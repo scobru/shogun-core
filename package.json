@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "0.1.0",
+  "version": "v1.0.0",
   "description": "SHOGUN SDK - Libreria semplificata per la gestione di wallet crypto con GunDB",
   "scripts": {
     "build": "tsc",
