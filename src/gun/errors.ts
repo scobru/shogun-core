@@ -8,7 +8,7 @@
 export class GunError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'GunError';
+    this.name = "GunError";
   }
 }
 
@@ -18,7 +18,7 @@ export class GunError extends Error {
 export class AuthError extends GunError {
   constructor(message: string) {
     super(message);
-    this.name = 'AuthError';
+    this.name = "AuthError";
   }
 }
 
@@ -26,9 +26,9 @@ export class AuthError extends GunError {
  * Errore di credenziali non valide
  */
 export class InvalidCredentials extends AuthError {
-  constructor(message = 'Credenziali non valide') {
+  constructor(message = "Credenziali non valide") {
     super(message);
-    this.name = 'InvalidCredentials';
+    this.name = "InvalidCredentials";
   }
 }
 
@@ -36,9 +36,9 @@ export class InvalidCredentials extends AuthError {
  * Errore di utente già esistente
  */
 export class UserExists extends AuthError {
-  constructor(message = 'Utente già esistente') {
+  constructor(message = "Utente già esistente") {
     super(message);
-    this.name = 'UserExists';
+    this.name = "UserExists";
   }
 }
 
@@ -46,9 +46,9 @@ export class UserExists extends AuthError {
  * Errore di timeout
  */
 export class TimeoutError extends GunError {
-  constructor(message = 'Timeout durante l\'operazione') {
+  constructor(message = "Timeout durante l'operazione") {
     super(message);
-    this.name = 'TimeoutError';
+    this.name = "TimeoutError";
   }
 }
 
@@ -56,9 +56,9 @@ export class TimeoutError extends GunError {
  * Errore di multiple autenticazioni
  */
 export class MultipleAuthError extends AuthError {
-  constructor(message = 'Autenticazione multipla in corso') {
+  constructor(message = "Autenticazione multipla in corso") {
     super(message);
-    this.name = 'MultipleAuthError';
+    this.name = "MultipleAuthError";
   }
 }
 
@@ -66,8 +66,8 @@ export class MultipleAuthError extends AuthError {
 export class NetworkError extends GunError {}
 
 const withDefaultMessage = (args: any[], defaultMessage: string) => {
-    if (args.length === 0 || args.length === 1 && !args[0]) {
-        args = [defaultMessage];
-    }
-    return args;
-}
+  if (args.length === 0 || (args.length === 1 && !args[0])) {
+    args = [defaultMessage];
+  }
+  return args;
+};

@@ -33,7 +33,7 @@ export function delay<T = any>(ms: number, passthrough?: T): Promise<T> {
  */
 export async function errorAfter<T = void>(
   ms: number,
-  error: Error
+  error: Error,
 ): Promise<T> {
   return new Promise<T>((_, reject) => {
     setTimeout(() => {

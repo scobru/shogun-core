@@ -43,7 +43,11 @@ export interface IShogunCore {
   loginWithWebAuthn(username: string): Promise<AuthResult>;
   loginWithMetaMask(address: string): Promise<AuthResult>;
 
-  signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
+  signUp(
+    username: string,
+    password: string,
+    passwordConfirmation?: string,
+  ): Promise<SignUpResult>;
   signUpWithMetaMask(address: string): Promise<AuthResult>;
   signUpWithWebAuthn(username: string): Promise<AuthResult>;
 
@@ -54,9 +58,16 @@ export interface IShogunCore {
   getMainWallet(): ethers.Wallet | null;
   createWallet(): Promise<WalletInfo>;
   loadWallets(): Promise<WalletInfo[]>;
-  signMessage(wallet: ethers.Wallet, message: string | Uint8Array): Promise<string>;
+  signMessage(
+    wallet: ethers.Wallet,
+    message: string | Uint8Array,
+  ): Promise<string>;
   verifySignature(message: string | Uint8Array, signature: string): string;
-  signTransaction(wallet: ethers.Wallet, toAddress: string, value: string): Promise<string>;
+  signTransaction(
+    wallet: ethers.Wallet,
+    toAddress: string,
+    value: string,
+  ): Promise<string>;
   getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
   generateNewMnemonic(): string;
 

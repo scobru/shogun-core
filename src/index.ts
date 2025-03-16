@@ -205,7 +205,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult> {
     try {
       // Input validation
@@ -293,10 +293,7 @@ export class ShogunCore implements IShogunCore {
 
       return result;
     } catch (error: any) {
-      logError(
-        `Error during registration for user ${username}:`,
-        error
-      );
+      logError(`Error during registration for user ${username}:`, error);
       return {
         success: false,
         error: error.message || "Unknown error during registration",
@@ -336,18 +333,18 @@ export class ShogunCore implements IShogunCore {
       const assertionResult = await this.webauthn.generateCredentials(
         username,
         null,
-        true
+        true,
       );
 
       if (!assertionResult.success) {
         throw new Error(
-          assertionResult.error || "WebAuthn verification failed"
+          assertionResult.error || "WebAuthn verification failed",
         );
       }
 
       // Use the credential ID as the password
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(assertionResult.credentialId || "")
+        ethers.toUtf8Bytes(assertionResult.credentialId || ""),
       );
 
       // Login with verified credentials
@@ -396,18 +393,18 @@ export class ShogunCore implements IShogunCore {
       const attestationResult = await this.webauthn.generateCredentials(
         username,
         null,
-        false
+        false,
       );
 
       if (!attestationResult.success) {
         throw new Error(
-          attestationResult.error || "Unable to generate WebAuthn credentials"
+          attestationResult.error || "Unable to generate WebAuthn credentials",
         );
       }
 
       // Use credential ID as password
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(attestationResult.credentialId || "")
+        ethers.toUtf8Bytes(attestationResult.credentialId || ""),
       );
 
       // Perform registration
@@ -415,7 +412,7 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         log(
-          `WebAuthn registration completed successfully for user: ${username}`
+          `WebAuthn registration completed successfully for user: ${username}`,
         );
         return {
           ...result,
@@ -463,7 +460,7 @@ export class ShogunCore implements IShogunCore {
       // Attempt login with generated credentials
       const loginPromise = this.login(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
       const timeoutPromise = new Promise<AuthResult>((_, reject) => {
         setTimeout(() => reject(new Error("Login timeout")), 30000);
@@ -506,9 +503,7 @@ export class ShogunCore implements IShogunCore {
       log(`MetaMask registration attempt for address: ${address}`);
 
       if (!address) {
-        throw new Error(
-          "Ethereum address required for MetaMask registration"
-        );
+        throw new Error("Ethereum address required for MetaMask registration");
       }
 
       // Check if MetaMask is available
@@ -525,13 +520,10 @@ export class ShogunCore implements IShogunCore {
       // Attempt registration with generated credentials
       const signupPromise = this.signUp(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
       const timeoutPromise = new Promise<SignUpResult>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Registration timeout")),
-          30000
-        );
+        setTimeout(() => reject(new Error("Registration timeout")), 30000);
       });
 
       // Use race to handle timeout
@@ -539,7 +531,7 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         log(
-          `MetaMask registration completed successfully for address: ${address}`
+          `MetaMask registration completed successfully for address: ${address}`,
         );
         return {
           ...result,
@@ -557,9 +549,7 @@ export class ShogunCore implements IShogunCore {
       logError(`Error during MetaMask registration: ${error}`);
       return {
         success: false,
-        error:
-          error.message ||
-          "Unknown error during MetaMask registration",
+        error: error.message || "Unknown error during MetaMask registration",
       };
     }
   }
@@ -612,7 +602,7 @@ export class ShogunCore implements IShogunCore {
    */
   async signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array
+    message: string | Uint8Array,
   ): Promise<string> {
     return this.walletManager.signMessage(wallet, message);
   }
@@ -639,7 +629,7 @@ export class ShogunCore implements IShogunCore {
   async signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string
+    value: string,
   ): Promise<string> {
     return this.walletManager.signTransaction(wallet, toAddress, value);
   }
@@ -693,7 +683,7 @@ export class ShogunCore implements IShogunCore {
    */
   async importMnemonic(
     mnemonicData: string,
-    password?: string
+    password?: string,
   ): Promise<boolean> {
     return this.walletManager.importMnemonic(mnemonicData, password);
   }
@@ -707,7 +697,7 @@ export class ShogunCore implements IShogunCore {
    */
   async importWalletKeys(
     walletsData: string,
-    password?: string
+    password?: string,
   ): Promise<number> {
     return this.walletManager.importWalletKeys(walletsData, password);
   }
@@ -739,7 +729,7 @@ export class ShogunCore implements IShogunCore {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    } = { importMnemonic: true, importWallets: true, importGunPair: true }
+    } = { importMnemonic: true, importWallets: true, importGunPair: true },
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
@@ -795,3 +785,4 @@ export {
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";
+export { WalletManager } from "./wallet/walletManager";

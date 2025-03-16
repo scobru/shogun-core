@@ -31,7 +31,7 @@ interface AuthResult {
 
 /**
  * GunDB - Simplified Gun management with advanced Auth
- * 
+ *
  * Uses the Auth class for optimized authentication handling
  */
 class GunDB {
@@ -49,9 +49,9 @@ class GunDB {
     const config = {
       peers: options.peers || CONFIG.PEERS,
       localStorage: options.localStorage ?? false,
-      radisk: options.radisk ?? false, 
+      radisk: options.radisk ?? false,
       multicast: options.multicast ?? false,
-      axe: options.axe ?? false
+      axe: options.axe ?? false,
     };
 
     // Configure GunDB with provided options
@@ -67,7 +67,7 @@ class GunDB {
   private subscribeToAuthEvents() {
     this.gun.on("auth", (ack: any) => {
       log("Auth event received:", ack);
-      
+
       if (ack.err) {
         logError("Authentication error:", ack.err);
       } else {
@@ -171,13 +171,13 @@ class GunDB {
           } else {
             // Automatic login after registration
             const loginResult = await this.login(username, password);
-            
+
             if (loginResult.success) {
               log("Registration and login completed successfully");
             } else {
               logError("Registration completed but login failed");
             }
-            
+
             resolve(loginResult);
           }
         });
@@ -211,7 +211,7 @@ class GunDB {
             });
           } else {
             const user = this.gun.user();
-            
+
             if (!user.is) {
               resolve({
                 success: false,
@@ -302,7 +302,7 @@ class GunDB {
               resolve(data);
             }
           },
-          options
+          options,
         );
     });
   }
@@ -354,7 +354,7 @@ class GunDB {
               resolve(data);
             }
           },
-          options
+          options,
         );
     });
   }

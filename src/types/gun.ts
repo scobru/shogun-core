@@ -14,7 +14,11 @@ export interface IGunChainReference<T = any> {
   /**
    * Puts data into a node
    */
-  put(data: any, callback?: (ack: any) => void, options?: any): IGunChainReference;
+  put(
+    data: any,
+    callback?: (ack: any) => void,
+    options?: any,
+  ): IGunChainReference;
 
   /**
    * Gets the current node's value once
@@ -40,19 +44,41 @@ export interface IGunChainReference<T = any> {
   /**
    * Authenticates the user
    */
-  auth(username: string, password: string, callback?: (ack: any) => void, options?: any): IGunChainReference;
-  auth(pair: IGunCryptoKeyPair, callback?: (ack: any) => void, options?: any): IGunChainReference;
+  auth(
+    username: string,
+    password: string,
+    callback?: (ack: any) => void,
+    options?: any,
+  ): IGunChainReference;
+  auth(
+    pair: IGunCryptoKeyPair,
+    callback?: (ack: any) => void,
+    options?: any,
+  ): IGunChainReference;
 
   /**
    * Creates a new user
    */
-  create(username: string, password: string, callback?: (ack: any) => void): IGunChainReference;
-  create(username: string, password: any, pair: any, callback?: (ack: any) => void): IGunChainReference;
+  create(
+    username: string,
+    password: string,
+    callback?: (ack: any) => void,
+  ): IGunChainReference;
+  create(
+    username: string,
+    password: any,
+    pair: any,
+    callback?: (ack: any) => void,
+  ): IGunChainReference;
 
   /**
    * Deletes a user
    */
-  delete(username: string, password: string, callback?: (ack: any) => void): IGunChainReference;
+  delete(
+    username: string,
+    password: string,
+    callback?: (ack: any) => void,
+  ): IGunChainReference;
 
   /**
    * Registers an event

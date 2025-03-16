@@ -62,7 +62,7 @@ const generateDeviceId = (): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 15);
   return uint8ArrayToHex(
-    new TextEncoder().encode(`${platform}-${timestamp}-${random}`)
+    new TextEncoder().encode(`${platform}-${timestamp}-${random}`),
   );
 };
 
@@ -76,27 +76,27 @@ const getPlatformInfo = (): { name: string; platform: string } => {
 
   const platform = navigator.platform;
   const userAgent = navigator.userAgent;
-  
+
   if (/iPhone|iPad|iPod/.test(platform)) {
     return { name: "iOS Device", platform };
   }
-  
+
   if (/Android/.test(userAgent)) {
     return { name: "Android Device", platform };
   }
-  
+
   if (/Win/.test(platform)) {
     return { name: "Windows Device", platform };
   }
-  
+
   if (/Mac/.test(platform)) {
     return { name: "Mac Device", platform };
   }
-  
+
   if (/Linux/.test(platform)) {
     return { name: "Linux Device", platform };
   }
-  
+
   return { name: "Unknown Device", platform };
 };
 
@@ -116,7 +116,7 @@ const getRandomBytes = (length: number): Uint8Array => {
   if (typeof window !== "undefined" && window.crypto) {
     return window.crypto.getRandomValues(new Uint8Array(length));
   }
-  
+
   throw new Error("No cryptographic implementation available");
 };
 
@@ -127,7 +127,7 @@ const generateChallenge = (username: string): Uint8Array => {
   const timestamp = Date.now().toString();
   const randomBytes = getRandomBytes(32);
   const challengeData = `${username}-${timestamp}-${uint8ArrayToHex(
-    randomBytes
+    randomBytes,
   )}`;
   return new TextEncoder().encode(challengeData);
 };
@@ -139,7 +139,7 @@ const bufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   const binary = bytes.reduce(
     (str, byte) => str + String.fromCharCode(byte),
-    ""
+    "",
   );
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 };
@@ -151,7 +151,7 @@ const base64ToBuffer = (base64: string): ArrayBuffer => {
   if (!/^[A-Za-z0-9\-_]*$/.test(base64)) {
     throw new Error("Invalid base64 string");
   }
-  
+
   const base64Url = base64.replace(/-/g, "+").replace(/_/g, "/");
   const padding = "=".repeat((4 - (base64Url.length % 4)) % 4);
   const base64Padded = base64Url + padding;
@@ -173,7 +173,7 @@ const base64ToBuffer = (base64: string): ArrayBuffer => {
  */
 const generateCredentialsFromSalt = (
   username: string,
-  salt: string
+  salt: string,
 ): { password: string } => {
   const data = ethers.toUtf8Bytes(username + salt);
   return {
@@ -193,7 +193,7 @@ class Webauthn {
    * Creates a new WebAuthn instance
    */
   constructor(gunInstance?: any) {
-    this.rpId = window.location.hostname.split(':')[0];
+    this.rpId = window.location.hostname.split(":")[0];
     this.gunInstance = gunInstance;
     this.credential = null;
   }
@@ -205,19 +205,22 @@ class Webauthn {
     if (!username || typeof username !== "string") {
       throw new Error("Username must be a non-empty string");
     }
-    
-    if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+
+    if (
+      username.length < MIN_USERNAME_LENGTH ||
+      username.length > MAX_USERNAME_LENGTH
+    ) {
       throw new Error(
-        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`
+        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`,
       );
     }
-    
+
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
       throw new Error(
-        "Username can only contain letters, numbers, underscores and hyphens"
+        "Username can only contain letters, numbers, underscores and hyphens",
       );
     }
-    
+
     // Username is valid
   }
 
@@ -227,20 +230,18 @@ class Webauthn {
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice = false
+    isNewDevice = false,
   ): Promise<CredentialResult> {
     const result = await this.generateCredentials(
       username,
       credentials,
-      isNewDevice
+      isNewDevice,
     );
-    
+
     if (!result.success) {
-      throw new Error(
-        result.error || "Error creating account"
-      );
+      throw new Error(result.error || "Error creating account");
     }
-    
+
     return result;
   }
 
@@ -248,8 +249,9 @@ class Webauthn {
    * Checks if WebAuthn is supported
    */
   isSupported(): boolean {
-    return typeof window !== 'undefined' && 
-           window.PublicKeyCredential !== undefined;
+    return (
+      typeof window !== "undefined" && window.PublicKeyCredential !== undefined
+    );
   }
 
   /**
@@ -260,39 +262,41 @@ class Webauthn {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const userId = new TextEncoder().encode(username);
 
-      const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
-        challenge,
-        rp: {
-          name: "Shogun Wallet",
-          ...(this.rpId !== 'localhost' && { id: this.rpId })
-        },
-        user: {
-          id: userId,
-          name: username,
-          displayName: username
-        },
-        pubKeyCredParams: [
-          { type: "public-key", alg: -7 }
-        ],
-        timeout: 60000,
-        attestation: "none",
-        authenticatorSelection: {
-          authenticatorAttachment: "platform",
-          userVerification: "preferred",
-          requireResidentKey: false
-        }
-      };
+      const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
+        {
+          challenge,
+          rp: {
+            name: "Shogun Wallet",
+            ...(this.rpId !== "localhost" && { id: this.rpId }),
+          },
+          user: {
+            id: userId,
+            name: username,
+            displayName: username,
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          timeout: 60000,
+          attestation: "none",
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "preferred",
+            requireResidentKey: false,
+          },
+        };
 
-      console.log("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
+      console.log(
+        "Attempting to create credentials with options:",
+        publicKeyCredentialCreationOptions,
+      );
 
       const credential = await navigator.credentials.create({
-        publicKey: publicKeyCredentialCreationOptions
+        publicKey: publicKeyCredentialCreationOptions,
       });
 
       if (!credential) {
         throw new Error("Credential creation failed");
       }
-      
+
       console.log("Credentials created successfully:", credential);
       this.credential = credential;
       return credential;
@@ -305,14 +309,18 @@ class Webauthn {
   /**
    * Generates or verifies credentials
    */
-  async generateCredentials(username: string, existingCredential?: any, isLogin = false): Promise<any> {
+  async generateCredentials(
+    username: string,
+    existingCredential?: any,
+    isLogin = false,
+  ): Promise<any> {
     try {
       if (isLogin) {
         return this.verifyCredential(username);
       } else {
         const credential = await this.createCredential(username);
         const credentialId = (credential as PublicKeyCredential).id;
-        
+
         let publicKey = null;
         if (credential && (credential as any).response?.getPublicKey) {
           publicKey = (credential as any).response.getPublicKey();
@@ -321,14 +329,14 @@ class Webauthn {
         return {
           success: true,
           credentialId,
-          publicKey
+          publicKey,
         };
       }
     } catch (error: any) {
       console.error("Error in generateCredentials:", error);
       return {
         success: false,
-        error: error.message || "Error during WebAuthn operation"
+        error: error.message || "Error during WebAuthn operation",
       };
     }
   }
@@ -344,36 +352,38 @@ class Webauthn {
         challenge,
         timeout: 60000,
         userVerification: "preferred",
-        ...(this.rpId !== 'localhost' && { rpId: this.rpId })
+        ...(this.rpId !== "localhost" && { rpId: this.rpId }),
       };
 
       if (this.credential?.rawId) {
-        options.allowCredentials = [{
-          id: this.credential.rawId,
-          type: 'public-key'
-        }];
+        options.allowCredentials = [
+          {
+            id: this.credential.rawId,
+            type: "public-key",
+          },
+        ];
       }
 
       const assertion = await navigator.credentials.get({
-        publicKey: options
+        publicKey: options,
       });
 
       if (!assertion) {
         return {
           success: false,
-          error: "Credential verification failed"
+          error: "Credential verification failed",
         };
       }
-      
+
       return {
         success: true,
-        credentialId: (assertion as PublicKeyCredential).id
+        credentialId: (assertion as PublicKeyCredential).id,
       };
     } catch (error: any) {
       console.error("Error verifying credentials:", error);
       return {
         success: false,
-        error: error.message || "Error verifying credentials"
+        error: error.message || "Error verifying credentials",
       };
     }
   }
@@ -387,7 +397,7 @@ class Webauthn {
         await this.gunInstance.get(`webauthn_${username}`).put({
           credentialId: credential.id,
           type: credential.type,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       } catch (error: any) {
         console.error("Error saving credentials to Gun:", error);
@@ -402,12 +412,16 @@ class Webauthn {
   async removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials
+    credentials: WebAuthnCredentials,
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }> {
-    if (!credentials || !credentials.credentials || !credentials.credentials[credentialId]) {
+    if (
+      !credentials ||
+      !credentials.credentials ||
+      !credentials.credentials[credentialId]
+    ) {
       return { success: false };
     }
-    
+
     const updatedCreds = { ...credentials };
     // Make sure credentials exists before modifying it
     if (updatedCreds.credentials) {
@@ -425,17 +439,15 @@ class Webauthn {
    */
   async authenticateUser(
     username: string,
-    salt: string | null
+    salt: string | null,
   ): Promise<CredentialResult> {
     try {
       this.validateUsername(username);
 
       if (!salt) {
-        throw new Error(
-          "No WebAuthn credentials found for this username"
-        );
+        throw new Error("No WebAuthn credentials found for this username");
       }
-      
+
       const challenge = generateChallenge(username);
 
       const assertionOptions: PublicKeyCredentialRequestOptions = {
@@ -458,7 +470,7 @@ class Webauthn {
         if (!assertion) {
           throw new Error("WebAuthn verification failed");
         }
-        
+
         const { password } = generateCredentialsFromSalt(username, salt);
 
         return {
