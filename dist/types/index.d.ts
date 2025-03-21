@@ -5,12 +5,15 @@ import { Stealth } from "./stealth/stealth";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, WalletInfo } from "./types/shogun";
 import { IGunInstance } from "gun/types/gun";
 import { ethers } from "ethers";
+import { ShogunDID } from "./did/DID";
+export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions } from "./did/DID";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     gundb: GunDB;
     webauthn: Webauthn;
     metamask: MetaMask;
     stealth: Stealth;
+    did: ShogunDID;
     private storage;
     private eventEmitter;
     private walletManager;

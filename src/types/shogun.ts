@@ -6,16 +6,18 @@ type Webauthn = any;
 type MetaMask = any;
 type Stealth = any;
 type GunDB = any;
+type DID = any;
 
 // Authentication result interfaces
 export interface AuthResult {
   success: boolean;
-  userPub?: string;
-  wallet?: any;
-  username?: string;
   error?: string;
-  credentialId?: string;
+  userPub?: string;
+  username?: string;
   password?: string;
+  credentialId?: string;
+  did?: string;
+  wallet?: any;
 }
 
 /**
@@ -29,6 +31,7 @@ export interface SignUpResult {
   error?: string;
   message?: string;
   wallet?: any;
+  did?: string;
 }
 
 export interface IShogunCore {
@@ -37,6 +40,7 @@ export interface IShogunCore {
   webauthn: Webauthn;
   metamask: MetaMask;
   stealth: Stealth;
+  did : DID;
 
   // Direct authentication methods
   login(username: string, password: string): Promise<AuthResult>;
@@ -74,6 +78,7 @@ export interface IShogunCore {
   // Utility methods
   logout(): void;
   isLoggedIn(): boolean;
+
 }
 
 /**

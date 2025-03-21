@@ -4,14 +4,16 @@ type Webauthn = any;
 type MetaMask = any;
 type Stealth = any;
 type GunDB = any;
+type DID = any;
 export interface AuthResult {
     success: boolean;
-    userPub?: string;
-    wallet?: any;
-    username?: string;
     error?: string;
-    credentialId?: string;
+    userPub?: string;
+    username?: string;
     password?: string;
+    credentialId?: string;
+    did?: string;
+    wallet?: any;
 }
 /**
  * Sign up result interface
@@ -24,6 +26,7 @@ export interface SignUpResult {
     error?: string;
     message?: string;
     wallet?: any;
+    did?: string;
 }
 export interface IShogunCore {
     gun: IGunInstance<any>;
@@ -31,6 +34,7 @@ export interface IShogunCore {
     webauthn: Webauthn;
     metamask: MetaMask;
     stealth: Stealth;
+    did: DID;
     login(username: string, password: string): Promise<AuthResult>;
     loginWithWebAuthn(username: string): Promise<AuthResult>;
     loginWithMetaMask(address: string): Promise<AuthResult>;

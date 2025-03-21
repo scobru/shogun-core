@@ -8,6 +8,8 @@ import { log, logError } from "./utils/logger";
 import { WalletManager } from "./wallet/walletManager";
 import CONFIG from "./config";
 import { ethers } from "ethers";
+import { ShogunDID } from "./did/DID";
+export { ShogunDID } from "./did/DID";
 let gun;
 export class ShogunCore {
     /**
@@ -32,6 +34,7 @@ export class ShogunCore {
         this.webauthn = new Webauthn();
         this.metamask = new MetaMask();
         this.stealth = new Stealth(this.storage);
+        this.did = new ShogunDID(this);
         // Initialize Ethereum provider
         if (config.providerUrl) {
             this.provider = new ethers.JsonRpcProvider(config.providerUrl);
@@ -244,6 +247,23 @@ export class ShogunCore {
                     userPub: result.userPub || "",
                     username,
                 });
+                // Creare automaticamente un DID per il nuovo utente
+                try {
+                    const did = await this.did.createDID({
+                        network: "main",
+                        controller: result.userPub,
+                    });
+                    log(`Created DID for new user: ${did}`);
+                    // Aggiungiamo l'informazione sul DID al risultato
+                    return {
+                        ...result,
+                        did: did
+                    };
+                }
+                catch (didError) {
+                    // Se la creazione del DID fallisce, logghiamo l'errore ma non facciamo fallire la registrazione
+                    logError("Error creating DID for new user:", didError);
+                }
             }
             return result;
         }
@@ -336,11 +356,33 @@ export class ShogunCore {
             const result = await this.signUp(username, hashedCredentialId);
             if (result.success) {
                 log(`WebAuthn registration completed successfully for user: ${username}`);
+                // Creare automaticamente un DID per il nuovo utente
+                try {
+                    const did = await this.did.createDID({
+                        network: "main",
+                        controller: result.userPub,
+                        services: [{
+                                type: "WebAuthnVerification",
+                                endpoint: `webauthn:${username}`
+                            }]
+                    });
+                    log(`Created DID for WebAuthn user: ${did}`);
+                    return {
+                        ...result,
+                        username,
+                        password: hashedCredentialId,
+                        credentialId: attestationResult.credentialId,
+                        did: did
+                    };
+                }
+                catch (didError) {
+                    logError("Error creating DID for WebAuthn user:", didError);
+                }
                 return {
                     ...result,
                     username,
                     password: hashedCredentialId,
-                    credentialId: attestationResult.credentialId,
+                    credentialId: attestationResult.credentialId
                 };
             }
             else {
@@ -437,6 +479,27 @@ export class ShogunCore {
             const result = await Promise.race([signupPromise, timeoutPromise]);
             if (result.success) {
                 log(`MetaMask registration completed successfully for address: ${address}`);
+                // Creare automaticamente un DID per il nuovo utente MetaMask
+                try {
+                    const did = await this.did.createDID({
+                        network: "main",
+                        controller: result.userPub,
+                        services: [{
+                                type: "EcdsaSecp256k1Verification",
+                                endpoint: `ethereum:${address}`
+                            }]
+                    });
+                    log(`Created DID for MetaMask user: ${did}`);
+                    return {
+                        ...result,
+                        username: credentials.username,
+                        password: credentials.password,
+                        did: did
+                    };
+                }
+                catch (didError) {
+                    logError("Error creating DID for MetaMask user:", didError);
+                }
                 return {
                     ...result,
                     username: credentials.username,
