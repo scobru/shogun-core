@@ -2,6 +2,7 @@
  * Manages stealth logic using Gun and SEA
  */
 import { ethers } from "ethers";
+import { Storage } from "../storage/storage";
 declare global {
     interface Window {
         Stealth?: typeof Stealth;
@@ -29,7 +30,9 @@ declare class Stealth {
     readonly STEALTH_DATA_TABLE: string;
     private lastEphemeralKeyPair;
     private lastMethodUsed;
-    constructor();
+    private storage;
+    private readonly STEALTH_HISTORY_KEY;
+    constructor(storage?: Storage);
     /**
      * Removes the initial tilde (~) from the public key if present
      */
@@ -64,7 +67,7 @@ declare class Stealth {
      */
     deriveWalletFromSecret(secret: string): ethers.Wallet;
     /**
-     * Saves stealth data in localStorage
+     * Saves stealth data in storage
      */
     saveStealthHistory(address: string, data: any): void;
 }

@@ -2,9 +2,19 @@ import { ethers } from "ethers";
 import { log } from "../utils/logger";
 import SEA from "gun/sea";
 /**
- * Class that manages wallet functionality
+ * Class that manages Ethereum wallet functionality including:
+ * - Wallet creation and derivation
+ * - Balance checking and transactions
+ * - Importing/exporting wallets
+ * - Encrypted storage and backup
  */
 export class WalletManager {
+    /**
+     * Creates a new WalletManager instance
+     * @param gundb GunDB instance for decentralized storage
+     * @param gun Raw Gun instance
+     * @param storage Storage interface for local persistence
+     */
     constructor(gundb, gun, storage) {
         this.walletPaths = {};
         this.mainWallet = null;
@@ -18,23 +28,22 @@ export class WalletManager {
         this.initializeWalletPaths();
     }
     /**
-     * Configure the RPC URL to use for connections
-     * @param rpcUrl RPC provider URL
+     * Sets the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
      */
     setRpcUrl(rpcUrl) {
         this.configuredRpcUrl = rpcUrl;
         log(`RPC Provider configured: ${rpcUrl}`);
     }
     /**
-     * Get a configured JSON RPC provider
-     * @returns JSON RPC Provider
+     * Gets a configured JSON RPC provider instance
+     * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider() {
         return new ethers.JsonRpcProvider(this.configuredRpcUrl || this.defaultRpcUrl);
     }
     /**
-     * Initialize wallet paths
-     * Load paths from both GUN and localStorage
+     * Initializes wallet paths from both GunDB and localStorage
      * @private
      */
     async initializeWalletPaths() {
@@ -45,7 +54,7 @@ export class WalletManager {
             await this.loadWalletPathsFromGun();
             // Load paths from localStorage as fallback
             await this.loadWalletPathsFromLocalStorage();
-            // Logging based on number of wallets found
+            // Log results
             const walletCount = Object.keys(this.walletPaths).length;
             if (walletCount === 0) {
                 log("No wallet paths found, new wallets will be created when needed");
@@ -59,7 +68,7 @@ export class WalletManager {
         }
     }
     /**
-     * Load wallet paths from Gun
+     * Loads wallet paths from GunDB
      * @private
      */
     async loadWalletPathsFromGun() {
@@ -79,7 +88,7 @@ export class WalletManager {
                     return;
                 }
                 log(`Found wallet paths in GUN: ${Object.keys(data).length - 1} wallets`); // -1 for _ field
-                // Convert data received from GUN to walletPaths
+                // Convert GUN data to walletPaths
                 Object.entries(data).forEach(([address, pathData]) => {
                     if (address !== "_" && pathData) {
                         const data = pathData;
@@ -97,7 +106,7 @@ export class WalletManager {
         });
     }
     /**
-     * Load wallet paths from localStorage
+     * Loads wallet paths from localStorage as backup
      * @private
      */
     async loadWalletPathsFromLocalStorage() {
@@ -107,7 +116,7 @@ export class WalletManager {
             try {
                 log("Found wallet paths in localStorage");
                 const parsedPaths = JSON.parse(storedPaths);
-                // Add paths from localStorage if not already present in GUN
+                // Add paths if not already in GUN
                 Object.entries(parsedPaths).forEach(([address, pathData]) => {
                     if (!this.walletPaths[address]) {
                         this.walletPaths[address] = pathData;
@@ -121,8 +130,9 @@ export class WalletManager {
         }
     }
     /**
-     * Get a unique identifier for the current user for storage
+     * Gets a unique identifier for the current user for storage purposes
      * @private
+     * @returns A string identifier based on user's public key or "guest"
      */
     getStorageUserIdentifier() {
         const user = this.gun.user();
@@ -133,7 +143,7 @@ export class WalletManager {
         return "guest"; // Identifier for unauthenticated users
     }
     /**
-     * Save wallet paths to localStorage
+     * Saves wallet paths to localStorage for backup
      * @private
      */
     saveWalletPathsToLocalStorage() {
@@ -148,10 +158,10 @@ export class WalletManager {
         }
     }
     /**
-     * Derive a private wallet from a mnemonic and derivation path
-     * @param mnemonic Mnemonic phrase
-     * @param path Derivation path
-     * @returns Derived wallet
+     * Derives a private wallet from a mnemonic and derivation path
+     * @param mnemonic The BIP-39 mnemonic phrase
+     * @param path The derivation path
+     * @returns A derived HDNodeWallet instance
      * @private
      */
     derivePrivateKeyFromMnemonic(mnemonic, path) {
@@ -191,8 +201,7 @@ export class WalletManager {
                 // Standard BIP-44 path for Ethereum: m/44'/60'/0'/0/i
                 const path = `m/44'/60'/0'/0/${i}`;
                 // Create HD wallet directly from mnemonic with specified path
-                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path // Pass path directly here
-                );
+                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path);
                 addresses.push(wallet.address);
                 log(`Address ${i}: ${wallet.address} (${path})`);
             }
@@ -200,29 +209,6 @@ export class WalletManager {
         }
         catch (error) {
             log(`Error calculating BIP-44 addresses: ${error}`);
-            return [];
-        }
-    }
-    /**
-     * INFORMATIONAL METHOD: Retrieve the first n wallets that would have been created from a mnemonic
-     * using MetaMask (for debug and verification only)
-     * @deprecated Use getStandardBIP44Addresses() which implements true BIP-44 derivation
-     */
-    getMetaMaskCompatibleAddresses(mnemonic, count = 5) {
-        try {
-            // This is for informational purposes only, does not affect app functionality
-            const addresses = [];
-            log(`Attempting MetaMask compatible derivation for mnemonic`);
-            for (let i = 0; i < count; i++) {
-                // Generate deterministic addresses using our method
-                const path = `m/44'/60'/0'/0/${i}`;
-                const wallet = this.derivePrivateKeyFromMnemonic(mnemonic, path);
-                addresses.push(wallet.address);
-            }
-            return addresses;
-        }
-        catch (error) {
-            log(`Error calculating MetaMask addresses: ${error}`);
             return [];
         }
     }
@@ -263,17 +249,21 @@ export class WalletManager {
             // Use synchronous version of digest
             const hashArray = digestSync(data);
             // Convert to hex string
-            const privateKey = "0x" + Array.from(hashArray)
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join("");
+            const privateKey = "0x" +
+                Array.from(hashArray)
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join("");
             return privateKey;
         }
         catch (error) {
             console.error("Error generating private key:", error);
             // Fallback: create valid hex value
-            const fallbackHex = "0x" + Array.from({ length: 32 })
-                .map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, "0"))
-                .join("");
+            const fallbackHex = "0x" +
+                Array.from({ length: 32 })
+                    .map(() => Math.floor(Math.random() * 256)
+                    .toString(16)
+                    .padStart(2, "0"))
+                    .join("");
             return fallbackHex;
         }
     }
@@ -521,7 +511,7 @@ export class WalletManager {
                 try {
                     // Use secure method to derive private key
                     const wallet = this.derivePrivateKeyFromMnemonic(masterMnemonic, data.path || `m/44'/60'/0'/0/${address.substring(0, 6)}`);
-                    log(`Derived wallet for path ${data.path || 'fallback'} with address ${wallet.address}`);
+                    log(`Derived wallet for path ${data.path || "fallback"} with address ${wallet.address}`);
                     if (wallet.address.toLowerCase() !== address.toLowerCase()) {
                         console.warn(`Warning: derived address (${wallet.address}) does not match saved address (${address})`);
                     }
@@ -557,7 +547,9 @@ export class WalletManager {
             // Check if we have valid cache
             const cachedData = this.balanceCache.get(address);
             const now = Date.now();
-            if (cachedData && cachedData.timestamp !== undefined && (now - cachedData.timestamp) < this.balanceCacheTTL) {
+            if (cachedData &&
+                cachedData.timestamp !== undefined &&
+                now - cachedData.timestamp < this.balanceCacheTTL) {
                 const cachedBalance = cachedData.balance || "0";
                 log(`Using cached balance for ${address}: ${cachedBalance} ETH`);
                 return cachedBalance;
@@ -570,7 +562,7 @@ export class WalletManager {
             // Update cache
             this.balanceCache.set(address, {
                 balance: formattedBalance,
-                timestamp: now
+                timestamp: now,
             });
             return formattedBalance;
         }
@@ -684,7 +676,7 @@ export class WalletManager {
                 return JSON.stringify({
                     type: "encrypted-mnemonic",
                     data: encryptedData,
-                    version: "1.0"
+                    version: "1.0",
                 });
             }
             // Otherwise return clear text mnemonic
@@ -708,20 +700,20 @@ export class WalletManager {
                 throw new Error("No wallets found to export");
             }
             // Create object with wallet data
-            const walletData = wallets.map(walletInfo => {
+            const walletData = wallets.map((walletInfo) => {
                 // Safety check for walletInfo.address
                 const address = walletInfo.address || "";
                 return {
                     address: address,
                     privateKey: walletInfo.wallet.privateKey,
                     path: walletInfo.path,
-                    created: address && this.walletPaths[address]?.created || Date.now()
+                    created: (address && this.walletPaths[address]?.created) || Date.now(),
                 };
             });
             const exportData = {
                 wallets: walletData,
                 version: "1.0",
-                exportedAt: new Date().toISOString()
+                exportedAt: new Date().toISOString(),
             };
             // Se è stata fornita una password, cifra i dati
             if (password) {
@@ -729,7 +721,7 @@ export class WalletManager {
                 return JSON.stringify({
                     type: "encrypted-wallets",
                     data: encryptedData,
-                    version: "1.0"
+                    version: "1.0",
                 });
             }
             // Altrimenti restituisci i dati in chiaro
@@ -758,7 +750,7 @@ export class WalletManager {
                 return JSON.stringify({
                     type: "encrypted-gun-pair",
                     data: encryptedData,
-                    version: "1.0"
+                    version: "1.0",
                 });
             }
             // Altrimenti restituisci i dati in chiaro
@@ -787,14 +779,14 @@ export class WalletManager {
                 throw new Error("Utente non autenticato o dati non disponibili");
             }
             // Prepara i dati dei wallet
-            const walletData = wallets.map(walletInfo => {
+            const walletData = wallets.map((walletInfo) => {
                 // Controllo di sicurezza per walletInfo.address
                 const address = walletInfo.address || "";
                 return {
                     address: address,
                     privateKey: walletInfo.wallet.privateKey,
                     path: walletInfo.path,
-                    created: address && this.walletPaths[address]?.created || Date.now()
+                    created: (address && this.walletPaths[address]?.created) || Date.now(),
                 };
             });
             // Crea l'oggetto completo con tutti i dati
@@ -802,20 +794,20 @@ export class WalletManager {
                 user: {
                     alias: user.is.alias,
                     pub: user.is.pub,
-                    pair: user._.sea
+                    pair: user._.sea,
                 },
                 mnemonic,
                 wallets: walletData,
                 version: "1.0",
                 exportedAt: new Date().toISOString(),
-                appName: "Shogun Wallet"
+                appName: "Shogun Wallet",
             };
             // Cifra i dati con la password fornita
             const encryptedData = await SEA.encrypt(JSON.stringify(exportData), password);
             return JSON.stringify({
                 type: "encrypted-shogun-backup",
                 data: encryptedData,
-                version: "1.0"
+                version: "1.0",
             });
         }
         catch (error) {
@@ -837,7 +829,9 @@ export class WalletManager {
                 try {
                     const jsonData = JSON.parse(mnemonicData);
                     // Se i dati sono cifrati, decifriamoli
-                    if (jsonData.type === "encrypted-mnemonic" && jsonData.data && password) {
+                    if (jsonData.type === "encrypted-mnemonic" &&
+                        jsonData.data &&
+                        password) {
                         const decryptedData = await SEA.decrypt(jsonData.data, password);
                         if (!decryptedData) {
                             throw new Error("Password non valida o dati corrotti");
@@ -923,31 +917,33 @@ export class WalletManager {
                 console.log(`[importWalletKeys] Dati completi: ${walletsData}`);
             }
             // Pulizia dei dati: rimuovi BOM e altri caratteri speciali
-            walletsData = walletsData.replace(/^\uFEFF/, ''); // Rimuovi BOM
+            walletsData = walletsData.replace(/^\uFEFF/, ""); // Rimuovi BOM
             walletsData = walletsData.trim(); // Rimuovi spazi all'inizio e alla fine
             // Verifica se i dati sono in formato JSON cifrato
             try {
                 // Verifica che sia un JSON valido
-                if (!walletsData.startsWith('{') && !walletsData.startsWith('[')) {
+                if (!walletsData.startsWith("{") && !walletsData.startsWith("[")) {
                     console.log("[importWalletKeys] Il formato non sembra essere JSON valido");
                     // Tenta di interpretare come mnemonic o chiave privata singola
-                    if (walletsData.split(' ').length >= 12) {
+                    if (walletsData.split(" ").length >= 12) {
                         console.log("[importWalletKeys] Potrebbe essere una mnemonic");
                         throw new Error("I dati sembrano essere una mnemonic, usa 'Importa Mnemonica' invece");
                     }
-                    if (walletsData.startsWith('0x') && walletsData.length === 66) {
+                    if (walletsData.startsWith("0x") && walletsData.length === 66) {
                         console.log("[importWalletKeys] Potrebbe essere una chiave privata singola");
                         // Crea un wallet manuale da chiave privata
                         try {
                             const wallet = new ethers.Wallet(walletsData);
                             const path = "m/44'/60'/0'/0/0"; // Path predefinito
                             // Crea un oggetto wallet compatibile
-                            wallets = [{
+                            wallets = [
+                                {
                                     address: wallet.address,
                                     privateKey: wallet.privateKey,
                                     path: path,
-                                    created: Date.now()
-                                }];
+                                    created: Date.now(),
+                                },
+                            ];
                             console.log(`[importWalletKeys] Creato wallet singolo da chiave privata: ${wallet.address}`);
                         }
                         catch (walletError) {
@@ -962,9 +958,11 @@ export class WalletManager {
                 else {
                     // Tenta di parsificare il JSON
                     const jsonData = JSON.parse(walletsData);
-                    console.log(`[importWalletKeys] JSON parsificato con successo, tipo: ${typeof jsonData}, chiavi: ${Object.keys(jsonData).join(', ')}`);
+                    console.log(`[importWalletKeys] JSON parsificato con successo, tipo: ${typeof jsonData}, chiavi: ${Object.keys(jsonData).join(", ")}`);
                     // Se i dati sono cifrati, decifriamoli
-                    if (jsonData.type === "encrypted-wallets" && jsonData.data && password) {
+                    if (jsonData.type === "encrypted-wallets" &&
+                        jsonData.data &&
+                        password) {
                         console.log("[importWalletKeys] Trovati dati cifrati, tentativo di decifratura...");
                         try {
                             const decryptedData = await SEA.decrypt(jsonData.data, password);
@@ -974,13 +972,15 @@ export class WalletManager {
                             }
                             console.log("[importWalletKeys] Decifratura riuscita, tentativo di parsing...");
                             console.log("[importWalletKeys] Tipo dei dati decifrati:", typeof decryptedData);
-                            if (typeof decryptedData === 'string' && decryptedData.length > 50) {
+                            if (typeof decryptedData === "string" &&
+                                decryptedData.length > 50) {
                                 console.log("[importWalletKeys] Primi 50 caratteri decifrati:", decryptedData.substring(0, 50));
                             }
                             try {
                                 const decryptedJson = JSON.parse(decryptedData);
-                                console.log("[importWalletKeys] Parsing riuscito, struttura:", Object.keys(decryptedJson).join(', '));
-                                if (decryptedJson.wallets && Array.isArray(decryptedJson.wallets)) {
+                                console.log("[importWalletKeys] Parsing riuscito, struttura:", Object.keys(decryptedJson).join(", "));
+                                if (decryptedJson.wallets &&
+                                    Array.isArray(decryptedJson.wallets)) {
                                     wallets = decryptedJson.wallets;
                                     console.log(`[importWalletKeys] Trovati ${wallets.length} wallet nei dati decifrati`);
                                 }
@@ -1050,13 +1050,14 @@ export class WalletManager {
                     try {
                         const wallet = new ethers.Wallet(walletData.privateKey);
                         // Verifica che la chiave privata corrisponda all'indirizzo fornito (se presente)
-                        if (walletData.address && wallet.address.toLowerCase() !== walletData.address.toLowerCase()) {
+                        if (walletData.address &&
+                            wallet.address.toLowerCase() !== walletData.address.toLowerCase()) {
                             console.warn(`[importWalletKeys] L'indirizzo generato ${wallet.address} non corrisponde all'indirizzo fornito ${walletData.address}`);
                         }
                         // Memorizza nel dizionario dei percorsi
                         this.walletPaths[wallet.address] = {
                             path: path,
-                            created: walletData.created || Date.now()
+                            created: walletData.created || Date.now(),
                         };
                         // Salva i percorsi aggiornati
                         this.saveWalletPathsToLocalStorage();
@@ -1101,7 +1102,9 @@ export class WalletManager {
             try {
                 const jsonData = JSON.parse(pairData);
                 // Se i dati sono cifrati, decifriamoli
-                if (jsonData.type === "encrypted-gun-pair" && jsonData.data && password) {
+                if (jsonData.type === "encrypted-gun-pair" &&
+                    jsonData.data &&
+                    password) {
                     const decryptedData = await SEA.decrypt(jsonData.data, password);
                     if (!decryptedData) {
                         throw new Error("Password non valida o dati corrotti");
@@ -1161,14 +1164,14 @@ export class WalletManager {
                 console.log(`[importAllUserData] Dati completi: ${backupData}`);
             }
             // Pulizia dei dati: rimuovi BOM e altri caratteri speciali
-            backupData = backupData.replace(/^\uFEFF/, ''); // Rimuovi BOM
+            backupData = backupData.replace(/^\uFEFF/, ""); // Rimuovi BOM
             backupData = backupData.trim(); // Rimuovi spazi all'inizio e alla fine
             let decryptedData;
             // Verifica se i dati sono nel formato corretto
             try {
                 console.log("[importAllUserData] Tentativo di parsing JSON...");
                 // Verifica che sia un JSON valido
-                if (!backupData.startsWith('{') && !backupData.startsWith('[')) {
+                if (!backupData.startsWith("{") && !backupData.startsWith("[")) {
                     console.error("[importAllUserData] Il formato non sembra essere JSON valido");
                     throw new Error("Il backup deve essere in formato JSON valido");
                 }
@@ -1193,7 +1196,7 @@ export class WalletManager {
                 }
                 console.log("[importAllUserData] Decifratura riuscita, tentativo di parsing del contenuto...");
                 console.log("[importAllUserData] Tipo di dati decifrati:", typeof decryptedData);
-                if (typeof decryptedData === 'string' && decryptedData.length > 50) {
+                if (typeof decryptedData === "string" && decryptedData.length > 50) {
                     console.log("[importAllUserData] Primi 50 caratteri decifrati:", decryptedData.substring(0, 50));
                 }
                 try {
@@ -1228,11 +1231,15 @@ export class WalletManager {
                 console.log("[importAllUserData] Importazione mnemonica non richiesta o mnemonica non trovata");
             }
             // Importa i wallet se richiesto
-            if (options.importWallets && decryptedData.wallets && Array.isArray(decryptedData.wallets)) {
+            if (options.importWallets &&
+                decryptedData.wallets &&
+                Array.isArray(decryptedData.wallets)) {
                 try {
                     console.log(`[importAllUserData] Tentativo di importazione di ${decryptedData.wallets.length} wallet...`);
                     // Prepara i dati nel formato richiesto da importWalletKeys
-                    const walletsData = JSON.stringify({ wallets: decryptedData.wallets });
+                    const walletsData = JSON.stringify({
+                        wallets: decryptedData.wallets,
+                    });
                     result.walletsImported = await this.importWalletKeys(walletsData);
                     console.log(`[importAllUserData] ${result.walletsImported} wallet importati con successo`);
                 }
@@ -1248,7 +1255,9 @@ export class WalletManager {
                 }
             }
             // Importa il pair di Gun se richiesto
-            if (options.importGunPair && decryptedData.user && decryptedData.user.pair) {
+            if (options.importGunPair &&
+                decryptedData.user &&
+                decryptedData.user.pair) {
                 try {
                     console.log("[importAllUserData] Tentativo di importazione pair Gun...");
                     // Il pair di Gun viene validato ma non applicato automaticamente
@@ -1271,7 +1280,9 @@ export class WalletManager {
             }
             // Imposta il risultato finale
             result.success = !!((options.importMnemonic && result.mnemonicImported) ||
-                (options.importWallets && result.walletsImported && result.walletsImported > 0) ||
+                (options.importWallets &&
+                    result.walletsImported &&
+                    result.walletsImported > 0) ||
                 (options.importGunPair && result.gunPairImported));
             console.log("[importAllUserData] Risultato finale:", result);
             return result;

@@ -2,11 +2,14 @@
  * Manages stealth logic using Gun and SEA
  */
 import { ethers } from "ethers";
+import { Storage } from "../storage/storage";
 class Stealth {
-    constructor() {
+    constructor(storage) {
         this.lastEphemeralKeyPair = null;
         this.lastMethodUsed = "unknown";
+        this.STEALTH_HISTORY_KEY = "stealthHistory";
         this.STEALTH_DATA_TABLE = "Stealth";
+        this.storage = storage || new Storage(); // Use provided storage or create a new one
     }
     /**
      * Removes the initial tilde (~) from the public key if present
@@ -108,7 +111,7 @@ class Stealth {
                         this.lastMethodUsed = "standard";
                         stealthData.method = "standard";
                         stealthData.sharedSecret = sharedSecret;
-                        // Save data in local storage to allow opening
+                        // Save data in storage to allow opening
                         this.saveStealthHistory(stealthWallet.address, stealthData);
                         resolve({
                             stealthAddress: stealthWallet.address,
@@ -128,11 +131,11 @@ class Stealth {
      */
     async openStealthAddress(stealthAddress, ephemeralPublicKey, pair) {
         console.log(`Attempting to open stealth address ${stealthAddress}`);
-        // First check if we have data saved locally
+        // First check if we have data saved in storage
         try {
-            const stealthHistory = localStorage.getItem("stealthHistory") || "{}";
-            const history = JSON.parse(stealthHistory);
-            console.log(`Checking if data exists for address ${stealthAddress} in localStorage`);
+            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
+            const history = JSON.parse(stealthHistoryJson);
+            console.log(`Checking if data exists for address ${stealthAddress} in storage`);
             const data = history[stealthAddress];
             if (data) {
                 console.log("Found locally saved stealth data:", data);
@@ -183,11 +186,11 @@ class Stealth {
                 }
                 throw new Error("Insufficient data"); // To exit and continue
             }
-            console.log("No stealth data found in localStorage for this address");
+            console.log("No stealth data found in storage for this address");
             throw new Error("No data found"); // To continue with standard methods
         }
         catch (e) {
-            console.log("Error retrieving data from localStorage:", e);
+            console.log("Error retrieving data from storage:", e);
             // Proceed with normal method
             return this.openStealthAddressStandard(stealthAddress, ephemeralPublicKey, pair);
         }
@@ -279,15 +282,15 @@ class Stealth {
         return new ethers.Wallet(stealthPrivateKey);
     }
     /**
-     * Saves stealth data in localStorage
+     * Saves stealth data in storage
      */
     saveStealthHistory(address, data) {
-        // Save to localStorage
+        // Save to storage
         try {
-            const stealthHistory = localStorage.getItem("stealthHistory") || "{}";
-            const history = JSON.parse(stealthHistory);
+            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
+            const history = JSON.parse(stealthHistoryJson);
             history[address] = data;
-            localStorage.setItem("stealthHistory", JSON.stringify(history));
+            this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
             console.log(`Stealth data saved for address ${address}`);
         }
         catch (e) {

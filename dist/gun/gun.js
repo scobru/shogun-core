@@ -24,7 +24,7 @@ class GunDB {
             localStorage: options.localStorage ?? false,
             radisk: options.radisk ?? false,
             multicast: options.multicast ?? false,
-            axe: options.axe ?? false
+            axe: options.axe ?? false,
         };
         // Configure GunDB with provided options
         this.gun = Gun(config);

@@ -3,7 +3,11 @@ import { GunDB } from "../gun/gun";
 import { Storage } from "../storage/storage";
 import { WalletInfo } from "../types/shogun";
 /**
- * Class that manages wallet functionality
+ * Class that manages Ethereum wallet functionality including:
+ * - Wallet creation and derivation
+ * - Balance checking and transactions
+ * - Importing/exporting wallets
+ * - Encrypted storage and backup
  */
 export declare class WalletManager {
     private gundb;
@@ -15,48 +19,54 @@ export declare class WalletManager {
     private balanceCacheTTL;
     private defaultRpcUrl;
     private configuredRpcUrl;
+    /**
+     * Creates a new WalletManager instance
+     * @param gundb GunDB instance for decentralized storage
+     * @param gun Raw Gun instance
+     * @param storage Storage interface for local persistence
+     */
     constructor(gundb: GunDB, gun: any, storage: Storage);
     /**
-     * Configure the RPC URL to use for connections
-     * @param rpcUrl RPC provider URL
+     * Sets the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
      */
     setRpcUrl(rpcUrl: string): void;
     /**
-     * Get a configured JSON RPC provider
-     * @returns JSON RPC Provider
+     * Gets a configured JSON RPC provider instance
+     * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider(): ethers.JsonRpcProvider;
     /**
-     * Initialize wallet paths
-     * Load paths from both GUN and localStorage
+     * Initializes wallet paths from both GunDB and localStorage
      * @private
      */
     private initializeWalletPaths;
     /**
-     * Load wallet paths from Gun
+     * Loads wallet paths from GunDB
      * @private
      */
     private loadWalletPathsFromGun;
     /**
-     * Load wallet paths from localStorage
+     * Loads wallet paths from localStorage as backup
      * @private
      */
     private loadWalletPathsFromLocalStorage;
     /**
-     * Get a unique identifier for the current user for storage
+     * Gets a unique identifier for the current user for storage purposes
      * @private
+     * @returns A string identifier based on user's public key or "guest"
      */
     private getStorageUserIdentifier;
     /**
-     * Save wallet paths to localStorage
+     * Saves wallet paths to localStorage for backup
      * @private
      */
     private saveWalletPathsToLocalStorage;
     /**
-     * Derive a private wallet from a mnemonic and derivation path
-     * @param mnemonic Mnemonic phrase
-     * @param path Derivation path
-     * @returns Derived wallet
+     * Derives a private wallet from a mnemonic and derivation path
+     * @param mnemonic The BIP-39 mnemonic phrase
+     * @param path The derivation path
+     * @returns A derived HDNodeWallet instance
      * @private
      */
     private derivePrivateKeyFromMnemonic;
@@ -73,12 +83,6 @@ export declare class WalletManager {
      * @returns An array of Ethereum addresses
      */
     getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
-    /**
-     * INFORMATIONAL METHOD: Retrieve the first n wallets that would have been created from a mnemonic
-     * using MetaMask (for debug and verification only)
-     * @deprecated Use getStandardBIP44Addresses() which implements true BIP-44 derivation
-     */
-    getMetaMaskCompatibleAddresses(mnemonic: string, count?: number): string[];
     /**
      * Override of main function with fixes and improvements
      */

@@ -228,3 +228,4 @@ export { Stealth, StealthKeyPair, StealthAddressResult, } from "./stealth/stealt
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";
+export { WalletManager } from "./wallet/walletManager";

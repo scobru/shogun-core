@@ -113,7 +113,7 @@ class Webauthn {
      * Creates a new WebAuthn instance
      */
     constructor(gunInstance) {
-        this.rpId = window.location.hostname.split(':')[0];
+        this.rpId = window.location.hostname.split(":")[0];
         this.gunInstance = gunInstance;
         this.credential = null;
     }
@@ -124,7 +124,8 @@ class Webauthn {
         if (!username || typeof username !== "string") {
             throw new Error("Username must be a non-empty string");
         }
-        if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+        if (username.length < MIN_USERNAME_LENGTH ||
+            username.length > MAX_USERNAME_LENGTH) {
             throw new Error(`Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`);
         }
         if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
@@ -146,8 +147,7 @@ class Webauthn {
      * Checks if WebAuthn is supported
      */
     isSupported() {
-        return typeof window !== 'undefined' &&
-            window.PublicKeyCredential !== undefined;
+        return (typeof window !== "undefined" && window.PublicKeyCredential !== undefined);
     }
     /**
      * Creates a new credential
@@ -160,27 +160,25 @@ class Webauthn {
                 challenge,
                 rp: {
                     name: "Shogun Wallet",
-                    ...(this.rpId !== 'localhost' && { id: this.rpId })
+                    ...(this.rpId !== "localhost" && { id: this.rpId }),
                 },
                 user: {
                     id: userId,
                     name: username,
-                    displayName: username
+                    displayName: username,
                 },
-                pubKeyCredParams: [
-                    { type: "public-key", alg: -7 }
-                ],
+                pubKeyCredParams: [{ type: "public-key", alg: -7 }],
                 timeout: 60000,
                 attestation: "none",
                 authenticatorSelection: {
                     authenticatorAttachment: "platform",
                     userVerification: "preferred",
-                    requireResidentKey: false
-                }
+                    requireResidentKey: false,
+                },
             };
             console.log("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
             const credential = await navigator.credentials.create({
-                publicKey: publicKeyCredentialCreationOptions
+                publicKey: publicKeyCredentialCreationOptions,
             });
             if (!credential) {
                 throw new Error("Credential creation failed");
@@ -212,7 +210,7 @@ class Webauthn {
                 return {
                     success: true,
                     credentialId,
-                    publicKey
+                    publicKey,
                 };
             }
         }
@@ -220,7 +218,7 @@ class Webauthn {
             console.error("Error in generateCredentials:", error);
             return {
                 success: false,
-                error: error.message || "Error during WebAuthn operation"
+                error: error.message || "Error during WebAuthn operation",
             };
         }
     }
@@ -234,33 +232,35 @@ class Webauthn {
                 challenge,
                 timeout: 60000,
                 userVerification: "preferred",
-                ...(this.rpId !== 'localhost' && { rpId: this.rpId })
+                ...(this.rpId !== "localhost" && { rpId: this.rpId }),
             };
             if (this.credential?.rawId) {
-                options.allowCredentials = [{
+                options.allowCredentials = [
+                    {
                         id: this.credential.rawId,
-                        type: 'public-key'
-                    }];
+                        type: "public-key",
+                    },
+                ];
             }
             const assertion = await navigator.credentials.get({
-                publicKey: options
+                publicKey: options,
             });
             if (!assertion) {
                 return {
                     success: false,
-                    error: "Credential verification failed"
+                    error: "Credential verification failed",
                 };
             }
             return {
                 success: true,
-                credentialId: assertion.id
+                credentialId: assertion.id,
             };
         }
         catch (error) {
             console.error("Error verifying credentials:", error);
             return {
                 success: false,
-                error: error.message || "Error verifying credentials"
+                error: error.message || "Error verifying credentials",
             };
         }
     }
@@ -273,7 +273,7 @@ class Webauthn {
                 await this.gunInstance.get(`webauthn_${username}`).put({
                     credentialId: credential.id,
                     type: credential.type,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
                 });
             }
             catch (error) {
@@ -286,7 +286,9 @@ class Webauthn {
      * Removes device credentials
      */
     async removeDevice(username, credentialId, credentials) {
-        if (!credentials || !credentials.credentials || !credentials.credentials[credentialId]) {
+        if (!credentials ||
+            !credentials.credentials ||
+            !credentials.credentials[credentialId]) {
             return { success: false };
         }
         const updatedCreds = { ...credentials };

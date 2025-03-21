@@ -20,11 +20,6 @@ export const CONFIG = {
         AUTHENTICATIONS: "authenticationsV2",
         WEBAUTHN: "webauthn",
         STEALTH: "stealth",
-        MOM_MESSAGES: "MOMMessages",
-        MOM_MESSAGE_BLOCKS: "MOMMessageBlocks",
-        MOM_MESSAGE_REPLIES: "MOMMessageReplies",
-        MOM_MESSAGE_UPDATES: "MOMMessageUpdates",
-        MOM_MESSAGE_DELETIONS: "MOMMessageDeletions"
     },
     AUTH: {
         MIN_PASSWORD_LENGTH: 8,

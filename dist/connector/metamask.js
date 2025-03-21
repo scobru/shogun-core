@@ -138,7 +138,7 @@ class MetaMask {
                     retries++;
                     if (retries < this.MAX_RETRIES) {
                         log(`Attempt ${retries + 1} of ${this.MAX_RETRIES}...`);
-                        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
+                        await new Promise((resolve) => setTimeout(resolve, this.RETRY_DELAY));
                     }
                     else {
                         throw error;
@@ -154,7 +154,7 @@ class MetaMask {
             const password = ethers.keccak256(ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`));
             return {
                 username,
-                password
+                password,
             };
         }
         catch (error) {

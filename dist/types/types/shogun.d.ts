@@ -13,6 +13,9 @@ export interface AuthResult {
     credentialId?: string;
     password?: string;
 }
+/**
+ * Sign up result interface
+ */
 export interface SignUpResult {
     success: boolean;
     userPub?: string;
@@ -21,57 +24,6 @@ export interface SignUpResult {
     error?: string;
     message?: string;
     wallet?: any;
-}
-/**
- * Payment channel configuration
- */
-export interface ChannelConfig {
-    /** Unique channel identifier */
-    channelId: string;
-    /** Ethereum address of channel creator */
-    creatorAddress: string;
-    /** Ethereum address of counterparty */
-    counterpartyAddress: string;
-    /** Initial deposit in wei */
-    initialDeposit: string;
-    /** Channel creation timestamp */
-    createdAt: number;
-    /** Dispute timeout period in seconds */
-    timeoutPeriod: number;
-    /** Smart contract address */
-    contractAddress: string;
-}
-/**
- * Current state of a payment channel
- */
-export interface ChannelState {
-    /** Unique channel identifier */
-    channelId: string;
-    /** Current balance in wei (remaining for creator) */
-    balance: string;
-    /** Sequence number to prevent replay attacks */
-    nonce: number;
-    /** Creator's signature on current state */
-    creatorSignature?: string;
-    /** Counterparty's signature on current state */
-    counterpartySignature?: string;
-    /** Last update timestamp */
-    lastUpdated: number;
-    /** Channel status */
-    status: 'open' | 'closing' | 'disputed' | 'closed';
-}
-/**
- * Result of a payment channel operation
- */
-export interface ChannelResult {
-    /** Indicates if operation was successful */
-    success: boolean;
-    /** Error message in case of failure */
-    error?: string;
-    /** Channel state after operation */
-    state?: ChannelState;
-    /** Ethereum transaction ID (if applicable) */
-    txHash?: string;
 }
 export interface IShogunCore {
     gun: IGunInstance<any>;

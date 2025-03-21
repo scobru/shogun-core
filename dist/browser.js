@@ -20,7 +20,7 @@ export function initShogunBrowser(config) {
             ...config.webauthn,
             rpId: config.webauthn?.rpId || window.location.hostname,
             enabled: config.webauthn?.enabled ?? true,
-        }
+        },
     };
     // Create a new ShogunCore instance with browser-optimized configuration
     return new ShogunCore(browserConfig);
@@ -30,7 +30,7 @@ export { ShogunCore };
 // Export main types as well
 export * from "./types/shogun";
 // Support use as a global variable when included via <script>
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
     window.ShogunCore = ShogunCore;
     window.initShogunBrowser = initShogunBrowser;
 }

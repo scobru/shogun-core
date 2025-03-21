@@ -31,7 +31,7 @@ export class ShogunCore {
         this.gun = this.gundb.getGun();
         this.webauthn = new Webauthn();
         this.metamask = new MetaMask();
-        this.stealth = new Stealth();
+        this.stealth = new Stealth(this.storage);
         // Initialize Ethereum provider
         if (config.providerUrl) {
             this.provider = new ethers.JsonRpcProvider(config.providerUrl);
@@ -455,8 +455,7 @@ export class ShogunCore {
             logError(`Error during MetaMask registration: ${error}`);
             return {
                 success: false,
-                error: error.message ||
-                    "Unknown error during MetaMask registration",
+                error: error.message || "Unknown error during MetaMask registration",
             };
         }
     }
@@ -644,3 +643,4 @@ export { Stealth, } from "./stealth/stealth";
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";
+export { WalletManager } from "./wallet/walletManager";
