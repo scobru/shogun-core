@@ -4,7 +4,19 @@ type Webauthn = any;
 type MetaMask = any;
 type Stealth = any;
 type GunDB = any;
-type DID = any;
+interface DID {
+    getCurrentUserDID(): Promise<string | null>;
+    resolveDID(did: string): Promise<any>;
+    authenticateWithDID(did: string, challenge?: string): Promise<AuthResult>;
+    createDID(options?: any): Promise<string>;
+    updateDIDDocument(did: string, documentUpdates: any): Promise<boolean>;
+    deactivateDID(did: string): Promise<boolean>;
+    registerDIDOnChain(did: string, signer?: ethers.Signer): Promise<{
+        success: boolean;
+        txHash?: string;
+        error?: string;
+    }>;
+}
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -65,6 +77,17 @@ export interface WebauthnConfig {
     rpId?: string;
 }
 /**
+ * DID configuration
+ */
+export interface DIDConfig {
+    /** DID registry address on blockchain */
+    registryAddress?: string;
+    /** Default network for DIDs */
+    network?: string;
+    /** Enable DID functionalities */
+    enabled?: boolean;
+}
+/**
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
@@ -94,6 +117,8 @@ export interface ShogunSDKConfig {
         /** Enable MetaMask */
         enabled?: boolean;
     };
+    /** DID configuration */
+    did?: DIDConfig;
 }
 export interface WalletInfo {
     wallet: any;
