@@ -2,22 +2,32 @@
   "name": "shogun-core",
   "version": "1.0.0",
   "description": "SHOGUN SDK - Libreria semplificata per la gestione di wallet crypto con GunDB",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "tsc --watch",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "docs": "yarn typedoc --options typedoc.json",
-    "build:browser": "webpack --config webpack.config.cjs"
-  },
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
-  "browser": "dist/browser/shogun-core.js",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "browser": "./dist/browser/shogun-core.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs && npm run build:browser",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "build:browser": "webpack --config webpack.config.cjs",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "docs": "yarn typedoc --options typedoc.json"
+  },
   "keywords": [
     "gun",
     "ethereum",
@@ -27,14 +37,6 @@
   ],
   "author": "Scobru",
   "license": "MIT",
-  "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.js"
-    }
-  },
   "dependencies": {
     "base64url": "^3.0.1",
     "ethers": "^6.11.1",
