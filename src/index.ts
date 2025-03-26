@@ -922,6 +922,42 @@ export class ShogunCore implements IShogunCore {
       throw new Error("Failed to generate mnemonic phrase");
     }
   }
+
+  /**
+   * Set the RPC URL used for Ethereum network connections
+   * @param rpcUrl The RPC provider URL to use
+   * @returns True if the URL was successfully set
+   */
+  setRpcUrl(rpcUrl: string): boolean {
+    try {
+      if (!rpcUrl) {
+        log("Invalid RPC URL provided");
+        return false;
+      }
+      
+      this.walletManager.setRpcUrl(rpcUrl);
+      
+      // Update the provider if it's already initialized
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      
+      log(`RPC URL updated to: ${rpcUrl}`);
+      return true;
+    } catch (error) {
+      logError("Failed to set RPC URL", error);
+      return false;
+    }
+  }
+  
+  /**
+   * Get the currently configured RPC URL
+   * @returns The current provider URL or null if not set
+   */
+  getRpcUrl(): string | null {
+    // Access the provider URL if available
+    return this.provider instanceof ethers.JsonRpcProvider ? 
+      (this.provider as any).connection?.url || null : 
+      null;
+  }
 }
 
 // Export all types

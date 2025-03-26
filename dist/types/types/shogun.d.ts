@@ -49,6 +49,8 @@ export interface IShogunCore {
     stealth: Stealth;
     did: DID;
     getRecentErrors(count?: number): ShogunError[];
+    setRpcUrl(rpcUrl: string): boolean;
+    getRpcUrl(): string | null;
     login(username: string, password: string): Promise<AuthResult>;
     loginWithWebAuthn(username: string): Promise<AuthResult>;
     loginWithMetaMask(address: string): Promise<AuthResult>;

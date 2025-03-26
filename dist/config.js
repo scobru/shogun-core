@@ -27,9 +27,7 @@ export const CONFIG = {
         MIN_USERNAME_LENGTH: 3,
     },
     PREFIX: "⚔️ ShogunSDK:",
-    PEERS: [
-        "https://gun-relay.scobrudot.dev/gun"
-    ],
+    PEERS: ["https://gun-relay.scobrudot.dev/gun"],
     MESSAGE_TO_SIGN: "Access With Shogun",
 };
 export default CONFIG;

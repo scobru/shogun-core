@@ -702,7 +702,7 @@ class WalletManager {
      * Export the mnemonic phrase, optionally encrypting it with a password
      * @param password Optional password to encrypt the exported data
      * @returns Exported mnemonic phrase (SENSITIVE DATA!)
-     * @important This method exports your mnemonic phrase which gives FULL ACCESS to all your wallets.
+     * SECURITY WARNING: This method exports your mnemonic phrase which gives FULL ACCESS to all your wallets.
      * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportMnemonic(password) {
@@ -728,7 +728,7 @@ class WalletManager {
      * Export wallet private keys, optionally encrypted with a password
      * @param password Optional password to encrypt the exported data
      * @returns Exported wallet keys (SENSITIVE DATA!)
-     * @important This method exports your wallet private keys which give FULL ACCESS to your funds.
+     * SECURITY WARNING: This method exports your wallet private keys which give FULL ACCESS to your funds.
      * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportWalletKeys(password) {
@@ -769,7 +769,7 @@ class WalletManager {
      * Export GunDB pair, optionally encrypted with a password
      * @param password Optional password to encrypt the exported data
      * @returns Exported GunDB pair (SENSITIVE DATA!)
-     * @important This method exports your GunDB credentials which give access to your encrypted data.
+     * SECURITY WARNING: This method exports your GunDB credentials which give access to your encrypted data.
      * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportGunPair(password) {

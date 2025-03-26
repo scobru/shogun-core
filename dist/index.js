@@ -31,7 +31,7 @@ export class ShogunCore {
             this.eventEmitter.emit("error", {
                 action: error.code,
                 message: error.message,
-                type: error.type
+                type: error.type,
             });
         });
         const gundbConfig = {
@@ -57,7 +57,7 @@ export class ShogunCore {
             log("WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.");
         }
         this.walletManager = new WalletManager(this.gundb, this.gun, this.storage, {
-            balanceCacheTTL: config.wallet?.balanceCacheTTL
+            balanceCacheTTL: config.wallet?.balanceCacheTTL,
         });
         // Configure RPC URL if provided
         if (config.providerUrl) {
@@ -735,6 +735,38 @@ export class ShogunCore {
             logError("Error generating mnemonic:", error);
             throw new Error("Failed to generate mnemonic phrase");
         }
+    }
+    /**
+     * Set the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
+     * @returns True if the URL was successfully set
+     */
+    setRpcUrl(rpcUrl) {
+        try {
+            if (!rpcUrl) {
+                log("Invalid RPC URL provided");
+                return false;
+            }
+            this.walletManager.setRpcUrl(rpcUrl);
+            // Update the provider if it's already initialized
+            this.provider = new ethers.JsonRpcProvider(rpcUrl);
+            log(`RPC URL updated to: ${rpcUrl}`);
+            return true;
+        }
+        catch (error) {
+            logError("Failed to set RPC URL", error);
+            return false;
+        }
+    }
+    /**
+     * Get the currently configured RPC URL
+     * @returns The current provider URL or null if not set
+     */
+    getRpcUrl() {
+        // Access the provider URL if available
+        return this.provider instanceof ethers.JsonRpcProvider ?
+            this.provider.connection?.url || null :
+            null;
     }
 }
 // Export all types

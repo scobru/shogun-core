@@ -231,6 +231,17 @@ export declare class ShogunCore implements IShogunCore {
      * that can be used to derive HD wallets
      */
     generateNewMnemonic(): string;
+    /**
+     * Set the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
+     * @returns True if the URL was successfully set
+     */
+    setRpcUrl(rpcUrl: string): boolean;
+    /**
+     * Get the currently configured RPC URL
+     * @returns The current provider URL or null if not set
+     */
+    getRpcUrl(): string | null;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";

@@ -57,6 +57,10 @@ export interface IShogunCore {
   // Error handling methods
   getRecentErrors(count?: number): ShogunError[];
 
+  // RPC Provider methods
+  setRpcUrl(rpcUrl: string): boolean;
+  getRpcUrl(): string | null;
+
   // Direct authentication methods
   login(username: string, password: string): Promise<AuthResult>;
   loginWithWebAuthn(username: string): Promise<AuthResult>;

@@ -32,7 +32,7 @@ function createError(type, code, message, originalError) {
         code,
         message,
         originalError,
-        timestamp: Date.now()
+        timestamp: Date.now(),
     };
 }
 /**
