@@ -5,6 +5,7 @@ import { Webauthn } from "../webauthn/webauthn";
 import { MetaMask } from "../connector/metamask";
 import { Stealth } from "../stealth/stealth";
 import { GunDB } from "../gun/gun";
+import { DIDCreateOptions } from "../did/DID";
 
 // Definizione dell'interfaccia DID
 interface DID {
@@ -165,10 +166,6 @@ export interface ShogunSDKConfig {
   peers?: string[];
   /** Ethereum provider URL */
   providerUrl?: string;
-  /** Payment channel contract address */
-  paymentChannelContract?: string;
-  /** State authority */
-  stateAuthority?: string;
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;
   /** MetaMask configuration */

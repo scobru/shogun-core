@@ -127,10 +127,6 @@ export interface ShogunSDKConfig {
     peers?: string[];
     /** Ethereum provider URL */
     providerUrl?: string;
-    /** Payment channel contract address */
-    paymentChannelContract?: string;
-    /** State authority */
-    stateAuthority?: string;
     /** WebAuthn configuration */
     webauthn?: WebauthnConfig;
     /** MetaMask configuration */
