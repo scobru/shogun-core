@@ -5,6 +5,7 @@ import Gun from "gun";
 import "gun/sea";
 import CONFIG from "../config";
 import { log, logError } from "../utils/logger";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 /**
  * GunDB - Simplified Gun management with advanced Auth
  *
@@ -163,6 +164,7 @@ class GunDB {
                 this.gun.user().auth(username, password, (ack) => {
                     if (ack.err) {
                         logError(`Login error: ${ack.err}`);
+                        ErrorHandler.handle(ErrorType.GUN, "LOGIN_FAILED", `Login error: ${ack.err}`, ack);
                         resolve({
                             success: false,
                             error: ack.err,
@@ -171,6 +173,7 @@ class GunDB {
                     else {
                         const user = this.gun.user();
                         if (!user.is) {
+                            ErrorHandler.handle(ErrorType.GUN, "AUTH_VERIFICATION_FAILED", "Login failed: user not authenticated", null);
                             resolve({
                                 success: false,
                                 error: "Login failed: user not authenticated",
@@ -191,6 +194,7 @@ class GunDB {
         }
         catch (error) {
             logError("Error during login:", error);
+            ErrorHandler.handle(ErrorType.GUN, "LOGIN_EXCEPTION", error instanceof Error ? error.message : "Unknown error during login", error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Unknown error",

@@ -1,9 +1,10 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
-type Webauthn = any;
-type MetaMask = any;
-type Stealth = any;
-type GunDB = any;
+import { ShogunError } from "../utils/errorHandler";
+import { Webauthn } from "../webauthn/webauthn";
+import { MetaMask } from "../connector/metamask";
+import { Stealth } from "../stealth/stealth";
+import { GunDB } from "../gun/gun";
 interface DID {
     getCurrentUserDID(): Promise<string | null>;
     resolveDID(did: string): Promise<any>;
@@ -47,6 +48,7 @@ export interface IShogunCore {
     metamask: MetaMask;
     stealth: Stealth;
     did: DID;
+    getRecentErrors(count?: number): ShogunError[];
     login(username: string, password: string): Promise<AuthResult>;
     loginWithWebAuthn(username: string): Promise<AuthResult>;
     loginWithMetaMask(address: string): Promise<AuthResult>;
@@ -62,6 +64,23 @@ export interface IShogunCore {
     signTransaction(wallet: ethers.Wallet, toAddress: string, value: string): Promise<string>;
     getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
     generateNewMnemonic(): string;
+    exportMnemonic(password?: string): Promise<string>;
+    exportWalletKeys(password?: string): Promise<string>;
+    exportGunPair(password?: string): Promise<string>;
+    exportAllUserData(password: string): Promise<string>;
+    importMnemonic(mnemonicData: string, password?: string): Promise<boolean>;
+    importWalletKeys(walletsData: string, password?: string): Promise<number>;
+    importGunPair(pairData: string, password?: string): Promise<boolean>;
+    importAllUserData(backupData: string, password: string, options?: {
+        importMnemonic?: boolean;
+        importWallets?: boolean;
+        importGunPair?: boolean;
+    }): Promise<{
+        success: boolean;
+        mnemonicImported?: boolean;
+        walletsImported?: number;
+        gunPairImported?: boolean;
+    }>;
     logout(): void;
     isLoggedIn(): boolean;
 }
@@ -94,20 +113,20 @@ export interface ShogunSDKConfig {
     /** GunDB configuration */
     gundb?: {
         /** List of peers to use */
-        peers: string[];
+        peers?: string[];
+        /** Enable websocket */
+        websocket?: boolean;
+        /** Enable radisk for disk storage */
+        radisk?: boolean;
+        /** Enable localStorage */
+        localStorage?: boolean;
     };
     /** List of peers to use (deprecated, use gundb.peers) */
     peers?: string[];
-    /** Enable websocket */
-    websocket?: boolean;
     /** Ethereum provider URL */
     providerUrl?: string;
     /** Payment channel contract address */
     paymentChannelContract?: string;
-    /** Enable radisk for disk storage */
-    radisk?: boolean;
-    /** Enable localStorage */
-    localStorage?: boolean;
     /** State authority */
     stateAuthority?: string;
     /** WebAuthn configuration */
@@ -119,6 +138,11 @@ export interface ShogunSDKConfig {
     };
     /** DID configuration */
     did?: DIDConfig;
+    /** Wallet configuration */
+    wallet?: {
+        /** Balance cache TTL in milliseconds (default: 30000) */
+        balanceCacheTTL?: number;
+    };
 }
 export interface WalletInfo {
     wallet: any;

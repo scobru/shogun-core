@@ -17,8 +17,18 @@ import { WalletManager } from "./wallet/walletManager";
 import CONFIG from "./config";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
+import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 
-export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions } from "./did/DID";
+export {
+  ShogunDID,
+  DIDDocument,
+  DIDResolutionResult,
+  DIDCreateOptions,
+} from "./did/DID";
+
+// Esportare anche i tipi per la gestione degli errori
+export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
+
 let gun: any;
 
 export class ShogunCore implements IShogunCore {
@@ -46,11 +56,20 @@ export class ShogunCore implements IShogunCore {
     this.storage = new Storage();
     this.eventEmitter = new EventEmitter();
 
+    // Configura l'error handler per emettere eventi tramite EventEmitter
+    ErrorHandler.addListener((error: ShogunError) => {
+      this.eventEmitter.emit("error", {
+        action: error.code,
+        message: error.message,
+        type: error.type,
+      });
+    });
+
     const gundbConfig = {
       peers: config.gundb?.peers || config.peers || CONFIG.PEERS,
-      websocket: config.websocket,
-      localStorage: false,
-      radisk: false,
+      websocket: config.gundb?.websocket ?? false,
+      localStorage: config.gundb?.localStorage ?? false,
+      radisk: config.gundb?.radisk ?? false,
     };
 
     this.gundb = new GunDB(gundbConfig);
@@ -64,14 +83,34 @@ export class ShogunCore implements IShogunCore {
     // Initialize Ethereum provider
     if (config.providerUrl) {
       this.provider = new ethers.JsonRpcProvider(config.providerUrl);
+      log(`Using configured provider URL: ${config.providerUrl}`);
     } else {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
+      log(
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
+      );
     }
 
-    this.walletManager = new WalletManager(this.gundb, this.gun, this.storage);
+    this.walletManager = new WalletManager(this.gundb, this.gun, this.storage, {
+      balanceCacheTTL: config.wallet?.balanceCacheTTL,
+    });
+
+    // Configure RPC URL if provided
+    if (config.providerUrl) {
+      this.walletManager.setRpcUrl(config.providerUrl);
+    }
 
     log("ShogunSDK initialized!");
+  }
+
+  /**
+   * Recupera gli errori recenti registrati dal sistema
+   * @param count - Numero di errori da recuperare
+   * @returns Lista degli errori più recenti
+   */
+  getRecentErrors(count: number = 10): ShogunError[] {
+    return ErrorHandler.getRecentErrors(count);
   }
 
   /**
@@ -111,11 +150,13 @@ export class ShogunCore implements IShogunCore {
       this.eventEmitter.emit("auth:logout", {});
       log("Logout completed successfully");
     } catch (error) {
-      logError("Error during logout:", error);
-      this.eventEmitter.emit("error", {
-        action: "logout",
-        message: error instanceof Error ? error.message : "Error during logout",
-      });
+      // Usa il gestore errori centralizzato
+      ErrorHandler.handle(
+        ErrorType.AUTHENTICATION,
+        "LOGOUT_FAILED",
+        error instanceof Error ? error.message : "Error during logout",
+        error,
+      );
     }
   }
 
@@ -189,7 +230,14 @@ export class ShogunCore implements IShogunCore {
 
       return result;
     } catch (error: any) {
-      logError(`Error during login for user ${username}:`, error);
+      // Usa il gestore errori centralizzato
+      ErrorHandler.handle(
+        ErrorType.AUTHENTICATION,
+        "LOGIN_FAILED",
+        error.message || "Unknown error during login",
+        error,
+      );
+
       return {
         success: false,
         error: error.message || "Unknown error during login",
@@ -293,20 +341,20 @@ export class ShogunCore implements IShogunCore {
           userPub: result.userPub || "",
           username,
         });
-        
+
         // Creare automaticamente un DID per il nuovo utente
         try {
           const did = await this.did.createDID({
             network: "main",
             controller: result.userPub,
           });
-          
+
           log(`Created DID for new user: ${did}`);
-          
+
           // Aggiungiamo l'informazione sul DID al risultato
           return {
             ...result,
-            did: did
+            did: did,
           };
         } catch (didError) {
           // Se la creazione del DID fallisce, logghiamo l'errore ma non facciamo fallire la registrazione
@@ -437,36 +485,38 @@ export class ShogunCore implements IShogunCore {
         log(
           `WebAuthn registration completed successfully for user: ${username}`,
         );
-        
+
         // Creare automaticamente un DID per il nuovo utente
         try {
           const did = await this.did.createDID({
-            network: "main", 
+            network: "main",
             controller: result.userPub,
-            services: [{
-              type: "WebAuthnVerification",
-              endpoint: `webauthn:${username}`
-            }]
+            services: [
+              {
+                type: "WebAuthnVerification",
+                endpoint: `webauthn:${username}`,
+              },
+            ],
           });
-          
+
           log(`Created DID for WebAuthn user: ${did}`);
-          
+
           return {
             ...result,
             username,
             password: hashedCredentialId,
             credentialId: attestationResult.credentialId,
-            did: did
+            did: did,
           };
         } catch (didError) {
           logError("Error creating DID for WebAuthn user:", didError);
         }
-        
+
         return {
           ...result,
           username,
           password: hashedCredentialId,
-          credentialId: attestationResult.credentialId
+          credentialId: attestationResult.credentialId,
         };
       } else {
         return result;
@@ -587,24 +637,26 @@ export class ShogunCore implements IShogunCore {
           const did = await this.did.createDID({
             network: "main",
             controller: result.userPub,
-            services: [{
-              type: "EcdsaSecp256k1Verification",
-              endpoint: `ethereum:${address}`
-            }]
+            services: [
+              {
+                type: "EcdsaSecp256k1Verification",
+                endpoint: `ethereum:${address}`,
+              },
+            ],
           });
-          
+
           log(`Created DID for MetaMask user: ${did}`);
-          
+
           return {
             ...result,
             username: credentials.username,
             password: credentials.password,
-            did: did
+            did: did,
           };
         } catch (didError) {
           logError("Error creating DID for MetaMask user:", didError);
         }
-        
+
         return {
           ...result,
           username: credentials.username,
@@ -655,12 +707,41 @@ export class ShogunCore implements IShogunCore {
     try {
       if (!this.isLoggedIn()) {
         log("Cannot load wallets: user not authenticated");
+
+        // Segnaliamo l'errore con il gestore centralizzato ma non interrompiamo il flusso
+        ErrorHandler.handle(
+          ErrorType.AUTHENTICATION,
+          "AUTH_REQUIRED",
+          "User authentication required to load wallets",
+          null,
+        );
+
         return [];
       }
 
-      return await this.walletManager.loadWallets();
+      try {
+        return await this.walletManager.loadWallets();
+      } catch (walletError) {
+        // Gestiamo l'errore in modo più dettagliato
+        ErrorHandler.handle(
+          ErrorType.WALLET,
+          "LOAD_WALLETS_ERROR",
+          `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`,
+          walletError,
+        );
+
+        // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
+        return [];
+      }
     } catch (error) {
-      logError("Error loading wallets:", error);
+      // Catturiamo errori generici imprevisti
+      ErrorHandler.handle(
+        ErrorType.UNKNOWN,
+        "UNEXPECTED_ERROR",
+        `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
+
       return [];
     }
   }

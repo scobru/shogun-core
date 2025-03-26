@@ -39,8 +39,27 @@ module.exports = {
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser',
     }),
+    // Ignora avvisi specifici per Gun.js
+    new webpack.IgnorePlugin({
+      resourceRegExp: /gun\/(sea|lib)$/,
+      contextRegExp: /node_modules/,
+    }),
   ],
   optimization: {
     minimize: true,
+  },
+  // Configurazione per ignorare avvisi specifici
+  ignoreWarnings: [
+    // Ignora avvisi relativi a Gun.js
+    {
+      module: /node_modules\/gun/,
+      message: /Critical dependency/,
+    },
+  ],
+  // Aumentare il limite della dimensione per evitare avvisi di performance
+  performance: {
+    maxEntrypointSize: 550000,
+    maxAssetSize: 550000,
+    hints: 'warning',
   },
 }; 

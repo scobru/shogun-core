@@ -17,15 +17,17 @@ export declare class WalletManager {
     private mainWallet;
     private balanceCache;
     private balanceCacheTTL;
-    private defaultRpcUrl;
     private configuredRpcUrl;
     /**
      * Creates a new WalletManager instance
      * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
+     * @param options Additional configuration options
      */
-    constructor(gundb: GunDB, gun: any, storage: Storage);
+    constructor(gundb: GunDB, gun: any, storage: Storage, options?: {
+        balanceCacheTTL?: number;
+    });
     /**
      * Sets the RPC URL used for Ethereum network connections
      * @param rpcUrl The RPC provider URL to use
@@ -39,6 +41,7 @@ export declare class WalletManager {
     /**
      * Initializes wallet paths from both GunDB and localStorage
      * @private
+     * @throws {Error} If there's an error during wallet path initialization
      */
     private initializeWalletPaths;
     /**
@@ -141,21 +144,27 @@ export declare class WalletManager {
      */
     resetMainWallet(): void;
     /**
-     * Export user's mnemonic phrase
-     * @param password Optional password to encrypt exported mnemonic
-     * @returns The mnemonic in clear text or encrypted if password provided
+     * Export the mnemonic phrase, optionally encrypting it with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported mnemonic phrase (SENSITIVE DATA!)
+     * @important This method exports your mnemonic phrase which gives FULL ACCESS to all your wallets.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     exportMnemonic(password?: string): Promise<string>;
     /**
-     * Export private keys of all generated wallets
-     * @param password Optional password to encrypt exported data
-     * @returns JSON object containing all wallets with their private keys
+     * Export wallet private keys, optionally encrypted with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported wallet keys (SENSITIVE DATA!)
+     * @important This method exports your wallet private keys which give FULL ACCESS to your funds.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     exportWalletKeys(password?: string): Promise<string>;
     /**
-     * Esporta il pair (coppia di chiavi) di Gun dell'utente
-     * @param password Password opzionale per cifrare i dati esportati
-     * @returns Il pair di Gun in formato JSON
+     * Export GunDB pair, optionally encrypted with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported GunDB pair (SENSITIVE DATA!)
+     * @important This method exports your GunDB credentials which give access to your encrypted data.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     exportGunPair(password?: string): Promise<string>;
     /**
@@ -202,4 +211,15 @@ export declare class WalletManager {
         walletsImported?: number;
         gunPairImported?: boolean;
     }>;
+    /**
+     * Update the balance cache TTL
+     * @param ttlMs Time-to-live in milliseconds
+     */
+    setBalanceCacheTTL(ttlMs: number): void;
+    /**
+     * Verifica se l'utente è autenticato
+     * @returns true se l'utente è autenticato
+     * @private
+     */
+    private isUserAuthenticated;
 }

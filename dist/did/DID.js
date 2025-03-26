@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { log, logError } from "../utils/logger";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 /**
  * ShogunDID class for decentralized identity management
  */
@@ -21,15 +22,21 @@ export class ShogunDID {
     async createDID(options = {}) {
         try {
             if (!this.core.isLoggedIn()) {
-                throw new Error("User must be logged in to create a DID");
+                const error = new Error("User must be logged in to create a DID");
+                ErrorHandler.handle(ErrorType.DID, "AUTH_REQUIRED", "User must be logged in to create a DID", error);
+                throw error;
             }
             // Get user's public key from GunDB
             const userPub = this.getUserPublicKey();
             if (!userPub) {
-                throw new Error("Cannot retrieve user's public key");
+                const error = new Error("Cannot retrieve user's public key");
+                ErrorHandler.handle(ErrorType.DID, "NO_PUBLIC_KEY", "Cannot retrieve user's public key", error);
+                throw error;
             }
             // Create a base method-specific ID using the user's GunDB public key
-            let methodSpecificId = ethers.keccak256(ethers.toUtf8Bytes(userPub)).slice(2, 42);
+            let methodSpecificId = ethers
+                .keccak256(ethers.toUtf8Bytes(userPub))
+                .slice(2, 42);
             // Add network prefix if specified
             if (options.network) {
                 methodSpecificId = `${options.network}:${methodSpecificId}`;
@@ -43,6 +50,7 @@ export class ShogunDID {
         }
         catch (error) {
             logError("Error creating DID:", error);
+            ErrorHandler.handle(ErrorType.DID, "CREATE_DID_ERROR", error instanceof Error ? error.message : "Error creating DID", error);
             throw error;
         }
     }
@@ -61,7 +69,10 @@ export class ShogunDID {
             }
             return new Promise((resolve) => {
                 // Try to find existing DID in user's space
-                this.core.gun.user().get("did").once((data) => {
+                this.core.gun
+                    .user()
+                    .get("did")
+                    .once((data) => {
                     if (data && typeof data === "string") {
                         resolve(data);
                     }
@@ -104,7 +115,10 @@ export class ShogunDID {
             }
             // Try to find the DID Document in GunDB
             return new Promise((resolve) => {
-                this.core.gun.get("dids").get(did).once((didDocData) => {
+                this.core.gun
+                    .get("dids")
+                    .get(did)
+                    .once((didDocData) => {
                     if (!didDocData) {
                         resolve(this.createErrorResolution("notFound", "DID Document not found"));
                         return;
@@ -189,7 +203,9 @@ export class ShogunDID {
             logError("Error authenticating with DID:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Unknown error during authentication",
+                error: error instanceof Error
+                    ? error.message
+                    : "Unknown error during authentication",
             };
         }
     }
@@ -227,7 +243,10 @@ export class ShogunDID {
             };
             // Update the DID Document in GunDB
             return new Promise((resolve) => {
-                this.core.gun.get("dids").get(did).put({
+                this.core.gun
+                    .get("dids")
+                    .get(did)
+                    .put({
                     document: JSON.stringify(updatedDocument),
                     updated: new Date().toISOString(),
                 }, (ack) => {
@@ -264,7 +283,10 @@ export class ShogunDID {
                 throw new Error("Cannot deactivate a DID you don't control");
             }
             return new Promise((resolve) => {
-                this.core.gun.get("dids").get(did).put({
+                this.core.gun
+                    .get("dids")
+                    .get(did)
+                    .put({
                     deactivated: true,
                     updated: new Date().toISOString(),
                 }, (ack) => {
@@ -309,7 +331,7 @@ export class ShogunDID {
         const document = {
             "@context": [
                 "https://www.w3.org/ns/did/v1",
-                "https://w3id.org/security/suites/ed25519-2020/v1"
+                "https://w3id.org/security/suites/ed25519-2020/v1",
             ],
             id: did,
             controller: options.controller || did,
@@ -318,18 +340,18 @@ export class ShogunDID {
                     id: `${did}#keys-1`,
                     type: "Ed25519VerificationKey2020",
                     controller: did,
-                    publicKeyMultibase: `z${userPub}`
-                }
+                    publicKeyMultibase: `z${userPub}`,
+                },
             ],
             authentication: [`${did}#keys-1`],
-            assertionMethod: [`${did}#keys-1`]
+            assertionMethod: [`${did}#keys-1`],
         };
         // Add services if provided
         if (options.services && options.services.length > 0) {
             document.service = options.services.map((service, index) => ({
                 id: `${did}#service-${index + 1}`,
                 type: service.type,
-                serviceEndpoint: service.endpoint
+                serviceEndpoint: service.endpoint,
             }));
         }
         return document;
@@ -346,7 +368,10 @@ export class ShogunDID {
         const timestamp = new Date().toISOString();
         // Store DID as the current user's DID
         await new Promise((resolve, reject) => {
-            this.core.gun.user().get("did").put(did, (ack) => {
+            this.core.gun
+                .user()
+                .get("did")
+                .put(did, (ack) => {
                 if (ack.err)
                     reject(new Error(ack.err));
                 else
@@ -355,11 +380,14 @@ export class ShogunDID {
         });
         // Store DID Document in public space
         await new Promise((resolve, reject) => {
-            this.core.gun.get("dids").get(did).put({
+            this.core.gun
+                .get("dids")
+                .get(did)
+                .put({
                 document: JSON.stringify(didDocument),
                 created: timestamp,
                 updated: timestamp,
-                deactivated: false
+                deactivated: false,
             }, (ack) => {
                 if (ack.err)
                     reject(new Error(ack.err));
@@ -393,7 +421,7 @@ export class ShogunDID {
         return {
             "@context": "https://www.w3.org/ns/did/v1",
             id: did,
-            authentication: []
+            authentication: [],
         };
     }
     extractAuthenticationMethod(document) {
@@ -404,12 +432,12 @@ export class ShogunDID {
             if (typeof auth === "string") {
                 // Reference to a verification method
                 const methodId = auth;
-                const method = document.verificationMethod?.find(vm => vm.id === methodId);
+                const method = document.verificationMethod?.find((vm) => vm.id === methodId);
                 if (method) {
                     return {
                         id: method.id,
                         type: method.type,
-                        controller: method.controller
+                        controller: method.controller,
                     };
                 }
             }
@@ -441,15 +469,15 @@ export class ShogunDID {
             if (didDoc.didResolutionMetadata.error || !didDoc.didDocument) {
                 return {
                     success: false,
-                    error: "Impossibile recuperare il documento DID per l'autenticazione"
+                    error: "Impossibile recuperare il documento DID per l'autenticazione",
                 };
             }
             // Cerca nei servizi se ci sono credenziali o informazioni di autenticazione
-            const gunAuthService = didDoc.didDocument.service?.find(service => service.type === "GunDBAuthentication");
+            const gunAuthService = didDoc.didDocument.service?.find((service) => service.type === "GunDBAuthentication");
             if (!gunAuthService) {
                 return {
                     success: false,
-                    error: "Nessun servizio di autenticazione GunDB trovato nel documento DID"
+                    error: "Nessun servizio di autenticazione GunDB trovato nel documento DID",
                 };
             }
             // Cerca di estrarre la password o altri dati di autenticazione
@@ -457,7 +485,7 @@ export class ShogunDID {
             const authData = typeof serviceEndpoint === "string"
                 ? { username }
                 : { ...serviceEndpoint, username };
-            if (!authData.hasOwnProperty('password')) {
+            if (!authData.hasOwnProperty("password")) {
                 // Se non c'è una password esplicita, proviamo ad usare una derivata dal DID
                 // Questo è solo un esempio, in un caso reale si dovrebbe usare un metodo più sicuro
                 const derivedPassword = ethers.keccak256(ethers.toUtf8Bytes(`${authMethod.id}:${challenge || ""}`));
@@ -471,7 +499,9 @@ export class ShogunDID {
             logError("Errore durante l'autenticazione con GunDB:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Errore sconosciuto durante l'autenticazione GunDB"
+                error: error instanceof Error
+                    ? error.message
+                    : "Errore sconosciuto durante l'autenticazione GunDB",
             };
         }
     }
@@ -497,7 +527,7 @@ export class ShogunDID {
             }
             // Definire l'interfaccia del contratto
             const didRegistryABI = [
-                "function registerDID(string did, string controller) public returns (bool)"
+                "function registerDID(string did, string controller) public returns (bool)",
             ];
             // Indirizzo del contratto di registro DID (configurabile)
             const didRegistryAddress = "0x1234..."; // Da configurare
@@ -510,14 +540,14 @@ export class ShogunDID {
             log(`DID registered on blockchain: ${did}, tx: ${receipt.hash}`);
             return {
                 success: true,
-                txHash: receipt.hash
+                txHash: receipt.hash,
             };
         }
         catch (error) {
             logError("Error registering DID on blockchain:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Unknown error"
+                error: error instanceof Error ? error.message : "Unknown error",
             };
         }
     }
@@ -531,7 +561,7 @@ export class ShogunDID {
             // Definire l'interfaccia del contratto (ABI semplificato per esempio)
             const didRegistryABI = [
                 "function isDIDRegistered(string did) public view returns (bool)",
-                "function getDIDController(string did) public view returns (string)"
+                "function getDIDController(string did) public view returns (string)",
             ];
             // Indirizzo del contratto di registro DID
             const didRegistryAddress = "0x1234..."; // Da sostituire con l'indirizzo reale
@@ -551,14 +581,14 @@ export class ShogunDID {
             const controller = await didRegistryContract.getDIDController(did);
             return {
                 isRegistered: true,
-                controller
+                controller,
             };
         }
         catch (error) {
             logError("Error verifying DID on blockchain:", error);
             return {
                 isRegistered: false,
-                error: error instanceof Error ? error.message : "Unknown error"
+                error: error instanceof Error ? error.message : "Unknown error",
             };
         }
     }

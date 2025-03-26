@@ -4,6 +4,7 @@
 import { ethers } from "ethers";
 import { log, logDebug, logError } from "../utils/logger";
 import CONFIG from "../config";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 /**
  * Class for MetaMask connection
  */
@@ -65,9 +66,11 @@ class MetaMask {
         try {
             // Check if MetaMask is available
             if (!MetaMask.isMetaMaskAvailable()) {
+                const error = "MetaMask is not available. Please install MetaMask extension.";
+                ErrorHandler.handle(ErrorType.NETWORK, "METAMASK_NOT_AVAILABLE", error, null);
                 return {
                     success: false,
-                    error: "MetaMask is not available. Please install MetaMask extension.",
+                    error,
                 };
             }
             const ethereum = window.ethereum;
@@ -78,9 +81,11 @@ class MetaMask {
                 });
                 // Verify if there are available accounts
                 if (!accounts || accounts.length === 0) {
+                    const error = "No accounts found in MetaMask";
+                    ErrorHandler.handle(ErrorType.NETWORK, "NO_METAMASK_ACCOUNTS", error, null);
                     return {
                         success: false,
-                        error: "No accounts found in MetaMask",
+                        error,
                     };
                 }
                 // Validate and normalize address
@@ -94,6 +99,7 @@ class MetaMask {
             }
             catch (error) {
                 logError("Error accessing MetaMask:", error);
+                ErrorHandler.handle(ErrorType.NETWORK, "METAMASK_ACCESS_ERROR", error.message || "Error connecting to MetaMask", error);
                 return {
                     success: false,
                     error: error.message || "Error connecting to MetaMask",
@@ -102,6 +108,7 @@ class MetaMask {
         }
         catch (error) {
             logError("General error in connectMetaMask:", error);
+            ErrorHandler.handle(ErrorType.NETWORK, "METAMASK_CONNECTION_ERROR", error.message || "Unknown error while connecting to MetaMask", error);
             return {
                 success: false,
                 error: error.message || "Unknown error while connecting to MetaMask",

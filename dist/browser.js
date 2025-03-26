@@ -2,19 +2,33 @@
  * Entry point for the browser version of Shogun Core
  */
 import { ShogunCore } from "./index";
+import { log } from "./utils/logger";
+// Lazy loading dei moduli pesanti
+const loadWebAuthnModule = () => import('./webauthn/webauthn');
+const loadStealthModule = () => import('./stealth/stealth');
+const loadDIDModule = () => import('./did/DID');
 /**
  * Function to initialize Shogun in a browser environment
  *
  * @param config - Configuration for the Shogun SDK
  * @returns A new instance of ShogunCore
+ *
+ * @important For production use:
+ * - Always set custom GunDB peers via config.gundb.peers or config.peers
+ * - Always set a valid Ethereum RPC provider URL via config.providerUrl
+ * - Default values are provided only for development and testing
  */
 export function initShogunBrowser(config) {
     // Apply default browser settings
     const browserConfig = {
         ...config,
         // Make sure browser default settings are applied
-        localStorage: config.localStorage ?? true,
-        radisk: config.radisk ?? true,
+        gundb: {
+            ...config.gundb,
+            localStorage: config.gundb?.localStorage ?? true,
+            radisk: config.gundb?.radisk ?? true,
+            peers: config.gundb?.peers || config.peers,
+        },
         // WebAuthn specific settings (if not specified)
         webauthn: {
             ...config.webauthn,
@@ -22,9 +36,22 @@ export function initShogunBrowser(config) {
             enabled: config.webauthn?.enabled ?? true,
         },
     };
+    // Warn users who don't provide custom peers or providerUrl
+    if (!config.peers && (!config.gundb || !config.gundb.peers)) {
+        log("WARNING: Using default GunDB peers. For production, always configure custom peers.");
+    }
+    if (!config.providerUrl) {
+        log("WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits.");
+    }
     // Create a new ShogunCore instance with browser-optimized configuration
     return new ShogunCore(browserConfig);
 }
+// Esportazione lazy loading helpers
+export const modules = {
+    loadWebAuthn: loadWebAuthnModule,
+    loadStealth: loadStealthModule,
+    loadDID: loadDIDModule,
+};
 // Export main class for those who prefer to use it directly
 export { ShogunCore };
 // Export main types as well
@@ -33,4 +60,5 @@ export * from "./types/shogun";
 if (typeof window !== "undefined") {
     window.ShogunCore = ShogunCore;
     window.initShogunBrowser = initShogunBrowser;
+    window.ShogunModules = modules;
 }

@@ -5,6 +5,7 @@ const TIMEOUT_MS = 60000;
 const MIN_USERNAME_LENGTH = 3;
 const MAX_USERNAME_LENGTH = 64;
 import { ethers } from "ethers";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 /**
  * Generates a unique device identifier
  */
@@ -308,7 +309,11 @@ class Webauthn {
         try {
             this.validateUsername(username);
             if (!salt) {
-                throw new Error("No WebAuthn credentials found for this username");
+                ErrorHandler.handle(ErrorType.WEBAUTHN, "NO_CREDENTIALS", "No WebAuthn credentials found for this username", null);
+                return {
+                    success: false,
+                    error: "No WebAuthn credentials found for this username",
+                };
             }
             const challenge = generateChallenge(username);
             const assertionOptions = {
@@ -326,6 +331,7 @@ class Webauthn {
                     signal: abortController.signal,
                 }));
                 if (!assertion) {
+                    ErrorHandler.handle(ErrorType.WEBAUTHN, "VERIFICATION_FAILED", "WebAuthn verification failed", null);
                     throw new Error("WebAuthn verification failed");
                 }
                 const { password } = generateCredentialsFromSalt(username, salt);
@@ -342,6 +348,7 @@ class Webauthn {
         }
         catch (error) {
             console.error("WebAuthn login error:", error);
+            ErrorHandler.handle(ErrorType.WEBAUTHN, "AUTH_ERROR", error instanceof Error ? error.message : "Unknown WebAuthn error", error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Unknown error",

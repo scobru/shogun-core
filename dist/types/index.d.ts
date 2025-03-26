@@ -6,7 +6,9 @@ import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, WalletInfo } fr
 import { IGunInstance } from "gun/types/gun";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
-export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions } from "./did/DID";
+import { ShogunError } from "./utils/errorHandler";
+export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./did/DID";
+export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     gundb: GunDB;
@@ -26,6 +28,12 @@ export declare class ShogunCore implements IShogunCore {
      * authentication methods (WebAuthn, MetaMask), and wallet management.
      */
     constructor(config: ShogunSDKConfig);
+    /**
+     * Recupera gli errori recenti registrati dal sistema
+     * @param count - Numero di errori da recuperare
+     * @returns Lista degli errori più recenti
+     */
+    getRecentErrors(count?: number): ShogunError[];
     /**
      * Check if user is logged in
      * @returns {boolean} True if user is logged in, false otherwise

@@ -29,6 +29,5 @@ export declare const CONFIG: {
     PREFIX: string;
     PEERS: string[];
     MESSAGE_TO_SIGN: string;
-    DEFAULT_RPC_URL: string;
 };
 export default CONFIG;

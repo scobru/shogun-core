@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { log } from "../utils/logger";
+import { log, logError } from "../utils/logger";
 import SEA from "gun/sea";
 /**
  * Class that manages Ethereum wallet functionality including:
@@ -14,17 +14,21 @@ export class WalletManager {
      * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
+     * @param options Additional configuration options
      */
-    constructor(gundb, gun, storage) {
+    constructor(gundb, gun, storage, options) {
         this.walletPaths = {};
         this.mainWallet = null;
         this.balanceCache = new Map();
         this.balanceCacheTTL = 30000; // 30 seconds cache
-        this.defaultRpcUrl = "https://mainnet.infura.io/v3/your-project-id";
         this.configuredRpcUrl = null;
         this.gundb = gundb;
         this.gun = gun;
         this.storage = storage;
+        // Override default cache TTL if provided
+        if (options?.balanceCacheTTL !== undefined) {
+            this.balanceCacheTTL = options.balanceCacheTTL;
+        }
         this.initializeWalletPaths();
     }
     /**
@@ -40,11 +44,12 @@ export class WalletManager {
      * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider() {
-        return new ethers.JsonRpcProvider(this.configuredRpcUrl || this.defaultRpcUrl);
+        return new ethers.JsonRpcProvider(this.configuredRpcUrl);
     }
     /**
      * Initializes wallet paths from both GunDB and localStorage
      * @private
+     * @throws {Error} If there's an error during wallet path initialization
      */
     async initializeWalletPaths() {
         try {
@@ -65,6 +70,8 @@ export class WalletManager {
         }
         catch (error) {
             console.error("Error initializing wallet paths:", error);
+            // Propagare l'errore invece di sopprimerlo
+            throw new Error(`Failed to initialize wallet paths: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     /**
@@ -455,25 +462,43 @@ export class WalletManager {
             // Get user's master mnemonic
             let masterMnemonic = await this.getUserMasterMnemonic();
             if (!masterMnemonic) {
-                // Generate new mnemonic
-                masterMnemonic = this.generateNewMnemonic();
-                await this.saveUserMasterMnemonic(masterMnemonic);
-                log(`Generated new mnemonic: ${masterMnemonic}`);
+                try {
+                    // Generate new mnemonic
+                    masterMnemonic = this.generateNewMnemonic();
+                    await this.saveUserMasterMnemonic(masterMnemonic);
+                    log(`Generated new mnemonic: ${masterMnemonic}`);
+                }
+                catch (mnemonicError) {
+                    throw new Error(`Failed to generate or save mnemonic: ${mnemonicError instanceof Error ? mnemonicError.message : String(mnemonicError)}`);
+                }
             }
             log("*** masterMnemonic: ", masterMnemonic);
             // Derive wallet using secure method
-            const wallet = this.derivePrivateKeyFromMnemonic(masterMnemonic, path);
-            log(`Derived wallet for path ${path} with address ${wallet.address}`);
+            let wallet;
+            try {
+                wallet = this.derivePrivateKeyFromMnemonic(masterMnemonic, path);
+                log(`Derived wallet for path ${path} with address ${wallet.address}`);
+            }
+            catch (derivationError) {
+                throw new Error(`Failed to derive wallet: ${derivationError instanceof Error ? derivationError.message : String(derivationError)}`);
+            }
             // Save wallet path
             const timestamp = Date.now();
             this.walletPaths[wallet.address] = { path, created: timestamp };
-            // Save in user context in Gun
-            await user
-                .get("wallet_paths")
-                .get(wallet.address)
-                .put({ path, created: timestamp });
-            // Also save to localStorage
-            this.saveWalletPathsToLocalStorage();
+            try {
+                // Save in user context in Gun
+                await user
+                    .get("wallet_paths")
+                    .get(wallet.address)
+                    .put({ path, created: timestamp });
+                // Also save to localStorage
+                this.saveWalletPathsToLocalStorage();
+            }
+            catch (saveError) {
+                console.error("Error saving wallet path:", saveError);
+                log("Wallet created but path might not be persisted properly");
+                // Non blocchiamo la creazione del wallet per errori di salvataggio del path
+            }
             return {
                 wallet,
                 path,
@@ -483,7 +508,7 @@ export class WalletManager {
         }
         catch (error) {
             console.error("Error creating wallet:", error);
-            throw error;
+            throw new Error(`Failed to create wallet: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     async loadWallets() {
@@ -494,8 +519,15 @@ export class WalletManager {
                 console.error("loadWallets: No Gun user available");
                 throw new Error("Gun user not available");
             }
-            // Initialize wallet paths if not already done
-            await this.initializeWalletPaths();
+            try {
+                // Initialize wallet paths if not already done
+                await this.initializeWalletPaths();
+            }
+            catch (pathsError) {
+                // Log l'errore ma continua con i wallet disponibili (se presenti)
+                console.error("Error initializing wallet paths, proceeding with available wallets:", pathsError);
+                log("Will attempt to continue with any available wallet data");
+            }
             // Get user's master mnemonic
             let masterMnemonic = await this.getUserMasterMnemonic();
             if (!masterMnemonic) {
@@ -524,6 +556,7 @@ export class WalletManager {
                 }
                 catch (innerError) {
                     console.error(`Error deriving wallet ${address}:`, innerError);
+                    // Non interrompiamo il ciclo per un singolo wallet fallito
                 }
             }
             // Set mainWallet if there are wallets
@@ -534,7 +567,8 @@ export class WalletManager {
         }
         catch (error) {
             console.error("Error loading wallets:", error);
-            throw error;
+            // Rilanciamo l'errore con un messaggio più dettagliato
+            throw new Error(`Failed to load wallets: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     // BASIC WALLET FUNCTIONS
@@ -659,105 +693,102 @@ export class WalletManager {
         this.mainWallet = null;
     }
     /**
-     * Export user's mnemonic phrase
-     * @param password Optional password to encrypt exported mnemonic
-     * @returns The mnemonic in clear text or encrypted if password provided
+     * Export the mnemonic phrase, optionally encrypting it with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported mnemonic phrase (SENSITIVE DATA!)
+     * @important This method exports your mnemonic phrase which gives FULL ACCESS to all your wallets.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportMnemonic(password) {
         try {
-            // Get mnemonic
+            // Warn user about sensitive data (will appear in logs)
+            log("⚠️ SECURITY WARNING: Exporting mnemonic phrase - handle with extreme care!");
             const mnemonic = await this.getUserMasterMnemonic();
             if (!mnemonic) {
-                throw new Error("No mnemonic found to export");
+                throw new Error("No mnemonic available for this user");
             }
-            // If password provided, encrypt mnemonic
+            // If password provided, encrypt the mnemonic
             if (password) {
-                const encryptedData = await SEA.encrypt(mnemonic, password);
-                return JSON.stringify({
-                    type: "encrypted-mnemonic",
-                    data: encryptedData,
-                    version: "1.0",
-                });
+                return this.encryptSensitiveData(mnemonic);
             }
-            // Otherwise return clear text mnemonic
             return mnemonic;
         }
         catch (error) {
-            console.error("Error exporting mnemonic:", error);
+            logError("Error exporting mnemonic:", error);
             throw error;
         }
     }
     /**
-     * Export private keys of all generated wallets
-     * @param password Optional password to encrypt exported data
-     * @returns JSON object containing all wallets with their private keys
+     * Export wallet private keys, optionally encrypted with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported wallet keys (SENSITIVE DATA!)
+     * @important This method exports your wallet private keys which give FULL ACCESS to your funds.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportWalletKeys(password) {
         try {
-            // Load all wallets
+            // Warn user about sensitive data (will appear in logs)
+            log("⚠️ SECURITY WARNING: Exporting wallet private keys - handle with extreme care!");
+            if (!this.isUserAuthenticated()) {
+                throw new Error("User must be authenticated to export wallet keys");
+            }
+            // Get all wallets
             const wallets = await this.loadWallets();
-            if (!wallets || wallets.length === 0) {
+            if (wallets.length === 0) {
                 throw new Error("No wallets found to export");
             }
-            // Create object with wallet data
-            const walletData = wallets.map((walletInfo) => {
-                // Safety check for walletInfo.address
-                const address = walletInfo.address || "";
+            // Create export objects with only necessary data
+            const exportData = wallets.map((walletInfo) => {
+                const wallet = walletInfo.wallet;
                 return {
-                    address: address,
-                    privateKey: walletInfo.wallet.privateKey,
+                    address: wallet.address,
+                    privateKey: wallet.privateKey,
                     path: walletInfo.path,
-                    created: (address && this.walletPaths[address]?.created) || Date.now(),
+                    created: this.walletPaths[wallet.address]?.created || Date.now(),
                 };
             });
-            const exportData = {
-                wallets: walletData,
-                version: "1.0",
-                exportedAt: new Date().toISOString(),
-            };
-            // Se è stata fornita una password, cifra i dati
+            const exportString = JSON.stringify(exportData);
+            // Encrypt if password provided
             if (password) {
-                const encryptedData = await SEA.encrypt(JSON.stringify(exportData), password);
-                return JSON.stringify({
-                    type: "encrypted-wallets",
-                    data: encryptedData,
-                    version: "1.0",
-                });
+                return this.encryptSensitiveData(exportString);
             }
-            // Altrimenti restituisci i dati in chiaro
-            return JSON.stringify(exportData, null, 2);
+            return exportString;
         }
         catch (error) {
-            console.error("Errore nell'esportazione delle chiavi dei wallet:", error);
+            logError("Error exporting wallet keys:", error);
             throw error;
         }
     }
     /**
-     * Esporta il pair (coppia di chiavi) di Gun dell'utente
-     * @param password Password opzionale per cifrare i dati esportati
-     * @returns Il pair di Gun in formato JSON
+     * Export GunDB pair, optionally encrypted with a password
+     * @param password Optional password to encrypt the exported data
+     * @returns Exported GunDB pair (SENSITIVE DATA!)
+     * @important This method exports your GunDB credentials which give access to your encrypted data.
+     * Never share this data with anyone, store it securely, and only use it for backup purposes.
      */
     async exportGunPair(password) {
         try {
+            // Warn user about sensitive data (will appear in logs)
+            log("⚠️ SECURITY WARNING: Exporting GunDB pair - handle with extreme care!");
+            // Check if user is authenticated
+            if (!this.isUserAuthenticated()) {
+                throw new Error("User must be authenticated to export GunDB pair");
+            }
             const user = this.gun.user();
-            if (!user || !user._ || !user._.sea) {
-                throw new Error("Utente non autenticato o pair non disponibile");
-            }
+            // @ts-ignore - Accessing internal Gun property
             const pair = user._.sea;
-            // Se è stata fornita una password, cifra i dati
-            if (password) {
-                const encryptedData = await SEA.encrypt(JSON.stringify(pair), password);
-                return JSON.stringify({
-                    type: "encrypted-gun-pair",
-                    data: encryptedData,
-                    version: "1.0",
-                });
+            if (!pair) {
+                throw new Error("No GunDB pair available for this user");
             }
-            // Altrimenti restituisci i dati in chiaro
-            return JSON.stringify(pair, null, 2);
+            const pairExport = JSON.stringify(pair);
+            // Encrypt if password provided
+            if (password) {
+                return this.encryptSensitiveData(pairExport);
+            }
+            return pairExport;
         }
         catch (error) {
-            console.error("Errore nell'esportazione del Gun pair:", error);
+            logError("Error exporting GunDB pair:", error);
             throw error;
         }
     }
@@ -1291,5 +1322,26 @@ export class WalletManager {
             console.error("Errore nell'importazione del backup:", error);
             throw error;
         }
+    }
+    /**
+     * Update the balance cache TTL
+     * @param ttlMs Time-to-live in milliseconds
+     */
+    setBalanceCacheTTL(ttlMs) {
+        if (ttlMs < 0) {
+            throw new Error("Cache TTL must be a positive number");
+        }
+        this.balanceCacheTTL = ttlMs;
+        log(`Balance cache TTL updated to ${ttlMs}ms`);
+    }
+    /**
+     * Verifica se l'utente è autenticato
+     * @returns true se l'utente è autenticato
+     * @private
+     */
+    isUserAuthenticated() {
+        const user = this.gun.user();
+        // @ts-ignore - Accesso a proprietà interna di Gun
+        return !!(user && user._ && user._.sea);
     }
 }

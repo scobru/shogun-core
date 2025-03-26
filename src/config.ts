@@ -27,9 +27,8 @@ export const CONFIG = {
     MIN_USERNAME_LENGTH: 3,
   },
   PREFIX: "⚔️ ShogunSDK:",
-  PEERS: ["http://localhost:8765/gun"],
+  PEERS: ["https://gun-relay.scobrudot.dev/gun"],
   MESSAGE_TO_SIGN: "Access With Shogun",
-  DEFAULT_RPC_URL: "https://eth-mainnet.g.alchemy.com/v2/demo",
 };
 
 export default CONFIG;

@@ -23,6 +23,8 @@
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs",
     "build:browser": "webpack --config webpack.config.cjs",
+    "build:light": "webpack --config webpack.light.config.cjs",
+    "build:all": "npm run build && npm run build:light",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",

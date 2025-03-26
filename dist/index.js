@@ -9,7 +9,10 @@ import { WalletManager } from "./wallet/walletManager";
 import CONFIG from "./config";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
-export { ShogunDID } from "./did/DID";
+import { ErrorHandler, ErrorType } from "./utils/errorHandler";
+export { ShogunDID, } from "./did/DID";
+// Esportare anche i tipi per la gestione degli errori
+export { ErrorHandler, ErrorType } from "./utils/errorHandler";
 let gun;
 export class ShogunCore {
     /**
@@ -23,11 +26,19 @@ export class ShogunCore {
         log("Initializing ShogunSDK");
         this.storage = new Storage();
         this.eventEmitter = new EventEmitter();
+        // Configura l'error handler per emettere eventi tramite EventEmitter
+        ErrorHandler.addListener((error) => {
+            this.eventEmitter.emit("error", {
+                action: error.code,
+                message: error.message,
+                type: error.type
+            });
+        });
         const gundbConfig = {
             peers: config.gundb?.peers || config.peers || CONFIG.PEERS,
-            websocket: config.websocket,
-            localStorage: false,
-            radisk: false,
+            websocket: config.gundb?.websocket ?? false,
+            localStorage: config.gundb?.localStorage ?? false,
+            radisk: config.gundb?.radisk ?? false,
         };
         this.gundb = new GunDB(gundbConfig);
         this.gun = this.gundb.getGun();
@@ -38,13 +49,29 @@ export class ShogunCore {
         // Initialize Ethereum provider
         if (config.providerUrl) {
             this.provider = new ethers.JsonRpcProvider(config.providerUrl);
+            log(`Using configured provider URL: ${config.providerUrl}`);
         }
         else {
             // Default provider (can be replaced as needed)
             this.provider = ethers.getDefaultProvider("mainnet");
+            log("WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.");
         }
-        this.walletManager = new WalletManager(this.gundb, this.gun, this.storage);
+        this.walletManager = new WalletManager(this.gundb, this.gun, this.storage, {
+            balanceCacheTTL: config.wallet?.balanceCacheTTL
+        });
+        // Configure RPC URL if provided
+        if (config.providerUrl) {
+            this.walletManager.setRpcUrl(config.providerUrl);
+        }
         log("ShogunSDK initialized!");
+    }
+    /**
+     * Recupera gli errori recenti registrati dal sistema
+     * @param count - Numero di errori da recuperare
+     * @returns Lista degli errori più recenti
+     */
+    getRecentErrors(count = 10) {
+        return ErrorHandler.getRecentErrors(count);
     }
     /**
      * Check if user is logged in
@@ -79,11 +106,8 @@ export class ShogunCore {
             log("Logout completed successfully");
         }
         catch (error) {
-            logError("Error during logout:", error);
-            this.eventEmitter.emit("error", {
-                action: "logout",
-                message: error instanceof Error ? error.message : "Error during logout",
-            });
+            // Usa il gestore errori centralizzato
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
         }
     }
     /**
@@ -153,7 +177,8 @@ export class ShogunCore {
             return result;
         }
         catch (error) {
-            logError(`Error during login for user ${username}:`, error);
+            // Usa il gestore errori centralizzato
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message || "Unknown error during login", error);
             return {
                 success: false,
                 error: error.message || "Unknown error during login",
@@ -257,7 +282,7 @@ export class ShogunCore {
                     // Aggiungiamo l'informazione sul DID al risultato
                     return {
                         ...result,
-                        did: did
+                        did: did,
                     };
                 }
                 catch (didError) {
@@ -361,10 +386,12 @@ export class ShogunCore {
                     const did = await this.did.createDID({
                         network: "main",
                         controller: result.userPub,
-                        services: [{
+                        services: [
+                            {
                                 type: "WebAuthnVerification",
-                                endpoint: `webauthn:${username}`
-                            }]
+                                endpoint: `webauthn:${username}`,
+                            },
+                        ],
                     });
                     log(`Created DID for WebAuthn user: ${did}`);
                     return {
@@ -372,7 +399,7 @@ export class ShogunCore {
                         username,
                         password: hashedCredentialId,
                         credentialId: attestationResult.credentialId,
-                        did: did
+                        did: did,
                     };
                 }
                 catch (didError) {
@@ -382,7 +409,7 @@ export class ShogunCore {
                     ...result,
                     username,
                     password: hashedCredentialId,
-                    credentialId: attestationResult.credentialId
+                    credentialId: attestationResult.credentialId,
                 };
             }
             else {
@@ -484,17 +511,19 @@ export class ShogunCore {
                     const did = await this.did.createDID({
                         network: "main",
                         controller: result.userPub,
-                        services: [{
+                        services: [
+                            {
                                 type: "EcdsaSecp256k1Verification",
-                                endpoint: `ethereum:${address}`
-                            }]
+                                endpoint: `ethereum:${address}`,
+                            },
+                        ],
                     });
                     log(`Created DID for MetaMask user: ${did}`);
                     return {
                         ...result,
                         username: credentials.username,
                         password: credentials.password,
-                        did: did
+                        did: did,
                     };
                 }
                 catch (didError) {
@@ -548,12 +577,23 @@ export class ShogunCore {
         try {
             if (!this.isLoggedIn()) {
                 log("Cannot load wallets: user not authenticated");
+                // Segnaliamo l'errore con il gestore centralizzato ma non interrompiamo il flusso
+                ErrorHandler.handle(ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
                 return [];
             }
-            return await this.walletManager.loadWallets();
+            try {
+                return await this.walletManager.loadWallets();
+            }
+            catch (walletError) {
+                // Gestiamo l'errore in modo più dettagliato
+                ErrorHandler.handle(ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`, walletError);
+                // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
+                return [];
+            }
         }
         catch (error) {
-            logError("Error loading wallets:", error);
+            // Catturiamo errori generici imprevisti
+            ErrorHandler.handle(ErrorType.UNKNOWN, "UNEXPECTED_ERROR", `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
             return [];
         }
     }

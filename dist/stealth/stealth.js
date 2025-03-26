@@ -3,6 +3,7 @@
  */
 import { ethers } from "ethers";
 import { Storage } from "../storage/storage";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 class Stealth {
     constructor(storage) {
         this.lastEphemeralKeyPair = null;
@@ -58,12 +59,16 @@ class Stealth {
      */
     async generateStealthAddress(recipientPublicKey) {
         if (!recipientPublicKey) {
-            throw new Error("Invalid keys: missing or invalid parameters");
+            const error = new Error("Invalid keys: missing or invalid parameters");
+            ErrorHandler.handle(ErrorType.STEALTH, "INVALID_KEYS", "Invalid or missing recipient public key", error);
+            throw error;
         }
         // First create stealth keys
         const stealthKeys = await this.createAccount();
         if (!stealthKeys) {
-            throw new Error("Failed to create stealth keys");
+            const error = new Error("Failed to create stealth keys");
+            ErrorHandler.handle(ErrorType.STEALTH, "KEY_GENERATION_FAILED", "Failed to create stealth keys", error);
+            throw error;
         }
         console.log("Generating stealth address with keys:", {
             userPub: stealthKeys.pub,
@@ -74,7 +79,9 @@ class Stealth {
             // Generate ephemeral key pair
             Gun.SEA.pair((ephemeralKeyPair) => {
                 if (!ephemeralKeyPair?.epub || !ephemeralKeyPair?.epriv) {
-                    reject(new Error("Invalid ephemeral keys"));
+                    const error = new Error("Invalid ephemeral keys");
+                    ErrorHandler.handle(ErrorType.STEALTH, "INVALID_EPHEMERAL_KEYS", "Failed to generate valid ephemeral keys", error);
+                    reject(error);
                     return;
                 }
                 console.log("Ephemeral keys generated:", ephemeralKeyPair);
@@ -120,7 +127,9 @@ class Stealth {
                         });
                     }
                     catch (error) {
-                        reject(new Error(`Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`));
+                        const formattedError = new Error(`Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`);
+                        ErrorHandler.handle(ErrorType.STEALTH, "ADDRESS_GENERATION_FAILED", `Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`, error);
+                        reject(formattedError);
                     }
                 });
             });
