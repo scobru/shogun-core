@@ -135,6 +135,8 @@ Shogun is particularly suitable for:
 
 Shogun SDK includes a complete technical documentation generated with TSDoc:
 
+Read the documentation [here](https://shogun-core-docs.vercel.app/)
+
 - **Local documentation**: View the documentation by opening `./docs/index.html`
 - **Main classes**: View `./docs/classes/` for details on the main classes
 - **Interfaces**: View `./docs/interfaces/` for details on the interfaces
