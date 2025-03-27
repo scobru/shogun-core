@@ -173,6 +173,16 @@ export class ShogunCore {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub || "",
                 });
+                // Assicuriamo che l'utente abbia un DID dopo il login
+                try {
+                    const did = await this.ensureUserHasDID();
+                    if (did) {
+                        result.did = did;
+                    }
+                }
+                catch (didError) {
+                    logError("Error ensuring DID after login:", didError);
+                }
             }
             return result;
         }
@@ -274,16 +284,12 @@ export class ShogunCore {
                 });
                 // Creare automaticamente un DID per il nuovo utente
                 try {
-                    const did = await this.did.createDID({
-                        network: "main",
-                        controller: result.userPub,
-                    });
-                    log(`Created DID for new user: ${did}`);
-                    // Aggiungiamo l'informazione sul DID al risultato
-                    return {
-                        ...result,
-                        did: did,
-                    };
+                    const did = await this.ensureUserHasDID();
+                    if (did) {
+                        log(`Created DID for new user: ${did}`);
+                        // Aggiungiamo l'informazione sul DID al risultato
+                        result.did = did;
+                    }
                 }
                 catch (didError) {
                     // Se la creazione del DID fallisce, logghiamo l'errore ma non facciamo fallire la registrazione
@@ -335,6 +341,18 @@ export class ShogunCore {
             const result = await this.login(username, hashedCredentialId);
             if (result.success) {
                 log(`WebAuthn login completed successfully for user: ${username}`);
+                // Assicuriamo che l'utente abbia un DID associato
+                if (!result.did) {
+                    try {
+                        const did = await this.ensureUserHasDID();
+                        if (did) {
+                            result.did = did;
+                        }
+                    }
+                    catch (didError) {
+                        logError("Error ensuring DID for WebAuthn user:", didError);
+                    }
+                }
                 return {
                     ...result,
                     username,
@@ -381,29 +399,24 @@ export class ShogunCore {
             const result = await this.signUp(username, hashedCredentialId);
             if (result.success) {
                 log(`WebAuthn registration completed successfully for user: ${username}`);
-                // Creare automaticamente un DID per il nuovo utente
-                try {
-                    const did = await this.did.createDID({
-                        network: "main",
-                        controller: result.userPub,
-                        services: [
-                            {
-                                type: "WebAuthnVerification",
-                                endpoint: `webauthn:${username}`,
-                            },
-                        ],
-                    });
-                    log(`Created DID for WebAuthn user: ${did}`);
-                    return {
-                        ...result,
-                        username,
-                        password: hashedCredentialId,
-                        credentialId: attestationResult.credentialId,
-                        did: did,
-                    };
-                }
-                catch (didError) {
-                    logError("Error creating DID for WebAuthn user:", didError);
+                // Assicuriamo che l'utente abbia un DID con informazioni WebAuthn
+                if (!result.did) {
+                    try {
+                        const did = await this.ensureUserHasDID({
+                            services: [
+                                {
+                                    type: "WebAuthnVerification",
+                                    endpoint: `webauthn:${username}`,
+                                },
+                            ],
+                        });
+                        if (did) {
+                            result.did = did;
+                        }
+                    }
+                    catch (didError) {
+                        logError("Error creating DID for WebAuthn user:", didError);
+                    }
                 }
                 return {
                     ...result,
@@ -454,6 +467,18 @@ export class ShogunCore {
             const result = await Promise.race([loginPromise, timeoutPromise]);
             if (result.success) {
                 log(`MetaMask login completed successfully for address: ${address}`);
+                // Assicuriamo che l'utente abbia un DID associato
+                if (!result.did) {
+                    try {
+                        const did = await this.ensureUserHasDID();
+                        if (did) {
+                            result.did = did;
+                        }
+                    }
+                    catch (didError) {
+                        logError("Error ensuring DID for MetaMask user:", didError);
+                    }
+                }
                 return {
                     ...result,
                     username: credentials.username,
@@ -506,28 +531,24 @@ export class ShogunCore {
             const result = await Promise.race([signupPromise, timeoutPromise]);
             if (result.success) {
                 log(`MetaMask registration completed successfully for address: ${address}`);
-                // Creare automaticamente un DID per il nuovo utente MetaMask
-                try {
-                    const did = await this.did.createDID({
-                        network: "main",
-                        controller: result.userPub,
-                        services: [
-                            {
-                                type: "EcdsaSecp256k1Verification",
-                                endpoint: `ethereum:${address}`,
-                            },
-                        ],
-                    });
-                    log(`Created DID for MetaMask user: ${did}`);
-                    return {
-                        ...result,
-                        username: credentials.username,
-                        password: credentials.password,
-                        did: did,
-                    };
-                }
-                catch (didError) {
-                    logError("Error creating DID for MetaMask user:", didError);
+                // Assicuriamo che l'utente abbia un DID con informazioni MetaMask
+                if (!result.did) {
+                    try {
+                        const did = await this.ensureUserHasDID({
+                            services: [
+                                {
+                                    type: "EcdsaSecp256k1Verification",
+                                    endpoint: `ethereum:${address}`,
+                                },
+                            ],
+                        });
+                        if (did) {
+                            result.did = did;
+                        }
+                    }
+                    catch (didError) {
+                        logError("Error creating DID for MetaMask user:", didError);
+                    }
                 }
                 return {
                     ...result,
@@ -768,13 +789,68 @@ export class ShogunCore {
             this.provider.connection?.url || null :
             null;
     }
+    /**
+     * Ensure the current user has a DID associated, creating one if needed
+     * @param options Optional DID creation options
+     * @returns Promise with the DID string or null if fails
+     */
+    async ensureUserHasDID(options) {
+        try {
+            if (!this.isLoggedIn()) {
+                logError("Cannot ensure DID: user not authenticated");
+                return null;
+            }
+            // Verifica se l'utente ha già un DID
+            let did = await this.did.getCurrentUserDID();
+            // Se l'utente ha già un DID, lo restituiamo
+            if (did) {
+                log(`User already has DID: ${did}`);
+                // Se sono state fornite opzioni, aggiorniamo il documento DID
+                if (options && Object.keys(options).length > 0) {
+                    try {
+                        const updated = await this.did.updateDIDDocument(did, {
+                            service: options.services?.map((service, index) => ({
+                                id: `${did}#service-${index + 1}`,
+                                type: service.type,
+                                serviceEndpoint: service.endpoint,
+                            }))
+                        });
+                        if (updated) {
+                            log(`Updated DID document for: ${did}`);
+                        }
+                    }
+                    catch (updateError) {
+                        logError("Error updating DID document:", updateError);
+                    }
+                }
+                return did;
+            }
+            // Se l'utente non ha un DID, ne creiamo uno nuovo
+            log("Creating new DID for authenticated user");
+            const userPub = this.gundb.gun.user().is?.pub || "";
+            const mergedOptions = {
+                network: "main",
+                controller: userPub,
+                ...options
+            };
+            did = await this.did.createDID(mergedOptions);
+            // Emetti evento di creazione DID
+            this.eventEmitter.emit("did:created", { did, userPub });
+            log(`Created new DID for user: ${did}`);
+            return did;
+        }
+        catch (error) {
+            logError("Error ensuring user has DID:", error);
+            return null;
+        }
+    }
 }
 // Export all types
 export * from "./types/shogun";
 // Export classes
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./connector/metamask";
-export { Stealth, } from "./stealth/stealth";
+export { Stealth } from "./stealth/stealth";
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";

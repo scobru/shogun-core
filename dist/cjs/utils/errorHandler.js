@@ -16,6 +16,7 @@ var ErrorType;
     ErrorType["STORAGE"] = "STORAGE";
     ErrorType["WEBAUTHN"] = "WEBAUTHN";
     ErrorType["STEALTH"] = "STEALTH";
+    ErrorType["VALIDATION"] = "VALIDATION";
     ErrorType["UNKNOWN"] = "UNKNOWN";
 })(ErrorType || (exports.ErrorType = ErrorType = {}));
 /**

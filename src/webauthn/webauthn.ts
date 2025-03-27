@@ -7,6 +7,16 @@ const MAX_USERNAME_LENGTH = 64;
 
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import { EventEmitter } from "events";
+import {
+  DeviceInfo,
+  WebAuthnCredentials,
+  CredentialResult,
+  WebAuthnConfig,
+  WebAuthnEventType,
+  WebAuthnEvent,
+  WebAuthnOperationOptions
+} from "../types/webauthn";
 
 /**
  * Extends Window interface to include WebauthnAuth
@@ -29,174 +39,40 @@ declare global {
 }
 
 /**
- * Definition of interfaces with standard types
+ * Constants for WebAuthn configuration
  */
-interface DeviceInfo {
-  deviceId: string;
-  timestamp: number;
-  name: string;
-  platform: string;
-}
-
-interface WebAuthnCredentials {
-  salt: string;
-  timestamp: number;
-  credentials: Record<string, DeviceInfo>;
-}
-
-interface CredentialResult {
-  success: boolean;
-  username?: string;
-  password?: string;
-  credentialId?: string;
-  deviceInfo?: DeviceInfo;
-  error?: string;
-  webAuthnCredentials?: WebAuthnCredentials;
-}
-
-/**
- * Generates a unique device identifier
- */
-const generateDeviceId = (): string => {
-  const platform =
-    typeof navigator !== "undefined" ? navigator.platform : "unknown";
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
-  return uint8ArrayToHex(
-    new TextEncoder().encode(`${platform}-${timestamp}-${random}`),
-  );
-};
-
-/**
- * Gets platform information
- */
-const getPlatformInfo = (): { name: string; platform: string } => {
-  if (typeof navigator === "undefined") {
-    return { name: "unknown", platform: "unknown" };
-  }
-
-  const platform = navigator.platform;
-  const userAgent = navigator.userAgent;
-
-  if (/iPhone|iPad|iPod/.test(platform)) {
-    return { name: "iOS Device", platform };
-  }
-
-  if (/Android/.test(userAgent)) {
-    return { name: "Android Device", platform };
-  }
-
-  if (/Win/.test(platform)) {
-    return { name: "Windows Device", platform };
-  }
-
-  if (/Mac/.test(platform)) {
-    return { name: "Mac Device", platform };
-  }
-
-  if (/Linux/.test(platform)) {
-    return { name: "Linux Device", platform };
-  }
-
-  return { name: "Unknown Device", platform };
-};
-
-/**
- * Converts Uint8Array to hexadecimal string
- */
-const uint8ArrayToHex = (arr: Uint8Array): string => {
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-};
-
-/**
- * Gets cryptographically secure random bytes
- */
-const getRandomBytes = (length: number): Uint8Array => {
-  if (typeof window !== "undefined" && window.crypto) {
-    return window.crypto.getRandomValues(new Uint8Array(length));
-  }
-
-  throw new Error("No cryptographic implementation available");
-};
-
-/**
- * Generates a challenge for WebAuthn operations
- */
-const generateChallenge = (username: string): Uint8Array => {
-  const timestamp = Date.now().toString();
-  const randomBytes = getRandomBytes(32);
-  const challengeData = `${username}-${timestamp}-${uint8ArrayToHex(
-    randomBytes,
-  )}`;
-  return new TextEncoder().encode(challengeData);
-};
-
-/**
- * Converts ArrayBuffer to URL-safe base64 string
- */
-const bufferToBase64 = (buffer: ArrayBuffer): string => {
-  const bytes = new Uint8Array(buffer);
-  const binary = bytes.reduce(
-    (str, byte) => str + String.fromCharCode(byte),
-    "",
-  );
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-};
-
-/**
- * Converts URL-safe base64 string to ArrayBuffer
- */
-const base64ToBuffer = (base64: string): ArrayBuffer => {
-  if (!/^[A-Za-z0-9\-_]*$/.test(base64)) {
-    throw new Error("Invalid base64 string");
-  }
-
-  const base64Url = base64.replace(/-/g, "+").replace(/_/g, "/");
-  const padding = "=".repeat((4 - (base64Url.length % 4)) % 4);
-  const base64Padded = base64Url + padding;
-
-  try {
-    const binary = atob(base64Padded);
-    const buffer = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      buffer[i] = binary.charCodeAt(i);
-    }
-    return buffer.buffer;
-  } catch (error) {
-    throw new Error("Failed to decode base64 string");
-  }
-};
-
-/**
- * Generates credentials from username and salt
- */
-const generateCredentialsFromSalt = (
-  username: string,
-  salt: string,
-): { password: string } => {
-  const data = ethers.toUtf8Bytes(username + salt);
-  return {
-    password: ethers.sha256(data),
-  };
+const DEFAULT_CONFIG: WebAuthnConfig = {
+  rpName: "Shogun Wallet",
+  timeout: 60000,
+  userVerification: "preferred",
+  attestation: "none",
+  authenticatorAttachment: "platform",
+  requireResidentKey: false
 };
 
 /**
  * Main WebAuthn class for authentication management
  */
-class Webauthn {
-  private rpId: string;
+export class Webauthn extends EventEmitter {
+  private config: WebAuthnConfig;
   private gunInstance: any;
   private credential: any;
+  private abortController: AbortController | null = null;
 
   /**
    * Creates a new WebAuthn instance
    */
-  constructor(gunInstance?: any) {
-    this.rpId = window.location.hostname.split(":")[0];
+  constructor(gunInstance?: any, config?: Partial<WebAuthnConfig>) {
+    super();
     this.gunInstance = gunInstance;
     this.credential = null;
+    
+    // Merge default config with provided config
+    this.config = {
+      ...DEFAULT_CONFIG,
+      ...config,
+      rpId: config?.rpId || window.location.hostname.split(":")[0]
+    };
   }
 
   /**
@@ -207,52 +83,263 @@ class Webauthn {
       throw new Error("Username must be a non-empty string");
     }
 
-    if (
-      username.length < MIN_USERNAME_LENGTH ||
-      username.length > MAX_USERNAME_LENGTH
-    ) {
-      throw new Error(
-        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`,
-      );
+    if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+      throw new Error(`Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`);
     }
 
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      throw new Error(
-        "Username can only contain letters, numbers, underscores and hyphens",
-      );
+      throw new Error("Username can only contain letters, numbers, underscores and hyphens");
     }
-
-    // Username is valid
   }
 
   /**
-   * Creates a new WebAuthn account
+   * Creates a new WebAuthn account with retry logic
    */
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice = false,
+    isNewDevice = false
   ): Promise<CredentialResult> {
-    const result = await this.generateCredentials(
-      username,
-      credentials,
-      isNewDevice,
-    );
+    try {
+      this.validateUsername(username);
 
-    if (!result.success) {
-      throw new Error(result.error || "Error creating account");
+      const maxRetries = 3;
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const result = await this.generateCredentials(username, credentials, isNewDevice);
+          
+          if (result.success) {
+            this.emit(WebAuthnEventType.DEVICE_REGISTERED, {
+              type: WebAuthnEventType.DEVICE_REGISTERED,
+              data: { username, deviceInfo: result.deviceInfo },
+              timestamp: Date.now()
+            });
+            
+            return result;
+          }
+          
+          lastError = new Error(result.error || "Unknown error");
+        } catch (error: any) {
+          lastError = error;
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            continue;
+          }
+        }
+      }
+
+      throw lastError || new Error("Failed to create account after retries");
+    } catch (error: any) {
+      this.emit(WebAuthnEventType.ERROR, {
+        type: WebAuthnEventType.ERROR,
+        data: { error: error.message },
+        timestamp: Date.now()
+      });
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Authenticates a user with timeout and abort handling
+   */
+  async authenticateUser(
+    username: string,
+    salt: string | null,
+    options: WebAuthnOperationOptions = {}
+  ): Promise<CredentialResult> {
+    try {
+      this.validateUsername(username);
+
+      if (!salt) {
+        const error = new Error("No WebAuthn credentials found for this username");
+        ErrorHandler.handle(ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
+        return { success: false, error: error.message };
+      }
+
+      // Cancel any existing authentication attempt
+      this.abortAuthentication();
+
+      // Create new abort controller
+      this.abortController = new AbortController();
+
+      const timeout = options.timeout || this.config.timeout;
+      const timeoutId = setTimeout(() => this.abortController?.abort(), timeout);
+
+      try {
+        const challenge = this.generateChallenge(username);
+        const assertionOptions: PublicKeyCredentialRequestOptions = {
+          challenge,
+          allowCredentials: [],
+          timeout,
+          userVerification: options.userVerification || this.config.userVerification,
+          rpId: this.config.rpId
+        };
+
+        const assertion = await navigator.credentials.get({
+          publicKey: assertionOptions,
+          signal: this.abortController.signal
+        }) as PublicKeyCredential;
+
+        if (!assertion) {
+          throw new Error("WebAuthn verification failed");
+        }
+
+        const { password } = this.generateCredentialsFromSalt(username, salt);
+        const deviceInfo = this.getDeviceInfo(assertion.id);
+
+        const result: CredentialResult = {
+          success: true,
+          username,
+          password,
+          credentialId: this.bufferToBase64(assertion.rawId),
+          deviceInfo
+        };
+
+        this.emit(WebAuthnEventType.AUTHENTICATION_SUCCESS, {
+          type: WebAuthnEventType.AUTHENTICATION_SUCCESS,
+          data: { username, deviceInfo },
+          timestamp: Date.now()
+        });
+
+        return result;
+      } finally {
+        clearTimeout(timeoutId);
+        this.abortController = null;
+      }
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown WebAuthn error";
+      
+      this.emit(WebAuthnEventType.AUTHENTICATION_FAILED, {
+        type: WebAuthnEventType.AUTHENTICATION_FAILED,
+        data: { username, error: errorMessage },
+        timestamp: Date.now()
+      });
+
+      ErrorHandler.handle(ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Aborts current authentication attempt
+   */
+  abortAuthentication(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  /**
+   * Gets device information
+   */
+  private getDeviceInfo(credentialId: string): DeviceInfo {
+    const platformInfo = this.getPlatformInfo();
+    return {
+      deviceId: credentialId,
+      timestamp: Date.now(),
+      name: platformInfo.name,
+      platform: platformInfo.platform,
+      lastUsed: Date.now()
+    };
+  }
+
+  /**
+   * Gets platform information
+   */
+  private getPlatformInfo(): { name: string; platform: string } {
+    if (typeof navigator === "undefined") {
+      return { name: "unknown", platform: "unknown" };
     }
 
-    return result;
+    const platform = navigator.platform;
+    const userAgent = navigator.userAgent;
+
+    if (/iPhone|iPad|iPod/.test(platform)) {
+      return { name: "iOS Device", platform };
+    }
+
+    if (/Android/.test(userAgent)) {
+      return { name: "Android Device", platform };
+    }
+
+    if (/Win/.test(platform)) {
+      return { name: "Windows Device", platform };
+    }
+
+    if (/Mac/.test(platform)) {
+      return { name: "Mac Device", platform };
+    }
+
+    if (/Linux/.test(platform)) {
+      return { name: "Linux Device", platform };
+    }
+
+    return { name: "Unknown Device", platform };
+  }
+
+  /**
+   * Generates a challenge for WebAuthn operations
+   */
+  private generateChallenge(username: string): Uint8Array {
+    const timestamp = Date.now().toString();
+    const randomBytes = this.getRandomBytes(32);
+    const challengeData = `${username}-${timestamp}-${this.uint8ArrayToHex(randomBytes)}`;
+    return new TextEncoder().encode(challengeData);
+  }
+
+  /**
+   * Gets cryptographically secure random bytes
+   */
+  private getRandomBytes(length: number): Uint8Array {
+    if (typeof window !== "undefined" && window.crypto) {
+      return window.crypto.getRandomValues(new Uint8Array(length));
+    }
+    throw new Error("No cryptographic implementation available");
+  }
+
+  /**
+   * Converts Uint8Array to hexadecimal string
+   */
+  private uint8ArrayToHex(arr: Uint8Array): string {
+    return Array.from(arr)
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  /**
+   * Converts ArrayBuffer to URL-safe base64 string
+   */
+  private bufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    const binary = bytes.reduce((str, byte) => str + String.fromCharCode(byte), "");
+    return btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+  }
+
+  /**
+   * Generates credentials from username and salt
+   */
+  private generateCredentialsFromSalt(
+    username: string,
+    salt: string
+  ): { password: string } {
+    const data = ethers.toUtf8Bytes(username + salt);
+    return {
+      password: ethers.sha256(data)
+    };
   }
 
   /**
    * Checks if WebAuthn is supported
    */
   isSupported(): boolean {
-    return (
-      typeof window !== "undefined" && window.PublicKeyCredential !== undefined
-    );
+    return typeof window !== "undefined" && window.PublicKeyCredential !== undefined;
   }
 
   /**
@@ -268,7 +355,7 @@ class Webauthn {
           challenge,
           rp: {
             name: "Shogun Wallet",
-            ...(this.rpId !== "localhost" && { id: this.rpId }),
+            ...(this.config.rpId !== "localhost" && { id: this.config.rpId }),
           },
           user: {
             id: userId,
@@ -276,12 +363,12 @@ class Webauthn {
             displayName: username,
           },
           pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-          timeout: 60000,
-          attestation: "none",
+          timeout: this.config.timeout,
+          attestation: this.config.attestation,
           authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "preferred",
-            requireResidentKey: false,
+            authenticatorAttachment: this.config.authenticatorAttachment,
+            userVerification: this.config.userVerification,
+            requireResidentKey: this.config.requireResidentKey,
           },
         };
 
@@ -351,9 +438,9 @@ class Webauthn {
 
       const options: PublicKeyCredentialRequestOptions = {
         challenge,
-        timeout: 60000,
-        userVerification: "preferred",
-        ...(this.rpId !== "localhost" && { rpId: this.rpId }),
+        timeout: this.config.timeout,
+        userVerification: this.config.userVerification,
+        ...(this.config.rpId !== "localhost" && { rpId: this.config.rpId }),
       };
 
       if (this.credential?.rawId) {
@@ -436,95 +523,13 @@ class Webauthn {
   }
 
   /**
-   * Authenticates a user
-   */
-  async authenticateUser(
-    username: string,
-    salt: string | null,
-  ): Promise<CredentialResult> {
-    try {
-      this.validateUsername(username);
-
-      if (!salt) {
-        ErrorHandler.handle(
-          ErrorType.WEBAUTHN,
-          "NO_CREDENTIALS",
-          "No WebAuthn credentials found for this username",
-          null,
-        );
-
-        return {
-          success: false,
-          error: "No WebAuthn credentials found for this username",
-        };
-      }
-
-      const challenge = generateChallenge(username);
-
-      const assertionOptions: PublicKeyCredentialRequestOptions = {
-        challenge,
-        allowCredentials: [],
-        timeout: TIMEOUT_MS,
-        userVerification: "required" as UserVerificationRequirement,
-        rpId: this.rpId,
-      };
-
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), TIMEOUT_MS);
-
-      try {
-        const assertion = (await navigator.credentials.get({
-          publicKey: assertionOptions,
-          signal: abortController.signal,
-        })) as PublicKeyCredential;
-
-        if (!assertion) {
-          ErrorHandler.handle(
-            ErrorType.WEBAUTHN,
-            "VERIFICATION_FAILED",
-            "WebAuthn verification failed",
-            null,
-          );
-
-          throw new Error("WebAuthn verification failed");
-        }
-
-        const { password } = generateCredentialsFromSalt(username, salt);
-
-        return {
-          success: true,
-          username,
-          password,
-          credentialId: bufferToBase64(assertion.rawId),
-        };
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    } catch (error: unknown) {
-      console.error("WebAuthn login error:", error);
-
-      ErrorHandler.handle(
-        ErrorType.WEBAUTHN,
-        "AUTH_ERROR",
-        error instanceof Error ? error.message : "Unknown WebAuthn error",
-        error,
-      );
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
    * Signs data using WebAuthn
    */
   async sign(data: any) {
     const signature = await navigator.credentials.get({
       publicKey: {
         challenge: new Uint8Array(16),
-        rpId: this.rpId,
+        rpId: this.config.rpId,
       },
     });
     return signature;
@@ -538,4 +543,4 @@ if (typeof window !== "undefined") {
   (global as any).Webauthn = Webauthn;
 }
 
-export { Webauthn, WebAuthnCredentials, DeviceInfo, CredentialResult };
+export { WebAuthnCredentials, DeviceInfo, CredentialResult };

@@ -4,6 +4,13 @@
 import { ethers } from "ethers";
 import { Storage } from "../storage/storage";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import { 
+  EphemeralKeyPair, 
+  StealthData, 
+  StealthAddressResult, 
+  LogLevel, 
+  LogMessage 
+} from "../types/stealth";
 
 // Extend Window interface to include StealthChain
 declare global {
@@ -20,38 +27,110 @@ declare global {
   }
 }
 
-// Define interfaces with standard types
-interface StealthData {
-  recipientPublicKey: string;
-  ephemeralKeyPair: any;
-  timestamp: number;
-  method?: string;
-  sharedSecret?: string;
-}
-
-interface StealthKeyPair {
-  pub: string;
-  priv: string;
-  epub: string;
-  epriv: string;
-}
-
-interface StealthAddressResult {
-  stealthAddress: string;
-  ephemeralPublicKey: string;
-  recipientPublicKey: string;
-}
-
 class Stealth {
   public readonly STEALTH_DATA_TABLE: string;
-  private lastEphemeralKeyPair: any = null;
-  private lastMethodUsed: string = "unknown";
+  private lastEphemeralKeyPair: EphemeralKeyPair | null = null;
+  private lastMethodUsed: 'standard' | 'legacy' | 'unknown' = 'unknown';
   private storage: Storage;
-  private readonly STEALTH_HISTORY_KEY = "stealthHistory";
+  private readonly STEALTH_HISTORY_KEY = 'stealthHistory';
+  private logs: LogMessage[] = [];
 
   constructor(storage?: Storage) {
-    this.STEALTH_DATA_TABLE = "Stealth";
-    this.storage = storage || new Storage(); // Use provided storage or create a new one
+    this.STEALTH_DATA_TABLE = 'Stealth';
+    this.storage = storage || new Storage();
+  }
+
+  /**
+   * Structured logging system
+   */
+  private log(level: LogLevel, message: string, data?: any): void {
+    const logMessage: LogMessage = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      data
+    };
+    
+    this.logs.push(logMessage);
+    console[level](`[${logMessage.timestamp}] ${message}`, data);
+  }
+
+  /**
+   * Cleanup sensitive data from memory
+   */
+  public async cleanupSensitiveData(): Promise<void> {
+    try {
+      this.lastEphemeralKeyPair = null;
+      this.lastMethodUsed = 'unknown';
+      this.logs = [];
+      
+      // Clear local storage if needed
+      // this.storage.removeItem(this.STEALTH_HISTORY_KEY);
+      
+      this.log('info', 'Sensitive data cleanup completed');
+    } catch (error) {
+      this.log('error', 'Error during cleanup', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate stealth data
+   */
+  private validateStealthData(data: StealthData): boolean {
+    try {
+      // Basic validation
+      if (!data || typeof data !== 'object') {
+        this.log('error', 'Invalid stealth data: data is not an object');
+        return false;
+      }
+
+      // Required fields validation
+      const requiredFields = ['recipientPublicKey', 'ephemeralKeyPair', 'timestamp'];
+      for (const field of requiredFields) {
+        if (!(field in data)) {
+          this.log('error', `Invalid stealth data: missing ${field}`);
+          return false;
+        }
+      }
+
+      // Type validation
+      if (typeof data.recipientPublicKey !== 'string' || !data.recipientPublicKey.trim()) {
+        this.log('error', 'Invalid recipientPublicKey');
+        return false;
+      }
+
+      if (typeof data.timestamp !== 'number' || data.timestamp <= 0) {
+        this.log('error', 'Invalid timestamp');
+        return false;
+      }
+
+      // EphemeralKeyPair validation
+      const keyPairFields = ['pub', 'priv', 'epub', 'epriv'] as (keyof EphemeralKeyPair)[];
+      for (const field of keyPairFields) {
+        if (!(field in data.ephemeralKeyPair) || typeof data.ephemeralKeyPair[field] !== 'string') {
+          this.log('error', `Invalid ephemeralKeyPair: missing or invalid ${field}`);
+          return false;
+        }
+      }
+
+      // Optional fields validation
+      if (data.method && !['standard', 'legacy'].includes(data.method)) {
+        this.log('error', 'Invalid method value');
+        return false;
+      }
+
+      if (data.sharedSecret && typeof data.sharedSecret !== 'string') {
+        this.log('error', 'Invalid sharedSecret type');
+        return false;
+      }
+
+      this.log('debug', 'Stealth data validation passed');
+      return true;
+    } catch (error) {
+      this.log('error', 'Error during stealth data validation', error);
+      return false;
+    }
   }
 
   /**
@@ -78,7 +157,7 @@ class Stealth {
   /**
    * Creates a new stealth account
    */
-  async createAccount(): Promise<StealthKeyPair> {
+  async createAccount(): Promise<EphemeralKeyPair> {
     try {
       // Generate a new key pair
       const keyPair = await (Gun as any).SEA.pair();
@@ -244,7 +323,7 @@ class Stealth {
   async openStealthAddress(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: StealthKeyPair,
+    pair: EphemeralKeyPair,
   ): Promise<ethers.Wallet> {
     console.log(`Attempting to open stealth address ${stealthAddress}`);
 
@@ -357,7 +436,7 @@ class Stealth {
   private async openStealthAddressStandard(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: StealthKeyPair,
+    pair: EphemeralKeyPair,
   ): Promise<ethers.Wallet> {
     if (!stealthAddress || !ephemeralPublicKey) {
       throw new Error(
@@ -443,7 +522,7 @@ class Stealth {
    * Saves stealth keys in user profile
    * @returns The stealth keys to save
    */
-  prepareStealthKeysForSaving(stealthKeyPair: StealthKeyPair): StealthKeyPair {
+  prepareStealthKeysForSaving(stealthKeyPair: EphemeralKeyPair): EphemeralKeyPair {
     if (
       !stealthKeyPair?.pub ||
       !stealthKeyPair?.priv ||
@@ -465,19 +544,22 @@ class Stealth {
   }
 
   /**
-   * Saves stealth data in storage
+   * Saves stealth data in storage with validation
    */
-  saveStealthHistory(address: string, data: any) {
-    // Save to storage
+  saveStealthHistory(address: string, data: StealthData) {
     try {
-      const stealthHistoryJson =
-        this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
+      if (!this.validateStealthData(data)) {
+        throw new Error('Invalid stealth data');
+      }
+
+      const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || '{}';
       const history = JSON.parse(stealthHistoryJson);
       history[address] = data;
       this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
-      console.log(`Stealth data saved for address ${address}`);
+      this.log('info', `Stealth data saved for address ${address}`);
     } catch (e) {
-      console.error("Error saving stealth data:", e);
+      this.log('error', 'Error saving stealth data:', e);
+      throw e;
     }
   }
 }
@@ -489,4 +571,4 @@ if (typeof window !== "undefined") {
   (global as any).Stealth = Stealth;
 }
 
-export { Stealth, StealthKeyPair, StealthAddressResult };
+export { Stealth, EphemeralKeyPair, StealthAddressResult };

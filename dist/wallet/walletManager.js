@@ -1,6 +1,8 @@
 import { ethers } from "ethers";
 import { log, logError } from "../utils/logger";
 import SEA from "gun/sea";
+import { EventEmitter } from "events";
+import { WalletEventType } from "../types/wallet";
 /**
  * Class that manages Ethereum wallet functionality including:
  * - Wallet creation and derivation
@@ -8,35 +10,83 @@ import SEA from "gun/sea";
  * - Importing/exporting wallets
  * - Encrypted storage and backup
  */
-export class WalletManager {
+export class WalletManager extends EventEmitter {
     /**
      * Creates a new WalletManager instance
      * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
-     * @param options Additional configuration options
+     * @param config Additional configuration options
      */
-    constructor(gundb, gun, storage, options) {
+    constructor(gundb, gun, storage, config) {
+        super();
         this.walletPaths = {};
         this.mainWallet = null;
         this.balanceCache = new Map();
-        this.balanceCacheTTL = 30000; // 30 seconds cache
-        this.configuredRpcUrl = null;
+        this.pendingTransactions = new Map();
         this.gundb = gundb;
         this.gun = gun;
         this.storage = storage;
-        // Override default cache TTL if provided
-        if (options?.balanceCacheTTL !== undefined) {
-            this.balanceCacheTTL = options.balanceCacheTTL;
-        }
+        this.config = {
+            balanceCacheTTL: 30000,
+            rpcUrl: "",
+            defaultGasLimit: 21000,
+            maxRetries: 3,
+            retryDelay: 1000,
+            ...config
+        };
         this.initializeWalletPaths();
+        this.setupTransactionMonitoring();
+    }
+    /**
+     * Setup transaction monitoring
+     */
+    setupTransactionMonitoring() {
+        setInterval(() => {
+            this.checkPendingTransactions();
+        }, 15000); // Check every 15 seconds
+    }
+    /**
+     * Check status of pending transactions
+     */
+    async checkPendingTransactions() {
+        const provider = this.getProvider();
+        for (const [txHash, tx] of this.pendingTransactions) {
+            try {
+                const receipt = await provider.getTransactionReceipt(txHash);
+                if (receipt) {
+                    if (receipt.status === 1) {
+                        this.emit(WalletEventType.TRANSACTION_CONFIRMED, {
+                            type: WalletEventType.TRANSACTION_CONFIRMED,
+                            data: { txHash, receipt },
+                            timestamp: Date.now()
+                        });
+                    }
+                    else {
+                        this.emit(WalletEventType.ERROR, {
+                            type: WalletEventType.ERROR,
+                            data: { txHash, error: "Transaction failed" },
+                            timestamp: Date.now()
+                        });
+                    }
+                    this.pendingTransactions.delete(txHash);
+                    // Invalidate balance cache for affected addresses
+                    this.invalidateBalanceCache(tx.from);
+                    if (tx.to)
+                        this.invalidateBalanceCache(tx.to);
+                }
+            }
+            catch (error) {
+                logError(`Error checking transaction ${txHash}:`, error);
+            }
+        }
     }
     /**
      * Sets the RPC URL used for Ethereum network connections
      * @param rpcUrl The RPC provider URL to use
      */
     setRpcUrl(rpcUrl) {
-        this.configuredRpcUrl = rpcUrl;
+        this.config.rpcUrl = rpcUrl;
         log(`RPC Provider configured: ${rpcUrl}`);
     }
     /**
@@ -44,7 +94,10 @@ export class WalletManager {
      * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider() {
-        return new ethers.JsonRpcProvider(this.configuredRpcUrl);
+        if (!this.config.rpcUrl) {
+            throw new Error("RPC URL not configured");
+        }
+        return new ethers.JsonRpcProvider(this.config.rpcUrl);
     }
     /**
      * Initializes wallet paths from both GunDB and localStorage
@@ -578,30 +631,27 @@ export class WalletManager {
     async getBalance(wallet) {
         try {
             const address = wallet.address;
-            // Check if we have valid cache
-            const cachedData = this.balanceCache.get(address);
             const now = Date.now();
-            if (cachedData &&
-                cachedData.timestamp !== undefined &&
-                now - cachedData.timestamp < this.balanceCacheTTL) {
-                const cachedBalance = cachedData.balance || "0";
-                log(`Using cached balance for ${address}: ${cachedBalance} ETH`);
-                return cachedBalance;
+            const cached = this.balanceCache.get(address);
+            if (cached && now - cached.timestamp < this.config.balanceCacheTTL) {
+                return cached.balance;
             }
-            // Otherwise call provider
-            log(`RPC call to get balance for ${address}`);
             const provider = this.getProvider();
-            const balance = await provider.getBalance(wallet.address);
+            const balance = await provider.getBalance(address);
             const formattedBalance = ethers.formatEther(balance);
-            // Update cache
             this.balanceCache.set(address, {
                 balance: formattedBalance,
-                timestamp: now,
+                timestamp: now
+            });
+            this.emit(WalletEventType.BALANCE_UPDATED, {
+                type: WalletEventType.BALANCE_UPDATED,
+                data: { address, balance: formattedBalance },
+                timestamp: now
             });
             return formattedBalance;
         }
         catch (error) {
-            console.error("Error retrieving balance:", error);
+            logError("Error getting balance:", error);
             return "0.0";
         }
     }
@@ -617,22 +667,56 @@ export class WalletManager {
         const nonce = await provider.getTransactionCount(wallet.address);
         return nonce;
     }
-    async sendTransaction(wallet, toAddress, value) {
+    async sendTransaction(wallet, toAddress, value, options = {}) {
         try {
-            log(`Sending transaction from wallet ${wallet.address} to ${toAddress} for ${value} ETH`);
             const provider = this.getProvider();
-            wallet.connect(provider);
-            const tx = await wallet.sendTransaction({
+            wallet = wallet.connect(provider);
+            // Get latest fee data
+            const feeData = await provider.getFeeData();
+            // Prepare transaction
+            const tx = {
                 to: toAddress,
                 value: ethers.parseEther(value),
-            });
-            // Invalidate balance cache after sending transaction
-            this.invalidateBalanceCache(wallet.address);
-            log(`Transaction sent successfully: ${tx.hash}`);
-            return tx.hash;
+                gasLimit: options.gasLimit || this.config.defaultGasLimit,
+                nonce: options.nonce || await provider.getTransactionCount(wallet.address),
+                maxFeePerGas: options.maxFeePerGas ? ethers.parseUnits(options.maxFeePerGas, "gwei") : feeData.maxFeePerGas,
+                maxPriorityFeePerGas: options.maxPriorityFeePerGas ? ethers.parseUnits(options.maxPriorityFeePerGas, "gwei") : feeData.maxPriorityFeePerGas
+            };
+            // Retry logic
+            for (let attempt = 1; attempt <= (this.config.maxRetries || 3); attempt++) {
+                try {
+                    const txResponse = await wallet.sendTransaction(tx);
+                    // Store pending transaction
+                    this.pendingTransactions.set(txResponse.hash, txResponse);
+                    // Emit event
+                    this.emit(WalletEventType.TRANSACTION_SENT, {
+                        type: WalletEventType.TRANSACTION_SENT,
+                        data: { txHash: txResponse.hash, tx },
+                        timestamp: Date.now()
+                    });
+                    return txResponse.hash;
+                }
+                catch (error) {
+                    if (attempt === this.config.maxRetries)
+                        throw error;
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
+                    // Update nonce and gas price for next attempt
+                    tx.nonce = await provider.getTransactionCount(wallet.address);
+                    const newFeeData = await provider.getFeeData();
+                    tx.maxFeePerGas = newFeeData.maxFeePerGas;
+                    tx.maxPriorityFeePerGas = newFeeData.maxPriorityFeePerGas;
+                }
+            }
+            throw new Error("Transaction failed after all retry attempts");
         }
         catch (error) {
-            console.error("Error sending transaction:", error);
+            logError("Error sending transaction:", error);
+            this.emit(WalletEventType.ERROR, {
+                type: WalletEventType.ERROR,
+                data: { error, wallet: wallet.address },
+                timestamp: Date.now()
+            });
             throw error;
         }
     }
@@ -1331,7 +1415,7 @@ export class WalletManager {
         if (ttlMs < 0) {
             throw new Error("Cache TTL must be a positive number");
         }
-        this.balanceCacheTTL = ttlMs;
+        this.config.balanceCacheTTL = ttlMs;
         log(`Balance cache TTL updated to ${ttlMs}ms`);
     }
     /**
@@ -1343,5 +1427,102 @@ export class WalletManager {
         const user = this.gun.user();
         // @ts-ignore - Accesso a proprietà interna di Gun
         return !!(user && user._ && user._.sea);
+    }
+    /**
+     * Export wallet data with enhanced security
+     */
+    async exportWalletData(options = {}) {
+        try {
+            const wallets = await this.loadWallets();
+            const exportData = {
+                version: "2.0",
+                timestamp: Date.now(),
+                wallets: wallets.map(w => ({
+                    address: w.address,
+                    path: w.path,
+                    created: this.walletPaths[w.address]?.created || Date.now(),
+                    ...(options.includePrivateKeys ? { privateKey: w.wallet.privateKey } : {})
+                })),
+                ...(options.includeHistory ? { history: await this.getWalletHistory() } : {})
+            };
+            if (options.encryptionPassword) {
+                const encrypted = await SEA.encrypt(JSON.stringify(exportData), options.encryptionPassword);
+                return JSON.stringify({
+                    type: "encrypted-wallet-backup",
+                    version: "2.0",
+                    data: encrypted
+                });
+            }
+            return JSON.stringify(exportData);
+        }
+        catch (error) {
+            logError("Error exporting wallet data:", error);
+            throw error;
+        }
+    }
+    /**
+     * Import wallet data with validation
+     */
+    async importWalletData(data, options = {}) {
+        try {
+            let walletData;
+            if (data.startsWith("{")) {
+                const parsed = JSON.parse(data);
+                if (parsed.type === "encrypted-wallet-backup" && options.decryptionPassword) {
+                    const decrypted = await SEA.decrypt(parsed.data, options.decryptionPassword);
+                    if (!decrypted)
+                        throw new Error("Decryption failed");
+                    walletData = JSON.parse(decrypted);
+                }
+                else {
+                    walletData = parsed;
+                }
+            }
+            else {
+                throw new Error("Invalid wallet data format");
+            }
+            let importedCount = 0;
+            for (const wallet of walletData.wallets) {
+                try {
+                    if (options.validateAddresses) {
+                        const valid = ethers.isAddress(wallet.address);
+                        if (!valid)
+                            continue;
+                    }
+                    if (!options.overwriteExisting && this.walletPaths[wallet.address]) {
+                        continue;
+                    }
+                    // Store wallet path
+                    this.walletPaths[wallet.address] = {
+                        path: wallet.path,
+                        created: wallet.created || Date.now()
+                    };
+                    importedCount++;
+                }
+                catch (error) {
+                    logError(`Error importing wallet ${wallet.address}:`, error);
+                    continue;
+                }
+            }
+            // Save updated paths
+            await this.saveWalletPathsToLocalStorage();
+            this.emit(WalletEventType.WALLET_IMPORTED, {
+                type: WalletEventType.WALLET_IMPORTED,
+                data: { count: importedCount },
+                timestamp: Date.now()
+            });
+            return importedCount;
+        }
+        catch (error) {
+            logError("Error importing wallet data:", error);
+            throw error;
+        }
+    }
+    /**
+     * Get wallet transaction history
+     */
+    async getWalletHistory() {
+        // Implementazione del recupero storico transazioni
+        return [];
     }
 }

@@ -242,11 +242,18 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The current provider URL or null if not set
      */
     getRpcUrl(): string | null;
+    /**
+     * Ensure the current user has a DID associated, creating one if needed
+     * @param options Optional DID creation options
+     * @returns Promise with the DID string or null if fails
+     */
+    private ensureUserHasDID;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./connector/metamask";
-export { Stealth, StealthKeyPair, StealthAddressResult, } from "./stealth/stealth";
+export { Stealth } from "./stealth/stealth";
+export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage } from "./types/stealth";
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";

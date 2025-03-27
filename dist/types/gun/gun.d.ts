@@ -3,13 +3,24 @@ import { IGunInstance } from "gun/types";
 /**
  * GunDB options definition
  */
-interface GunDBOptions {
+export interface GunDBOptions {
     peers?: string[];
     localStorage?: boolean;
     sessionStorage?: boolean;
     radisk?: boolean;
     multicast?: boolean;
     axe?: boolean;
+    retryAttempts?: number;
+    retryDelay?: number;
+}
+/**
+ * Authentication result
+ */
+export interface AuthResult {
+    success: boolean;
+    userPub?: string;
+    username?: string;
+    error?: string;
 }
 /**
  * GunDB - Simplified Gun management with advanced Auth
@@ -20,10 +31,15 @@ declare class GunDB {
     gun: IGunInstance<any>;
     private certificato;
     private onAuthCallbacks;
+    private retryConfig;
     /**
      * @param options - GunDBOptions
      */
     constructor(options?: Partial<GunDBOptions>);
+    /**
+     * Retry operation with exponential backoff
+     */
+    private retry;
     /**
      * Subscribe to Gun authentication events
      */
@@ -94,11 +110,19 @@ declare class GunDB {
      */
     getCurrentUser(): any;
     /**
-     * Save data to user node
+     * Save data with retry logic
+     */
+    private saveWithRetry;
+    /**
+     * Read data with retry logic
+     */
+    private readWithRetry;
+    /**
+     * Save data to user node with improved error handling
      */
     saveUserData(path: string, data: any): Promise<any>;
     /**
-     * Retrieve data from user node
+     * Retrieve data from user node with improved error handling
      */
     getUserData(path: string): Promise<any>;
     /**

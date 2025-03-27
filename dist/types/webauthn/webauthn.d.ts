@@ -1,3 +1,5 @@
+import { EventEmitter } from "events";
+import { DeviceInfo, WebAuthnCredentials, CredentialResult, WebAuthnConfig, WebAuthnOperationOptions } from "../types/webauthn";
 /**
  * Extends Window interface to include WebauthnAuth
  */
@@ -17,47 +19,61 @@ declare global {
     }
 }
 /**
- * Definition of interfaces with standard types
- */
-interface DeviceInfo {
-    deviceId: string;
-    timestamp: number;
-    name: string;
-    platform: string;
-}
-interface WebAuthnCredentials {
-    salt: string;
-    timestamp: number;
-    credentials: Record<string, DeviceInfo>;
-}
-interface CredentialResult {
-    success: boolean;
-    username?: string;
-    password?: string;
-    credentialId?: string;
-    deviceInfo?: DeviceInfo;
-    error?: string;
-    webAuthnCredentials?: WebAuthnCredentials;
-}
-/**
  * Main WebAuthn class for authentication management
  */
-declare class Webauthn {
-    private rpId;
+export declare class Webauthn extends EventEmitter {
+    private config;
     private gunInstance;
     private credential;
+    private abortController;
     /**
      * Creates a new WebAuthn instance
      */
-    constructor(gunInstance?: any);
+    constructor(gunInstance?: any, config?: Partial<WebAuthnConfig>);
     /**
      * Validates a username
      */
     validateUsername(username: string): void;
     /**
-     * Creates a new WebAuthn account
+     * Creates a new WebAuthn account with retry logic
      */
     createAccount(username: string, credentials: WebAuthnCredentials | null, isNewDevice?: boolean): Promise<CredentialResult>;
+    /**
+     * Authenticates a user with timeout and abort handling
+     */
+    authenticateUser(username: string, salt: string | null, options?: WebAuthnOperationOptions): Promise<CredentialResult>;
+    /**
+     * Aborts current authentication attempt
+     */
+    abortAuthentication(): void;
+    /**
+     * Gets device information
+     */
+    private getDeviceInfo;
+    /**
+     * Gets platform information
+     */
+    private getPlatformInfo;
+    /**
+     * Generates a challenge for WebAuthn operations
+     */
+    private generateChallenge;
+    /**
+     * Gets cryptographically secure random bytes
+     */
+    private getRandomBytes;
+    /**
+     * Converts Uint8Array to hexadecimal string
+     */
+    private uint8ArrayToHex;
+    /**
+     * Converts ArrayBuffer to URL-safe base64 string
+     */
+    private bufferToBase64;
+    /**
+     * Generates credentials from username and salt
+     */
+    private generateCredentialsFromSalt;
     /**
      * Checks if WebAuthn is supported
      */
@@ -86,12 +102,8 @@ declare class Webauthn {
         updatedCredentials?: WebAuthnCredentials;
     }>;
     /**
-     * Authenticates a user
-     */
-    authenticateUser(username: string, salt: string | null): Promise<CredentialResult>;
-    /**
      * Signs data using WebAuthn
      */
     sign(data: any): Promise<Credential | null>;
 }
-export { Webauthn, WebAuthnCredentials, DeviceInfo, CredentialResult };
+export { WebAuthnCredentials, DeviceInfo, CredentialResult };

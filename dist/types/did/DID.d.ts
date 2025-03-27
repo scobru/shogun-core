@@ -1,89 +1,63 @@
 import { ethers } from "ethers";
 import { IShogunCore, AuthResult } from "../types/shogun";
-/**
- * DID Document structure following W3C standard
- */
-export interface DIDDocument {
-    "@context": string | string[];
-    id: string;
-    controller?: string | string[];
-    verificationMethod?: Array<{
-        id: string;
-        type: string;
-        controller: string;
-        publicKeyMultibase?: string;
-        publicKeyJwk?: Record<string, any>;
-    }>;
-    authentication?: Array<string | {
-        id: string;
-        type: string;
-        controller: string;
-    }>;
-    assertionMethod?: Array<string | {
-        id: string;
-        type: string;
-        controller: string;
-    }>;
-    service?: Array<{
-        id: string;
-        type: string;
-        serviceEndpoint: string | Record<string, any>;
-    }>;
-}
-/**
- * DID resolution result
- */
-export interface DIDResolutionResult {
-    didResolutionMetadata: {
-        contentType?: string;
-        error?: string;
-    };
-    didDocument: DIDDocument | null;
-    didDocumentMetadata: {
-        created?: string;
-        updated?: string;
-        deactivated?: boolean;
-    };
-}
-/**
- * DID creation options
- */
-export interface DIDCreateOptions {
-    network?: string;
-    controller?: string;
-    services?: Array<{
-        type: string;
-        endpoint: string;
-    }>;
-}
+import { EventEmitter } from "events";
+import { DIDDocument, DIDResolutionResult, DIDCreateOptions, DIDRegistryConfig, DIDResolutionOptions } from "../types/did";
+export { DIDDocument, DIDResolutionResult, DIDCreateOptions };
 /**
  * ShogunDID class for decentralized identity management
  */
-export declare class ShogunDID {
+export declare class ShogunDID extends EventEmitter {
     private core;
     private methodName;
+    private didCache;
+    private readonly DEFAULT_CACHE_DURATION;
+    private readonly DEFAULT_TIMEOUT;
+    private readonly DEFAULT_MAX_RETRIES;
+    private readonly DEFAULT_RETRY_DELAY;
+    private registryConfig;
     /**
      * Initialize ShogunDID manager
-     * @param shogunCore - Instance of ShogunCore
      */
-    constructor(shogunCore: IShogunCore);
+    constructor(shogunCore: IShogunCore, registryConfig?: Partial<DIDRegistryConfig>);
     /**
-     * Create a new Shogun DID for the current user
-     * @param options - DID creation options
-     * @returns The created DID string
+     * Create a new Shogun DID
      */
     createDID(options?: DIDCreateOptions): Promise<string>;
+    /**
+     * Store DID document
+     * @param did DID identifier
+     * @param options DID creation options or document
+     * @returns Promise that resolves when DID is stored
+     */
+    private storeDID;
+    /**
+     * Create a DID Document from options
+     * @param did DID identifier
+     * @param options Creation options
+     * @returns DID Document
+     */
+    private createDidDocument;
+    /**
+     * Helper to get public key of current user
+     */
+    private getUserPublicKey;
+    /**
+     * Resolve a DID with caching
+     */
+    resolveDID(did: string, options?: DIDResolutionOptions): Promise<DIDResolutionResult>;
+    /**
+     * Register DID on blockchain with retry logic
+     */
+    registerDIDOnChain(did: string, signer?: ethers.Signer): Promise<{
+        success: boolean;
+        txHash?: string;
+        error?: string;
+    }>;
     /**
      * Get the current user's DID
      * @returns The user's DID or null if not found
      */
     getCurrentUserDID(): Promise<string | null>;
-    /**
-     * Resolve a DID to get its DID Document
-     * @param did - The DID to resolve
-     * @returns DID resolution result
-     */
-    resolveDID(did: string): Promise<DIDResolutionResult>;
     /**
      * Authenticate using a DID
      * @param did - The DID to authenticate
@@ -92,12 +66,12 @@ export declare class ShogunDID {
      */
     authenticateWithDID(did: string, challenge?: string): Promise<AuthResult>;
     /**
-     * Update a DID Document
-     * @param did - The DID to update
-     * @param documentUpdates - Updates to apply to the DID Document
-     * @returns Whether the update was successful
+     * Update DID Document
+     * @param did DID to update
+     * @param updates Partial DID Document to merge with existing document
+     * @returns True if the document was updated successfully
      */
-    updateDIDDocument(did: string, documentUpdates: Partial<DIDDocument>): Promise<boolean>;
+    updateDIDDocument(did: string, updates: Partial<DIDDocument>): Promise<boolean>;
     /**
      * Deactivate a DID
      * @param did - The DID to deactivate
@@ -117,25 +91,12 @@ export declare class ShogunDID {
      * @returns The created DID Document
      */
     generateDIDDocument(did: string, options?: DIDCreateOptions): DIDDocument;
-    private getUserPublicKey;
-    private storeDID;
     private createErrorResolution;
     private parseOrCreateDIDDocument;
     private extractAuthenticationMethod;
     private authenticateWithEthereum;
     private authenticateWithWebAuthn;
     private authenticateWithGunDB;
-    /**
-     * Registra il DID dell'utente sulla blockchain
-     * @param did - Il DID da registrare
-     * @param signer - Il signer da utilizzare per la transazione
-     * @returns Promise con il risultato della registrazione
-     */
-    registerDIDOnChain(did: string, signer?: ethers.Signer): Promise<{
-        success: boolean;
-        txHash?: string;
-        error?: string;
-    }>;
     /**
      * Verifica se un DID è registrato sulla blockchain
      * @param did - Il DID da verificare
@@ -146,4 +107,16 @@ export declare class ShogunDID {
         controller?: string;
         error?: string;
     }>;
+    /**
+     * Clear DID cache
+     */
+    clearCache(): void;
+    /**
+     * Remove specific DID from cache
+     */
+    removeFromCache(did: string): void;
+    /**
+     * Helper to get document from cache entry (compatibility)
+     */
+    private getDocumentFromCache;
 }

@@ -2,9 +2,11 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
+import { EventEmitter } from "events";
+import { ConnectionResult, MetaMaskCredentials, EthereumProvider, MetaMaskConfig } from "../types/metamask";
 declare global {
     interface Window {
-        ethereum?: any;
+        ethereum?: EthereumProvider;
         MetaMask?: typeof MetaMask;
     }
 }
@@ -16,60 +18,55 @@ declare global {
     }
 }
 /**
- * Definition of interfaces with standard types
- */
-interface ConnectionResult {
-    success: boolean;
-    address?: string;
-    username?: string;
-    randomPassword?: string;
-    error?: string;
-}
-/**
  * Class for MetaMask connection
  */
-declare class MetaMask {
+declare class MetaMask extends EventEmitter {
     readonly AUTH_DATA_TABLE: string;
-    private static readonly TIMEOUT_MS;
-    /** Custom JSON-RPC provider */
+    private readonly MESSAGE_TO_SIGN;
+    private readonly DEFAULT_CONFIG;
+    private config;
+    private signatureCache;
     private customProvider;
-    /** Wallet for custom provider */
     private customWallet;
-    /** Fixed message for signing */
-    private MESSAGE_TO_SIGN;
-    private MAX_RETRIES;
-    private RETRY_DELAY;
-    constructor();
+    private accountsChangedHandler;
+    constructor(config?: Partial<MetaMaskConfig>);
+    /**
+     * Setup MetaMask event listeners
+     */
+    private setupEventListeners;
+    /**
+     * Cleanup event listeners
+     */
+    cleanup(): void;
+    /**
+     * Get cached signature if valid
+     */
+    private getCachedSignature;
+    /**
+     * Cache signature
+     */
+    private cacheSignature;
     /**
      * Validates that the address is valid
-     * @param address Address to validate
-     * @returns Normalized address
-     * @throws Error if address is not valid
      */
     private validateAddress;
     /**
-     * Generates a secure password from signature
-     * @param signature Signature to generate password from
-     * @returns Generated password
-     */
-    generateSecurePassword(signature: string): string;
-    /**
-     * Connects to MetaMask
-     * @returns Connection result
+     * Connects to MetaMask with retry logic
      */
     connectMetaMask(): Promise<ConnectionResult>;
+    /**
+     * Generates credentials with caching
+     */
+    generateCredentials(address: string): Promise<MetaMaskCredentials>;
+    /**
+     * Generate credentials from signature
+     */
+    private generateCredentialsFromSignature;
     /**
      * Checks if MetaMask is available in the browser
      * @returns true if MetaMask is available
      */
     static isMetaMaskAvailable(): boolean;
-    /**
-     * Generates credentials for MetaMask authentication
-     */
-    generateCredentials(address: string): Promise<{
-        username: string;
-        password: string;
-    }>;
     /**
      * Requests signature with timeout
      */

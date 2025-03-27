@@ -5,11 +5,20 @@ import { ethers } from "ethers";
 import { log, logDebug, logError, logWarning } from "../utils/logger";
 import CONFIG from "../config";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import { EventEmitter } from "events";
+import {
+  ConnectionResult,
+  AuthResult,
+  MetaMaskCredentials,
+  EthereumProvider,
+  SignatureCache,
+  MetaMaskConfig
+} from "../types/metamask";
 
 // Extend the Window interface to include ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: EthereumProvider;
     MetaMask?: typeof MetaMask;
   }
 }
@@ -23,191 +32,199 @@ declare global {
 }
 
 /**
- * Definition of interfaces with standard types
- */
-interface ConnectionResult {
-  success: boolean;
-  address?: string;
-  username?: string;
-  randomPassword?: string;
-  error?: string;
-}
-
-interface AuthResult {
-  success: boolean;
-  username?: string;
-  password?: string;
-  error?: string;
-  nonce?: string;
-  timestamp?: number;
-  messageToSign?: string;
-}
-
-interface MetaMaskCredentials {
-  username: string;
-  password: string;
-}
-
-// Definition of EthereumProvider for TypeScript
-interface EthereumProvider {
-  request: (args: any) => Promise<any>;
-  isMetaMask?: boolean;
-}
-
-/**
  * Class for MetaMask connection
  */
-class MetaMask {
+class MetaMask extends EventEmitter {
   public readonly AUTH_DATA_TABLE: string;
-  private static readonly TIMEOUT_MS = 5000;
+  private readonly MESSAGE_TO_SIGN = "I Love Shogun!";
+  private readonly DEFAULT_CONFIG: MetaMaskConfig = {
+    cacheDuration: 30 * 60 * 1000, // 30 minutes
+    maxRetries: 3,
+    retryDelay: 1000,
+    timeout: 30000
+  };
 
-  /** Custom JSON-RPC provider */
+  private config: MetaMaskConfig;
+  private signatureCache: Map<string, SignatureCache> = new Map();
   private customProvider: ethers.JsonRpcProvider | null = null;
-
-  /** Wallet for custom provider */
   private customWallet: ethers.Wallet | null = null;
+  private accountsChangedHandler: ((accounts: string[]) => void) | null = null;
 
-  /** Fixed message for signing */
-  private MESSAGE_TO_SIGN = "I Love Shogun!";
+  constructor(config: Partial<MetaMaskConfig> = {}) {
+    super();
+    this.config = { ...this.DEFAULT_CONFIG, ...config };
+    this.AUTH_DATA_TABLE = CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
+    this.setupEventListeners();
+  }
 
-  private MAX_RETRIES = 3;
-  private RETRY_DELAY = 1000;
+  /**
+   * Setup MetaMask event listeners
+   */
+  private setupEventListeners(): void {
+    if (typeof window !== 'undefined' && window.ethereum?.on) {
+      this.accountsChangedHandler = (accounts: string[]) => {
+        this.emit('accountsChanged', accounts);
+      };
+      
+      window.ethereum.on('accountsChanged', this.accountsChangedHandler);
+      window.ethereum.on('chainChanged', () => this.emit('chainChanged'));
+      window.ethereum.on('connect', () => this.emit('connect'));
+      window.ethereum.on('disconnect', () => this.emit('disconnect'));
+    }
+  }
 
-  constructor() {
-    this.AUTH_DATA_TABLE =
-      CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
+  /**
+   * Cleanup event listeners
+   */
+  public cleanup(): void {
+    if (typeof window !== 'undefined' && window.ethereum?.removeListener && this.accountsChangedHandler) {
+      window.ethereum.removeListener('accountsChanged', this.accountsChangedHandler);
+    }
+    this.removeAllListeners();
+  }
+
+  /**
+   * Get cached signature if valid
+   */
+  private getCachedSignature(address: string): string | null {
+    const cached = this.signatureCache.get(address);
+    if (!cached) return null;
+
+    const now = Date.now();
+    if (now - cached.timestamp > this.config.cacheDuration!) {
+      this.signatureCache.delete(address);
+      return null;
+    }
+
+    return cached.signature;
+  }
+
+  /**
+   * Cache signature
+   */
+  private cacheSignature(address: string, signature: string): void {
+    this.signatureCache.set(address, {
+      signature,
+      timestamp: Date.now(),
+      address
+    });
   }
 
   /**
    * Validates that the address is valid
-   * @param address Address to validate
-   * @returns Normalized address
-   * @throws Error if address is not valid
    */
   private validateAddress(address: string | null | undefined): string {
     if (!address) {
       throw new Error("Address not provided");
     }
 
-    // Normalize address
-    const normalizedAddress = String(address).trim().toLowerCase();
-
     try {
-      // Verify if it's a valid address with ethers
+      const normalizedAddress = String(address).trim().toLowerCase();
       if (!ethers.isAddress(normalizedAddress)) {
         throw new Error("Invalid address format");
       }
-
-      // Format address correctly
       return ethers.getAddress(normalizedAddress);
-    } catch (e) {
-      throw new Error("Invalid Ethereum address");
+    } catch (error) {
+      ErrorHandler.handle(
+        ErrorType.VALIDATION,
+        "INVALID_ADDRESS",
+        "Invalid Ethereum address provided",
+        error
+      );
+      throw error;
     }
   }
 
   /**
-   * Generates a secure password from signature
-   * @param signature Signature to generate password from
-   * @returns Generated password
-   */
-  public generateSecurePassword(signature: string): string {
-    if (!signature) {
-      throw new Error("Invalid signature");
-    }
-
-    // hash the signature
-    const hash = ethers.keccak256(ethers.toUtf8Bytes(signature));
-    return hash.slice(2, 66);
-  }
-
-  /**
-   * Connects to MetaMask
-   * @returns Connection result
+   * Connects to MetaMask with retry logic
    */
   async connectMetaMask(): Promise<ConnectionResult> {
     try {
-      // Check if MetaMask is available
       if (!MetaMask.isMetaMaskAvailable()) {
-        const error =
-          "MetaMask is not available. Please install MetaMask extension.";
-
-        ErrorHandler.handle(
-          ErrorType.NETWORK,
-          "METAMASK_NOT_AVAILABLE",
-          error,
-          null,
-        );
-
-        return {
-          success: false,
-          error,
-        };
+        const error = "MetaMask is not available. Please install MetaMask extension.";
+        ErrorHandler.handle(ErrorType.NETWORK, "METAMASK_NOT_AVAILABLE", error, null);
+        return { success: false, error };
       }
 
-      const ethereum = window.ethereum as EthereumProvider;
-
-      try {
-        // Request authorization to access accounts
-        const accounts = await ethereum.request({
-          method: "eth_requestAccounts",
+      for (let attempt = 1; attempt <= this.config.maxRetries!; attempt++) {
+        try {
+          const accounts = await window.ethereum!.request({
+            method: "eth_requestAccounts"
         });
 
-        // Verify if there are available accounts
         if (!accounts || accounts.length === 0) {
-          const error = "No accounts found in MetaMask";
+            throw new Error("No accounts found in MetaMask");
+          }
 
-          ErrorHandler.handle(
-            ErrorType.NETWORK,
-            "NO_METAMASK_ACCOUNTS",
-            error,
-            null,
-          );
-
-          return {
-            success: false,
-            error,
-          };
-        }
-
-        // Validate and normalize address
         const address = this.validateAddress(accounts[0]);
         const metamaskUsername = `mm_${address.toLowerCase()}`;
 
-        return {
-          success: true,
-          address,
-          username: metamaskUsername,
-        };
+          this.emit('connected', { address });
+          return { success: true, address, username: metamaskUsername };
       } catch (error: any) {
-        logError("Error accessing MetaMask:", error);
-
-        ErrorHandler.handle(
-          ErrorType.NETWORK,
-          "METAMASK_ACCESS_ERROR",
-          error.message || "Error connecting to MetaMask",
-          error,
-        );
-
-        return {
-          success: false,
-          error: error.message || "Error connecting to MetaMask",
-        };
+          if (attempt === this.config.maxRetries!) throw error;
+          await new Promise(resolve => setTimeout(resolve, this.config.retryDelay!));
+        }
       }
-    } catch (error: any) {
-      logError("General error in connectMetaMask:", error);
 
+      throw new Error("Failed to connect after retries");
+    } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.NETWORK,
         "METAMASK_CONNECTION_ERROR",
         error.message || "Unknown error while connecting to MetaMask",
-        error,
+        error
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Generates credentials with caching
+   */
+  async generateCredentials(address: string): Promise<MetaMaskCredentials> {
+    try {
+      const validAddress = this.validateAddress(address);
+      
+      // Check cache first
+      const cachedSignature = this.getCachedSignature(validAddress);
+      if (cachedSignature) {
+        return this.generateCredentialsFromSignature(validAddress, cachedSignature);
+      }
+
+      const signature = await this.requestSignatureWithTimeout(
+        validAddress,
+        this.MESSAGE_TO_SIGN,
+        this.config.timeout!
       );
 
-      return {
-        success: false,
-        error: error.message || "Unknown error while connecting to MetaMask",
-      };
+      // Cache the new signature
+      this.cacheSignature(validAddress, signature);
+      
+      return this.generateCredentialsFromSignature(validAddress, signature);
+    } catch (error: any) {
+      ErrorHandler.handle(
+        ErrorType.AUTHENTICATION,
+        "CREDENTIALS_GENERATION_ERROR",
+        error.message || "Error generating MetaMask credentials",
+        error
+      );
+      throw error;
     }
+  }
+
+  /**
+   * Generate credentials from signature
+   */
+  private generateCredentialsFromSignature(
+    address: string,
+    signature: string
+  ): MetaMaskCredentials {
+    const username = `mm_${address.toLowerCase()}`;
+    const password = ethers.keccak256(
+      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`)
+    );
+    return { username, password };
   }
 
   /**
@@ -221,64 +238,6 @@ class MetaMask {
       typeof ethereum !== "undefined" &&
       ethereum?.isMetaMask === true
     );
-  }
-
-  /**
-   * Generates credentials for MetaMask authentication
-   */
-  async generateCredentials(
-    address: string,
-  ): Promise<{ username: string; password: string }> {
-    try {
-      if (!address) {
-        throw new Error("Ethereum address required");
-      }
-
-      log("Requesting message signature: " + this.MESSAGE_TO_SIGN);
-
-      let signature = null;
-      let retries = 0;
-
-      while (!signature && retries < this.MAX_RETRIES) {
-        try {
-          // Request signature with timeout
-          signature = await this.requestSignatureWithTimeout(
-            address,
-            this.MESSAGE_TO_SIGN,
-          );
-        } catch (error) {
-          retries++;
-          if (retries < this.MAX_RETRIES) {
-            log(`Attempt ${retries + 1} of ${this.MAX_RETRIES}...`);
-            await new Promise((resolve) =>
-              setTimeout(resolve, this.RETRY_DELAY),
-            );
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      if (!signature) {
-        throw new Error("Unable to get signature after attempts");
-      }
-
-      log("Signature obtained, generating password...");
-
-      // Generate deterministic username and password
-      const username = `mm_${address.toLowerCase()}`;
-      const password = ethers.keccak256(
-        ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`),
-      );
-
-      return {
-        username,
-        password,
-      };
-    } catch (error: any) {
-      logError("Error generating MetaMask credentials:", error);
-      throw new Error(`MetaMask error: ${error.message}`);
-    }
   }
 
   /**

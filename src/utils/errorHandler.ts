@@ -12,6 +12,7 @@ export enum ErrorType {
   STORAGE = "STORAGE",
   WEBAUTHN = "WEBAUTHN",
   STEALTH = "STEALTH",
+  VALIDATION = "VALIDATION",
   UNKNOWN = "UNKNOWN",
 }
 

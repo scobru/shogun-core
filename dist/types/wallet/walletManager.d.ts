@@ -2,6 +2,11 @@ import { ethers } from "ethers";
 import { GunDB } from "../gun/gun";
 import { Storage } from "../storage/storage";
 import { WalletInfo } from "../types/shogun";
+import { EventEmitter } from "events";
+import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions } from "../types/wallet";
+export type WalletPath = IWalletPath;
+export type BalanceCache = IBalanceCache;
+export type WalletExport = IWalletExport;
 /**
  * Class that manages Ethereum wallet functionality including:
  * - Wallet creation and derivation
@@ -9,25 +14,31 @@ import { WalletInfo } from "../types/shogun";
  * - Importing/exporting wallets
  * - Encrypted storage and backup
  */
-export declare class WalletManager {
+export declare class WalletManager extends EventEmitter {
     private gundb;
     private gun;
     private storage;
     private walletPaths;
     private mainWallet;
     private balanceCache;
-    private balanceCacheTTL;
-    private configuredRpcUrl;
+    private pendingTransactions;
+    private config;
     /**
      * Creates a new WalletManager instance
      * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
-     * @param options Additional configuration options
+     * @param config Additional configuration options
      */
-    constructor(gundb: GunDB, gun: any, storage: Storage, options?: {
-        balanceCacheTTL?: number;
-    });
+    constructor(gundb: GunDB, gun: any, storage: Storage, config?: Partial<WalletConfig>);
+    /**
+     * Setup transaction monitoring
+     */
+    private setupTransactionMonitoring;
+    /**
+     * Check status of pending transactions
+     */
+    private checkPendingTransactions;
     /**
      * Sets the RPC URL used for Ethereum network connections
      * @param rpcUrl The RPC provider URL to use
@@ -125,7 +136,7 @@ export declare class WalletManager {
      */
     invalidateBalanceCache(address: string): void;
     getNonce(wallet: ethers.Wallet): Promise<number>;
-    sendTransaction(wallet: ethers.Wallet, toAddress: string, value: string): Promise<string>;
+    sendTransaction(wallet: ethers.Wallet, toAddress: string, value: string, options?: TransactionOptions): Promise<string>;
     /**
      * Sign a message with a wallet
      */
@@ -222,4 +233,16 @@ export declare class WalletManager {
      * @private
      */
     private isUserAuthenticated;
+    /**
+     * Export wallet data with enhanced security
+     */
+    exportWalletData(options?: WalletBackupOptions): Promise<string>;
+    /**
+     * Import wallet data with validation
+     */
+    importWalletData(data: string, options?: WalletImportOptions): Promise<number>;
+    /**
+     * Get wallet transaction history
+     */
+    private getWalletHistory;
 }

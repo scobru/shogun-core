@@ -19,6 +19,10 @@ class GunDB {
         this.certificato = null;
         this.onAuthCallbacks = [];
         log("Initializing GunDB");
+        this.retryConfig = {
+            attempts: options.retryAttempts ?? 3,
+            delay: options.retryDelay ?? 1000
+        };
         // Use default configuration through spread to avoid null checks
         const config = {
             peers: options.peers || CONFIG.PEERS,
@@ -33,13 +37,33 @@ class GunDB {
         this.subscribeToAuthEvents();
     }
     /**
+     * Retry operation with exponential backoff
+     */
+    async retry(operation, context) {
+        let lastError;
+        for (let i = 0; i < this.retryConfig.attempts; i++) {
+            try {
+                return await operation();
+            }
+            catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                if (i < this.retryConfig.attempts - 1) {
+                    const delay = this.retryConfig.delay * Math.pow(2, i);
+                    log(`Retry attempt ${i + 1} for ${context} in ${delay}ms`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+        throw lastError;
+    }
+    /**
      * Subscribe to Gun authentication events
      */
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {
             log("Auth event received:", ack);
             if (ack.err) {
-                logError("Authentication error:", ack.err);
+                ErrorHandler.handle(ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
             }
             else {
                 this.notifyAuthListeners(ack.sea?.pub || "");
@@ -237,53 +261,64 @@ class GunDB {
         };
     }
     /**
-     * Save data to user node
+     * Save data with retry logic
+     */
+    async saveWithRetry(node, data, options) {
+        return this.retry(() => new Promise((resolve, reject) => {
+            node.put(data, (ack) => {
+                if (ack.err)
+                    reject(new Error(ack.err));
+                else
+                    resolve(data);
+            }, options);
+        }), "data save operation");
+    }
+    /**
+     * Read data with retry logic
+     */
+    async readWithRetry(node) {
+        return this.retry(() => new Promise((resolve) => {
+            node.once((data) => resolve(data));
+        }), "data read operation");
+    }
+    /**
+     * Save data to user node with improved error handling
      */
     async saveUserData(path, data) {
-        if (!this.gun.user()?.is?.pub) {
-            throw new Error("User not authenticated");
-        }
-        return new Promise((resolve, reject) => {
+        try {
+            if (!this.gun.user()?.is?.pub) {
+                throw new Error("User not authenticated");
+            }
             const options = this.certificato
                 ? { opt: { cert: this.certificato } }
                 : undefined;
-            this.gun
-                .user()
-                .get(path)
-                .put(data, (ack) => {
-                if (ack && ack.err) {
-                    logError(`Error saving data: ${ack.err}`);
-                    reject(new Error(ack.err));
-                }
-                else {
-                    log(`Data saved to ${path}`);
-                    resolve(data);
-                }
-            }, options);
-        });
+            return await this.saveWithRetry(this.gun.user().get(path), data, options);
+        }
+        catch (error) {
+            ErrorHandler.handle(ErrorType.GUN, "SAVE_USER_DATA_ERROR", `Error saving data to path ${path}`, error);
+            throw error;
+        }
     }
     /**
-     * Retrieve data from user node
+     * Retrieve data from user node with improved error handling
      */
     async getUserData(path) {
-        if (!this.gun.user()?.is?.pub) {
-            throw new Error("User not authenticated");
+        try {
+            if (!this.gun.user()?.is?.pub) {
+                throw new Error("User not authenticated");
+            }
+            const data = await this.readWithRetry(this.gun.user().get(path));
+            if (!data) {
+                log(`No data found at ${path}`);
+                return null;
+            }
+            log(`Data retrieved from ${path}`);
+            return data;
         }
-        return new Promise((resolve) => {
-            this.gun
-                .user()
-                .get(path)
-                .once((data) => {
-                if (!data) {
-                    log(`No data found at ${path}`);
-                    resolve(null);
-                }
-                else {
-                    log(`Data retrieved from ${path}`);
-                    resolve(data);
-                }
-            });
-        });
+        catch (error) {
+            ErrorHandler.handle(ErrorType.GUN, "GET_USER_DATA_ERROR", `Error retrieving data from path ${path}`, error);
+            throw error;
+        }
     }
     /**
      * Save data to public node
