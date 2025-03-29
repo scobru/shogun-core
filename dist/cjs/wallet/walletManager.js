@@ -49,7 +49,9 @@ class WalletManager extends events_1.EventEmitter {
      */
     setupTransactionMonitoring() {
         setInterval(() => {
-            this.checkPendingTransactions();
+            if (this.getProvider() !== null) {
+                this.checkPendingTransactions();
+            }
         }, 15000); // Check every 15 seconds
     }
     /**

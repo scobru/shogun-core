@@ -77,7 +77,9 @@ export class WalletManager extends EventEmitter {
    */
   private setupTransactionMonitoring() {
     setInterval(() => {
-      this.checkPendingTransactions();
+      if(this.getProvider() !== null) {
+        this.checkPendingTransactions();
+      }
     }, 15000); // Check every 15 seconds
   }
 
