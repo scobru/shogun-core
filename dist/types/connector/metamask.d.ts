@@ -26,12 +26,16 @@ declare class MetaMask extends EventEmitter {
     private readonly DEFAULT_CONFIG;
     private config;
     private signatureCache;
+    private provider;
     private customProvider;
     private customWallet;
-    private accountsChangedHandler;
     constructor(config?: Partial<MetaMaskConfig>);
     /**
-     * Setup MetaMask event listeners
+     * Initialize the BrowserProvider
+     */
+    private setupProvider;
+    /**
+     * Setup MetaMask event listeners using BrowserProvider
      */
     private setupEventListeners;
     /**
@@ -51,7 +55,7 @@ declare class MetaMask extends EventEmitter {
      */
     private validateAddress;
     /**
-     * Connects to MetaMask with retry logic
+     * Connects to MetaMask with retry logic using BrowserProvider
      */
     connectMetaMask(): Promise<ConnectionResult>;
     /**
@@ -68,7 +72,7 @@ declare class MetaMask extends EventEmitter {
      */
     static isMetaMaskAvailable(): boolean;
     /**
-     * Requests signature with timeout
+     * Request signature using BrowserProvider
      */
     private requestSignatureWithTimeout;
     /**
@@ -83,9 +87,7 @@ declare class MetaMask extends EventEmitter {
      */
     setCustomProvider(rpcUrl: string, privateKey: string): void;
     /**
-     * Get active signer instance
-     * @returns Ethers.js Signer
-     * @throws {Error} If no signer available
+     * Get active signer instance using BrowserProvider
      */
     getSigner(): Promise<ethers.Signer>;
     /**

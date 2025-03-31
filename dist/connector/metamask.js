@@ -2,7 +2,7 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { logDebug } from "../utils/logger";
+import { logDebug, logError, logWarning } from "../utils/logger";
 import CONFIG from "../config";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "events";
@@ -20,33 +20,53 @@ class MetaMask extends EventEmitter {
             timeout: 30000
         };
         this.signatureCache = new Map();
+        this.provider = null;
         this.customProvider = null;
         this.customWallet = null;
-        this.accountsChangedHandler = null;
         this.config = { ...this.DEFAULT_CONFIG, ...config };
         this.AUTH_DATA_TABLE = CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
+        this.setupProvider();
         this.setupEventListeners();
     }
     /**
-     * Setup MetaMask event listeners
+     * Initialize the BrowserProvider
+     */
+    async setupProvider() {
+        try {
+            if (typeof window !== 'undefined' && window.ethereum) {
+                this.provider = new ethers.BrowserProvider(window.ethereum);
+                logDebug("BrowserProvider initialized successfully");
+            }
+            else {
+                logWarning("Window.ethereum is not available");
+            }
+        }
+        catch (error) {
+            logError("Failed to initialize BrowserProvider", error);
+        }
+    }
+    /**
+     * Setup MetaMask event listeners using BrowserProvider
      */
     setupEventListeners() {
-        if (typeof window !== 'undefined' && window.ethereum?.on) {
-            this.accountsChangedHandler = (accounts) => {
-                this.emit('accountsChanged', accounts);
-            };
-            window.ethereum.on('accountsChanged', this.accountsChangedHandler);
-            window.ethereum.on('chainChanged', () => this.emit('chainChanged'));
-            window.ethereum.on('connect', () => this.emit('connect'));
-            window.ethereum.on('disconnect', () => this.emit('disconnect'));
+        if (this.provider) {
+            this.provider.on('network', (newNetwork, oldNetwork) => {
+                this.emit('chainChanged', newNetwork);
+            });
+            // Listen for account changes
+            if (window.ethereum?.on) {
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    this.emit('accountsChanged', accounts);
+                });
+            }
         }
     }
     /**
      * Cleanup event listeners
      */
     cleanup() {
-        if (typeof window !== 'undefined' && window.ethereum?.removeListener && this.accountsChangedHandler) {
-            window.ethereum.removeListener('accountsChanged', this.accountsChangedHandler);
+        if (this.provider) {
+            this.provider.removeAllListeners();
         }
         this.removeAllListeners();
     }
@@ -94,24 +114,23 @@ class MetaMask extends EventEmitter {
         }
     }
     /**
-     * Connects to MetaMask with retry logic
+     * Connects to MetaMask with retry logic using BrowserProvider
      */
     async connectMetaMask() {
         try {
-            if (!MetaMask.isMetaMaskAvailable()) {
-                const error = "MetaMask is not available. Please install MetaMask extension.";
-                ErrorHandler.handle(ErrorType.NETWORK, "METAMASK_NOT_AVAILABLE", error, null);
-                return { success: false, error };
+            if (!this.provider) {
+                await this.setupProvider();
+                if (!this.provider) {
+                    throw new Error("MetaMask is not available. Please install MetaMask extension.");
+                }
             }
             for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
                 try {
-                    const accounts = await window.ethereum.request({
-                        method: "eth_requestAccounts"
-                    });
-                    if (!accounts || accounts.length === 0) {
+                    const signer = await this.provider.getSigner();
+                    const address = await signer.getAddress();
+                    if (!address) {
                         throw new Error("No accounts found in MetaMask");
                     }
-                    const address = this.validateAddress(accounts[0]);
                     const metamaskUsername = `mm_${address.toLowerCase()}`;
                     this.emit('connected', { address });
                     return { success: true, address, username: metamaskUsername };
@@ -169,7 +188,7 @@ class MetaMask extends EventEmitter {
             ethereum?.isMetaMask === true);
     }
     /**
-     * Requests signature with timeout
+     * Request signature using BrowserProvider
      */
     async requestSignatureWithTimeout(address, message, timeout = 30000) {
         return new Promise(async (resolve, reject) => {
@@ -177,12 +196,10 @@ class MetaMask extends EventEmitter {
                 reject(new Error("Timeout requesting signature"));
             }, timeout);
             try {
-                if (!window.ethereum) {
-                    throw new Error("MetaMask not found");
+                if (!this.provider) {
+                    throw new Error("Provider not initialized");
                 }
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const signer = await provider.getSigner();
-                // Verify address matches
+                const signer = await this.provider.getSigner();
                 const signerAddress = await signer.getAddress();
                 if (signerAddress.toLowerCase() !== address.toLowerCase()) {
                     throw new Error("Signer address does not match");
@@ -226,20 +243,20 @@ class MetaMask extends EventEmitter {
         }
     }
     /**
-     * Get active signer instance
-     * @returns Ethers.js Signer
-     * @throws {Error} If no signer available
+     * Get active signer instance using BrowserProvider
      */
     async getSigner() {
         try {
             if (this.customWallet) {
                 return this.customWallet;
             }
-            const signer = await this.getEthereumSigner();
-            if (!signer) {
-                throw new Error("No Ethereum signer available");
+            if (!this.provider) {
+                await this.setupProvider();
             }
-            return signer;
+            if (!this.provider) {
+                throw new Error("Provider not initialized");
+            }
+            return await this.provider.getSigner();
         }
         catch (error) {
             throw new Error(`Unable to get Ethereum signer: ${error.message || "Unknown error"}`);
