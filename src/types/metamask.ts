@@ -28,11 +28,17 @@ export interface AuthResult extends BaseAuthResult {
 }
 
 /**
- * MetaMask credentials
+ * Structure for credentials generated via MetaMask
  */
 export interface MetaMaskCredentials {
+  /** Generated username based on the address */
   username: string;
+  /** Generated password based on the signature */
   password: string;
+  /** Original message signed by the user */
+  message: string;
+  /** Signature provided by MetaMask */
+  signature: string;
 }
 
 /**

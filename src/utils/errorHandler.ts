@@ -4,16 +4,22 @@ import { log, logError } from "./logger";
  * Tipi di errore che possono verificarsi nell'applicazione
  */
 export enum ErrorType {
-  AUTHENTICATION = "AUTHENTICATION",
-  WALLET = "WALLET",
-  GUN = "GUN",
-  NETWORK = "NETWORK",
-  DID = "DID",
-  STORAGE = "STORAGE",
-  WEBAUTHN = "WEBAUTHN",
-  STEALTH = "STEALTH",
-  VALIDATION = "VALIDATION",
-  UNKNOWN = "UNKNOWN",
+  AUTHENTICATION = "AuthenticationError",
+  AUTHORIZATION = "AuthorizationError",
+  VALIDATION = "ValidationError",
+  NETWORK = "NetworkError",
+  DATABASE = "DatabaseError",
+  WALLET = "WalletError",
+  DID = "DIDError",
+  STORAGE = "StorageError",
+  ENCRYPTION = "EncryptionError",
+  SIGNATURE = "SignatureError",
+  ENVIRONMENT = "EnvironmentError",
+  SECURITY = "SecurityError",
+  GUN = "GunError",
+  STEALTH = "StealthError",
+  WEBAUTHN = "WebAuthnError",
+  UNKNOWN = "UnknownError",
 }
 
 /**
@@ -90,9 +96,10 @@ export class ErrorHandler {
     code: string,
     message: string,
     originalError?: Error | any,
-  ): void {
+  ): ShogunError {
     const error = createError(type, code, message, originalError);
     this.handleError(error);
+    return error;
   }
 
   /**

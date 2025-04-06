@@ -5,7 +5,8 @@ import { Webauthn } from "../webauthn/webauthn";
 import { MetaMask } from "../connector/metamask";
 import { Stealth } from "../stealth/stealth";
 import { GunDB } from "../gun/gun";
-import { DIDCreateOptions } from "../did/DID";
+import { GunDBOptions } from "./gun";
+import { WalletManager } from "../wallet/walletManager";
 
 // Definizione dell'interfaccia DID
 interface DID {
@@ -17,7 +18,7 @@ interface DID {
   deactivateDID(did: string): Promise<boolean>;
   registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer,
+    signer?: ethers.Signer
   ): Promise<{ success: boolean; txHash?: string; error?: string }>;
 }
 
@@ -50,13 +51,17 @@ export interface SignUpResult {
 export interface IShogunCore {
   gun: IGunInstance<any>;
   gundb: GunDB;
-  webauthn: Webauthn;
-  metamask: MetaMask;
-  stealth: Stealth;
-  did: DID;
+  webauthn?: Webauthn;
+  metamask?: MetaMask;
+  stealth?: Stealth;
+  did?: DID;
+  walletManager?: WalletManager;
 
   // Error handling methods
   getRecentErrors(count?: number): ShogunError[];
+
+  // Logging configuration
+  configureLogging(config: LoggingConfig): void;
 
   // RPC Provider methods
   setRpcUrl(rpcUrl: string): boolean;
@@ -70,7 +75,7 @@ export interface IShogunCore {
   signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string,
+    passwordConfirmation?: string
   ): Promise<SignUpResult>;
   signUpWithMetaMask(address: string): Promise<AuthResult>;
   signUpWithWebAuthn(username: string): Promise<AuthResult>;
@@ -84,13 +89,13 @@ export interface IShogunCore {
   loadWallets(): Promise<WalletInfo[]>;
   signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array,
+    message: string | Uint8Array
   ): Promise<string>;
   verifySignature(message: string | Uint8Array, signature: string): string;
   signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string,
+    value: string
   ): Promise<string>;
   getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
   generateNewMnemonic(): string;
@@ -110,7 +115,7 @@ export interface IShogunCore {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    },
+    }
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
@@ -148,22 +153,23 @@ export interface DIDConfig {
 }
 
 /**
+ * Logging configuration
+ */
+export interface LoggingConfig {
+  /** Enable logging (default: true in development, false in production) */
+  enabled?: boolean;
+  /** Log level: 'error', 'warning', 'info', 'debug' */
+  level?: 'error' | 'warning' | 'info' | 'debug';
+  /** Custom prefix for log messages */
+  prefix?: string;
+}
+
+/**
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
   /** GunDB configuration */
-  gundb?: {
-    /** List of peers to use */
-    peers?: string[];
-    /** Enable websocket */
-    websocket?: boolean;
-    /** Enable radisk for disk storage */
-    radisk?: boolean;
-    /** Enable localStorage */
-    localStorage?: boolean;
-  };
-  /** List of peers to use (deprecated, use gundb.peers) */
-  peers?: string[];
+  gundb?: GunDBOptions;
   /** Ethereum provider URL */
   providerUrl?: string;
   /** WebAuthn configuration */
@@ -176,9 +182,27 @@ export interface ShogunSDKConfig {
   /** DID configuration */
   did?: DIDConfig;
   /** Wallet configuration */
-  wallet?: {
+  walletManager?: {
+    /** Enable wallet functionalities */
+    enabled?: boolean;
     /** Balance cache TTL in milliseconds (default: 30000) */
     balanceCacheTTL?: number;
+  };
+  /** Enable stealth functionalities */
+  stealth?: {
+    /** Enable stealth functionalities */
+    enabled?: boolean;
+  };
+  /** Logging configuration */
+  logging?: LoggingConfig;
+  /** Timeout configuration in milliseconds */
+  timeouts?: {
+    /** Login timeout in milliseconds (default: 15000) */
+    login?: number;
+    /** Signup timeout in milliseconds (default: 20000) */
+    signup?: number;
+    /** General operation timeout in milliseconds (default: 30000) */
+    operation?: number;
   };
 }
 

@@ -111,3 +111,16 @@ export interface IGunCryptoKeyPair {
    */
   epriv?: string;
 }
+
+export interface GunDBOptions {
+  peers?: string[];
+  localStorage?: boolean;
+  sessionStorage?: boolean;
+  radisk?: boolean;
+  multicast?: boolean;
+  axe?: boolean;
+  retryAttempts?: number;
+  retryDelay?: number;
+  authToken?: string;
+  websocket?: boolean;
+}

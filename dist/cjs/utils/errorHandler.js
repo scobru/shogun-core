@@ -8,16 +8,22 @@ const logger_1 = require("./logger");
  */
 var ErrorType;
 (function (ErrorType) {
-    ErrorType["AUTHENTICATION"] = "AUTHENTICATION";
-    ErrorType["WALLET"] = "WALLET";
-    ErrorType["GUN"] = "GUN";
-    ErrorType["NETWORK"] = "NETWORK";
-    ErrorType["DID"] = "DID";
-    ErrorType["STORAGE"] = "STORAGE";
-    ErrorType["WEBAUTHN"] = "WEBAUTHN";
-    ErrorType["STEALTH"] = "STEALTH";
-    ErrorType["VALIDATION"] = "VALIDATION";
-    ErrorType["UNKNOWN"] = "UNKNOWN";
+    ErrorType["AUTHENTICATION"] = "AuthenticationError";
+    ErrorType["AUTHORIZATION"] = "AuthorizationError";
+    ErrorType["VALIDATION"] = "ValidationError";
+    ErrorType["NETWORK"] = "NetworkError";
+    ErrorType["DATABASE"] = "DatabaseError";
+    ErrorType["WALLET"] = "WalletError";
+    ErrorType["DID"] = "DIDError";
+    ErrorType["STORAGE"] = "StorageError";
+    ErrorType["ENCRYPTION"] = "EncryptionError";
+    ErrorType["SIGNATURE"] = "SignatureError";
+    ErrorType["ENVIRONMENT"] = "EnvironmentError";
+    ErrorType["SECURITY"] = "SecurityError";
+    ErrorType["GUN"] = "GunError";
+    ErrorType["STEALTH"] = "StealthError";
+    ErrorType["WEBAUTHN"] = "WebAuthnError";
+    ErrorType["UNKNOWN"] = "UnknownError";
 })(ErrorType || (exports.ErrorType = ErrorType = {}));
 /**
  * Wrapper per standardizzare gli errori
@@ -66,6 +72,7 @@ class ErrorHandler {
     static handle(type, code, message, originalError) {
         const error = createError(type, code, message, originalError);
         this.handleError(error);
+        return error;
     }
     /**
      * Recupera gli ultimi N errori

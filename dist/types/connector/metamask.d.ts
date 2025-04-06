@@ -67,6 +67,11 @@ declare class MetaMask extends EventEmitter {
      */
     private generateCredentialsFromSignature;
     /**
+     * Generate fallback credentials when signature request fails
+     * Questo è meno sicuro della firma, ma permette di procedere con l'autenticazione
+     */
+    private generateFallbackCredentials;
+    /**
      * Checks if MetaMask is available in the browser
      * @returns true if MetaMask is available
      */

@@ -105,21 +105,57 @@ yarn add shogun-core
 
 ### Basic Usage
 ```typescript
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, initShogunBrowser } from "shogun-core";
 
-// Initialize SDK
+// Inizializzazione per ambiente Node.js
 const shogun = new ShogunCore({
-  peers: ["https://your-gun-peer.com/gun"],
-  localStorage: true,
+  gundb: {
+    peers: ["https://your-gun-peer.com/gun"],
+    localStorage: true,
+  },
+  providerUrl: "https://ethereum-rpc-url.com",
+});
+
+// Oppure per browser (consigliato per applicazioni web)
+const shogunBrowser = initShogunBrowser({
+  gundb: {
+    peers: ["https://your-gun-peer.com/gun"],
+    websocket: true,
+  },
+  providerUrl: "https://ethereum-rpc-url.com",
+  webauthn: {
+    enabled: true,
+    rpName: "Your App",
+    rpId: "yourdomain.com"
+  }
 });
 
 // Authentication examples
 const webAuthnLogin = await shogun.loginWithWebAuthn('username');
-const metaMaskLogin = await shogun.loginWithMetaMask('address');
+const metaMaskLogin = await shogun.loginWithMetaMask('0x1234...abcd');
 const passwordLogin = await shogun.login('username', 'password');
 
 // Wallet operations
 const wallet = await shogun.createWallet();
+
+// Login con MetaMask
+async function metamaskLogin() {
+  try {
+    // Prima ottieni l'indirizzo da MetaMask
+    const provider = window.ethereum;
+    if (!provider) {
+      throw new Error("MetaMask non è installato!");
+    }
+    
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    const address = accounts[0]; // Indirizzo dell'utente
+    
+    const result = await shogun.loginWithMetaMask(address);
+    console.log("Login with MetaMask completed:", result);
+  } catch (error) {
+    console.error("Error during MetaMask login:", error);
+  }
+}
 ```
 
 ## Use Cases
@@ -178,14 +214,27 @@ const { ShogunCore, initShogunBrowser } = require("shogun-core");
 ```javascript
 // Initialize Shogun with browser-optimized configuration
 const shogun = initShogunBrowser({
-  peers: ["https://your-gun-relay.com/gun"],
-  websocket: true, // Use WebSocket for communication
+  gundb: {
+    peers: ["https://your-gun-relay.com/gun"],
+    websocket: true, // Use WebSocket for communication
+  },
+  providerUrl: "https://ethereum-rpc-url.com",
   // WebAuthn configuration for biometric/device authentication
   webauthn: {
     enabled: true,
     rpName: "Your App",
     rpId: window.location.hostname,
   },
+  // Optional: attiva stealth e wallet manager
+  stealth: {
+    enabled: true
+  },
+  walletManager: {
+    enabled: true
+  },
+  did: {
+    enabled: true
+  }
 });
 
 // Registration

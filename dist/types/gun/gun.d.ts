@@ -1,18 +1,6 @@
 import "gun/sea";
 import { IGunInstance } from "gun/types";
-/**
- * GunDB options definition
- */
-export interface GunDBOptions {
-    peers?: string[];
-    localStorage?: boolean;
-    sessionStorage?: boolean;
-    radisk?: boolean;
-    multicast?: boolean;
-    axe?: boolean;
-    retryAttempts?: number;
-    retryDelay?: number;
-}
+import { GunDBOptions } from "../types/gun";
 /**
  * Authentication result
  */
@@ -32,6 +20,7 @@ declare class GunDB {
     private certificato;
     private onAuthCallbacks;
     private retryConfig;
+    private _authenticating;
     /**
      * @param options - GunDBOptions
      */
@@ -89,12 +78,26 @@ declare class GunDB {
      */
     signUp(username: string, password: string): Promise<any>;
     /**
-     * Login a user
+     * Perform user login
      * @param username - Username
      * @param password - Password
-     * @returns Promise resolving with login result
+     * @param callback - Optional callback function
+     * @returns Promise that resolves with login result
      */
-    login(username: string, password: string): Promise<any>;
+    login(username: string, password: string, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Salva la coppia di autenticazione dell'utente
+     * @private
+     */
+    private _savePair;
+    /**
+     * Verifica se un processo di autenticazione è già in corso
+     */
+    private isAuthenticating;
+    /**
+     * Imposta il flag di autenticazione
+     */
+    private _setAuthenticating;
     /**
      * Logout current user
      */

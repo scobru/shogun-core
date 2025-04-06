@@ -2,16 +2,22 @@
  * Tipi di errore che possono verificarsi nell'applicazione
  */
 export declare enum ErrorType {
-    AUTHENTICATION = "AUTHENTICATION",
-    WALLET = "WALLET",
-    GUN = "GUN",
-    NETWORK = "NETWORK",
-    DID = "DID",
-    STORAGE = "STORAGE",
-    WEBAUTHN = "WEBAUTHN",
-    STEALTH = "STEALTH",
-    VALIDATION = "VALIDATION",
-    UNKNOWN = "UNKNOWN"
+    AUTHENTICATION = "AuthenticationError",
+    AUTHORIZATION = "AuthorizationError",
+    VALIDATION = "ValidationError",
+    NETWORK = "NetworkError",
+    DATABASE = "DatabaseError",
+    WALLET = "WalletError",
+    DID = "DIDError",
+    STORAGE = "StorageError",
+    ENCRYPTION = "EncryptionError",
+    SIGNATURE = "SignatureError",
+    ENVIRONMENT = "EnvironmentError",
+    SECURITY = "SecurityError",
+    GUN = "GunError",
+    STEALTH = "StealthError",
+    WEBAUTHN = "WebAuthnError",
+    UNKNOWN = "UnknownError"
 }
 /**
  * Interfaccia standard per errori di Shogun
@@ -51,7 +57,7 @@ export declare class ErrorHandler {
      * @param message - Messaggio errore
      * @param originalError - Errore originale
      */
-    static handle(type: ErrorType, code: string, message: string, originalError?: Error | any): void;
+    static handle(type: ErrorType, code: string, message: string, originalError?: Error | any): ShogunError;
     /**
      * Recupera gli ultimi N errori
      * @param count - Numero di errori da recuperare

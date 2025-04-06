@@ -10,6 +10,8 @@ const loadWebAuthnModule = () => import("./webauthn/webauthn");
 const loadStealthModule = () => import("./stealth/stealth");
 const loadDIDModule = () => import("./did/DID");
 
+let shogunCoreInstance;
+
 /**
  * Function to initialize Shogun in a browser environment
  *
@@ -24,24 +26,16 @@ const loadDIDModule = () => import("./did/DID");
 export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   // Apply default browser settings
   const browserConfig: ShogunSDKConfig = {
-    ...config,
-    // Make sure browser default settings are applied
-    gundb: {
-      ...config.gundb,
-      localStorage: config.gundb?.localStorage ?? true,
-      radisk: config.gundb?.radisk ?? true,
-      peers: config.gundb?.peers || config.peers,
-    },
-    // WebAuthn specific settings (if not specified)
-    webauthn: {
-      ...config.webauthn,
-      rpId: config.webauthn?.rpId || window.location.hostname,
-      enabled: config.webauthn?.enabled ?? true,
-    },
+    ...config
   };
 
+  // Assicuriamoci che la configurazione di GunDB esista
+  if (!browserConfig.gundb) {
+    browserConfig.gundb = {};
+  }
+   
   // Warn users who don't provide custom peers or providerUrl
-  if (!config.peers && (!config.gundb || !config.gundb.peers)) {
+  if (!config.gundb?.peers) {
     log(
       "WARNING: Using default GunDB peers. For production, always configure custom peers.",
     );
@@ -54,7 +48,9 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   }
 
   // Create a new ShogunCore instance with browser-optimized configuration
-  return new ShogunCore(browserConfig);
+  shogunCoreInstance = new ShogunCore(browserConfig);
+
+  return shogunCoreInstance;
 }
 
 // Esportazione lazy loading helpers
@@ -72,7 +68,7 @@ export * from "./types/shogun";
 
 // Support use as a global variable when included via <script>
 if (typeof window !== "undefined") {
-  (window as any).ShogunCore = ShogunCore;
+  (window as any).ShogunCore = shogunCoreInstance;
   (window as any).initShogunBrowser = initShogunBrowser;
   (window as any).ShogunModules = modules;
 }

@@ -1,3 +1,9 @@
+import { LoggingConfig } from "../types/shogun";
+/**
+ * Configure logging behavior
+ * @param config - Logging configuration
+ */
+export declare function configureLogging(config: LoggingConfig): void;
 /**
  * Utility function for logging
  * @param message - Message to log
@@ -15,7 +21,7 @@ export declare function logError(message: string, ...args: any[]): void;
  * @param message - Warning message to log
  * @param args - Additional arguments
  */
-export declare function logWarning(message: string, ...args: any[]): void;
+export declare function logWarn(message: string, ...args: any[]): void;
 /**
  * Utility function for debug logging
  * @param message - Debug message to log

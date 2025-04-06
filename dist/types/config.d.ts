@@ -27,7 +27,7 @@ export declare const CONFIG: {
         MIN_USERNAME_LENGTH: number;
     };
     PREFIX: string;
-    PEERS: string[];
+    PEERS: never[];
     MESSAGE_TO_SIGN: string;
 };
 export default CONFIG;

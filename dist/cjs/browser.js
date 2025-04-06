@@ -48,6 +48,7 @@ const logger_1 = require("./utils/logger");
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./webauthn/webauthn")));
 const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./stealth/stealth")));
 const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./did/DID")));
+let shogunCoreInstance;
 /**
  * Function to initialize Shogun in a browser environment
  *
@@ -62,30 +63,22 @@ const loadDIDModule = () => Promise.resolve().then(() => __importStar(require(".
 function initShogunBrowser(config) {
     // Apply default browser settings
     const browserConfig = {
-        ...config,
-        // Make sure browser default settings are applied
-        gundb: {
-            ...config.gundb,
-            localStorage: config.gundb?.localStorage ?? true,
-            radisk: config.gundb?.radisk ?? true,
-            peers: config.gundb?.peers || config.peers,
-        },
-        // WebAuthn specific settings (if not specified)
-        webauthn: {
-            ...config.webauthn,
-            rpId: config.webauthn?.rpId || window.location.hostname,
-            enabled: config.webauthn?.enabled ?? true,
-        },
+        ...config
     };
+    // Assicuriamoci che la configurazione di GunDB esista
+    if (!browserConfig.gundb) {
+        browserConfig.gundb = {};
+    }
     // Warn users who don't provide custom peers or providerUrl
-    if (!config.peers && (!config.gundb || !config.gundb.peers)) {
+    if (!config.gundb?.peers) {
         (0, logger_1.log)("WARNING: Using default GunDB peers. For production, always configure custom peers.");
     }
     if (!config.providerUrl) {
         (0, logger_1.log)("WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits.");
     }
     // Create a new ShogunCore instance with browser-optimized configuration
-    return new index_1.ShogunCore(browserConfig);
+    shogunCoreInstance = new index_1.ShogunCore(browserConfig);
+    return shogunCoreInstance;
 }
 // Esportazione lazy loading helpers
 exports.modules = {
@@ -97,7 +90,7 @@ exports.modules = {
 __exportStar(require("./types/shogun"), exports);
 // Support use as a global variable when included via <script>
 if (typeof window !== "undefined") {
-    window.ShogunCore = index_1.ShogunCore;
+    window.ShogunCore = shogunCoreInstance;
     window.initShogunBrowser = initShogunBrowser;
     window.ShogunModules = exports.modules;
 }

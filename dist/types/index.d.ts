@@ -2,8 +2,9 @@ import { GunDB } from "./gun/gun";
 import { Webauthn } from "./webauthn/webauthn";
 import { MetaMask } from "./connector/metamask";
 import { Stealth } from "./stealth/stealth";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, WalletInfo } from "./types/shogun";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, WalletInfo, LoggingConfig } from "./types/shogun";
 import { IGunInstance } from "gun/types/gun";
+import { WalletManager } from "./wallet/walletManager";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
 import { ShogunError } from "./utils/errorHandler";
@@ -12,14 +13,15 @@ export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     gundb: GunDB;
-    webauthn: Webauthn;
-    metamask: MetaMask;
-    stealth: Stealth;
-    did: ShogunDID;
+    webauthn?: Webauthn;
+    metamask?: MetaMask;
+    stealth?: Stealth;
+    did?: ShogunDID;
     private storage;
     private eventEmitter;
-    private walletManager;
+    walletManager?: WalletManager;
     private provider?;
+    private config;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -92,16 +94,24 @@ export declare class ShogunCore implements IShogunCore {
      * Login with MetaMask
      * @param address - Ethereum address
      * @returns {Promise<AuthResult>} Authentication result
-     * @description Authenticates user using MetaMask wallet credentials
+     * @description Authenticates user using MetaMask wallet credentials after signature verification
      */
     loginWithMetaMask(address: string): Promise<AuthResult>;
     /**
      * Register new user with MetaMask
      * @param address - Ethereum address
      * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using MetaMask wallet credentials
+     * @description Creates a new user account using MetaMask wallet credentials after signature verification
      */
     signUpWithMetaMask(address: string): Promise<AuthResult>;
+    /**
+     * Create a new user with GunDB
+     * @param username - Username
+     * @param password - Password
+     * @returns {Promise<{success: boolean, userPub?: string, error?: string}>} Promise with success status and user public key
+     * @description Creates a new user in GunDB with error handling
+     */
+    private createUserWithGunDB;
     /**
      * Get main wallet
      * @returns {ethers.Wallet | null} Main wallet instance or null if not available
@@ -244,16 +254,34 @@ export declare class ShogunCore implements IShogunCore {
     getRpcUrl(): string | null;
     /**
      * Ensure the current user has a DID associated, creating one if needed
-     * @param options Optional DID creation options
-     * @returns Promise with the DID string or null if fails
+     * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
+     *   - network: The network to use (default: 'main')
+     *   - controller: The controller of the DID (default: user's public key)
+     *   - services: Array of service definitions to add to the DID document
+     * @returns {Promise<string|null>} The DID identifier string or null if operation fails
+     * @description Checks if the authenticated user already has a DID. If not, creates a new one.
+     * If the user already has a DID and options are provided, updates the DID document accordingly.
+     * @private
      */
     private ensureUserHasDID;
+    /**
+     * Configure logging behavior for the Shogun SDK
+     * @param {LoggingConfig} config - Logging configuration object containing:
+     *   - level: The minimum log level to display (error, warn, info, debug, trace)
+     *   - logToConsole: Whether to output logs to the console (default: true)
+     *   - customLogger: Optional custom logger implementation
+     *   - logTimestamps: Whether to include timestamps in logs (default: true)
+     * @returns {void}
+     * @description Updates the logging configuration for the SDK. Changes take effect immediately
+     * for all subsequent log operations.
+     */
+    configureLogging(config: LoggingConfig): void;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./connector/metamask";
 export { Stealth } from "./stealth/stealth";
-export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage } from "./types/stealth";
+export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
 export { Webauthn } from "./webauthn/webauthn";
 export { Storage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";

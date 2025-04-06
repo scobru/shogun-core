@@ -5,6 +5,8 @@ import { Webauthn } from "../webauthn/webauthn";
 import { MetaMask } from "../connector/metamask";
 import { Stealth } from "../stealth/stealth";
 import { GunDB } from "../gun/gun";
+import { GunDBOptions } from "./gun";
+import { WalletManager } from "../wallet/walletManager";
 interface DID {
     getCurrentUserDID(): Promise<string | null>;
     resolveDID(did: string): Promise<any>;
@@ -44,11 +46,13 @@ export interface SignUpResult {
 export interface IShogunCore {
     gun: IGunInstance<any>;
     gundb: GunDB;
-    webauthn: Webauthn;
-    metamask: MetaMask;
-    stealth: Stealth;
-    did: DID;
+    webauthn?: Webauthn;
+    metamask?: MetaMask;
+    stealth?: Stealth;
+    did?: DID;
+    walletManager?: WalletManager;
     getRecentErrors(count?: number): ShogunError[];
+    configureLogging(config: LoggingConfig): void;
     setRpcUrl(rpcUrl: string): boolean;
     getRpcUrl(): string | null;
     login(username: string, password: string): Promise<AuthResult>;
@@ -109,22 +113,22 @@ export interface DIDConfig {
     enabled?: boolean;
 }
 /**
+ * Logging configuration
+ */
+export interface LoggingConfig {
+    /** Enable logging (default: true in development, false in production) */
+    enabled?: boolean;
+    /** Log level: 'error', 'warning', 'info', 'debug' */
+    level?: 'error' | 'warning' | 'info' | 'debug';
+    /** Custom prefix for log messages */
+    prefix?: string;
+}
+/**
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
     /** GunDB configuration */
-    gundb?: {
-        /** List of peers to use */
-        peers?: string[];
-        /** Enable websocket */
-        websocket?: boolean;
-        /** Enable radisk for disk storage */
-        radisk?: boolean;
-        /** Enable localStorage */
-        localStorage?: boolean;
-    };
-    /** List of peers to use (deprecated, use gundb.peers) */
-    peers?: string[];
+    gundb?: GunDBOptions;
     /** Ethereum provider URL */
     providerUrl?: string;
     /** WebAuthn configuration */
@@ -137,9 +141,27 @@ export interface ShogunSDKConfig {
     /** DID configuration */
     did?: DIDConfig;
     /** Wallet configuration */
-    wallet?: {
+    walletManager?: {
+        /** Enable wallet functionalities */
+        enabled?: boolean;
         /** Balance cache TTL in milliseconds (default: 30000) */
         balanceCacheTTL?: number;
+    };
+    /** Enable stealth functionalities */
+    stealth?: {
+        /** Enable stealth functionalities */
+        enabled?: boolean;
+    };
+    /** Logging configuration */
+    logging?: LoggingConfig;
+    /** Timeout configuration in milliseconds */
+    timeouts?: {
+        /** Login timeout in milliseconds (default: 15000) */
+        login?: number;
+        /** Signup timeout in milliseconds (default: 20000) */
+        signup?: number;
+        /** General operation timeout in milliseconds (default: 30000) */
+        operation?: number;
     };
 }
 export interface WalletInfo {

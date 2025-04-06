@@ -107,22 +107,26 @@
         <!-- Username e Password -->
         <div class="auth-method">
           <h3>Username e Password</h3>
-          <input type="text" id="username" placeholder="Username" style="padding: 8px; width: 90%; margin-bottom: 10px;">
-          <input type="password" id="password" placeholder="Password" style="padding: 8px; width: 90%; margin-bottom: 10px;">
-          <div>
-            <button id="loginBtn">Login</button>
-            <button id="signupBtn">Registrati</button>
-          </div>
+          <form id="loginForm" onsubmit="return false;">
+            <input type="text" id="username" placeholder="Username" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
+            <input type="password" id="password" placeholder="Password" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="current-password">
+            <div>
+              <button type="button" id="loginBtn">Login</button>
+              <button type="button" id="signupBtn">Registrati</button>
+            </div>
+          </form>
         </div>
         
         <!-- WebAuthn -->
         <div class="auth-method">
           <h3>WebAuthn <span id="webauthnStatus" class="status-badge"></span></h3>
-          <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn" style="padding: 8px; width: 90%; margin-bottom: 10px;">
-          <div>
-            <button id="webauthnLoginBtn" disabled>Login con WebAuthn</button>
-            <button id="webauthnSignupBtn" disabled>Registra con WebAuthn</button>
-          </div>
+          <form id="webauthnForm" onsubmit="return false;">
+            <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
+            <div>
+              <button type="button" id="webauthnLoginBtn" disabled>Login con WebAuthn</button>
+              <button type="button" id="webauthnSignupBtn" disabled>Registra con WebAuthn</button>
+            </div>
+          </form>
         </div>
         
         <!-- MetaMask -->
@@ -266,10 +270,13 @@
       try {
         // Configurazione per l'ambiente browser
         const config = {
-          peers: ['https://gun-relay.scobrudot.dev/gun'],
-          websocket: false,
-          localStorage: true,
-          radisk: true,
+          gundb: {
+            peers: ['http://localhost:3000/gun'],
+            websocket: false,
+            localStorage: false,
+            radisk: false,
+            authToken: 'thisIsTheTokenForReals'
+          },
           webauthn: {
             enabled: true,
             rpName: 'Shogun Demo',
@@ -277,8 +284,18 @@
           },
           metamask: {
             enabled: true
+          },
+          logging: {
+            enabled: true,
+            level: 'debug',
+            prefix: '[Shogun Demo]'
+          },
+          walletManager: {
+            enabled: true
           }
         };
+
+        console.log("Initializing Shogun with authToken:", config.gundb.authToken);
 
         // Utilizziamo la funzione di inizializzazione specifica per browser
         shogun = window.initShogunBrowser(config);
@@ -361,14 +378,50 @@
         return;
       }
 
-      if (!metamaskAddress) {
-        showError('Login MetaMask', new Error('MetaMask non è connesso!'));
-        return;
-      }
-
       try {
-        const result = await shogun.loginWithMetaMask(metamaskAddress);
-        showResult('Login con MetaMask completato', result);
+        console.log('Login with MetaMask');
+        
+        // Prima connettiti a MetaMask se non lo siamo già
+        if (!metamaskAddress) {
+          showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
+          const connectResult = await shogun.metamask.connectMetaMask();
+          
+          if (!connectResult.success) {
+            showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
+            return;
+          }
+          
+          metamaskAddress = connectResult.address;
+          metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
+        }
+        
+        showResult('MetaMask', { message: 'Login in corso...', address: metamaskAddress });
+        
+        // Aggiungiamo un timeout più lungo per il login
+        const loginWithTimeout = async () => {
+          try {
+            // NOTA: L'API richiede l'address come parametro, a differenza di quanto suggerito nella documentazione semplificata
+            const result = await shogun.loginWithMetaMask(metamaskAddress);
+            return result;
+          } catch (error) {
+            console.error("Error durante login MetaMask:", error);
+            throw error;
+          }
+        };
+        
+        // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
+        const loginPromise = loginWithTimeout();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout durante il login (2 minuti)")), 120000);
+        });
+        
+        const result = await Promise.race([loginPromise, timeoutPromise]);
+        
+        if (result.success) {
+          showResult('Login con MetaMask completato', result);
+        } else {
+          showError('Login MetaMask', new Error(result.error || 'Errore sconosciuto durante il login'));
+        }
       } catch (error) {
         showError('Login MetaMask', error);
       }
@@ -381,14 +434,47 @@
         return;
       }
 
-      if (!metamaskAddress) {
-        showError('Registrazione MetaMask', new Error('MetaMask non è connesso!'));
-        return;
-      }
-
       try {
-        const result = await shogun.signUpWithMetaMask(metamaskAddress);
-        showResult('Registrazione con MetaMask completata', result);
+        // Prima connettiti a MetaMask se non lo siamo già
+        if (!metamaskAddress) {
+          showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
+          const connectResult = await shogun.metamask.connectMetaMask();
+          
+          if (!connectResult.success) {
+            showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
+            return;
+          }
+          
+          metamaskAddress = connectResult.address;
+          metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
+        }
+
+        showResult('MetaMask', { message: 'Registrazione in corso...', address: metamaskAddress });
+        
+        // Aggiungiamo un timeout più lungo per la registrazione
+        const signupWithTimeout = async () => {
+          try {
+            const result = await shogun.signUpWithMetaMask(metamaskAddress);
+            return result;
+          } catch (error) {
+            console.error("Error durante registrazione MetaMask:", error);
+            throw error;
+          }
+        };
+        
+        // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
+        const signupPromise = signupWithTimeout();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout durante la registrazione (2 minuti)")), 120000);
+        });
+        
+        const result = await Promise.race([signupPromise, timeoutPromise]);
+        
+        if (result.success) {
+          showResult('Registrazione con MetaMask completata', result);
+        } else {
+          showError('Registrazione MetaMask', new Error(result.error || 'Errore sconosciuto durante la registrazione'));
+        }
       } catch (error) {
         showError('Registrazione MetaMask', error);
       }
