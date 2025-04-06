@@ -6,7 +6,7 @@
  */
 export interface BaseEvent {
     type: string;
-    data: any;
+    data: Record<string, unknown>;
     timestamp: number;
 }
 /**
@@ -20,7 +20,7 @@ export interface BaseConfig {
 /**
  * Base cache entry interface
  */
-export interface BaseCacheEntry<T = any> {
+export interface BaseCacheEntry<T = unknown> {
     timestamp: number;
     data?: T;
 }
@@ -41,7 +41,7 @@ export interface BaseAuthResult extends BaseResult {
 /**
  * Common log levels
  */
-export type LogLevel = 'info' | 'error' | 'debug' | 'warn';
+export type LogLevel = "info" | "error" | "debug" | "warn";
 /**
  * Base log message
  */
@@ -49,7 +49,7 @@ export interface BaseLogMessage {
     timestamp: string;
     level: LogLevel;
     message: string;
-    data?: any;
+    data?: Record<string, unknown>;
 }
 /**
  * Base device info
@@ -75,4 +75,14 @@ export interface BaseImportOptions {
     decryptionPassword?: string;
     validateData?: boolean;
     overwriteExisting?: boolean;
+}
+/**
+ * Basic error information
+ */
+export interface ErrorInfo {
+    message: string;
+    code?: string;
+    name?: string;
+    stack?: string;
+    [key: string]: unknown;
 }

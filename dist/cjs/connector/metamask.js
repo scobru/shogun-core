@@ -23,14 +23,15 @@ class MetaMask extends events_1.EventEmitter {
             cacheDuration: 30 * 60 * 1000, // 30 minutes
             maxRetries: 3,
             retryDelay: 1000,
-            timeout: 60000
+            timeout: 60000,
         };
         this.signatureCache = new Map();
         this.provider = null;
         this.customProvider = null;
         this.customWallet = null;
         this.config = { ...this.DEFAULT_CONFIG, ...config };
-        this.AUTH_DATA_TABLE = config_1.default.GUN_TABLES.AUTHENTICATIONS || "Authentications";
+        this.AUTH_DATA_TABLE =
+            config_1.default.GUN_TABLES.AUTHENTICATIONS || "Authentications";
         this.setupProvider();
         this.setupEventListeners();
     }
@@ -39,7 +40,7 @@ class MetaMask extends events_1.EventEmitter {
      */
     async setupProvider() {
         try {
-            if (typeof window !== 'undefined' && window.ethereum) {
+            if (typeof window !== "undefined" && window.ethereum) {
                 this.provider = new ethers_1.ethers.BrowserProvider(window.ethereum);
                 (0, logger_1.logDebug)("BrowserProvider initialized successfully");
             }
@@ -56,13 +57,13 @@ class MetaMask extends events_1.EventEmitter {
      */
     setupEventListeners() {
         if (this.provider) {
-            this.provider.on('network', (newNetwork, oldNetwork) => {
-                this.emit('chainChanged', newNetwork);
+            this.provider.on("network", (newNetwork, oldNetwork) => {
+                this.emit("chainChanged", newNetwork);
             });
             // Listen for account changes
             if (window.ethereum?.on) {
-                window.ethereum.on('accountsChanged', (accounts) => {
-                    this.emit('accountsChanged', accounts);
+                window.ethereum.on("accountsChanged", (accounts) => {
+                    this.emit("accountsChanged", accounts);
                 });
             }
         }
@@ -97,7 +98,7 @@ class MetaMask extends events_1.EventEmitter {
         this.signatureCache.set(address, {
             signature,
             timestamp: Date.now(),
-            address
+            address,
         });
     }
     /**
@@ -137,7 +138,9 @@ class MetaMask extends events_1.EventEmitter {
             let accounts = [];
             if (window.ethereum) {
                 try {
-                    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    accounts = await window.ethereum.request({
+                        method: "eth_requestAccounts",
+                    });
                     (0, logger_1.logDebug)(`Accounts requested successfully: ${accounts.length} accounts returned`);
                 }
                 catch (requestError) {
@@ -160,7 +163,7 @@ class MetaMask extends events_1.EventEmitter {
                     (0, logger_1.logDebug)(`Signer address obtained: ${address}`);
                     const metamaskUsername = `mm_${address.toLowerCase()}`;
                     // Emetti evento connesso
-                    this.emit('connected', { address });
+                    this.emit("connected", { address });
                     (0, logger_1.logDebug)(`MetaMask connected successfully with address: ${address}`);
                     return { success: true, address, username: metamaskUsername };
                 }
@@ -169,7 +172,7 @@ class MetaMask extends events_1.EventEmitter {
                     if (attempt === this.config.maxRetries)
                         throw error;
                     (0, logger_1.logDebug)(`Retrying in ${this.config.retryDelay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
+                    await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
                 }
             }
             throw new Error("Failed to connect after retries");
@@ -298,7 +301,7 @@ class MetaMask extends events_1.EventEmitter {
                 };
                 // Aggiungere anche listener per l'evento accountsChanged che può interrompere la firma
                 if (window.ethereum?.on) {
-                    window.ethereum.on('accountsChanged', errorHandler);
+                    window.ethereum.on("accountsChanged", errorHandler);
                 }
                 try {
                     const signature = await signer.signMessage(message);
@@ -309,7 +312,7 @@ class MetaMask extends events_1.EventEmitter {
                     }
                     // Rimuoviamo i listener
                     if (window.ethereum?.removeListener) {
-                        window.ethereum.removeListener('accountsChanged', errorHandler);
+                        window.ethereum.removeListener("accountsChanged", errorHandler);
                     }
                     resolve(signature);
                 }
@@ -317,7 +320,7 @@ class MetaMask extends events_1.EventEmitter {
                     (0, logger_1.logError)("Error during message signing:", error);
                     // Rimuoviamo i listener
                     if (window.ethereum?.removeListener) {
-                        window.ethereum.removeListener('accountsChanged', errorHandler);
+                        window.ethereum.removeListener("accountsChanged", errorHandler);
                     }
                     throw error;
                 }

@@ -1,9 +1,9 @@
-import { 
-  BaseConfig, 
-  BaseResult, 
-  BaseAuthResult, 
-  BaseCacheEntry 
-} from './common';
+import {
+  BaseConfig,
+  BaseResult,
+  BaseAuthResult,
+  BaseCacheEntry,
+} from "./common";
 
 /**
  * MetaMask types definitions
@@ -63,5 +63,5 @@ export interface SignatureCache extends BaseCacheEntry<string> {
  * MetaMask configuration options
  */
 export interface MetaMaskConfig extends BaseConfig {
-  cacheDuration?: number;  // Duration in milliseconds for signature cache
-} 
+  cacheDuration?: number; // Duration in milliseconds for signature cache
+}

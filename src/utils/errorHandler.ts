@@ -1,4 +1,5 @@
 import { log, logError } from "./logger";
+import { LogLevel } from "../types/common";
 
 /**
  * Tipi di errore che possono verificarsi nell'applicazione
@@ -20,6 +21,8 @@ export enum ErrorType {
   STEALTH = "StealthError",
   WEBAUTHN = "WebAuthnError",
   UNKNOWN = "UnknownError",
+  CONNECTOR = "CONNECTOR",
+  GENERAL = "GENERAL",
 }
 
 /**
@@ -29,7 +32,7 @@ export interface ShogunError {
   type: ErrorType;
   code: string;
   message: string;
-  originalError?: Error | any;
+  originalError?: Error | unknown;
   timestamp: number;
 }
 
@@ -45,7 +48,7 @@ export function createError(
   type: ErrorType,
   code: string,
   message: string,
-  originalError?: Error | any,
+  originalError?: Error | unknown,
 ): ShogunError {
   return {
     type,
@@ -95,9 +98,35 @@ export class ErrorHandler {
     type: ErrorType,
     code: string,
     message: string,
-    originalError?: Error | any,
+    originalError?: Error | unknown,
+    logLevel: LogLevel = "error",
   ): ShogunError {
-    const error = createError(type, code, message, originalError);
+    // Create a formatted error message
+    const finalMessage = originalError
+      ? `${message} - ${this.formatError(originalError)}`
+      : message;
+
+    // Log the error
+    switch (logLevel) {
+      case "debug":
+        log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+        break;
+      case "warn":
+        log(`[${type}.${code}] (WARN) ${finalMessage}`);
+        break;
+      case "info":
+        log(`[${type}.${code}] (INFO) ${finalMessage}`);
+        break;
+      case "error":
+      default:
+        log(`[${type}.${code}] (ERROR) ${finalMessage}`);
+        if (originalError && originalError instanceof Error) {
+          log(originalError.stack || "No stack trace available");
+        }
+        break;
+    }
+
+    const error = createError(type, code, finalMessage, originalError);
     this.handleError(error);
     return error;
   }
@@ -149,10 +178,64 @@ export class ErrorHandler {
    * @param error - Errore da formattare
    * @returns Messaggio di errore formattato
    */
-  static formatError(error: Error | any): string {
-    if (error instanceof Error) {
-      return error.message;
+  static formatError(error: Error | unknown): string {
+    if (!error) {
+      return "Unknown error";
     }
+
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    if (typeof error === "object") {
+      try {
+        return JSON.stringify(error);
+      } catch (e) {
+        return `Object: ${Object.prototype.toString.call(error)}`;
+      }
+    }
+
     return String(error);
+  }
+
+  /**
+   * Error handling with retry logic
+   */
+  static async withRetry<T>(
+    fn: () => Promise<T>,
+    errorType: ErrorType,
+    errorCode: string,
+    maxRetries = 3,
+    retryDelay = 1000,
+  ): Promise<T> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        const delay = retryDelay * attempt;
+
+        if (attempt < maxRetries) {
+          log(
+            `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // If we got here, all retries failed
+    throw this.handle(
+      errorType,
+      errorCode,
+      `Operation failed after ${maxRetries} attempts`,
+      lastError,
+    );
   }
 }

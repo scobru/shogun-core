@@ -513,11 +513,14 @@ class ShogunCore {
             }
             (0, logger_1.log)("Generating credentials for MetaMask login...");
             const credentials = await this.metamask?.generateCredentials(address);
-            if (!credentials?.username || !credentials?.password || !credentials.signature || !credentials.message) {
+            if (!credentials?.username ||
+                !credentials?.password ||
+                !credentials.signature ||
+                !credentials.message) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "MetaMask credentials not generated correctly or signature missing");
             }
             (0, logger_1.log)(`Credentials generated successfully. Username: ${credentials.username}`);
-            // --- Verifica della Firma --- 
+            // --- Verifica della Firma ---
             (0, logger_1.log)("Verifying MetaMask signature...");
             const recoveredAddress = ethers_1.ethers.verifyMessage(credentials.message, credentials.signature);
             if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
@@ -530,7 +533,8 @@ class ShogunCore {
             (0, logger_1.log)("Attempting login or user creation with verified credentials...");
             const result = await this.createUserWithGunDB(credentials.username, credentials.password);
             if (!result.success || !result.userPub) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_CREATE_FAILED", result.error || "Login or user creation failed after signature verification");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_CREATE_FAILED", result.error ||
+                    "Login or user creation failed after signature verification");
             }
             (0, logger_1.log)(`Login/Creation successful: ${result.userPub}`);
             // Assicuriamo che l'utente abbia un DID associato
@@ -541,9 +545,9 @@ class ShogunCore {
                     services: [
                         {
                             type: "EcdsaSecp256k1VerificationKey2019", // Tipo più specifico
-                            endpoint: `ethereum:${address}`
-                        }
-                    ]
+                            endpoint: `ethereum:${address}`,
+                        },
+                    ],
                 });
                 if (did) {
                     (0, logger_1.log)(`DID assigned/verified: ${did}`);
@@ -601,11 +605,14 @@ class ShogunCore {
             }
             (0, logger_1.log)("Generating credentials for MetaMask registration...");
             const credentials = await this.metamask?.generateCredentials(address);
-            if (!credentials?.username || !credentials?.password || !credentials.signature || !credentials.message) {
+            if (!credentials?.username ||
+                !credentials?.password ||
+                !credentials.signature ||
+                !credentials.message) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "MetaMask credentials not generated correctly or signature missing");
             }
             (0, logger_1.log)(`Credentials generated successfully. Username: ${credentials.username}`);
-            // --- Verifica della Firma --- 
+            // --- Verifica della Firma ---
             (0, logger_1.log)("Verifying MetaMask signature...");
             const recoveredAddress = ethers_1.ethers.verifyMessage(credentials.message, credentials.signature);
             if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
@@ -618,7 +625,8 @@ class ShogunCore {
             (0, logger_1.log)("Attempting user creation (or login if exists) with verified credentials...");
             const result = await this.createUserWithGunDB(credentials.username, credentials.password);
             if (!result.success || !result.userPub) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "USER_CREATE_LOGIN_FAILED", result.error || "User creation or login failed after signature verification");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "USER_CREATE_LOGIN_FAILED", result.error ||
+                    "User creation or login failed after signature verification");
             }
             (0, logger_1.log)(`User creation/login successful: ${result.userPub}`);
             // Assicuriamo che l'utente abbia un DID associato
@@ -646,6 +654,7 @@ class ShogunCore {
             }
             // Emettiamo un evento di registrazione (o login se l'utente esisteva già)
             this.eventEmitter.emit("auth:signup", {
+                // Potrebbe essere logico emettere "auth:login" se l'utente esisteva già?
                 userPub: result.userPub,
                 username: credentials.username,
                 method: "metamask",
@@ -689,7 +698,9 @@ class ShogunCore {
                         try {
                             this.gundb.logout();
                         }
-                        catch (e) { /* ignore logout errors */ }
+                        catch (e) {
+                            /* ignore logout errors */
+                        }
                         this.gundb.gun.user().auth(username, password, (ack) => {
                             if (ack.err) {
                                 resolveAuth({ err: ack.err });
@@ -698,7 +709,9 @@ class ShogunCore {
                                 const user = this.gundb.gun.user();
                                 const userPub = user.is?.pub || "";
                                 if (!user.is || !userPub) {
-                                    resolveAuth({ err: "Authentication failed after apparent success." });
+                                    resolveAuth({
+                                        err: "Authentication failed after apparent success.",
+                                    });
                                 }
                                 else {
                                     resolveAuth({ pub: userPub });
@@ -714,7 +727,9 @@ class ShogunCore {
                         try {
                             this.gundb.logout();
                         }
-                        catch (e) { /* ignore logout errors */ }
+                        catch (e) {
+                            /* ignore logout errors */
+                        }
                         this.gundb.gun.user().create(username, password, (ack) => {
                             resolveCreate({ err: ack.err, pub: ack.pub }); // pub might be present on success
                         });
@@ -733,7 +748,7 @@ class ShogunCore {
                     return;
                 }
                 // Login fallito, proviamo a creare l'utente
-                (0, logger_1.log)(`Login failed (${loginResult.err || 'unknown reason'}), attempting user creation...`);
+                (0, logger_1.log)(`Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`);
                 const createResult = await createUser();
                 if (createResult.err) {
                     // Creazione fallita

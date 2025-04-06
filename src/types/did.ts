@@ -1,4 +1,4 @@
-import { BaseConfig, BaseEvent, BaseCacheEntry } from './common';
+import { BaseConfig, BaseEvent, BaseCacheEntry } from "./common";
 
 /**
  * DID types definitions
@@ -18,8 +18,12 @@ export interface DIDDocument {
     publicKeyMultibase?: string;
     publicKeyJwk?: Record<string, any>;
   }>;
-  authentication?: Array<string | { id: string; type: string; controller: string }>;
-  assertionMethod?: Array<string | { id: string; type: string; controller: string }>;
+  authentication?: Array<
+    string | { id: string; type: string; controller: string }
+  >;
+  assertionMethod?: Array<
+    string | { id: string; type: string; controller: string }
+  >;
   service?: Array<{
     id: string;
     type: string;
@@ -85,11 +89,11 @@ export interface DIDResolutionOptions extends BaseConfig {
  * DID Event types
  */
 export enum DIDEventType {
-  CREATED = 'didCreated',
-  UPDATED = 'didUpdated',
-  DEACTIVATED = 'didDeactivated',
-  REGISTERED = 'didRegistered',
-  ERROR = 'didError'
+  CREATED = "didCreated",
+  UPDATED = "didUpdated",
+  DEACTIVATED = "didDeactivated",
+  REGISTERED = "didRegistered",
+  ERROR = "didError",
 }
 
 /**
@@ -102,4 +106,4 @@ export interface DIDEvent extends BaseEvent {
     document?: DIDDocument;
     error?: string;
   };
-} 
+}

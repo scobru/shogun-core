@@ -1,4 +1,4 @@
-import { BaseConfig, BaseEvent, BaseCacheEntry } from './common';
+import { BaseConfig, BaseEvent, BaseCacheEntry } from "./common";
 /**
  * DID types definitions
  */

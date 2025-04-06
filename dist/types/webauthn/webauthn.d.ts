@@ -1,5 +1,6 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "../utils/eventEmitter";
 import { DeviceInfo, WebAuthnCredentials, CredentialResult, WebAuthnConfig, WebAuthnOperationOptions } from "../types/webauthn";
+import { IGunInstance } from "../types/gun";
 /**
  * Extends Window interface to include WebauthnAuth
  */
@@ -23,13 +24,13 @@ declare global {
  */
 export declare class Webauthn extends EventEmitter {
     private config;
-    private gunInstance;
+    private gunInstance?;
     private credential;
     private abortController;
     /**
      * Creates a new WebAuthn instance
      */
-    constructor(gunInstance?: any, config?: Partial<WebAuthnConfig>);
+    constructor(gunInstance?: IGunInstance, config?: Partial<WebAuthnConfig>);
     /**
      * Validates a username
      */
@@ -79,19 +80,19 @@ export declare class Webauthn extends EventEmitter {
      */
     isSupported(): boolean;
     /**
-     * Creates a new credential
+     * Creates a WebAuthn credential for registration
      */
     private createCredential;
     /**
-     * Generates or verifies credentials
+     * Generates WebAuthn credentials
      */
-    generateCredentials(username: string, existingCredential?: any, isLogin?: boolean): Promise<any>;
+    generateCredentials(username: string, existingCredential?: WebAuthnCredentials | null, isLogin?: boolean): Promise<CredentialResult>;
     /**
-     * Verifies an existing credential
+     * Verifies a credential
      */
     private verifyCredential;
     /**
-     * Saves the credential to Gun database
+     * Saves credential to GunDB
      */
     private saveToGun;
     /**
@@ -102,8 +103,8 @@ export declare class Webauthn extends EventEmitter {
         updatedCredentials?: WebAuthnCredentials;
     }>;
     /**
-     * Signs data using WebAuthn
+     * Signs data with the credential
      */
-    sign(data: any): Promise<Credential | null>;
+    sign(data: Record<string, unknown>): Promise<unknown>;
 }
 export { WebAuthnCredentials, DeviceInfo, CredentialResult };

@@ -17,7 +17,7 @@ export interface StealthData {
   recipientPublicKey: string;
   ephemeralKeyPair: EphemeralKeyPair;
   timestamp: number;
-  method?: 'standard' | 'legacy';
+  method?: "standard" | "legacy";
   sharedSecret?: string;
 }
 
@@ -33,7 +33,7 @@ export interface StealthAddressResult {
 /**
  * Type for log levels in stealth operations
  */
-export type LogLevel = 'info' | 'error' | 'debug' | 'warn';
+export type LogLevel = "info" | "error" | "debug" | "warn";
 
 /**
  * Interface for structured logging messages
@@ -43,4 +43,4 @@ export interface LogMessage {
   level: LogLevel;
   message: string;
   data?: any;
-} 
+}

@@ -11,7 +11,7 @@ import {
   DIDCacheEntry,
   DIDResolutionOptions,
   DIDEventType,
-  DIDEvent
+  DIDEvent,
 } from "../types/did";
 
 // Re-export types from types/did.ts
@@ -34,13 +34,16 @@ export class ShogunDID extends EventEmitter {
     network: "mainnet",
     timeout: this.DEFAULT_TIMEOUT,
     maxRetries: this.DEFAULT_MAX_RETRIES,
-    retryDelay: this.DEFAULT_RETRY_DELAY
+    retryDelay: this.DEFAULT_RETRY_DELAY,
   };
 
   /**
    * Initialize ShogunDID manager
    */
-  constructor(shogunCore: IShogunCore, registryConfig?: Partial<DIDRegistryConfig>) {
+  constructor(
+    shogunCore: IShogunCore,
+    registryConfig?: Partial<DIDRegistryConfig>,
+  ) {
     super();
     this.core = shogunCore;
     this.registryConfig = { ...this.registryConfig, ...registryConfig };
@@ -61,19 +64,21 @@ export class ShogunDID extends EventEmitter {
         throw new Error("Cannot retrieve user's public key");
       }
 
-      let methodSpecificId = ethers.keccak256(ethers.toUtf8Bytes(userPub)).slice(2, 42);
-      
+      let methodSpecificId = ethers
+        .keccak256(ethers.toUtf8Bytes(userPub))
+        .slice(2, 42);
+
       if (options.network) {
         methodSpecificId = `${options.network}:${methodSpecificId}`;
       }
 
       const did = `did:${this.methodName}:${methodSpecificId}`;
-      
+
       await this.storeDID(did, options);
-      
-      this.emit('didCreated', { did });
+
+      this.emit("didCreated", { did });
       log(`Created DID: ${did}`);
-      
+
       return did;
     } catch (error) {
       logError("Error creating DID:", error);
@@ -81,7 +86,7 @@ export class ShogunDID extends EventEmitter {
         ErrorType.DID,
         "CREATE_DID_ERROR",
         error instanceof Error ? error.message : "Error creating DID",
-        error
+        error,
       );
       throw error;
     }
@@ -93,35 +98,50 @@ export class ShogunDID extends EventEmitter {
    * @param options DID creation options or document
    * @returns Promise that resolves when DID is stored
    */
-  private async storeDID(did: string, options: DIDCreateOptions): Promise<void> {
+  private async storeDID(
+    did: string,
+    options: DIDCreateOptions,
+  ): Promise<void> {
     try {
       if (!this.isValidDID(did)) {
         throw new Error("Invalid DID format");
       }
 
       // Use existing document if provided, otherwise create a new one
-      const didDocument = options.document || this.createDidDocument(did, options);
+      const didDocument =
+        options.document || this.createDidDocument(did, options);
 
       // Store in GunDB
       return new Promise<void>((resolve, reject) => {
-        this.core.gun.get("dids").get(did).put({
-          document: JSON.stringify(didDocument),
-          created: new Date().toISOString(),
-          updated: new Date().toISOString(),
-          deactivated: false
-        }, (ack: any) => {
-          if (ack.err) {
-            reject(new Error(`Failed to store DID: ${ack.err}`));
-          } else {
-            // Associate DID with current user
-            this.core.gun.user().get("did").put(did, (userAck: any) => {
-              if (userAck.err) {
-                logError(`Warning: DID created but not associated with user: ${userAck.err}`);
+        this.core.gun
+          .get("dids")
+          .get(did)
+          .put(
+            {
+              document: JSON.stringify(didDocument),
+              created: new Date().toISOString(),
+              updated: new Date().toISOString(),
+              deactivated: false,
+            },
+            (ack: any) => {
+              if (ack.err) {
+                reject(new Error(`Failed to store DID: ${ack.err}`));
+              } else {
+                // Associate DID with current user
+                this.core.gun
+                  .user()
+                  .get("did")
+                  .put(did, (userAck: any) => {
+                    if (userAck.err) {
+                      logError(
+                        `Warning: DID created but not associated with user: ${userAck.err}`,
+                      );
+                    }
+                    resolve();
+                  });
               }
-              resolve();
-            });
-          }
-        });
+            },
+          );
 
         // Set timeout to avoid hanging
         setTimeout(() => reject(new Error("Timeout storing DID")), 10000);
@@ -138,7 +158,10 @@ export class ShogunDID extends EventEmitter {
    * @param options Creation options
    * @returns DID Document
    */
-  private createDidDocument(did: string, options: DIDCreateOptions): DIDDocument {
+  private createDidDocument(
+    did: string,
+    options: DIDCreateOptions,
+  ): DIDDocument {
     const timestamp = new Date().toISOString();
     const controller = options.controller || this.getUserPublicKey() || did;
 
@@ -146,7 +169,7 @@ export class ShogunDID extends EventEmitter {
     const document: DIDDocument = {
       "@context": [
         "https://www.w3.org/ns/did/v1",
-        "https://w3id.org/security/suites/ed25519-2020/v1"
+        "https://w3id.org/security/suites/ed25519-2020/v1",
       ],
       id: did,
       controller: controller,
@@ -155,11 +178,11 @@ export class ShogunDID extends EventEmitter {
           id: `${did}#keys-1`,
           type: "Ed25519VerificationKey2020",
           controller: did,
-          publicKeyMultibase: `z${this.getUserPublicKey() || ethers.keccak256(ethers.toUtf8Bytes(did))}`
-        }
+          publicKeyMultibase: `z${this.getUserPublicKey() || ethers.keccak256(ethers.toUtf8Bytes(did))}`,
+        },
       ],
       authentication: [`${did}#keys-1`],
-      assertionMethod: [`${did}#keys-1`]
+      assertionMethod: [`${did}#keys-1`],
     };
 
     // Add services if provided
@@ -167,7 +190,7 @@ export class ShogunDID extends EventEmitter {
       document.service = options.services.map((service, index) => ({
         id: `${did}#service-${index + 1}`,
         type: service.type,
-        serviceEndpoint: service.endpoint
+        serviceEndpoint: service.endpoint,
       }));
     }
 
@@ -196,18 +219,22 @@ export class ShogunDID extends EventEmitter {
   /**
    * Resolve a DID with caching
    */
-  async resolveDID(did: string, options: DIDResolutionOptions = {}): Promise<DIDResolutionResult> {
+  async resolveDID(
+    did: string,
+    options: DIDResolutionOptions = {},
+  ): Promise<DIDResolutionResult> {
     try {
-      const cacheDuration = options.cacheDuration || this.DEFAULT_CACHE_DURATION;
+      const cacheDuration =
+        options.cacheDuration || this.DEFAULT_CACHE_DURATION;
       const timeout = options.timeout || this.DEFAULT_TIMEOUT;
 
       // Check cache first
       const cached = this.didCache.get(did);
-      if (cached && (Date.now() - cached.timestamp) < cacheDuration) {
+      if (cached && Date.now() - cached.timestamp < cacheDuration) {
         return {
           didResolutionMetadata: { contentType: "application/did+json" },
           didDocument: this.getDocumentFromCache(cached),
-          didDocumentMetadata: {}
+          didDocumentMetadata: {},
         };
       }
 
@@ -218,52 +245,73 @@ export class ShogunDID extends EventEmitter {
 
       const [_, method, methodSpecificId] = did.split(":");
       if (method !== this.methodName) {
-        return this.createErrorResolution("unsupportedDidMethod", `Unsupported DID method: ${method}`);
+        return this.createErrorResolution(
+          "unsupportedDidMethod",
+          `Unsupported DID method: ${method}`,
+        );
       }
 
       return new Promise<DIDResolutionResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
-          resolve(this.createErrorResolution("timeout", "DID resolution timeout"));
+          resolve(
+            this.createErrorResolution("timeout", "DID resolution timeout"),
+          );
         }, timeout);
 
-        this.core.gun.get("dids").get(did).once((didDocData: any) => {
-          clearTimeout(timeoutId);
+        this.core.gun
+          .get("dids")
+          .get(did)
+          .once((didDocData: any) => {
+            clearTimeout(timeoutId);
 
-          if (!didDocData) {
-            resolve(this.createErrorResolution("notFound", "DID Document not found"));
-            return;
-          }
+            if (!didDocData) {
+              resolve(
+                this.createErrorResolution(
+                  "notFound",
+                  "DID Document not found",
+                ),
+              );
+              return;
+            }
 
-          try {
-            const didDocument = this.parseOrCreateDIDDocument(did, didDocData);
-            
-            // Cache the result
-            this.didCache.set(did, {
-              data: didDocument,
-              document: didDocument, // For backwards compatibility
-              timestamp: Date.now(),
-              network: methodSpecificId.split(":")[0] || "main"
-            });
+            try {
+              const didDocument = this.parseOrCreateDIDDocument(
+                did,
+                didDocData,
+              );
 
-            resolve({
-              didResolutionMetadata: { contentType: "application/did+json" },
-              didDocument,
-              didDocumentMetadata: {
-                created: didDocData.created,
-                updated: didDocData.updated,
-                deactivated: didDocData.deactivated || false
-              }
-            });
-          } catch (error) {
-            resolve(this.createErrorResolution("invalidDidDocument", "Error parsing DID Document"));
-          }
-        });
+              // Cache the result
+              this.didCache.set(did, {
+                data: didDocument,
+                document: didDocument, // For backwards compatibility
+                timestamp: Date.now(),
+                network: methodSpecificId.split(":")[0] || "main",
+              });
+
+              resolve({
+                didResolutionMetadata: { contentType: "application/did+json" },
+                didDocument,
+                didDocumentMetadata: {
+                  created: didDocData.created,
+                  updated: didDocData.updated,
+                  deactivated: didDocData.deactivated || false,
+                },
+              });
+            } catch (error) {
+              resolve(
+                this.createErrorResolution(
+                  "invalidDidDocument",
+                  "Error parsing DID Document",
+                ),
+              );
+            }
+          });
       });
     } catch (error) {
       logError("Error resolving DID:", error);
       return this.createErrorResolution(
         "internalError",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   }
@@ -273,7 +321,7 @@ export class ShogunDID extends EventEmitter {
    */
   async registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       if (!this.core.isLoggedIn()) {
@@ -286,30 +334,39 @@ export class ShogunDID extends EventEmitter {
       }
 
       const didRegistryABI = [
-        "function registerDID(string did, string controller) public returns (bool)"
+        "function registerDID(string did, string controller) public returns (bool)",
       ];
 
       const didRegistryContract = new ethers.Contract(
         this.registryConfig.address,
         didRegistryABI,
-        effectiveSigner
+        effectiveSigner,
       );
 
-      for (let attempt = 1; attempt <= this.registryConfig.maxRetries!; attempt++) {
+      for (
+        let attempt = 1;
+        attempt <= this.registryConfig.maxRetries!;
+        attempt++
+      ) {
         try {
-          const tx = await didRegistryContract.registerDID(did, this.getUserPublicKey());
+          const tx = await didRegistryContract.registerDID(
+            did,
+            this.getUserPublicKey(),
+          );
           const receipt = await tx.wait();
 
-          this.emit('didRegistered', { did, txHash: receipt.hash });
+          this.emit("didRegistered", { did, txHash: receipt.hash });
           log(`DID registered on blockchain: ${did}, tx: ${receipt.hash}`);
 
           return {
             success: true,
-            txHash: receipt.hash
+            txHash: receipt.hash,
           };
         } catch (error: any) {
           if (attempt === this.registryConfig.maxRetries!) throw error;
-          await new Promise(resolve => setTimeout(resolve, this.registryConfig.retryDelay!));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.registryConfig.retryDelay!),
+          );
         }
       }
 
@@ -318,7 +375,7 @@ export class ShogunDID extends EventEmitter {
       logError("Error registering DID on blockchain:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -430,7 +487,10 @@ export class ShogunDID extends EventEmitter {
    * @param updates Partial DID Document to merge with existing document
    * @returns True if the document was updated successfully
    */
-  async updateDIDDocument(did: string, updates: Partial<DIDDocument>): Promise<boolean> {
+  async updateDIDDocument(
+    did: string,
+    updates: Partial<DIDDocument>,
+  ): Promise<boolean> {
     try {
       if (!this.core.isLoggedIn()) {
         throw new Error("User must be logged in to update a DID document");
@@ -443,7 +503,9 @@ export class ShogunDID extends EventEmitter {
       // Resolve the current DID document
       const resolution = await this.resolveDID(did);
       if (resolution.didResolutionMetadata.error || !resolution.didDocument) {
-        throw new Error(`Cannot update DID document: ${resolution.didResolutionMetadata.error || "Document not found"}`);
+        throw new Error(
+          `Cannot update DID document: ${resolution.didResolutionMetadata.error || "Document not found"}`,
+        );
       }
 
       // Merge the existing document with updates
@@ -457,50 +519,54 @@ export class ShogunDID extends EventEmitter {
       if (updates.service && currentDoc.service) {
         // Find services by ID to update, or add if not exists
         const mergedServices = [...currentDoc.service];
-        
+
         for (const newService of updates.service) {
-          const existingIndex = mergedServices.findIndex(s => s.id === newService.id);
+          const existingIndex = mergedServices.findIndex(
+            (s) => s.id === newService.id,
+          );
           if (existingIndex >= 0) {
             mergedServices[existingIndex] = newService;
           } else {
             mergedServices.push(newService);
           }
         }
-        
+
         updatedDoc.service = mergedServices;
       }
 
       if (updates.verificationMethod && currentDoc.verificationMethod) {
         // Same merge logic for verification methods
         const mergedMethods = [...currentDoc.verificationMethod];
-        
+
         for (const newMethod of updates.verificationMethod) {
-          const existingIndex = mergedMethods.findIndex(m => m.id === newMethod.id);
+          const existingIndex = mergedMethods.findIndex(
+            (m) => m.id === newMethod.id,
+          );
           if (existingIndex >= 0) {
             mergedMethods[existingIndex] = newMethod;
           } else {
             mergedMethods.push(newMethod);
           }
         }
-        
+
         updatedDoc.verificationMethod = mergedMethods;
       }
 
       // Store the updated document
       await this.storeDID(did, { document: updatedDoc });
-      
+
       // Update the cache
       const [_, method, methodSpecificId] = did.split(":");
       this.didCache.set(did, {
         data: updatedDoc,
         document: updatedDoc, // For backwards compatibility
         timestamp: Date.now(),
-        network: methodSpecificId.split(":")[0] || "main"
+        network: methodSpecificId.split(":")[0] || "main",
       });
-      
-      this.emit('didUpdated', { did, document: updatedDoc });
+
+      this.emit("didUpdated", { did, document: updatedDoc });
       log(`Updated DID Document: ${did}`);
-      
+
       return true;
     } catch (error) {
       logError("Error updating DID document:", error);
@@ -508,7 +574,7 @@ export class ShogunDID extends EventEmitter {
         ErrorType.DID,
         "UPDATE_DID_ERROR",
         error instanceof Error ? error.message : "Error updating DID",
-        error
+        error,
       );
       return false;
     }
@@ -827,7 +893,7 @@ export class ShogunDID extends EventEmitter {
    */
   public clearCache(): void {
     this.didCache.clear();
-    this.emit('cacheCleared');
+    this.emit("cacheCleared");
   }
 
   /**
@@ -835,7 +901,7 @@ export class ShogunDID extends EventEmitter {
    */
   public removeFromCache(did: string): void {
     this.didCache.delete(did);
-    this.emit('didRemovedFromCache', { did });
+    this.emit("didRemovedFromCache", { did });
   }
 
   /**

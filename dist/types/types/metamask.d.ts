@@ -1,4 +1,4 @@
-import { BaseConfig, BaseResult, BaseAuthResult, BaseCacheEntry } from './common';
+import { BaseConfig, BaseResult, BaseAuthResult, BaseCacheEntry } from "./common";
 /**
  * MetaMask types definitions
  */

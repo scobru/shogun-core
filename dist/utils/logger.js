@@ -2,8 +2,25 @@
 let logConfig = {
     enabled: process.env.NODE_ENV === "development" || process.env.DEBUG === "true",
     level: "info",
-    prefix: "[ShogunSDK]"
+    prefix: "[ShogunSDK]",
 };
+/**
+ * Indicates whether debug mode is enabled
+ */
+let debugMode = false;
+/**
+ * Enables debug mode for logging
+ */
+export function enableDebug() {
+    debugMode = true;
+    log("Debug mode enabled");
+}
+/**
+ * Disables debug mode for logging
+ */
+export function disableDebug() {
+    debugMode = false;
+}
 /**
  * Configure logging behavior
  * @param config - Logging configuration
@@ -11,47 +28,68 @@ let logConfig = {
 export function configureLogging(config) {
     logConfig = {
         ...logConfig,
-        ...config
+        ...config,
     };
 }
 /**
- * Utility function for logging
- * @param message - Message to log
- * @param args - Additional arguments
+ * Logs a message to the console with timestamp and optional data
+ * @param message - The message to log
+ * @param args - Additional arguments to log
  */
 export function log(message, ...args) {
-    if (logConfig.enabled && (logConfig.level === "info" || logConfig.level === "debug")) {
-        console.log(`${logConfig.prefix} ${message}`, ...args);
-    }
+    const timestamp = new Date().toISOString();
+    const formattedMessage = `[${timestamp}] ${message}`;
+    console.log(formattedMessage, ...args);
 }
 /**
- * Utility function for error logging
- * @param message - Error message to log
+ * Logs an error message to the console
+ * @param message - The error message
  * @param args - Additional arguments, including any Error objects
  */
 export function logError(message, ...args) {
-    // Always log errors unless logging is explicitly disabled
-    if (logConfig.enabled) {
-        console.error(`${logConfig.prefix} ERROR: ${message}`, ...args);
-    }
+    const timestamp = new Date().toISOString();
+    console.error(`[${timestamp}] ERROR: ${message}`, ...args);
 }
 /**
- * Utility function for warning logging
- * @param message - Warning message to log
+ * Logs a warning message to the console
+ * @param message - The warning message
  * @param args - Additional arguments
  */
 export function logWarn(message, ...args) {
-    if (logConfig.enabled && (logConfig.level === "warning" || logConfig.level === "info" || logConfig.level === "debug")) {
-        console.warn(`${logConfig.prefix} WARNING: ${message}`, ...args);
-    }
+    const timestamp = new Date().toISOString();
+    console.warn(`[${timestamp}] WARNING: ${message}`, ...args);
 }
 /**
- * Utility function for debug logging
- * @param message - Debug message to log
+ * Logs a debug message to the console if debug mode is enabled
+ * @param message - The debug message
  * @param args - Additional arguments
  */
 export function logDebug(message, ...args) {
-    if (logConfig.enabled && logConfig.level === "debug") {
-        console.debug(`${logConfig.prefix} DEBUG: ${message}`, ...args);
+    if (!debugMode)
+        return;
+    const timestamp = new Date().toISOString();
+    console.debug(`[${timestamp}] DEBUG: ${message}`, ...args);
+}
+/**
+ * Generic logging function that accepts a log level
+ * @param level - The log level
+ * @param message - The message to log
+ * @param args - Additional arguments
+ */
+export function logWithLevel(level, message, ...args) {
+    switch (level) {
+        case "error":
+            logError(message, ...args);
+            break;
+        case "warn":
+            logWarn(message, ...args);
+            break;
+        case "debug":
+            logDebug(message, ...args);
+            break;
+        case "info":
+        default:
+            log(message, ...args);
+            break;
     }
 }

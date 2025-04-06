@@ -1,4 +1,4 @@
-import { BaseConfig, BaseEvent, BaseCacheEntry, BaseBackupOptions, BaseImportOptions } from './common';
+import { BaseConfig, BaseEvent, BaseCacheEntry, BaseBackupOptions, BaseImportOptions } from "./common";
 /**
  * Wallet types definitions
  */

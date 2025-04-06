@@ -39,7 +39,7 @@ class WalletManager extends events_1.EventEmitter {
             defaultGasLimit: 21000,
             maxRetries: 3,
             retryDelay: 1000,
-            ...config
+            ...config,
         };
         this.initializeWalletPaths();
         this.setupTransactionMonitoring();
@@ -67,14 +67,14 @@ class WalletManager extends events_1.EventEmitter {
                         this.emit(wallet_1.WalletEventType.TRANSACTION_CONFIRMED, {
                             type: wallet_1.WalletEventType.TRANSACTION_CONFIRMED,
                             data: { txHash, receipt },
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
                         });
                     }
                     else {
                         this.emit(wallet_1.WalletEventType.ERROR, {
                             type: wallet_1.WalletEventType.ERROR,
                             data: { txHash, error: "Transaction failed" },
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
                         });
                     }
                     this.pendingTransactions.delete(txHash);
@@ -649,12 +649,12 @@ class WalletManager extends events_1.EventEmitter {
             const formattedBalance = ethers_1.ethers.formatEther(balance);
             this.balanceCache.set(address, {
                 balance: formattedBalance,
-                timestamp: now
+                timestamp: now,
             });
             this.emit(wallet_1.WalletEventType.BALANCE_UPDATED, {
                 type: wallet_1.WalletEventType.BALANCE_UPDATED,
                 data: { address, balance: formattedBalance },
-                timestamp: now
+                timestamp: now,
             });
             return formattedBalance;
         }
@@ -686,9 +686,13 @@ class WalletManager extends events_1.EventEmitter {
                 to: toAddress,
                 value: ethers_1.ethers.parseEther(value),
                 gasLimit: options.gasLimit || this.config.defaultGasLimit,
-                nonce: options.nonce || await provider.getTransactionCount(wallet.address),
-                maxFeePerGas: options.maxFeePerGas ? ethers_1.ethers.parseUnits(options.maxFeePerGas, "gwei") : feeData.maxFeePerGas,
-                maxPriorityFeePerGas: options.maxPriorityFeePerGas ? ethers_1.ethers.parseUnits(options.maxPriorityFeePerGas, "gwei") : feeData.maxPriorityFeePerGas
+                nonce: options.nonce || (await provider.getTransactionCount(wallet.address)),
+                maxFeePerGas: options.maxFeePerGas
+                    ? ethers_1.ethers.parseUnits(options.maxFeePerGas, "gwei")
+                    : feeData.maxFeePerGas,
+                maxPriorityFeePerGas: options.maxPriorityFeePerGas
+                    ? ethers_1.ethers.parseUnits(options.maxPriorityFeePerGas, "gwei")
+                    : feeData.maxPriorityFeePerGas,
             };
             // Retry logic
             for (let attempt = 1; attempt <= (this.config.maxRetries || 3); attempt++) {
@@ -700,7 +704,7 @@ class WalletManager extends events_1.EventEmitter {
                     this.emit(wallet_1.WalletEventType.TRANSACTION_SENT, {
                         type: wallet_1.WalletEventType.TRANSACTION_SENT,
                         data: { txHash: txResponse.hash, tx },
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
                     });
                     return txResponse.hash;
                 }
@@ -708,7 +712,7 @@ class WalletManager extends events_1.EventEmitter {
                     if (attempt === this.config.maxRetries)
                         throw error;
                     // Wait before retry
-                    await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
+                    await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
                     // Update nonce and gas price for next attempt
                     tx.nonce = await provider.getTransactionCount(wallet.address);
                     const newFeeData = await provider.getFeeData();
@@ -723,7 +727,7 @@ class WalletManager extends events_1.EventEmitter {
             this.emit(wallet_1.WalletEventType.ERROR, {
                 type: wallet_1.WalletEventType.ERROR,
                 data: { error, wallet: wallet.address },
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
             throw error;
         }
@@ -1445,20 +1449,24 @@ class WalletManager extends events_1.EventEmitter {
             const exportData = {
                 version: "2.0",
                 timestamp: Date.now(),
-                wallets: wallets.map(w => ({
+                wallets: wallets.map((w) => ({
                     address: w.address,
                     path: w.path,
                     created: this.walletPaths[w.address]?.created || Date.now(),
-                    ...(options.includePrivateKeys ? { privateKey: w.wallet.privateKey } : {})
+                    ...(options.includePrivateKeys
+                        ? { privateKey: w.wallet.privateKey }
+                        : {}),
                 })),
-                ...(options.includeHistory ? { history: await this.getWalletHistory() } : {})
+                ...(options.includeHistory
+                    ? { history: await this.getWalletHistory() }
+                    : {}),
             };
             if (options.encryptionPassword) {
                 const encrypted = await sea_1.default.encrypt(JSON.stringify(exportData), options.encryptionPassword);
                 return JSON.stringify({
                     type: "encrypted-wallet-backup",
                     version: "2.0",
-                    data: encrypted
+                    data: encrypted,
                 });
             }
             return JSON.stringify(exportData);
@@ -1476,7 +1484,8 @@ class WalletManager extends events_1.EventEmitter {
             let walletData;
             if (data.startsWith("{")) {
                 const parsed = JSON.parse(data);
-                if (parsed.type === "encrypted-wallet-backup" && options.decryptionPassword) {
+                if (parsed.type === "encrypted-wallet-backup" &&
+                    options.decryptionPassword) {
                     const decrypted = await sea_1.default.decrypt(parsed.data, options.decryptionPassword);
                     if (!decrypted)
                         throw new Error("Decryption failed");
@@ -1503,7 +1512,7 @@ class WalletManager extends events_1.EventEmitter {
                     // Store wallet path
                     this.walletPaths[wallet.address] = {
                         path: wallet.path,
-                        created: wallet.created || Date.now()
+                        created: wallet.created || Date.now(),
                     };
                     importedCount++;
                 }
@@ -1517,7 +1526,7 @@ class WalletManager extends events_1.EventEmitter {
             this.emit(wallet_1.WalletEventType.WALLET_IMPORTED, {
                 type: wallet_1.WalletEventType.WALLET_IMPORTED,
                 data: { count: importedCount },
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
             return importedCount;
         }

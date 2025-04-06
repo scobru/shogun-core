@@ -5,9 +5,19 @@ import { IGunChainReference } from "../types/gun";
 
 /**
  * Checks if an object is a Gun instance
+ * @param gun - The object to check
+ * @returns True if the object is a Gun instance
  */
-export const isGunInstance = (gun: any): gun is IGunChainReference => {
-  return !!gun?.user && !!gun?.constructor?.SEA;
+export const isGunInstance = (gun: unknown): gun is IGunChainReference => {
+  if (!gun || typeof gun !== "object") return false;
+
+  // Check if it has Gun methods
+  const g = gun as Record<string, unknown>;
+  return (
+    typeof g.get === "function" &&
+    typeof g.put === "function" &&
+    typeof g.once === "function"
+  );
 };
 
 /**
@@ -18,14 +28,15 @@ export const isPlatformWeb = (): boolean => {
 };
 
 /**
- * Creates a timeout that resolves with a passthrough value
+ * Delays execution for the specified time
+ * @param ms - Milliseconds to delay
+ * @param passthrough - Optional value to pass through the promise
+ * @returns Promise that resolves with the passthrough value
  */
-export function delay<T = any>(ms: number, passthrough?: T): Promise<T> {
-  return new Promise<T>((resolve) => {
-    setTimeout(() => {
-      resolve(passthrough as T);
-    }, ms);
-  });
+export function delay<T>(ms: number, passthrough?: T): Promise<T> {
+  return new Promise<T>((resolve) =>
+    setTimeout(() => resolve(passthrough as T), ms),
+  );
 }
 
 /**
@@ -40,4 +51,24 @@ export async function errorAfter<T = void>(
       reject(error);
     }, ms);
   });
+}
+
+/**
+ * Generates a random string with specified length
+ * @param length - Length of the string
+ * @returns Random string
+ */
+export function randomString(length = 16): string {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+
+  const randValues = new Uint8Array(length);
+  crypto.getRandomValues(randValues);
+
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(randValues[i] % chars.length);
+  }
+
+  return result;
 }

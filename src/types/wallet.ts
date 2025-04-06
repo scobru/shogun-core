@@ -1,10 +1,10 @@
-import { 
-  BaseConfig, 
-  BaseEvent, 
+import {
+  BaseConfig,
+  BaseEvent,
   BaseCacheEntry,
   BaseBackupOptions,
-  BaseImportOptions
-} from './common';
+  BaseImportOptions,
+} from "./common";
 
 /**
  * Wallet types definitions
@@ -73,12 +73,12 @@ export interface WalletImportOptions extends BaseImportOptions {
  * Wallet event types
  */
 export enum WalletEventType {
-  WALLET_CREATED = 'walletCreated',
-  WALLET_IMPORTED = 'walletImported',
-  BALANCE_UPDATED = 'balanceUpdated',
-  TRANSACTION_SENT = 'transactionSent',
-  TRANSACTION_CONFIRMED = 'transactionConfirmed',
-  ERROR = 'error'
+  WALLET_CREATED = "walletCreated",
+  WALLET_IMPORTED = "walletImported",
+  BALANCE_UPDATED = "balanceUpdated",
+  TRANSACTION_SENT = "transactionSent",
+  TRANSACTION_CONFIRMED = "transactionConfirmed",
+  ERROR = "error",
 }
 
 /**
@@ -86,4 +86,4 @@ export enum WalletEventType {
  */
 export interface WalletEvent extends BaseEvent {
   type: WalletEventType;
-} 
+}

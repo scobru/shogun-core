@@ -17,7 +17,12 @@ import { log, logError, configureLogging, logWarn } from "./utils/logger";
 import { WalletManager } from "./wallet/walletManager";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
-import { ErrorHandler, ErrorType, ShogunError, createError } from "./utils/errorHandler";
+import {
+  ErrorHandler,
+  ErrorType,
+  ShogunError,
+  createError,
+} from "./utils/errorHandler";
 import { DIDCreateOptions } from "./types/did";
 
 export {
@@ -127,7 +132,7 @@ export class ShogunCore implements IShogunCore {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
       log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL."
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
       );
     }
 
@@ -139,7 +144,7 @@ export class ShogunCore implements IShogunCore {
         {
           balanceCacheTTL: config.walletManager?.balanceCacheTTL,
           rpcUrl: config.providerUrl,
-        }
+        },
       );
 
       if (config.providerUrl) {
@@ -201,7 +206,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -293,7 +298,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message || "Unknown error during login",
-        error
+        error,
       );
 
       return {
@@ -315,7 +320,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -462,18 +467,18 @@ export class ShogunCore implements IShogunCore {
       const assertionResult = await this.webauthn?.generateCredentials(
         username,
         null,
-        true
+        true,
       );
 
       if (!assertionResult?.success) {
         throw new Error(
-          assertionResult?.error || "WebAuthn verification failed"
+          assertionResult?.error || "WebAuthn verification failed",
         );
       }
 
       // Use the credential ID as the password
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(assertionResult.credentialId || "")
+        ethers.toUtf8Bytes(assertionResult.credentialId || ""),
       );
 
       // Login with verified credentials
@@ -537,18 +542,18 @@ export class ShogunCore implements IShogunCore {
       const attestationResult = await this.webauthn?.generateCredentials(
         username,
         null,
-        false
+        false,
       );
 
       if (!attestationResult?.success) {
         throw new Error(
-          attestationResult?.error || "Unable to generate WebAuthn credentials"
+          attestationResult?.error || "Unable to generate WebAuthn credentials",
         );
       }
 
       // Use credential ID as password
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(attestationResult.credentialId || "")
+        ethers.toUtf8Bytes(attestationResult.credentialId || ""),
       );
 
       // Perform registration
@@ -556,7 +561,7 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         log(
-          `WebAuthn registration completed successfully for user: ${username}`
+          `WebAuthn registration completed successfully for user: ${username}`,
         );
 
         // Assicuriamo che l'utente abbia un DID con informazioni WebAuthn
@@ -613,7 +618,7 @@ export class ShogunCore implements IShogunCore {
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask login"
+          "Ethereum address required for MetaMask login",
         );
       }
 
@@ -621,34 +626,44 @@ export class ShogunCore implements IShogunCore {
         throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser"
+          "MetaMask is not available in the browser",
         );
       }
 
       log("Generating credentials for MetaMask login...");
       const credentials = await this.metamask?.generateCredentials(address);
-      if (!credentials?.username || !credentials?.password || !credentials.signature || !credentials.message) {
+      if (
+        !credentials?.username ||
+        !credentials?.password ||
+        !credentials.signature ||
+        !credentials.message
+      ) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing"
+          "MetaMask credentials not generated correctly or signature missing",
         );
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
-      // --- Verifica della Firma --- 
+      // --- Verifica della Firma ---
       log("Verifying MetaMask signature...");
-      const recoveredAddress = ethers.verifyMessage(credentials.message, credentials.signature);
+      const recoveredAddress = ethers.verifyMessage(
+        credentials.message,
+        credentials.signature,
+      );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-         logError(`Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`);
-         throw createError(
-            ErrorType.SECURITY,
-            "SIGNATURE_VERIFICATION_FAILED",
-            "MetaMask signature verification failed. Address mismatch."
-         );
+        logError(
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
+        );
+        throw createError(
+          ErrorType.SECURITY,
+          "SIGNATURE_VERIFICATION_FAILED",
+          "MetaMask signature verification failed. Address mismatch.",
+        );
       }
       log("MetaMask signature verified successfully.");
       // --- Fine Verifica Firma ---
@@ -657,14 +672,15 @@ export class ShogunCore implements IShogunCore {
       log("Attempting login or user creation with verified credentials...");
       const result = await this.createUserWithGunDB(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
 
       if (!result.success || !result.userPub) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "LOGIN_CREATE_FAILED",
-          result.error || "Login or user creation failed after signature verification"
+          result.error ||
+            "Login or user creation failed after signature verification",
         );
       }
 
@@ -675,12 +691,12 @@ export class ShogunCore implements IShogunCore {
       try {
         log("Ensuring user has a DID...");
         did = await this.ensureUserHasDID({
-           services: [
-              { 
-                type: "EcdsaSecp256k1VerificationKey2019", // Tipo più specifico
-                endpoint: `ethereum:${address}` 
-              }
-           ]
+          services: [
+            {
+              type: "EcdsaSecp256k1VerificationKey2019", // Tipo più specifico
+              endpoint: `ethereum:${address}`,
+            },
+          ],
         });
         if (did) {
           log(`DID assigned/verified: ${did}`);
@@ -693,7 +709,7 @@ export class ShogunCore implements IShogunCore {
           ErrorType.DID,
           "DID_ENSURE_FAILED",
           "Error ensuring DID for MetaMask user",
-          didError
+          didError,
         );
       }
 
@@ -712,19 +728,19 @@ export class ShogunCore implements IShogunCore {
         password: credentials.password, // Potrebbe non essere sicuro restituirlo
         did: did || undefined,
       };
-
     } catch (error: any) {
       // Cattura sia errori conformi a ShogunError che generici
       const errorType = error?.type || ErrorType.AUTHENTICATION;
       const errorCode = error?.code || "METAMASK_LOGIN_ERROR";
-      const errorMessage = error?.message || "Unknown error during MetaMask login";
+      const errorMessage =
+        error?.message || "Unknown error during MetaMask login";
 
       const handledError = ErrorHandler.handle(
-          errorType,
-          errorCode,
-          errorMessage,
-          error
-        );
+        errorType,
+        errorCode,
+        errorMessage,
+        error,
+      );
 
       return {
         success: false,
@@ -745,62 +761,75 @@ export class ShogunCore implements IShogunCore {
     try {
       log(`MetaMask registration attempt for address: ${address}`);
 
-       if (!address) {
+      if (!address) {
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask registration"
+          "Ethereum address required for MetaMask registration",
         );
       }
 
       if (!this.metamask?.isAvailable()) {
-         throw createError(
+        throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser"
+          "MetaMask is not available in the browser",
         );
       }
 
       log("Generating credentials for MetaMask registration...");
       const credentials = await this.metamask?.generateCredentials(address);
-      if (!credentials?.username || !credentials?.password || !credentials.signature || !credentials.message) {
-         throw createError(
+      if (
+        !credentials?.username ||
+        !credentials?.password ||
+        !credentials.signature ||
+        !credentials.message
+      ) {
+        throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing"
+          "MetaMask credentials not generated correctly or signature missing",
         );
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
-       // --- Verifica della Firma --- 
+      // --- Verifica della Firma ---
       log("Verifying MetaMask signature...");
-      const recoveredAddress = ethers.verifyMessage(credentials.message, credentials.signature);
+      const recoveredAddress = ethers.verifyMessage(
+        credentials.message,
+        credentials.signature,
+      );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-         logError(`Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`);
-         throw createError(
-            ErrorType.SECURITY,
-            "SIGNATURE_VERIFICATION_FAILED",
-            "MetaMask signature verification failed. Address mismatch."
-         );
+        logError(
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
+        );
+        throw createError(
+          ErrorType.SECURITY,
+          "SIGNATURE_VERIFICATION_FAILED",
+          "MetaMask signature verification failed. Address mismatch.",
+        );
       }
       log("MetaMask signature verified successfully.");
       // --- Fine Verifica Firma ---
 
       // Utilizziamo il metodo refactored per creare l'utente (o loggare se esiste già)
-      log("Attempting user creation (or login if exists) with verified credentials...");
+      log(
+        "Attempting user creation (or login if exists) with verified credentials...",
+      );
       const result = await this.createUserWithGunDB(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
 
       if (!result.success || !result.userPub) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "USER_CREATE_LOGIN_FAILED",
-          result.error || "User creation or login failed after signature verification"
+          result.error ||
+            "User creation or login failed after signature verification",
         );
       }
 
@@ -819,22 +848,23 @@ export class ShogunCore implements IShogunCore {
           ],
         });
         if (did) {
-            log(`DID created/verified: ${did}`);
+          log(`DID created/verified: ${did}`);
         } else {
-             logWarn("Could not ensure DID for user after MetaMask signup.");
+          logWarn("Could not ensure DID for user after MetaMask signup.");
         }
       } catch (didError) {
-         // Non bloccare la registrazione se il DID fallisce, ma logga l'errore
-         ErrorHandler.handle(
-           ErrorType.DID,
-           "DID_ENSURE_FAILED",
-           "Error ensuring DID for MetaMask user during signup",
-           didError
+        // Non bloccare la registrazione se il DID fallisce, ma logga l'errore
+        ErrorHandler.handle(
+          ErrorType.DID,
+          "DID_ENSURE_FAILED",
+          "Error ensuring DID for MetaMask user during signup",
+          didError,
         );
       }
 
       // Emettiamo un evento di registrazione (o login se l'utente esisteva già)
-      this.eventEmitter.emit("auth:signup", { // Potrebbe essere logico emettere "auth:login" se l'utente esisteva già?
+      this.eventEmitter.emit("auth:signup", {
+        // Potrebbe essere logico emettere "auth:login" se l'utente esisteva già?
         userPub: result.userPub,
         username: credentials.username,
         method: "metamask",
@@ -848,19 +878,19 @@ export class ShogunCore implements IShogunCore {
         password: credentials.password, // Potrebbe non essere sicuro restituirlo
         did: did || undefined,
       };
-
     } catch (error: any) {
-       // Cattura sia errori conformi a ShogunError che generici
+      // Cattura sia errori conformi a ShogunError che generici
       const errorType = error?.type || ErrorType.AUTHENTICATION;
       const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
-      const errorMessage = error?.message || "Unknown error during MetaMask registration";
+      const errorMessage =
+        error?.message || "Unknown error during MetaMask registration";
 
       const handledError = ErrorHandler.handle(
-          errorType,
-          errorCode,
-          errorMessage,
-          error
-        );
+        errorType,
+        errorCode,
+        errorMessage,
+        error,
+      );
 
       return {
         success: false,
@@ -878,7 +908,7 @@ export class ShogunCore implements IShogunCore {
    */
   private createUserWithGunDB(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     log(`Ensuring user exists with GunDB: ${username}`);
 
@@ -890,7 +920,9 @@ export class ShogunCore implements IShogunCore {
             // Assicurati che l'utente sia sloggato prima di autenticare
             try {
               this.gundb.logout();
-            } catch(e) { /* ignore logout errors */ }
+            } catch (e) {
+              /* ignore logout errors */
+            }
 
             this.gundb.gun.user().auth(username, password, (ack: any) => {
               if (ack.err) {
@@ -899,9 +931,11 @@ export class ShogunCore implements IShogunCore {
                 const user = this.gundb.gun.user();
                 const userPub = user.is?.pub || "";
                 if (!user.is || !userPub) {
-                   resolveAuth({ err: "Authentication failed after apparent success." });
+                  resolveAuth({
+                    err: "Authentication failed after apparent success.",
+                  });
                 } else {
-                   resolveAuth({ pub: userPub });
+                  resolveAuth({ pub: userPub });
                 }
               }
             });
@@ -911,10 +945,12 @@ export class ShogunCore implements IShogunCore {
         // Helper per la creazione utente
         const createUser = (): Promise<{ err?: string; pub?: string }> => {
           return new Promise((resolveCreate) => {
-             // Assicurati che l'utente sia sloggato prima di creare
+            // Assicurati che l'utente sia sloggato prima di creare
             try {
               this.gundb.logout();
-            } catch(e) { /* ignore logout errors */ }
+            } catch (e) {
+              /* ignore logout errors */
+            }
 
             this.gundb.gun.user().create(username, password, (ack: any) => {
               resolveCreate({ err: ack.err, pub: ack.pub }); // pub might be present on success
@@ -937,7 +973,9 @@ export class ShogunCore implements IShogunCore {
         }
 
         // Login fallito, proviamo a creare l'utente
-        log(`Login failed (${loginResult.err || 'unknown reason'}), attempting user creation...`);
+        log(
+          `Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`,
+        );
         const createResult = await createUser();
 
         if (createResult.err) {
@@ -951,26 +989,30 @@ export class ShogunCore implements IShogunCore {
         }
 
         // Creazione riuscita, tentiamo di nuovo il login per conferma e per ottenere userPub
-        log(`User created successfully, attempting login again for confirmation...`);
+        log(
+          `User created successfully, attempting login again for confirmation...`,
+        );
         loginResult = await authUser();
 
         if (loginResult.pub) {
-           log(`Post-creation login successful! User pub: ${loginResult.pub}`);
-           resolve({
-             success: true,
-             userPub: loginResult.pub,
-           });
+          log(`Post-creation login successful! User pub: ${loginResult.pub}`);
+          resolve({
+            success: true,
+            userPub: loginResult.pub,
+          });
         } else {
-           // Questo non dovrebbe accadere se la creazione è andata a buon fine
-           logError(`Post-creation login failed unexpectedly: ${loginResult.err}`);
-           resolve({
-             success: false,
-             error: `User created, but subsequent login failed: ${loginResult.err}`,
-           });
+          // Questo non dovrebbe accadere se la creazione è andata a buon fine
+          logError(
+            `Post-creation login failed unexpectedly: ${loginResult.err}`,
+          );
+          resolve({
+            success: false,
+            error: `User created, but subsequent login failed: ${loginResult.err}`,
+          });
         }
-
       } catch (error: any) {
-        const errorMsg = error.message || "Unknown error during user existence check";
+        const errorMsg =
+          error.message || "Unknown error during user existence check";
         logError(`Error in createUserWithGunDB: ${errorMsg}`, error);
         resolve({
           success: false,
@@ -1020,7 +1062,7 @@ export class ShogunCore implements IShogunCore {
           ErrorType.AUTHENTICATION,
           "AUTH_REQUIRED",
           "User authentication required to load wallets",
-          null
+          null,
         );
 
         return [];
@@ -1037,7 +1079,7 @@ export class ShogunCore implements IShogunCore {
           ErrorType.WALLET,
           "LOAD_WALLETS_ERROR",
           `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`,
-          walletError
+          walletError,
         );
 
         // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
@@ -1049,7 +1091,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.UNKNOWN,
         "UNEXPECTED_ERROR",
         `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`,
-        error
+        error,
       );
 
       return [];
@@ -1065,7 +1107,7 @@ export class ShogunCore implements IShogunCore {
    */
   async signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array
+    message: string | Uint8Array,
   ): Promise<string> {
     if (!this.walletManager) {
       throw new Error("Wallet manager not initialized");
@@ -1098,7 +1140,7 @@ export class ShogunCore implements IShogunCore {
   async signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string
+    value: string,
   ): Promise<string> {
     if (!this.walletManager) {
       throw new Error("Wallet manager not initialized");
@@ -1167,7 +1209,7 @@ export class ShogunCore implements IShogunCore {
    */
   async importMnemonic(
     mnemonicData: string,
-    password?: string
+    password?: string,
   ): Promise<boolean> {
     if (!this.walletManager) {
       throw new Error("Wallet manager not initialized");
@@ -1184,7 +1226,7 @@ export class ShogunCore implements IShogunCore {
    */
   async importWalletKeys(
     walletsData: string,
-    password?: string
+    password?: string,
   ): Promise<number> {
     if (!this.walletManager) {
       throw new Error("Wallet manager not initialized");
@@ -1222,7 +1264,7 @@ export class ShogunCore implements IShogunCore {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    } = { importMnemonic: true, importWallets: true, importGunPair: true }
+    } = { importMnemonic: true, importWallets: true, importGunPair: true },
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
@@ -1319,7 +1361,7 @@ export class ShogunCore implements IShogunCore {
    * @private
    */
   private async ensureUserHasDID(
-    options?: DIDCreateOptions
+    options?: DIDCreateOptions,
   ): Promise<string | null> {
     try {
       if (!this.isLoggedIn()) {

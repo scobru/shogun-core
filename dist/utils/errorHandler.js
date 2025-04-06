@@ -1,4 +1,4 @@
-import { logError } from "./logger";
+import { log, logError } from "./logger";
 /**
  * Tipi di errore che possono verificarsi nell'applicazione
  */
@@ -20,6 +20,8 @@ export var ErrorType;
     ErrorType["STEALTH"] = "StealthError";
     ErrorType["WEBAUTHN"] = "WebAuthnError";
     ErrorType["UNKNOWN"] = "UnknownError";
+    ErrorType["CONNECTOR"] = "CONNECTOR";
+    ErrorType["GENERAL"] = "GENERAL";
 })(ErrorType || (ErrorType = {}));
 /**
  * Wrapper per standardizzare gli errori
@@ -65,8 +67,31 @@ export class ErrorHandler {
      * @param message - Messaggio errore
      * @param originalError - Errore originale
      */
-    static handle(type, code, message, originalError) {
-        const error = createError(type, code, message, originalError);
+    static handle(type, code, message, originalError, logLevel = "error") {
+        // Create a formatted error message
+        const finalMessage = originalError
+            ? `${message} - ${this.formatError(originalError)}`
+            : message;
+        // Log the error
+        switch (logLevel) {
+            case "debug":
+                log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+                break;
+            case "warn":
+                log(`[${type}.${code}] (WARN) ${finalMessage}`);
+                break;
+            case "info":
+                log(`[${type}.${code}] (INFO) ${finalMessage}`);
+                break;
+            case "error":
+            default:
+                log(`[${type}.${code}] (ERROR) ${finalMessage}`);
+                if (originalError && originalError instanceof Error) {
+                    log(originalError.stack || "No stack trace available");
+                }
+                break;
+        }
+        const error = createError(type, code, finalMessage, originalError);
         this.handleError(error);
         return error;
     }
@@ -115,10 +140,45 @@ export class ErrorHandler {
      * @returns Messaggio di errore formattato
      */
     static formatError(error) {
+        if (!error) {
+            return "Unknown error";
+        }
         if (error instanceof Error) {
-            return error.message;
+            return `${error.name}: ${error.message}`;
+        }
+        if (typeof error === "string") {
+            return error;
+        }
+        if (typeof error === "object") {
+            try {
+                return JSON.stringify(error);
+            }
+            catch (e) {
+                return `Object: ${Object.prototype.toString.call(error)}`;
+            }
         }
         return String(error);
+    }
+    /**
+     * Error handling with retry logic
+     */
+    static async withRetry(fn, errorType, errorCode, maxRetries = 3, retryDelay = 1000) {
+        let lastError;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await fn();
+            }
+            catch (error) {
+                lastError = error;
+                const delay = retryDelay * attempt;
+                if (attempt < maxRetries) {
+                    log(`Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                }
+            }
+        }
+        // If we got here, all retries failed
+        throw this.handle(errorType, errorCode, `Operation failed after ${maxRetries} attempts`, lastError);
     }
 }
 ErrorHandler.errors = [];

@@ -5,7 +5,7 @@
 /**
  * Interface for a Gun chain reference
  */
-export interface IGunChainReference<T = any> {
+export interface IGunChainReference<T = unknown> {
   /**
    * Gets a specific node in the chain
    */
@@ -15,9 +15,9 @@ export interface IGunChainReference<T = any> {
    * Puts data into a node
    */
   put(
-    data: any,
-    callback?: (ack: any) => void,
-    options?: any,
+    data: unknown,
+    callback?: (ack: IGunAck) => void,
+    options?: IGunOptions,
   ): IGunChainReference;
 
   /**
@@ -34,7 +34,10 @@ export interface IGunChainReference<T = any> {
   /**
    * Retrieves the user session
    */
-  recall(options?: any, callback?: (ack: any) => void): IGunChainReference;
+  recall(
+    options?: IGunOptions,
+    callback?: (ack: IGunAck) => void,
+  ): IGunChainReference;
 
   /**
    * Logs out the user
@@ -47,13 +50,13 @@ export interface IGunChainReference<T = any> {
   auth(
     username: string,
     password: string,
-    callback?: (ack: any) => void,
-    options?: any,
+    callback?: (ack: IGunAck) => void,
+    options?: IGunOptions,
   ): IGunChainReference;
   auth(
     pair: IGunCryptoKeyPair,
-    callback?: (ack: any) => void,
-    options?: any,
+    callback?: (ack: IGunAck) => void,
+    options?: IGunOptions,
   ): IGunChainReference;
 
   /**
@@ -62,13 +65,13 @@ export interface IGunChainReference<T = any> {
   create(
     username: string,
     password: string,
-    callback?: (ack: any) => void,
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
   create(
     username: string,
-    password: any,
-    pair: any,
-    callback?: (ack: any) => void,
+    password: string,
+    pair: IGunCryptoKeyPair,
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
 
   /**
@@ -77,13 +80,13 @@ export interface IGunChainReference<T = any> {
   delete(
     username: string,
     password: string,
-    callback?: (ack: any) => void,
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
 
   /**
    * Registers an event
    */
-  on(event: string, callback: (...args: any[]) => void): IGunChainReference;
+  on(event: string, callback: (...args: unknown[]) => void): IGunChainReference;
   on(callback: (data: T) => void): IGunChainReference;
 }
 
@@ -123,4 +126,53 @@ export interface GunDBOptions {
   retryDelay?: number;
   authToken?: string;
   websocket?: boolean;
+}
+
+/**
+ * Interface for Gun instance
+ */
+export interface IGunInstance<T = unknown> {
+  get(path: string): IGunChainReference<T>;
+  put(data: unknown): IGunChainReference<T>;
+  user(): IGunChainReference<T>;
+  on(event: string, callback: (...args: unknown[]) => void): IGunInstance<T>;
+  SEA: IGunSEA;
+}
+
+/**
+ * Interface for GunDB acknowledgment responses
+ */
+export interface IGunAck {
+  err?: string;
+  ok?: boolean | number;
+  pub?: string;
+  lack?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Interface for Gun options
+ */
+export interface IGunOptions {
+  opt?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Interface for SEA cryptography module
+ */
+export interface IGunSEA {
+  pair(
+    callback?: (pair: IGunCryptoKeyPair) => void,
+  ): Promise<IGunCryptoKeyPair>;
+  sign(data: unknown, pair: IGunCryptoKeyPair): Promise<string>;
+  verify(data: string, pair: IGunCryptoKeyPair): Promise<unknown>;
+  encrypt(data: unknown, pair: IGunCryptoKeyPair): Promise<string>;
+  decrypt(data: string, pair: IGunCryptoKeyPair): Promise<unknown>;
+  secret(
+    key: string,
+    pair: IGunCryptoKeyPair,
+    callback?: Function,
+  ): Promise<string>;
+  work(data: string, salt: string, callback?: Function): Promise<string>;
 }

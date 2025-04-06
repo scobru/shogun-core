@@ -63,7 +63,7 @@ let shogunCoreInstance;
 function initShogunBrowser(config) {
     // Apply default browser settings
     const browserConfig = {
-        ...config
+        ...config,
     };
     // Assicuriamoci che la configurazione di GunDB esista
     if (!browserConfig.gundb) {

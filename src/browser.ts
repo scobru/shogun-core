@@ -26,14 +26,14 @@ let shogunCoreInstance;
 export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   // Apply default browser settings
   const browserConfig: ShogunSDKConfig = {
-    ...config
+    ...config,
   };
 
   // Assicuriamoci che la configurazione di GunDB esista
   if (!browserConfig.gundb) {
     browserConfig.gundb = {};
   }
-   
+
   // Warn users who don't provide custom peers or providerUrl
   if (!config.gundb?.peers) {
     log(

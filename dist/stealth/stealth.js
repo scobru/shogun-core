@@ -7,10 +7,10 @@ import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 class Stealth {
     constructor(storage) {
         this.lastEphemeralKeyPair = null;
-        this.lastMethodUsed = 'unknown';
-        this.STEALTH_HISTORY_KEY = 'stealthHistory';
+        this.lastMethodUsed = "unknown";
+        this.STEALTH_HISTORY_KEY = "stealthHistory";
         this.logs = [];
-        this.STEALTH_DATA_TABLE = 'Stealth';
+        this.STEALTH_DATA_TABLE = "Stealth";
         this.storage = storage || new Storage();
     }
     /**
@@ -21,7 +21,7 @@ class Stealth {
             timestamp: new Date().toISOString(),
             level,
             message,
-            data
+            data,
         };
         this.logs.push(logMessage);
         console[level](`[${logMessage.timestamp}] ${message}`, data);
@@ -32,14 +32,14 @@ class Stealth {
     async cleanupSensitiveData() {
         try {
             this.lastEphemeralKeyPair = null;
-            this.lastMethodUsed = 'unknown';
+            this.lastMethodUsed = "unknown";
             this.logs = [];
             // Clear local storage if needed
             // this.storage.removeItem(this.STEALTH_HISTORY_KEY);
-            this.log('info', 'Sensitive data cleanup completed');
+            this.log("info", "Sensitive data cleanup completed");
         }
         catch (error) {
-            this.log('error', 'Error during cleanup', error);
+            this.log("error", "Error during cleanup", error);
             throw error;
         }
     }
@@ -49,49 +49,60 @@ class Stealth {
     validateStealthData(data) {
         try {
             // Basic validation
-            if (!data || typeof data !== 'object') {
-                this.log('error', 'Invalid stealth data: data is not an object');
+            if (!data || typeof data !== "object") {
+                this.log("error", "Invalid stealth data: data is not an object");
                 return false;
             }
             // Required fields validation
-            const requiredFields = ['recipientPublicKey', 'ephemeralKeyPair', 'timestamp'];
+            const requiredFields = [
+                "recipientPublicKey",
+                "ephemeralKeyPair",
+                "timestamp",
+            ];
             for (const field of requiredFields) {
                 if (!(field in data)) {
-                    this.log('error', `Invalid stealth data: missing ${field}`);
+                    this.log("error", `Invalid stealth data: missing ${field}`);
                     return false;
                 }
             }
             // Type validation
-            if (typeof data.recipientPublicKey !== 'string' || !data.recipientPublicKey.trim()) {
-                this.log('error', 'Invalid recipientPublicKey');
+            if (typeof data.recipientPublicKey !== "string" ||
+                !data.recipientPublicKey.trim()) {
+                this.log("error", "Invalid recipientPublicKey");
                 return false;
             }
-            if (typeof data.timestamp !== 'number' || data.timestamp <= 0) {
-                this.log('error', 'Invalid timestamp');
+            if (typeof data.timestamp !== "number" || data.timestamp <= 0) {
+                this.log("error", "Invalid timestamp");
                 return false;
             }
             // EphemeralKeyPair validation
-            const keyPairFields = ['pub', 'priv', 'epub', 'epriv'];
+            const keyPairFields = [
+                "pub",
+                "priv",
+                "epub",
+                "epriv",
+            ];
             for (const field of keyPairFields) {
-                if (!(field in data.ephemeralKeyPair) || typeof data.ephemeralKeyPair[field] !== 'string') {
-                    this.log('error', `Invalid ephemeralKeyPair: missing or invalid ${field}`);
+                if (!(field in data.ephemeralKeyPair) ||
+                    typeof data.ephemeralKeyPair[field] !== "string") {
+                    this.log("error", `Invalid ephemeralKeyPair: missing or invalid ${field}`);
                     return false;
                 }
             }
             // Optional fields validation
-            if (data.method && !['standard', 'legacy'].includes(data.method)) {
-                this.log('error', 'Invalid method value');
+            if (data.method && !["standard", "legacy"].includes(data.method)) {
+                this.log("error", "Invalid method value");
                 return false;
             }
-            if (data.sharedSecret && typeof data.sharedSecret !== 'string') {
-                this.log('error', 'Invalid sharedSecret type');
+            if (data.sharedSecret && typeof data.sharedSecret !== "string") {
+                this.log("error", "Invalid sharedSecret type");
                 return false;
             }
-            this.log('debug', 'Stealth data validation passed');
+            this.log("debug", "Stealth data validation passed");
             return true;
         }
         catch (error) {
-            this.log('error', 'Error during stealth data validation', error);
+            this.log("error", "Error during stealth data validation", error);
             return false;
         }
     }
@@ -379,16 +390,16 @@ class Stealth {
     saveStealthHistory(address, data) {
         try {
             if (!this.validateStealthData(data)) {
-                throw new Error('Invalid stealth data');
+                throw new Error("Invalid stealth data");
             }
-            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || '{}';
+            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
             const history = JSON.parse(stealthHistoryJson);
             history[address] = data;
             this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
-            this.log('info', `Stealth data saved for address ${address}`);
+            this.log("info", `Stealth data saved for address ${address}`);
         }
         catch (e) {
-            this.log('error', 'Error saving stealth data:', e);
+            this.log("error", "Error saving stealth data:", e);
             throw e;
         }
     }

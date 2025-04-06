@@ -104,7 +104,7 @@ class GunDB {
    */
   private async retry<T>(
     operation: () => Promise<T>,
-    context: string
+    context: string,
   ): Promise<T> {
     let lastError: Error;
 
@@ -137,7 +137,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -270,7 +270,7 @@ class GunDB {
   login(
     username: string,
     password: string,
-    callback?: (result: any) => void
+    callback?: (result: any) => void,
   ): Promise<any> {
     log(`Attempting login for user: ${username}`);
 
@@ -396,7 +396,7 @@ class GunDB {
   private async saveWithRetry(
     node: any,
     data: any,
-    options?: any
+    options?: any,
   ): Promise<any> {
     return this.retry(
       () =>
@@ -407,10 +407,10 @@ class GunDB {
               if (ack.err) reject(new Error(ack.err));
               else resolve(data);
             },
-            options
+            options,
           );
         }),
-      "data save operation"
+      "data save operation",
     );
   }
 
@@ -423,7 +423,7 @@ class GunDB {
         new Promise((resolve) => {
           node.once((data: any) => resolve(data));
         }),
-      "data read operation"
+      "data read operation",
     );
   }
 
@@ -446,7 +446,7 @@ class GunDB {
         ErrorType.GUN,
         "SAVE_USER_DATA_ERROR",
         `Error saving data to path ${path}`,
-        error
+        error,
       );
       throw error;
     }
@@ -475,7 +475,7 @@ class GunDB {
         ErrorType.GUN,
         "GET_USER_DATA_ERROR",
         `Error retrieving data from path ${path}`,
-        error
+        error,
       );
       throw error;
     }
@@ -504,7 +504,7 @@ class GunDB {
               resolve(data);
             }
           },
-          options
+          options,
         );
     });
   }

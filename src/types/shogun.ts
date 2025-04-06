@@ -18,7 +18,7 @@ interface DID {
   deactivateDID(did: string): Promise<boolean>;
   registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }>;
 }
 
@@ -75,7 +75,7 @@ export interface IShogunCore {
   signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult>;
   signUpWithMetaMask(address: string): Promise<AuthResult>;
   signUpWithWebAuthn(username: string): Promise<AuthResult>;
@@ -89,13 +89,13 @@ export interface IShogunCore {
   loadWallets(): Promise<WalletInfo[]>;
   signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array
+    message: string | Uint8Array,
   ): Promise<string>;
   verifySignature(message: string | Uint8Array, signature: string): string;
   signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string
+    value: string,
   ): Promise<string>;
   getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
   generateNewMnemonic(): string;
@@ -115,7 +115,7 @@ export interface IShogunCore {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    }
+    },
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
@@ -159,7 +159,7 @@ export interface LoggingConfig {
   /** Enable logging (default: true in development, false in production) */
   enabled?: boolean;
   /** Log level: 'error', 'warning', 'info', 'debug' */
-  level?: 'error' | 'warning' | 'info' | 'debug';
+  level?: "error" | "warning" | "info" | "debug";
   /** Custom prefix for log messages */
   prefix?: string;
 }

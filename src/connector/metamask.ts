@@ -11,7 +11,7 @@ import {
   MetaMaskCredentials,
   EthereumProvider,
   SignatureCache,
-  MetaMaskConfig
+  MetaMaskConfig,
 } from "../types/metamask";
 
 // Extend the Window interface to include ethereum
@@ -40,7 +40,7 @@ class MetaMask extends EventEmitter {
     cacheDuration: 30 * 60 * 1000, // 30 minutes
     maxRetries: 3,
     retryDelay: 1000,
-    timeout: 60000
+    timeout: 60000,
   };
 
   private config: MetaMaskConfig;
@@ -52,7 +52,8 @@ class MetaMask extends EventEmitter {
   constructor(config: Partial<MetaMaskConfig> = {}) {
     super();
     this.config = { ...this.DEFAULT_CONFIG, ...config };
-    this.AUTH_DATA_TABLE = CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
+    this.AUTH_DATA_TABLE =
+      CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
     this.setupProvider();
     this.setupEventListeners();
   }
@@ -62,8 +63,10 @@ class MetaMask extends EventEmitter {
    */
   private async setupProvider(): Promise<void> {
     try {
-      if (typeof window !== 'undefined' && window.ethereum) {
-        this.provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
+      if (typeof window !== "undefined" && window.ethereum) {
+        this.provider = new ethers.BrowserProvider(
+          window.ethereum as ethers.Eip1193Provider,
+        );
         logDebug("BrowserProvider initialized successfully");
       } else {
         logWarn("Window.ethereum is not available");
@@ -78,14 +81,14 @@ class MetaMask extends EventEmitter {
    */
   private setupEventListeners(): void {
     if (this.provider) {
-      this.provider.on('network', (newNetwork: any, oldNetwork: any) => {
-        this.emit('chainChanged', newNetwork);
+      this.provider.on("network", (newNetwork: any, oldNetwork: any) => {
+        this.emit("chainChanged", newNetwork);
       });
 
       // Listen for account changes
       if (window.ethereum?.on) {
-        window.ethereum.on('accountsChanged', (accounts: string[]) => {
-          this.emit('accountsChanged', accounts);
+        window.ethereum.on("accountsChanged", (accounts: string[]) => {
+          this.emit("accountsChanged", accounts);
         });
       }
     }
@@ -124,7 +127,7 @@ class MetaMask extends EventEmitter {
     this.signatureCache.set(address, {
       signature,
       timestamp: Date.now(),
-      address
+      address,
     });
   }
 
@@ -147,7 +150,7 @@ class MetaMask extends EventEmitter {
         ErrorType.VALIDATION,
         "INVALID_ADDRESS",
         "Invalid Ethereum address provided",
-        error
+        error,
       );
       throw error;
     }
@@ -159,23 +162,29 @@ class MetaMask extends EventEmitter {
   async connectMetaMask(): Promise<ConnectionResult> {
     try {
       logDebug("Attempting to connect to MetaMask...");
-      
+
       if (!this.provider) {
         logDebug("Provider not initialized, setting up...");
         await this.setupProvider();
         if (!this.provider) {
-          throw new Error("MetaMask is not available. Please install MetaMask extension.");
+          throw new Error(
+            "MetaMask is not available. Please install MetaMask extension.",
+          );
         }
       }
 
       // Richiedi esplicitamente l'accesso all'account MetaMask
       logDebug("Requesting account access...");
       let accounts: string[] = [];
-      
+
       if (window.ethereum) {
         try {
-          accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          logDebug(`Accounts requested successfully: ${accounts.length} accounts returned`);
+          accounts = await window.ethereum.request({
+            method: "eth_requestAccounts",
+          });
+          logDebug(
+            `Accounts requested successfully: ${accounts.length} accounts returned`,
+          );
         } catch (requestError) {
           logError("Error requesting MetaMask accounts:", requestError);
           throw new Error("User denied account access");
@@ -191,7 +200,7 @@ class MetaMask extends EventEmitter {
           logDebug(`Attempt ${attempt} to get signer...`);
           const signer = await this.provider.getSigner();
           const address = await signer.getAddress();
-          
+
           if (!address) {
             logError("No address returned from signer");
             throw new Error("No accounts found in MetaMask");
@@ -199,17 +208,19 @@ class MetaMask extends EventEmitter {
 
           logDebug(`Signer address obtained: ${address}`);
           const metamaskUsername = `mm_${address.toLowerCase()}`;
-          
+
           // Emetti evento connesso
-          this.emit('connected', { address });
-          
+          this.emit("connected", { address });
+
           logDebug(`MetaMask connected successfully with address: ${address}`);
           return { success: true, address, username: metamaskUsername };
         } catch (error: any) {
           logError(`Error in connection attempt ${attempt}:`, error);
           if (attempt === this.config.maxRetries!) throw error;
           logDebug(`Retrying in ${this.config.retryDelay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, this.config.retryDelay!));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.config.retryDelay!),
+          );
         }
       }
 
@@ -220,7 +231,7 @@ class MetaMask extends EventEmitter {
         ErrorType.NETWORK,
         "METAMASK_CONNECTION_ERROR",
         error.message || "Unknown error while connecting to MetaMask",
-        error
+        error,
       );
       return { success: false, error: error.message };
     }
@@ -233,12 +244,15 @@ class MetaMask extends EventEmitter {
     logDebug("Generating credentials for address:", address);
     try {
       const validAddress = this.validateAddress(address);
-      
+
       // Check cache first
       const cachedSignature = this.getCachedSignature(validAddress);
       if (cachedSignature) {
         logDebug("Using cached signature for address:", validAddress);
-        return this.generateCredentialsFromSignature(validAddress, cachedSignature);
+        return this.generateCredentialsFromSignature(
+          validAddress,
+          cachedSignature,
+        );
       }
 
       try {
@@ -246,17 +260,19 @@ class MetaMask extends EventEmitter {
         const signature = await this.requestSignatureWithTimeout(
           validAddress,
           this.MESSAGE_TO_SIGN,
-          this.config.timeout!
+          this.config.timeout!,
         );
 
         // Cache the new signature
         this.cacheSignature(validAddress, signature);
-        
+
         return this.generateCredentialsFromSignature(validAddress, signature);
       } catch (signingError) {
         // Gestione del fallimento di firma
-        logWarn(`Failed to get signature: ${signingError}. Using fallback method.`);
-        
+        logWarn(
+          `Failed to get signature: ${signingError}. Using fallback method.`,
+        );
+
         // Generiamo credenziali deterministiche basate solo sull'indirizzo
         // Non sicuro come la firma, ma permette di procedere con l'autenticazione
         return this.generateFallbackCredentials(validAddress);
@@ -266,7 +282,7 @@ class MetaMask extends EventEmitter {
         ErrorType.AUTHENTICATION,
         "CREDENTIALS_GENERATION_ERROR",
         error.message || "Error generating MetaMask credentials",
-        error
+        error,
       );
       throw error;
     }
@@ -277,11 +293,11 @@ class MetaMask extends EventEmitter {
    */
   private generateCredentialsFromSignature(
     address: string,
-    signature: string
+    signature: string,
   ): MetaMaskCredentials {
     const username = `mm_${address.toLowerCase()}`;
     const password = ethers.keccak256(
-      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`)
+      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`),
     );
     const message = this.MESSAGE_TO_SIGN;
     return { username, password, message, signature };
@@ -294,19 +310,17 @@ class MetaMask extends EventEmitter {
   private generateFallbackCredentials(address: string): MetaMaskCredentials {
     logWarn("Using fallback credentials generation for address:", address);
     const username = `mm_${address.toLowerCase()}`;
-    
+
     // Creiamo una password deterministica basata sull'indirizzo
     // Nota: meno sicuro della firma, ma deterministico
     const fallbackMessage = `SHOGUN_FALLBACK:${address.toLowerCase()}`;
-    const password = ethers.keccak256(
-      ethers.toUtf8Bytes(fallbackMessage)
-    );
-    
+    const password = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
+
     // Usiamo il messaggio fallback sia come messaggio che come pseudo-firma
     // Questo non è crittograficamente sicuro, ma soddisfa l'interfaccia
     const message = fallbackMessage;
     const signature = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
-    
+
     return { username, password, message, signature };
   }
 
@@ -364,12 +378,14 @@ class MetaMask extends EventEmitter {
         }
 
         if (signerAddress.toLowerCase() !== address.toLowerCase()) {
-          throw new Error(`Signer address (${signerAddress}) does not match expected address (${address})`);
+          throw new Error(
+            `Signer address (${signerAddress}) does not match expected address (${address})`,
+          );
         }
 
         // Eseguire la firma con handling migliorato
         logDebug(`Requesting signature for message: ${message}`);
-        
+
         // Aggiungere un event handler temporaneo per eventuali errori della window.ethereum
         const errorHandler = (error: any) => {
           if (timeoutId) {
@@ -378,45 +394,45 @@ class MetaMask extends EventEmitter {
           }
           reject(error);
         };
-        
+
         // Aggiungere anche listener per l'evento accountsChanged che può interrompere la firma
         if (window.ethereum?.on) {
-          window.ethereum.on('accountsChanged', errorHandler);
+          window.ethereum.on("accountsChanged", errorHandler);
         }
-        
+
         try {
           const signature = await signer.signMessage(message);
           logDebug("Signature obtained successfully");
-          
+
           if (timeoutId) {
             clearTimeout(timeoutId);
             timeoutId = null;
           }
-          
+
           // Rimuoviamo i listener
           if (window.ethereum?.removeListener) {
-            window.ethereum.removeListener('accountsChanged', errorHandler);
+            window.ethereum.removeListener("accountsChanged", errorHandler);
           }
-          
+
           resolve(signature);
         } catch (error: any) {
           logError("Error during message signing:", error);
-          
+
           // Rimuoviamo i listener
           if (window.ethereum?.removeListener) {
-            window.ethereum.removeListener('accountsChanged', errorHandler);
+            window.ethereum.removeListener("accountsChanged", errorHandler);
           }
-          
+
           throw error;
         }
       } catch (error: any) {
         logError("Failed to request signature:", error);
-        
+
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
-        
+
         reject(error);
       }
     });

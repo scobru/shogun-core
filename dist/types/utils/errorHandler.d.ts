@@ -1,3 +1,4 @@
+import { LogLevel } from "../types/common";
 /**
  * Tipi di errore che possono verificarsi nell'applicazione
  */
@@ -17,7 +18,9 @@ export declare enum ErrorType {
     GUN = "GunError",
     STEALTH = "StealthError",
     WEBAUTHN = "WebAuthnError",
-    UNKNOWN = "UnknownError"
+    UNKNOWN = "UnknownError",
+    CONNECTOR = "CONNECTOR",
+    GENERAL = "GENERAL"
 }
 /**
  * Interfaccia standard per errori di Shogun
@@ -26,7 +29,7 @@ export interface ShogunError {
     type: ErrorType;
     code: string;
     message: string;
-    originalError?: Error | any;
+    originalError?: Error | unknown;
     timestamp: number;
 }
 /**
@@ -37,7 +40,7 @@ export interface ShogunError {
  * @param originalError - Errore originale
  * @returns Un oggetto di errore strutturato
  */
-export declare function createError(type: ErrorType, code: string, message: string, originalError?: Error | any): ShogunError;
+export declare function createError(type: ErrorType, code: string, message: string, originalError?: Error | unknown): ShogunError;
 /**
  * Gestore centralizzato per errori
  */
@@ -57,7 +60,7 @@ export declare class ErrorHandler {
      * @param message - Messaggio errore
      * @param originalError - Errore originale
      */
-    static handle(type: ErrorType, code: string, message: string, originalError?: Error | any): ShogunError;
+    static handle(type: ErrorType, code: string, message: string, originalError?: Error | unknown, logLevel?: LogLevel): ShogunError;
     /**
      * Recupera gli ultimi N errori
      * @param count - Numero di errori da recuperare
@@ -84,5 +87,9 @@ export declare class ErrorHandler {
      * @param error - Errore da formattare
      * @returns Messaggio di errore formattato
      */
-    static formatError(error: Error | any): string;
+    static formatError(error: Error | unknown): string;
+    /**
+     * Error handling with retry logic
+     */
+    static withRetry<T>(fn: () => Promise<T>, errorType: ErrorType, errorCode: string, maxRetries?: number, retryDelay?: number): Promise<T>;
 }

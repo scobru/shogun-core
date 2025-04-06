@@ -1,4 +1,4 @@
-import { BaseEvent, BaseConfig, BaseDeviceInfo, BaseAuthResult } from './common';
+import { BaseEvent, BaseConfig, BaseDeviceInfo, BaseResult, BaseAuthResult } from "./common";
 /**
  * WebAuthn types definitions
  */
@@ -23,6 +23,7 @@ export interface CredentialResult extends BaseAuthResult {
     credentialId?: string;
     deviceInfo?: DeviceInfo;
     webAuthnCredentials?: WebAuthnCredentials;
+    publicKey?: ArrayBuffer | null;
 }
 /**
  * WebAuthn configuration options
@@ -57,4 +58,35 @@ export interface WebAuthnEvent extends BaseEvent {
 export interface WebAuthnOperationOptions extends BaseConfig {
     userVerification?: UserVerificationRequirement;
     attestation?: AttestationConveyancePreference;
+}
+/**
+ * WebAuthn credential data
+ */
+export interface WebAuthnCredentialData {
+    id: string;
+    rawId: ArrayBuffer;
+    response: {
+        clientDataJSON: ArrayBuffer;
+        attestationObject?: ArrayBuffer;
+        authenticatorData?: ArrayBuffer;
+        signature?: ArrayBuffer;
+        userHandle?: ArrayBuffer;
+        getPublicKey?: () => ArrayBuffer;
+    };
+    type: string;
+    getClientExtensionResults: () => AuthenticationExtensionsClientOutputs;
+}
+/**
+ * WebAuthn verification result
+ */
+export interface WebAuthnVerificationResult extends BaseResult {
+    username?: string;
+    credentialId?: string;
+    error?: string;
+}
+/**
+ * WebAuthn credential creation options with extensions
+ */
+export interface WebAuthnCredentialCreationOptions extends PublicKeyCredentialCreationOptions {
+    signal?: AbortSignal;
 }

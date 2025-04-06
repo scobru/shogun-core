@@ -7,7 +7,7 @@ const MAX_USERNAME_LENGTH = 64;
 
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { EventEmitter } from "events";
+import { EventEmitter } from "../utils/eventEmitter";
 import {
   DeviceInfo,
   WebAuthnCredentials,
@@ -15,8 +15,11 @@ import {
   WebAuthnConfig,
   WebAuthnEventType,
   WebAuthnEvent,
-  WebAuthnOperationOptions
+  WebAuthnOperationOptions,
+  WebAuthnCredentialData,
+  WebAuthnVerificationResult,
 } from "../types/webauthn";
+import { IGunInstance } from "../types/gun";
 
 /**
  * Extends Window interface to include WebauthnAuth
@@ -47,7 +50,7 @@ const DEFAULT_CONFIG: WebAuthnConfig = {
   userVerification: "preferred",
   attestation: "none",
   authenticatorAttachment: "platform",
-  requireResidentKey: false
+  requireResidentKey: false,
 };
 
 /**
@@ -55,23 +58,23 @@ const DEFAULT_CONFIG: WebAuthnConfig = {
  */
 export class Webauthn extends EventEmitter {
   private config: WebAuthnConfig;
-  private gunInstance: any;
-  private credential: any;
+  private gunInstance?: IGunInstance;
+  private credential: WebAuthnCredentialData | null;
   private abortController: AbortController | null = null;
 
   /**
    * Creates a new WebAuthn instance
    */
-  constructor(gunInstance?: any, config?: Partial<WebAuthnConfig>) {
+  constructor(gunInstance?: IGunInstance, config?: Partial<WebAuthnConfig>) {
     super();
     this.gunInstance = gunInstance;
     this.credential = null;
-    
+
     // Merge default config with provided config
     this.config = {
       ...DEFAULT_CONFIG,
       ...config,
-      rpId: config?.rpId || window.location.hostname.split(":")[0]
+      rpId: config?.rpId || window.location.hostname.split(":")[0],
     };
   }
 
@@ -83,12 +86,19 @@ export class Webauthn extends EventEmitter {
       throw new Error("Username must be a non-empty string");
     }
 
-    if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
-      throw new Error(`Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`);
+    if (
+      username.length < MIN_USERNAME_LENGTH ||
+      username.length > MAX_USERNAME_LENGTH
+    ) {
+      throw new Error(
+        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`,
+      );
     }
 
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      throw new Error("Username can only contain letters, numbers, underscores and hyphens");
+      throw new Error(
+        "Username can only contain letters, numbers, underscores and hyphens",
+      );
     }
   }
 
@@ -98,7 +108,7 @@ export class Webauthn extends EventEmitter {
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice = false
+    isNewDevice = false,
   ): Promise<CredentialResult> {
     try {
       this.validateUsername(username);
@@ -108,23 +118,27 @@ export class Webauthn extends EventEmitter {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const result = await this.generateCredentials(username, credentials, isNewDevice);
-          
+          const result = await this.generateCredentials(
+            username,
+            credentials,
+            isNewDevice,
+          );
+
           if (result.success) {
             this.emit(WebAuthnEventType.DEVICE_REGISTERED, {
               type: WebAuthnEventType.DEVICE_REGISTERED,
               data: { username, deviceInfo: result.deviceInfo },
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
-            
+
             return result;
           }
-          
+
           lastError = new Error(result.error || "Unknown error");
         } catch (error: any) {
           lastError = error;
           if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
             continue;
           }
         }
@@ -135,9 +149,9 @@ export class Webauthn extends EventEmitter {
       this.emit(WebAuthnEventType.ERROR, {
         type: WebAuthnEventType.ERROR,
         data: { error: error.message },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       throw error;
     }
   }
@@ -148,14 +162,21 @@ export class Webauthn extends EventEmitter {
   async authenticateUser(
     username: string,
     salt: string | null,
-    options: WebAuthnOperationOptions = {}
+    options: WebAuthnOperationOptions = {},
   ): Promise<CredentialResult> {
     try {
       this.validateUsername(username);
 
       if (!salt) {
-        const error = new Error("No WebAuthn credentials found for this username");
-        ErrorHandler.handle(ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
+        const error = new Error(
+          "No WebAuthn credentials found for this username",
+        );
+        ErrorHandler.handle(
+          ErrorType.WEBAUTHN,
+          "NO_CREDENTIALS",
+          error.message,
+          error,
+        );
         return { success: false, error: error.message };
       }
 
@@ -166,7 +187,10 @@ export class Webauthn extends EventEmitter {
       this.abortController = new AbortController();
 
       const timeout = options.timeout || this.config.timeout;
-      const timeoutId = setTimeout(() => this.abortController?.abort(), timeout);
+      const timeoutId = setTimeout(
+        () => this.abortController?.abort(),
+        timeout,
+      );
 
       try {
         const challenge = this.generateChallenge(username);
@@ -174,14 +198,15 @@ export class Webauthn extends EventEmitter {
           challenge,
           allowCredentials: [],
           timeout,
-          userVerification: options.userVerification || this.config.userVerification,
-          rpId: this.config.rpId
+          userVerification:
+            options.userVerification || this.config.userVerification,
+          rpId: this.config.rpId,
         };
 
-        const assertion = await navigator.credentials.get({
+        const assertion = (await navigator.credentials.get({
           publicKey: assertionOptions,
-          signal: this.abortController.signal
-        }) as PublicKeyCredential;
+          signal: this.abortController.signal,
+        })) as PublicKeyCredential;
 
         if (!assertion) {
           throw new Error("WebAuthn verification failed");
@@ -195,13 +220,13 @@ export class Webauthn extends EventEmitter {
           username,
           password,
           credentialId: this.bufferToBase64(assertion.rawId),
-          deviceInfo
+          deviceInfo,
         };
 
         this.emit(WebAuthnEventType.AUTHENTICATION_SUCCESS, {
           type: WebAuthnEventType.AUTHENTICATION_SUCCESS,
           data: { username, deviceInfo },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         return result;
@@ -209,16 +234,22 @@ export class Webauthn extends EventEmitter {
         clearTimeout(timeoutId);
         this.abortController = null;
       }
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown WebAuthn error";
-      
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown WebAuthn error";
+
       this.emit(WebAuthnEventType.AUTHENTICATION_FAILED, {
         type: WebAuthnEventType.AUTHENTICATION_FAILED,
         data: { username, error: errorMessage },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
-      ErrorHandler.handle(ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
+      ErrorHandler.handle(
+        ErrorType.WEBAUTHN,
+        "AUTH_ERROR",
+        errorMessage,
+        error,
+      );
       return { success: false, error: errorMessage };
     }
   }
@@ -243,7 +274,7 @@ export class Webauthn extends EventEmitter {
       timestamp: Date.now(),
       name: platformInfo.name,
       platform: platformInfo.platform,
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
     };
   }
 
@@ -306,7 +337,7 @@ export class Webauthn extends EventEmitter {
    */
   private uint8ArrayToHex(arr: Uint8Array): string {
     return Array.from(arr)
-      .map(b => b.toString(16).padStart(2, "0"))
+      .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
   }
 
@@ -315,7 +346,10 @@ export class Webauthn extends EventEmitter {
    */
   private bufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    const binary = bytes.reduce((str, byte) => str + String.fromCharCode(byte), "");
+    const binary = bytes.reduce(
+      (str, byte) => str + String.fromCharCode(byte),
+      "",
+    );
     return btoa(binary)
       .replace(/\+/g, "-")
       .replace(/\//g, "_")
@@ -327,11 +361,11 @@ export class Webauthn extends EventEmitter {
    */
   private generateCredentialsFromSalt(
     username: string,
-    salt: string
+    salt: string,
   ): { password: string } {
     const data = ethers.toUtf8Bytes(username + salt);
     return {
-      password: ethers.sha256(data)
+      password: ethers.sha256(data),
     };
   }
 
@@ -339,13 +373,17 @@ export class Webauthn extends EventEmitter {
    * Checks if WebAuthn is supported
    */
   isSupported(): boolean {
-    return typeof window !== "undefined" && window.PublicKeyCredential !== undefined;
+    return (
+      typeof window !== "undefined" && window.PublicKeyCredential !== undefined
+    );
   }
 
   /**
-   * Creates a new credential
+   * Creates a WebAuthn credential for registration
    */
-  private async createCredential(username: string): Promise<any> {
+  private async createCredential(
+    username: string,
+  ): Promise<WebAuthnCredentialData> {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const userId = new TextEncoder().encode(username);
@@ -386,32 +424,60 @@ export class Webauthn extends EventEmitter {
       }
 
       console.log("Credentials created successfully:", credential);
-      this.credential = credential;
-      return credential;
-    } catch (error: any) {
+      const webAuthnCredential = credential as PublicKeyCredential;
+
+      // Convert to WebAuthnCredentialData
+      const credentialData: WebAuthnCredentialData = {
+        id: webAuthnCredential.id,
+        rawId: webAuthnCredential.rawId,
+        type: webAuthnCredential.type,
+        response: {
+          clientDataJSON: webAuthnCredential.response.clientDataJSON,
+        },
+        getClientExtensionResults: webAuthnCredential.getClientExtensionResults,
+      };
+
+      // Add additional response properties if available
+      if ("attestationObject" in webAuthnCredential.response) {
+        credentialData.response.attestationObject = (
+          webAuthnCredential.response as AuthenticatorAttestationResponse
+        ).attestationObject;
+      }
+
+      this.credential = credentialData;
+      return credentialData;
+    } catch (error: unknown) {
       console.error("Detailed error in credential creation:", error);
-      throw new Error(`Error creating credentials: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Error creating credentials: ${errorMessage}`);
     }
   }
 
   /**
-   * Generates or verifies credentials
+   * Generates WebAuthn credentials
    */
   async generateCredentials(
     username: string,
-    existingCredential?: any,
+    existingCredential?: WebAuthnCredentials | null,
     isLogin = false,
-  ): Promise<any> {
+  ): Promise<CredentialResult> {
     try {
       if (isLogin) {
-        return this.verifyCredential(username);
+        const verificationResult = await this.verifyCredential(username);
+        return {
+          success: verificationResult.success,
+          error: verificationResult.error,
+          credentialId: verificationResult.credentialId,
+          username: verificationResult.username,
+        };
       } else {
         const credential = await this.createCredential(username);
-        const credentialId = (credential as PublicKeyCredential).id;
+        const credentialId = credential.id;
 
-        let publicKey = null;
-        if (credential && (credential as any).response?.getPublicKey) {
-          publicKey = (credential as any).response.getPublicKey();
+        let publicKey: ArrayBuffer | null = null;
+        if (credential?.response?.getPublicKey) {
+          publicKey = credential.response.getPublicKey();
         }
 
         return {
@@ -420,19 +486,25 @@ export class Webauthn extends EventEmitter {
           publicKey,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error in generateCredentials:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unknown error during WebAuthn operation";
       return {
         success: false,
-        error: error.message || "Error during WebAuthn operation",
+        error: errorMessage,
       };
     }
   }
 
   /**
-   * Verifies an existing credential
+   * Verifies a credential
    */
-  private async verifyCredential(username: string): Promise<any> {
+  private async verifyCredential(
+    username: string,
+  ): Promise<WebAuthnVerificationResult> {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
 
@@ -466,20 +538,28 @@ export class Webauthn extends EventEmitter {
       return {
         success: true,
         credentialId: (assertion as PublicKeyCredential).id,
+        username,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error verifying credentials:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unknown error verifying credentials";
       return {
         success: false,
-        error: error.message || "Error verifying credentials",
+        error: errorMessage,
       };
     }
   }
 
   /**
-   * Saves the credential to Gun database
+   * Saves credential to GunDB
    */
-  private async saveToGun(username: string, credential: any): Promise<void> {
+  private async saveToGun(
+    username: string,
+    credential: WebAuthnCredentialData,
+  ): Promise<void> {
     if (this.gunInstance) {
       try {
         await this.gunInstance.get(`webauthn_${username}`).put({
@@ -487,7 +567,7 @@ export class Webauthn extends EventEmitter {
           type: credential.type,
           timestamp: Date.now(),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error saving credentials to Gun:", error);
       }
     }
@@ -523,9 +603,9 @@ export class Webauthn extends EventEmitter {
   }
 
   /**
-   * Signs data using WebAuthn
+   * Signs data with the credential
    */
-  async sign(data: any) {
+  async sign(data: Record<string, unknown>): Promise<unknown> {
     const signature = await navigator.credentials.get({
       publicKey: {
         challenge: new Uint8Array(16),

@@ -9,7 +9,7 @@ const MIN_USERNAME_LENGTH = 3;
 const MAX_USERNAME_LENGTH = 64;
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("../utils/errorHandler");
-const events_1 = require("events");
+const eventEmitter_1 = require("../utils/eventEmitter");
 const webauthn_1 = require("../types/webauthn");
 /**
  * Constants for WebAuthn configuration
@@ -20,12 +20,12 @@ const DEFAULT_CONFIG = {
     userVerification: "preferred",
     attestation: "none",
     authenticatorAttachment: "platform",
-    requireResidentKey: false
+    requireResidentKey: false,
 };
 /**
  * Main WebAuthn class for authentication management
  */
-class Webauthn extends events_1.EventEmitter {
+class Webauthn extends eventEmitter_1.EventEmitter {
     /**
      * Creates a new WebAuthn instance
      */
@@ -38,7 +38,7 @@ class Webauthn extends events_1.EventEmitter {
         this.config = {
             ...DEFAULT_CONFIG,
             ...config,
-            rpId: config?.rpId || window.location.hostname.split(":")[0]
+            rpId: config?.rpId || window.location.hostname.split(":")[0],
         };
     }
     /**
@@ -48,7 +48,8 @@ class Webauthn extends events_1.EventEmitter {
         if (!username || typeof username !== "string") {
             throw new Error("Username must be a non-empty string");
         }
-        if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+        if (username.length < MIN_USERNAME_LENGTH ||
+            username.length > MAX_USERNAME_LENGTH) {
             throw new Error(`Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`);
         }
         if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
@@ -70,7 +71,7 @@ class Webauthn extends events_1.EventEmitter {
                         this.emit(webauthn_1.WebAuthnEventType.DEVICE_REGISTERED, {
                             type: webauthn_1.WebAuthnEventType.DEVICE_REGISTERED,
                             data: { username, deviceInfo: result.deviceInfo },
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
                         });
                         return result;
                     }
@@ -79,7 +80,7 @@ class Webauthn extends events_1.EventEmitter {
                 catch (error) {
                     lastError = error;
                     if (attempt < maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
                         continue;
                     }
                 }
@@ -90,7 +91,7 @@ class Webauthn extends events_1.EventEmitter {
             this.emit(webauthn_1.WebAuthnEventType.ERROR, {
                 type: webauthn_1.WebAuthnEventType.ERROR,
                 data: { error: error.message },
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
             throw error;
         }
@@ -119,12 +120,12 @@ class Webauthn extends events_1.EventEmitter {
                     allowCredentials: [],
                     timeout,
                     userVerification: options.userVerification || this.config.userVerification,
-                    rpId: this.config.rpId
+                    rpId: this.config.rpId,
                 };
-                const assertion = await navigator.credentials.get({
+                const assertion = (await navigator.credentials.get({
                     publicKey: assertionOptions,
-                    signal: this.abortController.signal
-                });
+                    signal: this.abortController.signal,
+                }));
                 if (!assertion) {
                     throw new Error("WebAuthn verification failed");
                 }
@@ -135,12 +136,12 @@ class Webauthn extends events_1.EventEmitter {
                     username,
                     password,
                     credentialId: this.bufferToBase64(assertion.rawId),
-                    deviceInfo
+                    deviceInfo,
                 };
                 this.emit(webauthn_1.WebAuthnEventType.AUTHENTICATION_SUCCESS, {
                     type: webauthn_1.WebAuthnEventType.AUTHENTICATION_SUCCESS,
                     data: { username, deviceInfo },
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
                 });
                 return result;
             }
@@ -154,7 +155,7 @@ class Webauthn extends events_1.EventEmitter {
             this.emit(webauthn_1.WebAuthnEventType.AUTHENTICATION_FAILED, {
                 type: webauthn_1.WebAuthnEventType.AUTHENTICATION_FAILED,
                 data: { username, error: errorMessage },
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
             return { success: false, error: errorMessage };
@@ -179,7 +180,7 @@ class Webauthn extends events_1.EventEmitter {
             timestamp: Date.now(),
             name: platformInfo.name,
             platform: platformInfo.platform,
-            lastUsed: Date.now()
+            lastUsed: Date.now(),
         };
     }
     /**
@@ -231,7 +232,7 @@ class Webauthn extends events_1.EventEmitter {
      */
     uint8ArrayToHex(arr) {
         return Array.from(arr)
-            .map(b => b.toString(16).padStart(2, "0"))
+            .map((b) => b.toString(16).padStart(2, "0"))
             .join("");
     }
     /**
@@ -251,17 +252,17 @@ class Webauthn extends events_1.EventEmitter {
     generateCredentialsFromSalt(username, salt) {
         const data = ethers_1.ethers.toUtf8Bytes(username + salt);
         return {
-            password: ethers_1.ethers.sha256(data)
+            password: ethers_1.ethers.sha256(data),
         };
     }
     /**
      * Checks if WebAuthn is supported
      */
     isSupported() {
-        return typeof window !== "undefined" && window.PublicKeyCredential !== undefined;
+        return (typeof window !== "undefined" && window.PublicKeyCredential !== undefined);
     }
     /**
-     * Creates a new credential
+     * Creates a WebAuthn credential for registration
      */
     async createCredential(username) {
         try {
@@ -295,27 +296,49 @@ class Webauthn extends events_1.EventEmitter {
                 throw new Error("Credential creation failed");
             }
             console.log("Credentials created successfully:", credential);
-            this.credential = credential;
-            return credential;
+            const webAuthnCredential = credential;
+            // Convert to WebAuthnCredentialData
+            const credentialData = {
+                id: webAuthnCredential.id,
+                rawId: webAuthnCredential.rawId,
+                type: webAuthnCredential.type,
+                response: {
+                    clientDataJSON: webAuthnCredential.response.clientDataJSON,
+                },
+                getClientExtensionResults: webAuthnCredential.getClientExtensionResults,
+            };
+            // Add additional response properties if available
+            if ('attestationObject' in webAuthnCredential.response) {
+                credentialData.response.attestationObject = webAuthnCredential.response.attestationObject;
+            }
+            this.credential = credentialData;
+            return credentialData;
         }
         catch (error) {
             console.error("Detailed error in credential creation:", error);
-            throw new Error(`Error creating credentials: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            throw new Error(`Error creating credentials: ${errorMessage}`);
         }
     }
     /**
-     * Generates or verifies credentials
+     * Generates WebAuthn credentials
      */
     async generateCredentials(username, existingCredential, isLogin = false) {
         try {
             if (isLogin) {
-                return this.verifyCredential(username);
+                const verificationResult = await this.verifyCredential(username);
+                return {
+                    success: verificationResult.success,
+                    error: verificationResult.error,
+                    credentialId: verificationResult.credentialId,
+                    username: verificationResult.username,
+                };
             }
             else {
                 const credential = await this.createCredential(username);
                 const credentialId = credential.id;
                 let publicKey = null;
-                if (credential && credential.response?.getPublicKey) {
+                if (credential?.response?.getPublicKey) {
                     publicKey = credential.response.getPublicKey();
                 }
                 return {
@@ -327,14 +350,15 @@ class Webauthn extends events_1.EventEmitter {
         }
         catch (error) {
             console.error("Error in generateCredentials:", error);
+            const errorMessage = error instanceof Error ? error.message : "Unknown error during WebAuthn operation";
             return {
                 success: false,
-                error: error.message || "Error during WebAuthn operation",
+                error: errorMessage,
             };
         }
     }
     /**
-     * Verifies an existing credential
+     * Verifies a credential
      */
     async verifyCredential(username) {
         try {
@@ -365,18 +389,20 @@ class Webauthn extends events_1.EventEmitter {
             return {
                 success: true,
                 credentialId: assertion.id,
+                username,
             };
         }
         catch (error) {
             console.error("Error verifying credentials:", error);
+            const errorMessage = error instanceof Error ? error.message : "Unknown error verifying credentials";
             return {
                 success: false,
-                error: error.message || "Error verifying credentials",
+                error: errorMessage,
             };
         }
     }
     /**
-     * Saves the credential to Gun database
+     * Saves credential to GunDB
      */
     async saveToGun(username, credential) {
         if (this.gunInstance) {
@@ -413,7 +439,7 @@ class Webauthn extends events_1.EventEmitter {
         };
     }
     /**
-     * Signs data using WebAuthn
+     * Signs data with the credential
      */
     async sign(data) {
         const signature = await navigator.credentials.get({

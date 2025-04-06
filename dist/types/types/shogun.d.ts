@@ -119,7 +119,7 @@ export interface LoggingConfig {
     /** Enable logging (default: true in development, false in production) */
     enabled?: boolean;
     /** Log level: 'error', 'warning', 'info', 'debug' */
-    level?: 'error' | 'warning' | 'info' | 'debug';
+    level?: "error" | "warning" | "info" | "debug";
     /** Custom prefix for log messages */
     prefix?: string;
 }
