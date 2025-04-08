@@ -75,7 +75,7 @@ class GunDB {
 
     // Configure GunDB with provided options
     this.gun = new Gun(config);
-    
+
     this.user = this.gun.user().recall({ sessionStorage: true });
 
     // Aggiungiamo il token di autenticazione ai messaggi in uscita

@@ -9,8 +9,11 @@ import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
 import { ShogunError } from "./utils/errorHandler";
 import { IGunUserInstance } from "gun";
+import { GunRxJS } from "./gun/rxjs-integration";
+import { Observable } from "rxjs";
 export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./did/DID";
 export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
+export { GunRxJS } from "./gun/rxjs-integration";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
@@ -24,6 +27,7 @@ export declare class ShogunCore implements IShogunCore {
     walletManager?: WalletManager;
     private provider?;
     private config;
+    rx: GunRxJS;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -33,11 +37,76 @@ export declare class ShogunCore implements IShogunCore {
      */
     constructor(config: ShogunSDKConfig);
     /**
+     * Observe a Gun node for changes
+     * @param path - Path to observe (can be a string or a Gun chain)
+     * @returns Observable that emits whenever the node changes
+     */
+    observe<T>(path: string | any): Observable<T>;
+    /**
+     * Match data based on Gun's '.map()' and convert to Observable
+     * @param path - Path to the collection
+     * @param matchFn - Optional function to filter results
+     * @returns Observable array of matched items
+     */
+    match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
+    /**
+     * Put data and return an Observable
+     * @param path - Path where to put the data
+     * @param data - Data to put
+     * @returns Observable that completes when the put is acknowledged
+     */
+    rxPut<T>(path: string | any, data: T): Observable<T>;
+    /**
+     * Set data on a node and return an Observable
+     * @param path - Path to the collection
+     * @param data - Data to set
+     * @returns Observable that completes when the set is acknowledged
+     */
+    rxSet<T>(path: string | any, data: T): Observable<T>;
+    /**
+     * Get data once and return as Observable
+     * @param path - Path to get data from
+     * @returns Observable that emits the data once
+     */
+    once<T>(path: string | any): Observable<T>;
+    /**
+     * Compute derived values from gun data
+     * @param sources - Array of paths or observables to compute from
+     * @param computeFn - Function that computes a new value from the sources
+     * @returns Observable of computed values
+     */
+    compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
+    /**
+     * User put data and return an Observable (for authenticated users)
+     * @param path - Path where to put the data
+     * @param data - Data to put
+     * @returns Observable that completes when the put is acknowledged
+     */
+    rxUserPut<T>(path: string, data: T): Observable<T>;
+    /**
+     * Observe user data
+     * @param path - Path to observe in user space
+     * @returns Observable that emits whenever the user data changes
+     */
+    observeUser<T>(path: string): Observable<T>;
+    /**
      * Recupera gli errori recenti registrati dal sistema
      * @param count - Numero di errori da recuperare
      * @returns Lista degli errori più recenti
      */
     getRecentErrors(count?: number): ShogunError[];
+    /**
+     * Configure logging behavior for the Shogun SDK
+     * @param {LoggingConfig} config - Logging configuration object containing:
+     *   - level: The minimum log level to display (error, warn, info, debug, trace)
+     *   - logToConsole: Whether to output logs to the console (default: true)
+     *   - customLogger: Optional custom logger implementation
+     *   - logTimestamps: Whether to include timestamps in logs (default: true)
+     * @returns {void}
+     * @description Updates the logging configuration for the SDK. Changes take effect immediately
+     * for all subsequent log operations.
+     */
+    configureLogging(config: LoggingConfig): void;
     /**
      * Check if user is logged in
      * @returns {boolean} True if user is logged in, false otherwise
@@ -107,13 +176,13 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUpWithMetaMask(address: string): Promise<AuthResult>;
     /**
-     * Create a new user with GunDB
-     * @param username - Username
-     * @param password - Password
-     * @returns {Promise<{success: boolean, userPub?: string, error?: string}>} Promise with success status and user public key
-     * @description Creates a new user in GunDB with error handling
+     * Get addresses that would be derived from a mnemonic using BIP-44 standard
+     * @param mnemonic The mnemonic phrase to derive addresses from
+     * @param count The number of addresses to derive
+     * @returns An array of Ethereum addresses
+     * @description This method is useful for verifying compatibility with other wallets
      */
-    private createUserWithGunDB;
+    getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
     /**
      * Get main wallet
      * @returns {ethers.Wallet | null} Main wallet instance or null if not available
@@ -121,17 +190,24 @@ export declare class ShogunCore implements IShogunCore {
      */
     getMainWallet(): ethers.Wallet | null;
     /**
+     * Load wallets
+     * @returns {Promise<WalletInfo[]>} Array of wallet information
+     * @description Retrieves all wallets associated with the authenticated user
+     */
+    loadWallets(): Promise<WalletInfo[]>;
+    /**
      * Create new wallet
      * @returns {Promise<WalletInfo>} Created wallet information
      * @description Generates a new wallet and associates it with the user
      */
     createWallet(): Promise<WalletInfo>;
     /**
-     * Load wallets
-     * @returns {Promise<WalletInfo[]>} Array of wallet information
-     * @description Retrieves all wallets associated with the authenticated user
+     * Generate a new BIP-39 mnemonic phrase
+     * @returns {string} A new random mnemonic phrase
+     * @description Generates a cryptographically secure random mnemonic phrase
+     * that can be used to derive HD wallets
      */
-    loadWallets(): Promise<WalletInfo[]>;
+    generateNewMnemonic(): string;
     /**
      * Sign message
      * @param wallet - Wallet for signing
@@ -229,21 +305,6 @@ export declare class ShogunCore implements IShogunCore {
         gunPairImported?: boolean;
     }>;
     /**
-     * Get addresses that would be derived from a mnemonic using BIP-44 standard
-     * @param mnemonic The mnemonic phrase to derive addresses from
-     * @param count The number of addresses to derive
-     * @returns An array of Ethereum addresses
-     * @description This method is useful for verifying compatibility with other wallets
-     */
-    getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
-    /**
-     * Generate a new BIP-39 mnemonic phrase
-     * @returns {string} A new random mnemonic phrase
-     * @description Generates a cryptographically secure random mnemonic phrase
-     * that can be used to derive HD wallets
-     */
-    generateNewMnemonic(): string;
-    /**
      * Set the RPC URL used for Ethereum network connections
      * @param rpcUrl The RPC provider URL to use
      * @returns True if the URL was successfully set
@@ -267,17 +328,37 @@ export declare class ShogunCore implements IShogunCore {
      */
     private ensureUserHasDID;
     /**
-     * Configure logging behavior for the Shogun SDK
-     * @param {LoggingConfig} config - Logging configuration object containing:
-     *   - level: The minimum log level to display (error, warn, info, debug, trace)
-     *   - logToConsole: Whether to output logs to the console (default: true)
-     *   - customLogger: Optional custom logger implementation
-     *   - logTimestamps: Whether to include timestamps in logs (default: true)
-     * @returns {void}
-     * @description Updates the logging configuration for the SDK. Changes take effect immediately
-     * for all subsequent log operations.
+     * Create a new user with GunDB
+     * @param username - Username
+     * @param password - Password
+     * @returns {Promise<{success: boolean, userPub?: string, error?: string}>} Promise with success status and user public key
+     * @description Creates a new user in GunDB with error handling
      */
-    configureLogging(config: LoggingConfig): void;
+    private createUserWithGunDB;
+    /**
+     * Retrieves data from a Gun node at the specified path
+     * @param path - The path to the Gun node
+     * @returns Promise that resolves with the node data or rejects with an error
+     */
+    get(path: string): Promise<any>;
+    /**
+     * Stores data in Gun at the root level
+     * @param data - The data to store
+     * @returns Promise that resolves when data is stored or rejects with an error
+     */
+    put(data: Record<string, any>): Promise<any>;
+    /**
+     * Stores data in the authenticated user's space
+     * @param data - The data to store in user space
+     * @returns Promise that resolves when data is stored or rejects with an error
+     */
+    userPut(data: Record<string, any>): Promise<any>;
+    /**
+     * Retrieves data from the authenticated user's space at the specified path
+     * @param path - The path to the user data
+     * @returns Promise that resolves with the user data or rejects with an error
+     */
+    userGet(path: string): Promise<any>;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";

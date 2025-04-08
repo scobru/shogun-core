@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WalletManager = exports.ShogunEventEmitter = exports.Storage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.WalletManager = exports.ShogunEventEmitter = exports.Storage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
 const webauthn_1 = require("./webauthn/webauthn");
 const metamask_1 = require("./connector/metamask");
@@ -26,12 +26,16 @@ const walletManager_1 = require("./wallet/walletManager");
 const ethers_1 = require("ethers");
 const DID_1 = require("./did/DID");
 const errorHandler_1 = require("./utils/errorHandler");
+const rxjs_integration_1 = require("./gun/rxjs-integration");
 var DID_2 = require("./did/DID");
 Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_2.ShogunDID; } });
 // Esportare anche i tipi per la gestione degli errori
 var errorHandler_2 = require("./utils/errorHandler");
 Object.defineProperty(exports, "ErrorHandler", { enumerable: true, get: function () { return errorHandler_2.ErrorHandler; } });
 Object.defineProperty(exports, "ErrorType", { enumerable: true, get: function () { return errorHandler_2.ErrorType; } });
+// Export RxJS integration
+var rxjs_integration_2 = require("./gun/rxjs-integration");
+Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return rxjs_integration_2.GunRxJS; } });
 let gun;
 class ShogunCore {
     /**
@@ -85,6 +89,8 @@ class ShogunCore {
         this.gundb = new gun_1.GunDB(gundbConfig);
         this.gun = this.gundb.getGun();
         this.user = this.gun.user().recall({ sessionStorage: true });
+        // Initialize RxJS integration
+        this.rx = new rxjs_integration_1.GunRxJS(this.gun);
         if (config.webauthn?.enabled) {
             this.webauthn = new webauthn_1.Webauthn();
         }
@@ -118,6 +124,81 @@ class ShogunCore {
         }
         (0, logger_1.log)("ShogunSDK initialized!");
     }
+    // *********************************************************************************************************
+    // 🔄 RXJS INTEGRATION 🔄
+    // *********************************************************************************************************
+    /**
+     * Observe a Gun node for changes
+     * @param path - Path to observe (can be a string or a Gun chain)
+     * @returns Observable that emits whenever the node changes
+     */
+    observe(path) {
+        return this.rx.observe(path);
+    }
+    /**
+     * Match data based on Gun's '.map()' and convert to Observable
+     * @param path - Path to the collection
+     * @param matchFn - Optional function to filter results
+     * @returns Observable array of matched items
+     */
+    match(path, matchFn) {
+        return this.rx.match(path, matchFn);
+    }
+    /**
+     * Put data and return an Observable
+     * @param path - Path where to put the data
+     * @param data - Data to put
+     * @returns Observable that completes when the put is acknowledged
+     */
+    rxPut(path, data) {
+        return this.rx.put(path, data);
+    }
+    /**
+     * Set data on a node and return an Observable
+     * @param path - Path to the collection
+     * @param data - Data to set
+     * @returns Observable that completes when the set is acknowledged
+     */
+    rxSet(path, data) {
+        return this.rx.set(path, data);
+    }
+    /**
+     * Get data once and return as Observable
+     * @param path - Path to get data from
+     * @returns Observable that emits the data once
+     */
+    once(path) {
+        return this.rx.once(path);
+    }
+    /**
+     * Compute derived values from gun data
+     * @param sources - Array of paths or observables to compute from
+     * @param computeFn - Function that computes a new value from the sources
+     * @returns Observable of computed values
+     */
+    compute(sources, computeFn) {
+        return this.rx.compute(sources, computeFn);
+    }
+    /**
+     * User put data and return an Observable (for authenticated users)
+     * @param path - Path where to put the data
+     * @param data - Data to put
+     * @returns Observable that completes when the put is acknowledged
+     */
+    rxUserPut(path, data) {
+        return this.rx.userPut(path, data);
+    }
+    /**
+     * Observe user data
+     * @param path - Path to observe in user space
+     * @returns Observable that emits whenever the user data changes
+     */
+    observeUser(path) {
+        return this.rx.observeUser(path);
+    }
+    // *********************************************************************************************************
+    // 🔐 ERROR HANDLER 🔐
+    // *********************************************************************************************************
     /**
      * Recupera gli errori recenti registrati dal sistema
      * @param count - Numero di errori da recuperare
@@ -126,6 +207,27 @@ class ShogunCore {
     getRecentErrors(count = 10) {
         return errorHandler_1.ErrorHandler.getRecentErrors(count);
     }
+    // *********************************************************************************************************
+    // 🔐 LOGGING 🔐
+    // *********************************************************************************************************
+    /**
+     * Configure logging behavior for the Shogun SDK
+     * @param {LoggingConfig} config - Logging configuration object containing:
+     *   - level: The minimum log level to display (error, warn, info, debug, trace)
+     *   - logToConsole: Whether to output logs to the console (default: true)
+     *   - customLogger: Optional custom logger implementation
+     *   - logTimestamps: Whether to include timestamps in logs (default: true)
+     * @returns {void}
+     * @description Updates the logging configuration for the SDK. Changes take effect immediately
+     * for all subsequent log operations.
+     */
+    configureLogging(config) {
+        (0, logger_1.configureLogging)(config);
+        (0, logger_1.log)("Logging reconfigured with new settings");
+    }
+    // *********************************************************************************************************
+    // 🔐 AUTHENTICATION
+    // *********************************************************************************************************
     /**
      * Check if user is logged in
      * @returns {boolean} True if user is logged in, false otherwise
@@ -363,6 +465,9 @@ class ShogunCore {
             };
         }
     }
+    // *********************************************************************************************************
+    // 🔐 WEBAUTHN AUTHENTICATION
+    // *********************************************************************************************************
     /**
      * Check if WebAuthn is supported by the browser
      * @returns {boolean} True if WebAuthn is supported, false otherwise
@@ -496,6 +601,9 @@ class ShogunCore {
             };
         }
     }
+    // *********************************************************************************************************
+    // 🔐 METAMASK AUTHENTICATION
+    // *********************************************************************************************************
     /**
      * Login with MetaMask
      * @param address - Ethereum address
@@ -681,6 +789,348 @@ class ShogunCore {
             };
         }
     }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - GETTERS 💰
+    // *********************************************************************************************************
+    /**
+     * Get addresses that would be derived from a mnemonic using BIP-44 standard
+     * @param mnemonic The mnemonic phrase to derive addresses from
+     * @param count The number of addresses to derive
+     * @returns An array of Ethereum addresses
+     * @description This method is useful for verifying compatibility with other wallets
+     */
+    getStandardBIP44Addresses(mnemonic, count = 5) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.getStandardBIP44Addresses(mnemonic, count);
+    }
+    /**
+     * Get main wallet
+     * @returns {ethers.Wallet | null} Main wallet instance or null if not available
+     * @description Retrieves the primary wallet associated with the user
+     */
+    getMainWallet() {
+        return this.walletManager?.getMainWallet() || null;
+    }
+    /**
+     * Load wallets
+     * @returns {Promise<WalletInfo[]>} Array of wallet information
+     * @description Retrieves all wallets associated with the authenticated user
+     */
+    async loadWallets() {
+        try {
+            if (!this.isLoggedIn()) {
+                (0, logger_1.log)("Cannot load wallets: user not authenticated");
+                // Segnaliamo l'errore con il gestore centralizzato ma non interrompiamo il flusso
+                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
+                return [];
+            }
+            try {
+                if (!this.walletManager) {
+                    throw new Error("Wallet manager not initialized");
+                }
+                return await this.walletManager.loadWallets();
+            }
+            catch (walletError) {
+                // Gestiamo l'errore in modo più dettagliato
+                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`, walletError);
+                // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
+                return [];
+            }
+        }
+        catch (error) {
+            // Catturiamo errori generici imprevisti
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.UNKNOWN, "UNEXPECTED_ERROR", `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
+            return [];
+        }
+    }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - GENERATORS 💰
+    // *********************************************************************************************************
+    /**
+     * Create new wallet
+     * @returns {Promise<WalletInfo>} Created wallet information
+     * @description Generates a new wallet and associates it with the user
+     */
+    async createWallet() {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.createWallet();
+    }
+    /**
+     * Generate a new BIP-39 mnemonic phrase
+     * @returns {string} A new random mnemonic phrase
+     * @description Generates a cryptographically secure random mnemonic phrase
+     * that can be used to derive HD wallets
+     */
+    generateNewMnemonic() {
+        try {
+            // Generate a new mnemonic phrase using ethers.js
+            const mnemonic = ethers_1.ethers.Wallet.createRandom().mnemonic;
+            if (!mnemonic || !mnemonic.phrase) {
+                throw new Error("Failed to generate mnemonic phrase");
+            }
+            return mnemonic.phrase;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error generating mnemonic:", error);
+            throw new Error("Failed to generate mnemonic phrase");
+        }
+    }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - SIGNERS 💰
+    // *********************************************************************************************************
+    /**
+     * Sign message
+     * @param wallet - Wallet for signing
+     * @param message - Message to sign
+     * @returns {Promise<string>} Message signature
+     * @description Signs a message using the provided wallet
+     */
+    async signMessage(wallet, message) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.signMessage(wallet, message);
+    }
+    /**
+     * Verify signature
+     * @param message - Signed message
+     * @param signature - Signature to verify
+     * @returns {string} Address that signed the message
+     * @description Recovers the address that signed a message from its signature
+     */
+    verifySignature(message, signature) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.verifySignature(message, signature);
+    }
+    /**
+     * Sign transaction
+     * @param wallet - Wallet for signing
+     * @param toAddress - Recipient address
+     * @param value - Amount to send
+     * @returns {Promise<string>} Signed transaction
+     * @description Signs a transaction using the provided wallet
+     */
+    async signTransaction(wallet, toAddress, value) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.signTransaction(wallet, toAddress, value);
+    }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - EXPORTS 💰
+    // *********************************************************************************************************
+    /**
+     * Export user's mnemonic phrase
+     * @param password Optional password to encrypt exported data
+     * @returns {Promise<string>} Exported mnemonic data
+     * @description Exports the mnemonic phrase used to generate user's wallets
+     */
+    async exportMnemonic(password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.exportMnemonic(password);
+    }
+    /**
+     * Export private keys of all wallets
+     * @param password Optional password to encrypt exported data
+     * @returns {Promise<string>} Exported wallet keys
+     * @description Exports private keys for all user's wallets
+     */
+    async exportWalletKeys(password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.exportWalletKeys(password);
+    }
+    /**
+     * Export user's Gun pair
+     * @param password Optional password to encrypt exported data
+     * @returns {Promise<string>} Exported Gun pair
+     * @description Exports the user's Gun authentication pair
+     */
+    async exportGunPair(password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.exportGunPair(password);
+    }
+    /**
+     * Export all user data in a single file
+     * @param password Required password to encrypt exported data
+     * @returns {Promise<string>} Exported user data
+     * @description Exports all user data including mnemonic, wallets and Gun pair
+     */
+    async exportAllUserData(password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.exportAllUserData(password);
+    }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - IMPORTS 💰
+    // *********************************************************************************************************
+    /**
+     * Import mnemonic phrase
+     * @param mnemonicData Mnemonic or encrypted JSON to import
+     * @param password Optional password to decrypt mnemonic if encrypted
+     * @returns {Promise<boolean>} Import success status
+     * @description Imports a mnemonic phrase to generate wallets
+     */
+    async importMnemonic(mnemonicData, password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.importMnemonic(mnemonicData, password);
+    }
+    /**
+     * Import wallet private keys
+     * @param walletsData JSON containing wallet data or encrypted JSON
+     * @param password Optional password to decrypt data if encrypted
+     * @returns {Promise<number>} Number of imported wallets
+     * @description Imports wallet private keys from exported data
+     */
+    async importWalletKeys(walletsData, password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.importWalletKeys(walletsData, password);
+    }
+    /**
+     * Import Gun pair
+     * @param pairData JSON containing Gun pair or encrypted JSON
+     * @param password Optional password to decrypt data if encrypted
+     * @returns {Promise<boolean>} Import success status
+     * @description Imports a Gun authentication pair
+     */
+    async importGunPair(pairData, password) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.importGunPair(pairData, password);
+    }
+    /**
+     * Import complete backup
+     * @param backupData Encrypted JSON containing all user data
+     * @param password Password to decrypt backup
+     * @param options Import options (which data to import)
+     * @returns {Promise<Object>} Import results for each data type
+     * @description Imports a complete user data backup including mnemonic,
+     * wallets and Gun pair
+     */
+    async importAllUserData(backupData, password, options = { importMnemonic: true, importWallets: true, importGunPair: true }) {
+        if (!this.walletManager) {
+            throw new Error("Wallet manager not initialized");
+        }
+        return this.walletManager.importAllUserData(backupData, password, options);
+    }
+    // *********************************************************************************************************
+    // 💰 WALLET MANAGER - PROVIDER 💰
+    // *********************************************************************************************************
+    /**
+     * Set the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
+     * @returns True if the URL was successfully set
+     */
+    setRpcUrl(rpcUrl) {
+        try {
+            if (!rpcUrl) {
+                (0, logger_1.log)("Invalid RPC URL provided");
+                return false;
+            }
+            if (this.walletManager) {
+                this.walletManager.setRpcUrl(rpcUrl);
+            }
+            // Update the provider if it's already initialized
+            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
+            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Failed to set RPC URL", error);
+            return false;
+        }
+    }
+    /**
+     * Get the currently configured RPC URL
+     * @returns The current provider URL or null if not set
+     */
+    getRpcUrl() {
+        // Access the provider URL if available
+        return this.provider instanceof ethers_1.ethers.JsonRpcProvider
+            ? this.provider.connection?.url || null
+            : null;
+    }
+    // *********************************************************************************************************
+    // 🤫 PRIVATE HELPER METHODS 🤫
+    // *********************************************************************************************************
+    /**
+     * Ensure the current user has a DID associated, creating one if needed
+     * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
+     *   - network: The network to use (default: 'main')
+     *   - controller: The controller of the DID (default: user's public key)
+     *   - services: Array of service definitions to add to the DID document
+     * @returns {Promise<string|null>} The DID identifier string or null if operation fails
+     * @description Checks if the authenticated user already has a DID. If not, creates a new one.
+     * If the user already has a DID and options are provided, updates the DID document accordingly.
+     * @private
+     */
+    async ensureUserHasDID(options) {
+        try {
+            if (!this.isLoggedIn()) {
+                (0, logger_1.logError)("Cannot ensure DID: user not authenticated");
+                return null;
+            }
+            // Verifica se l'utente ha già un DID
+            let did = await this.did?.getCurrentUserDID();
+            // Se l'utente ha già un DID, lo restituiamo
+            if (did) {
+                (0, logger_1.log)(`User already has DID: ${did}`);
+                // Se sono state fornite opzioni, aggiorniamo il documento DID
+                if (options && Object.keys(options).length > 0) {
+                    try {
+                        const updated = await this.did?.updateDIDDocument(did, {
+                            service: options.services?.map((service, index) => ({
+                                id: `${did}#service-${index + 1}`,
+                                type: service.type,
+                                serviceEndpoint: service.endpoint,
+                            })),
+                        });
+                        if (updated) {
+                            (0, logger_1.log)(`Updated DID document for: ${did}`);
+                        }
+                    }
+                    catch (updateError) {
+                        (0, logger_1.logError)("Error updating DID document:", updateError);
+                    }
+                }
+                return did;
+            }
+            // Se l'utente non ha un DID, ne creiamo uno nuovo
+            (0, logger_1.log)("Creating new DID for authenticated user");
+            const userPub = this.gundb.gun.user().is?.pub || "";
+            const mergedOptions = {
+                network: "main",
+                controller: userPub,
+                ...options,
+            };
+            did = await this.did?.createDID(mergedOptions);
+            // Emetti evento di creazione DID
+            this.eventEmitter.emit("did:created", { did, userPub });
+            (0, logger_1.log)(`Created new DID for user: ${did}`);
+            return did || null;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error ensuring user has DID:", error);
+            return null;
+        }
+    }
     /**
      * Create a new user with GunDB
      * @param username - Username
@@ -789,344 +1239,79 @@ class ShogunCore {
             }
         });
     }
-    // ----------------------------------------------------------------
-    // WALLET MANAGER -------------------------------------------------
-    // ----------------------------------------------------------------
+    // *********************************************************************************************************
+    // 🔫 GuN ACTIONS 🔫
+    // *********************************************************************************************************
     /**
-     * Get main wallet
-     * @returns {ethers.Wallet | null} Main wallet instance or null if not available
-     * @description Retrieves the primary wallet associated with the user
+     * Retrieves data from a Gun node at the specified path
+     * @param path - The path to the Gun node
+     * @returns Promise that resolves with the node data or rejects with an error
      */
-    getMainWallet() {
-        return this.walletManager?.getMainWallet() || null;
-    }
-    /**
-     * Create new wallet
-     * @returns {Promise<WalletInfo>} Created wallet information
-     * @description Generates a new wallet and associates it with the user
-     */
-    async createWallet() {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.createWallet();
-    }
-    /**
-     * Load wallets
-     * @returns {Promise<WalletInfo[]>} Array of wallet information
-     * @description Retrieves all wallets associated with the authenticated user
-     */
-    async loadWallets() {
-        try {
-            if (!this.isLoggedIn()) {
-                (0, logger_1.log)("Cannot load wallets: user not authenticated");
-                // Segnaliamo l'errore con il gestore centralizzato ma non interrompiamo il flusso
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
-                return [];
-            }
-            try {
-                if (!this.walletManager) {
-                    throw new Error("Wallet manager not initialized");
+    get(path) {
+        return new Promise((resolve, reject) => {
+            this.gundb.gun.get(path).once((data) => {
+                if (data.err) {
+                    reject(data.err);
                 }
-                return await this.walletManager.loadWallets();
-            }
-            catch (walletError) {
-                // Gestiamo l'errore in modo più dettagliato
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`, walletError);
-                // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
-                return [];
-            }
-        }
-        catch (error) {
-            // Catturiamo errori generici imprevisti
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.UNKNOWN, "UNEXPECTED_ERROR", `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
-            return [];
-        }
-    }
-    /**
-     * Sign message
-     * @param wallet - Wallet for signing
-     * @param message - Message to sign
-     * @returns {Promise<string>} Message signature
-     * @description Signs a message using the provided wallet
-     */
-    async signMessage(wallet, message) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.signMessage(wallet, message);
-    }
-    /**
-     * Verify signature
-     * @param message - Signed message
-     * @param signature - Signature to verify
-     * @returns {string} Address that signed the message
-     * @description Recovers the address that signed a message from its signature
-     */
-    verifySignature(message, signature) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.verifySignature(message, signature);
-    }
-    /**
-     * Sign transaction
-     * @param wallet - Wallet for signing
-     * @param toAddress - Recipient address
-     * @param value - Amount to send
-     * @returns {Promise<string>} Signed transaction
-     * @description Signs a transaction using the provided wallet
-     */
-    async signTransaction(wallet, toAddress, value) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.signTransaction(wallet, toAddress, value);
-    }
-    /**
-     * Export user's mnemonic phrase
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported mnemonic data
-     * @description Exports the mnemonic phrase used to generate user's wallets
-     */
-    async exportMnemonic(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportMnemonic(password);
-    }
-    /**
-     * Export private keys of all wallets
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported wallet keys
-     * @description Exports private keys for all user's wallets
-     */
-    async exportWalletKeys(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportWalletKeys(password);
-    }
-    /**
-     * Export user's Gun pair
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported Gun pair
-     * @description Exports the user's Gun authentication pair
-     */
-    async exportGunPair(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportGunPair(password);
-    }
-    /**
-     * Export all user data in a single file
-     * @param password Required password to encrypt exported data
-     * @returns {Promise<string>} Exported user data
-     * @description Exports all user data including mnemonic, wallets and Gun pair
-     */
-    async exportAllUserData(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportAllUserData(password);
-    }
-    /**
-     * Import mnemonic phrase
-     * @param mnemonicData Mnemonic or encrypted JSON to import
-     * @param password Optional password to decrypt mnemonic if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a mnemonic phrase to generate wallets
-     */
-    async importMnemonic(mnemonicData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importMnemonic(mnemonicData, password);
-    }
-    /**
-     * Import wallet private keys
-     * @param walletsData JSON containing wallet data or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<number>} Number of imported wallets
-     * @description Imports wallet private keys from exported data
-     */
-    async importWalletKeys(walletsData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importWalletKeys(walletsData, password);
-    }
-    /**
-     * Import Gun pair
-     * @param pairData JSON containing Gun pair or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a Gun authentication pair
-     */
-    async importGunPair(pairData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importGunPair(pairData, password);
-    }
-    /**
-     * Import complete backup
-     * @param backupData Encrypted JSON containing all user data
-     * @param password Password to decrypt backup
-     * @param options Import options (which data to import)
-     * @returns {Promise<Object>} Import results for each data type
-     * @description Imports a complete user data backup including mnemonic,
-     * wallets and Gun pair
-     */
-    async importAllUserData(backupData, password, options = { importMnemonic: true, importWallets: true, importGunPair: true }) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importAllUserData(backupData, password, options);
-    }
-    /**
-     * Get addresses that would be derived from a mnemonic using BIP-44 standard
-     * @param mnemonic The mnemonic phrase to derive addresses from
-     * @param count The number of addresses to derive
-     * @returns An array of Ethereum addresses
-     * @description This method is useful for verifying compatibility with other wallets
-     */
-    getStandardBIP44Addresses(mnemonic, count = 5) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.getStandardBIP44Addresses(mnemonic, count);
-    }
-    /**
-     * Generate a new BIP-39 mnemonic phrase
-     * @returns {string} A new random mnemonic phrase
-     * @description Generates a cryptographically secure random mnemonic phrase
-     * that can be used to derive HD wallets
-     */
-    generateNewMnemonic() {
-        try {
-            // Generate a new mnemonic phrase using ethers.js
-            const mnemonic = ethers_1.ethers.Wallet.createRandom().mnemonic;
-            if (!mnemonic || !mnemonic.phrase) {
-                throw new Error("Failed to generate mnemonic phrase");
-            }
-            return mnemonic.phrase;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error generating mnemonic:", error);
-            throw new Error("Failed to generate mnemonic phrase");
-        }
-    }
-    /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl) {
-        try {
-            if (!rpcUrl) {
-                (0, logger_1.log)("Invalid RPC URL provided");
-                return false;
-            }
-            if (this.walletManager) {
-                this.walletManager.setRpcUrl(rpcUrl);
-            }
-            // Update the provider if it's already initialized
-            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
-            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
-            return true;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Failed to set RPC URL", error);
-            return false;
-        }
-    }
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl() {
-        // Access the provider URL if available
-        return this.provider instanceof ethers_1.ethers.JsonRpcProvider
-            ? this.provider.connection?.url || null
-            : null;
-    }
-    /**
-     * Ensure the current user has a DID associated, creating one if needed
-     * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
-     *   - network: The network to use (default: 'main')
-     *   - controller: The controller of the DID (default: user's public key)
-     *   - services: Array of service definitions to add to the DID document
-     * @returns {Promise<string|null>} The DID identifier string or null if operation fails
-     * @description Checks if the authenticated user already has a DID. If not, creates a new one.
-     * If the user already has a DID and options are provided, updates the DID document accordingly.
-     * @private
-     */
-    async ensureUserHasDID(options) {
-        try {
-            if (!this.isLoggedIn()) {
-                (0, logger_1.logError)("Cannot ensure DID: user not authenticated");
-                return null;
-            }
-            // Verifica se l'utente ha già un DID
-            let did = await this.did?.getCurrentUserDID();
-            // Se l'utente ha già un DID, lo restituiamo
-            if (did) {
-                (0, logger_1.log)(`User already has DID: ${did}`);
-                // Se sono state fornite opzioni, aggiorniamo il documento DID
-                if (options && Object.keys(options).length > 0) {
-                    try {
-                        const updated = await this.did?.updateDIDDocument(did, {
-                            service: options.services?.map((service, index) => ({
-                                id: `${did}#service-${index + 1}`,
-                                type: service.type,
-                                serviceEndpoint: service.endpoint,
-                            })),
-                        });
-                        if (updated) {
-                            (0, logger_1.log)(`Updated DID document for: ${did}`);
-                        }
-                    }
-                    catch (updateError) {
-                        (0, logger_1.logError)("Error updating DID document:", updateError);
-                    }
+                else {
+                    resolve(data);
                 }
-                return did;
-            }
-            // Se l'utente non ha un DID, ne creiamo uno nuovo
-            (0, logger_1.log)("Creating new DID for authenticated user");
-            const userPub = this.gundb.gun.user().is?.pub || "";
-            const mergedOptions = {
-                network: "main",
-                controller: userPub,
-                ...options,
-            };
-            did = await this.did?.createDID(mergedOptions);
-            // Emetti evento di creazione DID
-            this.eventEmitter.emit("did:created", { did, userPub });
-            (0, logger_1.log)(`Created new DID for user: ${did}`);
-            return did || null;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error ensuring user has DID:", error);
-            return null;
-        }
+            });
+        });
     }
     /**
-     * Configure logging behavior for the Shogun SDK
-     * @param {LoggingConfig} config - Logging configuration object containing:
-     *   - level: The minimum log level to display (error, warn, info, debug, trace)
-     *   - logToConsole: Whether to output logs to the console (default: true)
-     *   - customLogger: Optional custom logger implementation
-     *   - logTimestamps: Whether to include timestamps in logs (default: true)
-     * @returns {void}
-     * @description Updates the logging configuration for the SDK. Changes take effect immediately
-     * for all subsequent log operations.
+     * Stores data in Gun at the root level
+     * @param data - The data to store
+     * @returns Promise that resolves when data is stored or rejects with an error
      */
-    configureLogging(config) {
-        (0, logger_1.configureLogging)(config);
-        (0, logger_1.log)("Logging reconfigured with new settings");
+    put(data) {
+        return new Promise((resolve, reject) => {
+            this.gundb.gun.put(data, (ack) => {
+                if (ack.err) {
+                    reject(ack.err);
+                }
+                else {
+                    resolve(ack);
+                }
+            });
+        });
+    }
+    /**
+     * Stores data in the authenticated user's space
+     * @param data - The data to store in user space
+     * @returns Promise that resolves when data is stored or rejects with an error
+     */
+    userPut(data) {
+        return new Promise((resolve, reject) => {
+            this.gundb.gun.user().put(data, (ack) => {
+                if (ack.err) {
+                    reject(ack.err);
+                }
+                else {
+                    resolve(ack);
+                }
+            });
+        });
+    }
+    /**
+     * Retrieves data from the authenticated user's space at the specified path
+     * @param path - The path to the user data
+     * @returns Promise that resolves with the user data or rejects with an error
+     */
+    userGet(path) {
+        return new Promise((resolve, reject) => {
+            this.gundb.gun
+                .user()
+                .get(path)
+                .once((data) => {
+                if (data.err) {
+                    reject(data.err);
+                }
+                else {
+                    resolve(data);
+                }
+            });
+        });
     }
 }
 exports.ShogunCore = ShogunCore;

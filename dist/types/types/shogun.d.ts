@@ -7,6 +7,8 @@ import { Stealth } from "../stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "./gun";
 import { WalletManager } from "../wallet/walletManager";
+import { Observable } from "rxjs";
+import { GunRxJS } from "../gun/rxjs-integration";
 interface DID {
     getCurrentUserDID(): Promise<string | null>;
     resolveDID(did: string): Promise<any>;
@@ -51,6 +53,7 @@ export interface IShogunCore {
     stealth?: Stealth;
     did?: DID;
     walletManager?: WalletManager;
+    rx: GunRxJS;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
     setRpcUrl(rpcUrl: string): boolean;
@@ -89,6 +92,18 @@ export interface IShogunCore {
     }>;
     logout(): void;
     isLoggedIn(): boolean;
+    observe<T>(path: string | any): Observable<T>;
+    match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
+    rxPut<T>(path: string | any, data: T): Observable<T>;
+    rxSet<T>(path: string | any, data: T): Observable<T>;
+    once<T>(path: string | any): Observable<T>;
+    compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
+    rxUserPut<T>(path: string, data: T): Observable<T>;
+    observeUser<T>(path: string): Observable<T>;
+    get(path: string): Promise<any>;
+    put(data: Record<string, any>): Promise<any>;
+    userPut(data: Record<string, any>): Promise<any>;
+    userGet(path: string): Promise<any>;
 }
 /**
  * WebAuthn configuration
