@@ -1,5 +1,5 @@
 import "gun/sea";
-import { IGunInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun/types";
 import { GunDBOptions } from "../types/gun";
 /**
  * Authentication result
@@ -17,6 +17,7 @@ export interface AuthResult {
  */
 declare class GunDB {
     gun: IGunInstance<any>;
+    user: IGunUserInstance<any> | null;
     private certificato;
     private onAuthCallbacks;
     private retryConfig;

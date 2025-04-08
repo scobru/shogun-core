@@ -8,10 +8,12 @@ import { WalletManager } from "./wallet/walletManager";
 import { ethers } from "ethers";
 import { ShogunDID } from "./did/DID";
 import { ShogunError } from "./utils/errorHandler";
+import { IGunUserInstance } from "gun";
 export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./did/DID";
 export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
+    user: IGunUserInstance<any> | null;
     gundb: GunDB;
     webauthn?: Webauthn;
     metamask?: MetaMask;

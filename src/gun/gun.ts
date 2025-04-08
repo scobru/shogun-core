@@ -3,7 +3,7 @@
  */
 import Gun from "gun";
 import "gun/sea";
-import { IGunInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun/types";
 import CONFIG from "../config";
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
@@ -34,6 +34,7 @@ interface RetryConfig {
  */
 class GunDB {
   public gun: IGunInstance<any>;
+  public user: IGunUserInstance<any> | null = null;
   private certificato: string | null = null;
   private onAuthCallbacks: Array<(user: any) => void> = [];
   private retryConfig: RetryConfig;
@@ -74,6 +75,8 @@ class GunDB {
 
     // Configure GunDB with provided options
     this.gun = new Gun(config);
+    
+    this.user = this.gun.user().recall({ sessionStorage: true });
 
     // Aggiungiamo il token di autenticazione ai messaggi in uscita
     const authToken = options.authToken;

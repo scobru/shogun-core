@@ -84,6 +84,7 @@ class ShogunCore {
         };
         this.gundb = new gun_1.GunDB(gundbConfig);
         this.gun = this.gundb.getGun();
+        this.user = this.gun.user().recall({ sessionStorage: true });
         if (config.webauthn?.enabled) {
             this.webauthn = new webauthn_1.Webauthn();
         }

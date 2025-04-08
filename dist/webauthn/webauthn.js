@@ -305,7 +305,7 @@ export class Webauthn extends EventEmitter {
                 getClientExtensionResults: webAuthnCredential.getClientExtensionResults,
             };
             // Add additional response properties if available
-            if ('attestationObject' in webAuthnCredential.response) {
+            if ("attestationObject" in webAuthnCredential.response) {
                 credentialData.response.attestationObject = webAuthnCredential.response.attestationObject;
             }
             this.credential = credentialData;
@@ -347,7 +347,9 @@ export class Webauthn extends EventEmitter {
         }
         catch (error) {
             console.error("Error in generateCredentials:", error);
-            const errorMessage = error instanceof Error ? error.message : "Unknown error during WebAuthn operation";
+            const errorMessage = error instanceof Error
+                ? error.message
+                : "Unknown error during WebAuthn operation";
             return {
                 success: false,
                 error: errorMessage,
@@ -391,7 +393,9 @@ export class Webauthn extends EventEmitter {
         }
         catch (error) {
             console.error("Error verifying credentials:", error);
-            const errorMessage = error instanceof Error ? error.message : "Unknown error verifying credentials";
+            const errorMessage = error instanceof Error
+                ? error.message
+                : "Unknown error verifying credentials";
             return {
                 success: false,
                 error: errorMessage,

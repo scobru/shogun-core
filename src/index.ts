@@ -24,6 +24,7 @@ import {
   createError,
 } from "./utils/errorHandler";
 import { DIDCreateOptions } from "./types/did";
+import { IGunUserInstance } from "gun";
 
 export {
   ShogunDID,
@@ -39,6 +40,7 @@ let gun: any;
 
 export class ShogunCore implements IShogunCore {
   public gun: IGunInstance<any>;
+  public user: IGunUserInstance<any> | null;
   public gundb: GunDB;
   public webauthn?: Webauthn;
   public metamask?: MetaMask;
@@ -107,6 +109,7 @@ export class ShogunCore implements IShogunCore {
 
     this.gundb = new GunDB(gundbConfig);
     this.gun = this.gundb.getGun();
+    this.user = this.gun.user().recall({ sessionStorage: true });
 
     if (config.webauthn?.enabled) {
       this.webauthn = new Webauthn();
