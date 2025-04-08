@@ -8,6 +8,7 @@
 - [Core Features](#core-features)
   - [Authentication](#authentication)
   - [Storage](#storage)
+  - [Reactive Data](#reactive-data)
   - [Wallet Management](#wallet-management)
   - [Security](#security)
 - [Technologies Used](#technologies-used)
@@ -18,6 +19,7 @@
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
+  - [Reactive Programming with RxJS](#reactive-programming-with-rxjs)
 - [Use Cases](#use-cases)
 - [Documentation](#documentation)
 - [Browser Integration](#browser-integration)
@@ -57,6 +59,16 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
   - Real-time synchronization
 - **Local Storage Support**: Efficient client-side data persistence
 
+### Reactive Data
+- **RxJS Integration**:
+  - Observe real-time data changes through Observables
+  - Reactive collections with filtering and transformations
+  - Computed values derived from multiple data sources
+  - Simplified data flow with RxJS operators
+- **Two Programming Models**:
+  - Promise-based for traditional async workflows
+  - Observable-based for reactive programming
+
 ### Wallet Management
 - **BIP-44 Standard**: Compatible with major wallet services
 - **Stealth Addresses**: Enhanced transaction privacy
@@ -73,6 +85,7 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
 
 - **TypeScript**: Built with TypeScript for enhanced type safety and developer experience
 - **GunDB**: Decentralized graph database for P2P data storage and synchronization
+- **RxJS**: Reactive Extensions for JavaScript for powerful reactive programming
 - **ethers.js**: Complete Ethereum wallet implementation and utilities
 - **WebAuthn**: W3C standard for passwordless authentication
 
@@ -158,6 +171,52 @@ async function metamaskLogin() {
 }
 ```
 
+### Reactive Programming with RxJS
+
+Shogun SDK provides first-class RxJS integration, enabling reactive programming patterns with GunDB:
+
+```typescript
+import { map, filter } from 'rxjs/operators';
+
+// Observe a user profile in real-time
+shogun.observe('users/profile/123').subscribe(
+  profile => console.log('Profile updated:', profile),
+  error => console.error('Error observing profile:', error)
+);
+
+// Work with reactive collections
+const todos$ = shogun.match('todos');
+todos$.subscribe(todos => console.log('All todos:', todos));
+
+// Filter collections with RxJS operators
+todos$.pipe(
+  map(todos => todos.filter(todo => !todo.completed))
+).subscribe(pendingTodos => console.log('Pending todos:', pendingTodos));
+
+// Update data reactively
+shogun.rxPut('users/profile/123', { 
+  name: 'John Doe', 
+  status: 'online'
+}).subscribe(() => console.log('Profile updated'));
+
+// Create computed values from multiple data sources
+shogun.compute(
+  ['todos', 'users/profile/123'],
+  (todos, profile) => ({
+    username: profile.name,
+    pendingCount: todos.filter(t => !t.completed).length,
+    completedCount: todos.filter(t => t.completed).length
+  })
+).subscribe(stats => console.log('Dashboard stats:', stats));
+
+// Work with user data
+if (shogun.isLoggedIn()) {
+  shogun.observeUser('preferences').subscribe(
+    prefs => console.log('User preferences:', prefs)
+  );
+}
+```
+
 ## Use Cases
 
 Shogun is particularly suitable for:
@@ -166,6 +225,8 @@ Shogun is particularly suitable for:
 - **Web Wallets**: Implementation of crypto wallets directly in the browser.
 - **Social dApps**: Social applications requiring decentralized storage and crypto identities.
 - **Privacy-Focused Apps**: Applications needing stealth features and advanced privacy.
+- **Real-time Applications**: Chat apps, live dashboards, and collaborative tools using reactive data.
+- **Reactive UIs**: User interfaces that need to respond to data changes in real-time.
 
 ## Documentation
 
@@ -270,6 +331,28 @@ async function createWallet() {
   } catch (error) {
     console.error("Error while creating wallet:", error);
   }
+}
+
+// Using reactive data
+function setupReactiveUI() {
+  // Subscribe to user profile changes
+  shogun.observe('users/current').subscribe(user => {
+    document.getElementById('username').textContent = user.name;
+    document.getElementById('status').className = user.online ? 'online' : 'offline';
+  });
+  
+  // Handle real-time messages
+  shogun.match('messages').subscribe(messages => {
+    const chatBox = document.getElementById('chat');
+    chatBox.innerHTML = '';
+    
+    messages.forEach(msg => {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'message';
+      msgEl.textContent = `${msg.sender}: ${msg.text}`;
+      chatBox.appendChild(msgEl);
+    });
+  });
 }
 ```
 
