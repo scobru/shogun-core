@@ -118,7 +118,7 @@ yarn add shogun-core
 
 ### Basic Usage
 ```typescript
-import { ShogunCore, initShogunBrowser } from "shogun-core";
+import { ShogunCore, CorePlugins, initShogunBrowser } from "shogun-core";
 
 // Inizializzazione per ambiente Node.js
 const shogun = new ShogunCore({
@@ -127,6 +127,12 @@ const shogun = new ShogunCore({
     localStorage: true,
   },
   providerUrl: "https://ethereum-rpc-url.com",
+  // Abilitazione plugin integrati
+  webauthn: { enabled: true },
+  metamask: { enabled: true },
+  stealth: { enabled: true },
+  did: { enabled: true },
+  walletManager: { enabled: true }
 });
 
 // Oppure per browser (consigliato per applicazioni web)
@@ -144,15 +150,23 @@ const shogunBrowser = initShogunBrowser({
 });
 
 // Authentication examples
-const webAuthnLogin = await shogun.loginWithWebAuthn('username');
-const metaMaskLogin = await shogun.loginWithMetaMask('0x1234...abcd');
+// Autenticazione standard
 const passwordLogin = await shogun.login('username', 'password');
 
-// Wallet operations
-const wallet = await shogun.createWallet();
+// Accesso ai plugin
+const webauthnPlugin = shogun.getPlugin(CorePlugins.WebAuthn);
+const metamaskPlugin = shogun.getPlugin(CorePlugins.MetaMask);
+const walletPlugin = shogun.getPlugin(CorePlugins.WalletManager);
 
-// Login con MetaMask
-async function metamaskLogin() {
+if (webauthnPlugin) {
+  const credentials = await webauthnPlugin.generateCredentials('username', null, true); // true = login
+  if (credentials.success) {
+    // Usa le credenziali per autenticare...
+  }
+}
+
+if (metamaskPlugin) {
+  // Login con MetaMask
   try {
     // Prima ottieni l'indirizzo da MetaMask
     const provider = window.ethereum;
@@ -163,11 +177,17 @@ async function metamaskLogin() {
     const accounts = await provider.request({ method: 'eth_requestAccounts' });
     const address = accounts[0]; // Indirizzo dell'utente
     
-    const result = await shogun.loginWithMetaMask(address);
-    console.log("Login with MetaMask completed:", result);
+    const credentials = await metamaskPlugin.generateCredentials(address);
+    // Usa le credenziali per autenticare...
   } catch (error) {
     console.error("Error during MetaMask login:", error);
   }
+}
+
+// Wallet operations
+if (walletPlugin) {
+  const wallet = await walletPlugin.createWallet();
+  const mainWallet = walletPlugin.getMainWallet();
 }
 ```
 
@@ -318,6 +338,50 @@ async function login() {
   }
 }
 
+// WebAuthn Login (usando il plugin)
+async function webAuthnLogin() {
+  try {
+    const webauthnPlugin = shogun.getPlugin(shogun.CorePlugins.WebAuthn);
+    if (webauthnPlugin && webauthnPlugin.isSupported()) {
+      const username = document.getElementById('webauthnUsername').value;
+      const credentials = await webauthnPlugin.generateCredentials(username, null, true);
+      if (credentials.success) {
+        // Utilizza le credenziali per autenticare l'utente
+        const loginResult = await shogun.login(username, credentials.password);
+        console.log("WebAuthn login result:", loginResult);
+      }
+    } else {
+      console.error("WebAuthn not supported by this browser");
+    }
+  } catch (error) {
+    console.error("Error during WebAuthn login:", error);
+  }
+}
+
+// MetaMask Login (usando il plugin)
+async function metamaskLogin() {
+  try {
+    const metamaskPlugin = shogun.getPlugin(shogun.CorePlugins.MetaMask);
+    if (metamaskPlugin && await metamaskPlugin.isAvailable()) {
+      // Ottieni l'indirizzo
+      const address = await metamaskPlugin.connectMetaMask();
+      if (address) {
+        // Genera credenziali
+        const credentials = await metamaskPlugin.generateCredentials(address);
+        if (credentials.success) {
+          // Login con le credenziali ottenute
+          const loginResult = await shogun.login(credentials.username, credentials.password);
+          console.log("MetaMask login result:", loginResult);
+        }
+      }
+    } else {
+      console.error("MetaMask not available");
+    }
+  } catch (error) {
+    console.error("Error during MetaMask login:", error);
+  }
+}
+
 // Creating a wallet
 async function createWallet() {
   if (!shogun.isLoggedIn()) {
@@ -326,8 +390,13 @@ async function createWallet() {
   }
 
   try {
-    const wallet = await shogun.createWallet();
-    console.log("Wallet created:", wallet);
+    const walletPlugin = shogun.getPlugin(shogun.CorePlugins.WalletManager);
+    if (walletPlugin) {
+      const wallet = await walletPlugin.createWallet();
+      console.log("Wallet created:", wallet);
+    } else {
+      console.error("Wallet plugin not available");
+    }
   } catch (error) {
     console.error("Error while creating wallet:", error);
   }

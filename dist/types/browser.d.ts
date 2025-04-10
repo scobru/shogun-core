@@ -16,9 +16,9 @@ import { ShogunSDKConfig } from "./types/shogun";
  */
 export declare function initShogunBrowser(config: ShogunSDKConfig): ShogunCore;
 export declare const modules: {
-    loadWebAuthn: () => Promise<typeof import("./webauthn/webauthn")>;
-    loadStealth: () => Promise<typeof import("./stealth/stealth")>;
-    loadDID: () => Promise<typeof import("./did/DID")>;
+    loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
+    loadStealth: () => Promise<typeof import("./plugins/stealth/stealth")>;
+    loadDID: () => Promise<typeof import("./plugins/did/DID")>;
 };
 export { ShogunCore };
 export * from "./types/shogun";

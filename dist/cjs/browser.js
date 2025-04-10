@@ -45,9 +45,9 @@ const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
 const logger_1 = require("./utils/logger");
 // Lazy loading dei moduli pesanti
-const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./webauthn/webauthn")));
-const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./stealth/stealth")));
-const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./did/DID")));
+const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
+const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
+const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./plugins/did/DID")));
 let shogunCoreInstance;
 /**
  * Function to initialize Shogun in a browser environment

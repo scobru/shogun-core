@@ -3,7 +3,7 @@
  * Provides a unified storage interface that works in both browser and non-browser environments
  * In browser environments, data is persisted to localStorage as a backup
  */
-export class Storage {
+export class ShogunStorage {
   private store: Map<string, any>;
 
   /**

@@ -14,21 +14,17 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WalletManager = exports.ShogunEventEmitter = exports.Storage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
-const webauthn_1 = require("./webauthn/webauthn");
-const metamask_1 = require("./connector/metamask");
-const stealth_1 = require("./stealth/stealth");
 const events_1 = require("events");
 const storage_1 = require("./storage/storage");
+const shogun_1 = require("./types/shogun");
 const logger_1 = require("./utils/logger");
-const walletManager_1 = require("./wallet/walletManager");
 const ethers_1 = require("ethers");
-const DID_1 = require("./did/DID");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
-var DID_2 = require("./did/DID");
-Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_2.ShogunDID; } });
+var DID_1 = require("./plugins/did/DID");
+Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
 // Esportare anche i tipi per la gestione degli errori
 var errorHandler_2 = require("./utils/errorHandler");
 Object.defineProperty(exports, "ErrorHandler", { enumerable: true, get: function () { return errorHandler_2.ErrorHandler; } });
@@ -36,16 +32,19 @@ Object.defineProperty(exports, "ErrorType", { enumerable: true, get: function ()
 // Export RxJS integration
 var rxjs_integration_2 = require("./gun/rxjs-integration");
 Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return rxjs_integration_2.GunRxJS; } });
-let gun;
+// Aggiungiamo l'esportazione dei plugin
+__exportStar(require("./plugins"), exports);
 class ShogunCore {
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
      * @description Creates a new instance of ShogunCore with the provided configuration.
      * Initializes all required components including storage, event emitter, GunDB connection,
-     * authentication methods (WebAuthn, MetaMask), and wallet management.
+     * and plugin system.
      */
     constructor(config) {
+        // Collezione di plugin registrati
+        this.plugins = new Map();
         (0, logger_1.log)("Initializing ShogunSDK");
         // Salviamo la configurazione
         this.config = config;
@@ -54,7 +53,7 @@ class ShogunCore {
             (0, logger_1.configureLogging)(config.logging);
             (0, logger_1.log)("Logging configured with custom settings");
         }
-        this.storage = new storage_1.Storage();
+        this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new events_1.EventEmitter();
         // Configura l'error handler per emettere eventi tramite EventEmitter
         errorHandler_1.ErrorHandler.addListener((error) => {
@@ -91,18 +90,6 @@ class ShogunCore {
         this.user = this.gun.user().recall({ sessionStorage: true });
         // Initialize RxJS integration
         this.rx = new rxjs_integration_1.GunRxJS(this.gun);
-        if (config.webauthn?.enabled) {
-            this.webauthn = new webauthn_1.Webauthn();
-        }
-        if (config.metamask?.enabled) {
-            this.metamask = new metamask_1.MetaMask();
-        }
-        if (config.stealth?.enabled) {
-            this.stealth = new stealth_1.Stealth(this.storage);
-        }
-        if (config.did?.enabled) {
-            this.did = new DID_1.ShogunDID(this);
-        }
         // Initialize Ethereum provider
         if (config.providerUrl) {
             this.provider = new ethers_1.ethers.JsonRpcProvider(config.providerUrl);
@@ -113,16 +100,138 @@ class ShogunCore {
             this.provider = ethers_1.ethers.getDefaultProvider("mainnet");
             (0, logger_1.log)("WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.");
         }
-        if (config.walletManager?.enabled) {
-            this.walletManager = new walletManager_1.WalletManager(this.gundb, this.gun, this.storage, {
-                balanceCacheTTL: config.walletManager?.balanceCacheTTL,
-                rpcUrl: config.providerUrl,
-            });
-            if (config.providerUrl) {
-                this.walletManager.setRpcUrl(config.providerUrl);
+        // Registriamo automaticamente i plugin in base alla configurazione
+        this.registerBuiltinPlugins(config);
+        // Registra i plugin personalizzati se configurati
+        if (config.plugins?.autoRegister && config.plugins.autoRegister.length > 0) {
+            for (const plugin of config.plugins.autoRegister) {
+                try {
+                    this.register(plugin);
+                    (0, logger_1.log)(`Auto-registered plugin: ${plugin.name}`);
+                }
+                catch (error) {
+                    (0, logger_1.logError)(`Failed to auto-register plugin ${plugin.name}:`, error);
+                }
             }
         }
         (0, logger_1.log)("ShogunSDK initialized!");
+    }
+    /**
+     * Registra i plugin integrati in base alla configurazione
+     * @private
+     */
+    registerBuiltinPlugins(config) {
+        try {
+            // Import dinamici per i plugin integrati
+            const { WebauthnPlugin } = require('./plugins/webauthn/webauthnPlugin');
+            const { MetaMaskPlugin } = require('./plugins/metamask/metamaskPlugin');
+            const { StealthPlugin } = require('./plugins/stealth/stealthPlugin');
+            const { DIDPlugin } = require('./plugins/did/didPlugin');
+            // Gruppo: Plugin di Autenticazione
+            // Registra plugin Webauthn se abilitato
+            if (config.webauthn?.enabled) {
+                const webauthnPlugin = new WebauthnPlugin();
+                webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
+                this.register(webauthnPlugin);
+                // Per retrocompatibilità
+                this.webauthn = this.getPlugin(shogun_1.CorePlugins.WebAuthn);
+                (0, logger_1.log)("Webauthn plugin registered");
+            }
+            // Registra plugin MetaMask se abilitato
+            if (config.metamask?.enabled) {
+                const metamaskPlugin = new MetaMaskPlugin();
+                metamaskPlugin._category = shogun_1.PluginCategory.Authentication;
+                this.register(metamaskPlugin);
+                // Per retrocompatibilità
+                this.metamask = this.getPlugin(shogun_1.CorePlugins.MetaMask);
+                (0, logger_1.log)("MetaMask plugin registered");
+            }
+            // Gruppo: Plugin di Privacy
+            // Registra plugin Stealth se abilitato
+            if (config.stealth?.enabled) {
+                const stealthPlugin = new StealthPlugin();
+                stealthPlugin._category = shogun_1.PluginCategory.Privacy;
+                this.register(stealthPlugin);
+                // Per retrocompatibilità
+                this.stealth = this.getPlugin(shogun_1.CorePlugins.Stealth);
+                (0, logger_1.log)("Stealth plugin registered");
+            }
+            // Gruppo: Plugin di Identità
+            // Registra plugin DID se abilitato
+            if (config.did?.enabled) {
+                const didPlugin = new DIDPlugin();
+                didPlugin._category = shogun_1.PluginCategory.Identity;
+                this.register(didPlugin);
+                // Per retrocompatibilità
+                this.did = this.getPlugin(shogun_1.CorePlugins.DID);
+                (0, logger_1.log)("DID plugin registered");
+            }
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error registering builtin plugins:", error);
+        }
+    }
+    // *********************************************************************************************************
+    // 🔌 PLUGIN MANAGER 🔌
+    // *********************************************************************************************************
+    /**
+     * Registra un nuovo plugin
+     * @param plugin Il plugin da registrare
+     */
+    register(plugin) {
+        if (this.plugins.has(plugin.name)) {
+            throw new Error(`Plugin with name "${plugin.name}" already registered`);
+        }
+        plugin.initialize(this);
+        this.plugins.set(plugin.name, plugin);
+        (0, logger_1.log)(`Registered plugin: ${plugin.name}`);
+    }
+    /**
+     * Cancella la registrazione di un plugin
+     * @param pluginName Nome del plugin da cancellare
+     */
+    unregister(pluginName) {
+        const plugin = this.plugins.get(pluginName);
+        if (!plugin) {
+            (0, logger_1.log)(`Plugin "${pluginName}" not found, nothing to unregister`);
+            return;
+        }
+        if (plugin.destroy) {
+            plugin.destroy();
+        }
+        this.plugins.delete(pluginName);
+        (0, logger_1.log)(`Unregistered plugin: ${pluginName}`);
+    }
+    /**
+     * Recupera un plugin registrato per nome
+     * @param name Nome del plugin
+     * @returns Il plugin richiesto o undefined se non trovato
+     * @template T Tipo del plugin o dell'interfaccia pubblica del plugin
+     */
+    getPlugin(name) {
+        return this.plugins.get(name);
+    }
+    /**
+     * Verifica se un plugin è registrato
+     * @param name Nome del plugin da verificare
+     * @returns true se il plugin è registrato, false altrimenti
+     */
+    hasPlugin(name) {
+        return this.plugins.has(name);
+    }
+    /**
+     * Ottiene tutti i plugin di una determinata categoria
+     * @param category Categoria di plugin da filtrare
+     * @returns Array di plugin della categoria specificata
+     */
+    getPluginsByCategory(category) {
+        const result = [];
+        this.plugins.forEach(plugin => {
+            if (plugin._category === category) {
+                result.push(plugin);
+            }
+        });
+        return result;
     }
     // *********************************************************************************************************
     // 🔄 RXJS INTEGRATION 🔄
@@ -474,6 +583,12 @@ class ShogunCore {
      * @description Verifies if the current browser environment supports WebAuthn authentication
      */
     isWebAuthnSupported() {
+        // Utilizziamo il plugin WebAuthn se disponibile
+        const webauthnPlugin = this.getPlugin("webauthn");
+        if (webauthnPlugin) {
+            return webauthnPlugin.isSupported();
+        }
+        // Fallback al vecchio metodo
         return this.webauthn?.isSupported() || false;
     }
     /**
@@ -493,8 +608,11 @@ class ShogunCore {
             if (!this.isWebAuthnSupported()) {
                 throw new Error("WebAuthn is not supported by this browser");
             }
+            // Utilizziamo il plugin WebAuthn se disponibile
+            const webauthnPlugin = this.getPlugin("webauthn");
+            const webauthnInstance = webauthnPlugin || this.webauthn;
             // Verify WebAuthn credentials
-            const assertionResult = await this.webauthn?.generateCredentials(username, null, true);
+            const assertionResult = await webauthnInstance?.generateCredentials(username, null, true);
             if (!assertionResult?.success) {
                 throw new Error(assertionResult?.error || "WebAuthn verification failed");
             }
@@ -552,8 +670,11 @@ class ShogunCore {
             if (!this.isWebAuthnSupported()) {
                 throw new Error("WebAuthn is not supported by this browser");
             }
+            // Utilizziamo il plugin WebAuthn se disponibile
+            const webauthnPlugin = this.getPlugin("webauthn");
+            const webauthnInstance = webauthnPlugin || this.webauthn;
             // Generate new WebAuthn credentials
-            const attestationResult = await this.webauthn?.generateCredentials(username, null, false);
+            const attestationResult = await webauthnInstance?.generateCredentials(username, null, false);
             if (!attestationResult?.success) {
                 throw new Error(attestationResult?.error || "Unable to generate WebAuthn credentials");
             }
@@ -617,11 +738,14 @@ class ShogunCore {
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for MetaMask login");
             }
-            if (!this.metamask?.isAvailable()) {
+            // Utilizziamo il plugin MetaMask se disponibile
+            const metamaskPlugin = this.getPlugin("metamask");
+            const metamaskInstance = metamaskPlugin || this.metamask;
+            if (!metamaskInstance?.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "METAMASK_UNAVAILABLE", "MetaMask is not available in the browser");
             }
             (0, logger_1.log)("Generating credentials for MetaMask login...");
-            const credentials = await this.metamask?.generateCredentials(address);
+            const credentials = await metamaskInstance.generateCredentials(address);
             if (!credentials?.username ||
                 !credentials?.password ||
                 !credentials.signature ||
@@ -709,11 +833,14 @@ class ShogunCore {
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for MetaMask registration");
             }
-            if (!this.metamask?.isAvailable()) {
+            // Utilizziamo il plugin MetaMask se disponibile
+            const metamaskPlugin = this.getPlugin("metamask");
+            const metamaskInstance = metamaskPlugin || this.metamask;
+            if (!metamaskInstance?.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "METAMASK_UNAVAILABLE", "MetaMask is not available in the browser");
             }
             (0, logger_1.log)("Generating credentials for MetaMask registration...");
-            const credentials = await this.metamask?.generateCredentials(address);
+            const credentials = await metamaskInstance.generateCredentials(address);
             if (!credentials?.username ||
                 !credentials?.password ||
                 !credentials.signature ||
@@ -790,284 +917,6 @@ class ShogunCore {
         }
     }
     // *********************************************************************************************************
-    // 💰 WALLET MANAGER - GETTERS 💰
-    // *********************************************************************************************************
-    /**
-     * Get addresses that would be derived from a mnemonic using BIP-44 standard
-     * @param mnemonic The mnemonic phrase to derive addresses from
-     * @param count The number of addresses to derive
-     * @returns An array of Ethereum addresses
-     * @description This method is useful for verifying compatibility with other wallets
-     */
-    getStandardBIP44Addresses(mnemonic, count = 5) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.getStandardBIP44Addresses(mnemonic, count);
-    }
-    /**
-     * Get main wallet
-     * @returns {ethers.Wallet | null} Main wallet instance or null if not available
-     * @description Retrieves the primary wallet associated with the user
-     */
-    getMainWallet() {
-        return this.walletManager?.getMainWallet() || null;
-    }
-    /**
-     * Load wallets
-     * @returns {Promise<WalletInfo[]>} Array of wallet information
-     * @description Retrieves all wallets associated with the authenticated user
-     */
-    async loadWallets() {
-        try {
-            if (!this.isLoggedIn()) {
-                (0, logger_1.log)("Cannot load wallets: user not authenticated");
-                // Segnaliamo l'errore con il gestore centralizzato ma non interrompiamo il flusso
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
-                return [];
-            }
-            try {
-                if (!this.walletManager) {
-                    throw new Error("Wallet manager not initialized");
-                }
-                return await this.walletManager.loadWallets();
-            }
-            catch (walletError) {
-                // Gestiamo l'errore in modo più dettagliato
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${walletError instanceof Error ? walletError.message : String(walletError)}`, walletError);
-                // Ritorniamo un array vuoto ma non interrompiamo l'applicazione
-                return [];
-            }
-        }
-        catch (error) {
-            // Catturiamo errori generici imprevisti
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.UNKNOWN, "UNEXPECTED_ERROR", `Unexpected error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
-            return [];
-        }
-    }
-    // *********************************************************************************************************
-    // 💰 WALLET MANAGER - GENERATORS 💰
-    // *********************************************************************************************************
-    /**
-     * Create new wallet
-     * @returns {Promise<WalletInfo>} Created wallet information
-     * @description Generates a new wallet and associates it with the user
-     */
-    async createWallet() {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.createWallet();
-    }
-    /**
-     * Generate a new BIP-39 mnemonic phrase
-     * @returns {string} A new random mnemonic phrase
-     * @description Generates a cryptographically secure random mnemonic phrase
-     * that can be used to derive HD wallets
-     */
-    generateNewMnemonic() {
-        try {
-            // Generate a new mnemonic phrase using ethers.js
-            const mnemonic = ethers_1.ethers.Wallet.createRandom().mnemonic;
-            if (!mnemonic || !mnemonic.phrase) {
-                throw new Error("Failed to generate mnemonic phrase");
-            }
-            return mnemonic.phrase;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error generating mnemonic:", error);
-            throw new Error("Failed to generate mnemonic phrase");
-        }
-    }
-    // *********************************************************************************************************
-    // 💰 WALLET MANAGER - SIGNERS 💰
-    // *********************************************************************************************************
-    /**
-     * Sign message
-     * @param wallet - Wallet for signing
-     * @param message - Message to sign
-     * @returns {Promise<string>} Message signature
-     * @description Signs a message using the provided wallet
-     */
-    async signMessage(wallet, message) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.signMessage(wallet, message);
-    }
-    /**
-     * Verify signature
-     * @param message - Signed message
-     * @param signature - Signature to verify
-     * @returns {string} Address that signed the message
-     * @description Recovers the address that signed a message from its signature
-     */
-    verifySignature(message, signature) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.verifySignature(message, signature);
-    }
-    /**
-     * Sign transaction
-     * @param wallet - Wallet for signing
-     * @param toAddress - Recipient address
-     * @param value - Amount to send
-     * @returns {Promise<string>} Signed transaction
-     * @description Signs a transaction using the provided wallet
-     */
-    async signTransaction(wallet, toAddress, value) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.signTransaction(wallet, toAddress, value);
-    }
-    // *********************************************************************************************************
-    // 💰 WALLET MANAGER - EXPORTS 💰
-    // *********************************************************************************************************
-    /**
-     * Export user's mnemonic phrase
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported mnemonic data
-     * @description Exports the mnemonic phrase used to generate user's wallets
-     */
-    async exportMnemonic(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportMnemonic(password);
-    }
-    /**
-     * Export private keys of all wallets
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported wallet keys
-     * @description Exports private keys for all user's wallets
-     */
-    async exportWalletKeys(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportWalletKeys(password);
-    }
-    /**
-     * Export user's Gun pair
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported Gun pair
-     * @description Exports the user's Gun authentication pair
-     */
-    async exportGunPair(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportGunPair(password);
-    }
-    /**
-     * Export all user data in a single file
-     * @param password Required password to encrypt exported data
-     * @returns {Promise<string>} Exported user data
-     * @description Exports all user data including mnemonic, wallets and Gun pair
-     */
-    async exportAllUserData(password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.exportAllUserData(password);
-    }
-    // *********************************************************************************************************
-    // 💰 WALLET MANAGER - IMPORTS 💰
-    // *********************************************************************************************************
-    /**
-     * Import mnemonic phrase
-     * @param mnemonicData Mnemonic or encrypted JSON to import
-     * @param password Optional password to decrypt mnemonic if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a mnemonic phrase to generate wallets
-     */
-    async importMnemonic(mnemonicData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importMnemonic(mnemonicData, password);
-    }
-    /**
-     * Import wallet private keys
-     * @param walletsData JSON containing wallet data or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<number>} Number of imported wallets
-     * @description Imports wallet private keys from exported data
-     */
-    async importWalletKeys(walletsData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importWalletKeys(walletsData, password);
-    }
-    /**
-     * Import Gun pair
-     * @param pairData JSON containing Gun pair or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a Gun authentication pair
-     */
-    async importGunPair(pairData, password) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importGunPair(pairData, password);
-    }
-    /**
-     * Import complete backup
-     * @param backupData Encrypted JSON containing all user data
-     * @param password Password to decrypt backup
-     * @param options Import options (which data to import)
-     * @returns {Promise<Object>} Import results for each data type
-     * @description Imports a complete user data backup including mnemonic,
-     * wallets and Gun pair
-     */
-    async importAllUserData(backupData, password, options = { importMnemonic: true, importWallets: true, importGunPair: true }) {
-        if (!this.walletManager) {
-            throw new Error("Wallet manager not initialized");
-        }
-        return this.walletManager.importAllUserData(backupData, password, options);
-    }
-    // *********************************************************************************************************
-    // 💰 WALLET MANAGER - PROVIDER 💰
-    // *********************************************************************************************************
-    /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl) {
-        try {
-            if (!rpcUrl) {
-                (0, logger_1.log)("Invalid RPC URL provided");
-                return false;
-            }
-            if (this.walletManager) {
-                this.walletManager.setRpcUrl(rpcUrl);
-            }
-            // Update the provider if it's already initialized
-            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
-            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
-            return true;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Failed to set RPC URL", error);
-            return false;
-        }
-    }
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl() {
-        // Access the provider URL if available
-        return this.provider instanceof ethers_1.ethers.JsonRpcProvider
-            ? this.provider.connection?.url || null
-            : null;
-    }
-    // *********************************************************************************************************
     // 🤫 PRIVATE HELPER METHODS 🤫
     // *********************************************************************************************************
     /**
@@ -1083,6 +932,12 @@ class ShogunCore {
      */
     async ensureUserHasDID(options) {
         try {
+            // Utilizziamo il plugin DID se disponibile
+            const didPlugin = this.getPlugin("did");
+            if (didPlugin && didPlugin.ensureUserHasDID) {
+                return didPlugin.ensureUserHasDID(options);
+            }
+            // Fallback al vecchio metodo se il plugin non è disponibile
             if (!this.isLoggedIn()) {
                 (0, logger_1.logError)("Cannot ensure DID: user not authenticated");
                 return null;
@@ -1313,6 +1168,66 @@ class ShogunCore {
             });
         });
     }
+    // *********************************************************************************************************
+    // 🔌 PROVIDER 🔌
+    // *********************************************************************************************************
+    /**
+     * Set the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
+     * @returns True if the URL was successfully set
+     */
+    setRpcUrl(rpcUrl) {
+        try {
+            if (!rpcUrl) {
+                (0, logger_1.log)("Invalid RPC URL provided");
+                return false;
+            }
+            // Update the provider if it's already initialized
+            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
+            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Failed to set RPC URL", error);
+            return false;
+        }
+    }
+    /**
+     * Get the currently configured RPC URL
+     * @returns The current provider URL or null if not set
+     */
+    getRpcUrl() {
+        // Access the provider URL if available
+        return this.provider instanceof ethers_1.ethers.JsonRpcProvider
+            ? this.provider.connection?.url || null
+            : null;
+    }
+    /**
+     * Get the main wallet for the authenticated user
+     * @returns The user's main Ethereum wallet or null if not available
+     * @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead
+     */
+    getMainWallet() {
+        // Try to get the wallet from the wallet plugin if available
+        const walletPlugin = this.getPlugin(shogun_1.CorePlugins.WalletManager);
+        if (walletPlugin && typeof walletPlugin.getMainWallet === 'function') {
+            return walletPlugin.getMainWallet();
+        }
+        // If no wallet plugin, return null
+        return null;
+    }
+    // *********************************************************************************************************
+    // 📢 EVENT EMITTER 📢
+    // *********************************************************************************************************
+    /**
+     * Emits an event through the core's event emitter.
+     * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
+     * @param eventName The name of the event to emit.
+     * @param data The data to pass with the event.
+     */
+    emit(eventName, ...args) {
+        return this.eventEmitter.emit(eventName, ...args);
+    }
 }
 exports.ShogunCore = ShogunCore;
 // Export all types
@@ -1320,15 +1235,13 @@ __exportStar(require("./types/shogun"), exports);
 // Export classes
 var gun_2 = require("./gun/gun");
 Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
-var metamask_2 = require("./connector/metamask");
-Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_2.MetaMask; } });
-var stealth_2 = require("./stealth/stealth");
-Object.defineProperty(exports, "Stealth", { enumerable: true, get: function () { return stealth_2.Stealth; } });
-var webauthn_2 = require("./webauthn/webauthn");
-Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_2.Webauthn; } });
+var metamask_1 = require("./plugins/metamask/connector/metamask");
+Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_1.MetaMask; } });
+var stealth_1 = require("./plugins/stealth/stealth");
+Object.defineProperty(exports, "Stealth", { enumerable: true, get: function () { return stealth_1.Stealth; } });
+var webauthn_1 = require("./plugins/webauthn/webauthn");
+Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_1.Webauthn; } });
 var storage_2 = require("./storage/storage");
-Object.defineProperty(exports, "Storage", { enumerable: true, get: function () { return storage_2.Storage; } });
+Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_2.ShogunStorage; } });
 var events_2 = require("./events");
 Object.defineProperty(exports, "ShogunEventEmitter", { enumerable: true, get: function () { return events_2.ShogunEventEmitter; } });
-var walletManager_2 = require("./wallet/walletManager");
-Object.defineProperty(exports, "WalletManager", { enumerable: true, get: function () { return walletManager_2.WalletManager; } });

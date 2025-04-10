@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Storage = void 0;
+exports.ShogunStorage = void 0;
 /**
  * Storage implementation based on StorageMock
  * Provides a unified storage interface that works in both browser and non-browser environments
  * In browser environments, data is persisted to localStorage as a backup
  */
-class Storage {
+class ShogunStorage {
     /**
      * Initializes storage and loads any existing keypair from localStorage if available
      */
@@ -129,4 +129,4 @@ class Storage {
         }
     }
 }
-exports.Storage = Storage;
+exports.ShogunStorage = ShogunStorage;

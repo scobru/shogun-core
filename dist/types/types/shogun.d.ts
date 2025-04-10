@@ -1,15 +1,46 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { Webauthn } from "../webauthn/webauthn";
-import { MetaMask } from "../connector/metamask";
-import { Stealth } from "../stealth/stealth";
+import { Webauthn } from "../plugins/webauthn/webauthn";
+import { MetaMask } from "../plugins/metamask/connector/metamask";
+import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "./gun";
-import { WalletManager } from "../wallet/walletManager";
 import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
-interface DID {
+import { ShogunPlugin, PluginManager } from "./plugin";
+import { ShogunStorage } from "../storage/storage";
+/**
+ * Categorie di plugin standard in ShogunCore
+ */
+export declare enum PluginCategory {
+    /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
+    Authentication = "authentication",
+    /** Plugin per la gestione di wallet */
+    Wallet = "wallet",
+    /** Plugin per la privacy e l'anonimato */
+    Privacy = "privacy",
+    /** Plugin per l'identità decentralizzata */
+    Identity = "identity",
+    /** Plugin per altre funzionalità */
+    Utility = "utility"
+}
+/**
+ * Nomi standard dei plugin integrati
+ */
+export declare enum CorePlugins {
+    /** Plugin WebAuthn */
+    WebAuthn = "webauthn",
+    /** Plugin MetaMask */
+    MetaMask = "metamask",
+    /** Plugin Stealth */
+    Stealth = "stealth",
+    /** Plugin DID */
+    DID = "did",
+    /** Plugin Wallet Manager */
+    WalletManager = "wallet"
+}
+export interface DID {
     getCurrentUserDID(): Promise<string | null>;
     resolveDID(did: string): Promise<any>;
     authenticateWithDID(did: string, challenge?: string): Promise<AuthResult>;
@@ -45,51 +76,39 @@ export interface SignUpResult {
     wallet?: any;
     did?: string;
 }
-export interface IShogunCore {
+export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
     gundb: GunDB;
+    /** @deprecated Use getPlugin(CorePlugins.WebAuthn) instead */
     webauthn?: Webauthn;
+    /** @deprecated Use getPlugin(CorePlugins.MetaMask) instead */
     metamask?: MetaMask;
+    /** @deprecated Use getPlugin(CorePlugins.Stealth) instead */
     stealth?: Stealth;
+    /** @deprecated Use getPlugin(CorePlugins.DID) instead */
     did?: DID;
-    walletManager?: WalletManager;
     rx: GunRxJS;
+    storage: ShogunStorage;
+    config: ShogunSDKConfig;
+    provider?: ethers.Provider;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
     setRpcUrl(rpcUrl: string): boolean;
     getRpcUrl(): string | null;
+    /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
+    getMainWallet(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
+    /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() instead */
     loginWithWebAuthn(username: string): Promise<AuthResult>;
+    /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() instead */
     loginWithMetaMask(address: string): Promise<AuthResult>;
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
+    /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
     signUpWithMetaMask(address: string): Promise<AuthResult>;
+    /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() and signUp() instead */
     signUpWithWebAuthn(username: string): Promise<AuthResult>;
+    /** @deprecated Use getPlugin(CorePlugins.WebAuthn).isSupported() instead */
     isWebAuthnSupported(): boolean;
-    getMainWallet(): ethers.Wallet | null;
-    createWallet(): Promise<WalletInfo>;
-    loadWallets(): Promise<WalletInfo[]>;
-    signMessage(wallet: ethers.Wallet, message: string | Uint8Array): Promise<string>;
-    verifySignature(message: string | Uint8Array, signature: string): string;
-    signTransaction(wallet: ethers.Wallet, toAddress: string, value: string): Promise<string>;
-    getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
-    generateNewMnemonic(): string;
-    exportMnemonic(password?: string): Promise<string>;
-    exportWalletKeys(password?: string): Promise<string>;
-    exportGunPair(password?: string): Promise<string>;
-    exportAllUserData(password: string): Promise<string>;
-    importMnemonic(mnemonicData: string, password?: string): Promise<boolean>;
-    importWalletKeys(walletsData: string, password?: string): Promise<number>;
-    importGunPair(pairData: string, password?: string): Promise<boolean>;
-    importAllUserData(backupData: string, password: string, options?: {
-        importMnemonic?: boolean;
-        importWallets?: boolean;
-        importGunPair?: boolean;
-    }): Promise<{
-        success: boolean;
-        mnemonicImported?: boolean;
-        walletsImported?: number;
-        gunPairImported?: boolean;
-    }>;
     logout(): void;
     isLoggedIn(): boolean;
     observe<T>(path: string | any): Observable<T>;
@@ -178,6 +197,11 @@ export interface ShogunSDKConfig {
         /** General operation timeout in milliseconds (default: 30000) */
         operation?: number;
     };
+    /** Plugin configuration */
+    plugins?: {
+        /** List of plugins to automatically register on initialization */
+        autoRegister?: ShogunPlugin[];
+    };
 }
 export interface WalletInfo {
     wallet: any;
@@ -200,4 +224,3 @@ export interface ShogunEvents {
     }) => void;
     "auth:logout": (data: Record<string, never>) => void;
 }
-export {};

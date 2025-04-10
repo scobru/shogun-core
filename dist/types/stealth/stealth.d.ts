@@ -2,7 +2,7 @@
  * Manages stealth logic using Gun and SEA
  */
 import { ethers } from "ethers";
-import { Storage } from "../storage/storage";
+import { ShogunStorage } from "../storage/storage";
 import { EphemeralKeyPair, StealthData, StealthAddressResult } from "../types/stealth";
 declare global {
     interface Window {
@@ -23,7 +23,7 @@ declare class Stealth {
     private storage;
     private readonly STEALTH_HISTORY_KEY;
     private logs;
-    constructor(storage?: Storage);
+    constructor(storage?: ShogunStorage);
     /**
      * Structured logging system
      */
@@ -45,9 +45,20 @@ declare class Stealth {
      */
     createAccount(): Promise<EphemeralKeyPair>;
     /**
-     * Generates a stealth address for the recipient's public key
+     * Generates a new ephemeral key pair for stealth transactions
+     * @returns Promise with the generated key pair
      */
-    generateStealthAddress(recipientPublicKey: string): Promise<StealthAddressResult>;
+    generateEphemeralKeyPair(): Promise<{
+        privateKey: string;
+        publicKey: string;
+    }>;
+    /**
+     * Generates a stealth address for the recipient's public key
+     * @param recipientPublicKey Recipient's public key
+     * @param ephemeralPrivateKey Ephemeral private key (optional)
+     * @returns Promise with the stealth address result
+     */
+    generateStealthAddress(recipientPublicKey: string, ephemeralPrivateKey?: string): Promise<StealthAddressResult>;
     /**
      * Opens a stealth address by deriving the private key
      */
@@ -73,5 +84,26 @@ declare class Stealth {
      * Saves stealth data in storage with validation
      */
     saveStealthHistory(address: string, data: StealthData): void;
+    /**
+     * Scans a list of stealth addresses to find ones belonging to the user
+     * @param addresses Array of stealth data to scan
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise with array of stealth data that belongs to the user
+     */
+    scanStealthAddresses(addresses: StealthData[], privateKeyOrSpendKey: string): Promise<StealthData[]>;
+    /**
+     * Checks if a stealth address belongs to the user
+     * @param stealthData Stealth data to check
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise resolving to boolean indicating ownership
+     */
+    isStealthAddressMine(stealthData: StealthData, privateKeyOrSpendKey: string): Promise<boolean>;
+    /**
+     * Gets the private key for a stealth address
+     * @param stealthData Stealth data
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise with the derived private key
+     */
+    getStealthPrivateKey(stealthData: StealthData, privateKeyOrSpendKey: string): Promise<string>;
 }
 export { Stealth, EphemeralKeyPair, StealthAddressResult };

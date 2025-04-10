@@ -1,0 +1,1 @@
+export { DIDPlugin } from './didPlugin';
