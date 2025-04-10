@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { GunDB } from "../gun/gun";
-import { Storage } from "../storage/storage";
+import { ShogunStorage } from "../storage/storage";
 import { WalletInfo } from "../types/shogun";
 import { EventEmitter } from "events";
 import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions } from "../types/wallet";
@@ -30,7 +30,7 @@ export declare class WalletManager extends EventEmitter {
      * @param storage Storage interface for local persistence
      * @param config Additional configuration options
      */
-    constructor(gundb: GunDB, gun: any, storage: Storage, config?: Partial<WalletConfig>);
+    constructor(gundb: GunDB, gun: any, storage: ShogunStorage, config?: Partial<WalletConfig>);
     /**
      * Setup transaction monitoring
      */

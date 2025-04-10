@@ -1,41 +1,77 @@
 import { GunDB } from "./gun/gun";
-import { Webauthn } from "./webauthn/webauthn";
-import { MetaMask } from "./connector/metamask";
-import { Stealth } from "./stealth/stealth";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, WalletInfo, LoggingConfig } from "./types/shogun";
-import { IGunInstance } from "gun/types/gun";
-import { WalletManager } from "./wallet/walletManager";
+import { Webauthn } from "./plugins/webauthn/webauthn";
+import { MetaMask } from "./plugins/metamask/connector/metamask";
+import { Stealth } from "./plugins/stealth/stealth";
+import { ShogunStorage } from "./storage/storage";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, DID } from "./types/shogun";
+import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
-import { ShogunDID } from "./did/DID";
 import { ShogunError } from "./utils/errorHandler";
 import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
-export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./did/DID";
+import { ShogunPlugin } from "./types/plugin";
+export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
 export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
+export * from "./plugins";
+export { ShogunPlugin, PluginManager } from "./types/plugin";
 export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
     gundb: GunDB;
+    did?: DID;
+    storage: ShogunStorage;
+    private eventEmitter;
+    provider?: ethers.Provider;
+    config: ShogunSDKConfig;
+    rx: GunRxJS;
     webauthn?: Webauthn;
     metamask?: MetaMask;
     stealth?: Stealth;
-    did?: ShogunDID;
-    private storage;
-    private eventEmitter;
-    walletManager?: WalletManager;
-    private provider?;
-    private config;
-    rx: GunRxJS;
+    private plugins;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
      * @description Creates a new instance of ShogunCore with the provided configuration.
      * Initializes all required components including storage, event emitter, GunDB connection,
-     * authentication methods (WebAuthn, MetaMask), and wallet management.
+     * and plugin system.
      */
     constructor(config: ShogunSDKConfig);
+    /**
+     * Registra i plugin integrati in base alla configurazione
+     * @private
+     */
+    private registerBuiltinPlugins;
+    /**
+     * Registra un nuovo plugin
+     * @param plugin Il plugin da registrare
+     */
+    register(plugin: ShogunPlugin): void;
+    /**
+     * Cancella la registrazione di un plugin
+     * @param pluginName Nome del plugin da cancellare
+     */
+    unregister(pluginName: string): void;
+    /**
+     * Recupera un plugin registrato per nome
+     * @param name Nome del plugin
+     * @returns Il plugin richiesto o undefined se non trovato
+     * @template T Tipo del plugin o dell'interfaccia pubblica del plugin
+     */
+    getPlugin<T>(name: string): T | undefined;
+    /**
+     * Verifica se un plugin è registrato
+     * @param name Nome del plugin da verificare
+     * @returns true se il plugin è registrato, false altrimenti
+     */
+    hasPlugin(name: string): boolean;
+    /**
+     * Ottiene tutti i plugin di una determinata categoria
+     * @param category Categoria di plugin da filtrare
+     * @returns Array di plugin della categoria specificata
+     */
+    getPluginsByCategory(category: PluginCategory): ShogunPlugin[];
     /**
      * Observe a Gun node for changes
      * @param path - Path to observe (can be a string or a Gun chain)
@@ -176,146 +212,6 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUpWithMetaMask(address: string): Promise<AuthResult>;
     /**
-     * Get addresses that would be derived from a mnemonic using BIP-44 standard
-     * @param mnemonic The mnemonic phrase to derive addresses from
-     * @param count The number of addresses to derive
-     * @returns An array of Ethereum addresses
-     * @description This method is useful for verifying compatibility with other wallets
-     */
-    getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
-    /**
-     * Get main wallet
-     * @returns {ethers.Wallet | null} Main wallet instance or null if not available
-     * @description Retrieves the primary wallet associated with the user
-     */
-    getMainWallet(): ethers.Wallet | null;
-    /**
-     * Load wallets
-     * @returns {Promise<WalletInfo[]>} Array of wallet information
-     * @description Retrieves all wallets associated with the authenticated user
-     */
-    loadWallets(): Promise<WalletInfo[]>;
-    /**
-     * Create new wallet
-     * @returns {Promise<WalletInfo>} Created wallet information
-     * @description Generates a new wallet and associates it with the user
-     */
-    createWallet(): Promise<WalletInfo>;
-    /**
-     * Generate a new BIP-39 mnemonic phrase
-     * @returns {string} A new random mnemonic phrase
-     * @description Generates a cryptographically secure random mnemonic phrase
-     * that can be used to derive HD wallets
-     */
-    generateNewMnemonic(): string;
-    /**
-     * Sign message
-     * @param wallet - Wallet for signing
-     * @param message - Message to sign
-     * @returns {Promise<string>} Message signature
-     * @description Signs a message using the provided wallet
-     */
-    signMessage(wallet: ethers.Wallet, message: string | Uint8Array): Promise<string>;
-    /**
-     * Verify signature
-     * @param message - Signed message
-     * @param signature - Signature to verify
-     * @returns {string} Address that signed the message
-     * @description Recovers the address that signed a message from its signature
-     */
-    verifySignature(message: string | Uint8Array, signature: string): string;
-    /**
-     * Sign transaction
-     * @param wallet - Wallet for signing
-     * @param toAddress - Recipient address
-     * @param value - Amount to send
-     * @returns {Promise<string>} Signed transaction
-     * @description Signs a transaction using the provided wallet
-     */
-    signTransaction(wallet: ethers.Wallet, toAddress: string, value: string): Promise<string>;
-    /**
-     * Export user's mnemonic phrase
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported mnemonic data
-     * @description Exports the mnemonic phrase used to generate user's wallets
-     */
-    exportMnemonic(password?: string): Promise<string>;
-    /**
-     * Export private keys of all wallets
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported wallet keys
-     * @description Exports private keys for all user's wallets
-     */
-    exportWalletKeys(password?: string): Promise<string>;
-    /**
-     * Export user's Gun pair
-     * @param password Optional password to encrypt exported data
-     * @returns {Promise<string>} Exported Gun pair
-     * @description Exports the user's Gun authentication pair
-     */
-    exportGunPair(password?: string): Promise<string>;
-    /**
-     * Export all user data in a single file
-     * @param password Required password to encrypt exported data
-     * @returns {Promise<string>} Exported user data
-     * @description Exports all user data including mnemonic, wallets and Gun pair
-     */
-    exportAllUserData(password: string): Promise<string>;
-    /**
-     * Import mnemonic phrase
-     * @param mnemonicData Mnemonic or encrypted JSON to import
-     * @param password Optional password to decrypt mnemonic if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a mnemonic phrase to generate wallets
-     */
-    importMnemonic(mnemonicData: string, password?: string): Promise<boolean>;
-    /**
-     * Import wallet private keys
-     * @param walletsData JSON containing wallet data or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<number>} Number of imported wallets
-     * @description Imports wallet private keys from exported data
-     */
-    importWalletKeys(walletsData: string, password?: string): Promise<number>;
-    /**
-     * Import Gun pair
-     * @param pairData JSON containing Gun pair or encrypted JSON
-     * @param password Optional password to decrypt data if encrypted
-     * @returns {Promise<boolean>} Import success status
-     * @description Imports a Gun authentication pair
-     */
-    importGunPair(pairData: string, password?: string): Promise<boolean>;
-    /**
-     * Import complete backup
-     * @param backupData Encrypted JSON containing all user data
-     * @param password Password to decrypt backup
-     * @param options Import options (which data to import)
-     * @returns {Promise<Object>} Import results for each data type
-     * @description Imports a complete user data backup including mnemonic,
-     * wallets and Gun pair
-     */
-    importAllUserData(backupData: string, password: string, options?: {
-        importMnemonic?: boolean;
-        importWallets?: boolean;
-        importGunPair?: boolean;
-    }): Promise<{
-        success: boolean;
-        mnemonicImported?: boolean;
-        walletsImported?: number;
-        gunPairImported?: boolean;
-    }>;
-    /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl: string): boolean;
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl(): string | null;
-    /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
      *   - network: The network to use (default: 'main')
@@ -359,13 +255,36 @@ export declare class ShogunCore implements IShogunCore {
      * @returns Promise that resolves with the user data or rejects with an error
      */
     userGet(path: string): Promise<any>;
+    /**
+     * Set the RPC URL used for Ethereum network connections
+     * @param rpcUrl The RPC provider URL to use
+     * @returns True if the URL was successfully set
+     */
+    setRpcUrl(rpcUrl: string): boolean;
+    /**
+     * Get the currently configured RPC URL
+     * @returns The current provider URL or null if not set
+     */
+    getRpcUrl(): string | null;
+    /**
+     * Get the main wallet for the authenticated user
+     * @returns The user's main Ethereum wallet or null if not available
+     * @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead
+     */
+    getMainWallet(): ethers.Wallet | null;
+    /**
+     * Emits an event through the core's event emitter.
+     * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
+     * @param eventName The name of the event to emit.
+     * @param data The data to pass with the event.
+     */
+    emit(eventName: string | symbol, ...args: any[]): boolean;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
-export { MetaMask } from "./connector/metamask";
-export { Stealth } from "./stealth/stealth";
+export { MetaMask } from "./plugins/metamask/connector/metamask";
+export { Stealth } from "./plugins/stealth/stealth";
 export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
-export { Webauthn } from "./webauthn/webauthn";
-export { Storage } from "./storage/storage";
+export { Webauthn } from "./plugins/webauthn/webauthn";
+export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";
-export { WalletManager } from "./wallet/walletManager";

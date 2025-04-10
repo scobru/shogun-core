@@ -3,7 +3,7 @@
  * Provides a unified storage interface that works in both browser and non-browser environments
  * In browser environments, data is persisted to localStorage as a backup
  */
-export declare class Storage {
+export declare class ShogunStorage {
     private store;
     /**
      * Initializes storage and loads any existing keypair from localStorage if available

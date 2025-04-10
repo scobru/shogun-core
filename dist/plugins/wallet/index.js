@@ -1,0 +1,1 @@
+export { WalletPlugin } from './walletPlugin';

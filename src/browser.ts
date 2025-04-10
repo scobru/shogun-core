@@ -6,9 +6,9 @@ import { ShogunSDKConfig } from "./types/shogun";
 import { log } from "./utils/logger";
 
 // Lazy loading dei moduli pesanti
-const loadWebAuthnModule = () => import("./webauthn/webauthn");
-const loadStealthModule = () => import("./stealth/stealth");
-const loadDIDModule = () => import("./did/DID");
+const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
+const loadStealthModule = () => import("./plugins/stealth/stealth");
+const loadDIDModule = () => import("./plugins/did/DID");
 
 let shogunCoreInstance;
 

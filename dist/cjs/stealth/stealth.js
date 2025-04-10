@@ -14,7 +14,7 @@ class Stealth {
         this.STEALTH_HISTORY_KEY = "stealthHistory";
         this.logs = [];
         this.STEALTH_DATA_TABLE = "Stealth";
-        this.storage = storage || new storage_1.Storage();
+        this.storage = storage || new storage_1.ShogunStorage();
     }
     /**
      * Structured logging system
@@ -152,35 +152,41 @@ class Stealth {
         }
     }
     /**
-     * Generates a stealth address for the recipient's public key
+     * Generates a new ephemeral key pair for stealth transactions
+     * @returns Promise with the generated key pair
      */
-    async generateStealthAddress(recipientPublicKey) {
+    async generateEphemeralKeyPair() {
+        try {
+            const keyPair = await Gun.SEA.pair();
+            if (!keyPair || !keyPair.epriv || !keyPair.epub) {
+                throw new Error("Failed to generate ephemeral key pair");
+            }
+            return {
+                privateKey: keyPair.epriv,
+                publicKey: keyPair.epub
+            };
+        }
+        catch (error) {
+            this.log("error", "Error generating ephemeral key pair", error);
+            throw error;
+        }
+    }
+    /**
+     * Generates a stealth address for the recipient's public key
+     * @param recipientPublicKey Recipient's public key
+     * @param ephemeralPrivateKey Ephemeral private key (optional)
+     * @returns Promise with the stealth address result
+     */
+    async generateStealthAddress(recipientPublicKey, ephemeralPrivateKey) {
         if (!recipientPublicKey) {
             const error = new Error("Invalid keys: missing or invalid parameters");
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.STEALTH, "INVALID_KEYS", "Invalid or missing recipient public key", error);
             throw error;
         }
-        // First create stealth keys
-        const stealthKeys = await this.createAccount();
-        if (!stealthKeys) {
-            const error = new Error("Failed to create stealth keys");
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.STEALTH, "KEY_GENERATION_FAILED", "Failed to create stealth keys", error);
-            throw error;
-        }
-        console.log("Generating stealth address with keys:", {
-            userPub: stealthKeys.pub,
-            userEpub: stealthKeys.epub,
-            recipientPub: recipientPublicKey,
-        });
         return new Promise((resolve, reject) => {
-            // Generate ephemeral key pair
-            Gun.SEA.pair((ephemeralKeyPair) => {
-                if (!ephemeralKeyPair?.epub || !ephemeralKeyPair?.epriv) {
-                    const error = new Error("Invalid ephemeral keys");
-                    errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.STEALTH, "INVALID_EPHEMERAL_KEYS", "Failed to generate valid ephemeral keys", error);
-                    reject(error);
-                    return;
-                }
+            let ephemeralKeyPair;
+            // Define continueWithKeyPair before using it
+            const continueWithKeyPair = () => {
                 console.log("Ephemeral keys generated:", ephemeralKeyPair);
                 // Store entire pair for debugging
                 this.lastEphemeralKeyPair = ephemeralKeyPair;
@@ -229,7 +235,47 @@ class Stealth {
                         reject(formattedError);
                     }
                 });
-            });
+            };
+            // First, get or generate ephemeral key pair
+            if (!ephemeralPrivateKey) {
+                // Generate a new ephemeral key pair
+                this.generateEphemeralKeyPair().then((result) => {
+                    try {
+                        const newEphemeralKeyPair = {
+                            epriv: result.privateKey,
+                            epub: result.publicKey,
+                            priv: result.privateKey,
+                            pub: result.publicKey
+                        };
+                        ephemeralKeyPair = newEphemeralKeyPair;
+                        continueWithKeyPair();
+                    }
+                    catch (error) {
+                        errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.STEALTH, "EPHEMERAL_KEY_GENERATION_FAILED", "Failed to generate valid ephemeral keys", error);
+                        reject(error);
+                        return;
+                    }
+                });
+            }
+            else {
+                // If ephemeral private key is provided, generate a compatible key pair
+                this.generateEphemeralKeyPair().then((result) => {
+                    try {
+                        ephemeralKeyPair = {
+                            epriv: ephemeralPrivateKey,
+                            epub: result.publicKey,
+                            priv: ephemeralPrivateKey,
+                            pub: result.publicKey
+                        };
+                        continueWithKeyPair();
+                    }
+                    catch (error) {
+                        errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.STEALTH, "EPHEMERAL_KEY_GENERATION_FAILED", "Failed to use provided ephemeral key", error);
+                        reject(error);
+                        return;
+                    }
+                });
+            }
         });
     }
     /**
@@ -404,6 +450,117 @@ class Stealth {
         catch (e) {
             this.log("error", "Error saving stealth data:", e);
             throw e;
+        }
+    }
+    /**
+     * Scans a list of stealth addresses to find ones belonging to the user
+     * @param addresses Array of stealth data to scan
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise with array of stealth data that belongs to the user
+     */
+    async scanStealthAddresses(addresses, privateKeyOrSpendKey) {
+        try {
+            const results = [];
+            for (const stealthData of addresses) {
+                try {
+                    const isMine = await this.isStealthAddressMine(stealthData, privateKeyOrSpendKey);
+                    if (isMine) {
+                        results.push(stealthData);
+                    }
+                }
+                catch (error) {
+                    this.log("error", `Error checking stealth address: ${error instanceof Error ? error.message : "unknown error"}`);
+                    // Continue with next address even if one fails
+                }
+            }
+            return results;
+        }
+        catch (error) {
+            this.log("error", "Error scanning stealth addresses", error);
+            throw error;
+        }
+    }
+    /**
+     * Checks if a stealth address belongs to the user
+     * @param stealthData Stealth data to check
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise resolving to boolean indicating ownership
+     */
+    async isStealthAddressMine(stealthData, privateKeyOrSpendKey) {
+        try {
+            // Validate inputs
+            if (!stealthData || !privateKeyOrSpendKey) {
+                throw new Error("Invalid parameters for stealth address check");
+            }
+            if (!this.validateStealthData(stealthData)) {
+                throw new Error("Invalid stealth data format");
+            }
+            // Try to derive the private key
+            const privateKey = await this.getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
+            if (!privateKey) {
+                return false;
+            }
+            // Derive the address from the private key and compare
+            try {
+                const wallet = new ethers_1.ethers.Wallet(privateKey);
+                // If we can derive a wallet with this private key, it means the stealth address is ours
+                return true;
+            }
+            catch (error) {
+                return false;
+            }
+        }
+        catch (error) {
+            this.log("error", "Error checking stealth address ownership", error);
+            throw error;
+        }
+    }
+    /**
+     * Gets the private key for a stealth address
+     * @param stealthData Stealth data
+     * @param privateKeyOrSpendKey User's private key or spend key
+     * @returns Promise with the derived private key
+     */
+    async getStealthPrivateKey(stealthData, privateKeyOrSpendKey) {
+        try {
+            // Validate inputs
+            if (!stealthData || !privateKeyOrSpendKey) {
+                throw new Error("Invalid parameters for private key derivation");
+            }
+            if (!this.validateStealthData(stealthData)) {
+                throw new Error("Invalid stealth data format");
+            }
+            // If we already have the shared secret, we can derive directly
+            if (stealthData.sharedSecret) {
+                return ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(stealthData.sharedSecret));
+            }
+            // We need to regenerate the shared secret
+            return new Promise((resolve, reject) => {
+                // Use the private key to create the key format needed for SEA.secret
+                const keyForSecret = {
+                    priv: privateKeyOrSpendKey,
+                    epub: stealthData.ephemeralKeyPair.epub
+                };
+                // Generate shared secret
+                Gun.SEA.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {
+                    if (!sharedSecret) {
+                        reject(new Error("Failed to generate shared secret"));
+                        return;
+                    }
+                    try {
+                        // Derive the private key
+                        const privateKey = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(sharedSecret));
+                        resolve(privateKey);
+                    }
+                    catch (error) {
+                        reject(new Error(`Error deriving private key: ${error instanceof Error ? error.message : "unknown error"}`));
+                    }
+                });
+            });
+        }
+        catch (error) {
+            this.log("error", "Error getting stealth private key", error);
+            throw error;
         }
     }
 }
