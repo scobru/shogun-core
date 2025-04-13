@@ -212,14 +212,14 @@ class Stealth {
   }> {
     try {
       const keyPair = await (Gun as any).SEA.pair();
-      
+
       if (!keyPair || !keyPair.epriv || !keyPair.epub) {
         throw new Error("Failed to generate ephemeral key pair");
       }
-      
+
       return {
         privateKey: keyPair.epriv,
-        publicKey: keyPair.epub
+        publicKey: keyPair.epub,
       };
     } catch (error) {
       this.log("error", "Error generating ephemeral key pair", error);
@@ -235,7 +235,7 @@ class Stealth {
    */
   async generateStealthAddress(
     recipientPublicKey: string,
-    ephemeralPrivateKey?: string
+    ephemeralPrivateKey?: string,
   ): Promise<StealthAddressResult> {
     if (!recipientPublicKey) {
       const error = new Error("Invalid keys: missing or invalid parameters");
@@ -328,7 +328,7 @@ class Stealth {
 
               reject(formattedError);
             }
-          }
+          },
         );
       };
 
@@ -341,7 +341,7 @@ class Stealth {
               epriv: result.privateKey,
               epub: result.publicKey,
               priv: result.privateKey,
-              pub: result.publicKey
+              pub: result.publicKey,
             };
             ephemeralKeyPair = newEphemeralKeyPair;
             continueWithKeyPair();
@@ -364,7 +364,7 @@ class Stealth {
               epriv: ephemeralPrivateKey,
               epub: result.publicKey,
               priv: ephemeralPrivateKey,
-              pub: result.publicKey
+              pub: result.publicKey,
             };
             continueWithKeyPair();
           } catch (error) {
@@ -639,23 +639,29 @@ class Stealth {
    */
   async scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<StealthData[]> {
     try {
       const results: StealthData[] = [];
-      
+
       for (const stealthData of addresses) {
         try {
-          const isMine = await this.isStealthAddressMine(stealthData, privateKeyOrSpendKey);
+          const isMine = await this.isStealthAddressMine(
+            stealthData,
+            privateKeyOrSpendKey,
+          );
           if (isMine) {
             results.push(stealthData);
           }
         } catch (error) {
-          this.log("error", `Error checking stealth address: ${error instanceof Error ? error.message : "unknown error"}`);
+          this.log(
+            "error",
+            `Error checking stealth address: ${error instanceof Error ? error.message : "unknown error"}`,
+          );
           // Continue with next address even if one fails
         }
       }
-      
+
       return results;
     } catch (error) {
       this.log("error", "Error scanning stealth addresses", error);
@@ -671,25 +677,28 @@ class Stealth {
    */
   async isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<boolean> {
     try {
       // Validate inputs
       if (!stealthData || !privateKeyOrSpendKey) {
         throw new Error("Invalid parameters for stealth address check");
       }
-      
+
       if (!this.validateStealthData(stealthData)) {
         throw new Error("Invalid stealth data format");
       }
-      
+
       // Try to derive the private key
-      const privateKey = await this.getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
-      
+      const privateKey = await this.getStealthPrivateKey(
+        stealthData,
+        privateKeyOrSpendKey,
+      );
+
       if (!privateKey) {
         return false;
       }
-      
+
       // Derive the address from the private key and compare
       try {
         const wallet = new ethers.Wallet(privateKey);
@@ -712,31 +721,31 @@ class Stealth {
    */
   async getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<string> {
     try {
       // Validate inputs
       if (!stealthData || !privateKeyOrSpendKey) {
         throw new Error("Invalid parameters for private key derivation");
       }
-      
+
       if (!this.validateStealthData(stealthData)) {
         throw new Error("Invalid stealth data format");
       }
-      
+
       // If we already have the shared secret, we can derive directly
       if (stealthData.sharedSecret) {
         return ethers.keccak256(ethers.toUtf8Bytes(stealthData.sharedSecret));
       }
-      
+
       // We need to regenerate the shared secret
       return new Promise((resolve, reject) => {
         // Use the private key to create the key format needed for SEA.secret
         const keyForSecret = {
           priv: privateKeyOrSpendKey,
-          epub: stealthData.ephemeralKeyPair.epub
+          epub: stealthData.ephemeralKeyPair.epub,
         };
-        
+
         // Generate shared secret
         (Gun as any).SEA.secret(
           stealthData.ephemeralKeyPair.epub,
@@ -746,15 +755,21 @@ class Stealth {
               reject(new Error("Failed to generate shared secret"));
               return;
             }
-            
+
             try {
               // Derive the private key
-              const privateKey = ethers.keccak256(ethers.toUtf8Bytes(sharedSecret));
+              const privateKey = ethers.keccak256(
+                ethers.toUtf8Bytes(sharedSecret),
+              );
               resolve(privateKey);
             } catch (error) {
-              reject(new Error(`Error deriving private key: ${error instanceof Error ? error.message : "unknown error"}`));
+              reject(
+                new Error(
+                  `Error deriving private key: ${error instanceof Error ? error.message : "unknown error"}`,
+                ),
+              );
             }
-          }
+          },
         );
       });
     } catch (error) {

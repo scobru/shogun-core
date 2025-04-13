@@ -1,1 +1,2 @@
-export { StealthPlugin } from './stealthPlugin';
+export { StealthPlugin } from "./stealthPlugin";
+export * from "./stealth";

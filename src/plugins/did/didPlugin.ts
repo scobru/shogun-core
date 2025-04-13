@@ -14,22 +14,23 @@ import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
   name = "did";
   version = "1.0.0";
-  description = "Provides Decentralized Identifiers (DID) functionality for ShogunCore";
-  
+  description =
+    "Provides Decentralized Identifiers (DID) functionality for ShogunCore";
+
   private did: ShogunDID | null = null;
-  
+
   /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-    
+
     // Inizializza il modulo DID
     this.did = new ShogunDID(core);
-    
+
     log("DID plugin initialized");
   }
-  
+
   /**
    * @inheritdoc
    */
@@ -38,7 +39,7 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
     super.destroy();
     log("DID plugin destroyed");
   }
-  
+
   /**
    * Assicura che il modulo DID sia inizializzato
    * @private
@@ -50,70 +51,73 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
     }
     return this.did;
   }
-  
+
   /**
    * @inheritdoc
    */
   async getCurrentUserDID(): Promise<string | null> {
     return this.assertDID().getCurrentUserDID();
   }
-  
+
   /**
    * @inheritdoc
    */
   async resolveDID(did: string): Promise<any> {
     return this.assertDID().resolveDID(did);
   }
-  
+
   /**
    * @inheritdoc
    */
-  async authenticateWithDID(did: string, challenge?: string): Promise<AuthResult> {
+  async authenticateWithDID(
+    did: string,
+    challenge?: string,
+  ): Promise<AuthResult> {
     return this.assertDID().authenticateWithDID(did, challenge);
   }
-  
+
   /**
    * @inheritdoc
    */
   async createDID(options?: DIDCreateOptions): Promise<string> {
     return this.assertDID().createDID(options);
   }
-  
+
   /**
    * @inheritdoc
    */
   async updateDIDDocument(did: string, documentUpdates: any): Promise<boolean> {
     return this.assertDID().updateDIDDocument(did, documentUpdates);
   }
-  
+
   /**
    * @inheritdoc
    */
   async deactivateDID(did: string): Promise<boolean> {
     return this.assertDID().deactivateDID(did);
   }
-  
+
   /**
    * @inheritdoc
    */
   async registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     return this.assertDID().registerDIDOnChain(did, signer);
   }
-  
+
   /**
    * @inheritdoc
    */
   async ensureUserHasDID(options?: DIDCreateOptions): Promise<string | null> {
     try {
       const core = this.core;
-      
+
       if (!core) {
         throw new Error("Core not available");
       }
-      
+
       if (!core.isLoggedIn()) {
         logError("Cannot ensure DID: user not authenticated");
         return null;
@@ -170,9 +174,9 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
         ErrorType.DID,
         "ENSURE_DID_FAILED",
         `Error ensuring user has DID: ${error instanceof Error ? error.message : String(error)}`,
-        error
+        error,
       );
       return null;
     }
   }
-} 
+}

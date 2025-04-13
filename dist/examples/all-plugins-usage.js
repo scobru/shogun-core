@@ -1,4 +1,4 @@
-import { ShogunCore, WalletPlugin, StealthPlugin, DIDPlugin } from "../index";
+import { ShogunCore, WalletPlugin, StealthPlugin, DIDPlugin, } from "../index";
 /**
  * Esempio di utilizzo di tutti i plugin di ShogunCore
  */
@@ -8,7 +8,7 @@ async function exampleAllPlugins() {
         gundb: {
             peers: ["https://gun-server.example.com/gun"],
         },
-        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
     // Creiamo le istanze dei plugin
     const walletPlugin = new WalletPlugin();
@@ -86,8 +86,8 @@ async function exampleAutoRegisterPlugins() {
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
         plugins: {
-            autoRegister: [walletPlugin, stealthPlugin, didPlugin]
-        }
+            autoRegister: [walletPlugin, stealthPlugin, didPlugin],
+        },
     });
     // Verifichiamo che i plugin siano stati registrati automaticamente
     console.log(`Wallet plugin auto-registered: ${core.hasPlugin("wallet")}`);
@@ -130,9 +130,9 @@ async function examplePluginInteractions() {
             services: [
                 {
                     type: "EthereumAddress",
-                    endpoint: `ethereum:${newWallet.address}`
-                }
-            ]
+                    endpoint: `ethereum:${newWallet.address}`,
+                },
+            ],
         });
         console.log(`User DID with wallet service: ${userDID}`);
         // Genera chiavi stealth
@@ -140,11 +140,13 @@ async function examplePluginInteractions() {
         // Aggiorna il DID con informazioni stealth
         if (userDID) {
             const updated = await did.updateDIDDocument(userDID, {
-                service: [{
+                service: [
+                    {
                         id: `${userDID}#stealth-1`,
                         type: "StealthAddress",
-                        serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`
-                    }]
+                        serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`,
+                    },
+                ],
             });
             console.log(`DID updated with stealth information: ${updated}`);
         }
@@ -156,4 +158,4 @@ async function examplePluginInteractions() {
 // Esecuzione degli esempi
 // exampleAllPlugins().catch(console.error);
 // exampleAutoRegisterPlugins().catch(console.error);
-// examplePluginInteractions().catch(console.error); 
+// examplePluginInteractions().catch(console.error);

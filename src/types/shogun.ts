@@ -2,7 +2,7 @@ import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/connector/metamask";
+import { MetaMask } from "../plugins/metamask/metamask";
 import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "./gun";
@@ -24,7 +24,7 @@ export enum PluginCategory {
   /** Plugin per l'identità decentralizzata */
   Identity = "identity",
   /** Plugin per altre funzionalità */
-  Utility = "utility"
+  Utility = "utility",
 }
 
 /**
@@ -38,9 +38,9 @@ export enum CorePlugins {
   /** Plugin Stealth */
   Stealth = "stealth",
   /** Plugin DID */
-  DID = "did", 
+  DID = "did",
   /** Plugin Wallet Manager */
-  WalletManager = "wallet"
+  WalletManager = "wallet",
 }
 
 // Definizione dell'interfaccia DID

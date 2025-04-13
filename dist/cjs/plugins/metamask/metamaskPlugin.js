@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MetaMaskPlugin = void 0;
 const base_1 = require("../base");
-const metamask_1 = require("./connector/metamask");
+const metamask_1 = require("./metamask");
 const logger_1 = require("../../utils/logger");
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore

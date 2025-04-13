@@ -51,4 +51,4 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
         updatedCredentials?: WebAuthnCredentials;
     }>;
 }
-export { WebauthnPluginInterface } from './types';
+export { WebauthnPluginInterface } from "./types";

@@ -14,7 +14,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DIDPlugin = void 0;
-var didPlugin_1 = require("./didPlugin");
-Object.defineProperty(exports, "DIDPlugin", { enumerable: true, get: function () { return didPlugin_1.DIDPlugin; } });
-__exportStar(require("./DID"), exports);
+__exportStar(require("./metamaskPlugin"), exports);
+__exportStar(require("./types"), exports);
+__exportStar(require("./metamask"), exports);

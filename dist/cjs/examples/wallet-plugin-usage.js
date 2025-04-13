@@ -8,7 +8,7 @@ function exampleManualPluginInit() {
         gundb: {
             peers: ["https://gun-server.example.com/gun"],
         },
-        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
     // Crea e registra il plugin wallet
     const walletPlugin = new index_1.WalletPlugin();
@@ -55,8 +55,8 @@ function exampleAutoPluginInit() {
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
         plugins: {
-            autoRegister: [walletPlugin]
-        }
+            autoRegister: [walletPlugin],
+        },
     });
     // Usa il plugin dopo l'inizializzazione
     async function useWalletPlugin() {
@@ -72,7 +72,7 @@ function exampleAutoPluginInit() {
             console.log("Main wallet:", mainWallet?.address);
             // Carica tutti i wallet
             const wallets = await wallet.loadWallets();
-            console.log("All wallets:", wallets.map(w => w.address));
+            console.log("All wallets:", wallets.map((w) => w.address));
         }
         else {
             console.log("User not logged in, please authenticate first");

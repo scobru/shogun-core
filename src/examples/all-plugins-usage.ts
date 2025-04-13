@@ -1,11 +1,11 @@
-import { 
-  ShogunCore, 
-  WalletPlugin, 
+import {
+  ShogunCore,
+  WalletPlugin,
   WalletPluginInterface,
   StealthPlugin,
   StealthPluginInterface,
   DIDPlugin,
-  DIDPluginInterface
+  DIDPluginInterface,
 } from "../index";
 
 /**
@@ -17,7 +17,7 @@ async function exampleAllPlugins() {
     gundb: {
       peers: ["https://gun-server.example.com/gun"],
     },
-    providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+    providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
   });
 
   // Creiamo le istanze dei plugin
@@ -65,8 +65,8 @@ async function exampleAllPlugins() {
 
     // Esempio di generazione indirizzo stealth (utilizzando le chiavi per demo)
     const stealthAddress = await stealthPlugin.generateStealthAddress(
-      ephemeralKeys.publicKey, 
-      ephemeralKeys.privateKey
+      ephemeralKeys.publicKey,
+      ephemeralKeys.privateKey,
     );
     console.log("Generated stealth address:", stealthAddress);
   } catch (error) {
@@ -107,8 +107,8 @@ async function exampleAutoRegisterPlugins() {
     },
     providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     plugins: {
-      autoRegister: [walletPlugin, stealthPlugin, didPlugin]
-    }
+      autoRegister: [walletPlugin, stealthPlugin, didPlugin],
+    },
   });
 
   // Verifichiamo che i plugin siano stati registrati automaticamente
@@ -160,9 +160,9 @@ async function examplePluginInteractions() {
       services: [
         {
           type: "EthereumAddress",
-          endpoint: `ethereum:${newWallet.address}`
-        }
-      ]
+          endpoint: `ethereum:${newWallet.address}`,
+        },
+      ],
     });
     console.log(`User DID with wallet service: ${userDID}`);
 
@@ -172,11 +172,13 @@ async function examplePluginInteractions() {
     // Aggiorna il DID con informazioni stealth
     if (userDID) {
       const updated = await did.updateDIDDocument(userDID, {
-        service: [{
-          id: `${userDID}#stealth-1`,
-          type: "StealthAddress",
-          serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`
-        }]
+        service: [
+          {
+            id: `${userDID}#stealth-1`,
+            type: "StealthAddress",
+            serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`,
+          },
+        ],
       });
 
       console.log(`DID updated with stealth information: ${updated}`);
@@ -189,4 +191,4 @@ async function examplePluginInteractions() {
 // Esecuzione degli esempi
 // exampleAllPlugins().catch(console.error);
 // exampleAutoRegisterPlugins().catch(console.error);
-// examplePluginInteractions().catch(console.error); 
+// examplePluginInteractions().catch(console.error);

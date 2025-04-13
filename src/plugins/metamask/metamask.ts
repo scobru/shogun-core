@@ -2,9 +2,9 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { log, logDebug, logError, logWarn } from "../../../utils/logger";
-import CONFIG from "../../../config";
-import { ErrorHandler, ErrorType } from "../../../utils/errorHandler";
+import { log, logDebug, logError, logWarn } from "../../utils/logger";
+import CONFIG from "../../config";
+import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "events";
 import {
   ConnectionResult,
@@ -12,7 +12,7 @@ import {
   EthereumProvider,
   SignatureCache,
   MetaMaskConfig,
-} from "../../../types/metamask";
+} from "../../types/metamask";
 
 // Extend the Window interface to include ethereum
 declare global {

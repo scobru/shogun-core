@@ -1,5 +1,5 @@
 import { BasePlugin } from "../base";
-import { MetaMask } from "./connector/metamask";
+import { MetaMask } from "./metamask";
 import { log } from "../../utils/logger";
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore

@@ -1,7 +1,4 @@
 import { GunDB } from "./gun/gun";
-import { Webauthn } from "./plugins/webauthn/webauthn";
-import { MetaMask } from "./plugins/metamask/connector/metamask";
-import { Stealth } from "./plugins/stealth/stealth";
 import { EventEmitter } from "events";
 import { ShogunStorage } from "./storage/storage";
 import {
@@ -28,6 +25,11 @@ import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin, PluginManager } from "./types/plugin";
+import { DIDPluginInterface } from "./plugins/did/types";
+import { WalletPluginInterface } from "./plugins/wallet/types";
+import { MetaMaskPluginInterface } from "./plugins/metamask/types";
+import { WebauthnPluginInterface } from "./plugins/webauthn/types";
+import { StealthPluginInterface } from "./plugins/stealth/types";
 
 export {
   ShogunDID,
@@ -50,18 +52,12 @@ export class ShogunCore implements IShogunCore {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null;
   public gundb: GunDB;
-  public did?: DID;
   public storage: ShogunStorage;
   private eventEmitter: EventEmitter;
   public provider?: ethers.Provider;
   public config: ShogunSDKConfig;
   public rx: GunRxJS; // RxJS integration
-  
-  // Proprietà per retrocompatibilità
-  public webauthn?: Webauthn;
-  public metamask?: MetaMask;
-  public stealth?: Stealth;
-  
+
   // Collezione di plugin registrati
   private plugins: Map<string, ShogunPlugin> = new Map();
 
@@ -138,12 +134,15 @@ export class ShogunCore implements IShogunCore {
         "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
       );
     }
-    
+
     // Registriamo automaticamente i plugin in base alla configurazione
     this.registerBuiltinPlugins(config);
-    
+
     // Registra i plugin personalizzati se configurati
-    if (config.plugins?.autoRegister && config.plugins.autoRegister.length > 0) {
+    if (
+      config.plugins?.autoRegister &&
+      config.plugins.autoRegister.length > 0
+    ) {
       for (const plugin of config.plugins.autoRegister) {
         try {
           this.register(plugin);
@@ -156,7 +155,7 @@ export class ShogunCore implements IShogunCore {
 
     log("ShogunSDK initialized!");
   }
-  
+
   /**
    * Registra i plugin integrati in base alla configurazione
    * @private
@@ -164,65 +163,66 @@ export class ShogunCore implements IShogunCore {
   private registerBuiltinPlugins(config: ShogunSDKConfig): void {
     try {
       // Import dinamici per i plugin integrati
-      const { WebauthnPlugin } = require('./plugins/webauthn/webauthnPlugin');
-      const { MetaMaskPlugin } = require('./plugins/metamask/metamaskPlugin');
-      const { StealthPlugin } = require('./plugins/stealth/stealthPlugin');
-      const { DIDPlugin } = require('./plugins/did/didPlugin');
-      
+      const { WebauthnPlugin } = require("./plugins/webauthn/webauthnPlugin");
+      const { MetaMaskPlugin } = require("./plugins/metamask/metamaskPlugin");
+      const { StealthPlugin } = require("./plugins/stealth/stealthPlugin");
+      const { DIDPlugin } = require("./plugins/did/didPlugin");
+      const { WalletPlugin } = require("./plugins/wallet/walletPlugin");
+
       // Gruppo: Plugin di Autenticazione
-      
+
       // Registra plugin Webauthn se abilitato
       if (config.webauthn?.enabled) {
         const webauthnPlugin = new WebauthnPlugin();
         webauthnPlugin._category = PluginCategory.Authentication;
         this.register(webauthnPlugin);
-        // Per retrocompatibilità
-        this.webauthn = this.getPlugin<Webauthn>(CorePlugins.WebAuthn);
         log("Webauthn plugin registered");
       }
-      
+
       // Registra plugin MetaMask se abilitato
       if (config.metamask?.enabled) {
         const metamaskPlugin = new MetaMaskPlugin();
         metamaskPlugin._category = PluginCategory.Authentication;
         this.register(metamaskPlugin);
-        // Per retrocompatibilità
-        this.metamask = this.getPlugin<MetaMask>(CorePlugins.MetaMask);
         log("MetaMask plugin registered");
       }
-      
+
       // Gruppo: Plugin di Privacy
-      
+
       // Registra plugin Stealth se abilitato
       if (config.stealth?.enabled) {
         const stealthPlugin = new StealthPlugin();
         stealthPlugin._category = PluginCategory.Privacy;
         this.register(stealthPlugin);
-        // Per retrocompatibilità
-        this.stealth = this.getPlugin<Stealth>(CorePlugins.Stealth);
         log("Stealth plugin registered");
       }
-      
+
       // Gruppo: Plugin di Identità
-      
+
       // Registra plugin DID se abilitato
       if (config.did?.enabled) {
         const didPlugin = new DIDPlugin();
         didPlugin._category = PluginCategory.Identity;
         this.register(didPlugin);
-        // Per retrocompatibilità
-        this.did = this.getPlugin<DID>(CorePlugins.DID);
         log("DID plugin registered");
+      }
+
+      // Registra plugin Wallet se abilitato
+      if (config.walletManager?.enabled) {
+        const walletPlugin = new WalletPlugin();
+        walletPlugin._category = PluginCategory.Wallet;
+        this.register(walletPlugin);
+        log("Wallet plugin registered");
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
     }
   }
-  
+
   // *********************************************************************************************************
   // 🔌 PLUGIN MANAGER 🔌
   // *********************************************************************************************************
-  
+
   /**
    * Registra un nuovo plugin
    * @param plugin Il plugin da registrare
@@ -231,12 +231,12 @@ export class ShogunCore implements IShogunCore {
     if (this.plugins.has(plugin.name)) {
       throw new Error(`Plugin with name "${plugin.name}" already registered`);
     }
-    
+
     plugin.initialize(this);
     this.plugins.set(plugin.name, plugin);
     log(`Registered plugin: ${plugin.name}`);
   }
-  
+
   /**
    * Cancella la registrazione di un plugin
    * @param pluginName Nome del plugin da cancellare
@@ -247,15 +247,15 @@ export class ShogunCore implements IShogunCore {
       log(`Plugin "${pluginName}" not found, nothing to unregister`);
       return;
     }
-    
+
     if (plugin.destroy) {
       plugin.destroy();
     }
-    
+
     this.plugins.delete(pluginName);
     log(`Unregistered plugin: ${pluginName}`);
   }
-  
+
   /**
    * Recupera un plugin registrato per nome
    * @param name Nome del plugin
@@ -265,7 +265,7 @@ export class ShogunCore implements IShogunCore {
   getPlugin<T>(name: string): T | undefined {
     return this.plugins.get(name) as T | undefined;
   }
-  
+
   /**
    * Verifica se un plugin è registrato
    * @param name Nome del plugin da verificare
@@ -282,7 +282,7 @@ export class ShogunCore implements IShogunCore {
    */
   getPluginsByCategory(category: PluginCategory): ShogunPlugin[] {
     const result: ShogunPlugin[] = [];
-    this.plugins.forEach(plugin => {
+    this.plugins.forEach((plugin) => {
       if (plugin._category === category) {
         result.push(plugin);
       }
@@ -413,7 +413,6 @@ export class ShogunCore implements IShogunCore {
   // *********************************************************************************************************
   // 🔐 AUTHENTICATION
   // *********************************************************************************************************
-
 
   /**
    * Check if user is logged in
@@ -694,14 +693,8 @@ export class ShogunCore implements IShogunCore {
    * @description Verifies if the current browser environment supports WebAuthn authentication
    */
   isWebAuthnSupported(): boolean {
-    // Utilizziamo il plugin WebAuthn se disponibile
     const webauthnPlugin = this.getPlugin<any>("webauthn");
-    if (webauthnPlugin) {
-      return webauthnPlugin.isSupported();
-    }
-    
-    // Fallback al vecchio metodo
-    return this.webauthn?.isSupported() || false;
+    return webauthnPlugin?.isSupported() || false;
   }
 
   /**
@@ -725,12 +718,13 @@ export class ShogunCore implements IShogunCore {
         throw new Error("WebAuthn is not supported by this browser");
       }
 
-      // Utilizziamo il plugin WebAuthn se disponibile
       const webauthnPlugin = this.getPlugin<any>("webauthn");
-      const webauthnInstance = webauthnPlugin || this.webauthn;
+      if (!webauthnPlugin) {
+        throw new Error("WebAuthn plugin not available");
+      }
 
       // Verify WebAuthn credentials
-      const assertionResult = await webauthnInstance?.generateCredentials(
+      const assertionResult = await webauthnPlugin.generateCredentials(
         username,
         null,
         true,
@@ -804,12 +798,13 @@ export class ShogunCore implements IShogunCore {
         throw new Error("WebAuthn is not supported by this browser");
       }
 
-      // Utilizziamo il plugin WebAuthn se disponibile
       const webauthnPlugin = this.getPlugin<any>("webauthn");
-      const webauthnInstance = webauthnPlugin || this.webauthn;
+      if (!webauthnPlugin) {
+        throw new Error("WebAuthn plugin not available");
+      }
 
       // Generate new WebAuthn credentials
-      const attestationResult = await webauthnInstance?.generateCredentials(
+      const attestationResult = await webauthnPlugin.generateCredentials(
         username,
         null,
         false,
@@ -895,12 +890,17 @@ export class ShogunCore implements IShogunCore {
           "Ethereum address required for MetaMask login",
         );
       }
-      
-      // Utilizziamo il plugin MetaMask se disponibile
-      const metamaskPlugin = this.getPlugin<any>("metamask");
-      const metamaskInstance = metamaskPlugin || this.metamask;
 
-      if (!metamaskInstance?.isAvailable()) {
+      const metamaskPlugin = this.getPlugin<any>("metamask");
+      if (!metamaskPlugin) {
+        throw createError(
+          ErrorType.PLUGIN,
+          "PLUGIN_NOT_AVAILABLE",
+          "MetaMask plugin not available",
+        );
+      }
+
+      if (!metamaskPlugin.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
@@ -909,7 +909,7 @@ export class ShogunCore implements IShogunCore {
       }
 
       log("Generating credentials for MetaMask login...");
-      const credentials = await metamaskInstance.generateCredentials(address);
+      const credentials = await metamaskPlugin.generateCredentials(address);
       if (
         !credentials?.username ||
         !credentials?.password ||
@@ -1046,12 +1046,17 @@ export class ShogunCore implements IShogunCore {
           "Ethereum address required for MetaMask registration",
         );
       }
-      
-      // Utilizziamo il plugin MetaMask se disponibile
-      const metamaskPlugin = this.getPlugin<any>("metamask");
-      const metamaskInstance = metamaskPlugin || this.metamask;
 
-      if (!metamaskInstance?.isAvailable()) {
+      const metamaskPlugin = this.getPlugin<any>("metamask");
+      if (!metamaskPlugin) {
+        throw createError(
+          ErrorType.PLUGIN,
+          "PLUGIN_NOT_AVAILABLE",
+          "MetaMask plugin not available",
+        );
+      }
+
+      if (!metamaskPlugin.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
@@ -1060,7 +1065,7 @@ export class ShogunCore implements IShogunCore {
       }
 
       log("Generating credentials for MetaMask registration...");
-      const credentials = await metamaskInstance.generateCredentials(address);
+      const credentials = await metamaskPlugin.generateCredentials(address);
       if (
         !credentials?.username ||
         !credentials?.password ||
@@ -1200,65 +1205,15 @@ export class ShogunCore implements IShogunCore {
     options?: DIDCreateOptions,
   ): Promise<string | null> {
     try {
-      // Utilizziamo il plugin DID se disponibile
-      const didPlugin = this.getPlugin<any>("did");
-      
-      if (didPlugin && didPlugin.ensureUserHasDID) {
-        return didPlugin.ensureUserHasDID(options);
-      }
-      
-      // Fallback al vecchio metodo se il plugin non è disponibile
-      if (!this.isLoggedIn()) {
-        logError("Cannot ensure DID: user not authenticated");
+      // Utilizziamo il plugin DID
+      const didPlugin = this.getPlugin<DIDPluginInterface>("did");
+
+      if (!didPlugin) {
+        log("DID plugin not available, cannot ensure DID");
         return null;
       }
 
-      // Verifica se l'utente ha già un DID
-      let did = await this.did?.getCurrentUserDID();
-
-      // Se l'utente ha già un DID, lo restituiamo
-      if (did) {
-        log(`User already has DID: ${did}`);
-
-        // Se sono state fornite opzioni, aggiorniamo il documento DID
-        if (options && Object.keys(options).length > 0) {
-          try {
-            const updated = await this.did?.updateDIDDocument(did, {
-              service: options.services?.map((service, index) => ({
-                id: `${did}#service-${index + 1}`,
-                type: service.type,
-                serviceEndpoint: service.endpoint,
-              })),
-            });
-
-            if (updated) {
-              log(`Updated DID document for: ${did}`);
-            }
-          } catch (updateError) {
-            logError("Error updating DID document:", updateError);
-          }
-        }
-
-        return did;
-      }
-
-      // Se l'utente non ha un DID, ne creiamo uno nuovo
-      log("Creating new DID for authenticated user");
-      const userPub = this.gundb.gun.user().is?.pub || "";
-
-      const mergedOptions: DIDCreateOptions = {
-        network: "main",
-        controller: userPub,
-        ...options,
-      };
-
-      did = await this.did?.createDID(mergedOptions);
-
-      // Emetti evento di creazione DID
-      this.eventEmitter.emit("did:created", { did, userPub });
-
-      log(`Created new DID for user: ${did}`);
-      return did || null;
+      return await didPlugin.ensureUserHasDID(options);
     } catch (error) {
       logError("Error ensuring user has DID:", error);
       return null;
@@ -1500,20 +1455,17 @@ export class ShogunCore implements IShogunCore {
       ? (this.provider as any).connection?.url || null
       : null;
   }
-  
+
   /**
    * Get the main wallet for the authenticated user
    * @returns The user's main Ethereum wallet or null if not available
    * @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead
    */
   getMainWallet(): ethers.Wallet | null {
-    // Try to get the wallet from the wallet plugin if available
     const walletPlugin = this.getPlugin<any>(CorePlugins.WalletManager);
-    if (walletPlugin && typeof walletPlugin.getMainWallet === 'function') {
+    if (walletPlugin && typeof walletPlugin.getMainWallet === "function") {
       return walletPlugin.getMainWallet();
     }
-    
-    // If no wallet plugin, return null
     return null;
   }
 
@@ -1537,7 +1489,7 @@ export * from "./types/shogun";
 
 // Export classes
 export { GunDB } from "./gun/gun";
-export { MetaMask } from "./plugins/metamask/connector/metamask";
+export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export {
   EphemeralKeyPair,

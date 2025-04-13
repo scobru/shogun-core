@@ -19,6 +19,7 @@ export var ErrorType;
     ErrorType["GUN"] = "GunError";
     ErrorType["STEALTH"] = "StealthError";
     ErrorType["WEBAUTHN"] = "WebAuthnError";
+    ErrorType["PLUGIN"] = "PluginError";
     ErrorType["UNKNOWN"] = "UnknownError";
     ErrorType["CONNECTOR"] = "CONNECTOR";
     ErrorType["GENERAL"] = "GENERAL";

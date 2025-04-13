@@ -8,29 +8,32 @@ import { log, logError } from "../../utils/logger";
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore
  */
-export class StealthPlugin extends BasePlugin implements StealthPluginInterface {
+export class StealthPlugin
+  extends BasePlugin
+  implements StealthPluginInterface
+{
   name = "stealth";
   version = "1.0.0";
   description = "Provides stealth address functionality for ShogunCore";
-  
+
   private stealth: Stealth | null = null;
-  
+
   /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-    
+
     if (!core.storage) {
       throw new Error("Storage dependency not available in core");
     }
-    
+
     // Inizializziamo il modulo Stealth
     this.stealth = new Stealth(core.storage);
-    
+
     log("Stealth plugin initialized");
   }
-  
+
   /**
    * @inheritdoc
    */
@@ -39,7 +42,7 @@ export class StealthPlugin extends BasePlugin implements StealthPluginInterface 
     super.destroy();
     log("Stealth plugin destroyed");
   }
-  
+
   /**
    * Assicura che il modulo Stealth sia inizializzato
    * @private
@@ -51,7 +54,7 @@ export class StealthPlugin extends BasePlugin implements StealthPluginInterface 
     }
     return this.stealth;
   }
-  
+
   /**
    * @inheritdoc
    */
@@ -61,44 +64,56 @@ export class StealthPlugin extends BasePlugin implements StealthPluginInterface 
   }> {
     return this.assertStealth().generateEphemeralKeyPair();
   }
-  
+
   /**
    * @inheritdoc
    */
   async generateStealthAddress(
     publicKey: string,
-    ephemeralPrivateKey: string
+    ephemeralPrivateKey: string,
   ): Promise<StealthAddressResult> {
-    return this.assertStealth().generateStealthAddress(publicKey, ephemeralPrivateKey);
+    return this.assertStealth().generateStealthAddress(
+      publicKey,
+      ephemeralPrivateKey,
+    );
   }
-  
+
   /**
    * @inheritdoc
    */
   async scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<StealthData[]> {
-    return this.assertStealth().scanStealthAddresses(addresses, privateKeyOrSpendKey);
+    return this.assertStealth().scanStealthAddresses(
+      addresses,
+      privateKeyOrSpendKey,
+    );
   }
-  
+
   /**
    * @inheritdoc
    */
   async isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<boolean> {
-    return this.assertStealth().isStealthAddressMine(stealthData, privateKeyOrSpendKey);
+    return this.assertStealth().isStealthAddressMine(
+      stealthData,
+      privateKeyOrSpendKey,
+    );
   }
-  
+
   /**
    * @inheritdoc
    */
   async getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<string> {
-    return this.assertStealth().getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
+    return this.assertStealth().getStealthPrivateKey(
+      stealthData,
+      privateKeyOrSpendKey,
+    );
   }
-} 
+}

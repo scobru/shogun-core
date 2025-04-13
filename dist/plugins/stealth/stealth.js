@@ -160,7 +160,7 @@ class Stealth {
             }
             return {
                 privateKey: keyPair.epriv,
-                publicKey: keyPair.epub
+                publicKey: keyPair.epub,
             };
         }
         catch (error) {
@@ -242,7 +242,7 @@ class Stealth {
                             epriv: result.privateKey,
                             epub: result.publicKey,
                             priv: result.privateKey,
-                            pub: result.publicKey
+                            pub: result.publicKey,
                         };
                         ephemeralKeyPair = newEphemeralKeyPair;
                         continueWithKeyPair();
@@ -262,7 +262,7 @@ class Stealth {
                             epriv: ephemeralPrivateKey,
                             epub: result.publicKey,
                             priv: ephemeralPrivateKey,
-                            pub: result.publicKey
+                            pub: result.publicKey,
                         };
                         continueWithKeyPair();
                     }
@@ -536,7 +536,7 @@ class Stealth {
                 // Use the private key to create the key format needed for SEA.secret
                 const keyForSecret = {
                     priv: privateKeyOrSpendKey,
-                    epub: stealthData.ephemeralKeyPair.epub
+                    epub: stealthData.ephemeralKeyPair.epub,
                 };
                 // Generate shared secret
                 Gun.SEA.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {

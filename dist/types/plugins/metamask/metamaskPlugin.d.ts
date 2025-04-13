@@ -57,4 +57,4 @@ export declare class MetaMaskPlugin extends BasePlugin implements MetaMaskPlugin
      */
     verifySignature(message: string, signature: string): Promise<string>;
 }
-export { MetaMaskPluginInterface } from './types';
+export { MetaMaskPluginInterface } from "./types";

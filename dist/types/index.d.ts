@@ -1,9 +1,6 @@
 import { GunDB } from "./gun/gun";
-import { Webauthn } from "./plugins/webauthn/webauthn";
-import { MetaMask } from "./plugins/metamask/connector/metamask";
-import { Stealth } from "./plugins/stealth/stealth";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, DID } from "./types/shogun";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "./utils/errorHandler";
@@ -20,15 +17,11 @@ export declare class ShogunCore implements IShogunCore {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
     gundb: GunDB;
-    did?: DID;
     storage: ShogunStorage;
     private eventEmitter;
     provider?: ethers.Provider;
     config: ShogunSDKConfig;
     rx: GunRxJS;
-    webauthn?: Webauthn;
-    metamask?: MetaMask;
-    stealth?: Stealth;
     private plugins;
     /**
      * Initialize the Shogun SDK
@@ -282,7 +275,7 @@ export declare class ShogunCore implements IShogunCore {
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
-export { MetaMask } from "./plugins/metamask/connector/metamask";
+export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
 export { Webauthn } from "./plugins/webauthn/webauthn";

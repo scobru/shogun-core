@@ -1,1 +1,2 @@
-export { DIDPlugin } from './didPlugin';
+export { DIDPlugin } from "./didPlugin";
+export * from "./DID";

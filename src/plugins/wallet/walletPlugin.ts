@@ -15,33 +15,29 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
   name = "wallet";
   version = "1.0.0";
   description = "Provides wallet management functionality for Shogun Core";
-  
+
   private walletManager: WalletManager | null = null;
-  
+
   /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-    
+
     if (!core.gundb || !core.gun || !core.storage) {
       throw new Error("Core dependencies not available");
     }
-    
+
     // Creiamo un nuovo WalletManager
-    this.walletManager = new WalletManager(
-      core.gundb,
-      core.gun,
-      core.storage,
-      {
-        // Recuperiamo configurazione dal core se disponibile
-        balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
-        rpcUrl: core.provider instanceof ethers.JsonRpcProvider 
-          ? (core.provider as any).connection?.url 
-          : undefined
-      }
-    );
-    
+    this.walletManager = new WalletManager(core.gundb, core.gun, core.storage, {
+      // Recuperiamo configurazione dal core se disponibile
+      balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
+      rpcUrl:
+        core.provider instanceof ethers.JsonRpcProvider
+          ? (core.provider as any).connection?.url
+          : undefined,
+    });
+
     log("Wallet plugin initialized");
   }
 
@@ -88,10 +84,10 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
   async loadWallets(): Promise<WalletInfo[]> {
     try {
       const manager = this.assertWalletManager();
-      
+
       if (!this.core?.isLoggedIn()) {
         log("Cannot load wallets: user not authenticated");
-        
+
         // Segnaliamo l'errore con il gestore centralizzato
         ErrorHandler.handle(
           ErrorType.AUTHENTICATION,
@@ -99,10 +95,10 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
           "User authentication required to load wallets",
           null,
         );
-        
+
         return [];
       }
-      
+
       return await manager.loadWallets();
     } catch (error) {
       // Gestiamo l'errore in modo dettagliato
@@ -112,7 +108,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
         `Error loading wallets: ${error instanceof Error ? error.message : String(error)}`,
         error,
       );
-      
+
       // Ritorniamo un array vuoto
       return [];
     }
@@ -122,7 +118,10 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
    * @inheritdoc
    */
   getStandardBIP44Addresses(mnemonic: string, count: number = 5): string[] {
-    return this.assertWalletManager().getStandardBIP44Addresses(mnemonic, count);
+    return this.assertWalletManager().getStandardBIP44Addresses(
+      mnemonic,
+      count,
+    );
   }
 
   /**
@@ -242,7 +241,11 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
     walletsImported?: number;
     gunPairImported?: boolean;
   }> {
-    return this.assertWalletManager().importAllUserData(backupData, password, options);
+    return this.assertWalletManager().importAllUserData(
+      backupData,
+      password,
+      options,
+    );
   }
 
   /**
@@ -277,10 +280,10 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
     if (!this.core) {
       return null;
     }
-    
+
     // Accediamo all'URL del provider se disponibile
     return this.core.provider instanceof ethers.JsonRpcProvider
       ? (this.core.provider as any).connection?.url || null
       : null;
   }
-} 
+}

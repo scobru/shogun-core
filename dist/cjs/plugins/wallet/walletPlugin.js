@@ -31,7 +31,7 @@ class WalletPlugin extends base_1.BasePlugin {
             balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
             rpcUrl: core.provider instanceof ethers_1.ethers.JsonRpcProvider
                 ? core.provider.connection?.url
-                : undefined
+                : undefined,
         });
         (0, logger_1.log)("Wallet plugin initialized");
     }
