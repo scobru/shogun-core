@@ -6,7 +6,7 @@ function exampleManualPluginInit() {
     // Inizializza ShogunCore senza il wallet manager
     const core = new index_1.ShogunCore({
         gundb: {
-            peers: ["https://gun-server.example.com/gun"],
+            peers: ["http://localhost:8765/gun"],
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
@@ -51,7 +51,7 @@ function exampleAutoPluginInit() {
     // Inizializza ShogunCore con auto-registrazione del plugin
     const core = new index_1.ShogunCore({
         gundb: {
-            peers: ["https://gun-server.example.com/gun"],
+            peers: ["http://localhost:8765/gun"],
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
         plugins: {

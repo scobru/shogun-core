@@ -4,7 +4,7 @@ import { ShogunCore } from "../../index";
 import { ShogunDID } from "./DID";
 import { DIDPluginInterface } from "./types";
 import { DIDCreateOptions } from "../../types/did";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, CorePlugins } from "../../types/shogun";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 

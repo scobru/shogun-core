@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { IShogunCore, AuthResult } from "../../types/shogun";
+import { AuthResult, IShogunCore } from "../../types/shogun";
 import { EventEmitter } from "events";
 import { DIDDocument, DIDResolutionResult, DIDCreateOptions, DIDRegistryConfig, DIDResolutionOptions } from "../../types/did";
 export { DIDDocument, DIDResolutionResult, DIDCreateOptions };
@@ -14,11 +14,15 @@ export declare class ShogunDID extends EventEmitter {
     private readonly DEFAULT_TIMEOUT;
     private readonly DEFAULT_MAX_RETRIES;
     private readonly DEFAULT_RETRY_DELAY;
+    private options;
     private registryConfig;
     /**
      * Initialize ShogunDID manager
      */
-    constructor(shogunCore: IShogunCore, registryConfig?: Partial<DIDRegistryConfig>);
+    constructor(shogunCore: IShogunCore, registryConfig?: Partial<DIDRegistryConfig>, options?: {
+        useSecureRandomPassword?: boolean;
+        [key: string]: any;
+    });
     /**
      * Create a new Shogun DID
      */
@@ -94,6 +98,7 @@ export declare class ShogunDID extends EventEmitter {
     private createErrorResolution;
     private parseOrCreateDIDDocument;
     private extractAuthenticationMethod;
+    private getWallet;
     private authenticateWithEthereum;
     private authenticateWithWebAuthn;
     private authenticateWithGunDB;

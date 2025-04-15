@@ -124,12 +124,6 @@ export declare class ShogunCore implements IShogunCore {
      */
     rxSet<T>(path: string | any, data: T): Observable<T>;
     /**
-     * Get data once and return as Observable
-     * @param path - Path to get data from
-     * @returns Observable that emits the data once
-     */
-    onceObservable<T>(path: string | any): Observable<T>;
-    /**
      * Compute derived values from gun data
      * @param sources - Array of paths or observables to compute from
      * @param computeFn - Function that computes a new value from the sources
@@ -200,6 +194,54 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     /**
+     * Check if WebAuthn is supported by the browser
+     * @returns {boolean} True if WebAuthn is supported, false otherwise
+     * @description Verifies if the current browser environment supports WebAuthn authentication
+     * @deprecated Since v2.0.0. Use getPlugin(CorePlugins.WebAuthn).isSupported() instead.
+     */
+    isWebAuthnSupported(): boolean;
+    /**
+     * Perform WebAuthn login
+     * @param username - Username
+     * @returns {Promise<AuthResult>} Authentication result
+     * @description Authenticates user using WebAuthn credentials.
+     * Requires browser support for WebAuthn and existing credentials.
+     * @deprecated Since v2.0.0. Use getAuthenticationMethod("webauthn").login(username) instead.
+     */
+    loginWithWebAuthn(username: string): Promise<AuthResult>;
+    /**
+     * Register new user with WebAuthn
+     * @param username - Username
+     * @returns {Promise<AuthResult>} Registration result
+     * @description Creates a new user account using WebAuthn credentials.
+     * Requires browser support for WebAuthn.
+     * @deprecated Since v2.0.0. Use getAuthenticationMethod("webauthn").signUp(username) instead.
+     */
+    signUpWithWebAuthn(username: string): Promise<AuthResult>;
+    /**
+     * Log deprecation warning to console
+     * @param oldMethod Name of the deprecated method
+     * @param newMethod Recommended replacement method
+     * @private
+     */
+    private logDeprecationWarning;
+    /**
+     * Login with MetaMask
+     * @param address - Ethereum address
+     * @returns {Promise<AuthResult>} Authentication result
+     * @description Authenticates user using MetaMask wallet credentials after signature verification
+     * @deprecated Since v2.0.0. Use getAuthenticationMethod("metamask").login(address) instead.
+     */
+    loginWithMetaMask(address: string): Promise<AuthResult>;
+    /**
+     * Register new user with MetaMask
+     * @param address - Ethereum address
+     * @returns {Promise<AuthResult>} Registration result
+     * @description Creates a new user account using MetaMask wallet credentials after signature verification
+     * @deprecated Since v2.0.0. Use getAuthenticationMethod("metamask").signUp(address) instead.
+     */
+    signUpWithMetaMask(address: string): Promise<AuthResult>;
+    /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
      *   - network: The network to use (default: 'main')
@@ -255,6 +297,12 @@ export declare class ShogunCore implements IShogunCore {
      */
     getRpcUrl(): string | null;
     /**
+     * Get the main wallet for the authenticated user
+     * @returns The user's main Ethereum wallet or null if not available
+     * @deprecated Since v2.0.0. Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead.
+     */
+    getMainWallet(): ethers.Wallet | null;
+    /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
      * @param eventName The name of the event to emit.
@@ -267,12 +315,6 @@ export declare class ShogunCore implements IShogunCore {
      * @param listener The callback function to execute when the event is emitted
      */
     on(eventName: string | symbol, listener: (...args: any[]) => void): this;
-    /**
-     * Add a one-time event listener
-     * @param eventName The name of the event to listen for
-     * @param listener The callback function to execute when the event is emitted
-     */
-    once(eventName: string | symbol, listener: (...args: any[]) => void): this;
     /**
      * Remove an event listener
      * @param eventName The name of the event to stop listening for

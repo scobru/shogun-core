@@ -6,13 +6,37 @@ const logger_1 = require("../../utils/logger");
 const errorHandler_1 = require("../../utils/errorHandler");
 const events_1 = require("events");
 /**
+ * Genera una password casuale sicura
+ * @param length Lunghezza della password
+ * @returns Password generata
+ */
+function generateSecureRandomPassword(length = 32) {
+    // Genera una stringa casuale sicura
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+/**
+ * Deriva una chiave di cifratura da username e password
+ * @param username Nome utente
+ * @param password Password
+ * @returns Chiave derivata
+ */
+async function deriveEncryptionKey(username, password) {
+    // In un ambiente reale, usa PBKDF2 o Argon2
+    const data = new TextEncoder().encode(`${username}:${password}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+/**
  * ShogunDID class for decentralized identity management
  */
 class ShogunDID extends events_1.EventEmitter {
     /**
      * Initialize ShogunDID manager
      */
-    constructor(shogunCore, registryConfig) {
+    constructor(shogunCore, registryConfig, options) {
         super();
         this.methodName = "shogun";
         this.didCache = new Map();
@@ -29,6 +53,7 @@ class ShogunDID extends events_1.EventEmitter {
         };
         this.core = shogunCore;
         this.registryConfig = { ...this.registryConfig, ...registryConfig };
+        this.options = options || { useSecureRandomPassword: true };
         (0, logger_1.log)("ShogunDID initialized");
     }
     /**
@@ -241,7 +266,7 @@ class ShogunDID extends events_1.EventEmitter {
             if (!this.core.isLoggedIn()) {
                 throw new Error("User must be logged in to register DID on chain");
             }
-            let effectiveSigner = signer || this.core.getMainWallet();
+            let effectiveSigner = signer || this.getWallet();
             if (!effectiveSigner) {
                 throw new Error("No signer provided and main wallet not available");
             }
@@ -354,7 +379,7 @@ class ShogunDID extends events_1.EventEmitter {
             }
             else {
                 // Default to GunDB authentication
-                return this.authenticateWithGunDB(authMethod, challenge);
+                return this.authenticateWithGunDB(authMethod.controller.split(":").pop() || "", challenge);
             }
         }
         catch (error) {
@@ -582,61 +607,100 @@ class ShogunDID extends events_1.EventEmitter {
         }
         return null;
     }
+    getWallet() {
+        try {
+            if (this.core.constructor.name === 'ShogunCore') {
+                // Core moderno, usa getPlugin
+                if (!this.core.getPlugin) {
+                    return null;
+                }
+                const walletPlugin = this.core.getPlugin(this.core.constructor.name === 'ShogunCore' ? 'wallet' : 'walletManager');
+                if (walletPlugin && typeof walletPlugin === 'object' && 'getMainWallet' in walletPlugin) {
+                    return walletPlugin.getMainWallet();
+                }
+            }
+            else if ('getMainWallet' in this.core) {
+                // Core legacy
+                return this.core.getMainWallet();
+            }
+            return null;
+        }
+        catch (e) {
+            return null;
+        }
+    }
     async authenticateWithEthereum(authMethod, challenge) {
         // Extract Ethereum address from DID or authMethod
         const address = authMethod.id.split("#")[0].split(":").pop() || "";
-        // Use MetaMask for authentication
-        return this.core.loginWithMetaMask(address);
+        // Usa il metodo loginWithMetaMask se disponibile nel core
+        if ('loginWithMetaMask' in this.core) {
+            return this.core.loginWithMetaMask(address);
+        }
+        // Altrimenti, prova con getAuthenticationMethod
+        if (!this.core.getAuthenticationMethod) {
+            return {
+                success: false,
+                error: "Authentication method provider not available"
+            };
+        }
+        const auth = this.core.getAuthenticationMethod("metamask");
+        if (auth && typeof auth === 'object' && 'login' in auth) {
+            return auth.login(address);
+        }
+        return {
+            success: false,
+            error: "MetaMask authentication not available"
+        };
     }
     async authenticateWithWebAuthn(authMethod, challenge) {
         // Extract username from controller or other means
         const username = authMethod.controller.split(":").pop() || "";
-        // Use WebAuthn for authentication
-        return this.core.loginWithWebAuthn(username);
-    }
-    async authenticateWithGunDB(authMethod, challenge) {
-        try {
-            // Estrai username dal controller o altre informazioni
-            const username = authMethod.controller.split(":").pop() || "";
-            // Tenta di recuperare la password o altre informazioni necessarie dal DID document
-            const didDoc = await this.resolveDID(authMethod.id.split("#")[0]);
-            if (didDoc.didResolutionMetadata.error || !didDoc.didDocument) {
-                return {
-                    success: false,
-                    error: "Impossibile recuperare il documento DID per l'autenticazione",
-                };
-            }
-            // Cerca nei servizi se ci sono credenziali o informazioni di autenticazione
-            const gunAuthService = didDoc.didDocument.service?.find((service) => service.type === "GunDBAuthentication");
-            if (!gunAuthService) {
-                return {
-                    success: false,
-                    error: "Nessun servizio di autenticazione GunDB trovato nel documento DID",
-                };
-            }
-            // Cerca di estrarre la password o altri dati di autenticazione
-            const serviceEndpoint = gunAuthService.serviceEndpoint;
-            const authData = typeof serviceEndpoint === "string"
-                ? { username }
-                : { ...serviceEndpoint, username };
-            if (!authData.hasOwnProperty("password")) {
-                // Se non c'è una password esplicita, proviamo ad usare una derivata dal DID
-                // Questo è solo un esempio, in un caso reale si dovrebbe usare un metodo più sicuro
-                const derivedPassword = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${authMethod.id}:${challenge || ""}`));
-                // Prova ad autenticarsi con username e password derivata
-                return this.core.login(username, derivedPassword);
-            }
-            // Altrimenti usa la password dal service endpoint
-            return this.core.login(username, authData.password);
+        // Usa il metodo loginWithWebAuthn se disponibile nel core
+        if ('loginWithWebAuthn' in this.core) {
+            return this.core.loginWithWebAuthn(username);
         }
-        catch (error) {
-            (0, logger_1.logError)("Errore durante l'autenticazione con GunDB:", error);
+        // Altrimenti, prova con getAuthenticationMethod
+        if (!this.core.getAuthenticationMethod) {
             return {
                 success: false,
-                error: error instanceof Error
-                    ? error.message
-                    : "Errore sconosciuto durante l'autenticazione GunDB",
+                error: "Authentication method provider not available"
             };
+        }
+        const auth = this.core.getAuthenticationMethod("webauthn");
+        if (auth && typeof auth === 'object' && 'login' in auth) {
+            return auth.login(username);
+        }
+        return {
+            success: false,
+            error: "WebAuthn authentication not available"
+        };
+    }
+    async authenticateWithGunDB(username, challenge) {
+        try {
+            (0, logger_1.log)("Authenticating with GunDB using password method", username);
+            // Estraiamo la password dalla sfida o generiamo una password sicura
+            let password = challenge || '';
+            // Se abilitato, genera una password casuale sicura
+            const useSecureRandomPassword = this.options && this.options.useSecureRandomPassword;
+            if (useSecureRandomPassword && !password) {
+                password = generateSecureRandomPassword();
+            }
+            // Deriva una chiave sicura da username e password
+            const encryptionKey = await deriveEncryptionKey(username, password);
+            // Utilizziamo il metodo di autenticazione "password"
+            if (!this.core.getAuthenticationMethod) {
+                throw new Error("Authentication method provider not available");
+            }
+            const passwordAuth = this.core.getAuthenticationMethod("password");
+            if (!passwordAuth) {
+                throw new Error("Password authentication method not available");
+            }
+            // Autentica l'utente
+            return await passwordAuth.authenticate(username, encryptionKey);
+        }
+        catch (error) {
+            (0, logger_1.log)("Error authenticating with GunDB:", error);
+            throw error;
         }
     }
     /**
@@ -654,7 +718,8 @@ class ShogunDID extends events_1.EventEmitter {
             // Indirizzo del contratto di registro DID
             const didRegistryAddress = "0x1234..."; // Da sostituire con l'indirizzo reale
             // Se non c'è un provider in ShogunCore, usiamo il signer del wallet
-            const provider = this.core.getMainWallet()?.provider;
+            const wallet = this.getWallet();
+            const provider = wallet?.provider || this.core.provider;
             if (!provider) {
                 throw new Error("Provider non disponibile per verificare il DID on-chain");
             }
