@@ -23,10 +23,12 @@ export class BasePlugin {
     /**
      * Verifica che il plugin sia stato inizializzato prima di usare il core
      * @throws Error se il plugin non è stato inizializzato
+     * @returns L'istanza di ShogunCore non null
      */
     assertInitialized() {
         if (!this.core) {
             throw new Error(`Plugin ${this.name} not initialized`);
         }
+        return this.core;
     }
 }

@@ -81,6 +81,10 @@ async function exampleAutoRegisterPlugins() {
     const walletPlugin = new index_1.WalletPlugin();
     const stealthPlugin = new index_1.StealthPlugin();
     const didPlugin = new index_1.DIDPlugin();
+    // Aggiungiamo informazioni di categoria ai plugin
+    walletPlugin._category = index_1.PluginCategory.Wallet;
+    stealthPlugin._category = index_1.PluginCategory.Privacy;
+    didPlugin._category = index_1.PluginCategory.Identity;
     // Inizializziamo ShogunCore con auto-registrazione dei plugin
     const core = new index_1.ShogunCore({
         gundb: {
@@ -103,6 +107,10 @@ async function exampleAutoRegisterPlugins() {
     console.log(`Wallet plugin available: ${!!wallet}`);
     console.log(`Stealth plugin available: ${!!stealth}`);
     console.log(`DID plugin available: ${!!did}`);
+    // Otteniamo i plugin per categoria
+    console.log("Wallet plugins:", core.getPluginsByCategory(index_1.PluginCategory.Wallet).length);
+    console.log("Privacy plugins:", core.getPluginsByCategory(index_1.PluginCategory.Privacy).length);
+    console.log("Identity plugins:", core.getPluginsByCategory(index_1.PluginCategory.Identity).length);
 }
 /**
  * Esempio di interazione tra plugin

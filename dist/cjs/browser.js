@@ -44,10 +44,13 @@ exports.initShogunBrowser = initShogunBrowser;
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
 const logger_1 = require("./utils/logger");
+const shogun_1 = require("./types/shogun");
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
 const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
 const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./plugins/did/DID")));
+const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/wallet/walletPlugin")));
+const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/metamask/metamaskPlugin")));
 let shogunCoreInstance;
 /**
  * Function to initialize Shogun in a browser environment
@@ -78,6 +81,16 @@ function initShogunBrowser(config) {
     }
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
+    // Log the plugin status
+    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.WebAuthn)) {
+        (0, logger_1.log)("WebAuthn plugin initialized", { category: "init", level: "info" });
+    }
+    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.MetaMask)) {
+        (0, logger_1.log)("MetaMask plugin initialized", { category: "init", level: "info" });
+    }
+    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.WalletManager)) {
+        (0, logger_1.log)("Wallet plugin initialized", { category: "init", level: "info" });
+    }
     return shogunCoreInstance;
 }
 // Esportazione lazy loading helpers
@@ -85,6 +98,8 @@ exports.modules = {
     loadWebAuthn: loadWebAuthnModule,
     loadStealth: loadStealthModule,
     loadDID: loadDIDModule,
+    loadWallet: loadWalletModule,
+    loadMetaMask: loadMetaMaskModule
 };
 // Export main types as well
 __exportStar(require("./types/shogun"), exports);

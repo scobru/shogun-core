@@ -6,6 +6,8 @@ import {
   StealthPluginInterface,
   DIDPlugin,
   DIDPluginInterface,
+  PluginCategory,
+  CorePlugins,
 } from "../index";
 
 /**
@@ -100,6 +102,11 @@ async function exampleAutoRegisterPlugins() {
   const stealthPlugin = new StealthPlugin();
   const didPlugin = new DIDPlugin();
 
+  // Aggiungiamo informazioni di categoria ai plugin
+  walletPlugin._category = PluginCategory.Wallet;
+  stealthPlugin._category = PluginCategory.Privacy;
+  didPlugin._category = PluginCategory.Identity;
+
   // Inizializziamo ShogunCore con auto-registrazione dei plugin
   const core = new ShogunCore({
     gundb: {
@@ -117,14 +124,19 @@ async function exampleAutoRegisterPlugins() {
   console.log(`DID plugin auto-registered: ${core.hasPlugin("did")}`);
 
   // Accediamo ai plugin tipizzati
-  const wallet = core.getPlugin<WalletPlugin>("wallet");
-  const stealth = core.getPlugin<StealthPlugin>("stealth");
-  const did = core.getPlugin<DIDPlugin>("did");
+  const wallet = core.getPlugin<WalletPluginInterface>("wallet");
+  const stealth = core.getPlugin<StealthPluginInterface>("stealth");
+  const did = core.getPlugin<DIDPluginInterface>("did");
 
   // Verifichiamo che i plugin siano disponibili
   console.log(`Wallet plugin available: ${!!wallet}`);
   console.log(`Stealth plugin available: ${!!stealth}`);
   console.log(`DID plugin available: ${!!did}`);
+
+  // Otteniamo i plugin per categoria
+  console.log("Wallet plugins:", core.getPluginsByCategory(PluginCategory.Wallet).length);
+  console.log("Privacy plugins:", core.getPluginsByCategory(PluginCategory.Privacy).length);
+  console.log("Identity plugins:", core.getPluginsByCategory(PluginCategory.Identity).length);
 }
 
 /**

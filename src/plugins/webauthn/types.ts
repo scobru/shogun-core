@@ -1,3 +1,4 @@
+import { AuthResult } from "../../types/shogun";
 import {
   CredentialResult,
   WebAuthnCredentials,
@@ -70,4 +71,18 @@ export interface WebauthnPluginInterface {
     credentialId: string,
     credentials: WebAuthnCredentials,
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
+
+  /**
+   * Login con WebAuthn
+   * @param username Nome utente
+   * @returns Promise con il risultato dell'operazione
+   */
+  login(username: string): Promise<AuthResult>;
+
+  /**
+   * Signup con WebAuthn
+   * @param username Nome utente
+   * @returns Promise con il risultato dell'operazione
+   */
+  signUp(username: string): Promise<AuthResult>;
 }

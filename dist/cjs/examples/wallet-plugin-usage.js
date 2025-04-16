@@ -12,6 +12,7 @@ function exampleManualPluginInit() {
     });
     // Crea e registra il plugin wallet
     const walletPlugin = new index_1.WalletPlugin();
+    walletPlugin._category = index_1.PluginCategory.Wallet;
     core.register(walletPlugin);
     // Usa il plugin wallet
     async function useWalletPlugin() {
@@ -48,6 +49,7 @@ function exampleManualPluginInit() {
 function exampleAutoPluginInit() {
     // Crea il plugin prima dell'inizializzazione di ShogunCore
     const walletPlugin = new index_1.WalletPlugin();
+    walletPlugin._category = index_1.PluginCategory.Wallet;
     // Inizializza ShogunCore con auto-registrazione del plugin
     const core = new index_1.ShogunCore({
         gundb: {
@@ -96,6 +98,7 @@ function exampleAutoPluginInit() {
 function typeChecking() {
     const core = new index_1.ShogunCore({});
     const plugin = new index_1.WalletPlugin();
+    plugin._category = index_1.PluginCategory.Wallet;
     core.register(plugin);
     // Type-safe access to plugin methods
     const typedPlugin = core.getPlugin("wallet");
@@ -104,4 +107,7 @@ function typeChecking() {
         typedPlugin.generateNewMnemonic();
         typedPlugin.createWallet();
     }
+    // Esempio di utilizzo del getPluginsByCategory
+    const walletPlugins = core.getPluginsByCategory(index_1.PluginCategory.Wallet);
+    console.log(`Found ${walletPlugins.length} wallet plugins`);
 }

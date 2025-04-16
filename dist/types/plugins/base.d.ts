@@ -28,6 +28,7 @@ export declare abstract class BasePlugin implements ShogunPlugin {
     /**
      * Verifica che il plugin sia stato inizializzato prima di usare il core
      * @throws Error se il plugin non è stato inizializzato
+     * @returns L'istanza di ShogunCore non null
      */
-    protected assertInitialized(): void;
+    protected assertInitialized(): ShogunCore;
 }

@@ -34,7 +34,7 @@ const runRxJSExample = async () => {
     });
     
     // Or use the reactive way
-    shogun.rxPut('users/profile/123', {
+    shogun.rxPut<{ name: string; bio: string }>('users/profile/123', {
       name: 'John Doe',
       bio: 'Web Developer & RxJS enthusiast'
     }).subscribe(() => console.log('Data updated successfully'));
@@ -102,7 +102,7 @@ const runRxJSExample = async () => {
     });
 
     // Update user preferences
-    shogun.rxUserPut('preferences', {
+    shogun.rxUserPut<{ theme: string, notifications: boolean }>('preferences', {
       theme: 'dark',
       notifications: true
     }).subscribe(() => console.log('User preferences updated'));
@@ -208,7 +208,7 @@ const chatAppExample = async () => {
   });
 
   // Mark current user as active
-  shogun.rx.put(`rooms/${roomId}/users/${userPub}`, {
+  shogun.rx.put<{ id: string; name: string; lastSeen: number }>(`rooms/${roomId}/users/${userPub}`, {
     id: userPub,
     name: 'TestUser', // In a real app, get this from profile
     lastSeen: Date.now()
@@ -225,7 +225,13 @@ const chatAppExample = async () => {
   const sendMessage = (text: string) => {
     const messageId = Math.random().toString(36).substring(2, 15);
     
-    shogun.rxPut(`rooms/${roomId}/messages/${messageId}`, {
+    shogun.rxPut<{
+      id: string;
+      sender: string;
+      senderName: string;
+      text: string;
+      timestamp: number;
+    }>(`rooms/${roomId}/messages/${messageId}`, {
       id: messageId,
       sender: userPub,
       senderName: 'TestUser', // In a real app, get this from profile

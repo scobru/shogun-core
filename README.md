@@ -19,6 +19,7 @@
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
+  - [Authentication Methods](#authentication-methods)
   - [Reactive Programming with RxJS](#reactive-programming-with-rxjs)
 - [Use Cases](#use-cases)
 - [Documentation](#documentation)
@@ -118,7 +119,7 @@ yarn add shogun-core
 
 ### Basic Usage
 ```typescript
-import { ShogunCore, CorePlugins, initShogunBrowser } from "shogun-core";
+import { ShogunCore, CorePlugins, PluginCategory, initShogunBrowser } from "shogun-core";
 
 // Inizializzazione per ambiente Node.js
 const shogun = new ShogunCore({
@@ -156,7 +157,7 @@ const passwordLogin = await shogun.login('username', 'password');
 // Accesso ai plugin
 const webauthnPlugin = shogun.getPlugin(CorePlugins.WebAuthn);
 const metamaskPlugin = shogun.getPlugin(CorePlugins.MetaMask);
-const walletPlugin = shogun.getPlugin(CorePlugins.WalletManager);
+const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
 
 if (webauthnPlugin) {
   const credentials = await webauthnPlugin.generateCredentials('username', null, true); // true = login
@@ -168,17 +169,14 @@ if (webauthnPlugin) {
 if (metamaskPlugin) {
   // Login con MetaMask
   try {
-    // Prima ottieni l'indirizzo da MetaMask
-    const provider = window.ethereum;
-    if (!provider) {
-      throw new Error("MetaMask non è installato!");
+    // Connessione e autenticazione con MetaMask
+    const connectResult = await metamaskPlugin.connectMetaMask();
+    if (connectResult.success) {
+      const address = connectResult.address;
+      // Login usando l'indirizzo
+      const loginResult = await metamaskPlugin.loginWithMetaMask(address);
+      console.log("MetaMask login result:", loginResult);
     }
-    
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-    const address = accounts[0]; // Indirizzo dell'utente
-    
-    const credentials = await metamaskPlugin.generateCredentials(address);
-    // Usa le credenziali per autenticare...
   } catch (error) {
     console.error("Error during MetaMask login:", error);
   }
@@ -189,6 +187,82 @@ if (walletPlugin) {
   const wallet = await walletPlugin.createWallet();
   const mainWallet = walletPlugin.getMainWallet();
 }
+
+// Ottenere i plugin per categoria
+const walletPlugins = shogun.getPluginsByCategory(PluginCategory.Wallet);
+const authPlugins = shogun.getPluginsByCategory(PluginCategory.Authentication);
+console.log(`Found ${walletPlugins.length} wallet plugins and ${authPlugins.length} auth plugins`);
+```
+
+### Authentication Methods
+
+Shogun provides a modern approach to access authentication methods via the `getAuthenticationMethod` API. This simplifies working with different authentication types by providing a consistent interface.
+
+```typescript
+// Recommended modern approach to access authentication methods
+// Approach 1: Get the standard password authentication
+const passwordAuth = shogun.getAuthenticationMethod("password");
+const loginResult = await passwordAuth.login("username", "password123");
+const signupResult = await passwordAuth.signUp("newuser", "securepassword");
+
+// Approach 2: Get the WebAuthn authentication (if enabled)
+const webauthnAuth = shogun.getAuthenticationMethod("webauthn");
+if (webauthnAuth) {
+  // WebAuthn is available
+  const isSupported = await webauthnAuth.isSupported();
+  if (isSupported) {
+    const credentials = await webauthnAuth.generateCredentials("username", null, true);
+    // Use the credentials...
+  }
+}
+
+// Approach 3: Get the MetaMask authentication (if enabled)
+const metamaskAuth = shogun.getAuthenticationMethod("metamask");
+if (metamaskAuth) {
+  // MetaMask is available
+  const isAvailable = await metamaskAuth.isAvailable();
+  if (isAvailable) {
+    const connectResult = await metamaskAuth.connectMetaMask();
+    if (connectResult.success) {
+      const loginResult = await metamaskAuth.login(connectResult.address);
+      console.log("Logged in with MetaMask:", loginResult);
+    }
+  }
+}
+
+// Example: Dynamic authentication based on user choice
+function authenticateUser(method: "password" | "webauthn" | "metamask", username: string, password?: string) {
+  const auth = shogun.getAuthenticationMethod(method);
+  
+  if (!auth) {
+    console.error(`Authentication method ${method} not available`);
+    return Promise.resolve({ success: false, error: "Method not available" });
+  }
+  
+  switch (method) {
+    case "password":
+      return auth.login(username, password);
+    case "webauthn":
+      return auth.generateCredentials(username).then(creds => {
+        if (creds.success) {
+          return auth.login(username);
+        }
+        return { success: false, error: "WebAuthn failed" };
+      });
+    case "metamask":
+      return auth.connectMetaMask().then(result => {
+        if (result.success) {
+          return auth.login(result.address);
+        }
+        return { success: false, error: "MetaMask connection failed" };
+      });
+  }
+}
+
+// Usage
+authenticateUser("password", "username", "password123").then(result => {
+  console.log("Authentication result:", result);
+});
 ```
 
 ### Reactive Programming with RxJS
@@ -199,13 +273,13 @@ Shogun SDK provides first-class RxJS integration, enabling reactive programming 
 import { map, filter } from 'rxjs/operators';
 
 // Observe a user profile in real-time
-shogun.observe('users/profile/123').subscribe(
+shogun.observe<{name: string; status: string}>('users/profile/123').subscribe(
   profile => console.log('Profile updated:', profile),
   error => console.error('Error observing profile:', error)
 );
 
 // Work with reactive collections
-const todos$ = shogun.match('todos');
+const todos$ = shogun.match<{id: string; task: string; completed: boolean}>('todos');
 todos$.subscribe(todos => console.log('All todos:', todos));
 
 // Filter collections with RxJS operators
@@ -214,13 +288,13 @@ todos$.pipe(
 ).subscribe(pendingTodos => console.log('Pending todos:', pendingTodos));
 
 // Update data reactively
-shogun.rxPut('users/profile/123', { 
+shogun.rxPut<{name: string; status: string}>('users/profile/123', { 
   name: 'John Doe', 
   status: 'online'
 }).subscribe(() => console.log('Profile updated'));
 
 // Create computed values from multiple data sources
-shogun.compute(
+shogun.compute<any, {username: string; pendingCount: number; completedCount: number}>(
   ['todos', 'users/profile/123'],
   (todos, profile) => ({
     username: profile.name,
@@ -231,7 +305,7 @@ shogun.compute(
 
 // Work with user data
 if (shogun.isLoggedIn()) {
-  shogun.observeUser('preferences').subscribe(
+  shogun.observeUser<{theme: string; notifications: boolean}>('preferences').subscribe(
     prefs => console.log('User preferences:', prefs)
   );
 }
@@ -284,10 +358,10 @@ And then import it in your applications:
 
 ```javascript
 // ESM
-import { ShogunCore, initShogunBrowser } from "shogun-core";
+import { ShogunCore, initShogunBrowser, CorePlugins, PluginCategory } from "shogun-core";
 
 // CommonJS
-const { ShogunCore, initShogunBrowser } = require("shogun-core");
+const { ShogunCore, initShogunBrowser, CorePlugins, PluginCategory } = require("shogun-core");
 ```
 
 ### Examples
@@ -338,16 +412,17 @@ async function login() {
   }
 }
 
-// WebAuthn Login (usando il plugin)
+// WebAuthn Login using the getAuthenticationMethod (modern way)
 async function webAuthnLogin() {
   try {
-    const webauthnPlugin = shogun.getPlugin(shogun.CorePlugins.WebAuthn);
-    if (webauthnPlugin && webauthnPlugin.isSupported()) {
-      const username = document.getElementById('webauthnUsername').value;
-      const credentials = await webauthnPlugin.generateCredentials(username, null, true);
+    const username = document.getElementById('webauthnUsername').value;
+    const authMethod = shogun.getAuthenticationMethod("webauthn");
+    
+    if (authMethod && await authMethod.isSupported()) {
+      const credentials = await authMethod.generateCredentials(username, null, true);
       if (credentials.success) {
         // Utilizza le credenziali per autenticare l'utente
-        const loginResult = await shogun.login(username, credentials.password);
+        const loginResult = await authMethod.login(username);
         console.log("WebAuthn login result:", loginResult);
       }
     } else {
@@ -358,21 +433,18 @@ async function webAuthnLogin() {
   }
 }
 
-// MetaMask Login (usando il plugin)
+// MetaMask Login using the getAuthenticationMethod (modern way)
 async function metamaskLogin() {
   try {
-    const metamaskPlugin = shogun.getPlugin(shogun.CorePlugins.MetaMask);
-    if (metamaskPlugin && await metamaskPlugin.isAvailable()) {
-      // Ottieni l'indirizzo
-      const address = await metamaskPlugin.connectMetaMask();
-      if (address) {
-        // Genera credenziali
-        const credentials = await metamaskPlugin.generateCredentials(address);
-        if (credentials.success) {
-          // Login con le credenziali ottenute
-          const loginResult = await shogun.login(credentials.username, credentials.password);
-          console.log("MetaMask login result:", loginResult);
-        }
+    const authMethod = shogun.getAuthenticationMethod("metamask");
+    
+    if (authMethod && await authMethod.isAvailable()) {
+      // Get connection
+      const connectResult = await authMethod.connectMetaMask();
+      if (connectResult.success) {
+        // Login with the address
+        const loginResult = await authMethod.login(connectResult.address);
+        console.log("MetaMask login result:", loginResult);
       }
     } else {
       console.error("MetaMask not available");
@@ -390,7 +462,7 @@ async function createWallet() {
   }
 
   try {
-    const walletPlugin = shogun.getPlugin(shogun.CorePlugins.WalletManager);
+    const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
     if (walletPlugin) {
       const wallet = await walletPlugin.createWallet();
       console.log("Wallet created:", wallet);

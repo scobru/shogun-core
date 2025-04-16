@@ -1,4 +1,4 @@
-import { MetaMaskCredentials, ConnectionResult } from "../../types/metamask";
+import { MetaMaskCredentials, ConnectionResult, AuthResult } from "../../types/metamask";
 /**
  * Interfaccia per il plugin MetaMask
  */
@@ -47,4 +47,16 @@ export interface MetaMaskPluginInterface {
      * @returns Promise con l'indirizzo che ha generato la firma
      */
     verifySignature(message: string, signature: string): Promise<string>;
+    /**
+     * Login con MetaMask
+     * @param address Indirizzo Ethereum
+     * @returns Promise con il risultato dell'operazione
+     */
+    login(address: string): Promise<AuthResult>;
+    /**
+     * Signup con MetaMask
+     * @param address Indirizzo Ethereum
+     * @returns Promise con il risultato dell'operazione
+     */
+    signUp(address: string): Promise<AuthResult>;
 }
