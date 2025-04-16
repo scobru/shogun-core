@@ -291,7 +291,7 @@ export class WebauthnPlugin
         return {
           ...signupResult,
           username,
-          password: hashedCredentialId,
+          password: '*******',
           credentialId: attestationResult.credentialId,
         };
       } else {

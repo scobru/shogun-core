@@ -1,4 +1,3 @@
-// Improved ShogunCore SDK Implementation
 import { GunDB } from "./gun/gun";
 import { EventEmitter } from "events";
 import { ShogunStorage } from "./storage/storage";
@@ -27,25 +26,20 @@ import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
 import { DIDPluginInterface } from "./plugins/did/types";
 
-// Import plugins statically instead of using dynamic requires
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 
-// Re-export existing types and classes
 export {
   ShogunDID,
   DIDDocument,
   DIDResolutionResult,
   DIDCreateOptions,
 } from "./plugins/did/DID";
-
 export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-
 export { GunRxJS } from "./gun/rxjs-integration";
-
 export * from "./plugins";
 export { ShogunPlugin, PluginManager } from "./types/plugin";
 
