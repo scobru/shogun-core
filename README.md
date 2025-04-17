@@ -1,5 +1,11 @@
 # Shogun SDK
 
+[![Tests](https://github.com/yourusername/shogun-core/actions/workflows/tests.yml/badge.svg)](https://github.com/yourusername/shogun-core/actions/workflows/tests.yml)
+[![Coverage Status](https://coveralls.io/repos/github/yourusername/shogun-core/badge.svg?branch=main)](https://coveralls.io/github/yourusername/shogun-core?branch=main)
+[![npm version](https://badge.fury.io/js/shogun-core.svg)](https://badge.fury.io/js/shogun-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9-blue.svg)](https://www.typescriptlang.org/)
+
 ## Table of Contents
 
 - [Overview](#overview)
