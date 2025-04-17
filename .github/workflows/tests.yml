@@ -37,5 +37,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results
-          path: ./coverage/
+          name: test-results-${{ matrix.node-version }}
+          path: /coverage/
+          if-no-files-found: ignore
