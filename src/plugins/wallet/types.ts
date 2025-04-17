@@ -10,19 +10,19 @@ export interface WalletPluginInterface {
    * @returns Il wallet principale o null se non disponibile
    */
   getMainWallet(): ethers.Wallet | null;
-  
+
   /**
    * Crea un nuovo wallet
    * @returns Promise con l'informazione del wallet creato
    */
   createWallet(): Promise<WalletInfo>;
-  
+
   /**
    * Carica tutti i wallet dell'utente
    * @returns Promise con array di wallet information
    */
   loadWallets(): Promise<WalletInfo[]>;
-  
+
   /**
    * Firma un messaggio con un wallet
    * @param wallet Wallet da utilizzare per la firma
@@ -31,9 +31,9 @@ export interface WalletPluginInterface {
    */
   signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array
+    message: string | Uint8Array,
   ): Promise<string>;
-  
+
   /**
    * Verifica una firma
    * @param message Messaggio firmato
@@ -41,7 +41,7 @@ export interface WalletPluginInterface {
    * @returns Indirizzo che ha firmato il messaggio
    */
   verifySignature(message: string | Uint8Array, signature: string): string;
-  
+
   /**
    * Firma una transazione
    * @param wallet Wallet per la firma
@@ -52,9 +52,9 @@ export interface WalletPluginInterface {
   signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string
+    value: string,
   ): Promise<string>;
-  
+
   /**
    * Ottiene indirizzi derivati da una mnemonic usando lo standard BIP-44
    * @param mnemonic Mnemonic phrase
@@ -62,19 +62,19 @@ export interface WalletPluginInterface {
    * @returns Array di indirizzi Ethereum
    */
   getStandardBIP44Addresses(mnemonic: string, count?: number): string[];
-  
+
   /**
    * Genera una nuova mnemonic phrase
    * @returns Nuova mnemonic phrase
    */
   generateNewMnemonic(): string;
-  
+
   // Metodi di esportazione
   exportMnemonic(password?: string): Promise<string>;
   exportWalletKeys(password?: string): Promise<string>;
   exportGunPair(password?: string): Promise<string>;
   exportAllUserData(password: string): Promise<string>;
-  
+
   // Metodi di importazione
   importMnemonic(mnemonicData: string, password?: string): Promise<boolean>;
   importWalletKeys(walletsData: string, password?: string): Promise<number>;
@@ -86,24 +86,24 @@ export interface WalletPluginInterface {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    }
+    },
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
     walletsImported?: number;
     gunPairImported?: boolean;
   }>;
-  
+
   /**
    * Imposta l'URL RPC per le connessioni alla rete Ethereum
    * @param rpcUrl URL del provider RPC da utilizzare
    * @returns true se l'URL è stato impostato con successo
    */
   setRpcUrl(rpcUrl: string): boolean;
-  
+
   /**
    * Ottiene l'URL RPC configurato
    * @returns L'URL del provider corrente o null se non impostato
    */
   getRpcUrl(): string | null;
-} 
+}

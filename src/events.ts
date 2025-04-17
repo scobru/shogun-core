@@ -39,7 +39,6 @@ export interface ErrorEventData {
 
 /**
  * Type defining all available Shogun event listeners
- * @type ShogunEventListeners
  */
 export type ShogunEventMap = {
   "auth:login": AuthEventData;
@@ -60,12 +59,13 @@ export class ShogunEventEmitter extends EventEmitter<ShogunEventMap> {
    * @template K - Event key type
    * @param {K} event - Event name
    * @param {ShogunEventMap[K]} data - Event data
+   * @returns {boolean} - Returns true if the event had listeners, false otherwise
    */
   emit<K extends keyof ShogunEventMap>(
     event: K,
     data?: ShogunEventMap[K],
-  ): void {
-    super.emit(event as string, data);
+  ): boolean {
+    return super.emit(event as string, data);
   }
 
   /**

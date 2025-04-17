@@ -1,4 +1,9 @@
-import { CredentialResult, WebAuthnCredentials, WebAuthnConfig } from "../../types/webauthn";
+import { AuthResult } from "../../types/shogun";
+import {
+  CredentialResult,
+  WebAuthnCredentials,
+  WebAuthnConfig,
+} from "../../types/webauthn";
 
 /**
  * Interfaccia per il plugin WebAuthn
@@ -9,7 +14,7 @@ export interface WebauthnPluginInterface {
    * @returns true se WebAuthn è supportato, false altrimenti
    */
   isSupported(): boolean;
-  
+
   /**
    * Genera credenziali WebAuthn
    * @param username Nome utente
@@ -20,9 +25,9 @@ export interface WebauthnPluginInterface {
   generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
-    isLogin?: boolean
+    isLogin?: boolean,
   ): Promise<CredentialResult>;
-  
+
   /**
    * Crea un nuovo account WebAuthn
    * @param username Nome utente
@@ -33,9 +38,9 @@ export interface WebauthnPluginInterface {
   createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice?: boolean
+    isNewDevice?: boolean,
   ): Promise<CredentialResult>;
-  
+
   /**
    * Autentica un utente con WebAuthn
    * @param username Nome utente
@@ -46,14 +51,14 @@ export interface WebauthnPluginInterface {
   authenticateUser(
     username: string,
     salt: string | null,
-    options?: any
+    options?: any,
   ): Promise<CredentialResult>;
-  
+
   /**
    * Interrompe un tentativo di autenticazione in corso
    */
   abortAuthentication(): void;
-  
+
   /**
    * Rimuove un dispositivo WebAuthn
    * @param username Nome utente
@@ -64,6 +69,20 @@ export interface WebauthnPluginInterface {
   removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials
+    credentials: WebAuthnCredentials,
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
-} 
+
+  /**
+   * Login con WebAuthn
+   * @param username Nome utente
+   * @returns Promise con il risultato dell'operazione
+   */
+  login(username: string): Promise<AuthResult>;
+
+  /**
+   * Signup con WebAuthn
+   * @param username Nome utente
+   * @returns Promise con il risultato dell'operazione
+   */
+  signUp(username: string): Promise<AuthResult>;
+}

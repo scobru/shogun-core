@@ -1,11 +1,9 @@
-import { ethers } from "ethers";
-import { log, logError } from "../../utils/logger";
-import { GunDB } from "../../gun/gun";
+import { log, logError, logWarn } from "../../utils/logger";
 import { ShogunStorage } from "../../storage/storage";
 import { WalletInfo } from "../../types/shogun";
 import SEA from "gun/sea";
-import { HDNodeWallet, randomBytes, Mnemonic } from "ethers";
-import { EventEmitter } from "events";
+import { HDNodeWallet, ethers } from "ethers";
+import { EventEmitter } from "../../utils/eventEmitter";
 import {
   WalletPath as IWalletPath,
   BalanceCache as IBalanceCache,
@@ -15,7 +13,6 @@ import {
   WalletBackupOptions,
   WalletImportOptions,
   WalletEventType,
-  WalletEvent,
 } from "../../types/wallet";
 
 // Rinominiamo le interfacce locali per evitare conflitti
@@ -31,33 +28,31 @@ export type WalletExport = IWalletExport;
  * - Encrypted storage and backup
  */
 export class WalletManager extends EventEmitter {
-  private gundb: GunDB;
-  private gun: any;
-  private storage: ShogunStorage;
+  private readonly gun: any;
+  private readonly storage: ShogunStorage;
   private walletPaths: {
     [address: string]: WalletPath;
   } = {};
   private mainWallet: ethers.Wallet | null = null;
-  private balanceCache: Map<string, BalanceCache> = new Map();
-  private pendingTransactions: Map<string, ethers.TransactionResponse> =
-    new Map();
-  private config: WalletConfig;
+  private readonly balanceCache: Map<string, BalanceCache> = new Map();
+  private readonly pendingTransactions: Map<
+    string,
+    ethers.TransactionResponse
+  > = new Map();
+  private readonly config: WalletConfig;
 
   /**
    * Creates a new WalletManager instance
-   * @param gundb GunDB instance for decentralized storage
    * @param gun Raw Gun instance
    * @param storage Storage interface for local persistence
    * @param config Additional configuration options
    */
   constructor(
-    gundb: GunDB,
     gun: any,
     storage: ShogunStorage,
     config?: Partial<WalletConfig>,
   ) {
     super();
-    this.gundb = gundb;
     this.gun = gun;
     this.storage = storage;
     this.config = {
@@ -69,8 +64,134 @@ export class WalletManager extends EventEmitter {
       ...config,
     };
 
-    this.initializeWalletPaths();
+    this.initWalletPathsSync();
     this.setupTransactionMonitoring();
+  }
+
+  /**
+   * Initialize wallet paths synchronously with basic setup
+   * @private
+   */
+  private initWalletPathsSync(): void {
+    try {
+      // Reset existing paths
+      this.walletPaths = {};
+
+      // Load paths from localStorage as fallback (synchronous operation)
+      this.loadWalletPathsFromLocalStorage();
+
+      log(
+        "Wallet paths initialized synchronously. Async loading will occur on first use.",
+      );
+    } catch (error) {
+      logError("Error in synchronous wallet path initialization:", error);
+      log("Will attempt async initialization on first use");
+    }
+  }
+
+  /**
+   * Initializes wallet paths from both GunDB and localStorage
+   * Call this method explicitly when needed
+   * @public
+   * @throws {Error} If there's an error during wallet path initialization
+   */
+  public async initializeWalletPaths(): Promise<void> {
+    try {
+      // Reset existing paths
+      this.walletPaths = {};
+
+      // Load paths from Gun
+      await this.loadWalletPathsFromGun();
+
+      // Load paths from localStorage as fallback
+      this.loadWalletPathsFromLocalStorage();
+
+      // Log results
+      const walletCount = Object.keys(this.walletPaths).length;
+      if (walletCount === 0) {
+        log("No wallet paths found, new wallets will be created when needed");
+      } else {
+        log(`Initialized ${walletCount} wallet paths`);
+      }
+    } catch (error) {
+      logError("Error initializing wallet paths:", error);
+      // Propagare l'errore invece di sopprimerlo
+      throw new Error(
+        `Failed to initialize wallet paths: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Loads wallet paths from localStorage as backup
+   * @private
+   */
+  private loadWalletPathsFromLocalStorage(): void {
+    const storageKey = `shogun_wallet_paths_${this.getStorageUserIdentifier()}`;
+    const storedPaths = this.storage.getItem(storageKey);
+
+    if (storedPaths) {
+      try {
+        log("Found wallet paths in localStorage");
+        const parsedPaths = JSON.parse(storedPaths as string);
+
+        // Add paths if not already in GUN
+        Object.entries(parsedPaths).forEach(([address, pathData]) => {
+          if (!this.walletPaths[address]) {
+            this.walletPaths[address] = pathData as WalletPath;
+            log(`Loaded path from localStorage for wallet: ${address}`);
+          }
+        });
+      } catch (error) {
+        logError("Error parsing wallet paths from localStorage:", error);
+      }
+    }
+  }
+
+  /**
+   * Loads wallet paths from GunDB
+   * @private
+   */
+  private async loadWalletPathsFromGun(): Promise<void> {
+    // Verify user authentication
+    const user = this.gun.user();
+    if (!user?.is) {
+      log("User not authenticated on Gun, cannot load wallet paths from Gun");
+      return Promise.resolve();
+    }
+
+    log(`Loading wallet paths from GUN for user: ${user.is.alias}`);
+
+    // Load paths from user profile
+    return new Promise<void>((resolve) => {
+      user.get("wallet_paths").once((data: any) => {
+        if (!data) {
+          log("No wallet paths found in GUN");
+          resolve();
+          return;
+        }
+
+        log(
+          `Found wallet paths in GUN: ${Object.keys(data).length - 1} wallets`,
+        ); // -1 for _ field
+
+        // Convert GUN data to walletPaths
+        Object.entries(data).forEach(([address, pathData]) => {
+          if (address !== "_" && pathData) {
+            const data = pathData as any;
+            if (data?.path) {
+              this.walletPaths[address] = {
+                path: data.path,
+                created: data.created || Date.now(),
+              };
+              log(`Loaded path for wallet: ${address} -> ${data.path}`);
+            }
+          }
+        });
+
+        resolve();
+      });
+    });
   }
 
   /**
@@ -142,110 +263,6 @@ export class WalletManager extends EventEmitter {
   }
 
   /**
-   * Initializes wallet paths from both GunDB and localStorage
-   * @private
-   * @throws {Error} If there's an error during wallet path initialization
-   */
-  private async initializeWalletPaths() {
-    try {
-      // Reset existing paths
-      this.walletPaths = {};
-
-      // Load paths from Gun
-      await this.loadWalletPathsFromGun();
-
-      // Load paths from localStorage as fallback
-      await this.loadWalletPathsFromLocalStorage();
-
-      // Log results
-      const walletCount = Object.keys(this.walletPaths).length;
-      if (walletCount === 0) {
-        log("No wallet paths found, new wallets will be created when needed");
-      } else {
-        log(`Initialized ${walletCount} wallet paths`);
-      }
-    } catch (error) {
-      console.error("Error initializing wallet paths:", error);
-      // Propagare l'errore invece di sopprimerlo
-      throw new Error(
-        `Failed to initialize wallet paths: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  /**
-   * Loads wallet paths from GunDB
-   * @private
-   */
-  private async loadWalletPathsFromGun(): Promise<void> {
-    // Verify user authentication
-    const user = this.gun.user();
-    if (!user?.is) {
-      log("User not authenticated on Gun, cannot load wallet paths from Gun");
-      return Promise.resolve();
-    }
-
-    log(`Loading wallet paths from GUN for user: ${user.is.alias}`);
-
-    // Load paths from user profile
-    return new Promise<void>((resolve) => {
-      user.get("wallet_paths").once((data: any) => {
-        if (!data) {
-          log("No wallet paths found in GUN");
-          resolve();
-          return;
-        }
-
-        log(
-          `Found wallet paths in GUN: ${Object.keys(data).length - 1} wallets`,
-        ); // -1 for _ field
-
-        // Convert GUN data to walletPaths
-        Object.entries(data).forEach(([address, pathData]) => {
-          if (address !== "_" && pathData) {
-            const data = pathData as any;
-            if (data?.path) {
-              this.walletPaths[address] = {
-                path: data.path,
-                created: data.created || Date.now(),
-              };
-              log(`Loaded path for wallet: ${address} -> ${data.path}`);
-            }
-          }
-        });
-
-        resolve();
-      });
-    });
-  }
-
-  /**
-   * Loads wallet paths from localStorage as backup
-   * @private
-   */
-  private async loadWalletPathsFromLocalStorage(): Promise<void> {
-    const storageKey = `shogun_wallet_paths_${this.getStorageUserIdentifier()}`;
-    const storedPaths = this.storage.getItem(storageKey);
-
-    if (storedPaths) {
-      try {
-        log("Found wallet paths in localStorage");
-        const parsedPaths = JSON.parse(storedPaths as string);
-
-        // Add paths if not already in GUN
-        Object.entries(parsedPaths).forEach(([address, pathData]) => {
-          if (!this.walletPaths[address]) {
-            this.walletPaths[address] = pathData as WalletPath;
-            log(`Loaded path from localStorage for wallet: ${address}`);
-          }
-        });
-      } catch (error) {
-        console.error("Error parsing wallet paths from localStorage:", error);
-      }
-    }
-  }
-
-  /**
    * Gets a unique identifier for the current user for storage purposes
    * @private
    * @returns A string identifier based on user's public key or "guest"
@@ -272,7 +289,7 @@ export class WalletManager extends EventEmitter {
         `Saved ${Object.keys(this.walletPaths).length} wallet paths to localStorage`,
       );
     } catch (error) {
-      console.error("Error saving wallet paths to localStorage:", error);
+      logError("Error saving wallet paths to localStorage:", error);
     }
   }
 
@@ -300,7 +317,7 @@ export class WalletManager extends EventEmitter {
 
       return wallet as HDNodeWallet;
     } catch (error) {
-      console.error(`Error deriving wallet for path ${path}:`, error);
+      logError(`Error deriving wallet for path ${path}:`, error);
       throw new Error(`Unable to derive wallet for path ${path}`);
     }
   }
@@ -397,7 +414,7 @@ export class WalletManager extends EventEmitter {
 
       return privateKey;
     } catch (error) {
-      console.error("Error generating private key:", error);
+      logError("Error generating private key:", error);
 
       // Fallback: create valid hex value
       const fallbackHex =
@@ -468,7 +485,7 @@ export class WalletManager extends EventEmitter {
       }
       return this.mainWallet;
     } catch (error) {
-      console.error("Error retrieving main wallet:", error);
+      logError("Error retrieving main wallet:", error);
       return null;
     }
   }
@@ -493,7 +510,7 @@ export class WalletManager extends EventEmitter {
         return JSON.stringify(encrypted);
       }
     } catch (error) {
-      console.error("Error encrypting data:", error);
+      logError("Error encrypting data:", error);
       // Fallback: save in clear but with warning
       log("WARNING: Sensitive data saved without encryption");
       return `unencrypted:${text}`;
@@ -530,7 +547,7 @@ export class WalletManager extends EventEmitter {
         return decrypted as string;
       }
     } catch (error) {
-      console.error("Error decrypting data:", error);
+      logError("Error decrypting data:", error);
       return null;
     }
   }
@@ -578,7 +595,7 @@ export class WalletManager extends EventEmitter {
 
       return decrypted;
     } catch (error) {
-      console.error("Error retrieving mnemonic:", error);
+      logError("Error retrieving mnemonic:", error);
       return null;
     }
   }
@@ -603,7 +620,7 @@ export class WalletManager extends EventEmitter {
       this.storage.setItem(storageKey, encryptedMnemonic);
       log("Encrypted mnemonic also saved to localStorage as backup");
     } catch (error) {
-      console.error("Error saving mnemonic:", error);
+      logError("Error saving mnemonic:", error);
       throw error;
     }
   }
@@ -664,7 +681,7 @@ export class WalletManager extends EventEmitter {
         // Also save to localStorage
         this.saveWalletPathsToLocalStorage();
       } catch (saveError) {
-        console.error("Error saving wallet path:", saveError);
+        logError("Error saving wallet path:", saveError);
         log("Wallet created but path might not be persisted properly");
         // Non blocchiamo la creazione del wallet per errori di salvataggio del path
       }
@@ -676,7 +693,7 @@ export class WalletManager extends EventEmitter {
         getAddressString: () => wallet.address,
       };
     } catch (error) {
-      console.error("Error creating wallet:", error);
+      logError("Error creating wallet:", error);
       throw new Error(
         `Failed to create wallet: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -689,7 +706,7 @@ export class WalletManager extends EventEmitter {
 
       // More complete authentication check
       if (!user) {
-        console.error("loadWallets: No Gun user available");
+        logError("loadWallets: No Gun user available");
         throw new Error("Gun user not available");
       }
 
@@ -698,7 +715,7 @@ export class WalletManager extends EventEmitter {
         await this.initializeWalletPaths();
       } catch (pathsError) {
         // Log l'errore ma continua con i wallet disponibili (se presenti)
-        console.error(
+        logError(
           "Error initializing wallet paths, proceeding with available wallets:",
           pathsError,
         );
@@ -709,7 +726,7 @@ export class WalletManager extends EventEmitter {
       let masterMnemonic = await this.getUserMasterMnemonic();
       if (!masterMnemonic) {
         // If none exists, create default wallet
-        console.log("No mnemonic found, creating default wallet...");
+        log("No mnemonic found, creating default wallet...");
         const mainWallet = await this.createWallet();
         return [mainWallet];
       }
@@ -730,7 +747,7 @@ export class WalletManager extends EventEmitter {
           );
 
           if (wallet.address.toLowerCase() !== address.toLowerCase()) {
-            console.warn(
+            logWarn(
               `Warning: derived address (${wallet.address}) does not match saved address (${address})`,
             );
           }
@@ -742,7 +759,7 @@ export class WalletManager extends EventEmitter {
             getAddressString: () => wallet.address,
           });
         } catch (innerError) {
-          console.error(`Error deriving wallet ${address}:`, innerError);
+          logError(`Error deriving wallet ${address}:`, innerError);
           // Non interrompiamo il ciclo per un singolo wallet fallito
         }
       }
@@ -754,7 +771,7 @@ export class WalletManager extends EventEmitter {
 
       return wallets;
     } catch (error) {
-      console.error("Error loading wallets:", error);
+      logError("Error loading wallets:", error);
       // Rilanciamo l'errore con un messaggio più dettagliato
       throw new Error(
         `Failed to load wallets: ${error instanceof Error ? error.message : String(error)}`,
@@ -901,7 +918,7 @@ export class WalletManager extends EventEmitter {
     try {
       return await wallet.signMessage(message);
     } catch (error) {
-      console.error("Error signing message:", error);
+      logError("Error signing message:", error);
       throw error;
     }
   }
@@ -950,7 +967,7 @@ export class WalletManager extends EventEmitter {
       log(`Transaction signed successfully`);
       return signedTx;
     } catch (error) {
-      console.error("Error signing transaction:", error);
+      logError("Error signing transaction:", error);
       throw error;
     }
   }
@@ -1144,7 +1161,7 @@ export class WalletManager extends EventEmitter {
         version: "1.0",
       });
     } catch (error) {
-      console.error("Errore nell'esportazione di tutti i dati utente:", error);
+      logError("Errore nell'esportazione di tutti i dati utente:", error);
       throw error;
     }
   }
@@ -1217,7 +1234,7 @@ export class WalletManager extends EventEmitter {
         await user.get("wallet_paths").put(null);
         log("Wallet path eliminati da Gun con successo");
       } catch (gunError) {
-        console.error(
+        logError(
           "Errore durante la cancellazione dei wallet path da Gun:",
           gunError,
         );
@@ -1230,7 +1247,7 @@ export class WalletManager extends EventEmitter {
         this.storage.removeItem(storageKey);
         log("Wallet path eliminati da localStorage con successo");
       } catch (storageError) {
-        console.error(
+        logError(
           "Errore durante la cancellazione dei wallet path da localStorage:",
           storageError,
         );
@@ -1253,7 +1270,7 @@ export class WalletManager extends EventEmitter {
 
       return true;
     } catch (error) {
-      console.error("Errore nell'importazione della mnemonica:", error);
+      logError("Errore nell'importazione della mnemonica:", error);
       throw error;
     }
   }
@@ -1272,15 +1289,15 @@ export class WalletManager extends EventEmitter {
       let wallets: any[] = [];
 
       // Log per debug
-      console.log(
+      log(
         `[importWalletKeys] Tentativo di importazione wallet, lunghezza dati: ${walletsData.length} caratteri`,
       );
       if (walletsData.length > 100) {
-        console.log(
+        log(
           `[importWalletKeys] Primi 100 caratteri: ${walletsData.substring(0, 100)}...`,
         );
       } else {
-        console.log(`[importWalletKeys] Dati completi: ${walletsData}`);
+        log(`[importWalletKeys] Dati completi: ${walletsData}`);
       }
 
       // Pulizia dei dati: rimuovi BOM e altri caratteri speciali
@@ -1291,20 +1308,18 @@ export class WalletManager extends EventEmitter {
       try {
         // Verifica che sia un JSON valido
         if (!walletsData.startsWith("{") && !walletsData.startsWith("[")) {
-          console.log(
-            "[importWalletKeys] Il formato non sembra essere JSON valido",
-          );
+          log("[importWalletKeys] Il formato non sembra essere JSON valido");
 
           // Tenta di interpretare come mnemonic o chiave privata singola
           if (walletsData.split(" ").length >= 12) {
-            console.log("[importWalletKeys] Potrebbe essere una mnemonic");
+            log("[importWalletKeys] Potrebbe essere una mnemonic");
             throw new Error(
               "I dati sembrano essere una mnemonic, usa 'Importa Mnemonica' invece",
             );
           }
 
           if (walletsData.startsWith("0x") && walletsData.length === 66) {
-            console.log(
+            log(
               "[importWalletKeys] Potrebbe essere una chiave privata singola",
             );
             // Crea un wallet manuale da chiave privata
@@ -1322,11 +1337,11 @@ export class WalletManager extends EventEmitter {
                 },
               ];
 
-              console.log(
+              log(
                 `[importWalletKeys] Creato wallet singolo da chiave privata: ${wallet.address}`,
               );
             } catch (walletError) {
-              console.error(
+              logError(
                 "[importWalletKeys] Errore nella creazione del wallet da chiave privata:",
                 walletError,
               );
@@ -1340,7 +1355,7 @@ export class WalletManager extends EventEmitter {
         } else {
           // Tenta di parsificare il JSON
           const jsonData = JSON.parse(walletsData);
-          console.log(
+          log(
             `[importWalletKeys] JSON parsificato con successo, tipo: ${typeof jsonData}, chiavi: ${Object.keys(jsonData).join(", ")}`,
           );
 
@@ -1350,23 +1365,21 @@ export class WalletManager extends EventEmitter {
             jsonData.data &&
             password
           ) {
-            console.log(
+            log(
               "[importWalletKeys] Trovati dati cifrati, tentativo di decifratura...",
             );
             try {
               const decryptedData = await SEA.decrypt(jsonData.data, password);
 
               if (!decryptedData) {
-                console.error(
-                  "[importWalletKeys] Decifratura fallita: risultato null",
-                );
+                log("[importWalletKeys] Decifratura fallita: risultato null");
                 throw new Error("Password non valida o dati corrotti");
               }
 
-              console.log(
+              log(
                 "[importWalletKeys] Decifratura riuscita, tentativo di parsing...",
               );
-              console.log(
+              log(
                 "[importWalletKeys] Tipo dei dati decifrati:",
                 typeof decryptedData,
               );
@@ -1374,7 +1387,7 @@ export class WalletManager extends EventEmitter {
                 typeof decryptedData === "string" &&
                 decryptedData.length > 50
               ) {
-                console.log(
+                log(
                   "[importWalletKeys] Primi 50 caratteri decifrati:",
                   decryptedData.substring(0, 50),
                 );
@@ -1382,7 +1395,7 @@ export class WalletManager extends EventEmitter {
 
               try {
                 const decryptedJson = JSON.parse(decryptedData as string);
-                console.log(
+                log(
                   "[importWalletKeys] Parsing riuscito, struttura:",
                   Object.keys(decryptedJson).join(", "),
                 );
@@ -1392,16 +1405,16 @@ export class WalletManager extends EventEmitter {
                   Array.isArray(decryptedJson.wallets)
                 ) {
                   wallets = decryptedJson.wallets;
-                  console.log(
+                  log(
                     `[importWalletKeys] Trovati ${wallets.length} wallet nei dati decifrati`,
                   );
                 } else if (Array.isArray(decryptedJson)) {
                   wallets = decryptedJson;
-                  console.log(
+                  log(
                     `[importWalletKeys] Trovato array diretto di ${wallets.length} wallet nei dati decifrati`,
                   );
                 } else {
-                  console.error(
+                  log(
                     "[importWalletKeys] Formato JSON decifrato non valido:",
                     decryptedJson,
                   );
@@ -1410,13 +1423,13 @@ export class WalletManager extends EventEmitter {
                   );
                 }
               } catch (parseError) {
-                console.error(
+                logError(
                   `[importWalletKeys] Errore nel parsing dei dati decifrati: ${parseError}`,
                 );
                 throw new Error("Formato JSON decifrato non valido");
               }
             } catch (decryptError: any) {
-              console.error(
+              logError(
                 "[importWalletKeys] Errore durante la decifratura:",
                 decryptError,
               );
@@ -1428,11 +1441,11 @@ export class WalletManager extends EventEmitter {
             // Se i dati sono in formato JSON non cifrato con campo wallets
             if (Array.isArray(jsonData.wallets)) {
               wallets = jsonData.wallets;
-              console.log(
+              log(
                 `[importWalletKeys] Trovati ${wallets.length} wallet nel JSON non cifrato`,
               );
             } else {
-              console.error(
+              log(
                 "[importWalletKeys] Il campo wallets non è un array:",
                 jsonData.wallets,
               );
@@ -1443,34 +1456,29 @@ export class WalletManager extends EventEmitter {
           } else if (Array.isArray(jsonData)) {
             // Se è un array diretto di wallet
             wallets = jsonData;
-            console.log(
+            log(
               `[importWalletKeys] Trovato array diretto di ${wallets.length} wallet`,
             );
           } else {
-            console.error(
-              "[importWalletKeys] Formato JSON non valido:",
-              jsonData,
-            );
+            log("[importWalletKeys] Formato JSON non valido:", jsonData);
             throw new Error(
               "Formato JSON non valido: manca il campo 'wallets'",
             );
           }
         }
       } catch (error) {
-        console.error(`[importWalletKeys] Errore nel parsing JSON: ${error}`);
+        logError(`[importWalletKeys] Errore nel parsing JSON: ${error}`);
         throw new Error(
           `Formato JSON non valido o password errata: ${error || String(error)}`,
         );
       }
 
       if (!Array.isArray(wallets) || wallets.length === 0) {
-        console.error(
-          "[importWalletKeys] Nessun wallet valido trovato nei dati forniti",
-        );
+        log("[importWalletKeys] Nessun wallet valido trovato nei dati forniti");
         throw new Error("Nessun wallet valido trovato nei dati forniti");
       }
 
-      console.log(
+      log(
         `[importWalletKeys] Inizio importazione di ${wallets.length} wallet...`,
       );
 
@@ -1480,12 +1488,12 @@ export class WalletManager extends EventEmitter {
       // Per ogni wallet nei dati importati
       for (const walletData of wallets) {
         try {
-          console.log(
+          log(
             `[importWalletKeys] Tentativo di importazione wallet: ${JSON.stringify(walletData).substring(0, 100)}...`,
           );
 
           if (!walletData.privateKey) {
-            console.log(
+            log(
               "[importWalletKeys] Manca la chiave privata, salto questo wallet",
             );
             continue; // Salta wallet incompleti
@@ -1503,7 +1511,7 @@ export class WalletManager extends EventEmitter {
               walletData.address &&
               wallet.address.toLowerCase() !== walletData.address.toLowerCase()
             ) {
-              console.warn(
+              logWarn(
                 `[importWalletKeys] L'indirizzo generato ${wallet.address} non corrisponde all'indirizzo fornito ${walletData.address}`,
               );
             }
@@ -1520,17 +1528,17 @@ export class WalletManager extends EventEmitter {
             // Incrementa il contatore
             successCount++;
 
-            console.log(
+            log(
               `[importWalletKeys] Wallet importato con successo: ${wallet.address}`,
             );
           } catch (walletError: any) {
-            console.error(
+            logError(
               `[importWalletKeys] Errore nella creazione del wallet: ${walletError.message || String(walletError)}`,
             );
             // Continua con il prossimo wallet
           }
         } catch (walletImportError: any) {
-          console.error(
+          logError(
             `[importWalletKeys] Errore nell'importazione del wallet: ${walletImportError.message || String(walletImportError)}`,
           );
           // Continua con il prossimo wallet
@@ -1545,12 +1553,12 @@ export class WalletManager extends EventEmitter {
       // Resetta il wallet principale per forzare la riderivazione
       this.resetMainWallet();
 
-      console.log(
+      log(
         `[importWalletKeys] Importazione completata: ${successCount} wallet importati su ${wallets.length}`,
       );
       return successCount;
     } catch (error) {
-      console.error("Errore nell'importazione dei wallet:", error);
+      logError("Errore nell'importazione dei wallet:", error);
       throw error;
     }
   }
@@ -1612,7 +1620,7 @@ export class WalletManager extends EventEmitter {
         );
       }
     } catch (error) {
-      console.error("Errore nell'importazione del pair di Gun:", error);
+      logError("Errore nell'importazione del pair di Gun:", error);
       throw error;
     }
   }
@@ -1644,15 +1652,15 @@ export class WalletManager extends EventEmitter {
       }
 
       // Log per debug
-      console.log(
+      log(
         `[importAllUserData] Tentativo di importazione backup, lunghezza: ${backupData.length} caratteri`,
       );
       if (backupData.length > 100) {
-        console.log(
+        log(
           `[importAllUserData] Primi 100 caratteri: ${backupData.substring(0, 100)}...`,
         );
       } else {
-        console.log(`[importAllUserData] Dati completi: ${backupData}`);
+        log(`[importAllUserData] Dati completi: ${backupData}`);
       }
 
       // Pulizia dei dati: rimuovi BOM e altri caratteri speciali
@@ -1663,37 +1671,32 @@ export class WalletManager extends EventEmitter {
 
       // Verifica se i dati sono nel formato corretto
       try {
-        console.log("[importAllUserData] Tentativo di parsing JSON...");
+        log("[importAllUserData] Tentativo di parsing JSON...");
 
         // Verifica che sia un JSON valido
         if (!backupData.startsWith("{") && !backupData.startsWith("[")) {
-          console.error(
-            "[importAllUserData] Il formato non sembra essere JSON valido",
-          );
+          log("[importAllUserData] Il formato non sembra essere JSON valido");
           throw new Error("Il backup deve essere in formato JSON valido");
         }
 
         const jsonData = JSON.parse(backupData);
-        console.log(
+        log(
           `[importAllUserData] JSON parsificato con successo, tipo: ${jsonData.type || "non specificato"}`,
         );
 
         if (jsonData.type !== "encrypted-shogun-backup" || !jsonData.data) {
-          console.error(
-            "[importAllUserData] Formato del backup non valido:",
-            jsonData,
-          );
+          log("[importAllUserData] Formato del backup non valido:", jsonData);
           throw new Error(
             "Formato del backup non valido: manca il tipo o i dati",
           );
         }
 
         // Decifra i dati
-        console.log("[importAllUserData] Tentativo di decifratura...");
+        log("[importAllUserData] Tentativo di decifratura...");
         try {
           decryptedData = await SEA.decrypt(jsonData.data, password);
         } catch (decryptError) {
-          console.error(
+          logError(
             "[importAllUserData] Errore nella decifratura:",
             decryptError,
           );
@@ -1701,21 +1704,19 @@ export class WalletManager extends EventEmitter {
         }
 
         if (!decryptedData) {
-          console.error(
-            "[importAllUserData] Decifratura fallita: null o undefined",
-          );
+          log("[importAllUserData] Decifratura fallita: null o undefined");
           throw new Error("Password non valida o dati corrotti");
         }
 
-        console.log(
+        log(
           "[importAllUserData] Decifratura riuscita, tentativo di parsing del contenuto...",
         );
-        console.log(
+        log(
           "[importAllUserData] Tipo di dati decifrati:",
           typeof decryptedData,
         );
         if (typeof decryptedData === "string" && decryptedData.length > 50) {
-          console.log(
+          log(
             "[importAllUserData] Primi 50 caratteri decifrati:",
             decryptedData.substring(0, 50),
           );
@@ -1723,11 +1724,9 @@ export class WalletManager extends EventEmitter {
 
         try {
           decryptedData = JSON.parse(decryptedData as string);
-          console.log(
-            "[importAllUserData] Parsing del contenuto decifrato riuscito",
-          );
+          log("[importAllUserData] Parsing del contenuto decifrato riuscito");
         } catch (parseError) {
-          console.error(
+          logError(
             "[importAllUserData] Errore nel parsing del contenuto decifrato:",
             parseError,
           );
@@ -1736,7 +1735,7 @@ export class WalletManager extends EventEmitter {
           );
         }
       } catch (error) {
-        console.error("[importAllUserData] Errore generale:", error);
+        logError("[importAllUserData] Errore generale:", error);
         throw new Error(`Formato JSON non valido o password errata: ${error}`);
       }
 
@@ -1751,21 +1750,19 @@ export class WalletManager extends EventEmitter {
       // Importa la mnemonic se richiesto
       if (options.importMnemonic && decryptedData.mnemonic) {
         try {
-          console.log(
-            "[importAllUserData] Tentativo di importazione mnemonica...",
-          );
+          log("[importAllUserData] Tentativo di importazione mnemonica...");
           await this.saveUserMasterMnemonic(decryptedData.mnemonic);
           result.mnemonicImported = true;
-          console.log("[importAllUserData] Mnemonica importata con successo");
+          log("[importAllUserData] Mnemonica importata con successo");
         } catch (error) {
-          console.error(
+          logError(
             "[importAllUserData] Errore nell'importazione della mnemonica:",
             error,
           );
           result.mnemonicImported = false;
         }
       } else {
-        console.log(
+        log(
           "[importAllUserData] Importazione mnemonica non richiesta o mnemonica non trovata",
         );
       }
@@ -1777,7 +1774,7 @@ export class WalletManager extends EventEmitter {
         Array.isArray(decryptedData.wallets)
       ) {
         try {
-          console.log(
+          log(
             `[importAllUserData] Tentativo di importazione di ${decryptedData.wallets.length} wallet...`,
           );
           // Prepara i dati nel formato richiesto da importWalletKeys
@@ -1785,25 +1782,22 @@ export class WalletManager extends EventEmitter {
             wallets: decryptedData.wallets,
           });
           result.walletsImported = await this.importWalletKeys(walletsData);
-          console.log(
+          log(
             `[importAllUserData] ${result.walletsImported} wallet importati con successo`,
           );
         } catch (error) {
-          console.error(
+          logError(
             "[importAllUserData] Errore nell'importazione dei wallet:",
             error,
           );
           result.walletsImported = 0;
         }
       } else {
-        console.log(
+        log(
           "[importAllUserData] Importazione wallet non richiesta o wallet non trovati",
         );
         if (options.importWallets) {
-          console.log(
-            "[importAllUserData] Dettagli wallets:",
-            decryptedData.wallets,
-          );
+          log("[importAllUserData] Dettagli wallets:", decryptedData.wallets);
         }
       }
 
@@ -1814,28 +1808,26 @@ export class WalletManager extends EventEmitter {
         decryptedData.user.pair
       ) {
         try {
-          console.log(
-            "[importAllUserData] Tentativo di importazione pair Gun...",
-          );
+          log("[importAllUserData] Tentativo di importazione pair Gun...");
           // Il pair di Gun viene validato ma non applicato automaticamente
           // (richiede logout e login che deve essere gestito dall'app)
           const pairData = JSON.stringify(decryptedData.user.pair);
           await this.importGunPair(pairData);
           result.gunPairImported = true;
-          console.log("[importAllUserData] Pair Gun importato con successo");
+          log("[importAllUserData] Pair Gun importato con successo");
         } catch (error) {
-          console.error(
+          logError(
             "[importAllUserData] Errore nell'importazione del pair di Gun:",
             error,
           );
           result.gunPairImported = false;
         }
       } else {
-        console.log(
+        log(
           "[importAllUserData] Importazione pair Gun non richiesta o pair non trovato",
         );
         if (options.importGunPair) {
-          console.log("[importAllUserData] Dettagli user:", decryptedData.user);
+          log("[importAllUserData] Dettagli user:", decryptedData.user);
         }
       }
 
@@ -1848,10 +1840,10 @@ export class WalletManager extends EventEmitter {
         (options.importGunPair && result.gunPairImported)
       );
 
-      console.log("[importAllUserData] Risultato finale:", result);
+      log("[importAllUserData] Risultato finale:", result);
       return result;
     } catch (error) {
-      console.error("Errore nell'importazione del backup:", error);
+      logError("Errore nell'importazione del backup:", error);
       throw error;
     }
   }

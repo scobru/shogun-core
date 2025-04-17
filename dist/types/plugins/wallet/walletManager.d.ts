@@ -1,8 +1,7 @@
-import { ethers } from "ethers";
-import { GunDB } from "../../gun/gun";
 import { ShogunStorage } from "../../storage/storage";
 import { WalletInfo } from "../../types/shogun";
-import { EventEmitter } from "events";
+import { ethers } from "ethers";
+import { EventEmitter } from "../../utils/eventEmitter";
 import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions } from "../../types/wallet";
 export type WalletPath = IWalletPath;
 export type BalanceCache = IBalanceCache;
@@ -15,22 +14,42 @@ export type WalletExport = IWalletExport;
  * - Encrypted storage and backup
  */
 export declare class WalletManager extends EventEmitter {
-    private gundb;
-    private gun;
-    private storage;
+    private readonly gun;
+    private readonly storage;
     private walletPaths;
     private mainWallet;
-    private balanceCache;
-    private pendingTransactions;
-    private config;
+    private readonly balanceCache;
+    private readonly pendingTransactions;
+    private readonly config;
     /**
      * Creates a new WalletManager instance
-     * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
      * @param config Additional configuration options
      */
-    constructor(gundb: GunDB, gun: any, storage: ShogunStorage, config?: Partial<WalletConfig>);
+    constructor(gun: any, storage: ShogunStorage, config?: Partial<WalletConfig>);
+    /**
+     * Initialize wallet paths synchronously with basic setup
+     * @private
+     */
+    private initWalletPathsSync;
+    /**
+     * Initializes wallet paths from both GunDB and localStorage
+     * Call this method explicitly when needed
+     * @public
+     * @throws {Error} If there's an error during wallet path initialization
+     */
+    initializeWalletPaths(): Promise<void>;
+    /**
+     * Loads wallet paths from localStorage as backup
+     * @private
+     */
+    private loadWalletPathsFromLocalStorage;
+    /**
+     * Loads wallet paths from GunDB
+     * @private
+     */
+    private loadWalletPathsFromGun;
     /**
      * Setup transaction monitoring
      */
@@ -49,22 +68,6 @@ export declare class WalletManager extends EventEmitter {
      * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider(): ethers.JsonRpcProvider;
-    /**
-     * Initializes wallet paths from both GunDB and localStorage
-     * @private
-     * @throws {Error} If there's an error during wallet path initialization
-     */
-    private initializeWalletPaths;
-    /**
-     * Loads wallet paths from GunDB
-     * @private
-     */
-    private loadWalletPathsFromGun;
-    /**
-     * Loads wallet paths from localStorage as backup
-     * @private
-     */
-    private loadWalletPathsFromLocalStorage;
     /**
      * Gets a unique identifier for the current user for storage purposes
      * @private

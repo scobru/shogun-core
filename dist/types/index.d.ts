@@ -1,9 +1,6 @@
 import { GunDB } from "./gun/gun";
-import { Webauthn } from "./plugins/webauthn/webauthn";
-import { MetaMask } from "./plugins/metamask/connector/metamask";
-import { Stealth } from "./plugins/stealth/stealth";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, DID } from "./types/shogun";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "./utils/errorHandler";
@@ -16,20 +13,39 @@ export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
 export { ShogunPlugin, PluginManager } from "./types/plugin";
+/**
+ * Main ShogunCore class - implements the IShogunCore interface
+ *
+ * This is the primary entry point for the Shogun SDK, providing access to:
+ * - Decentralized database (GunDB)
+ * - Authentication methods (traditional, WebAuthn, MetaMask)
+ * - Plugin system for extensibility
+ * - DID (Decentralized Identity) management
+ * - RxJS integration for reactive programming
+ *
+ * @since 2.0.0
+ */
 export declare class ShogunCore implements IShogunCore {
+    /** Current API version - used for deprecation warnings and migration guidance */
+    static readonly API_VERSION = "2.0.0";
+    /** Gun database instance */
     gun: IGunInstance<any>;
+    /** Gun user instance */
     user: IGunUserInstance<any> | null;
+    /** GunDB wrapper */
     gundb: GunDB;
-    did?: DID;
+    /** Storage implementation */
     storage: ShogunStorage;
-    private eventEmitter;
+    /** Event emitter for SDK events */
+    private readonly eventEmitter;
+    /** Ethereum provider */
     provider?: ethers.Provider;
+    /** SDK configuration */
     config: ShogunSDKConfig;
+    /** RxJS integration */
     rx: GunRxJS;
-    webauthn?: Webauthn;
-    metamask?: MetaMask;
-    stealth?: Stealth;
-    private plugins;
+    /** Plugin registry */
+    private readonly plugins;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -39,45 +55,53 @@ export declare class ShogunCore implements IShogunCore {
      */
     constructor(config: ShogunSDKConfig);
     /**
-     * Registra i plugin integrati in base alla configurazione
+     * Register built-in plugins based on configuration
      * @private
      */
     private registerBuiltinPlugins;
     /**
-     * Registra un nuovo plugin
-     * @param plugin Il plugin da registrare
+     * Register a new plugin with the SDK
+     * @param plugin The plugin to register
+     * @throws Error if a plugin with the same name is already registered
      */
     register(plugin: ShogunPlugin): void;
     /**
-     * Cancella la registrazione di un plugin
-     * @param pluginName Nome del plugin da cancellare
+     * Unregister a plugin from the SDK
+     * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName: string): void;
     /**
-     * Recupera un plugin registrato per nome
-     * @param name Nome del plugin
-     * @returns Il plugin richiesto o undefined se non trovato
-     * @template T Tipo del plugin o dell'interfaccia pubblica del plugin
+     * Retrieve a registered plugin by name
+     * @param name Name of the plugin
+     * @returns The requested plugin or undefined if not found
+     * @template T Type of the plugin or its public interface
      */
     getPlugin<T>(name: string): T | undefined;
     /**
-     * Verifica se un plugin è registrato
-     * @param name Nome del plugin da verificare
-     * @returns true se il plugin è registrato, false altrimenti
+     * Check if a plugin is registered
+     * @param name Name of the plugin to check
+     * @returns true if the plugin is registered, false otherwise
      */
     hasPlugin(name: string): boolean;
     /**
-     * Ottiene tutti i plugin di una determinata categoria
-     * @param category Categoria di plugin da filtrare
-     * @returns Array di plugin della categoria specificata
+     * Get all plugins of a specific category
+     * @param category Category of plugins to filter
+     * @returns Array of plugins in the specified category
      */
     getPluginsByCategory(category: PluginCategory): ShogunPlugin[];
+    /**
+     * Get an authentication method plugin by type
+     * @param type The type of authentication method
+     * @returns The authentication plugin or undefined if not available
+     * This is a more modern approach to accessing authentication methods
+     */
+    getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): unknown;
     /**
      * Observe a Gun node for changes
      * @param path - Path to observe (can be a string or a Gun chain)
      * @returns Observable that emits whenever the node changes
      */
-    observe<T>(path: string | any): Observable<T>;
+    observe<T>(path: string): Observable<T>;
     /**
      * Match data based on Gun's '.map()' and convert to Observable
      * @param path - Path to the collection
@@ -104,7 +128,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to get data from
      * @returns Observable that emits the data once
      */
-    once<T>(path: string | any): Observable<T>;
+    onceObservable<T>(path: string | any): Observable<T>;
     /**
      * Compute derived values from gun data
      * @param sources - Array of paths or observables to compute from
@@ -126,9 +150,9 @@ export declare class ShogunCore implements IShogunCore {
      */
     observeUser<T>(path: string): Observable<T>;
     /**
-     * Recupera gli errori recenti registrati dal sistema
-     * @param count - Numero di errori da recuperare
-     * @returns Lista degli errori più recenti
+     * Retrieve recent errors logged by the system
+     * @param count - Number of errors to retrieve (default: 10)
+     * @returns List of most recent errors
      */
     getRecentErrors(count?: number): ShogunError[];
     /**
@@ -175,42 +199,6 @@ export declare class ShogunCore implements IShogunCore {
      * Validates password requirements and emits signup event on success.
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
-    /**
-     * Check if WebAuthn is supported by the browser
-     * @returns {boolean} True if WebAuthn is supported, false otherwise
-     * @description Verifies if the current browser environment supports WebAuthn authentication
-     */
-    isWebAuthnSupported(): boolean;
-    /**
-     * Perform WebAuthn login
-     * @param username - Username
-     * @returns {Promise<AuthResult>} Authentication result
-     * @description Authenticates user using WebAuthn credentials.
-     * Requires browser support for WebAuthn and existing credentials.
-     */
-    loginWithWebAuthn(username: string): Promise<AuthResult>;
-    /**
-     * Register new user with WebAuthn
-     * @param username - Username
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using WebAuthn credentials.
-     * Requires browser support for WebAuthn.
-     */
-    signUpWithWebAuthn(username: string): Promise<AuthResult>;
-    /**
-     * Login with MetaMask
-     * @param address - Ethereum address
-     * @returns {Promise<AuthResult>} Authentication result
-     * @description Authenticates user using MetaMask wallet credentials after signature verification
-     */
-    loginWithMetaMask(address: string): Promise<AuthResult>;
-    /**
-     * Register new user with MetaMask
-     * @param address - Ethereum address
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using MetaMask wallet credentials after signature verification
-     */
-    signUpWithMetaMask(address: string): Promise<AuthResult>;
     /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
@@ -267,22 +255,40 @@ export declare class ShogunCore implements IShogunCore {
      */
     getRpcUrl(): string | null;
     /**
-     * Get the main wallet for the authenticated user
-     * @returns The user's main Ethereum wallet or null if not available
-     * @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead
-     */
-    getMainWallet(): ethers.Wallet | null;
-    /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
      * @param eventName The name of the event to emit.
      * @param data The data to pass with the event.
      */
-    emit(eventName: string | symbol, ...args: any[]): boolean;
+    emit(eventName: string | symbol, data?: any): boolean;
+    /**
+     * Add an event listener
+     * @param eventName The name of the event to listen for
+     * @param listener The callback function to execute when the event is emitted
+     */
+    on(eventName: string | symbol, listener: (data: unknown) => void): this;
+    /**
+     * Add a one-time event listener
+     * @param eventName The name of the event to listen for
+     * @param listener The callback function to execute when the event is emitted
+     */
+    once(eventName: string | symbol, listener: (data: unknown) => void): this;
+    /**
+     * Remove an event listener
+     * @param eventName The name of the event to stop listening for
+     * @param listener The callback function to remove
+     */
+    off(eventName: string | symbol, listener: (data: unknown) => void): this;
+    /**
+     * Remove all listeners for a specific event or all events
+     * @param eventName Optional. The name of the event to remove listeners for.
+     * If not provided, all listeners for all events are removed.
+     */
+    removeAllListeners(eventName?: string | symbol): this;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
-export { MetaMask } from "./plugins/metamask/connector/metamask";
+export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
 export { Webauthn } from "./plugins/webauthn/webauthn";

@@ -23,8 +23,8 @@ declare global {
  * Main WebAuthn class for authentication management
  */
 export declare class Webauthn extends EventEmitter {
-    private config;
-    private gunInstance?;
+    private readonly config;
+    private readonly gunInstance?;
     private credential;
     private abortController;
     /**

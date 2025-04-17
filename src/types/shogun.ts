@@ -2,7 +2,7 @@ import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/connector/metamask";
+import { MetaMask } from "../plugins/metamask/metamask";
 import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "./gun";
@@ -24,7 +24,7 @@ export enum PluginCategory {
   /** Plugin per l'identità decentralizzata */
   Identity = "identity",
   /** Plugin per altre funzionalità */
-  Utility = "utility"
+  Utility = "utility",
 }
 
 /**
@@ -38,9 +38,9 @@ export enum CorePlugins {
   /** Plugin Stealth */
   Stealth = "stealth",
   /** Plugin DID */
-  DID = "did", 
+  DID = "did",
   /** Plugin Wallet Manager */
-  WalletManager = "wallet"
+  WalletManager = "wallet",
 }
 
 // Definizione dell'interfaccia DID
@@ -99,6 +99,13 @@ export interface IShogunCore extends PluginManager {
   config: ShogunSDKConfig;
   provider?: ethers.Provider;
 
+  // Event emitter methods
+  on(eventName: string | symbol, listener: (...args: any[]) => void): any;
+  off(eventName: string | symbol, listener: (...args: any[]) => void): any;
+  once(eventName: string | symbol, listener: (...args: any[]) => void): any;
+  removeAllListeners(eventName?: string | symbol): any;
+  emit(eventName: string | symbol, ...args: any[]): boolean;
+
   // Error handling methods
   getRecentErrors(count?: number): ShogunError[];
 
@@ -111,14 +118,14 @@ export interface IShogunCore extends PluginManager {
 
   // Wallet management methods
   /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
-  getMainWallet(): ethers.Wallet | null;
+  getMainWallet?(): ethers.Wallet | null;
 
   // Direct authentication methods
   login(username: string, password: string): Promise<AuthResult>;
   /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() instead */
-  loginWithWebAuthn(username: string): Promise<AuthResult>;
+  loginWithWebAuthn?(username: string): Promise<AuthResult>;
   /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() instead */
-  loginWithMetaMask(address: string): Promise<AuthResult>;
+  loginWithMetaMask?(address: string): Promise<AuthResult>;
 
   signUp(
     username: string,
@@ -126,13 +133,16 @@ export interface IShogunCore extends PluginManager {
     passwordConfirmation?: string,
   ): Promise<SignUpResult>;
   /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
-  signUpWithMetaMask(address: string): Promise<AuthResult>;
+  signUpWithMetaMask?(address: string): Promise<AuthResult>;
   /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() and signUp() instead */
-  signUpWithWebAuthn(username: string): Promise<AuthResult>;
+  signUpWithWebAuthn?(username: string): Promise<AuthResult>;
 
   // Support methods
   /** @deprecated Use getPlugin(CorePlugins.WebAuthn).isSupported() instead */
-  isWebAuthnSupported(): boolean;
+  isWebAuthnSupported?(): boolean;
+
+  // Authentication method retrieval
+  getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
 
   // Utility methods
   logout(): void;
@@ -146,7 +156,7 @@ export interface IShogunCore extends PluginManager {
   ): Observable<T[]>;
   rxPut<T>(path: string | any, data: T): Observable<T>;
   rxSet<T>(path: string | any, data: T): Observable<T>;
-  once<T>(path: string | any): Observable<T>;
+  onceObservable<T>(path: string | any): Observable<T>;
   compute<T, R>(
     sources: Array<string | Observable<any>>,
     computeFn: (...values: T[]) => R,

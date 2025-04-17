@@ -1,17 +1,23 @@
-import { ShogunCore, WalletPlugin, WalletPluginInterface } from "../index";
+import {
+  ShogunCore,
+  WalletPlugin,
+  WalletPluginInterface,
+  PluginCategory,
+} from "../index";
 
 // Primo modo: inizializzazione manuale del plugin
 function exampleManualPluginInit() {
   // Inizializza ShogunCore senza il wallet manager
   const core = new ShogunCore({
     gundb: {
-      peers: ["https://gun-server.example.com/gun"],
+      peers: ["http://localhost:8765/gun"],
     },
-    providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+    providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
   });
 
   // Crea e registra il plugin wallet
   const walletPlugin = new WalletPlugin();
+  walletPlugin._category = PluginCategory.Wallet;
   core.register(walletPlugin);
 
   // Usa il plugin wallet
@@ -52,23 +58,24 @@ function exampleManualPluginInit() {
 function exampleAutoPluginInit() {
   // Crea il plugin prima dell'inizializzazione di ShogunCore
   const walletPlugin = new WalletPlugin();
+  walletPlugin._category = PluginCategory.Wallet;
 
   // Inizializza ShogunCore con auto-registrazione del plugin
   const core = new ShogunCore({
     gundb: {
-      peers: ["https://gun-server.example.com/gun"],
+      peers: ["http://localhost:8765/gun"],
     },
     providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     plugins: {
-      autoRegister: [walletPlugin]
-    }
+      autoRegister: [walletPlugin],
+    },
   });
 
   // Usa il plugin dopo l'inizializzazione
   async function useWalletPlugin() {
     // Recupera il plugin tramite il suo nome
     const wallet = core.getPlugin<WalletPluginInterface>("wallet");
-    
+
     if (!wallet) {
       console.log("Wallet plugin not found");
       return;
@@ -81,7 +88,10 @@ function exampleAutoPluginInit() {
 
       // Carica tutti i wallet
       const wallets = await wallet.loadWallets();
-      console.log("All wallets:", wallets.map(w => w.address));
+      console.log(
+        "All wallets:",
+        wallets.map((w) => w.address),
+      );
     } else {
       console.log("User not logged in, please authenticate first");
     }
@@ -106,6 +116,7 @@ function exampleAutoPluginInit() {
 function typeChecking() {
   const core = new ShogunCore({});
   const plugin = new WalletPlugin();
+  plugin._category = PluginCategory.Wallet;
   core.register(plugin);
 
   // Type-safe access to plugin methods
@@ -115,4 +126,8 @@ function typeChecking() {
     typedPlugin.generateNewMnemonic();
     typedPlugin.createWallet();
   }
-} 
+
+  // Esempio di utilizzo del getPluginsByCategory
+  const walletPlugins = core.getPluginsByCategory(PluginCategory.Wallet);
+  console.log(`Found ${walletPlugins.length} wallet plugins`);
+}

@@ -2,6 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { WebauthnPluginInterface } from "./types";
 import { WebAuthnCredentials, CredentialResult } from "../../types/webauthn";
+import { AuthResult } from "../../types/shogun";
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
@@ -50,5 +51,33 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
         success: boolean;
         updatedCredentials?: WebAuthnCredentials;
     }>;
+    /**
+     * Login with WebAuthn
+     * This is the recommended method for WebAuthn authentication
+     * @param username - Username
+     * @returns {Promise<AuthResult>} Authentication result
+     * @description Authenticates user using WebAuthn credentials.
+     * Requires browser support for WebAuthn and existing credentials.
+     */
+    login(username: string): Promise<AuthResult>;
+    /**
+     * Register new user with WebAuthn
+     * This is the recommended method for WebAuthn registration
+     * @param username - Username
+     * @returns {Promise<AuthResult>} Registration result
+     * @description Creates a new user account using WebAuthn credentials.
+     * Requires browser support for WebAuthn.
+     */
+    signUp(username: string): Promise<AuthResult>;
+    /**
+     * Legacy method for WebAuthn login - use login() instead
+     * @deprecated Use login(username) instead
+     */
+    loginWithWebAuthn(username: string): Promise<AuthResult>;
+    /**
+     * Legacy method for WebAuthn signup - use signUp() instead
+     * @deprecated Use signUp(username) instead
+     */
+    signUpWithWebAuthn(username: string): Promise<AuthResult>;
 }
-export { WebauthnPluginInterface } from './types';
+export { WebauthnPluginInterface } from "./types";

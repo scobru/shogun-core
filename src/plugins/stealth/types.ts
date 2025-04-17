@@ -21,7 +21,7 @@ export interface StealthPluginInterface {
    */
   generateStealthAddress(
     publicKey: string,
-    ephemeralPrivateKey: string
+    ephemeralPrivateKey: string,
   ): Promise<StealthAddressResult>;
 
   /**
@@ -32,7 +32,7 @@ export interface StealthPluginInterface {
    */
   scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<StealthData[]>;
 
   /**
@@ -43,7 +43,7 @@ export interface StealthPluginInterface {
    */
   isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<boolean>;
 
   /**
@@ -54,6 +54,6 @@ export interface StealthPluginInterface {
    */
   getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<string>;
-} 
+}

@@ -2,13 +2,15 @@
  * Entry point for the browser version of Shogun Core
  */
 import { ShogunCore } from "./index";
-import { ShogunSDKConfig } from "./types/shogun";
+import { ShogunSDKConfig, CorePlugins } from "./types/shogun";
 import { log } from "./utils/logger";
 
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
 const loadStealthModule = () => import("./plugins/stealth/stealth");
 const loadDIDModule = () => import("./plugins/did/DID");
+const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
+const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
 
 let shogunCoreInstance;
 
@@ -30,9 +32,7 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   };
 
   // Assicuriamoci che la configurazione di GunDB esista
-  if (!browserConfig.gundb) {
-    browserConfig.gundb = {};
-  }
+  browserConfig.gundb ??= {};
 
   // Warn users who don't provide custom peers or providerUrl
   if (!config.gundb?.peers) {
@@ -50,6 +50,19 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   // Create a new ShogunCore instance with browser-optimized configuration
   shogunCoreInstance = new ShogunCore(browserConfig);
 
+  // Log the plugin status
+  if (shogunCoreInstance.hasPlugin(CorePlugins.WebAuthn)) {
+    log("WebAuthn plugin initialized", { category: "init", level: "info" });
+  }
+
+  if (shogunCoreInstance.hasPlugin(CorePlugins.MetaMask)) {
+    log("MetaMask plugin initialized", { category: "init", level: "info" });
+  }
+
+  if (shogunCoreInstance.hasPlugin(CorePlugins.WalletManager)) {
+    log("Wallet plugin initialized", { category: "init", level: "info" });
+  }
+
   return shogunCoreInstance;
 }
 
@@ -58,6 +71,8 @@ export const modules = {
   loadWebAuthn: loadWebAuthnModule,
   loadStealth: loadStealthModule,
   loadDID: loadDIDModule,
+  loadWallet: loadWalletModule,
+  loadMetaMask: loadMetaMaskModule,
 };
 
 // Export main class for those who prefer to use it directly

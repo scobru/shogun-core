@@ -20,6 +20,7 @@ export enum ErrorType {
   GUN = "GunError",
   STEALTH = "StealthError",
   WEBAUTHN = "WebAuthnError",
+  PLUGIN = "PluginError",
   UNKNOWN = "UnknownError",
   CONNECTOR = "CONNECTOR",
   GENERAL = "GENERAL",

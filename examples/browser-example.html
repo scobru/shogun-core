@@ -189,6 +189,9 @@
     // Variabile globale per l'istanza di Shogun
     let shogun;
     let metamaskAddress = '';
+    let walletPlugin;
+    let webauthnPlugin;
+    let metamaskPlugin;
 
     // Funzione per mostrare i risultati
     function showResult(title, data) {
@@ -228,41 +231,28 @@
 
     // Funzione per connettersi a MetaMask
     async function connectMetaMask() {
+      try {
+        metamaskPlugin = shogun.getPlugin("metamask");
+        if (!metamaskPlugin) {
+          showError('MetaMask', 'Plugin MetaMask non disponibile');
+          return;
+        }
 
-      const result = await shogun.metamask.connectMetaMask();
+        const result = await metamaskPlugin.connectMetaMask();
 
-      showResult('MetaMask', result);
+        showResult('MetaMask', result);
 
-      if (result.success) {
-        metamaskAddress = result.address;
-        metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
+        if (result.success) {
+          metamaskAddress = result.address;
+          metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
+        }
+
+        if (result.error) {
+          showError('MetaMask', result.error);
+        }
+      } catch (error) {
+        showError('MetaMask', error);
       }
-
-      if (result.error) {
-        showError('MetaMask', result.error);
-      }
-
-      // if (typeof window.ethereum === 'undefined') {
-      //   showError('MetaMask', 'MetaMask non è installato');
-      //   return;
-      // }
-      
-      // try {
-      //   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      //   metamaskAddress = accounts[0];
-      //   metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
-        
-      //   metamaskLoginBtn.disabled = false;
-      //   metamaskSignupBtn.disabled = false;
-        
-      //   showResult('MetaMask', {
-      //     success: true,
-      //     connesso: true,
-      //     indirizzo: metamaskAddress
-      //   });
-      // } catch (error) {
-      //   showError('MetaMask', error);
-      // }
     }
 
     // Inizializzazione di Shogun
@@ -300,6 +290,11 @@
         // Utilizziamo la funzione di inizializzazione specifica per browser
         shogun = window.initShogunBrowser(config);
         
+        // Otteniamo i riferimenti ai plugin
+        walletPlugin = shogun.getPlugin("wallet");
+        webauthnPlugin = shogun.getPlugin("webauthn");
+        metamaskPlugin = shogun.getPlugin("metamask");
+        
         // Verifica il supporto di WebAuthn e MetaMask
         const webauthnSupported = checkWebAuthnSupport();
         const metamaskSupported = checkMetaMaskSupport();
@@ -313,7 +308,12 @@
           stato: 'Successo', 
           connesso: true,
           webauthn: webauthnSupported,
-          metamask: metamaskSupported
+          metamask: metamaskSupported,
+          plugins: {
+            wallet: !!walletPlugin,
+            webauthn: !!webauthnPlugin,
+            metamask: !!metamaskPlugin
+          }
         });
       } catch (error) {
         showError('Inizializzazione', error);
@@ -379,12 +379,17 @@
       }
 
       try {
+        if (!metamaskPlugin) {
+          showError('Login MetaMask', new Error('Plugin MetaMask non disponibile'));
+          return;
+        }
+        
         console.log('Login with MetaMask');
         
         // Prima connettiti a MetaMask se non lo siamo già
         if (!metamaskAddress) {
           showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
-          const connectResult = await shogun.metamask.connectMetaMask();
+          const connectResult = await metamaskPlugin.connectMetaMask();
           
           if (!connectResult.success) {
             showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
@@ -400,8 +405,7 @@
         // Aggiungiamo un timeout più lungo per il login
         const loginWithTimeout = async () => {
           try {
-            // NOTA: L'API richiede l'address come parametro, a differenza di quanto suggerito nella documentazione semplificata
-            const result = await shogun.loginWithMetaMask(metamaskAddress);
+            const result = await metamaskPlugin.loginWithMetaMask(metamaskAddress);
             return result;
           } catch (error) {
             console.error("Error durante login MetaMask:", error);
@@ -435,10 +439,15 @@
       }
 
       try {
+        if (!metamaskPlugin) {
+          showError('Registrazione MetaMask', new Error('Plugin MetaMask non disponibile'));
+          return;
+        }
+        
         // Prima connettiti a MetaMask se non lo siamo già
         if (!metamaskAddress) {
           showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
-          const connectResult = await shogun.metamask.connectMetaMask();
+          const connectResult = await metamaskPlugin.connectMetaMask();
           
           if (!connectResult.success) {
             showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
@@ -454,7 +463,7 @@
         // Aggiungiamo un timeout più lungo per la registrazione
         const signupWithTimeout = async () => {
           try {
-            const result = await shogun.signUpWithMetaMask(metamaskAddress);
+            const result = await metamaskPlugin.signUpWithMetaMask(metamaskAddress);
             return result;
           } catch (error) {
             console.error("Error durante registrazione MetaMask:", error);
@@ -487,6 +496,11 @@
         return;
       }
 
+      if (!webauthnPlugin) {
+        showError('Login WebAuthn', new Error('Plugin WebAuthn non disponibile'));
+        return;
+      }
+
       const username = webauthnUsernameInput.value;
       if (!username) {
         showError('Login WebAuthn', new Error('Username richiesto per WebAuthn!'));
@@ -494,7 +508,7 @@
       }
 
       try {
-        const result = await shogun.loginWithWebAuthn(username);
+        const result = await webauthnPlugin.loginWithWebAuthn(username);
         showResult('Login con WebAuthn completato', result);
       } catch (error) {
         showError('Login WebAuthn', error);
@@ -508,6 +522,11 @@
         return;
       }
 
+      if (!webauthnPlugin) {
+        showError('Registrazione WebAuthn', new Error('Plugin WebAuthn non disponibile'));
+        return;
+      }
+
       const username = webauthnUsernameInput.value;
       if (!username) {
         showError('Registrazione WebAuthn', new Error('Username richiesto per WebAuthn!'));
@@ -515,7 +534,7 @@
       }
 
       try {
-        const result = await shogun.signUpWithWebAuthn(username);
+        const result = await webauthnPlugin.signUpWithWebAuthn(username);
         showResult('Registrazione con WebAuthn completata', result);
       } catch (error) {
         showError('Registrazione WebAuthn', error);
@@ -550,7 +569,12 @@
       }
 
       try {
-        const wallet = await shogun.createWallet();
+        if (!walletPlugin) {
+          showError('Creazione Wallet', new Error('Plugin Wallet non disponibile'));
+          return;
+        }
+        
+        const wallet = await walletPlugin.createWallet();
         showResult('Wallet Creato', wallet);
       } catch (error) {
         showError('Creazione Wallet', error);
@@ -570,7 +594,12 @@
       }
 
       try {
-        const wallets = await shogun.loadWallets();
+        if (!walletPlugin) {
+          showError('Ottenimento Wallets', new Error('Plugin Wallet non disponibile'));
+          return;
+        }
+        
+        const wallets = await walletPlugin.loadWallets();
         showResult('Wallets Disponibili', wallets);
       } catch (error) {
         showError('Ottenimento Wallets', error);

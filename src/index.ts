@@ -1,8 +1,5 @@
 import { GunDB } from "./gun/gun";
-import { Webauthn } from "./plugins/webauthn/webauthn";
-import { MetaMask } from "./plugins/metamask/connector/metamask";
-import { Stealth } from "./plugins/stealth/stealth";
-import { EventEmitter } from "events";
+import { EventEmitter } from "./utils/eventEmitter";
 import { ShogunStorage } from "./storage/storage";
 import {
   IShogunCore,
@@ -12,22 +9,23 @@ import {
   LoggingConfig,
   PluginCategory,
   CorePlugins,
-  DID,
 } from "./types/shogun";
 import { IGunInstance } from "gun/types";
-import { log, logError, configureLogging, logWarn } from "./utils/logger";
+import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
-import {
-  ErrorHandler,
-  ErrorType,
-  ShogunError,
-  createError,
-} from "./utils/errorHandler";
+import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { DIDCreateOptions } from "./types/did";
 import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
-import { ShogunPlugin, PluginManager } from "./types/plugin";
+import { ShogunPlugin } from "./types/plugin";
+import { DIDPluginInterface } from "./plugins/did/types";
+
+import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
+import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
+import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
+import { DIDPlugin } from "./plugins/did/didPlugin";
+import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 
 export {
   ShogunDID,
@@ -35,35 +33,53 @@ export {
   DIDResolutionResult,
   DIDCreateOptions,
 } from "./plugins/did/DID";
-
-// Esportare anche i tipi per la gestione degli errori
 export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-
-// Export RxJS integration
 export { GunRxJS } from "./gun/rxjs-integration";
-
-// Aggiungiamo l'esportazione dei plugin
 export * from "./plugins";
 export { ShogunPlugin, PluginManager } from "./types/plugin";
 
+/**
+ * Main ShogunCore class - implements the IShogunCore interface
+ *
+ * This is the primary entry point for the Shogun SDK, providing access to:
+ * - Decentralized database (GunDB)
+ * - Authentication methods (traditional, WebAuthn, MetaMask)
+ * - Plugin system for extensibility
+ * - DID (Decentralized Identity) management
+ * - RxJS integration for reactive programming
+ *
+ * @since 2.0.0
+ */
 export class ShogunCore implements IShogunCore {
+  /** Current API version - used for deprecation warnings and migration guidance */
+  public static readonly API_VERSION = "2.0.0";
+
+  /** Gun database instance */
   public gun: IGunInstance<any>;
+
+  /** Gun user instance */
   public user: IGunUserInstance<any> | null;
+
+  /** GunDB wrapper */
   public gundb: GunDB;
-  public did?: DID;
+
+  /** Storage implementation */
   public storage: ShogunStorage;
-  private eventEmitter: EventEmitter;
+
+  /** Event emitter for SDK events */
+  private readonly eventEmitter: EventEmitter;
+
+  /** Ethereum provider */
   public provider?: ethers.Provider;
+
+  /** SDK configuration */
   public config: ShogunSDKConfig;
-  public rx: GunRxJS; // RxJS integration
-  
-  // Proprietà per retrocompatibilità
-  public webauthn?: Webauthn;
-  public metamask?: MetaMask;
-  public stealth?: Stealth;
-  
-  // Collezione di plugin registrati
-  private plugins: Map<string, ShogunPlugin> = new Map();
+
+  /** RxJS integration */
+  public rx: GunRxJS;
+
+  /** Plugin registry */
+  private readonly plugins: Map<string, ShogunPlugin> = new Map();
 
   /**
    * Initialize the Shogun SDK
@@ -75,10 +91,8 @@ export class ShogunCore implements IShogunCore {
   constructor(config: ShogunSDKConfig) {
     log("Initializing ShogunSDK");
 
-    // Salviamo la configurazione
     this.config = config;
 
-    // Inizializza la configurazione del logging
     if (config.logging) {
       configureLogging(config.logging);
       log("Logging configured with custom settings");
@@ -87,7 +101,6 @@ export class ShogunCore implements IShogunCore {
     this.storage = new ShogunStorage();
     this.eventEmitter = new EventEmitter();
 
-    // Configura l'error handler per emettere eventi tramite EventEmitter
     ErrorHandler.addListener((error: ShogunError) => {
       this.eventEmitter.emit("error", {
         action: error.code,
@@ -96,13 +109,11 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    // Assicuriamoci che la configurazione di GunDB esista
     if (!config.gundb) {
       config.gundb = {};
       log("No GunDB configuration provided, using defaults");
     }
 
-    // Logghiamo il token di autenticazione se presente
     if (config.gundb.authToken) {
       const tokenPreview = config.gundb.authToken;
       log(`Auth token from config: ${tokenPreview}`);
@@ -124,10 +135,8 @@ export class ShogunCore implements IShogunCore {
     this.gun = this.gundb.getGun();
     this.user = this.gun.user().recall({ sessionStorage: true });
 
-    // Initialize RxJS integration
     this.rx = new GunRxJS(this.gun);
 
-    // Initialize Ethereum provider
     if (config.providerUrl) {
       this.provider = new ethers.JsonRpcProvider(config.providerUrl);
       log(`Using configured provider URL: ${config.providerUrl}`);
@@ -138,12 +147,13 @@ export class ShogunCore implements IShogunCore {
         "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
       );
     }
-    
-    // Registriamo automaticamente i plugin in base alla configurazione
+
     this.registerBuiltinPlugins(config);
-    
-    // Registra i plugin personalizzati se configurati
-    if (config.plugins?.autoRegister && config.plugins.autoRegister.length > 0) {
+
+    if (
+      config.plugins?.autoRegister &&
+      config.plugins.autoRegister.length > 0
+    ) {
       for (const plugin of config.plugins.autoRegister) {
         try {
           this.register(plugin);
@@ -156,90 +166,78 @@ export class ShogunCore implements IShogunCore {
 
     log("ShogunSDK initialized!");
   }
-  
+
   /**
-   * Registra i plugin integrati in base alla configurazione
+   * Register built-in plugins based on configuration
    * @private
    */
   private registerBuiltinPlugins(config: ShogunSDKConfig): void {
     try {
-      // Import dinamici per i plugin integrati
-      const { WebauthnPlugin } = require('./plugins/webauthn/webauthnPlugin');
-      const { MetaMaskPlugin } = require('./plugins/metamask/metamaskPlugin');
-      const { StealthPlugin } = require('./plugins/stealth/stealthPlugin');
-      const { DIDPlugin } = require('./plugins/did/didPlugin');
-      
-      // Gruppo: Plugin di Autenticazione
-      
-      // Registra plugin Webauthn se abilitato
+      // Authentication plugins group
       if (config.webauthn?.enabled) {
         const webauthnPlugin = new WebauthnPlugin();
         webauthnPlugin._category = PluginCategory.Authentication;
         this.register(webauthnPlugin);
-        // Per retrocompatibilità
-        this.webauthn = this.getPlugin<Webauthn>(CorePlugins.WebAuthn);
         log("Webauthn plugin registered");
       }
-      
-      // Registra plugin MetaMask se abilitato
+
       if (config.metamask?.enabled) {
         const metamaskPlugin = new MetaMaskPlugin();
         metamaskPlugin._category = PluginCategory.Authentication;
         this.register(metamaskPlugin);
-        // Per retrocompatibilità
-        this.metamask = this.getPlugin<MetaMask>(CorePlugins.MetaMask);
         log("MetaMask plugin registered");
       }
-      
-      // Gruppo: Plugin di Privacy
-      
-      // Registra plugin Stealth se abilitato
+
+      // Privacy plugins group
       if (config.stealth?.enabled) {
         const stealthPlugin = new StealthPlugin();
         stealthPlugin._category = PluginCategory.Privacy;
         this.register(stealthPlugin);
-        // Per retrocompatibilità
-        this.stealth = this.getPlugin<Stealth>(CorePlugins.Stealth);
         log("Stealth plugin registered");
       }
-      
-      // Gruppo: Plugin di Identità
-      
-      // Registra plugin DID se abilitato
+
+      // Identity plugins group
       if (config.did?.enabled) {
         const didPlugin = new DIDPlugin();
         didPlugin._category = PluginCategory.Identity;
         this.register(didPlugin);
-        // Per retrocompatibilità
-        this.did = this.getPlugin<DID>(CorePlugins.DID);
         log("DID plugin registered");
+      }
+
+      // Wallet plugins group
+      if (config.walletManager?.enabled) {
+        const walletPlugin = new WalletPlugin();
+        walletPlugin._category = PluginCategory.Wallet;
+        this.register(walletPlugin);
+        log("Wallet plugin registered");
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
     }
   }
-  
+
   // *********************************************************************************************************
   // 🔌 PLUGIN MANAGER 🔌
   // *********************************************************************************************************
-  
+
   /**
-   * Registra un nuovo plugin
-   * @param plugin Il plugin da registrare
+   * Register a new plugin with the SDK
+   * @param plugin The plugin to register
+   * @throws Error if a plugin with the same name is already registered
    */
   register(plugin: ShogunPlugin): void {
     if (this.plugins.has(plugin.name)) {
       throw new Error(`Plugin with name "${plugin.name}" already registered`);
     }
-    
+
     plugin.initialize(this);
     this.plugins.set(plugin.name, plugin);
     log(`Registered plugin: ${plugin.name}`);
   }
-  
+
   /**
-   * Cancella la registrazione di un plugin
-   * @param pluginName Nome del plugin da cancellare
+   * Unregister a plugin from the SDK
+   * @param pluginName Name of the plugin to unregister
    */
   unregister(pluginName: string): void {
     const plugin = this.plugins.get(pluginName);
@@ -247,47 +245,71 @@ export class ShogunCore implements IShogunCore {
       log(`Plugin "${pluginName}" not found, nothing to unregister`);
       return;
     }
-    
+
     if (plugin.destroy) {
       plugin.destroy();
     }
-    
+
     this.plugins.delete(pluginName);
     log(`Unregistered plugin: ${pluginName}`);
   }
-  
+
   /**
-   * Recupera un plugin registrato per nome
-   * @param name Nome del plugin
-   * @returns Il plugin richiesto o undefined se non trovato
-   * @template T Tipo del plugin o dell'interfaccia pubblica del plugin
+   * Retrieve a registered plugin by name
+   * @param name Name of the plugin
+   * @returns The requested plugin or undefined if not found
+   * @template T Type of the plugin or its public interface
    */
   getPlugin<T>(name: string): T | undefined {
     return this.plugins.get(name) as T | undefined;
   }
-  
+
   /**
-   * Verifica se un plugin è registrato
-   * @param name Nome del plugin da verificare
-   * @returns true se il plugin è registrato, false altrimenti
+   * Check if a plugin is registered
+   * @param name Name of the plugin to check
+   * @returns true if the plugin is registered, false otherwise
    */
   hasPlugin(name: string): boolean {
     return this.plugins.has(name);
   }
 
   /**
-   * Ottiene tutti i plugin di una determinata categoria
-   * @param category Categoria di plugin da filtrare
-   * @returns Array di plugin della categoria specificata
+   * Get all plugins of a specific category
+   * @param category Category of plugins to filter
+   * @returns Array of plugins in the specified category
    */
   getPluginsByCategory(category: PluginCategory): ShogunPlugin[] {
     const result: ShogunPlugin[] = [];
-    this.plugins.forEach(plugin => {
+    this.plugins.forEach((plugin) => {
       if (plugin._category === category) {
         result.push(plugin);
       }
     });
     return result;
+  }
+
+  /**
+   * Get an authentication method plugin by type
+   * @param type The type of authentication method
+   * @returns The authentication plugin or undefined if not available
+   * This is a more modern approach to accessing authentication methods
+   */
+  getAuthenticationMethod(type: "password" | "webauthn" | "metamask") {
+    switch (type) {
+      case "webauthn":
+        return this.getPlugin(CorePlugins.WebAuthn);
+      case "metamask":
+        return this.getPlugin(CorePlugins.MetaMask);
+      case "password":
+      default:
+        // Default authentication is provided by the core class
+        return {
+          login: (username: string, password: string) =>
+            this.login(username, password),
+          signUp: (username: string, password: string, confirm?: string) =>
+            this.signUp(username, password, confirm),
+        };
+    }
   }
 
   // *********************************************************************************************************
@@ -299,7 +321,7 @@ export class ShogunCore implements IShogunCore {
    * @param path - Path to observe (can be a string or a Gun chain)
    * @returns Observable that emits whenever the node changes
    */
-  observe<T>(path: string | any): Observable<T> {
+  observe<T>(path: string): Observable<T> {
     return this.rx.observe<T>(path);
   }
 
@@ -341,7 +363,7 @@ export class ShogunCore implements IShogunCore {
    * @param path - Path to get data from
    * @returns Observable that emits the data once
    */
-  once<T>(path: string | any): Observable<T> {
+  onceObservable<T>(path: string | any): Observable<T> {
     return this.rx.once<T>(path);
   }
 
@@ -382,9 +404,9 @@ export class ShogunCore implements IShogunCore {
   // *********************************************************************************************************
 
   /**
-   * Recupera gli errori recenti registrati dal sistema
-   * @param count - Numero di errori da recuperare
-   * @returns Lista degli errori più recenti
+   * Retrieve recent errors logged by the system
+   * @param count - Number of errors to retrieve (default: 10)
+   * @returns List of most recent errors
    */
   getRecentErrors(count: number = 10): ShogunError[] {
     return ErrorHandler.getRecentErrors(count);
@@ -413,7 +435,6 @@ export class ShogunCore implements IShogunCore {
   // *********************************************************************************************************
   // 🔐 AUTHENTICATION
   // *********************************************************************************************************
-
 
   /**
    * Check if user is logged in
@@ -452,7 +473,7 @@ export class ShogunCore implements IShogunCore {
       this.eventEmitter.emit("auth:logout", {});
       log("Logout completed successfully");
     } catch (error) {
-      // Usa il gestore errori centralizzato
+      // Use centralized error handler
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
@@ -483,7 +504,6 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Set timeout to avoid infinite blocks
       const loginPromise = new Promise<AuthResult>((resolve) => {
         this.gundb.gun.user().auth(username, password, (ack: any) => {
           if (ack.err) {
@@ -512,8 +532,8 @@ export class ShogunCore implements IShogunCore {
         });
       });
 
-      // Timeout dopo un intervallo configurabile (default 15 secondi)
-      const timeoutDuration = this.config?.timeouts?.login || 15000;
+      // Timeout after a configurable interval (default 15 seconds)
+      const timeoutDuration = this.config?.timeouts?.login ?? 15000;
       const timeoutPromise = new Promise<AuthResult>((resolve) => {
         setTimeout(() => {
           resolve({
@@ -523,15 +543,13 @@ export class ShogunCore implements IShogunCore {
         }, timeoutDuration);
       });
 
-      // Use Promise.race to handle timeout
       const result = await Promise.race([loginPromise, timeoutPromise]);
 
       if (result.success) {
         this.eventEmitter.emit("auth:login", {
-          userPub: result.userPub || "",
+          userPub: result.userPub ?? "",
         });
 
-        // Assicuriamoci che l'utente abbia un DID dopo il login
         try {
           const did = await this.ensureUserHasDID();
           if (did) {
@@ -544,17 +562,16 @@ export class ShogunCore implements IShogunCore {
 
       return result;
     } catch (error: any) {
-      // Usa il gestore errori centralizzato
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
-        error.message || "Unknown error during login",
+        error.message ?? "Unknown error during login",
         error,
       );
 
       return {
         success: false,
-        error: error.message || "Unknown error during login",
+        error: error.message ?? "Unknown error during login",
       };
     }
   }
@@ -575,7 +592,6 @@ export class ShogunCore implements IShogunCore {
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
-      // Input validation
       if (!username || !password) {
         return {
           success: false,
@@ -583,7 +599,6 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Validate passwords match if confirmation provided
       if (
         passwordConfirmation !== undefined &&
         password !== passwordConfirmation
@@ -594,7 +609,6 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Validate password length
       if (password.length < 6) {
         return {
           success: false,
@@ -602,7 +616,6 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Set registration timeout
       const signupPromise = new Promise<SignUpResult>((resolve) => {
         this.gundb.gun.user().create(username, password, (ack: any) => {
           if (ack.err) {
@@ -611,7 +624,6 @@ export class ShogunCore implements IShogunCore {
               error: ack.err,
             });
           } else {
-            // Auto-login after registration
             this.gundb.gun.user().auth(username, password, (loginAck: any) => {
               if (loginAck.err) {
                 resolve({
@@ -638,8 +650,7 @@ export class ShogunCore implements IShogunCore {
         });
       });
 
-      // Timeout dopo un intervallo configurabile (default 20 secondi)
-      const timeoutDuration = this.config?.timeouts?.signup || 20000;
+      const timeoutDuration = this.config?.timeouts?.signup ?? 20000;
       const timeoutPromise = new Promise<SignUpResult>((resolve) => {
         setTimeout(() => {
           resolve({
@@ -654,22 +665,19 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         this.eventEmitter.emit("auth:signup", {
-          userPub: result.userPub || "",
+          userPub: result.userPub ?? "",
           username,
         });
 
-        // Creare automaticamente un DID per il nuovo utente
         try {
           const did = await this.ensureUserHasDID();
 
           if (did) {
             log(`Created DID for new user: ${did}`);
 
-            // Aggiungiamo l'informazione sul DID al risultato
             result.did = did;
           }
         } catch (didError) {
-          // Se la creazione del DID fallisce, logghiamo l'errore ma non facciamo fallire la registrazione
           logError("Error creating DID for new user:", didError);
         }
       }
@@ -679,504 +687,7 @@ export class ShogunCore implements IShogunCore {
       logError(`Error during registration for user ${username}:`, error);
       return {
         success: false,
-        error: error.message || "Unknown error during registration",
-      };
-    }
-  }
-
-  // *********************************************************************************************************
-  // 🔐 WEBAUTHN AUTHENTICATION
-  // *********************************************************************************************************
-
-  /**
-   * Check if WebAuthn is supported by the browser
-   * @returns {boolean} True if WebAuthn is supported, false otherwise
-   * @description Verifies if the current browser environment supports WebAuthn authentication
-   */
-  isWebAuthnSupported(): boolean {
-    // Utilizziamo il plugin WebAuthn se disponibile
-    const webauthnPlugin = this.getPlugin<any>("webauthn");
-    if (webauthnPlugin) {
-      return webauthnPlugin.isSupported();
-    }
-    
-    // Fallback al vecchio metodo
-    return this.webauthn?.isSupported() || false;
-  }
-
-  /**
-   * Perform WebAuthn login
-   * @param username - Username
-   * @returns {Promise<AuthResult>} Authentication result
-   * @description Authenticates user using WebAuthn credentials.
-   * Requires browser support for WebAuthn and existing credentials.
-   */
-  async loginWithWebAuthn(username: string): Promise<AuthResult> {
-    log("Login with WebAuthn");
-
-    try {
-      log(`Attempting WebAuthn login for user: ${username}`);
-
-      if (!username) {
-        throw new Error("Username required for WebAuthn login");
-      }
-
-      if (!this.isWebAuthnSupported()) {
-        throw new Error("WebAuthn is not supported by this browser");
-      }
-
-      // Utilizziamo il plugin WebAuthn se disponibile
-      const webauthnPlugin = this.getPlugin<any>("webauthn");
-      const webauthnInstance = webauthnPlugin || this.webauthn;
-
-      // Verify WebAuthn credentials
-      const assertionResult = await webauthnInstance?.generateCredentials(
-        username,
-        null,
-        true,
-      );
-
-      if (!assertionResult?.success) {
-        throw new Error(
-          assertionResult?.error || "WebAuthn verification failed",
-        );
-      }
-
-      // Use the credential ID as the password
-      const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(assertionResult.credentialId || ""),
-      );
-
-      // Login with verified credentials
-      const result = await this.login(username, hashedCredentialId);
-
-      if (result.success) {
-        log(`WebAuthn login completed successfully for user: ${username}`);
-
-        // Assicuriamo che l'utente abbia un DID associato
-        if (!result.did) {
-          try {
-            const did = await this.ensureUserHasDID();
-            if (did) {
-              result.did = did;
-            }
-          } catch (didError) {
-            logError("Error ensuring DID for WebAuthn user:", didError);
-          }
-        }
-
-        return {
-          ...result,
-          username,
-          password: hashedCredentialId,
-          credentialId: assertionResult.credentialId,
-        };
-      } else {
-        return result;
-      }
-    } catch (error: any) {
-      logError(`Error during WebAuthn login: ${error}`);
-      return {
-        success: false,
-        error: error.message || "Error during WebAuthn login",
-      };
-    }
-  }
-
-  /**
-   * Register new user with WebAuthn
-   * @param username - Username
-   * @returns {Promise<AuthResult>} Registration result
-   * @description Creates a new user account using WebAuthn credentials.
-   * Requires browser support for WebAuthn.
-   */
-  async signUpWithWebAuthn(username: string): Promise<AuthResult> {
-    log("Sign up with WebAuthn");
-
-    try {
-      log(`Attempting WebAuthn registration for user: ${username}`);
-
-      if (!username) {
-        throw new Error("Username required for WebAuthn registration");
-      }
-
-      if (!this.isWebAuthnSupported()) {
-        throw new Error("WebAuthn is not supported by this browser");
-      }
-
-      // Utilizziamo il plugin WebAuthn se disponibile
-      const webauthnPlugin = this.getPlugin<any>("webauthn");
-      const webauthnInstance = webauthnPlugin || this.webauthn;
-
-      // Generate new WebAuthn credentials
-      const attestationResult = await webauthnInstance?.generateCredentials(
-        username,
-        null,
-        false,
-      );
-
-      if (!attestationResult?.success) {
-        throw new Error(
-          attestationResult?.error || "Unable to generate WebAuthn credentials",
-        );
-      }
-
-      // Use credential ID as password
-      const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(attestationResult.credentialId || ""),
-      );
-
-      // Perform registration
-      const result = await this.signUp(username, hashedCredentialId);
-
-      if (result.success) {
-        log(
-          `WebAuthn registration completed successfully for user: ${username}`,
-        );
-
-        // Assicuriamo che l'utente abbia un DID con informazioni WebAuthn
-        if (!result.did) {
-          try {
-            const did = await this.ensureUserHasDID({
-              services: [
-                {
-                  type: "WebAuthnVerification",
-                  endpoint: `webauthn:${username}`,
-                },
-              ],
-            });
-
-            if (did) {
-              result.did = did;
-            }
-          } catch (didError) {
-            logError("Error creating DID for WebAuthn user:", didError);
-          }
-        }
-
-        return {
-          ...result,
-          username,
-          password: hashedCredentialId,
-          credentialId: attestationResult.credentialId,
-        };
-      } else {
-        return result;
-      }
-    } catch (error: any) {
-      logError(`Error during WebAuthn registration: ${error}`);
-      return {
-        success: false,
-        error: error.message || "Error during WebAuthn registration",
-      };
-    }
-  }
-
-  // *********************************************************************************************************
-  // 🔐 METAMASK AUTHENTICATION
-  // *********************************************************************************************************
-
-  /**
-   * Login with MetaMask
-   * @param address - Ethereum address
-   * @returns {Promise<AuthResult>} Authentication result
-   * @description Authenticates user using MetaMask wallet credentials after signature verification
-   */
-  async loginWithMetaMask(address: string): Promise<AuthResult> {
-    log("Login with MetaMask");
-
-    try {
-      log(`MetaMask login attempt for address: ${address}`);
-
-      if (!address) {
-        throw createError(
-          ErrorType.VALIDATION,
-          "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask login",
-        );
-      }
-      
-      // Utilizziamo il plugin MetaMask se disponibile
-      const metamaskPlugin = this.getPlugin<any>("metamask");
-      const metamaskInstance = metamaskPlugin || this.metamask;
-
-      if (!metamaskInstance?.isAvailable()) {
-        throw createError(
-          ErrorType.ENVIRONMENT,
-          "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser",
-        );
-      }
-
-      log("Generating credentials for MetaMask login...");
-      const credentials = await metamaskInstance.generateCredentials(address);
-      if (
-        !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
-      ) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing",
-        );
-      }
-
-      log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
-      // --- Verifica della Firma ---
-      log("Verifying MetaMask signature...");
-      const recoveredAddress = ethers.verifyMessage(
-        credentials.message,
-        credentials.signature,
-      );
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
-        );
-        throw createError(
-          ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch.",
-        );
-      }
-      log("MetaMask signature verified successfully.");
-      // --- Fine Verifica Firma ---
-
-      // Utilizziamo il metodo refactored per gestire login/creazione
-      log("Attempting login or user creation with verified credentials...");
-      const result = await this.createUserWithGunDB(
-        credentials.username,
-        credentials.password,
-      );
-
-      if (!result.success || !result.userPub) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "LOGIN_CREATE_FAILED",
-          result.error ||
-            "Login or user creation failed after signature verification",
-        );
-      }
-
-      log(`Login/Creation successful: ${result.userPub}`);
-
-      // Assicuriamo che l'utente abbia un DID associato
-      let did: string | null = null;
-      try {
-        log("Ensuring user has a DID...");
-        did = await this.ensureUserHasDID({
-          services: [
-            {
-              type: "EcdsaSecp256k1VerificationKey2019", // Tipo più specifico
-              endpoint: `ethereum:${address}`,
-            },
-          ],
-        });
-        if (did) {
-          log(`DID assigned/verified: ${did}`);
-        } else {
-          logWarn("Could not ensure DID for user after MetaMask login.");
-        }
-      } catch (didError) {
-        // Non bloccare il login se il DID fallisce, ma logga l'errore
-        ErrorHandler.handle(
-          ErrorType.DID,
-          "DID_ENSURE_FAILED",
-          "Error ensuring DID for MetaMask user",
-          didError,
-        );
-      }
-
-      // Emettiamo un evento di login
-      this.eventEmitter.emit("auth:login", {
-        userPub: result.userPub,
-        username: credentials.username,
-        method: "metamask",
-        did: did || undefined,
-      });
-
-      return {
-        success: true,
-        userPub: result.userPub,
-        username: credentials.username,
-        password: credentials.password, // Potrebbe non essere sicuro restituirlo
-        did: did || undefined,
-      };
-    } catch (error: any) {
-      // Cattura sia errori conformi a ShogunError che generici
-      const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "METAMASK_LOGIN_ERROR";
-      const errorMessage =
-        error?.message || "Unknown error during MetaMask login";
-
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message, // Ora handledError è ShogunError e ha .message
-      };
-    }
-  }
-
-  /**
-   * Register new user with MetaMask
-   * @param address - Ethereum address
-   * @returns {Promise<AuthResult>} Registration result
-   * @description Creates a new user account using MetaMask wallet credentials after signature verification
-   */
-  async signUpWithMetaMask(address: string): Promise<AuthResult> {
-    log("Sign up with MetaMask");
-
-    try {
-      log(`MetaMask registration attempt for address: ${address}`);
-
-      if (!address) {
-        throw createError(
-          ErrorType.VALIDATION,
-          "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask registration",
-        );
-      }
-      
-      // Utilizziamo il plugin MetaMask se disponibile
-      const metamaskPlugin = this.getPlugin<any>("metamask");
-      const metamaskInstance = metamaskPlugin || this.metamask;
-
-      if (!metamaskInstance?.isAvailable()) {
-        throw createError(
-          ErrorType.ENVIRONMENT,
-          "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser",
-        );
-      }
-
-      log("Generating credentials for MetaMask registration...");
-      const credentials = await metamaskInstance.generateCredentials(address);
-      if (
-        !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
-      ) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing",
-        );
-      }
-
-      log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
-      // --- Verifica della Firma ---
-      log("Verifying MetaMask signature...");
-      const recoveredAddress = ethers.verifyMessage(
-        credentials.message,
-        credentials.signature,
-      );
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
-        );
-        throw createError(
-          ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch.",
-        );
-      }
-      log("MetaMask signature verified successfully.");
-      // --- Fine Verifica Firma ---
-
-      // Utilizziamo il metodo refactored per creare l'utente (o loggare se esiste già)
-      log(
-        "Attempting user creation (or login if exists) with verified credentials...",
-      );
-      const result = await this.createUserWithGunDB(
-        credentials.username,
-        credentials.password,
-      );
-
-      if (!result.success || !result.userPub) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "USER_CREATE_LOGIN_FAILED",
-          result.error ||
-            "User creation or login failed after signature verification",
-        );
-      }
-
-      log(`User creation/login successful: ${result.userPub}`);
-
-      // Assicuriamo che l'utente abbia un DID associato
-      let did: string | null = null;
-      try {
-        log("Creating/Ensuring DID with MetaMask verification service...");
-        did = await this.ensureUserHasDID({
-          services: [
-            {
-              type: "EcdsaSecp256k1VerificationKey2019", // Tipo più specifico
-              endpoint: `ethereum:${address}`,
-            },
-          ],
-        });
-        if (did) {
-          log(`DID created/verified: ${did}`);
-        } else {
-          logWarn("Could not ensure DID for user after MetaMask signup.");
-        }
-      } catch (didError) {
-        // Non bloccare la registrazione se il DID fallisce, ma logga l'errore
-        ErrorHandler.handle(
-          ErrorType.DID,
-          "DID_ENSURE_FAILED",
-          "Error ensuring DID for MetaMask user during signup",
-          didError,
-        );
-      }
-
-      // Emettiamo un evento di registrazione (o login se l'utente esisteva già)
-      this.eventEmitter.emit("auth:signup", {
-        // Potrebbe essere logico emettere "auth:login" se l'utente esisteva già?
-        userPub: result.userPub,
-        username: credentials.username,
-        method: "metamask",
-        did: did || undefined,
-      });
-
-      return {
-        success: true,
-        userPub: result.userPub,
-        username: credentials.username,
-        password: credentials.password, // Potrebbe non essere sicuro restituirlo
-        did: did || undefined,
-      };
-    } catch (error: any) {
-      // Cattura sia errori conformi a ShogunError che generici
-      const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
-      const errorMessage =
-        error?.message || "Unknown error during MetaMask registration";
-
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message, // Ora handledError è ShogunError e ha .message
+        error: error.message ?? "Unknown error during registration",
       };
     }
   }
@@ -1200,65 +711,14 @@ export class ShogunCore implements IShogunCore {
     options?: DIDCreateOptions,
   ): Promise<string | null> {
     try {
-      // Utilizziamo il plugin DID se disponibile
-      const didPlugin = this.getPlugin<any>("did");
-      
-      if (didPlugin && didPlugin.ensureUserHasDID) {
-        return didPlugin.ensureUserHasDID(options);
-      }
-      
-      // Fallback al vecchio metodo se il plugin non è disponibile
-      if (!this.isLoggedIn()) {
-        logError("Cannot ensure DID: user not authenticated");
+      const didPlugin = this.getPlugin<DIDPluginInterface>("did");
+
+      if (!didPlugin) {
+        log("DID plugin not available, cannot ensure DID");
         return null;
       }
 
-      // Verifica se l'utente ha già un DID
-      let did = await this.did?.getCurrentUserDID();
-
-      // Se l'utente ha già un DID, lo restituiamo
-      if (did) {
-        log(`User already has DID: ${did}`);
-
-        // Se sono state fornite opzioni, aggiorniamo il documento DID
-        if (options && Object.keys(options).length > 0) {
-          try {
-            const updated = await this.did?.updateDIDDocument(did, {
-              service: options.services?.map((service, index) => ({
-                id: `${did}#service-${index + 1}`,
-                type: service.type,
-                serviceEndpoint: service.endpoint,
-              })),
-            });
-
-            if (updated) {
-              log(`Updated DID document for: ${did}`);
-            }
-          } catch (updateError) {
-            logError("Error updating DID document:", updateError);
-          }
-        }
-
-        return did;
-      }
-
-      // Se l'utente non ha un DID, ne creiamo uno nuovo
-      log("Creating new DID for authenticated user");
-      const userPub = this.gundb.gun.user().is?.pub || "";
-
-      const mergedOptions: DIDCreateOptions = {
-        network: "main",
-        controller: userPub,
-        ...options,
-      };
-
-      did = await this.did?.createDID(mergedOptions);
-
-      // Emetti evento di creazione DID
-      this.eventEmitter.emit("did:created", { did, userPub });
-
-      log(`Created new DID for user: ${did}`);
-      return did || null;
+      return await didPlugin.ensureUserHasDID(options);
     } catch (error) {
       logError("Error ensuring user has DID:", error);
       return null;
@@ -1280,10 +740,8 @@ export class ShogunCore implements IShogunCore {
 
     return new Promise(async (resolve) => {
       try {
-        // Helper per l'autenticazione
         const authUser = (): Promise<{ err?: string; pub?: string }> => {
           return new Promise((resolveAuth) => {
-            // Assicurati che l'utente sia sloggato prima di autenticare
             try {
               this.gundb.logout();
             } catch (e) {
@@ -1308,10 +766,8 @@ export class ShogunCore implements IShogunCore {
           });
         };
 
-        // Helper per la creazione utente
         const createUser = (): Promise<{ err?: string; pub?: string }> => {
           return new Promise((resolveCreate) => {
-            // Assicurati che l'utente sia sloggato prima di creare
             try {
               this.gundb.logout();
             } catch (e) {
@@ -1324,12 +780,10 @@ export class ShogunCore implements IShogunCore {
           });
         };
 
-        // --- Flusso Principale ---
         log(`Attempting login first for ${username}...`);
         let loginResult = await authUser();
 
         if (loginResult.pub) {
-          // Login riuscito, utente esiste già
           log(`Login successful for existing user. Pub: ${loginResult.pub}`);
           resolve({
             success: true,
@@ -1338,14 +792,12 @@ export class ShogunCore implements IShogunCore {
           return;
         }
 
-        // Login fallito, proviamo a creare l'utente
         log(
-          `Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`,
+          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`,
         );
         const createResult = await createUser();
 
         if (createResult.err) {
-          // Creazione fallita
           log(`User creation error: ${createResult.err}`);
           resolve({
             success: false,
@@ -1354,7 +806,6 @@ export class ShogunCore implements IShogunCore {
           return;
         }
 
-        // Creazione riuscita, tentiamo di nuovo il login per conferma e per ottenere userPub
         log(
           `User created successfully, attempting login again for confirmation...`,
         );
@@ -1367,7 +818,6 @@ export class ShogunCore implements IShogunCore {
             userPub: loginResult.pub,
           });
         } else {
-          // Questo non dovrebbe accadere se la creazione è andata a buon fine
           logError(
             `Post-creation login failed unexpectedly: ${loginResult.err}`,
           );
@@ -1378,7 +828,7 @@ export class ShogunCore implements IShogunCore {
         }
       } catch (error: any) {
         const errorMsg =
-          error.message || "Unknown error during user existence check";
+          error.message ?? "Unknown error during user existence check";
         logError(`Error in createUserWithGunDB: ${errorMsg}`, error);
         resolve({
           success: false,
@@ -1389,7 +839,7 @@ export class ShogunCore implements IShogunCore {
   }
 
   // *********************************************************************************************************
-  // 🔫 GuN ACTIONS 🔫
+  // 🔫 GUN ACTIONS 🔫
   // *********************************************************************************************************
 
   /**
@@ -1401,7 +851,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.get(path).once((data) => {
         if (data.err) {
-          reject(data.err);
+          reject(data.err as Error);
         } else {
           resolve(data);
         }
@@ -1418,7 +868,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.put(data, (ack: any) => {
         if (ack.err) {
-          reject(ack.err);
+          reject(ack.err as Error);
         } else {
           resolve(ack);
         }
@@ -1435,7 +885,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.user().put(data, (ack: any) => {
         if (ack.err) {
-          reject(ack.err);
+          reject(ack.err as Error);
         } else {
           resolve(ack);
         }
@@ -1455,7 +905,7 @@ export class ShogunCore implements IShogunCore {
         .get(path)
         .once((data) => {
           if (data.err) {
-            reject(data.err);
+            reject(data.err as Error);
           } else {
             resolve(data);
           }
@@ -1497,24 +947,8 @@ export class ShogunCore implements IShogunCore {
   getRpcUrl(): string | null {
     // Access the provider URL if available
     return this.provider instanceof ethers.JsonRpcProvider
-      ? (this.provider as any).connection?.url || null
+      ? ((this.provider as any).connection?.url ?? null)
       : null;
-  }
-  
-  /**
-   * Get the main wallet for the authenticated user
-   * @returns The user's main Ethereum wallet or null if not available
-   * @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead
-   */
-  getMainWallet(): ethers.Wallet | null {
-    // Try to get the wallet from the wallet plugin if available
-    const walletPlugin = this.getPlugin<any>(CorePlugins.WalletManager);
-    if (walletPlugin && typeof walletPlugin.getMainWallet === 'function') {
-      return walletPlugin.getMainWallet();
-    }
-    
-    // If no wallet plugin, return null
-    return null;
   }
 
   // *********************************************************************************************************
@@ -1527,8 +961,48 @@ export class ShogunCore implements IShogunCore {
    * @param eventName The name of the event to emit.
    * @param data The data to pass with the event.
    */
-  emit(eventName: string | symbol, ...args: any[]): boolean {
-    return this.eventEmitter.emit(eventName, ...args);
+  emit(eventName: string | symbol, data?: any): boolean {
+    return this.eventEmitter.emit(eventName, data);
+  }
+
+  /**
+   * Add an event listener
+   * @param eventName The name of the event to listen for
+   * @param listener The callback function to execute when the event is emitted
+   */
+  on(eventName: string | symbol, listener: (data: unknown) => void): this {
+    this.eventEmitter.on(eventName, listener);
+    return this;
+  }
+
+  /**
+   * Add a one-time event listener
+   * @param eventName The name of the event to listen for
+   * @param listener The callback function to execute when the event is emitted
+   */
+  once(eventName: string | symbol, listener: (data: unknown) => void): this {
+    this.eventEmitter.once(eventName, listener);
+    return this;
+  }
+
+  /**
+   * Remove an event listener
+   * @param eventName The name of the event to stop listening for
+   * @param listener The callback function to remove
+   */
+  off(eventName: string | symbol, listener: (data: unknown) => void): this {
+    this.eventEmitter.off(eventName, listener);
+    return this;
+  }
+
+  /**
+   * Remove all listeners for a specific event or all events
+   * @param eventName Optional. The name of the event to remove listeners for.
+   * If not provided, all listeners for all events are removed.
+   */
+  removeAllListeners(eventName?: string | symbol): this {
+    this.eventEmitter.removeAllListeners(eventName);
+    return this;
   }
 }
 
@@ -1537,7 +1011,7 @@ export * from "./types/shogun";
 
 // Export classes
 export { GunDB } from "./gun/gun";
-export { MetaMask } from "./plugins/metamask/connector/metamask";
+export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export {
   EphemeralKeyPair,

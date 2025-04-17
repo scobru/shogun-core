@@ -1,5 +1,6 @@
 import { ShogunCore } from "../index";
 import { ShogunPlugin } from "../types/plugin";
+import { PluginCategory } from "../types/shogun";
 
 /**
  * Classe base per tutti i plugin di ShogunCore
@@ -8,16 +9,19 @@ import { ShogunPlugin } from "../types/plugin";
 export abstract class BasePlugin implements ShogunPlugin {
   /** Nome univoco del plugin - deve essere implementato dalle sottoclassi */
   abstract name: string;
-  
+
   /** Versione del plugin - deve essere implementata dalle sottoclassi */
   abstract version: string;
-  
+
   /** Descrizione opzionale del plugin */
   description?: string;
-  
+
+  /** Categoria del plugin */
+  _category?: PluginCategory;
+
   /** Riferimento all'istanza di ShogunCore */
   protected core: ShogunCore | null = null;
-  
+
   /**
    * Inizializza il plugin con un'istanza di ShogunCore
    * @param core Istanza di ShogunCore
@@ -25,21 +29,23 @@ export abstract class BasePlugin implements ShogunPlugin {
   initialize(core: ShogunCore): void {
     this.core = core;
   }
-  
+
   /**
    * Distrugge il plugin e libera le risorse
    */
   destroy(): void {
     this.core = null;
   }
-  
+
   /**
    * Verifica che il plugin sia stato inizializzato prima di usare il core
    * @throws Error se il plugin non è stato inizializzato
+   * @returns L'istanza di ShogunCore non null
    */
-  protected assertInitialized(): void {
+  protected assertInitialized(): ShogunCore {
     if (!this.core) {
       throw new Error(`Plugin ${this.name} not initialized`);
     }
+    return this.core;
   }
-} 
+}

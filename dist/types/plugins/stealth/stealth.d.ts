@@ -20,7 +20,7 @@ declare class Stealth {
     readonly STEALTH_DATA_TABLE: string;
     private lastEphemeralKeyPair;
     private lastMethodUsed;
-    private storage;
+    private readonly storage;
     private readonly STEALTH_HISTORY_KEY;
     private logs;
     constructor(storage?: ShogunStorage);

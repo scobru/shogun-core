@@ -1,6 +1,7 @@
 # Shogun SDK
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Why Choose Shogun?](#why-choose-shogun)
   - [The Web3 Challenge](#the-web3-challenge)
@@ -19,9 +20,14 @@
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
+  - [Authentication Methods](#authentication-methods)
   - [Reactive Programming with RxJS](#reactive-programming-with-rxjs)
 - [Use Cases](#use-cases)
 - [Documentation](#documentation)
+- [Custom Plugins](#custom-plugins)
+  - [Creating a Plugin](#creating-a-plugin)
+  - [Registering a Plugin](#registering-a-plugin)
+  - [Using the Plugin](#using-the-plugin)
 - [Browser Integration](#browser-integration)
   - [Setup](#setup)
   - [Examples](#examples)
@@ -46,13 +52,15 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
 ## Core Features
 
 ### Authentication
-- **Multi-layer Support**: 
+
+- **Multi-layer Support**:
   - WebAuthn for biometric and hardware authentication
   - MetaMask integration
   - Traditional username/password
 - **Flexible Implementation**: Adapt to different user needs and security requirements
 
 ### Storage
+
 - **Decentralized with GunDB**:
   - True data decentralization
   - Offline resilience
@@ -60,6 +68,7 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
 - **Local Storage Support**: Efficient client-side data persistence
 
 ### Reactive Data
+
 - **RxJS Integration**:
   - Observe real-time data changes through Observables
   - Reactive collections with filtering and transformations
@@ -70,11 +79,13 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
   - Observable-based for reactive programming
 
 ### Wallet Management
+
 - **BIP-44 Standard**: Compatible with major wallet services
 - **Stealth Addresses**: Enhanced transaction privacy
 - **Backup & Recovery**: Robust security measures
 
 ### Security
+
 - **End-to-End Encryption**: Protected sensitive data
 - **Modern Standards**: WebAuthn and best practices
 - **Audit Trail**: Complete operation tracking
@@ -110,6 +121,7 @@ Shogun combines GunDB's decentralization, modern authentication standards, and t
 ## Getting Started
 
 ### Installation
+
 ```bash
 npm install shogun-core
 # or
@@ -117,8 +129,14 @@ yarn add shogun-core
 ```
 
 ### Basic Usage
+
 ```typescript
-import { ShogunCore, CorePlugins, initShogunBrowser } from "shogun-core";
+import {
+  ShogunCore,
+  CorePlugins,
+  PluginCategory,
+  initShogunBrowser,
+} from "shogun-core";
 
 // Inizializzazione per ambiente Node.js
 const shogun = new ShogunCore({
@@ -132,7 +150,7 @@ const shogun = new ShogunCore({
   metamask: { enabled: true },
   stealth: { enabled: true },
   did: { enabled: true },
-  walletManager: { enabled: true }
+  walletManager: { enabled: true },
 });
 
 // Oppure per browser (consigliato per applicazioni web)
@@ -145,21 +163,25 @@ const shogunBrowser = initShogunBrowser({
   webauthn: {
     enabled: true,
     rpName: "Your App",
-    rpId: "yourdomain.com"
-  }
+    rpId: "yourdomain.com",
+  },
 });
 
 // Authentication examples
 // Autenticazione standard
-const passwordLogin = await shogun.login('username', 'password');
+const passwordLogin = await shogun.login("username", "password");
 
 // Accesso ai plugin
 const webauthnPlugin = shogun.getPlugin(CorePlugins.WebAuthn);
 const metamaskPlugin = shogun.getPlugin(CorePlugins.MetaMask);
-const walletPlugin = shogun.getPlugin(CorePlugins.WalletManager);
+const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
 
 if (webauthnPlugin) {
-  const credentials = await webauthnPlugin.generateCredentials('username', null, true); // true = login
+  const credentials = await webauthnPlugin.generateCredentials(
+    "username",
+    null,
+    true
+  ); // true = login
   if (credentials.success) {
     // Usa le credenziali per autenticare...
   }
@@ -168,17 +190,14 @@ if (webauthnPlugin) {
 if (metamaskPlugin) {
   // Login con MetaMask
   try {
-    // Prima ottieni l'indirizzo da MetaMask
-    const provider = window.ethereum;
-    if (!provider) {
-      throw new Error("MetaMask non è installato!");
+    // Connessione e autenticazione con MetaMask
+    const connectResult = await metamaskPlugin.connectMetaMask();
+    if (connectResult.success) {
+      const address = connectResult.address;
+      // Login usando l'indirizzo
+      const loginResult = await metamaskPlugin.loginWithMetaMask(address);
+      console.log("MetaMask login result:", loginResult);
     }
-    
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-    const address = accounts[0]; // Indirizzo dell'utente
-    
-    const credentials = await metamaskPlugin.generateCredentials(address);
-    // Usa le credenziali per autenticare...
   } catch (error) {
     console.error("Error during MetaMask login:", error);
   }
@@ -189,6 +208,92 @@ if (walletPlugin) {
   const wallet = await walletPlugin.createWallet();
   const mainWallet = walletPlugin.getMainWallet();
 }
+
+// Ottenere i plugin per categoria
+const walletPlugins = shogun.getPluginsByCategory(PluginCategory.Wallet);
+const authPlugins = shogun.getPluginsByCategory(PluginCategory.Authentication);
+console.log(
+  `Found ${walletPlugins.length} wallet plugins and ${authPlugins.length} auth plugins`
+);
+```
+
+### Authentication Methods
+
+Shogun provides a modern approach to access authentication methods via the `getAuthenticationMethod` API. This simplifies working with different authentication types by providing a consistent interface.
+
+```typescript
+// Recommended modern approach to access authentication methods
+// Approach 1: Get the standard password authentication
+const passwordAuth = shogun.getAuthenticationMethod("password");
+const loginResult = await passwordAuth.login("username", "password123");
+const signupResult = await passwordAuth.signUp("newuser", "securepassword");
+
+// Approach 2: Get the WebAuthn authentication (if enabled)
+const webauthnAuth = shogun.getAuthenticationMethod("webauthn");
+if (webauthnAuth) {
+  // WebAuthn is available
+  const isSupported = await webauthnAuth.isSupported();
+  if (isSupported) {
+    const credentials = await webauthnAuth.generateCredentials(
+      "username",
+      null,
+      true
+    );
+    // Use the credentials...
+  }
+}
+
+// Approach 3: Get the MetaMask authentication (if enabled)
+const metamaskAuth = shogun.getAuthenticationMethod("metamask");
+if (metamaskAuth) {
+  // MetaMask is available
+  const isAvailable = await metamaskAuth.isAvailable();
+  if (isAvailable) {
+    const connectResult = await metamaskAuth.connectMetaMask();
+    if (connectResult.success) {
+      const loginResult = await metamaskAuth.login(connectResult.address);
+      console.log("Logged in with MetaMask:", loginResult);
+    }
+  }
+}
+
+// Example: Dynamic authentication based on user choice
+function authenticateUser(
+  method: "password" | "webauthn" | "metamask",
+  username: string,
+  password?: string
+) {
+  const auth = shogun.getAuthenticationMethod(method);
+
+  if (!auth) {
+    console.error(`Authentication method ${method} not available`);
+    return Promise.resolve({ success: false, error: "Method not available" });
+  }
+
+  switch (method) {
+    case "password":
+      return auth.login(username, password);
+    case "webauthn":
+      return auth.generateCredentials(username).then((creds) => {
+        if (creds.success) {
+          return auth.login(username);
+        }
+        return { success: false, error: "WebAuthn failed" };
+      });
+    case "metamask":
+      return auth.connectMetaMask().then((result) => {
+        if (result.success) {
+          return auth.login(result.address);
+        }
+        return { success: false, error: "MetaMask connection failed" };
+      });
+  }
+}
+
+// Usage
+authenticateUser("password", "username", "password123").then((result) => {
+  console.log("Authentication result:", result);
+});
 ```
 
 ### Reactive Programming with RxJS
@@ -196,44 +301,50 @@ if (walletPlugin) {
 Shogun SDK provides first-class RxJS integration, enabling reactive programming patterns with GunDB:
 
 ```typescript
-import { map, filter } from 'rxjs/operators';
+import { map, filter } from "rxjs/operators";
 
 // Observe a user profile in real-time
-shogun.observe('users/profile/123').subscribe(
-  profile => console.log('Profile updated:', profile),
-  error => console.error('Error observing profile:', error)
+shogun.observe<{ name: string; status: string }>("users/profile/123").subscribe(
+  (profile) => console.log("Profile updated:", profile),
+  (error) => console.error("Error observing profile:", error)
 );
 
 // Work with reactive collections
-const todos$ = shogun.match('todos');
-todos$.subscribe(todos => console.log('All todos:', todos));
+const todos$ = shogun.match<{ id: string; task: string; completed: boolean }>(
+  "todos"
+);
+todos$.subscribe((todos) => console.log("All todos:", todos));
 
 // Filter collections with RxJS operators
-todos$.pipe(
-  map(todos => todos.filter(todo => !todo.completed))
-).subscribe(pendingTodos => console.log('Pending todos:', pendingTodos));
+todos$
+  .pipe(map((todos) => todos.filter((todo) => !todo.completed)))
+  .subscribe((pendingTodos) => console.log("Pending todos:", pendingTodos));
 
 // Update data reactively
-shogun.rxPut('users/profile/123', { 
-  name: 'John Doe', 
-  status: 'online'
-}).subscribe(() => console.log('Profile updated'));
+shogun
+  .rxPut<{ name: string; status: string }>("users/profile/123", {
+    name: "John Doe",
+    status: "online",
+  })
+  .subscribe(() => console.log("Profile updated"));
 
 // Create computed values from multiple data sources
-shogun.compute(
-  ['todos', 'users/profile/123'],
-  (todos, profile) => ({
+shogun
+  .compute<
+    any,
+    { username: string; pendingCount: number; completedCount: number }
+  >(["todos", "users/profile/123"], (todos, profile) => ({
     username: profile.name,
-    pendingCount: todos.filter(t => !t.completed).length,
-    completedCount: todos.filter(t => t.completed).length
-  })
-).subscribe(stats => console.log('Dashboard stats:', stats));
+    pendingCount: todos.filter((t) => !t.completed).length,
+    completedCount: todos.filter((t) => t.completed).length,
+  }))
+  .subscribe((stats) => console.log("Dashboard stats:", stats));
 
 // Work with user data
 if (shogun.isLoggedIn()) {
-  shogun.observeUser('preferences').subscribe(
-    prefs => console.log('User preferences:', prefs)
-  );
+  shogun
+    .observeUser<{ theme: string; notifications: boolean }>("preferences")
+    .subscribe((prefs) => console.log("User preferences:", prefs));
 }
 ```
 
@@ -257,6 +368,123 @@ Read the documentation [here](https://shogun-core-docs.vercel.app/)
 - **Local documentation**: View the documentation by opening `./docs/index.html`
 - **Main classes**: View `./docs/classes/` for details on the main classes
 - **Interfaces**: View `./docs/interfaces/` for details on the interfaces
+
+## Custom Plugins
+
+Shogun SDK supports extending its functionality through custom plugins. This allows you to add new features while maintaining system modularity.
+
+### Creating a Plugin
+
+1. Create a new class that extends `BasePlugin` or directly implements the `ShogunPlugin` interface:
+
+```typescript
+import { BasePlugin } from "shogun-core/src/plugins/base";
+import { ShogunCore } from "shogun-core";
+import { PluginCategory } from "shogun-core/src/types/shogun";
+
+// Define an interface for the plugin's public functionality
+export interface MyPluginInterface {
+  exampleFunction(): void;
+  // Other public functions
+}
+
+// Implement the plugin by extending BasePlugin
+export class MyPlugin extends BasePlugin implements MyPluginInterface {
+  // Required properties
+  name = "my-plugin";
+  version = "1.0.0";
+  description = "My custom plugin for shogun-core";
+
+  // Initialization
+  initialize(core: ShogunCore): void {
+    super.initialize(core);
+    // Specific initialization logic
+    console.log("MyPlugin initialized");
+  }
+
+  // Implement interface functions
+  exampleFunction(): void {
+    const core = this.assertInitialized();
+    // Implementation...
+  }
+
+  // Optional: implement destroy method
+  destroy(): void {
+    // Cleanup resources
+    super.destroy();
+  }
+}
+```
+
+### Registering a Plugin
+
+There are two ways to register a plugin with Shogun Core:
+
+1. **Manual registration** after creating the ShogunCore instance:
+
+```typescript
+import { ShogunCore, PluginCategory } from "shogun-core";
+import { MyPlugin } from "./my-plugin";
+
+// Create ShogunCore instance
+const shogun = new ShogunCore({
+  // Configuration...
+});
+
+// Create and register the plugin
+const myPlugin = new MyPlugin();
+myPlugin._category = PluginCategory.Utility; // Optional: assign a category
+shogun.register(myPlugin);
+```
+
+2. **Automatic registration** during initialization:
+
+```typescript
+import { ShogunCore } from "shogun-core";
+import { MyPlugin } from "./my-plugin";
+
+const shogun = new ShogunCore({
+  // Configuration...
+  plugins: {
+    autoRegister: [new MyPlugin()],
+  },
+});
+```
+
+### Using the Plugin
+
+Once registered, you can access the plugin in two ways:
+
+1. **Direct access by name**:
+
+```typescript
+const plugin = shogun.getPlugin<MyPluginInterface>("my-plugin");
+if (plugin) {
+  plugin.exampleFunction();
+}
+```
+
+2. **Access by category**:
+
+```typescript
+import { PluginCategory } from "shogun-core";
+
+const utilityPlugins = shogun.getPluginsByCategory(PluginCategory.Utility);
+console.log(`Found ${utilityPlugins.length} utility plugins`);
+
+// Use the found plugins
+utilityPlugins.forEach((plugin) => {
+  console.log(`Plugin: ${plugin.name}, version: ${plugin.version}`);
+});
+```
+
+Available categories include:
+
+- `PluginCategory.Authentication`: plugins for authentication
+- `PluginCategory.Wallet`: plugins for wallet management
+- `PluginCategory.Privacy`: plugins for privacy and anonymization
+- `PluginCategory.Identity`: plugins for decentralized identity
+- `PluginCategory.Utility`: plugins for other functionalities
 
 ## Browser Integration
 
@@ -284,10 +512,20 @@ And then import it in your applications:
 
 ```javascript
 // ESM
-import { ShogunCore, initShogunBrowser } from "shogun-core";
+import {
+  ShogunCore,
+  initShogunBrowser,
+  CorePlugins,
+  PluginCategory,
+} from "shogun-core";
 
 // CommonJS
-const { ShogunCore, initShogunBrowser } = require("shogun-core");
+const {
+  ShogunCore,
+  initShogunBrowser,
+  CorePlugins,
+  PluginCategory,
+} = require("shogun-core");
 ```
 
 ### Examples
@@ -308,14 +546,14 @@ const shogun = initShogunBrowser({
   },
   // Optional: attiva stealth e wallet manager
   stealth: {
-    enabled: true
+    enabled: true,
   },
   walletManager: {
-    enabled: true
+    enabled: true,
   },
   did: {
-    enabled: true
-  }
+    enabled: true,
+  },
 });
 
 // Registration
@@ -338,16 +576,21 @@ async function login() {
   }
 }
 
-// WebAuthn Login (usando il plugin)
+// WebAuthn Login using the getAuthenticationMethod (modern way)
 async function webAuthnLogin() {
   try {
-    const webauthnPlugin = shogun.getPlugin(shogun.CorePlugins.WebAuthn);
-    if (webauthnPlugin && webauthnPlugin.isSupported()) {
-      const username = document.getElementById('webauthnUsername').value;
-      const credentials = await webauthnPlugin.generateCredentials(username, null, true);
+    const username = document.getElementById("webauthnUsername").value;
+    const authMethod = shogun.getAuthenticationMethod("webauthn");
+
+    if (authMethod && (await authMethod.isSupported())) {
+      const credentials = await authMethod.generateCredentials(
+        username,
+        null,
+        true
+      );
       if (credentials.success) {
         // Utilizza le credenziali per autenticare l'utente
-        const loginResult = await shogun.login(username, credentials.password);
+        const loginResult = await authMethod.login(username);
         console.log("WebAuthn login result:", loginResult);
       }
     } else {
@@ -358,21 +601,18 @@ async function webAuthnLogin() {
   }
 }
 
-// MetaMask Login (usando il plugin)
+// MetaMask Login using the getAuthenticationMethod (modern way)
 async function metamaskLogin() {
   try {
-    const metamaskPlugin = shogun.getPlugin(shogun.CorePlugins.MetaMask);
-    if (metamaskPlugin && await metamaskPlugin.isAvailable()) {
-      // Ottieni l'indirizzo
-      const address = await metamaskPlugin.connectMetaMask();
-      if (address) {
-        // Genera credenziali
-        const credentials = await metamaskPlugin.generateCredentials(address);
-        if (credentials.success) {
-          // Login con le credenziali ottenute
-          const loginResult = await shogun.login(credentials.username, credentials.password);
-          console.log("MetaMask login result:", loginResult);
-        }
+    const authMethod = shogun.getAuthenticationMethod("metamask");
+
+    if (authMethod && (await authMethod.isAvailable())) {
+      // Get connection
+      const connectResult = await authMethod.connectMetaMask();
+      if (connectResult.success) {
+        // Login with the address
+        const loginResult = await authMethod.login(connectResult.address);
+        console.log("MetaMask login result:", loginResult);
       }
     } else {
       console.error("MetaMask not available");
@@ -390,7 +630,7 @@ async function createWallet() {
   }
 
   try {
-    const walletPlugin = shogun.getPlugin(shogun.CorePlugins.WalletManager);
+    const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
     if (walletPlugin) {
       const wallet = await walletPlugin.createWallet();
       console.log("Wallet created:", wallet);
@@ -405,19 +645,21 @@ async function createWallet() {
 // Using reactive data
 function setupReactiveUI() {
   // Subscribe to user profile changes
-  shogun.observe('users/current').subscribe(user => {
-    document.getElementById('username').textContent = user.name;
-    document.getElementById('status').className = user.online ? 'online' : 'offline';
+  shogun.observe("users/current").subscribe((user) => {
+    document.getElementById("username").textContent = user.name;
+    document.getElementById("status").className = user.online
+      ? "online"
+      : "offline";
   });
-  
+
   // Handle real-time messages
-  shogun.match('messages').subscribe(messages => {
-    const chatBox = document.getElementById('chat');
-    chatBox.innerHTML = '';
-    
-    messages.forEach(msg => {
-      const msgEl = document.createElement('div');
-      msgEl.className = 'message';
+  shogun.match("messages").subscribe((messages) => {
+    const chatBox = document.getElementById("chat");
+    chatBox.innerHTML = "";
+
+    messages.forEach((msg) => {
+      const msgEl = document.createElement("div");
+      msgEl.className = "message";
       msgEl.textContent = `${msg.sender}: ${msg.text}`;
       chatBox.appendChild(msgEl);
     });

@@ -8,9 +8,9 @@ async function exampleAllPlugins() {
     // Inizializziamo ShogunCore con configurazione di base
     const core = new index_1.ShogunCore({
         gundb: {
-            peers: ["https://gun-server.example.com/gun"],
+            peers: ["http://localhost:8765/gun"],
         },
-        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+        providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
     // Creiamo le istanze dei plugin
     const walletPlugin = new index_1.WalletPlugin();
@@ -81,6 +81,10 @@ async function exampleAutoRegisterPlugins() {
     const walletPlugin = new index_1.WalletPlugin();
     const stealthPlugin = new index_1.StealthPlugin();
     const didPlugin = new index_1.DIDPlugin();
+    // Aggiungiamo informazioni di categoria ai plugin
+    walletPlugin._category = index_1.PluginCategory.Wallet;
+    stealthPlugin._category = index_1.PluginCategory.Privacy;
+    didPlugin._category = index_1.PluginCategory.Identity;
     // Inizializziamo ShogunCore con auto-registrazione dei plugin
     const core = new index_1.ShogunCore({
         gundb: {
@@ -88,8 +92,8 @@ async function exampleAutoRegisterPlugins() {
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
         plugins: {
-            autoRegister: [walletPlugin, stealthPlugin, didPlugin]
-        }
+            autoRegister: [walletPlugin, stealthPlugin, didPlugin],
+        },
     });
     // Verifichiamo che i plugin siano stati registrati automaticamente
     console.log(`Wallet plugin auto-registered: ${core.hasPlugin("wallet")}`);
@@ -103,6 +107,10 @@ async function exampleAutoRegisterPlugins() {
     console.log(`Wallet plugin available: ${!!wallet}`);
     console.log(`Stealth plugin available: ${!!stealth}`);
     console.log(`DID plugin available: ${!!did}`);
+    // Otteniamo i plugin per categoria
+    console.log("Wallet plugins:", core.getPluginsByCategory(index_1.PluginCategory.Wallet).length);
+    console.log("Privacy plugins:", core.getPluginsByCategory(index_1.PluginCategory.Privacy).length);
+    console.log("Identity plugins:", core.getPluginsByCategory(index_1.PluginCategory.Identity).length);
 }
 /**
  * Esempio di interazione tra plugin
@@ -132,9 +140,9 @@ async function examplePluginInteractions() {
             services: [
                 {
                     type: "EthereumAddress",
-                    endpoint: `ethereum:${newWallet.address}`
-                }
-            ]
+                    endpoint: `ethereum:${newWallet.address}`,
+                },
+            ],
         });
         console.log(`User DID with wallet service: ${userDID}`);
         // Genera chiavi stealth
@@ -142,11 +150,13 @@ async function examplePluginInteractions() {
         // Aggiorna il DID con informazioni stealth
         if (userDID) {
             const updated = await did.updateDIDDocument(userDID, {
-                service: [{
+                service: [
+                    {
                         id: `${userDID}#stealth-1`,
                         type: "StealthAddress",
-                        serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`
-                    }]
+                        serviceEndpoint: `stealth:${ephemeralKeys.publicKey}`,
+                    },
+                ],
             });
             console.log(`DID updated with stealth information: ${updated}`);
         }
@@ -158,4 +168,4 @@ async function examplePluginInteractions() {
 // Esecuzione degli esempi
 // exampleAllPlugins().catch(console.error);
 // exampleAutoRegisterPlugins().catch(console.error);
-// examplePluginInteractions().catch(console.error); 
+// examplePluginInteractions().catch(console.error);

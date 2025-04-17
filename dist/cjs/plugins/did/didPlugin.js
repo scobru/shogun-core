@@ -126,7 +126,7 @@ class DIDPlugin extends base_1.BasePlugin {
             }
             // Se l'utente non ha un DID, ne creiamo uno nuovo
             (0, logger_1.log)("Creating new DID for authenticated user");
-            const userPub = core.gundb.gun.user().is?.pub || "";
+            const userPub = core.gundb.gun.user().is?.pub ?? "";
             const mergedOptions = {
                 network: "main",
                 controller: userPub,

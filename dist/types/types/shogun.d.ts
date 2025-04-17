@@ -2,7 +2,7 @@ import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/connector/metamask";
+import { MetaMask } from "../plugins/metamask/metamask";
 import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "./gun";
@@ -91,31 +91,37 @@ export interface IShogunCore extends PluginManager {
     storage: ShogunStorage;
     config: ShogunSDKConfig;
     provider?: ethers.Provider;
+    on(eventName: string | symbol, listener: (...args: any[]) => void): any;
+    off(eventName: string | symbol, listener: (...args: any[]) => void): any;
+    once(eventName: string | symbol, listener: (...args: any[]) => void): any;
+    removeAllListeners(eventName?: string | symbol): any;
+    emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
     setRpcUrl(rpcUrl: string): boolean;
     getRpcUrl(): string | null;
     /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
-    getMainWallet(): ethers.Wallet | null;
+    getMainWallet?(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
     /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() instead */
-    loginWithWebAuthn(username: string): Promise<AuthResult>;
+    loginWithWebAuthn?(username: string): Promise<AuthResult>;
     /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() instead */
-    loginWithMetaMask(address: string): Promise<AuthResult>;
+    loginWithMetaMask?(address: string): Promise<AuthResult>;
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
-    signUpWithMetaMask(address: string): Promise<AuthResult>;
+    signUpWithMetaMask?(address: string): Promise<AuthResult>;
     /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() and signUp() instead */
-    signUpWithWebAuthn(username: string): Promise<AuthResult>;
+    signUpWithWebAuthn?(username: string): Promise<AuthResult>;
     /** @deprecated Use getPlugin(CorePlugins.WebAuthn).isSupported() instead */
-    isWebAuthnSupported(): boolean;
+    isWebAuthnSupported?(): boolean;
+    getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
     logout(): void;
     isLoggedIn(): boolean;
     observe<T>(path: string | any): Observable<T>;
     match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
     rxPut<T>(path: string | any, data: T): Observable<T>;
     rxSet<T>(path: string | any, data: T): Observable<T>;
-    once<T>(path: string | any): Observable<T>;
+    onceObservable<T>(path: string | any): Observable<T>;
     compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
     rxUserPut<T>(path: string, data: T): Observable<T>;
     observeUser<T>(path: string): Observable<T>;

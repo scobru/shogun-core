@@ -1,2 +1,4 @@
-export { WalletPlugin } from './walletPlugin';
-export { WalletPluginInterface } from './types'; 
+export { WalletPlugin } from "./walletPlugin";
+export { WalletPluginInterface } from "./types";
+
+export * from "./walletManager";
