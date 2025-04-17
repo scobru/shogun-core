@@ -26,11 +26,11 @@ jobs:
           cache-dependency-path: "**/package.json"
 
       - name: Install dependencies
-        working-directory: ./shogun-core
+        working-directory: ./
         run: npm ci || npm install
 
       - name: Run tests
-        working-directory: ./shogun-core
+        working-directory: ./
         run: npm test
 
       - name: Upload test results
@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-results
-          path: shogun-core/coverage/
+          path: ./coverage/
