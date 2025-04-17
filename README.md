@@ -1,10 +1,7 @@
 # Shogun SDK
 
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/scobru/shogun-core/actions)
-[![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)](https://coveralls.io/github/scobru/shogun-core)
-
-<!-- [![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)](https://coveralls.io/github/yourusername/shogun-core) -->
-
+[![Tests](https://img.shields.io/github/actions/workflow/status/scobru/shogun-core/tests.yml?branch=main&label=tests)](https://github.com/scobru/shogun-core/actions/workflows/tests.yml)
+[![Coverage Status](https://coveralls.io/repos/github/scobru/shogun-core/badge.svg?branch=main)](https://coveralls.io/github/scobru/shogun-core?branch=main)
 [![npm](https://img.shields.io/badge/npm-v1.0.0-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
