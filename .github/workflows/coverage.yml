@@ -26,10 +26,16 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./
-        run: npm test
+        run: npm test -- --coverage
+
+      - name: Verify coverage file exists
+        run: |
+          ls -la ./coverage/
+          cat ./coverage/lcov.info || echo "lcov.info file not found or empty"
 
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.2.3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./coverage/lcov.info
+          flag-name: run-${{ github.run_id }}
