@@ -26,12 +26,12 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./
-        run: npm test -- --coverage
+        run: npm run test:coverage
 
-      - name: Verify coverage file exists
+      - name: Debug coverage output
         run: |
-          ls -la ./coverage/
-          cat ./coverage/lcov.info || echo "lcov.info file not found or empty"
+          find . -name "lcov.info" -type f
+          find . -path "*/coverage/*" -type f | grep -v "node_modules"
 
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.2.3
