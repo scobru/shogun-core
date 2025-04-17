@@ -195,12 +195,12 @@ export class WebauthnPlugin extends BasePlugin {
                     userPub: signupResult.userPub,
                     username,
                     method: "webauthn",
-                    did: signupResult.did || undefined
+                    did: signupResult.did || undefined,
                 });
                 return {
                     ...signupResult,
                     username,
-                    password: '*******',
+                    password: "*******",
                     credentialId: attestationResult.credentialId,
                 };
             }

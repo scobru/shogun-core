@@ -25,7 +25,7 @@ export * from "./plugins";
  * - DID (Decentralized Identity) management
  * - RxJS integration for reactive programming
  *
- * @version 2.0.0
+ * @since 2.0.0
  */
 export class ShogunCore {
     /**

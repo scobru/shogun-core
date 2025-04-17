@@ -43,7 +43,6 @@ export class WalletManager extends EventEmitter {
 
   /**
    * Creates a new WalletManager instance
-   * @param gundb GunDB instance for decentralized storage
    * @param gun Raw Gun instance
    * @param storage Storage interface for local persistence
    * @param config Additional configuration options

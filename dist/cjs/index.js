@@ -46,7 +46,7 @@ __exportStar(require("./plugins"), exports);
  * - DID (Decentralized Identity) management
  * - RxJS integration for reactive programming
  *
- * @version 2.0.0
+ * @since 2.0.0
  */
 class ShogunCore {
     /**

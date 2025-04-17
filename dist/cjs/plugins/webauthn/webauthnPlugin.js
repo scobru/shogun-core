@@ -198,12 +198,12 @@ class WebauthnPlugin extends base_1.BasePlugin {
                     userPub: signupResult.userPub,
                     username,
                     method: "webauthn",
-                    did: signupResult.did || undefined
+                    did: signupResult.did || undefined,
                 });
                 return {
                     ...signupResult,
                     username,
-                    password: '*******',
+                    password: "*******",
                     credentialId: attestationResult.credentialId,
                 };
             }

@@ -19,7 +19,6 @@ const wallet_1 = require("../../types/wallet");
 class WalletManager extends eventEmitter_1.EventEmitter {
     /**
      * Creates a new WalletManager instance
-     * @param gundb GunDB instance for decentralized storage
      * @param gun Raw Gun instance
      * @param storage Storage interface for local persistence
      * @param config Additional configuration options
@@ -286,8 +285,7 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                 // Standard BIP-44 path for Ethereum: m/44'/60'/0'/0/i
                 const path = `m/44'/60'/0'/0/${i}`;
                 // Create HD wallet directly from mnemonic with specified path
-                const wallet = ethers_1.ethers.HDNodeWallet.fromMnemonic(ethers_1.ethers.Mnemonic.fromPhrase(mnemonic), path // Pass path directly here
-                );
+                const wallet = ethers_1.ethers.HDNodeWallet.fromMnemonic(ethers_1.ethers.Mnemonic.fromPhrase(mnemonic), path);
                 addresses.push(wallet.address);
                 (0, logger_1.log)(`Address ${i}: ${wallet.address} (${path})`);
             }

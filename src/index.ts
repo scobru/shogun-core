@@ -48,7 +48,7 @@ export { ShogunPlugin, PluginManager } from "./types/plugin";
  * - DID (Decentralized Identity) management
  * - RxJS integration for reactive programming
  *
- * @version 2.0.0
+ * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
   /** Current API version - used for deprecation warnings and migration guidance */

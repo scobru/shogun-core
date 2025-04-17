@@ -35,7 +35,6 @@ export interface ErrorEventData {
 }
 /**
  * Type defining all available Shogun event listeners
- * @type ShogunEventListeners
  */
 export type ShogunEventMap = {
     "auth:login": AuthEventData;

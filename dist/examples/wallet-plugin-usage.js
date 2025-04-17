@@ -1,4 +1,4 @@
-import { ShogunCore, WalletPlugin, PluginCategory } from "../index";
+import { ShogunCore, WalletPlugin, PluginCategory, } from "../index";
 // Primo modo: inizializzazione manuale del plugin
 function exampleManualPluginInit() {
     // Inizializza ShogunCore senza il wallet manager

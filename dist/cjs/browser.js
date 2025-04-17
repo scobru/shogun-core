@@ -97,7 +97,7 @@ exports.modules = {
     loadStealth: loadStealthModule,
     loadDID: loadDIDModule,
     loadWallet: loadWalletModule,
-    loadMetaMask: loadMetaMaskModule
+    loadMetaMask: loadMetaMaskModule,
 };
 // Export main types as well
 __exportStar(require("./types/shogun"), exports);

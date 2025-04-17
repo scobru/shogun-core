@@ -56,7 +56,7 @@ export const modules = {
     loadStealth: loadStealthModule,
     loadDID: loadDIDModule,
     loadWallet: loadWalletModule,
-    loadMetaMask: loadMetaMaskModule
+    loadMetaMask: loadMetaMaskModule,
 };
 // Export main class for those who prefer to use it directly
 export { ShogunCore };
