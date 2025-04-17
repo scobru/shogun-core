@@ -38,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-results-${{ matrix.node-version }}
-          path: /coverage/
+          path: ./coverage/
           if-no-files-found: ignore
