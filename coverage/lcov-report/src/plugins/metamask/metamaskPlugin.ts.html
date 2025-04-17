@@ -493,7 +493,8 @@
 <a name='L428'></a><a href='#L428'>428</a>
 <a name='L429'></a><a href='#L429'>429</a>
 <a name='L430'></a><a href='#L430'>430</a>
-<a name='L431'></a><a href='#L431'>431</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L431'></a><a href='#L431'>431</a>
+<a name='L432'></a><a href='#L432'>432</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -506,7 +507,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -823,6 +823,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -932,7 +934,6 @@ import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import { DIDCreateOptions } from "../../types/did";
 &nbsp;
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
@@ -1039,7 +1040,7 @@ import { DIDCreateOptions } from "../../types/did";
 <span class="fstat-no" title="function not covered" >  async </span>verifySignature(message: string, signature: string): Promise&lt;string&gt; {
 <span class="cstat-no" title="statement not covered" >    return this.assertMetaMask().verifySignature(message, signature);</span>
   }
-  
+&nbsp;
   /**
    * Login con MetaMask
    * @param address - Indirizzo Ethereum
@@ -1085,7 +1086,7 @@ import { DIDCreateOptions } from "../../types/did";
       }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      log(</span>
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      log("Verifying MetaMask signature...");</span>
@@ -1095,7 +1096,7 @@ import { DIDCreateOptions } from "../../types/did";
       );
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {</span>
 <span class="cstat-no" title="statement not covered" >        logError(</span>
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
 <span class="cstat-no" title="statement not covered" >        throw createError(</span>
           ErrorType.SECURITY,
@@ -1117,7 +1118,7 @@ import { DIDCreateOptions } from "../../types/did";
 <span class="cstat-no" title="statement not covered" >        throw createError(</span>
           ErrorType.AUTHENTICATION,
           "LOGIN_CREATE_FAILED",
-          result.error ||
+          result.error ??
             "Login or user creation failed after signature verification",
         );
       }
@@ -1163,7 +1164,7 @@ import { DIDCreateOptions } from "../../types/did";
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        password: "********", 
+        password: "********",
         did: did || undefined,
       };
     } catch (error: any) {
@@ -1232,7 +1233,7 @@ import { DIDCreateOptions } from "../../types/did";
       }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      log(</span>
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      log("Verifying MetaMask signature...");</span>
@@ -1242,7 +1243,7 @@ import { DIDCreateOptions } from "../../types/did";
       );
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {</span>
 <span class="cstat-no" title="statement not covered" >        logError(</span>
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
 <span class="cstat-no" title="statement not covered" >        throw createError(</span>
           ErrorType.SECURITY,
@@ -1252,7 +1253,9 @@ import { DIDCreateOptions } from "../../types/did";
       }
 <span class="cstat-no" title="statement not covered" >      log("MetaMask signature verified successfully.");</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      log("Attempting user creation (or login if exists) with verified credentials...");</span>
+<span class="cstat-no" title="statement not covered" >      log(</span>
+        "Attempting user creation (or login if exists) with verified credentials...",
+      );
       // Utilizziamo il metodo privato del core per la creazione dell'utente in GunDB
       const createUserWithGunDB = <span class="cstat-no" title="statement not covered" >core["createUserWithGunDB"].bind(core);</span>
       const result = <span class="cstat-no" title="statement not covered" >await createUserWithGunDB(</span>
@@ -1264,7 +1267,7 @@ import { DIDCreateOptions } from "../../types/did";
 <span class="cstat-no" title="statement not covered" >        throw createError(</span>
           ErrorType.AUTHENTICATION,
           "USER_CREATE_LOGIN_FAILED",
-          result.error ||
+          result.error ??
             "User creation or login failed after signature verification",
         );
       }
@@ -1303,7 +1306,7 @@ import { DIDCreateOptions } from "../../types/did";
         userPub: result.userPub,
         username: credentials.username,
         method: "metamask",
-        did: did || undefined,
+        did: did ?? undefined,
       });
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      return {</span>
@@ -1311,14 +1314,14 @@ import { DIDCreateOptions } from "../../types/did";
         userPub: result.userPub,
         username: credentials.username,
         password: credentials.password,
-        did: did || undefined,
+        did: did ?? undefined,
       };
     } catch (error: any) {
       // Cattura sia errori conformi a ShogunError che generici
-      const errorType = <span class="cstat-no" title="statement not covered" >error?.type || ErrorType.AUTHENTICATION;</span>
-      const errorCode = <span class="cstat-no" title="statement not covered" >error?.code || "METAMASK_SIGNUP_ERROR";</span>
+      const errorType = <span class="cstat-no" title="statement not covered" >error?.type ?? ErrorType.AUTHENTICATION;</span>
+      const errorCode = <span class="cstat-no" title="statement not covered" >error?.code ?? "METAMASK_SIGNUP_ERROR";</span>
       const errorMessage =
-<span class="cstat-no" title="statement not covered" >        error?.message || "Unknown error during MetaMask registration";</span>
+<span class="cstat-no" title="statement not covered" >        error?.message ?? "Unknown error during MetaMask registration";</span>
 &nbsp;
       const handledError = <span class="cstat-no" title="statement not covered" >ErrorHandler.handle(</span>
         errorType,
@@ -1360,7 +1363,7 @@ export { <span class="fstat-no" title="function not covered" >MetaMaskPluginInte
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-04-16T09:24:48.789Z
+                at 2025-04-17T15:45:51.719Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
