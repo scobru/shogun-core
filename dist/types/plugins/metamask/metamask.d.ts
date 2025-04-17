@@ -2,7 +2,7 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { EventEmitter } from "events";
+import { EventEmitter } from "../../utils/eventEmitter";
 import { ConnectionResult, MetaMaskCredentials, EthereumProvider, MetaMaskConfig } from "../../types/metamask";
 declare global {
     interface Window {
@@ -24,16 +24,20 @@ declare class MetaMask extends EventEmitter {
     readonly AUTH_DATA_TABLE: string;
     private readonly MESSAGE_TO_SIGN;
     private readonly DEFAULT_CONFIG;
-    private config;
-    private signatureCache;
+    private readonly config;
+    private readonly signatureCache;
     private provider;
     private customProvider;
     private customWallet;
     constructor(config?: Partial<MetaMaskConfig>);
     /**
-     * Initialize the BrowserProvider
+     * Initialize the provider synchronously
      */
-    private setupProvider;
+    private initProvider;
+    /**
+     * Initialize the BrowserProvider (async method for explicit calls)
+     */
+    setupProvider(): Promise<void>;
     /**
      * Setup MetaMask event listeners using BrowserProvider
      */

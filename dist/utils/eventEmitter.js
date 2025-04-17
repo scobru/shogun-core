@@ -1,4 +1,8 @@
 /**
+ * Type for any event data
+ */
+import { logError } from "./logger";
+/**
  * Simple event emitter implementation with generic event types
  */
 export class EventEmitter {
@@ -19,16 +23,17 @@ export class EventEmitter {
      */
     emit(event, data) {
         if (!this.events.has(event))
-            return;
+            return false;
         const listeners = this.events.get(event) || [];
         listeners.forEach((listener) => {
             try {
                 listener(data);
             }
             catch (error) {
-                console.error(`Error in event listener for ${event}:`, error);
+                logError(`Error in event listener for ${String(event)}:`, error);
             }
         });
+        return true;
     }
     /**
      * Removes an event listener

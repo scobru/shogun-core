@@ -44,7 +44,7 @@ class ErrorHandler {
 
   createError(
     message: string,
-    errorType: ErrorType = ErrorType.General
+    errorType: ErrorType = ErrorType.General,
   ): ShogunError {
     return new ShogunError(message, errorType);
   }
@@ -149,7 +149,7 @@ describe("ErrorHandler", () => {
   test("dovrebbe creare errori corretti", () => {
     const error = errorHandler.createError(
       "Test error",
-      ErrorType.Authentication
+      ErrorType.Authentication,
     );
     expect(error).toBeInstanceOf(ShogunError);
     expect(error.message).toBe("Test error");
@@ -252,19 +252,19 @@ describe("ErrorHandler", () => {
     // Crea errori di diversi tipi
     const generalError = errorHandler.createError(
       "General error",
-      ErrorType.General
+      ErrorType.General,
     );
     const authError1 = errorHandler.createError(
       "Auth error 1",
-      ErrorType.Authentication
+      ErrorType.Authentication,
     );
     const authError2 = errorHandler.createError(
       "Auth error 2",
-      ErrorType.Authentication
+      ErrorType.Authentication,
     );
     const validationError = errorHandler.createError(
       "Validation error",
-      ErrorType.Validation
+      ErrorType.Validation,
     );
 
     // Gestisci tutti gli errori

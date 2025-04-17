@@ -134,9 +134,18 @@ async function exampleAutoRegisterPlugins() {
   console.log(`DID plugin available: ${!!did}`);
 
   // Otteniamo i plugin per categoria
-  console.log("Wallet plugins:", core.getPluginsByCategory(PluginCategory.Wallet).length);
-  console.log("Privacy plugins:", core.getPluginsByCategory(PluginCategory.Privacy).length);
-  console.log("Identity plugins:", core.getPluginsByCategory(PluginCategory.Identity).length);
+  console.log(
+    "Wallet plugins:",
+    core.getPluginsByCategory(PluginCategory.Wallet).length,
+  );
+  console.log(
+    "Privacy plugins:",
+    core.getPluginsByCategory(PluginCategory.Privacy).length,
+  );
+  console.log(
+    "Identity plugins:",
+    core.getPluginsByCategory(PluginCategory.Identity).length,
+  );
 }
 
 /**

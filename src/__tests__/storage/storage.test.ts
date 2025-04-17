@@ -20,7 +20,9 @@ describe("ShogunStorage", () => {
   test("dovrebbe salvare e recuperare dati usando il store interno", () => {
     storage.setItem(testKey, testValueStr);
     const retrievedValue = storage.getItem(testKey);
-    expect(JSON.parse(retrievedValue)).toEqual(testValue);
+    expect(retrievedValue !== null ? JSON.parse(retrievedValue) : null).toEqual(
+      testValue,
+    );
   });
 
   test("dovrebbe rimuovere i dati dallo store", () => {
@@ -55,8 +57,10 @@ describe("ShogunStorage", () => {
     };
 
     storage.setItem(testKey, JSON.stringify(complexData));
-    const retrievedValue = JSON.parse(storage.getItem(testKey));
-    expect(retrievedValue).toEqual(complexData);
+    const retrievedValue = storage.getItem(testKey);
+    expect(retrievedValue !== null ? JSON.parse(retrievedValue) : null).toEqual(
+      complexData,
+    );
   });
 
   test("dovrebbe gestire localStorage non disponibile", () => {

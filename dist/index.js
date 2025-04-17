@@ -1,19 +1,16 @@
-// Improved ShogunCore SDK Implementation
 import { GunDB } from "./gun/gun";
-import { EventEmitter } from "events";
+import { EventEmitter } from "./utils/eventEmitter";
 import { ShogunStorage } from "./storage/storage";
 import { PluginCategory, CorePlugins, } from "./types/shogun";
 import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
-import { ErrorHandler, ErrorType, } from "./utils/errorHandler";
+import { ErrorHandler, ErrorType } from "./utils/errorHandler";
 import { GunRxJS } from "./gun/rxjs-integration";
-// Import plugins statically instead of using dynamic requires
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
-// Re-export existing types and classes
 export { ShogunDID, } from "./plugins/did/DID";
 export { ErrorHandler, ErrorType } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
@@ -229,7 +226,7 @@ export class ShogunCore {
                 // Default authentication is provided by the core class
                 return {
                     login: (username, password) => this.login(username, password),
-                    signUp: (username, password, confirm) => this.signUp(username, password, confirm)
+                    signUp: (username, password, confirm) => this.signUp(username, password, confirm),
                 };
         }
     }
@@ -423,7 +420,7 @@ export class ShogunCore {
                 });
             });
             // Timeout after a configurable interval (default 15 seconds)
-            const timeoutDuration = this.config?.timeouts?.login || 15000;
+            const timeoutDuration = this.config?.timeouts?.login ?? 15000;
             const timeoutPromise = new Promise((resolve) => {
                 setTimeout(() => {
                     resolve({
@@ -435,7 +432,7 @@ export class ShogunCore {
             const result = await Promise.race([loginPromise, timeoutPromise]);
             if (result.success) {
                 this.eventEmitter.emit("auth:login", {
-                    userPub: result.userPub || "",
+                    userPub: result.userPub ?? "",
                 });
                 try {
                     const did = await this.ensureUserHasDID();
@@ -450,10 +447,10 @@ export class ShogunCore {
             return result;
         }
         catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message || "Unknown error during login", error);
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
             return {
                 success: false,
-                error: error.message || "Unknown error during login",
+                error: error.message ?? "Unknown error during login",
             };
         }
     }
@@ -524,7 +521,7 @@ export class ShogunCore {
                     }
                 });
             });
-            const timeoutDuration = this.config?.timeouts?.signup || 20000;
+            const timeoutDuration = this.config?.timeouts?.signup ?? 20000;
             const timeoutPromise = new Promise((resolve) => {
                 setTimeout(() => {
                     resolve({
@@ -537,7 +534,7 @@ export class ShogunCore {
             const result = await Promise.race([signupPromise, timeoutPromise]);
             if (result.success) {
                 this.eventEmitter.emit("auth:signup", {
-                    userPub: result.userPub || "",
+                    userPub: result.userPub ?? "",
                     username,
                 });
                 try {
@@ -557,7 +554,7 @@ export class ShogunCore {
             logError(`Error during registration for user ${username}:`, error);
             return {
                 success: false,
-                error: error.message || "Unknown error during registration",
+                error: error.message ?? "Unknown error during registration",
             };
         }
     }
@@ -650,7 +647,7 @@ export class ShogunCore {
                     });
                     return;
                 }
-                log(`Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`);
+                log(`Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`);
                 const createResult = await createUser();
                 if (createResult.err) {
                     log(`User creation error: ${createResult.err}`);
@@ -678,7 +675,7 @@ export class ShogunCore {
                 }
             }
             catch (error) {
-                const errorMsg = error.message || "Unknown error during user existence check";
+                const errorMsg = error.message ?? "Unknown error during user existence check";
                 logError(`Error in createUserWithGunDB: ${errorMsg}`, error);
                 resolve({
                     success: false,
@@ -792,7 +789,7 @@ export class ShogunCore {
     getRpcUrl() {
         // Access the provider URL if available
         return this.provider instanceof ethers.JsonRpcProvider
-            ? this.provider.connection?.url || null
+            ? (this.provider.connection?.url ?? null)
             : null;
     }
     // *********************************************************************************************************
@@ -804,8 +801,8 @@ export class ShogunCore {
      * @param eventName The name of the event to emit.
      * @param data The data to pass with the event.
      */
-    emit(eventName, ...args) {
-        return this.eventEmitter.emit(eventName, ...args);
+    emit(eventName, data) {
+        return this.eventEmitter.emit(eventName, data);
     }
     /**
      * Add an event listener

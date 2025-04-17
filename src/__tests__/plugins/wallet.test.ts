@@ -96,7 +96,7 @@ describe("WalletManager", () => {
           getBalance: jest.fn().mockResolvedValue(ethers.parseEther("1.0")),
           getTransactionCount: jest.fn().mockResolvedValue(0),
           getTransactionReceipt: jest.fn(),
-        }) as unknown as ethers.JsonRpcProvider
+        }) as unknown as ethers.JsonRpcProvider,
     );
 
     // Mock per SEA
@@ -105,7 +105,7 @@ describe("WalletManager", () => {
       global.Gun.SEA.decrypt = jest
         .fn()
         .mockResolvedValue(
-          "test one two three four five six seven eight nine ten eleven twelve"
+          "test one two three four five six seven eight nine ten eleven twelve",
         );
     }
 
@@ -119,7 +119,7 @@ describe("WalletManager", () => {
     walletManager.generateNewMnemonic = jest
       .fn()
       .mockReturnValue(
-        "test one two three four five six seven eight nine ten eleven twelve"
+        "test one two three four five six seven eight nine ten eleven twelve",
       );
   });
 
@@ -132,7 +132,7 @@ describe("WalletManager", () => {
     walletManager.generateNewMnemonic = jest
       .fn()
       .mockReturnValue(
-        "one two three four five six seven eight nine ten eleven twelve"
+        "one two three four five six seven eight nine ten eleven twelve",
       );
 
     const mnemonic = walletManager.generateNewMnemonic();

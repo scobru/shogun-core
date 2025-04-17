@@ -15,22 +15,19 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
-// Improved ShogunCore SDK Implementation
 const gun_1 = require("./gun/gun");
-const events_1 = require("events");
+const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
 const logger_1 = require("./utils/logger");
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
-// Import plugins statically instead of using dynamic requires
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const didPlugin_1 = require("./plugins/did/didPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
-// Re-export existing types and classes
 var DID_1 = require("./plugins/did/DID");
 Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
 var errorHandler_2 = require("./utils/errorHandler");
@@ -69,7 +66,7 @@ class ShogunCore {
             (0, logger_1.log)("Logging configured with custom settings");
         }
         this.storage = new storage_1.ShogunStorage();
-        this.eventEmitter = new events_1.EventEmitter();
+        this.eventEmitter = new eventEmitter_1.EventEmitter();
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -250,7 +247,7 @@ class ShogunCore {
                 // Default authentication is provided by the core class
                 return {
                     login: (username, password) => this.login(username, password),
-                    signUp: (username, password, confirm) => this.signUp(username, password, confirm)
+                    signUp: (username, password, confirm) => this.signUp(username, password, confirm),
                 };
         }
     }
@@ -444,7 +441,7 @@ class ShogunCore {
                 });
             });
             // Timeout after a configurable interval (default 15 seconds)
-            const timeoutDuration = this.config?.timeouts?.login || 15000;
+            const timeoutDuration = this.config?.timeouts?.login ?? 15000;
             const timeoutPromise = new Promise((resolve) => {
                 setTimeout(() => {
                     resolve({
@@ -456,7 +453,7 @@ class ShogunCore {
             const result = await Promise.race([loginPromise, timeoutPromise]);
             if (result.success) {
                 this.eventEmitter.emit("auth:login", {
-                    userPub: result.userPub || "",
+                    userPub: result.userPub ?? "",
                 });
                 try {
                     const did = await this.ensureUserHasDID();
@@ -471,10 +468,10 @@ class ShogunCore {
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message || "Unknown error during login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
             return {
                 success: false,
-                error: error.message || "Unknown error during login",
+                error: error.message ?? "Unknown error during login",
             };
         }
     }
@@ -545,7 +542,7 @@ class ShogunCore {
                     }
                 });
             });
-            const timeoutDuration = this.config?.timeouts?.signup || 20000;
+            const timeoutDuration = this.config?.timeouts?.signup ?? 20000;
             const timeoutPromise = new Promise((resolve) => {
                 setTimeout(() => {
                     resolve({
@@ -558,7 +555,7 @@ class ShogunCore {
             const result = await Promise.race([signupPromise, timeoutPromise]);
             if (result.success) {
                 this.eventEmitter.emit("auth:signup", {
-                    userPub: result.userPub || "",
+                    userPub: result.userPub ?? "",
                     username,
                 });
                 try {
@@ -578,7 +575,7 @@ class ShogunCore {
             (0, logger_1.logError)(`Error during registration for user ${username}:`, error);
             return {
                 success: false,
-                error: error.message || "Unknown error during registration",
+                error: error.message ?? "Unknown error during registration",
             };
         }
     }
@@ -671,7 +668,7 @@ class ShogunCore {
                     });
                     return;
                 }
-                (0, logger_1.log)(`Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`);
+                (0, logger_1.log)(`Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`);
                 const createResult = await createUser();
                 if (createResult.err) {
                     (0, logger_1.log)(`User creation error: ${createResult.err}`);
@@ -699,7 +696,7 @@ class ShogunCore {
                 }
             }
             catch (error) {
-                const errorMsg = error.message || "Unknown error during user existence check";
+                const errorMsg = error.message ?? "Unknown error during user existence check";
                 (0, logger_1.logError)(`Error in createUserWithGunDB: ${errorMsg}`, error);
                 resolve({
                     success: false,
@@ -813,7 +810,7 @@ class ShogunCore {
     getRpcUrl() {
         // Access the provider URL if available
         return this.provider instanceof ethers_1.ethers.JsonRpcProvider
-            ? this.provider.connection?.url || null
+            ? (this.provider.connection?.url ?? null)
             : null;
     }
     // *********************************************************************************************************
@@ -825,8 +822,8 @@ class ShogunCore {
      * @param eventName The name of the event to emit.
      * @param data The data to pass with the event.
      */
-    emit(eventName, ...args) {
-        return this.eventEmitter.emit(eventName, ...args);
+    emit(eventName, data) {
+        return this.eventEmitter.emit(eventName, data);
     }
     /**
      * Add an event listener
@@ -881,5 +878,5 @@ var webauthn_1 = require("./plugins/webauthn/webauthn");
 Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_1.Webauthn; } });
 var storage_2 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_2.ShogunStorage; } });
-var events_2 = require("./events");
-Object.defineProperty(exports, "ShogunEventEmitter", { enumerable: true, get: function () { return events_2.ShogunEventEmitter; } });
+var events_1 = require("./events");
+Object.defineProperty(exports, "ShogunEventEmitter", { enumerable: true, get: function () { return events_1.ShogunEventEmitter; } });

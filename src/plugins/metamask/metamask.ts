@@ -2,10 +2,10 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { log, logDebug, logError, logWarn } from "../../utils/logger";
+import { logDebug, logError, logWarn } from "../../utils/logger";
 import CONFIG from "../../config";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
-import { EventEmitter } from "events";
+import { EventEmitter } from "../../utils/eventEmitter";
 import {
   ConnectionResult,
   MetaMaskCredentials,
@@ -43,8 +43,8 @@ class MetaMask extends EventEmitter {
     timeout: 60000,
   };
 
-  private config: MetaMaskConfig;
-  private signatureCache: Map<string, SignatureCache> = new Map();
+  private readonly config: MetaMaskConfig;
+  private readonly signatureCache: Map<string, SignatureCache> = new Map();
   private provider: ethers.BrowserProvider | null = null;
   private customProvider: ethers.JsonRpcProvider | null = null;
   private customWallet: ethers.Wallet | null = null;
@@ -54,14 +54,32 @@ class MetaMask extends EventEmitter {
     this.config = { ...this.DEFAULT_CONFIG, ...config };
     this.AUTH_DATA_TABLE =
       CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
-    this.setupProvider();
+    this.initProvider();
     this.setupEventListeners();
   }
 
   /**
-   * Initialize the BrowserProvider
+   * Initialize the provider synchronously
    */
-  private async setupProvider(): Promise<void> {
+  private initProvider(): void {
+    if (typeof window !== "undefined" && window.ethereum) {
+      try {
+        this.provider = new ethers.BrowserProvider(
+          window.ethereum as ethers.Eip1193Provider,
+        );
+        logDebug("BrowserProvider initialized successfully");
+      } catch (error) {
+        logError("Failed to initialize BrowserProvider", error);
+      }
+    } else {
+      logWarn("Window.ethereum is not available");
+    }
+  }
+
+  /**
+   * Initialize the BrowserProvider (async method for explicit calls)
+   */
+  public async setupProvider(): Promise<void> {
     try {
       if (typeof window !== "undefined" && window.ethereum) {
         this.provider = new ethers.BrowserProvider(
@@ -165,7 +183,7 @@ class MetaMask extends EventEmitter {
 
       if (!this.provider) {
         logDebug("Provider not initialized, setting up...");
-        await this.setupProvider();
+        this.initProvider();
         if (!this.provider) {
           throw new Error(
             "MetaMask is not available. Please install MetaMask extension.",
@@ -219,7 +237,7 @@ class MetaMask extends EventEmitter {
           if (attempt === this.config.maxRetries!) throw error;
           logDebug(`Retrying in ${this.config.retryDelay}ms...`);
           await new Promise((resolve) =>
-            setTimeout(resolve, this.config.retryDelay!),
+            setTimeout(resolve, this.config.retryDelay),
           );
         }
       }
@@ -230,7 +248,7 @@ class MetaMask extends EventEmitter {
       ErrorHandler.handle(
         ErrorType.NETWORK,
         "METAMASK_CONNECTION_ERROR",
-        error.message || "Unknown error while connecting to MetaMask",
+        error.message ?? "Unknown error while connecting to MetaMask",
         error,
       );
       return { success: false, error: error.message };
@@ -260,7 +278,7 @@ class MetaMask extends EventEmitter {
         const signature = await this.requestSignatureWithTimeout(
           validAddress,
           this.MESSAGE_TO_SIGN,
-          this.config.timeout!,
+          this.config.timeout,
         );
 
         // Cache the new signature
@@ -281,7 +299,7 @@ class MetaMask extends EventEmitter {
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "CREDENTIALS_GENERATION_ERROR",
-        error.message || "Error generating MetaMask credentials",
+        error.message ?? "Error generating MetaMask credentials",
         error,
       );
       throw error;
@@ -329,7 +347,7 @@ class MetaMask extends EventEmitter {
    * @returns true if MetaMask is available
    */
   public static isMetaMaskAvailable(): boolean {
-    const ethereum = window.ethereum as EthereumProvider | undefined;
+    const ethereum = window.ethereum;
     return (
       typeof window !== "undefined" &&
       typeof ethereum !== "undefined" &&
@@ -340,101 +358,69 @@ class MetaMask extends EventEmitter {
   /**
    * Request signature using BrowserProvider
    */
-  private async requestSignatureWithTimeout(
+  private requestSignatureWithTimeout(
     address: string,
     message: string,
     timeout: number = 30000,
   ): Promise<string> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
         timeoutId = null;
         reject(new Error("Timeout requesting signature"));
       }, timeout);
 
-      try {
-        if (!this.provider) {
-          await this.setupProvider();
-          if (!this.provider) {
-            throw new Error("Provider not initialized");
-          }
-        }
-
-        // Preparare il signer
-        let signer;
-        try {
-          signer = await this.provider.getSigner();
-        } catch (error: any) {
-          logError("Failed to get signer:", error);
-          throw new Error(`Failed to get signer: ${error.message}`);
-        }
-
-        // Verifica l'indirizzo del signer
-        let signerAddress;
-        try {
-          signerAddress = await signer.getAddress();
-        } catch (error: any) {
-          logError("Failed to get signer address:", error);
-          throw new Error(`Failed to get signer address: ${error.message}`);
-        }
-
-        if (signerAddress.toLowerCase() !== address.toLowerCase()) {
-          throw new Error(
-            `Signer address (${signerAddress}) does not match expected address (${address})`,
-          );
-        }
-
-        // Eseguire la firma con handling migliorato
-        logDebug(`Requesting signature for message: ${message}`);
-
-        // Aggiungere un event handler temporaneo per eventuali errori della window.ethereum
-        const errorHandler = (error: any) => {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-          reject(error);
-        };
-
-        // Aggiungere anche listener per l'evento accountsChanged che può interrompere la firma
-        if (window.ethereum?.on) {
-          window.ethereum.on("accountsChanged", errorHandler);
-        }
-
-        try {
-          const signature = await signer.signMessage(message);
-          logDebug("Signature obtained successfully");
-
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-
-          // Rimuoviamo i listener
-          if (window.ethereum?.removeListener) {
-            window.ethereum.removeListener("accountsChanged", errorHandler);
-          }
-
-          resolve(signature);
-        } catch (error: any) {
-          logError("Error during message signing:", error);
-
-          // Rimuoviamo i listener
-          if (window.ethereum?.removeListener) {
-            window.ethereum.removeListener("accountsChanged", errorHandler);
-          }
-
-          throw error;
-        }
-      } catch (error: any) {
-        logError("Failed to request signature:", error);
-
+      const cleanup = () => {
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
+        if (window.ethereum?.removeListener) {
+          window.ethereum.removeListener("accountsChanged", errorHandler);
+        }
+      };
 
-        reject(error);
+      const errorHandler = (error: any) => {
+        cleanup();
+        reject(error as Error);
+      };
+
+      // Aggiungere listener per l'evento accountsChanged che può interrompere la firma
+      if (window.ethereum?.on) {
+        window.ethereum.on("accountsChanged", errorHandler);
       }
+
+      const initializeAndSign = async () => {
+        try {
+          if (!this.provider) {
+            this.initProvider();
+            if (!this.provider) {
+              throw new Error("Provider not initialized");
+            }
+          }
+
+          const signer = await this.provider.getSigner();
+          const signerAddress = await signer.getAddress();
+
+          if (signerAddress.toLowerCase() !== address.toLowerCase()) {
+            throw new Error(
+              `Signer address (${signerAddress}) does not match expected address (${address})`,
+            );
+          }
+
+          logDebug(`Requesting signature for message: ${message}`);
+          const signature = await signer.signMessage(message);
+          logDebug("Signature obtained successfully");
+
+          cleanup();
+          resolve(signature);
+        } catch (error: any) {
+          logError("Failed to request signature:", error);
+          cleanup();
+          reject(error as Error);
+        }
+      };
+
+      initializeAndSign();
     });
   }
 
@@ -466,7 +452,7 @@ class MetaMask extends EventEmitter {
       logDebug("Custom provider configured successfully");
     } catch (error: any) {
       throw new Error(
-        `Error configuring provider: ${error.message || "Unknown error"}`,
+        `Error configuring provider: ${error.message ?? "Unknown error"}`,
       );
     }
   }
@@ -481,7 +467,7 @@ class MetaMask extends EventEmitter {
       }
 
       if (!this.provider) {
-        await this.setupProvider();
+        this.initProvider();
       }
 
       if (!this.provider) {
@@ -555,7 +541,7 @@ class MetaMask extends EventEmitter {
       return provider.getSigner();
     } catch (error: any) {
       throw new Error(
-        `Error accessing MetaMask: ${error.message || "Unknown error"}`,
+        `Error accessing MetaMask: ${error.message ?? "Unknown error"}`,
       );
     }
   }

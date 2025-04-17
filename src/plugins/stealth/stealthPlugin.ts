@@ -3,7 +3,7 @@ import { ShogunCore } from "../../index";
 import { Stealth } from "./stealth";
 import { StealthPluginInterface } from "./types";
 import { StealthAddressResult, StealthData } from "../../types/stealth";
-import { log, logError } from "../../utils/logger";
+import { log } from "../../utils/logger";
 
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore

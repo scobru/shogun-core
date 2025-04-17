@@ -1,6 +1,8 @@
 /**
  * Type for any event data
  */
+import { logError } from "./logger";
+
 export type EventData = Record<string, unknown>;
 
 /**
@@ -9,12 +11,17 @@ export type EventData = Record<string, unknown>;
 export type Listener<T = unknown> = (data: T) => void;
 
 /**
+ * Event type che può essere string o symbol per compatibilità con Node.js EventEmitter
+ */
+export type EventType = string | symbol;
+
+/**
  * Simple event emitter implementation with generic event types
  */
 export class EventEmitter<
   Events extends Record<string, unknown> = Record<string, unknown>,
 > {
-  private events: Map<string, Array<(data: unknown) => void>>;
+  private events: Map<EventType, Array<(data: unknown) => void>>;
 
   constructor() {
     this.events = new Map();
@@ -23,7 +30,7 @@ export class EventEmitter<
   /**
    * Registers an event listener
    */
-  on(event: string, listener: (data: unknown) => void): void {
+  on(event: EventType, listener: (data: unknown) => void): void {
     if (!this.events.has(event)) {
       this.events.set(event, []);
     }
@@ -33,23 +40,25 @@ export class EventEmitter<
   /**
    * Emits an event with arguments
    */
-  emit(event: string, data?: unknown): void {
-    if (!this.events.has(event)) return;
+  emit(event: EventType, data?: unknown): boolean {
+    if (!this.events.has(event)) return false;
 
     const listeners = this.events.get(event) || [];
     listeners.forEach((listener) => {
       try {
         listener(data);
       } catch (error) {
-        console.error(`Error in event listener for ${event}:`, error);
+        logError(`Error in event listener for ${String(event)}:`, error);
       }
     });
+
+    return true;
   }
 
   /**
    * Removes an event listener
    */
-  off(event: string, listener: (data: unknown) => void): void {
+  off(event: EventType, listener: (data: unknown) => void): void {
     if (!this.events.has(event)) return;
 
     const listeners = this.events.get(event) || [];
@@ -68,7 +77,7 @@ export class EventEmitter<
   /**
    * Registers a one-time event listener
    */
-  once(event: string, listener: (data: unknown) => void): void {
+  once(event: EventType, listener: (data: unknown) => void): void {
     const onceWrapper = (data: unknown) => {
       listener(data);
       this.off(event, onceWrapper);
@@ -79,7 +88,7 @@ export class EventEmitter<
   /**
    * Removes all listeners for an event or all events
    */
-  removeAllListeners(event?: string): void {
+  removeAllListeners(event?: EventType): void {
     if (event) {
       this.events.delete(event);
     } else {

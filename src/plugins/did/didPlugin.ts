@@ -4,7 +4,7 @@ import { ShogunCore } from "../../index";
 import { ShogunDID } from "./DID";
 import { DIDPluginInterface } from "./types";
 import { DIDCreateOptions } from "../../types/did";
-import { AuthResult, CorePlugins } from "../../types/shogun";
+import { AuthResult } from "../../types/shogun";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
@@ -154,7 +154,7 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
 
       // Se l'utente non ha un DID, ne creiamo uno nuovo
       log("Creating new DID for authenticated user");
-      const userPub = core.gundb.gun.user().is?.pub || "";
+      const userPub = core.gundb.gun.user().is?.pub ?? "";
 
       const mergedOptions: DIDCreateOptions = {
         network: "main",

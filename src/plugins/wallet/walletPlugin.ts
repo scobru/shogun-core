@@ -4,7 +4,6 @@ import { ShogunCore } from "../../index";
 import { WalletManager } from "./walletManager";
 import { WalletInfo } from "../../types/shogun";
 import { WalletPluginInterface } from "./types";
-import { ShogunStorage } from "../../storage/storage";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
@@ -29,7 +28,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
     }
 
     // Creiamo un nuovo WalletManager
-    this.walletManager = new WalletManager(core.gundb, core.gun, core.storage, {
+    this.walletManager = new WalletManager(core.gun, core.storage, {
       // Recuperiamo configurazione dal core se disponibile
       balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
       rpcUrl:

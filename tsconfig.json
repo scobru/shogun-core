@@ -13,5 +13,11 @@
     "allowJs": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/hedgehog/*"]
-} 
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/hedgehog/*",
+    "src/__tests__/**/*",
+    "**/*.test.ts"
+  ]
+}

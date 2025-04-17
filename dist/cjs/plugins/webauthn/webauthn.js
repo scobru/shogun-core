@@ -4,12 +4,12 @@ exports.Webauthn = void 0;
 /**
  * Constants for WebAuthn configuration
  */
-const TIMEOUT_MS = 60000;
 const MIN_USERNAME_LENGTH = 3;
 const MAX_USERNAME_LENGTH = 64;
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
+const logger_1 = require("../../utils/logger");
 const webauthn_1 = require("../../types/webauthn");
 /**
  * Constants for WebAuthn configuration
@@ -38,7 +38,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         this.config = {
             ...DEFAULT_CONFIG,
             ...config,
-            rpId: config?.rpId || window.location.hostname.split(":")[0],
+            rpId: config?.rpId ?? window.location.hostname.split(":")[0],
         };
     }
     /**
@@ -75,7 +75,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                         });
                         return result;
                     }
-                    lastError = new Error(result.error || "Unknown error");
+                    lastError = new Error(result.error ?? "Unknown error");
                 }
                 catch (error) {
                     lastError = error;
@@ -288,14 +288,14 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     requireResidentKey: this.config.requireResidentKey,
                 },
             };
-            console.log("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
+            (0, logger_1.logDebug)("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
             const credential = await navigator.credentials.create({
                 publicKey: publicKeyCredentialCreationOptions,
             });
             if (!credential) {
                 throw new Error("Credential creation failed");
             }
-            console.log("Credentials created successfully:", credential);
+            (0, logger_1.logDebug)("Credentials created successfully:", credential);
             const webAuthnCredential = credential;
             // Convert to WebAuthnCredentialData
             const credentialData = {
@@ -315,7 +315,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             return credentialData;
         }
         catch (error) {
-            console.error("Detailed error in credential creation:", error);
+            (0, logger_1.logError)("Detailed error in credential creation:", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
             throw new Error(`Error creating credentials: ${errorMessage}`);
         }
@@ -349,7 +349,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             }
         }
         catch (error) {
-            console.error("Error in generateCredentials:", error);
+            (0, logger_1.logError)("Error in generateCredentials:", error);
             const errorMessage = error instanceof Error
                 ? error.message
                 : "Unknown error during WebAuthn operation";
@@ -395,7 +395,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             };
         }
         catch (error) {
-            console.error("Error verifying credentials:", error);
+            (0, logger_1.logError)("Error verifying credentials:", error);
             const errorMessage = error instanceof Error
                 ? error.message
                 : "Unknown error verifying credentials";
@@ -418,7 +418,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                 });
             }
             catch (error) {
-                console.error("Error saving credentials to Gun:", error);
+                (0, logger_1.logError)("Error saving credentials to Gun:", error);
             }
         }
         // No action if gunInstance is not available

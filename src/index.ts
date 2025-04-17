@@ -1,5 +1,5 @@
 import { GunDB } from "./gun/gun";
-import { EventEmitter } from "events";
+import { EventEmitter } from "./utils/eventEmitter";
 import { ShogunStorage } from "./storage/storage";
 import {
   IShogunCore,
@@ -144,7 +144,7 @@ export class ShogunCore implements IShogunCore {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
       log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL."
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
       );
     }
 
@@ -321,7 +321,7 @@ export class ShogunCore implements IShogunCore {
    * @param path - Path to observe (can be a string or a Gun chain)
    * @returns Observable that emits whenever the node changes
    */
-  observe<T>(path: string | any): Observable<T> {
+  observe<T>(path: string): Observable<T> {
     return this.rx.observe<T>(path);
   }
 
@@ -333,7 +333,7 @@ export class ShogunCore implements IShogunCore {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean
+    matchFn?: (data: any) => boolean,
   ): Observable<T[]> {
     return this.rx.match<T>(path, matchFn);
   }
@@ -375,7 +375,7 @@ export class ShogunCore implements IShogunCore {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R
+    computeFn: (...values: T[]) => R,
   ): Observable<R> {
     return this.rx.compute<T, R>(sources, computeFn);
   }
@@ -478,7 +478,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -533,7 +533,7 @@ export class ShogunCore implements IShogunCore {
       });
 
       // Timeout after a configurable interval (default 15 seconds)
-      const timeoutDuration = this.config?.timeouts?.login || 15000;
+      const timeoutDuration = this.config?.timeouts?.login ?? 15000;
       const timeoutPromise = new Promise<AuthResult>((resolve) => {
         setTimeout(() => {
           resolve({
@@ -547,7 +547,7 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         this.eventEmitter.emit("auth:login", {
-          userPub: result.userPub || "",
+          userPub: result.userPub ?? "",
         });
 
         try {
@@ -565,13 +565,13 @@ export class ShogunCore implements IShogunCore {
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
-        error.message || "Unknown error during login",
-        error
+        error.message ?? "Unknown error during login",
+        error,
       );
 
       return {
         success: false,
-        error: error.message || "Unknown error during login",
+        error: error.message ?? "Unknown error during login",
       };
     }
   }
@@ -588,7 +588,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -708,7 +708,7 @@ export class ShogunCore implements IShogunCore {
    * @private
    */
   private async ensureUserHasDID(
-    options?: DIDCreateOptions
+    options?: DIDCreateOptions,
   ): Promise<string | null> {
     try {
       const didPlugin = this.getPlugin<DIDPluginInterface>("did");
@@ -734,7 +734,7 @@ export class ShogunCore implements IShogunCore {
    */
   private createUserWithGunDB(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     log(`Ensuring user exists with GunDB: ${username}`);
 
@@ -793,7 +793,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`
+          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`,
         );
         const createResult = await createUser();
 
@@ -807,7 +807,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `User created successfully, attempting login again for confirmation...`
+          `User created successfully, attempting login again for confirmation...`,
         );
         loginResult = await authUser();
 
@@ -819,7 +819,7 @@ export class ShogunCore implements IShogunCore {
           });
         } else {
           logError(
-            `Post-creation login failed unexpectedly: ${loginResult.err}`
+            `Post-creation login failed unexpectedly: ${loginResult.err}`,
           );
           resolve({
             success: false,
@@ -961,8 +961,8 @@ export class ShogunCore implements IShogunCore {
    * @param eventName The name of the event to emit.
    * @param data The data to pass with the event.
    */
-  emit(eventName: string | symbol, ...args: any[]): boolean {
-    return this.eventEmitter.emit(eventName, ...args);
+  emit(eventName: string | symbol, data?: any): boolean {
+    return this.eventEmitter.emit(eventName, data);
   }
 
   /**
@@ -970,7 +970,7 @@ export class ShogunCore implements IShogunCore {
    * @param eventName The name of the event to listen for
    * @param listener The callback function to execute when the event is emitted
    */
-  on(eventName: string | symbol, listener: (...args: any[]) => void): this {
+  on(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.on(eventName, listener);
     return this;
   }
@@ -980,7 +980,7 @@ export class ShogunCore implements IShogunCore {
    * @param eventName The name of the event to listen for
    * @param listener The callback function to execute when the event is emitted
    */
-  once(eventName: string | symbol, listener: (...args: any[]) => void): this {
+  once(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.once(eventName, listener);
     return this;
   }
@@ -990,7 +990,7 @@ export class ShogunCore implements IShogunCore {
    * @param eventName The name of the event to stop listening for
    * @param listener The callback function to remove
    */
-  off(eventName: string | symbol, listener: (...args: any[]) => void): this {
+  off(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.off(eventName, listener);
     return this;
   }

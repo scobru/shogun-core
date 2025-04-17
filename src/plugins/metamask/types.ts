@@ -1,4 +1,8 @@
-import { MetaMaskCredentials, ConnectionResult, AuthResult } from "../../types/metamask";
+import {
+  MetaMaskCredentials,
+  ConnectionResult,
+  AuthResult,
+} from "../../types/metamask";
 
 /**
  * Interfaccia per il plugin MetaMask

@@ -1,4 +1,4 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "../../utils/eventEmitter";
 import { EthereumProvider } from "../../types/metamask";
 
 // Mock implementazione manuale di MetaMask senza dipendere dalla classe reale
@@ -60,7 +60,7 @@ class MetaMask extends EventEmitter {
       const validAddress = this.validateAddress(address);
       const signature = await this.requestSignatureWithTimeout(
         validAddress,
-        "Test message"
+        "Test message",
       );
 
       return {
@@ -79,7 +79,7 @@ class MetaMask extends EventEmitter {
   async requestSignatureWithTimeout(
     address: string,
     message: string,
-    timeout = 1000
+    timeout = 1000,
   ) {
     // Mock implementation
     return "mock-signature";

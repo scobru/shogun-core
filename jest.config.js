@@ -12,6 +12,12 @@ module.exports = {
     "/__tests__/",
     "/examples/",
   ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/dist/",
+    "/dist/types/",
+    "\\.d\\.ts$",
+  ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   transform: {
     "^.+\\.tsx?$": [

@@ -10,9 +10,10 @@ export class ShogunEventEmitter extends EventEmitter {
      * @template K - Event key type
      * @param {K} event - Event name
      * @param {ShogunEventMap[K]} data - Event data
+     * @returns {boolean} - Returns true if the event had listeners, false otherwise
      */
     emit(event, data) {
-        super.emit(event, data);
+        return super.emit(event, data);
     }
     /**
      * Register a listener for a typed Shogun event

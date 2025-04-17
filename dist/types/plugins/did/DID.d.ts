@@ -1,21 +1,21 @@
 import { ethers } from "ethers";
 import { AuthResult, IShogunCore } from "../../types/shogun";
-import { EventEmitter } from "events";
+import { EventEmitter } from "../../utils/eventEmitter";
 import { DIDDocument, DIDResolutionResult, DIDCreateOptions, DIDRegistryConfig, DIDResolutionOptions } from "../../types/did";
 export { DIDDocument, DIDResolutionResult, DIDCreateOptions };
 /**
  * ShogunDID class for decentralized identity management
  */
 export declare class ShogunDID extends EventEmitter {
-    private core;
-    private methodName;
-    private didCache;
+    private readonly core;
+    private readonly methodName;
+    private readonly didCache;
     private readonly DEFAULT_CACHE_DURATION;
     private readonly DEFAULT_TIMEOUT;
     private readonly DEFAULT_MAX_RETRIES;
     private readonly DEFAULT_RETRY_DELAY;
-    private options;
-    private registryConfig;
+    private readonly options;
+    private readonly registryConfig;
     /**
      * Initialize ShogunDID manager
      */

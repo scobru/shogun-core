@@ -43,8 +43,8 @@ exports.initShogunBrowser = initShogunBrowser;
  */
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
-const logger_1 = require("./utils/logger");
 const shogun_1 = require("./types/shogun");
+const logger_1 = require("./utils/logger");
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
 const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
@@ -69,9 +69,7 @@ function initShogunBrowser(config) {
         ...config,
     };
     // Assicuriamoci che la configurazione di GunDB esista
-    if (!browserConfig.gundb) {
-        browserConfig.gundb = {};
-    }
+    browserConfig.gundb ?? (browserConfig.gundb = {});
     // Warn users who don't provide custom peers or providerUrl
     if (!config.gundb?.peers) {
         (0, logger_1.log)("WARNING: Using default GunDB peers. For production, always configure custom peers.");

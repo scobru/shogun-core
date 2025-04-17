@@ -2,9 +2,8 @@
  * Entry point for the browser version of Shogun Core
  */
 import { ShogunCore } from "./index";
-import { ShogunSDKConfig } from "./types/shogun";
+import { ShogunSDKConfig, CorePlugins } from "./types/shogun";
 import { log } from "./utils/logger";
-import { PluginCategory, CorePlugins } from "./types/shogun";
 
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
@@ -33,9 +32,7 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   };
 
   // Assicuriamoci che la configurazione di GunDB esista
-  if (!browserConfig.gundb) {
-    browserConfig.gundb = {};
-  }
+  browserConfig.gundb ??= {};
 
   // Warn users who don't provide custom peers or providerUrl
   if (!config.gundb?.peers) {
@@ -57,11 +54,11 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   if (shogunCoreInstance.hasPlugin(CorePlugins.WebAuthn)) {
     log("WebAuthn plugin initialized", { category: "init", level: "info" });
   }
-  
+
   if (shogunCoreInstance.hasPlugin(CorePlugins.MetaMask)) {
     log("MetaMask plugin initialized", { category: "init", level: "info" });
   }
-  
+
   if (shogunCoreInstance.hasPlugin(CorePlugins.WalletManager)) {
     log("Wallet plugin initialized", { category: "init", level: "info" });
   }
@@ -75,7 +72,7 @@ export const modules = {
   loadStealth: loadStealthModule,
   loadDID: loadDIDModule,
   loadWallet: loadWalletModule,
-  loadMetaMask: loadMetaMaskModule
+  loadMetaMask: loadMetaMaskModule,
 };
 
 // Export main class for those who prefer to use it directly

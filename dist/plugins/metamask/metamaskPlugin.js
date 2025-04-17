@@ -131,7 +131,7 @@ export class MetaMaskPlugin extends BasePlugin {
             const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
             const result = await createUserWithGunDB(credentials.username, credentials.password);
             if (!result.success || !result.userPub) {
-                throw createError(ErrorType.AUTHENTICATION, "LOGIN_CREATE_FAILED", result.error ||
+                throw createError(ErrorType.AUTHENTICATION, "LOGIN_CREATE_FAILED", result.error ??
                     "Login or user creation failed after signature verification");
             }
             log(`Login/Creation successful: ${result.userPub}`);
@@ -223,7 +223,7 @@ export class MetaMaskPlugin extends BasePlugin {
             const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
             const result = await createUserWithGunDB(credentials.username, credentials.password);
             if (!result.success || !result.userPub) {
-                throw createError(ErrorType.AUTHENTICATION, "USER_CREATE_LOGIN_FAILED", result.error ||
+                throw createError(ErrorType.AUTHENTICATION, "USER_CREATE_LOGIN_FAILED", result.error ??
                     "User creation or login failed after signature verification");
             }
             log(`User creation/login successful: ${result.userPub}`);
@@ -255,21 +255,21 @@ export class MetaMaskPlugin extends BasePlugin {
                 userPub: result.userPub,
                 username: credentials.username,
                 method: "metamask",
-                did: did || undefined,
+                did: did ?? undefined,
             });
             return {
                 success: true,
                 userPub: result.userPub,
                 username: credentials.username,
                 password: credentials.password,
-                did: did || undefined,
+                did: did ?? undefined,
             };
         }
         catch (error) {
             // Cattura sia errori conformi a ShogunError che generici
-            const errorType = error?.type || ErrorType.AUTHENTICATION;
-            const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
-            const errorMessage = error?.message || "Unknown error during MetaMask registration";
+            const errorType = error?.type ?? ErrorType.AUTHENTICATION;
+            const errorCode = error?.code ?? "METAMASK_SIGNUP_ERROR";
+            const errorMessage = error?.message ?? "Unknown error during MetaMask registration";
             const handledError = ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return {
                 success: false,

@@ -37,7 +37,7 @@ export declare class ShogunCore implements IShogunCore {
     /** Storage implementation */
     storage: ShogunStorage;
     /** Event emitter for SDK events */
-    private eventEmitter;
+    private readonly eventEmitter;
     /** Ethereum provider */
     provider?: ethers.Provider;
     /** SDK configuration */
@@ -45,7 +45,7 @@ export declare class ShogunCore implements IShogunCore {
     /** RxJS integration */
     rx: GunRxJS;
     /** Plugin registry */
-    private plugins;
+    private readonly plugins;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -101,7 +101,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to observe (can be a string or a Gun chain)
      * @returns Observable that emits whenever the node changes
      */
-    observe<T>(path: string | any): Observable<T>;
+    observe<T>(path: string): Observable<T>;
     /**
      * Match data based on Gun's '.map()' and convert to Observable
      * @param path - Path to the collection
@@ -260,25 +260,25 @@ export declare class ShogunCore implements IShogunCore {
      * @param eventName The name of the event to emit.
      * @param data The data to pass with the event.
      */
-    emit(eventName: string | symbol, ...args: any[]): boolean;
+    emit(eventName: string | symbol, data?: any): boolean;
     /**
      * Add an event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
      */
-    on(eventName: string | symbol, listener: (...args: any[]) => void): this;
+    on(eventName: string | symbol, listener: (data: unknown) => void): this;
     /**
      * Add a one-time event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
      */
-    once(eventName: string | symbol, listener: (...args: any[]) => void): this;
+    once(eventName: string | symbol, listener: (data: unknown) => void): this;
     /**
      * Remove an event listener
      * @param eventName The name of the event to stop listening for
      * @param listener The callback function to remove
      */
-    off(eventName: string | symbol, listener: (...args: any[]) => void): this;
+    off(eventName: string | symbol, listener: (data: unknown) => void): this;
     /**
      * Remove all listeners for a specific event or all events
      * @param eventName Optional. The name of the event to remove listeners for.

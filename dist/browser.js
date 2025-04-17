@@ -2,8 +2,8 @@
  * Entry point for the browser version of Shogun Core
  */
 import { ShogunCore } from "./index";
-import { log } from "./utils/logger";
 import { CorePlugins } from "./types/shogun";
+import { log } from "./utils/logger";
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
 const loadStealthModule = () => import("./plugins/stealth/stealth");
@@ -28,9 +28,7 @@ export function initShogunBrowser(config) {
         ...config,
     };
     // Assicuriamoci che la configurazione di GunDB esista
-    if (!browserConfig.gundb) {
-        browserConfig.gundb = {};
-    }
+    browserConfig.gundb ?? (browserConfig.gundb = {});
     // Warn users who don't provide custom peers or providerUrl
     if (!config.gundb?.peers) {
         log("WARNING: Using default GunDB peers. For production, always configure custom peers.");

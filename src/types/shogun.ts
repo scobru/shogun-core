@@ -98,7 +98,7 @@ export interface IShogunCore extends PluginManager {
   storage: ShogunStorage;
   config: ShogunSDKConfig;
   provider?: ethers.Provider;
-  
+
   // Event emitter methods
   on(eventName: string | symbol, listener: (...args: any[]) => void): any;
   off(eventName: string | symbol, listener: (...args: any[]) => void): any;

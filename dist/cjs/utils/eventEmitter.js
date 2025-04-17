@@ -2,6 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventEmitter = void 0;
 /**
+ * Type for any event data
+ */
+const logger_1 = require("./logger");
+/**
  * Simple event emitter implementation with generic event types
  */
 class EventEmitter {
@@ -22,16 +26,17 @@ class EventEmitter {
      */
     emit(event, data) {
         if (!this.events.has(event))
-            return;
+            return false;
         const listeners = this.events.get(event) || [];
         listeners.forEach((listener) => {
             try {
                 listener(data);
             }
             catch (error) {
-                console.error(`Error in event listener for ${event}:`, error);
+                (0, logger_1.logError)(`Error in event listener for ${String(event)}:`, error);
             }
         });
+        return true;
     }
     /**
      * Removes an event listener

@@ -1,4 +1,9 @@
-import { ShogunCore, WalletPlugin, WalletPluginInterface, PluginCategory } from "../index";
+import {
+  ShogunCore,
+  WalletPlugin,
+  WalletPluginInterface,
+  PluginCategory,
+} from "../index";
 
 // Primo modo: inizializzazione manuale del plugin
 function exampleManualPluginInit() {
@@ -121,7 +126,7 @@ function typeChecking() {
     typedPlugin.generateNewMnemonic();
     typedPlugin.createWallet();
   }
-  
+
   // Esempio di utilizzo del getPluginsByCategory
   const walletPlugins = core.getPluginsByCategory(PluginCategory.Wallet);
   console.log(`Found ${walletPlugins.length} wallet plugins`);

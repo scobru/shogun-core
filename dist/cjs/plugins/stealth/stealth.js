@@ -7,6 +7,7 @@ exports.Stealth = void 0;
 const ethers_1 = require("ethers");
 const storage_1 = require("../../storage/storage");
 const errorHandler_1 = require("../../utils/errorHandler");
+const logger_1 = require("../../utils/logger");
 class Stealth {
     constructor(storage) {
         this.lastEphemeralKeyPair = null;
@@ -187,7 +188,7 @@ class Stealth {
             let ephemeralKeyPair;
             // Define continueWithKeyPair before using it
             const continueWithKeyPair = () => {
-                console.log("Ephemeral keys generated:", ephemeralKeyPair);
+                (0, logger_1.logDebug)("Ephemeral keys generated:", ephemeralKeyPair);
                 // Store entire pair for debugging
                 this.lastEphemeralKeyPair = ephemeralKeyPair;
                 // Create stealth data
@@ -201,10 +202,10 @@ class Stealth {
                     epub: ephemeralKeyPair.epub,
                     epriv: ephemeralKeyPair.epriv,
                 };
-                console.log("Key format for secret (generation):", JSON.stringify(keyForSecret));
+                (0, logger_1.logDebug)("Key format for secret (generation):", JSON.stringify(keyForSecret));
                 Gun.SEA.secret(recipientPublicKey, keyForSecret, async (sharedSecret) => {
-                    console.log("Shared secret successfully generated with recipient keys");
-                    console.log("Input format used:", {
+                    (0, logger_1.logDebug)("Shared secret successfully generated with recipient keys");
+                    (0, logger_1.logDebug)("Input format used:", {
                         recipientPublicKey: recipientPublicKey,
                         ephemeralKeyObject: keyForSecret,
                     });
@@ -212,7 +213,7 @@ class Stealth {
                         // Generate stealth address using shared secret
                         const stealthPrivateKey = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(sharedSecret));
                         const stealthWallet = new ethers_1.ethers.Wallet(stealthPrivateKey);
-                        console.log("Stealth address generated:", {
+                        (0, logger_1.logDebug)("Stealth address generated:", {
                             address: stealthWallet.address,
                             ephemeralPubKey: ephemeralKeyPair.epub,
                             recipientPublicKey: recipientPublicKey,
@@ -282,31 +283,31 @@ class Stealth {
      * Opens a stealth address by deriving the private key
      */
     async openStealthAddress(stealthAddress, ephemeralPublicKey, pair) {
-        console.log(`Attempting to open stealth address ${stealthAddress}`);
+        (0, logger_1.logDebug)(`Attempting to open stealth address ${stealthAddress}`);
         // First check if we have data saved in storage
         try {
             const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
             const history = JSON.parse(stealthHistoryJson);
-            console.log(`Checking if data exists for address ${stealthAddress} in storage`);
+            (0, logger_1.logDebug)(`Checking if data exists for address ${stealthAddress} in storage`);
             const data = history[stealthAddress];
             if (data) {
-                console.log("Found locally saved stealth data:", data);
+                (0, logger_1.logDebug)("Found locally saved stealth data:", data);
                 // If we have the shared secret, we can derive the wallet directly
                 if (data.sharedSecret) {
-                    console.log("Direct derivation from saved shared secret");
+                    (0, logger_1.logDebug)("Direct derivation from saved shared secret");
                     const stealthPrivateKey = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(data.sharedSecret));
                     return new ethers_1.ethers.Wallet(stealthPrivateKey);
                 }
                 // If we have the method and complete ephemeral keys, try to regenerate the secret
                 if (data.method && data.ephemeralKeyPair) {
-                    console.log("Attempting to regenerate secret with method:", data.method);
+                    (0, logger_1.logDebug)("Attempting to regenerate secret with method:", data.method);
                     if (data.method === "standard") {
                         // Use the specific format we used during generation
                         const keyForSecret = {
                             epub: data.ephemeralKeyPair.epub,
                             epriv: data.ephemeralKeyPair.epriv,
                         };
-                        console.log("Regenerating with explicit format:", JSON.stringify(keyForSecret));
+                        (0, logger_1.logDebug)("Regenerating with explicit format:", JSON.stringify(keyForSecret));
                         return new Promise((resolve, reject) => {
                             Gun.SEA.secret(data.recipientPublicKey, keyForSecret, async (secret) => {
                                 if (!secret) {
@@ -319,15 +320,15 @@ class Stealth {
                                     // Verify generated wallet matches address
                                     if (wallet.address.toLowerCase() ===
                                         stealthAddress.toLowerCase()) {
-                                        console.log("Regeneration successful! Matching address:", wallet.address);
+                                        (0, logger_1.logDebug)("Regeneration successful! Matching address:", wallet.address);
                                         return resolve(wallet);
                                     }
-                                    console.log("Generated address does not match:", wallet.address);
+                                    (0, logger_1.logDebug)("Generated address does not match:", wallet.address);
                                     // Continue with standard methods
                                     throw new Error("Address does not match"); // To exit and continue
                                 }
                                 catch (e) {
-                                    console.error("Error during derivation:", e);
+                                    (0, logger_1.logError)("Error during derivation:", e);
                                     // Continue with standard methods
                                     throw new Error("Derivation error"); // To exit and continue
                                 }
@@ -338,11 +339,11 @@ class Stealth {
                 }
                 throw new Error("Insufficient data"); // To exit and continue
             }
-            console.log("No stealth data found in storage for this address");
+            (0, logger_1.logDebug)("No stealth data found in storage for this address");
             throw new Error("No data found"); // To continue with standard methods
         }
         catch (e) {
-            console.log("Error retrieving data from storage:", e);
+            (0, logger_1.logError)("Error retrieving data from storage:", e);
             // Proceed with normal method
             return this.openStealthAddressStandard(stealthAddress, ephemeralPublicKey, pair);
         }
@@ -355,7 +356,7 @@ class Stealth {
             throw new Error("Missing parameters: stealthAddress or ephemeralPublicKey");
         }
         // Retrieve user's stealth keys
-        console.log("Opening stealth address with retrieved keys:", {
+        (0, logger_1.logDebug)("Opening stealth address with retrieved keys:", {
             stealthAddress: stealthAddress,
             ephemeralPublicKey: ephemeralPublicKey,
             userKeysFound: !!pair,
@@ -365,7 +366,7 @@ class Stealth {
             const attempts = [
                 // Attempt 1: Standard method - ephemeral keys first
                 () => {
-                    console.log("Attempt 1: Standard method with ephemeral keys");
+                    (0, logger_1.logDebug)("Attempt 1: Standard method with ephemeral keys");
                     return new Promise((res) => {
                         Gun.SEA.secret(ephemeralPublicKey, pair, async (secret) => {
                             try {
@@ -398,7 +399,7 @@ class Stealth {
                 }
                 const wallet = await attempts[index]();
                 if (wallet) {
-                    console.log(`Method ${index + 1} worked!`);
+                    (0, logger_1.logDebug)(`Method ${index + 1} worked!`);
                     return resolve(wallet);
                 }
                 tryNextAttempt(index + 1);
@@ -441,7 +442,7 @@ class Stealth {
             if (!this.validateStealthData(data)) {
                 throw new Error("Invalid stealth data");
             }
-            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) || "{}";
+            const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) ?? "{}";
             const history = JSON.parse(stealthHistoryJson);
             history[address] = data;
             this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
@@ -504,6 +505,7 @@ class Stealth {
             try {
                 const wallet = new ethers_1.ethers.Wallet(privateKey);
                 // If we can derive a wallet with this private key, it means the stealth address is ours
+                (0, logger_1.logDebug)("Wallet derived:", wallet.address);
                 return true;
             }
             catch (error) {

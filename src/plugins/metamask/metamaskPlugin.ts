@@ -7,7 +7,6 @@ import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import { DIDCreateOptions } from "../../types/did";
 
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
@@ -114,7 +113,7 @@ export class MetaMaskPlugin
   async verifySignature(message: string, signature: string): Promise<string> {
     return this.assertMetaMask().verifySignature(message, signature);
   }
-  
+
   /**
    * Login con MetaMask
    * @param address - Indirizzo Ethereum
@@ -160,7 +159,7 @@ export class MetaMaskPlugin
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
       log("Verifying MetaMask signature...");
@@ -170,7 +169,7 @@ export class MetaMaskPlugin
       );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
         logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
         throw createError(
           ErrorType.SECURITY,
@@ -192,7 +191,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "LOGIN_CREATE_FAILED",
-          result.error ||
+          result.error ??
             "Login or user creation failed after signature verification",
         );
       }
@@ -238,7 +237,7 @@ export class MetaMaskPlugin
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        password: "********", 
+        password: "********",
         did: did || undefined,
       };
     } catch (error: any) {
@@ -307,7 +306,7 @@ export class MetaMaskPlugin
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
       log("Verifying MetaMask signature...");
@@ -317,7 +316,7 @@ export class MetaMaskPlugin
       );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
         logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
         throw createError(
           ErrorType.SECURITY,
@@ -327,7 +326,9 @@ export class MetaMaskPlugin
       }
       log("MetaMask signature verified successfully.");
 
-      log("Attempting user creation (or login if exists) with verified credentials...");
+      log(
+        "Attempting user creation (or login if exists) with verified credentials...",
+      );
       // Utilizziamo il metodo privato del core per la creazione dell'utente in GunDB
       const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
       const result = await createUserWithGunDB(
@@ -339,7 +340,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "USER_CREATE_LOGIN_FAILED",
-          result.error ||
+          result.error ??
             "User creation or login failed after signature verification",
         );
       }
@@ -378,7 +379,7 @@ export class MetaMaskPlugin
         userPub: result.userPub,
         username: credentials.username,
         method: "metamask",
-        did: did || undefined,
+        did: did ?? undefined,
       });
 
       return {
@@ -386,14 +387,14 @@ export class MetaMaskPlugin
         userPub: result.userPub,
         username: credentials.username,
         password: credentials.password,
-        did: did || undefined,
+        did: did ?? undefined,
       };
     } catch (error: any) {
       // Cattura sia errori conformi a ShogunError che generici
-      const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
+      const errorType = error?.type ?? ErrorType.AUTHENTICATION;
+      const errorCode = error?.code ?? "METAMASK_SIGNUP_ERROR";
       const errorMessage =
-        error?.message || "Unknown error during MetaMask registration";
+        error?.message ?? "Unknown error during MetaMask registration";
 
       const handledError = ErrorHandler.handle(
         errorType,

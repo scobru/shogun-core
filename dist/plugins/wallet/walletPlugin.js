@@ -23,7 +23,7 @@ export class WalletPlugin extends BasePlugin {
             throw new Error("Core dependencies not available");
         }
         // Creiamo un nuovo WalletManager
-        this.walletManager = new WalletManager(core.gundb, core.gun, core.storage, {
+        this.walletManager = new WalletManager(core.gun, core.storage, {
             // Recuperiamo configurazione dal core se disponibile
             balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
             rpcUrl: core.provider instanceof ethers.JsonRpcProvider

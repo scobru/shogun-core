@@ -203,7 +203,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 return {
                     ...signupResult,
                     username,
-                    password: hashedCredentialId,
+                    password: '*******',
                     credentialId: attestationResult.credentialId,
                 };
             }

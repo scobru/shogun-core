@@ -192,14 +192,14 @@ export class WebauthnPlugin
       }
     } catch (error: any) {
       logError(`Error during WebAuthn login: ${error}`);
-      
+
       ErrorHandler.handle(
         ErrorType.WEBAUTHN,
         "WEBAUTHN_LOGIN_ERROR",
         error.message || "Error during WebAuthn login",
-        error
+        error,
       );
-      
+
       return {
         success: false,
         error: error.message || "Error during WebAuthn login",
@@ -209,7 +209,7 @@ export class WebauthnPlugin
 
   /**
    * Register new user with WebAuthn
-   * This is the recommended method for WebAuthn registration 
+   * This is the recommended method for WebAuthn registration
    * @param username - Username
    * @returns {Promise<AuthResult>} Registration result
    * @description Creates a new user account using WebAuthn credentials.
@@ -285,13 +285,13 @@ export class WebauthnPlugin
           userPub: signupResult.userPub,
           username,
           method: "webauthn",
-          did: signupResult.did || undefined
+          did: signupResult.did || undefined,
         });
 
         return {
           ...signupResult,
           username,
-          password: '*******',
+          password: "*******",
           credentialId: attestationResult.credentialId,
         };
       } else {
@@ -299,14 +299,14 @@ export class WebauthnPlugin
       }
     } catch (error: any) {
       logError(`Error during WebAuthn registration: ${error}`);
-      
+
       ErrorHandler.handle(
         ErrorType.WEBAUTHN,
         "WEBAUTHN_SIGNUP_ERROR",
         error.message || "Error during WebAuthn registration",
-        error
+        error,
       );
-      
+
       return {
         success: false,
         error: error.message || "Error during WebAuthn registration",

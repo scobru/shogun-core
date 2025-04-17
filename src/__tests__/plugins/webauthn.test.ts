@@ -61,7 +61,7 @@ const mockCredential = {
         type: "webauthn.create",
         challenge: "test-challenge",
         origin: "https://test.com",
-      })
+      }),
     ),
     attestationObject: new Uint8Array([9, 10, 11, 12]),
     authenticatorData: new Uint8Array([13, 14, 15, 16]),
