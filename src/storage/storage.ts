@@ -5,12 +5,15 @@
  */
 export class ShogunStorage {
   private store: Map<string, any>;
+  private isTestMode: boolean;
 
   /**
    * Initializes storage and loads any existing keypair from localStorage if available
    */
   constructor() {
     this.store = new Map<string, any>();
+    // Controlla se siamo in ambiente di test
+    this.isTestMode = process.env.NODE_ENV === "test";
 
     // Try loading data from localStorage in browser environments
     if (typeof localStorage !== "undefined") {
@@ -20,7 +23,9 @@ export class ShogunStorage {
           this.store.set("keypair", JSON.parse(storedPair));
         }
       } catch (error) {
-        console.error("Error retrieving data from localStorage:", error);
+        if (!this.isTestMode) {
+          console.error("Error retrieving data from localStorage:", error);
+        }
       }
     }
   }
@@ -53,7 +58,9 @@ export class ShogunStorage {
       try {
         localStorage.setItem("shogun_keypair", JSON.stringify(pair));
       } catch (error) {
-        console.error("Error saving data to localStorage:", error);
+        if (!this.isTestMode) {
+          console.error("Error saving data to localStorage:", error);
+        }
       }
     }
   }
@@ -69,7 +76,9 @@ export class ShogunStorage {
       try {
         localStorage.removeItem("shogun_keypair");
       } catch (error) {
-        console.error("Error removing data from localStorage:", error);
+        if (!this.isTestMode) {
+          console.error("Error removing data from localStorage:", error);
+        }
       }
     }
   }
@@ -99,7 +108,9 @@ export class ShogunStorage {
         try {
           localStorage.setItem(key, value);
         } catch (error) {
-          console.error(`Error saving ${key} to localStorage:`, error);
+          if (!this.isTestMode) {
+            console.error(`Error saving ${key} to localStorage:`, error);
+          }
         }
       }
     } catch (error) {
@@ -111,7 +122,9 @@ export class ShogunStorage {
         try {
           localStorage.setItem(key, value);
         } catch (error) {
-          console.error(`Error saving ${key} to localStorage:`, error);
+          if (!this.isTestMode) {
+            console.error(`Error saving ${key} to localStorage:`, error);
+          }
         }
       }
     }
@@ -129,7 +142,9 @@ export class ShogunStorage {
       try {
         localStorage.removeItem(key);
       } catch (error) {
-        console.error(`Error removing ${key} from localStorage:`, error);
+        if (!this.isTestMode) {
+          console.error(`Error removing ${key} from localStorage:`, error);
+        }
       }
     }
   }

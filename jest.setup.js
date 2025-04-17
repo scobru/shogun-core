@@ -3,18 +3,39 @@ require("mock-local-storage");
 
 // Assicura che localStorage funzioni correttamente
 if (typeof localStorage === "undefined" || !localStorage.setItem) {
-  global.localStorage = {
-    getItem: jest.fn((key) => this[key] || null),
-    setItem: jest.fn((key, value) => {
-      this[key] = value;
-    }),
-    removeItem: jest.fn((key) => {
-      delete this[key];
-    }),
-    clear: jest.fn(() => {
-      Object.keys(this).forEach((key) => delete this[key]);
-    }),
+  // Console.log silenzioso per i test
+  const silentConsole = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
   };
+
+  // Salva il console originale
+  const originalConsole = global.console;
+
+  // Sostituisci temporaneamente console per evitare output di errori durante l'inizializzazione
+  global.console = silentConsole;
+
+  try {
+    global.localStorage = {
+      _data: {},
+      getItem: jest.fn(function (key) {
+        return this._data[key] || null;
+      }),
+      setItem: jest.fn(function (key, value) {
+        this._data[key] = value;
+      }),
+      removeItem: jest.fn(function (key) {
+        delete this._data[key];
+      }),
+      clear: jest.fn(function () {
+        this._data = {};
+      }),
+    };
+  } finally {
+    // Ripristina il console originale
+    global.console = originalConsole;
+  }
 }
 
 // Aggiungi TextEncoder e TextDecoder globali
