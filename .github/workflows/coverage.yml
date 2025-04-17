@@ -24,17 +24,12 @@ jobs:
         working-directory: ./
         run: npm ci || npm install
 
-      - name: Install coverage tools
-        working-directory: ./
-        run: npm install --save-dev jest @types/jest ts-jest nyc coveralls
-
       - name: Run tests with coverage
         working-directory: ./
-        run: npm test -- --coverage
+        run: npm test
 
-      - name: Coveralls
-        uses: coverallsapp/github-action@v2
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.2.3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          base-path: ./
-          
+          path-to-lcov: ./coverage/lcov.info

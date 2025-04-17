@@ -1,0 +1,26 @@
+name: Minimal Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  simple:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create test file
+        run: |
+          mkdir -p test-output
+          echo "test content" > test-output/test.txt
+
+      - name: Upload test file
+        uses: actions/upload-artifact@v3.1.3
+        with:
+          name: simple-test-result
+          path: test-output/
+          if-no-files-found: error
