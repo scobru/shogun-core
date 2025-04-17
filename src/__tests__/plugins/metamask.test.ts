@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { EthereumProvider } from '../../types/metamask';
 
 // Mock implementazione manuale di MetaMask senza dipendere dalla classe reale
 class MetaMask extends EventEmitter {
@@ -11,19 +12,19 @@ class MetaMask extends EventEmitter {
     // Metodo mock
   }
   
-  validateAddress(address) {
+  validateAddress(address: string) {
     if (!address || typeof address !== 'string' || !address.startsWith('0x')) {
       throw new Error("Invalid address format");
     }
     return address.toLowerCase();
   }
   
-  getCachedSignature(address) {
+  getCachedSignature(address: string | number) {
     // Implementazione mock
     return this._cachedSignatures ? this._cachedSignatures[address] : null;
   }
   
-  cacheSignature(address, signature) {
+  cacheSignature(address: string | number, signature: any) {
     this._cachedSignatures = this._cachedSignatures || {};
     this._cachedSignatures[address] = signature;
   }
@@ -50,7 +51,7 @@ class MetaMask extends EventEmitter {
     return { success: true, address: accounts[0] };
   }
   
-  async generateCredentials(address) {
+  async generateCredentials(address: string) {
     try {
       const validAddress = this.validateAddress(address);
       const signature = await this.requestSignatureWithTimeout(validAddress, "Test message");
@@ -68,7 +69,7 @@ class MetaMask extends EventEmitter {
     }
   }
   
-  async requestSignatureWithTimeout(address, message, timeout = 1000) {
+  async requestSignatureWithTimeout(address: string, message: string, timeout = 1000) {
     // Mock implementation
     return 'mock-signature';
   }
@@ -82,8 +83,8 @@ const mockEthereum = {
 };
 
 describe('MetaMask Plugin', () => {
-  let metamask;
-  let originalEthereum;
+  let metamask: MetaMask;
+  let originalEthereum: EthereumProvider | undefined;
   
   // Salva l'originale window.ethereum
   beforeAll(() => {

@@ -11,14 +11,9 @@ import {
   CorePlugins,
 } from "./types/shogun";
 import { IGunInstance } from "gun/types";
-import { log, logError, configureLogging, logWarn } from "./utils/logger";
+import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
-import {
-  ErrorHandler,
-  ErrorType,
-  ShogunError,
-  createError,
-} from "./utils/errorHandler";
+import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { DIDCreateOptions } from "./types/did";
 import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
@@ -45,46 +40,46 @@ export { ShogunPlugin, PluginManager } from "./types/plugin";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
- * 
+ *
  * This is the primary entry point for the Shogun SDK, providing access to:
  * - Decentralized database (GunDB)
  * - Authentication methods (traditional, WebAuthn, MetaMask)
  * - Plugin system for extensibility
  * - DID (Decentralized Identity) management
  * - RxJS integration for reactive programming
- * 
+ *
  * @version 2.0.0
  */
 export class ShogunCore implements IShogunCore {
   /** Current API version - used for deprecation warnings and migration guidance */
   public static readonly API_VERSION = "2.0.0";
-  
+
   /** Gun database instance */
   public gun: IGunInstance<any>;
-  
+
   /** Gun user instance */
   public user: IGunUserInstance<any> | null;
-  
+
   /** GunDB wrapper */
   public gundb: GunDB;
-  
+
   /** Storage implementation */
   public storage: ShogunStorage;
-  
+
   /** Event emitter for SDK events */
-  private eventEmitter: EventEmitter;
-  
+  private readonly eventEmitter: EventEmitter;
+
   /** Ethereum provider */
   public provider?: ethers.Provider;
-  
+
   /** SDK configuration */
   public config: ShogunSDKConfig;
-  
+
   /** RxJS integration */
   public rx: GunRxJS;
-  
+
   /** Plugin registry */
-  private plugins: Map<string, ShogunPlugin> = new Map();
+  private readonly plugins: Map<string, ShogunPlugin> = new Map();
 
   /**
    * Initialize the Shogun SDK
@@ -149,7 +144,7 @@ export class ShogunCore implements IShogunCore {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
       log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL."
       );
     }
 
@@ -300,7 +295,7 @@ export class ShogunCore implements IShogunCore {
    * This is a more modern approach to accessing authentication methods
    */
   getAuthenticationMethod(type: "password" | "webauthn" | "metamask") {
-    switch(type) {
+    switch (type) {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
       case "metamask":
@@ -309,9 +304,10 @@ export class ShogunCore implements IShogunCore {
       default:
         // Default authentication is provided by the core class
         return {
-          login: (username: string, password: string) => this.login(username, password),
-          signUp: (username: string, password: string, confirm?: string) => 
-            this.signUp(username, password, confirm)
+          login: (username: string, password: string) =>
+            this.login(username, password),
+          signUp: (username: string, password: string, confirm?: string) =>
+            this.signUp(username, password, confirm),
         };
     }
   }
@@ -337,7 +333,7 @@ export class ShogunCore implements IShogunCore {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean,
+    matchFn?: (data: any) => boolean
   ): Observable<T[]> {
     return this.rx.match<T>(path, matchFn);
   }
@@ -379,7 +375,7 @@ export class ShogunCore implements IShogunCore {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
+    computeFn: (...values: T[]) => R
   ): Observable<R> {
     return this.rx.compute<T, R>(sources, computeFn);
   }
@@ -482,7 +478,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error,
+        error
       );
     }
   }
@@ -570,7 +566,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message || "Unknown error during login",
-        error,
+        error
       );
 
       return {
@@ -592,7 +588,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string,
+    passwordConfirmation?: string
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -654,7 +650,7 @@ export class ShogunCore implements IShogunCore {
         });
       });
 
-      const timeoutDuration = this.config?.timeouts?.signup || 20000;
+      const timeoutDuration = this.config?.timeouts?.signup ?? 20000;
       const timeoutPromise = new Promise<SignUpResult>((resolve) => {
         setTimeout(() => {
           resolve({
@@ -669,7 +665,7 @@ export class ShogunCore implements IShogunCore {
 
       if (result.success) {
         this.eventEmitter.emit("auth:signup", {
-          userPub: result.userPub || "",
+          userPub: result.userPub ?? "",
           username,
         });
 
@@ -691,7 +687,7 @@ export class ShogunCore implements IShogunCore {
       logError(`Error during registration for user ${username}:`, error);
       return {
         success: false,
-        error: error.message || "Unknown error during registration",
+        error: error.message ?? "Unknown error during registration",
       };
     }
   }
@@ -712,7 +708,7 @@ export class ShogunCore implements IShogunCore {
    * @private
    */
   private async ensureUserHasDID(
-    options?: DIDCreateOptions,
+    options?: DIDCreateOptions
   ): Promise<string | null> {
     try {
       const didPlugin = this.getPlugin<DIDPluginInterface>("did");
@@ -738,7 +734,7 @@ export class ShogunCore implements IShogunCore {
    */
   private createUserWithGunDB(
     username: string,
-    password: string,
+    password: string
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     log(`Ensuring user exists with GunDB: ${username}`);
 
@@ -797,7 +793,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `Login failed (${loginResult.err || "unknown reason"}), attempting user creation...`,
+          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`
         );
         const createResult = await createUser();
 
@@ -811,7 +807,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `User created successfully, attempting login again for confirmation...`,
+          `User created successfully, attempting login again for confirmation...`
         );
         loginResult = await authUser();
 
@@ -823,7 +819,7 @@ export class ShogunCore implements IShogunCore {
           });
         } else {
           logError(
-            `Post-creation login failed unexpectedly: ${loginResult.err}`,
+            `Post-creation login failed unexpectedly: ${loginResult.err}`
           );
           resolve({
             success: false,
@@ -832,7 +828,7 @@ export class ShogunCore implements IShogunCore {
         }
       } catch (error: any) {
         const errorMsg =
-          error.message || "Unknown error during user existence check";
+          error.message ?? "Unknown error during user existence check";
         logError(`Error in createUserWithGunDB: ${errorMsg}`, error);
         resolve({
           success: false,
@@ -855,7 +851,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.get(path).once((data) => {
         if (data.err) {
-          reject(data.err);
+          reject(data.err as Error);
         } else {
           resolve(data);
         }
@@ -872,7 +868,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.put(data, (ack: any) => {
         if (ack.err) {
-          reject(ack.err);
+          reject(ack.err as Error);
         } else {
           resolve(ack);
         }
@@ -889,7 +885,7 @@ export class ShogunCore implements IShogunCore {
     return new Promise((resolve, reject) => {
       this.gundb.gun.user().put(data, (ack: any) => {
         if (ack.err) {
-          reject(ack.err);
+          reject(ack.err as Error);
         } else {
           resolve(ack);
         }
@@ -909,7 +905,7 @@ export class ShogunCore implements IShogunCore {
         .get(path)
         .once((data) => {
           if (data.err) {
-            reject(data.err);
+            reject(data.err as Error);
           } else {
             resolve(data);
           }
@@ -951,7 +947,7 @@ export class ShogunCore implements IShogunCore {
   getRpcUrl(): string | null {
     // Access the provider URL if available
     return this.provider instanceof ethers.JsonRpcProvider
-      ? (this.provider as any).connection?.url || null
+      ? ((this.provider as any).connection?.url ?? null)
       : null;
   }
 

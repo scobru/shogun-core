@@ -1,9 +1,10 @@
-import { ShogunStorage } from '../../storage/storage';
+import { ShogunStorage } from "../../storage/storage";
 
-describe('ShogunStorage', () => {
+describe("ShogunStorage", () => {
   let storage: ShogunStorage;
-  const testKey = 'test-key';
-  const testValue = { data: 'test-value', number: 123 };
+  const testKey = "test-key";
+  const testValue = { data: "test-value", number: 123 };
+  const testValueStr = JSON.stringify(testValue);
 
   beforeEach(() => {
     // Pulisce localStorage e sessionStorage prima di ogni test
@@ -12,90 +13,95 @@ describe('ShogunStorage', () => {
     storage = new ShogunStorage();
   });
 
-  test('dovrebbe inizializzarsi correttamente', () => {
+  test("dovrebbe inizializzarsi correttamente", () => {
     expect(storage).toBeInstanceOf(ShogunStorage);
   });
 
-  test('dovrebbe salvare e recuperare dati dal localStorage', () => {
-    storage.setLocal(testKey, testValue);
-    const retrievedValue = storage.getLocal(testKey);
-    expect(retrievedValue).toEqual(testValue);
+  test("dovrebbe salvare e recuperare dati usando il store interno", () => {
+    storage.setItem(testKey, testValueStr);
+    const retrievedValue = storage.getItem(testKey);
+    expect(JSON.parse(retrievedValue)).toEqual(testValue);
   });
 
-  test('dovrebbe salvare e recuperare dati dal sessionStorage', () => {
-    storage.setSession(testKey, testValue);
-    const retrievedValue = storage.getSession(testKey);
-    expect(retrievedValue).toEqual(testValue);
-  });
-
-  test('dovrebbe rimuovere i dati dal localStorage', () => {
-    storage.setLocal(testKey, testValue);
-    storage.removeLocal(testKey);
-    const retrievedValue = storage.getLocal(testKey);
+  test("dovrebbe rimuovere i dati dallo store", () => {
+    storage.setItem(testKey, testValueStr);
+    storage.removeItem(testKey);
+    const retrievedValue = storage.getItem(testKey);
     expect(retrievedValue).toBeNull();
   });
 
-  test('dovrebbe rimuovere i dati dal sessionStorage', () => {
-    storage.setSession(testKey, testValue);
-    storage.removeSession(testKey);
-    const retrievedValue = storage.getSession(testKey);
-    expect(retrievedValue).toBeNull();
+  test("dovrebbe gestire valori undefined", () => {
+    storage.setItem(testKey, "null");
+    const retrievedValue = storage.getItem(testKey);
+    expect(retrievedValue).toBe("null");
   });
 
-  test('dovrebbe gestire valori undefined', () => {
-    storage.setLocal(testKey, undefined);
-    const retrievedValue = storage.getLocal(testKey);
-    expect(retrievedValue).toBeNull();
+  test("dovrebbe pulire tutto lo storage", () => {
+    storage.setItem("key1", JSON.stringify("value1"));
+    storage.setItem("key2", JSON.stringify("value2"));
+    storage.clearAll();
+    expect(storage.getItem("key1")).toBeNull();
+    expect(storage.getItem("key2")).toBeNull();
   });
 
-  test('dovrebbe pulire tutto il localStorage', () => {
-    storage.setLocal('key1', 'value1');
-    storage.setLocal('key2', 'value2');
-    storage.clearLocal();
-    expect(storage.getLocal('key1')).toBeNull();
-    expect(storage.getLocal('key2')).toBeNull();
-  });
-
-  test('dovrebbe pulire tutto il sessionStorage', () => {
-    storage.setSession('key1', 'value1');
-    storage.setSession('key2', 'value2');
-    storage.clearSession();
-    expect(storage.getSession('key1')).toBeNull();
-    expect(storage.getSession('key2')).toBeNull();
-  });
-
-  test('dovrebbe gestire strutture di dati complesse', () => {
+  test("dovrebbe gestire strutture di dati complesse", () => {
     const complexData = {
-      name: 'Test User',
+      name: "Test User",
       settings: {
-        theme: 'dark',
+        theme: "dark",
         notifications: true,
       },
-      items: [1, 2, 3, { id: 1, value: 'test' }]
+      items: [1, 2, 3, { id: 1, value: "test" }],
     };
-    
-    storage.setLocal(testKey, complexData);
-    const retrievedValue = storage.getLocal(testKey);
+
+    storage.setItem(testKey, JSON.stringify(complexData));
+    const retrievedValue = JSON.parse(storage.getItem(testKey));
     expect(retrievedValue).toEqual(complexData);
   });
 
-  test('dovrebbe gestire localStorage non disponibile', () => {
-    // Simula localStorage non disponibile
+  test("dovrebbe gestire localStorage non disponibile", () => {
+    // Backup dell'implementazione originale
     const originalLocalStorage = global.localStorage;
-    Object.defineProperty(global, 'localStorage', {
-      get: () => undefined
-    });
-    
-    const fallbackStorage = new ShogunStorage();
-    fallbackStorage.setLocal(testKey, testValue);
-    const retrievedValue = fallbackStorage.getLocal(testKey);
-    
-    // Ripristina localStorage originale
-    Object.defineProperty(global, 'localStorage', {
-      get: () => originalLocalStorage
-    });
-    
-    // Anche se localStorage non è disponibile, il test non dovrebbe fallire
-    expect(retrievedValue).toBeNull();
+
+    try {
+      // Creiamo un mock che lancia errori in modo controllato
+      const mockLocalStorage = {
+        getItem: jest.fn().mockImplementation(() => {
+          throw new Error("localStorage not available");
+        }),
+        setItem: jest.fn().mockImplementation(() => {
+          throw new Error("localStorage not available");
+        }),
+        removeItem: jest.fn().mockImplementation(() => {
+          throw new Error("localStorage not available");
+        }),
+        clear: jest.fn().mockImplementation(() => {
+          throw new Error("localStorage not available");
+        }),
+      };
+
+      // Sostituisci localStorage con il nostro mock
+      Object.defineProperty(global, "localStorage", {
+        value: mockLocalStorage,
+        writable: true,
+      });
+
+      // Creiamo un nuovo ShogunStorage che userà il nostro mock
+      const fallbackStorage = new ShogunStorage();
+
+      // Anche con localStorage che lancia errori, dovrebbe funzionare usando Map interno
+      const testItem = JSON.stringify(testValue);
+      fallbackStorage.setItem(testKey, testItem);
+      const retrievedValue = fallbackStorage.getItem(testKey);
+
+      // Se l'operazione ha successo, il valore sarà recuperato dal Map interno
+      expect(retrievedValue).toBe(testItem);
+    } finally {
+      // Ripristina localStorage originale
+      Object.defineProperty(global, "localStorage", {
+        value: originalLocalStorage,
+        writable: true,
+      });
+    }
   });
-}); 
+});
