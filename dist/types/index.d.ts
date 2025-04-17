@@ -8,11 +8,13 @@ import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
-export { ShogunDID, DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
-export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
+export { ShogunDID } from "./plugins/did/DID";
+export type { DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
+export { ErrorHandler, ErrorType } from "./utils/errorHandler";
+export type { ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
-export { ShogunPlugin, PluginManager } from "./types/plugin";
+export type { ShogunPlugin, PluginManager } from "./types/plugin";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -290,7 +292,7 @@ export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
-export { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
+export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./events";

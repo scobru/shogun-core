@@ -107,7 +107,7 @@ export declare class WalletManager extends EventEmitter {
     /**
      * Get the main wallet
      */
-    getMainWallet(): ethers.Wallet | null;
+    getMainWallet(): ethers.Wallet;
     /**
      * Encrypt sensitive text using SEA
      * @param text Text to encrypt
@@ -248,4 +248,47 @@ export declare class WalletManager extends EventEmitter {
      * Get wallet transaction history
      */
     private getWalletHistory;
+    /**
+     * Deriva un wallet da un percorso derivazione
+     * @param path Percorso di derivazione BIP-44 (es: m/44'/60'/0'/0/0)
+     * @returns Wallet derivato
+     */
+    deriveWallet(path: string): Promise<ethers.Wallet>;
+    /**
+     * Salva il percorso di derivazione di un wallet
+     * @param address Indirizzo del wallet
+     * @param path Percorso di derivazione
+     */
+    saveWalletPath(address: string, path: string): Promise<void>;
+    /**
+     * Salva una transazione pendente
+     * @param tx Transazione da salvare
+     */
+    savePendingTransaction(tx: any): Promise<void>;
+    /**
+     * Ottiene il mnemonic dell'utente
+     * @returns Mnemonic dell'utente
+     */
+    getUserMnemonic(): Promise<string | null>;
+    /**
+     * Ottiene il saldo del wallet principale
+     * @returns Saldo formattato come stringa
+     */
+    getWalletBalance(): Promise<string>;
+    /**
+     * Verifica se l'utente è loggato
+     * @returns true se l'utente è loggato, false altrimenti
+     */
+    isLogged(): boolean;
+    /**
+     * Ottiene tutti i wallet dell'utente
+     * @returns Array di wallet
+     */
+    getWallets(): Promise<any[]>;
+    /**
+     * Crea e carica un wallet con un percorso specifico
+     * @param path Percorso di derivazione
+     * @returns Informazioni sul wallet
+     */
+    createAndLoadWallet(path: string): Promise<any>;
 }

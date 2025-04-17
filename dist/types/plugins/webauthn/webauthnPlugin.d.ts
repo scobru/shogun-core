@@ -80,4 +80,4 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      */
     signUpWithWebAuthn(username: string): Promise<AuthResult>;
 }
-export { WebauthnPluginInterface } from "./types";
+export type { WebauthnPluginInterface } from "./types";

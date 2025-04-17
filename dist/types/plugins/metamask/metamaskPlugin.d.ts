@@ -82,4 +82,4 @@ export declare class MetaMaskPlugin extends BasePlugin implements MetaMaskPlugin
      */
     signUpWithMetaMask(address: string): Promise<AuthResult>;
 }
-export { MetaMaskPluginInterface } from "./types";
+export type { MetaMaskPluginInterface } from "./types";

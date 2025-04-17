@@ -90,13 +90,13 @@ export class Webauthn extends EventEmitter {
       username.length > MAX_USERNAME_LENGTH
     ) {
       throw new Error(
-        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`,
+        `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters`
       );
     }
 
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
       throw new Error(
-        "Username can only contain letters, numbers, underscores and hyphens",
+        "Username can only contain letters, numbers, underscores and hyphens"
       );
     }
   }
@@ -107,7 +107,7 @@ export class Webauthn extends EventEmitter {
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice = false,
+    isNewDevice = false
   ): Promise<CredentialResult> {
     try {
       this.validateUsername(username);
@@ -120,7 +120,7 @@ export class Webauthn extends EventEmitter {
           const result = await this.generateCredentials(
             username,
             credentials,
-            isNewDevice,
+            isNewDevice
           );
 
           if (result.success) {
@@ -161,20 +161,20 @@ export class Webauthn extends EventEmitter {
   async authenticateUser(
     username: string,
     salt: string | null,
-    options: WebAuthnOperationOptions = {},
+    options: WebAuthnOperationOptions = {}
   ): Promise<CredentialResult> {
     try {
       this.validateUsername(username);
 
       if (!salt) {
         const error = new Error(
-          "No WebAuthn credentials found for this username",
+          "No WebAuthn credentials found for this username"
         );
         ErrorHandler.handle(
           ErrorType.WEBAUTHN,
           "NO_CREDENTIALS",
           error.message,
-          error,
+          error
         );
         return { success: false, error: error.message };
       }
@@ -188,7 +188,7 @@ export class Webauthn extends EventEmitter {
       const timeout = options.timeout || this.config.timeout;
       const timeoutId = setTimeout(
         () => this.abortController?.abort(),
-        timeout,
+        timeout
       );
 
       try {
@@ -247,7 +247,7 @@ export class Webauthn extends EventEmitter {
         ErrorType.WEBAUTHN,
         "AUTH_ERROR",
         errorMessage,
-        error,
+        error
       );
       return { success: false, error: errorMessage };
     }
@@ -347,7 +347,7 @@ export class Webauthn extends EventEmitter {
     const bytes = new Uint8Array(buffer);
     const binary = bytes.reduce(
       (str, byte) => str + String.fromCharCode(byte),
-      "",
+      ""
     );
     return btoa(binary)
       .replace(/\+/g, "-")
@@ -360,7 +360,7 @@ export class Webauthn extends EventEmitter {
    */
   private generateCredentialsFromSalt(
     username: string,
-    salt: string,
+    salt: string
   ): { password: string } {
     const data = ethers.toUtf8Bytes(username + salt);
     return {
@@ -381,7 +381,7 @@ export class Webauthn extends EventEmitter {
    * Creates a WebAuthn credential for registration
    */
   private async createCredential(
-    username: string,
+    username: string
   ): Promise<WebAuthnCredentialData> {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -411,7 +411,7 @@ export class Webauthn extends EventEmitter {
 
       logDebug(
         "Attempting to create credentials with options:",
-        publicKeyCredentialCreationOptions,
+        publicKeyCredentialCreationOptions
       );
 
       const credential = await navigator.credentials.create({
@@ -459,7 +459,7 @@ export class Webauthn extends EventEmitter {
   async generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
-    isLogin = false,
+    isLogin = false
   ): Promise<CredentialResult> {
     try {
       if (isLogin) {
@@ -502,7 +502,7 @@ export class Webauthn extends EventEmitter {
    * Verifies a credential
    */
   private async verifyCredential(
-    username: string,
+    username: string
   ): Promise<WebAuthnVerificationResult> {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -557,7 +557,7 @@ export class Webauthn extends EventEmitter {
    */
   private async saveToGun(
     username: string,
-    credential: WebAuthnCredentialData,
+    credential: WebAuthnCredentialData
   ): Promise<void> {
     if (this.gunInstance) {
       try {
@@ -579,7 +579,7 @@ export class Webauthn extends EventEmitter {
   async removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials,
+    credentials: WebAuthnCredentials
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }> {
     if (
       !credentials ||
@@ -622,4 +622,4 @@ if (typeof window !== "undefined") {
   (global as any).Webauthn = Webauthn;
 }
 
-export { WebAuthnCredentials, DeviceInfo, CredentialResult };
+export type { WebAuthnCredentials, DeviceInfo, CredentialResult };

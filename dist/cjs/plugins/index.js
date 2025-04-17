@@ -15,6 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StealthPlugin = exports.DIDPlugin = exports.WalletPlugin = exports.MetaMaskPlugin = exports.WebauthnPlugin = exports.BasePlugin = void 0;
+// Esporta l'interfaccia di base per i plugin
 var base_1 = require("./base");
 Object.defineProperty(exports, "BasePlugin", { enumerable: true, get: function () { return base_1.BasePlugin; } });
 // Esporta i plugin standard

@@ -27,16 +27,19 @@ import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 
-export {
-  ShogunDID,
+export { ShogunDID } from "./plugins/did/DID";
+export type {
   DIDDocument,
   DIDResolutionResult,
   DIDCreateOptions,
 } from "./plugins/did/DID";
-export { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
+
+export { ErrorHandler, ErrorType } from "./utils/errorHandler";
+export type { ShogunError } from "./utils/errorHandler";
+
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
-export { ShogunPlugin, PluginManager } from "./types/plugin";
+export type { ShogunPlugin, PluginManager } from "./types/plugin";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -144,7 +147,7 @@ export class ShogunCore implements IShogunCore {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
       log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL."
       );
     }
 
@@ -333,7 +336,7 @@ export class ShogunCore implements IShogunCore {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean,
+    matchFn?: (data: any) => boolean
   ): Observable<T[]> {
     return this.rx.match<T>(path, matchFn);
   }
@@ -375,7 +378,7 @@ export class ShogunCore implements IShogunCore {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
+    computeFn: (...values: T[]) => R
   ): Observable<R> {
     return this.rx.compute<T, R>(sources, computeFn);
   }
@@ -478,7 +481,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error,
+        error
       );
     }
   }
@@ -566,7 +569,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error,
+        error
       );
 
       return {
@@ -588,7 +591,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string,
+    passwordConfirmation?: string
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -708,7 +711,7 @@ export class ShogunCore implements IShogunCore {
    * @private
    */
   private async ensureUserHasDID(
-    options?: DIDCreateOptions,
+    options?: DIDCreateOptions
   ): Promise<string | null> {
     try {
       const didPlugin = this.getPlugin<DIDPluginInterface>("did");
@@ -734,7 +737,7 @@ export class ShogunCore implements IShogunCore {
    */
   private createUserWithGunDB(
     username: string,
-    password: string,
+    password: string
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     log(`Ensuring user exists with GunDB: ${username}`);
 
@@ -793,7 +796,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`,
+          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`
         );
         const createResult = await createUser();
 
@@ -807,7 +810,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `User created successfully, attempting login again for confirmation...`,
+          `User created successfully, attempting login again for confirmation...`
         );
         loginResult = await authUser();
 
@@ -819,7 +822,7 @@ export class ShogunCore implements IShogunCore {
           });
         } else {
           logError(
-            `Post-creation login failed unexpectedly: ${loginResult.err}`,
+            `Post-creation login failed unexpectedly: ${loginResult.err}`
           );
           resolve({
             success: false,
@@ -1013,7 +1016,7 @@ export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
-export {
+export type {
   EphemeralKeyPair,
   StealthData,
   StealthAddressResult,

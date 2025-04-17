@@ -11,7 +11,7 @@ import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
-export { ShogunDID, } from "./plugins/did/DID";
+export { ShogunDID } from "./plugins/did/DID";
 export { ErrorHandler, ErrorType } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
