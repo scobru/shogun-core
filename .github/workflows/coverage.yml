@@ -2,33 +2,38 @@ name: Coverage
 
 on:
   push:
-    branches: [main, master]
+    branches: [ main, master ]
   pull_request:
-    branches: [main, master]
+    branches: [ main, master ]
 
 jobs:
   coverage:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18.x"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci || npm install
-
-      - name: Install coverage tools
-        run: npm install --save-dev jest @types/jest ts-jest nyc coveralls
-
-      - name: Run tests with coverage
-        run: npm test -- --coverage
-
-      - name: Coveralls
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: '**/package.json'
+    
+    - name: Install dependencies
+      working-directory: ./shogun-core
+      run: npm ci || npm install
+      
+    - name: Install coverage tools
+      working-directory: ./shogun-core
+      run: npm install --save-dev jest @types/jest ts-jest nyc coveralls
+    
+    - name: Run tests with coverage
+      working-directory: ./shogun-core
+      run: npm test -- --coverage
+      
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        base-path: ./shogun-core

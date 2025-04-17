@@ -2,36 +2,40 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [16.x, 18.x]
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci || npm install
-    
-    - name: Run tests
-      run: npm test
-      
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-results
-        path: coverage/ 
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          # Disabilita il caching poiché non esiste un file di lock
+          cache: "npm"
+          cache-dependency-path: "**/package.json"
+
+      - name: Install dependencies
+        working-directory: ./shogun-core
+        run: npm ci || npm install
+
+      - name: Run tests
+        working-directory: ./shogun-core
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: shogun-core/coverage/
