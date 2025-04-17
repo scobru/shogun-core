@@ -31,4 +31,8 @@ module.exports = {
   testTimeout: 60000, // Aumenta il timeout per i test più lenti
   detectOpenHandles: true,
   forceExit: true,
+  // Configurazione esplicita per la copertura
+  collectCoverage: true,
+  coverageReporters: ["lcov", "text", "html"],
+  coverageDirectory: "coverage",
 };

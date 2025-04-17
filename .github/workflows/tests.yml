@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          # Disabilita il caching poiché non esiste un file di lock
+          cache: "npm"
+          cache-dependency-path: "**/package.json"
+
+      - name: Install dependencies
+        working-directory: ./
+        run: npm ci || npm install
+
+      - name: Run tests
+        working-directory: ./
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.node-version }}
+          path: ./coverage/
+          if-no-files-found: ignore
