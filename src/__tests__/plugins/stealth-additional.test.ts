@@ -85,12 +85,12 @@ describe("StealthAddresses", () => {
     expect(keys.spending.publicKey).toBeDefined();
   });
 
-  test("dovrebbe generare indirizzi stealth da chiavi", () => {
+  test("dovrebbe generare indirizzi stealth da chiavi", async () => {
     // Prima generiamo chiavi stealth
     const keys = stealth.generateStealthKeys();
 
     // Generiamo un indirizzo stealth usando le chiavi
-    const stealthAddress = stealth.generateStealthAddress(
+    const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
       keys.spending.publicKey
     );
@@ -100,12 +100,12 @@ describe("StealthAddresses", () => {
     expect(stealthAddress.stealthAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
   });
 
-  test("dovrebbe recuperare chiavi private da indirizzo stealth", () => {
+  test("dovrebbe recuperare chiavi private da indirizzo stealth", async () => {
     // Prima generiamo chiavi stealth
     const keys = stealth.generateStealthKeys();
 
     // Generiamo un indirizzo stealth
-    const stealthAddress = stealth.generateStealthAddress(
+    const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
       keys.spending.publicKey
     );
@@ -120,12 +120,12 @@ describe("StealthAddresses", () => {
     expect(privateKey).toBeDefined();
   });
 
-  test("dovrebbe generare metadati stealth", () => {
+  test("dovrebbe generare metadati stealth", async () => {
     // Prima generiamo chiavi stealth
     const keys = stealth.generateStealthKeys();
 
     // Generiamo un indirizzo stealth
-    const stealthAddress = stealth.generateStealthAddress(
+    const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
       keys.spending.publicKey
     );
@@ -141,7 +141,7 @@ describe("StealthAddresses", () => {
     expect(metadata.stealthAddress).toBe(stealthAddress.stealthAddress);
   });
 
-  test("dovrebbe verificare un indirizzo stealth", () => {
+  test("dovrebbe verificare un indirizzo stealth", async () => {
     // Mock per testare la verifica di un indirizzo
     jest.spyOn(stealth as any, "verifyStealthAddress").mockReturnValue(true);
 
@@ -149,7 +149,7 @@ describe("StealthAddresses", () => {
     const keys = stealth.generateStealthKeys();
 
     // Generiamo un indirizzo stealth
-    const stealthAddress = stealth.generateStealthAddress(
+    const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
       keys.spending.publicKey
     );
