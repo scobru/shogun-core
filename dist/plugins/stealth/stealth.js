@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { ShogunStorage } from "../../storage/storage";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { logDebug, logError } from "../../utils/logger";
+import Gun from "gun";
 class Stealth {
     constructor(storage) {
         this.lastEphemeralKeyPair = null;
@@ -218,7 +219,9 @@ class Stealth {
                         // Save method used and shared secret
                         this.lastMethodUsed = "standard";
                         stealthData.method = "standard";
-                        stealthData.sharedSecret = sharedSecret;
+                        // Non salviamo il segreto condiviso nei dati di cronologia
+                        // Rimuovendo questa linea, solo il proprietario della chiave potrà aprire l'indirizzo
+                        // stealthData.sharedSecret = sharedSecret;
                         // Save data in storage to allow opening
                         this.saveStealthHistory(stealthWallet.address, stealthData);
                         // Assicuriamoci che ephemeralPublicKey sia definito correttamente
@@ -444,9 +447,25 @@ class Stealth {
             if (!this.validateStealthData(data)) {
                 throw new Error("Invalid stealth data");
             }
+            // Creiamo una copia sicura dei dati rimuovendo informazioni sensibili
+            const secureCopy = {
+                ...data,
+                // Assicuriamoci che non venga salvato il segreto condiviso
+                sharedSecret: undefined,
+            };
+            // Salviamo solo le chiavi pubbliche dell'ephemeralKeyPair
+            if (secureCopy.ephemeralKeyPair) {
+                secureCopy.ephemeralKeyPair = {
+                    pub: secureCopy.ephemeralKeyPair.pub,
+                    epub: secureCopy.ephemeralKeyPair.epub,
+                    // Non salviamo le chiavi private, utilizziamo stringhe vuote invece di undefined
+                    priv: "",
+                    epriv: "",
+                };
+            }
             const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) ?? "{}";
             const history = JSON.parse(stealthHistoryJson);
-            history[address] = data;
+            history[address] = secureCopy;
             this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
             this.log("info", `Stealth data saved for address ${address}`);
         }

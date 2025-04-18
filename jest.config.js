@@ -1,9 +1,12 @@
+/** @type {import('jest').Config} */
 module.exports = {
   preset: "ts-jest",
-  testEnvironment: "jsdom",
+  testEnvironment: "node",
   moduleNameMapper: {
     // Gestisce i percorsi di alias se necessario
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^gun$": "<rootDir>/src/__mocks__/gun.ts",
+    "^gun/sea$": "<rootDir>/src/__mocks__/gun.ts",
   },
   testMatch: ["**/__tests__/**/*.ts?(x)", "**/?(*.)+(spec|test).ts?(x)"],
   coveragePathIgnorePatterns: [
@@ -18,12 +21,11 @@ module.exports = {
     "/dist/types/",
     "\\.d\\.ts$",
   ],
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  setupFilesAfterEnv: ["./jest.setup.js"],
   transform: {
     "^.+\\.tsx?$": [
       "ts-jest",
       {
-        isolatedModules: true,
         tsconfig: "tsconfig.json",
       },
     ],
@@ -35,4 +37,9 @@ module.exports = {
   collectCoverage: true,
   coverageReporters: ["lcov", "text", "html"],
   coverageDirectory: "coverage",
+  globals: {
+    "ts-jest": {
+      tsconfig: "tsconfig.json",
+    },
+  },
 };

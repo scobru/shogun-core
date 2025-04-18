@@ -1,6 +1,10 @@
-/**
- * GunDB - Optimized class with advanced Auth integration
- */
+/* Updated GunDB class with:
+1. Dynamic auth token usage
+2. Concurrency-safe authentication
+3. Dynamic peer linking
+4. Support for remove/unset operations
+*/
+
 import Gun from "gun";
 import "gun/sea";
 import { IGunInstance, IGunUserInstance } from "gun/types";
@@ -9,9 +13,6 @@ import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { GunDBOptions } from "../types/gun";
 
-/**
- * Authentication result
- */
 export interface AuthResult {
   success: boolean;
   userPub?: string;
@@ -19,30 +20,19 @@ export interface AuthResult {
   error?: string;
 }
 
-/**
- * Retry configuration
- */
 interface RetryConfig {
   attempts: number;
   delay: number;
 }
 
-/**
- * GunDB - Simplified Gun management with advanced Auth
- *
- * Uses the Auth class for optimized authentication handling
- */
 class GunDB {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
-  private certificato: string | null = null;
-  private onAuthCallbacks: Array<(user: any) => void> = [];
-  private retryConfig: RetryConfig;
+  private readonly onAuthCallbacks: Array<(user: any) => void> = [];
+  private readonly retryConfig: RetryConfig;
   private _authenticating: boolean = false;
+  private authToken?: string;
 
-  /**
-   * @param options - GunDBOptions
-   */
   constructor(options: Partial<GunDBOptions> = {}) {
     log("Initializing GunDB");
 
@@ -51,7 +41,6 @@ class GunDB {
       delay: options.retryDelay ?? 1000,
     };
 
-    // Use default configuration through spread to avoid null checks
     const config = {
       peers: options.peers,
       localStorage: options.localStorage ?? false,
@@ -60,54 +49,35 @@ class GunDB {
       axe: options.axe ?? false,
     };
 
-    // Logghiamo l'authToken ricevuto (senza mostrare il valore completo per sicurezza)
-    if (options.authToken) {
-      const tokenPreview =
-        options.authToken.substring(0, 3) +
-        "..." +
-        (options.authToken.length > 6
-          ? options.authToken.substring(options.authToken.length - 3)
-          : "");
-      log(`Auth token received (${tokenPreview})`);
+    this.authToken = options.authToken;
+
+    if (this.authToken) {
+      const preview = `${this.authToken.substring(0, 3)}...${this.authToken.slice(-3)}`;
+      log(`Auth token received (${preview})`);
     } else {
       log("No auth token received");
     }
 
-    // Configure GunDB with provided options
     this.gun = new Gun(config);
-
     this.user = this.gun.user().recall({ sessionStorage: true });
 
-    // Aggiungiamo il token di autenticazione ai messaggi in uscita
-    const authToken = options.authToken;
-
-    if (authToken) {
-      Gun.on("opt", function (ctx: any) {
-        if (ctx.once) {
-          return;
-        }
-        ctx.on("out", function (msg: any) {
-          var to = ctx.to;
-          // Adds headers for put
-          msg.headers = {
-            token: "thisIsTheTokenForReals",
-          };
-          to.next(msg); // pass to next middleware
+    if (this.authToken) {
+      Gun.on("opt", (ctx: any) => {
+        if (ctx.once) return;
+        ctx.on("out", (msg: any) => {
+          msg.headers = { token: this.authToken };
+          ctx.to.next(msg);
         });
       });
       log("Auth token handler configured for outgoing messages");
     }
 
-    // Handle authentication events
     this.subscribeToAuthEvents();
   }
 
-  /**
-   * Retry operation with exponential backoff
-   */
   private async retry<T>(
     operation: () => Promise<T>,
-    context: string,
+    context: string
   ): Promise<T> {
     let lastError: Error;
 
@@ -116,11 +86,10 @@ class GunDB {
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-
         if (i < this.retryConfig.attempts - 1) {
           const delay = this.retryConfig.delay * Math.pow(2, i);
           log(`Retry attempt ${i + 1} for ${context} in ${delay}ms`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await new Promise((r) => setTimeout(r, delay));
         }
       }
     }
@@ -128,9 +97,6 @@ class GunDB {
     throw lastError!;
   }
 
-  /**
-   * Subscribe to Gun authentication events
-   */
   private subscribeToAuthEvents() {
     this.gun.on("auth", (ack: any) => {
       log("Auth event received:", ack);
@@ -140,7 +106,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -148,231 +114,127 @@ class GunDB {
     });
   }
 
-  /**
-   * Notify all authentication listeners
-   * @param pub - Public key of authenticated user
-   */
   private notifyAuthListeners(pub: string): void {
     const user = this.gun.user();
-    this.onAuthCallbacks.forEach((callback) => {
-      callback(user);
-    });
+    this.onAuthCallbacks.forEach((cb) => cb(user));
   }
 
-  /**
-   * Create new GunDB instance with specified peers
-   * @param peers - Array of peer URLs
-   * @returns New GunDB instance
-   */
   static withPeers(peers: string[] = CONFIG.PEERS): GunDB {
     return new GunDB({ peers });
   }
 
-  /**
-   * Add listener for authentication events
-   * @param callback - Function to call when user authenticates
-   * @returns Function to remove the listener
-   */
+  addPeer(peer: string): void {
+    this.gun.opt({ peers: [peer] });
+    log(`Added new peer: ${peer}`);
+  }
+
   onAuth(callback: (user: any) => void): () => void {
     this.onAuthCallbacks.push(callback);
-
-    // If user is already authenticated, call callback immediately
     const user = this.gun.user();
-    if (user && user.is) {
-      callback(user);
-    }
-
-    // Return function to remove listener
+    if (user && user.is) callback(user);
     return () => {
-      const index = this.onAuthCallbacks.indexOf(callback);
-      if (index !== -1) {
-        this.onAuthCallbacks.splice(index, 1);
-      }
+      const i = this.onAuthCallbacks.indexOf(callback);
+      if (i !== -1) this.onAuthCallbacks.splice(i, 1);
     };
   }
 
-  /**
-   * Get underlying Gun instance
-   * @returns Gun instance
-   */
   getGun(): IGunInstance<any> {
     return this.gun;
   }
 
-  /**
-   * Get current user
-   * @returns Gun user or null if not authenticated
-   */
   getUser(): any {
     return this.gun.user();
   }
 
-  /**
-   * Get data from a specific path
-   * @param path - Path to get data from
-   * @returns Node reference
-   */
   get(path: string): any {
     return this.gun.get(path);
   }
 
-  /**
-   * Put data at a specific path
-   * @param path - Path to put data at
-   * @param data - Data to put
-   * @returns Promise with success result
-   */
   async put(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
-        if (ack.err) {
-          resolve({ success: false, error: ack.err });
-        } else {
-          resolve({ success: true });
-        }
+        resolve(
+          ack.err ? { success: false, error: ack.err } : { success: true }
+        );
       });
     });
   }
 
-  /**
-   * Set data in a collection
-   * @param path - Path to collection
-   * @param data - Data to set
-   * @returns Promise with success result
-   */
   async set(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
+        resolve(
+          ack.err ? { success: false, error: ack.err } : { success: true }
+        );
+      });
+    });
+  }
+
+  async remove(path: string): Promise<any> {
+    return new Promise((resolve) => {
+      this.gun.get(path).put(null, (ack: any) => {
+        resolve(
+          ack.err ? { success: false, error: ack.err } : { success: true }
+        );
+      });
+    });
+  }
+
+  async unset(path: string, node: any): Promise<any> {
+    return new Promise((resolve) => {
+      this.gun.get(path).unset(node);
+      resolve({ success: true });
+    });
+  }
+
+  async signUp(username: string, password: string): Promise<any> {
+    log("Attempting user registration:", username);
+    return new Promise((resolve) => {
+      this.gun.user().create(username, password, async (ack: any) => {
         if (ack.err) {
+          logError(`Registration error: ${ack.err}`);
           resolve({ success: false, error: ack.err });
         } else {
-          resolve({ success: true });
+          const loginResult = await this.login(username, password);
+          resolve(loginResult);
         }
       });
     });
   }
 
-  /**
-   * Set certificate for current user
-   * @param certificate - Certificate to use
-   */
-  setCertificate(certificate: string): void {
-    this.certificato = certificate;
-    const user = this.gun.user();
-    user.get("trust").get("certificate").put(certificate);
-  }
-
-  /**
-   * Get current user's certificate
-   * @returns Certificate or null if not available
-   */
-  getCertificate(): string | null {
-    return this.certificato;
-  }
-
-  /**
-   * Register a new user
-   * @param username - Username
-   * @param password - Password
-   * @returns Promise resolving with user's public key
-   */
-  async signUp(username: string, password: string): Promise<any> {
-    try {
-      log("Attempting user registration:", username);
-
-      return new Promise((resolve) => {
-        this.gun.user().create(username, password, async (ack: any) => {
-          if (ack.err) {
-            logError(`Registration error: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
-          } else {
-            // Automatic login after registration
-            try {
-              const loginResult = await this.login(username, password);
-              if (loginResult.success) {
-                log("Registration and login completed successfully");
-              } else {
-                logError("Registration completed but login failed");
-              }
-              resolve(loginResult);
-            } catch (error) {
-              resolve({
-                success: true,
-                userPub: ack.pub,
-                username,
-                loginError: "Auto-login failed, but registration successful",
-              });
-            }
-          }
-        });
-      });
-    } catch (error) {
-      logError("Error during registration:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Perform user login
-   * @param username - Username
-   * @param password - Password
-   * @param callback - Optional callback function
-   * @returns Promise that resolves with login result
-   */
-  login(
+  async login(
     username: string,
     password: string,
-    callback?: (result: any) => void,
+    callback?: (result: any) => void
   ): Promise<any> {
+    if (this.isAuthenticating()) {
+      const err = "Authentication already in progress";
+      log(err);
+      return { success: false, error: err };
+    }
+
+    this._setAuthenticating(true);
     log(`Attempting login for user: ${username}`);
 
-    return new Promise((resolve, reject) => {
-      if (!username || !password) {
-        const error = "Username and password are required";
-        log(error);
-        if (callback) callback({ err: error });
-        resolve({ success: false, error });
-        return;
-      }
-
-      // Limpiezza: forziamo un reset di eventuali utenti precedenti
+    return new Promise((resolve) => {
       try {
         this.gun.user().leave();
-        log("Current user reset before login attempt");
-      } catch (e) {
-        // Ignoriamo errori qui
-      }
+      } catch {}
 
-      // Imponiamo un timeout per evitare blocchi infiniti
-      const timeoutId = setTimeout(() => {
-        log("Login timeout reached - resolving with error");
-        if (callback) callback({ err: "Login timeout" });
+      const timeout = setTimeout(() => {
+        this._setAuthenticating(false);
         resolve({ success: false, error: "Login timeout" });
-      }, 3000); // 3 secondi di timeout
+      }, 3000);
 
-      // Eseguiamo login con una nuova istanza di Gun per evitare conflitti
-      log(`Performing auth with Gun for user: ${username}`);
       this.gun.user().auth(username, password, (ack: any) => {
-        clearTimeout(timeoutId);
+        clearTimeout(timeout);
+        this._setAuthenticating(false);
 
         if (ack.err) {
           log(`Login error: ${ack.err}`);
-          if (callback) callback({ err: ack.err });
           resolve({ success: false, error: ack.err });
         } else {
-          log("Authentication completed successfully");
-          // Salviamo il pair
-          try {
-            this._savePair();
-            log("User auth pair saved");
-          } catch (saveError) {
-            log(`Warning: Error saving auth pair: ${saveError}`);
-          }
-
-          if (callback) callback(ack);
+          this._savePair();
           resolve({
             success: true,
             userPub: this.gun.user().is?.pub,
@@ -383,46 +245,27 @@ class GunDB {
     });
   }
 
-  /**
-   * Salva la coppia di autenticazione dell'utente
-   * @private
-   */
   private _savePair(): void {
     try {
-      const user = this.gun.user();
-      // @ts-ignore - Accessing Gun's internal properties
-      const pair = user._ && user._.sea;
-      if (pair) {
-        // Salva in storage locale se disponibile
-        if (typeof localStorage !== "undefined") {
-          localStorage.setItem("pair", JSON.stringify(pair));
-        }
+      const pair = this.gun.user()?._?.sea;
+      if (pair && typeof localStorage !== "undefined") {
+        localStorage.setItem("pair", JSON.stringify(pair));
       }
     } catch (error) {
-      console.error("Error saving authentication pair:", error);
+      console.error("Error saving auth pair:", error);
     }
   }
 
-  /**
-   * Verifica se un processo di autenticazione è già in corso
-   */
   private isAuthenticating(): boolean {
-    return this._authenticating === true;
+    return this._authenticating;
   }
 
-  /**
-   * Imposta il flag di autenticazione
-   */
   private _setAuthenticating(value: boolean): void {
     this._authenticating = value;
   }
 
-  /**
-   * Logout current user
-   */
   logout(): void {
     try {
-      log("Attempting logout");
       this.gun.user().leave();
       log("Logout completed");
     } catch (error) {
@@ -430,194 +273,71 @@ class GunDB {
     }
   }
 
-  /**
-   * Check if a user is currently authenticated
-   * @returns true if a user is authenticated
-   */
   isLoggedIn(): boolean {
-    const user = this.gun.user();
-    return !!(user && user.is && user.is.pub);
+    return !!this.gun.user()?.is?.pub;
   }
 
-  /**
-   * Get currently authenticated user
-   * @returns Current user or null if not authenticated
-   */
   getCurrentUser(): any {
-    const userPub = this.gun.user()?.is?.pub;
-    if (!userPub) {
-      return null;
-    }
-    return {
-      pub: userPub,
-      user: this.gun.user(),
-    };
+    const pub = this.gun.user()?.is?.pub;
+    return pub ? { pub, user: this.gun.user() } : null;
   }
 
-  /**
-   * Save data with retry logic
-   */
-  private async saveWithRetry(
-    node: any,
-    data: any,
-    options?: any,
-  ): Promise<any> {
+  private async save(node: any, data: any): Promise<any> {
     return this.retry(
       () =>
         new Promise((resolve, reject) => {
-          node.put(
-            data,
-            (ack: any) => {
-              if (ack.err) reject(new Error(ack.err));
-              else resolve(data);
-            },
-            options,
+          node.put(data, (ack: any) =>
+            ack.err ? reject(new Error(ack.err)) : resolve(data)
           );
         }),
-      "data save operation",
+      "data save operation"
     );
   }
 
-  /**
-   * Read data with retry logic
-   */
-  private async readWithRetry(node: any): Promise<any> {
+  private async read(node: any): Promise<any> {
     return this.retry(
       () =>
         new Promise((resolve) => {
           node.once((data: any) => resolve(data));
         }),
-      "data read operation",
+      "data read operation"
     );
   }
 
-  /**
-   * Save data to user node with improved error handling
-   */
   async saveUserData(path: string, data: any): Promise<any> {
-    try {
-      if (!this.gun.user()?.is?.pub) {
-        throw new Error("User not authenticated");
-      }
-
-      const options = this.certificato
-        ? { opt: { cert: this.certificato } }
-        : undefined;
-
-      return await this.saveWithRetry(this.gun.user().get(path), data, options);
-    } catch (error) {
-      ErrorHandler.handle(
-        ErrorType.GUN,
-        "SAVE_USER_DATA_ERROR",
-        `Error saving data to path ${path}`,
-        error,
-      );
-      throw error;
-    }
+    if (!this.isLoggedIn()) throw new Error("User not authenticated");
+    return this.save(this.gun.user().get(path), data);
   }
 
-  /**
-   * Retrieve data from user node with improved error handling
-   */
   async getUserData(path: string): Promise<any> {
-    try {
-      if (!this.gun.user()?.is?.pub) {
-        throw new Error("User not authenticated");
-      }
-
-      const data = await this.readWithRetry(this.gun.user().get(path));
-
-      if (!data) {
-        log(`No data found at ${path}`);
-        return null;
-      }
-
-      log(`Data retrieved from ${path}`);
-      return data;
-    } catch (error) {
-      ErrorHandler.handle(
-        ErrorType.GUN,
-        "GET_USER_DATA_ERROR",
-        `Error retrieving data from path ${path}`,
-        error,
-      );
-      throw error;
-    }
+    if (!this.isLoggedIn()) throw new Error("User not authenticated");
+    const data = await this.read(this.gun.user().get(path));
+    return data || null;
   }
 
-  /**
-   * Save data to public node
-   */
   async savePublicData(node: string, key: string, data: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const options = this.certificato
-        ? { opt: { cert: this.certificato } }
-        : undefined;
-
       this.gun
         .get(node)
         .get(key)
-        .put(
-          data,
-          (ack: any) => {
-            if (ack && ack.err) {
-              logError(`Error saving public data: ${ack.err}`);
-              reject(new Error(ack.err));
-            } else {
-              log(`Public data saved to ${node}/${key}`);
-              resolve(data);
-            }
-          },
-          options,
-        );
+        .put(data, (ack: any) => {
+          ack && ack.err ? reject(new Error(ack.err)) : resolve(data);
+        });
     });
   }
 
-  /**
-   * Retrieve data from public node
-   */
   async getPublicData(node: string, key: string): Promise<any> {
     return new Promise((resolve) => {
       this.gun
         .get(node)
         .get(key)
-        .once((data) => {
-          if (!data) {
-            log(`No public data found at ${node}/${key}`);
-            resolve(null);
-          } else {
-            log(`Public data retrieved from ${node}/${key}`);
-            resolve(data);
-          }
-        });
+        .once((data) => resolve(data || null));
     });
   }
 
-  /**
-   * Generate new SEA key pair
-   */
   async generateKeyPair(): Promise<any> {
-    // Use SEA.pair() directly instead of this.auth.generatePair()
     return (Gun as any).SEA.pair();
   }
-}
-
-// Make class globally available
-declare global {
-  interface Window {
-    GunDB: typeof GunDB;
-  }
-  namespace NodeJS {
-    interface Global {
-      GunDB: typeof GunDB;
-    }
-  }
-}
-
-if (typeof window !== "undefined") {
-  window.GunDB = GunDB;
-} else if (typeof global !== "undefined") {
-  (global as any).GunDB = GunDB;
 }
 
 export { GunDB };

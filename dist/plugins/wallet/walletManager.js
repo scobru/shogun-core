@@ -305,8 +305,7 @@ export class WalletManager extends EventEmitter {
                 // Standard BIP-44 path for Ethereum: m/44'/60'/0'/0/i
                 const path = `m/44'/60'/0'/0/${i}`;
                 // Create HD wallet directly from mnemonic with specified path
-                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path // Pass path directly here
-                );
+                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path);
                 addresses.push(wallet.address);
                 log(`Address ${i}: ${wallet.address} (${path})`);
             }

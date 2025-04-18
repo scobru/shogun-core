@@ -1,4 +1,9 @@
-import { StealthAddressResult, StealthData } from "../../types/stealth";
+import {
+  StealthAddressResult,
+  StealthData,
+  EphemeralKeyPair,
+} from "../../types/stealth";
+import { ethers } from "ethers";
 
 /**
  * Interfaccia per il plugin Stealth
@@ -21,7 +26,7 @@ export interface StealthPluginInterface {
    */
   generateStealthAddress(
     publicKey: string,
-    ephemeralPrivateKey: string,
+    ephemeralPrivateKey: string
   ): Promise<StealthAddressResult>;
 
   /**
@@ -32,7 +37,7 @@ export interface StealthPluginInterface {
    */
   scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<StealthData[]>;
 
   /**
@@ -43,7 +48,7 @@ export interface StealthPluginInterface {
    */
   isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<boolean>;
 
   /**
@@ -54,6 +59,19 @@ export interface StealthPluginInterface {
    */
   getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<string>;
+
+  /**
+   * Apre un indirizzo stealth utilizzando la chiave pubblica effimera e le chiavi dell'utente
+   * @param stealthAddress Indirizzo stealth da aprire
+   * @param ephemeralPublicKey Chiave pubblica effimera utilizzata per generare l'indirizzo
+   * @param pair Coppia di chiavi dell'utente
+   * @returns Promise con il wallet dell'indirizzo stealth
+   */
+  openStealthAddress(
+    stealthAddress: string,
+    ephemeralPublicKey: string,
+    pair: EphemeralKeyPair
+  ): Promise<ethers.Wallet>;
 }

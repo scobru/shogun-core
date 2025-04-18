@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">15.13% </span>
+                <span class="strong">16.23% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>115/760</span>
+                <span class='fraction'>125/770</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.25% </span>
+                <span class="strong">8.82% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>25/303</span>
+                <span class='fraction'>27/306</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">30.88% </span>
+                <span class="strong">31.42% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>21/68</span>
+                <span class='fraction'>22/70</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">14.78% </span>
+                <span class="strong">15.78% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>111/751</span>
+                <span class='fraction'>120/760</span>
             </div>
         
             
@@ -2282,7 +2282,22 @@
 <a name='L2217'></a><a href='#L2217'>2217</a>
 <a name='L2218'></a><a href='#L2218'>2218</a>
 <a name='L2219'></a><a href='#L2219'>2219</a>
-<a name='L2220'></a><a href='#L2220'>2220</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
+<a name='L2220'></a><a href='#L2220'>2220</a>
+<a name='L2221'></a><a href='#L2221'>2221</a>
+<a name='L2222'></a><a href='#L2222'>2222</a>
+<a name='L2223'></a><a href='#L2223'>2223</a>
+<a name='L2224'></a><a href='#L2224'>2224</a>
+<a name='L2225'></a><a href='#L2225'>2225</a>
+<a name='L2226'></a><a href='#L2226'>2226</a>
+<a name='L2227'></a><a href='#L2227'>2227</a>
+<a name='L2228'></a><a href='#L2228'>2228</a>
+<a name='L2229'></a><a href='#L2229'>2229</a>
+<a name='L2230'></a><a href='#L2230'>2230</a>
+<a name='L2231'></a><a href='#L2231'>2231</a>
+<a name='L2232'></a><a href='#L2232'>2232</a>
+<a name='L2233'></a><a href='#L2233'>2233</a>
+<a name='L2234'></a><a href='#L2234'>2234</a>
+<a name='L2235'></a><a href='#L2235'>2235</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -2324,6 +2339,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -2486,6 +2502,21 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">363809x</span>
+<span class="cline-any cline-yes">363809x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -4325,7 +4356,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -4543,6 +4573,7 @@ export class WalletManager extends EventEmitter {
     ethers.TransactionResponse
   &gt; = new Map();
   private readonly config: WalletConfig;
+  private transactionMonitoringInterval: NodeJS.Timeout | null = null;
 &nbsp;
   /**
    * Creates a new WalletManager instance
@@ -4701,11 +4732,26 @@ export class WalletManager extends EventEmitter {
    * Setup transaction monitoring
    */
   private setupTransactionMonitoring() {
-    setInterval(<span class="fstat-no" title="function not covered" >() =</span>&gt; {
+    this.transactionMonitoringInterval = setInterval(<span class="fstat-no" title="function not covered" >() =</span>&gt; {
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (this.getProvider() !== null) {</span>
 <span class="cstat-no" title="statement not covered" >        this.checkPendingTransactions();</span>
       }
-    }, 15000); // Check every 15 seconds
+    }, 15000);
+  }
+&nbsp;
+  public cleanup() {
+    if (this.transactionMonitoringInterval) {
+      clearInterval(this.transactionMonitoringInterval);
+      this.transactionMonitoringInterval = null;
+    }
+&nbsp;
+    // Pulisci eventuali altri timer
+    const globalObj = typeof window !== "undefined" ? window : <span class="branch-1 cbranch-no" title="branch not covered" >global;</span>
+    const highestTimeoutId = Number(setTimeout(<span class="fstat-no" title="function not covered" >() =</span>&gt; {}, 0));
+    for (let i = 0; i &lt; highestTimeoutId; i++) {
+      clearTimeout(i);
+      clearInterval(i);
+    }
   }
 &nbsp;
   /**
@@ -6542,7 +6588,6 @@ export class WalletManager extends EventEmitter {
 <span class="fstat-no" title="function not covered" >  async </span>deriveWallet(path: string): Promise&lt;ethers.Wallet&gt; {
 <span class="cstat-no" title="statement not covered" >    try {</span>
       // Per i test, ritorniamo un wallet predefinito
-      
 &nbsp;
       // Ottieni il mnemonic dell'utente
       const mnemonic = <span class="cstat-no" title="statement not covered" >await this.getUserMasterMnemonic();</span>
@@ -6727,7 +6772,7 @@ export class WalletManager extends EventEmitter {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-04-18T08:59:37.177Z
+                at 2025-04-18T19:58:44.599Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

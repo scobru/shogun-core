@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StealthAddresses = exports.Stealth = void 0;
 /**
@@ -8,6 +11,7 @@ const ethers_1 = require("ethers");
 const storage_1 = require("../../storage/storage");
 const errorHandler_1 = require("../../utils/errorHandler");
 const logger_1 = require("../../utils/logger");
+const gun_1 = __importDefault(require("gun"));
 class Stealth {
     constructor(storage) {
         this.lastEphemeralKeyPair = null;
@@ -132,7 +136,7 @@ class Stealth {
     async createAccount() {
         try {
             // Generate a new key pair
-            const keyPair = await Gun.SEA.pair();
+            const keyPair = await gun_1.default.SEA.pair();
             if (!keyPair ||
                 !keyPair.pub ||
                 !keyPair.priv ||
@@ -158,7 +162,7 @@ class Stealth {
      */
     async generateEphemeralKeyPair() {
         try {
-            const keyPair = await Gun.SEA.pair();
+            const keyPair = await gun_1.default.SEA.pair();
             if (!keyPair || !keyPair.epriv || !keyPair.epub) {
                 throw new Error("Failed to generate ephemeral key pair");
             }
@@ -203,7 +207,7 @@ class Stealth {
                     epriv: ephemeralKeyPair.epriv,
                 };
                 (0, logger_1.logDebug)("Key format for secret (generation):", JSON.stringify(keyForSecret));
-                Gun.SEA.secret(recipientPublicKey, keyForSecret, async (sharedSecret) => {
+                gun_1.default.SEA.secret(recipientPublicKey, keyForSecret, async (sharedSecret) => {
                     (0, logger_1.logDebug)("Shared secret successfully generated with recipient keys");
                     (0, logger_1.logDebug)("Input format used:", {
                         recipientPublicKey: recipientPublicKey,
@@ -221,7 +225,9 @@ class Stealth {
                         // Save method used and shared secret
                         this.lastMethodUsed = "standard";
                         stealthData.method = "standard";
-                        stealthData.sharedSecret = sharedSecret;
+                        // Non salviamo il segreto condiviso nei dati di cronologia
+                        // Rimuovendo questa linea, solo il proprietario della chiave potrà aprire l'indirizzo
+                        // stealthData.sharedSecret = sharedSecret;
                         // Save data in storage to allow opening
                         this.saveStealthHistory(stealthWallet.address, stealthData);
                         // Assicuriamoci che ephemeralPublicKey sia definito correttamente
@@ -314,7 +320,7 @@ class Stealth {
                         };
                         (0, logger_1.logDebug)("Regenerating with explicit format:", JSON.stringify(keyForSecret));
                         return new Promise((resolve, reject) => {
-                            Gun.SEA.secret(data.recipientPublicKey, keyForSecret, async (secret) => {
+                            gun_1.default.SEA.secret(data.recipientPublicKey, keyForSecret, async (secret) => {
                                 if (!secret) {
                                     reject(new Error("Unable to regenerate shared secret"));
                                     return;
@@ -373,7 +379,7 @@ class Stealth {
                 () => {
                     (0, logger_1.logDebug)("Attempt 1: Standard method with ephemeral keys");
                     return new Promise((res) => {
-                        Gun.SEA.secret(ephemeralPublicKey, pair, async (secret) => {
+                        gun_1.default.SEA.secret(ephemeralPublicKey, pair, async (secret) => {
                             try {
                                 if (!secret) {
                                     return res(null);
@@ -447,9 +453,25 @@ class Stealth {
             if (!this.validateStealthData(data)) {
                 throw new Error("Invalid stealth data");
             }
+            // Creiamo una copia sicura dei dati rimuovendo informazioni sensibili
+            const secureCopy = {
+                ...data,
+                // Assicuriamoci che non venga salvato il segreto condiviso
+                sharedSecret: undefined,
+            };
+            // Salviamo solo le chiavi pubbliche dell'ephemeralKeyPair
+            if (secureCopy.ephemeralKeyPair) {
+                secureCopy.ephemeralKeyPair = {
+                    pub: secureCopy.ephemeralKeyPair.pub,
+                    epub: secureCopy.ephemeralKeyPair.epub,
+                    // Non salviamo le chiavi private, utilizziamo stringhe vuote invece di undefined
+                    priv: "",
+                    epriv: "",
+                };
+            }
             const stealthHistoryJson = this.storage.getItem(this.STEALTH_HISTORY_KEY) ?? "{}";
             const history = JSON.parse(stealthHistoryJson);
-            history[address] = data;
+            history[address] = secureCopy;
             this.storage.setItem(this.STEALTH_HISTORY_KEY, JSON.stringify(history));
             this.log("info", `Stealth data saved for address ${address}`);
         }
@@ -549,7 +571,7 @@ class Stealth {
                     epub: stealthData.ephemeralKeyPair.epub,
                 };
                 // Generate shared secret
-                Gun.SEA.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {
+                gun_1.default.SEA.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {
                     if (!sharedSecret) {
                         reject(new Error("Failed to generate shared secret"));
                         return;
