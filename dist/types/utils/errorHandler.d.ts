@@ -43,6 +43,34 @@ export interface ShogunError {
  */
 export declare function createError(type: ErrorType, code: string, message: string, originalError?: Error | unknown): ShogunError;
 /**
+ * Opzioni di configurazione per il gestore di errori
+ */
+export interface ErrorOptions {
+    message?: string;
+    throwError?: boolean;
+    logError?: boolean;
+    callback?: ErrorCallback;
+}
+/**
+ * Tipo della funzione di callback per errori
+ */
+export type ErrorCallback = (error: any) => any;
+/**
+ * Risultato standardizzato per gestione errori
+ */
+export interface ErrorResult {
+    success: boolean;
+    message: string;
+    error?: any;
+}
+/**
+ * Funzione di utilità per gestire gli errori in modo consistente
+ * @param error - L'errore da gestire
+ * @param options - Opzioni di configurazione
+ * @returns Risultato dell'operazione o il risultato della callback
+ */
+export declare function handleError(error: any, options?: ErrorOptions): ErrorResult | any;
+/**
  * Gestore centralizzato per errori
  */
 export declare class ErrorHandler {

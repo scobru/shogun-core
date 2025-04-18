@@ -49,7 +49,7 @@ export function createError(
   type: ErrorType,
   code: string,
   message: string,
-  originalError?: Error | unknown,
+  originalError?: Error | unknown
 ): ShogunError {
   return {
     type,
@@ -57,6 +57,75 @@ export function createError(
     message,
     originalError,
     timestamp: Date.now(),
+  };
+}
+
+/**
+ * Opzioni di configurazione per il gestore di errori
+ */
+export interface ErrorOptions {
+  message?: string;
+  throwError?: boolean;
+  logError?: boolean;
+  callback?: ErrorCallback;
+}
+
+/**
+ * Tipo della funzione di callback per errori
+ */
+export type ErrorCallback = (error: any) => any;
+
+/**
+ * Risultato standardizzato per gestione errori
+ */
+export interface ErrorResult {
+  success: boolean;
+  message: string;
+  error?: any;
+}
+
+/**
+ * Funzione di utilità per gestire gli errori in modo consistente
+ * @param error - L'errore da gestire
+ * @param options - Opzioni di configurazione
+ * @returns Risultato dell'operazione o il risultato della callback
+ */
+export function handleError(
+  error: any,
+  options: ErrorOptions = {}
+): ErrorResult | any {
+  // Impostazioni di default
+  const {
+    message = error instanceof Error ? error.message : String(error),
+    throwError = false,
+    logError = true,
+    callback,
+  } = options;
+
+  // Log dell'errore se richiesto
+  if (logError) {
+    console.error(`[ERROR] ${message}`, error);
+  }
+
+  // Se è stata fornita una callback, la eseguiamo e restituiamo il suo risultato
+  if (typeof callback === "function") {
+    return callback(error);
+  }
+
+  // Se è richiesto di lanciare l'errore, lo lanciamo
+  if (throwError) {
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error(message);
+    }
+  }
+
+  // Altrimenti restituiamo un oggetto di risultato standard
+  return {
+    success: false,
+    message,
+    error,
   };
 }
 
@@ -100,7 +169,7 @@ export class ErrorHandler {
     code: string,
     message: string,
     originalError?: Error | unknown,
-    logLevel: LogLevel = "error",
+    logLevel: LogLevel = "error"
   ): ShogunError {
     // Create a formatted error message
     const finalMessage = originalError
@@ -211,7 +280,7 @@ export class ErrorHandler {
     errorType: ErrorType,
     errorCode: string,
     maxRetries = 3,
-    retryDelay = 1000,
+    retryDelay = 1000
   ): Promise<T> {
     let lastError: unknown;
 
@@ -224,7 +293,7 @@ export class ErrorHandler {
 
         if (attempt < maxRetries) {
           log(
-            `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`,
+            `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
@@ -236,7 +305,7 @@ export class ErrorHandler {
       errorType,
       errorCode,
       `Operation failed after ${maxRetries} attempts`,
-      lastError,
+      lastError
     );
   }
 }

@@ -308,3 +308,19 @@ if (!global.jasmine) {
   // jasmine is undefined in Jest, but we need to set this property for some reason
   global.jasmine = {};
 }
+
+// Definisci le variabili globali di Gun per i test
+global.Gun = {
+  SEA: {
+    encrypt: jest.fn().mockResolvedValue("encrypted-data"),
+    decrypt: jest.fn().mockResolvedValue("decrypted-data"),
+    sign: jest.fn().mockResolvedValue("signed-data"),
+    verify: jest.fn().mockResolvedValue(true),
+    pair: jest.fn().mockReturnValue({
+      pub: "pub-key",
+      priv: "priv-key",
+      epub: "epub-key",
+      epriv: "epriv-key",
+    }),
+  },
+};

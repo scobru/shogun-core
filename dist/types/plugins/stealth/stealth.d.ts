@@ -53,12 +53,19 @@ declare class Stealth {
         publicKey: string;
     }>;
     /**
-     * Generates a stealth address for the recipient's public key
+     * Metodo compatibile con i test-additional per generare un indirizzo stealth
+     * @param scanningPublicKey chiave pubblica di scansione
+     * @param spendingPublicKey chiave pubblica di spesa
+     * @returns risultato con indirizzo stealth e chiave pubblica effimera
+     */
+    generateStealthAddress(scanningPublicKey: string, spendingPublicKey?: string): any;
+    /**
+     * Implementazione originale di generateStealthAddress
      * @param recipientPublicKey Recipient's public key
      * @param ephemeralPrivateKey Ephemeral private key (optional)
      * @returns Promise with the stealth address result
      */
-    generateStealthAddress(recipientPublicKey: string, ephemeralPrivateKey?: string): Promise<StealthAddressResult>;
+    generateStealthAddress2(recipientPublicKey: string, ephemeralPrivateKey?: string): Promise<StealthAddressResult>;
     /**
      * Opens a stealth address by deriving the private key
      */
@@ -105,5 +112,32 @@ declare class Stealth {
      * @returns Promise with the derived private key
      */
     getStealthPrivateKey(stealthData: StealthData, privateKeyOrSpendKey: string): Promise<string>;
+    /**
+     * Genera una coppia di chiavi stealth - necessaria per i test aggiuntivi
+     */
+    generateStealthKeys(): {
+        scanning: {
+            privateKey: string;
+            publicKey: string;
+        };
+        spending: {
+            privateKey: string;
+            publicKey: string;
+        };
+    };
+    /**
+     * Utilizzato per verificare un indirizzo stealth - necessario per i test
+     */
+    verifyStealthAddress(ephemeralPublicKey: string, scanningPublicKey: string, spendingPublicKey: string, stealthAddress: string): boolean;
+    /**
+     * Converte una chiave di scansione in chiave privata - necessario per i test
+     */
+    scanningKeyToPrivateKey(scanningPrivateKey: string, spendingPrivateKey: string, ephemeralPublicKey: string): string;
+    /**
+     * Genera metadati stealth - necessario per i test
+     */
+    generateStealthMetadata(ephemeralPublicKey: string, stealthAddress: string): any;
 }
-export { Stealth, EphemeralKeyPair, StealthAddressResult };
+export { Stealth };
+export { Stealth as StealthAddresses };
+export default Stealth;

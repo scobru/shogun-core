@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ErrorHandler = exports.ErrorType = void 0;
 exports.createError = createError;
+exports.handleError = handleError;
 const logger_1 = require("./logger");
 /**
  * Tipi di errore che possono verificarsi nell'applicazione
@@ -43,6 +44,39 @@ function createError(type, code, message, originalError) {
         message,
         originalError,
         timestamp: Date.now(),
+    };
+}
+/**
+ * Funzione di utilità per gestire gli errori in modo consistente
+ * @param error - L'errore da gestire
+ * @param options - Opzioni di configurazione
+ * @returns Risultato dell'operazione o il risultato della callback
+ */
+function handleError(error, options = {}) {
+    // Impostazioni di default
+    const { message = error instanceof Error ? error.message : String(error), throwError = false, logError = true, callback, } = options;
+    // Log dell'errore se richiesto
+    if (logError) {
+        console.error(`[ERROR] ${message}`, error);
+    }
+    // Se è stata fornita una callback, la eseguiamo e restituiamo il suo risultato
+    if (typeof callback === "function") {
+        return callback(error);
+    }
+    // Se è richiesto di lanciare l'errore, lo lanciamo
+    if (throwError) {
+        if (error instanceof Error) {
+            throw error;
+        }
+        else {
+            throw new Error(message);
+        }
+    }
+    // Altrimenti restituiamo un oggetto di risultato standard
+    return {
+        success: false,
+        message,
+        error,
     };
 }
 /**

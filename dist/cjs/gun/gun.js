@@ -162,6 +162,50 @@ class GunDB {
         return this.gun.user();
     }
     /**
+     * Get data from a specific path
+     * @param path - Path to get data from
+     * @returns Node reference
+     */
+    get(path) {
+        return this.gun.get(path);
+    }
+    /**
+     * Put data at a specific path
+     * @param path - Path to put data at
+     * @param data - Data to put
+     * @returns Promise with success result
+     */
+    async put(path, data) {
+        return new Promise((resolve) => {
+            this.gun.get(path).put(data, (ack) => {
+                if (ack.err) {
+                    resolve({ success: false, error: ack.err });
+                }
+                else {
+                    resolve({ success: true });
+                }
+            });
+        });
+    }
+    /**
+     * Set data in a collection
+     * @param path - Path to collection
+     * @param data - Data to set
+     * @returns Promise with success result
+     */
+    async set(path, data) {
+        return new Promise((resolve) => {
+            this.gun.get(path).set(data, (ack) => {
+                if (ack.err) {
+                    resolve({ success: false, error: ack.err });
+                }
+                else {
+                    resolve({ success: true });
+                }
+            });
+        });
+    }
+    /**
      * Set certificate for current user
      * @param certificate - Certificate to use
      */
@@ -194,14 +238,24 @@ class GunDB {
                     }
                     else {
                         // Automatic login after registration
-                        const loginResult = await this.login(username, password);
-                        if (loginResult.success) {
-                            (0, logger_1.log)("Registration and login completed successfully");
+                        try {
+                            const loginResult = await this.login(username, password);
+                            if (loginResult.success) {
+                                (0, logger_1.log)("Registration and login completed successfully");
+                            }
+                            else {
+                                (0, logger_1.logError)("Registration completed but login failed");
+                            }
+                            resolve(loginResult);
                         }
-                        else {
-                            (0, logger_1.logError)("Registration completed but login failed");
+                        catch (error) {
+                            resolve({
+                                success: true,
+                                userPub: ack.pub,
+                                username,
+                                loginError: "Auto-login failed, but registration successful",
+                            });
                         }
-                        resolve(loginResult);
                     }
                 });
             });
@@ -229,7 +283,7 @@ class GunDB {
                 (0, logger_1.log)(error);
                 if (callback)
                     callback({ err: error });
-                reject(new Error(error));
+                resolve({ success: false, error });
                 return;
             }
             // Limpiezza: forziamo un reset di eventuali utenti precedenti
@@ -240,14 +294,22 @@ class GunDB {
             catch (e) {
                 // Ignoriamo errori qui
             }
+            // Imponiamo un timeout per evitare blocchi infiniti
+            const timeoutId = setTimeout(() => {
+                (0, logger_1.log)("Login timeout reached - resolving with error");
+                if (callback)
+                    callback({ err: "Login timeout" });
+                resolve({ success: false, error: "Login timeout" });
+            }, 3000); // 3 secondi di timeout
             // Eseguiamo login con una nuova istanza di Gun per evitare conflitti
             (0, logger_1.log)(`Performing auth with Gun for user: ${username}`);
             this.gun.user().auth(username, password, (ack) => {
+                clearTimeout(timeoutId);
                 if (ack.err) {
                     (0, logger_1.log)(`Login error: ${ack.err}`);
                     if (callback)
                         callback({ err: ack.err });
-                    reject(new Error(ack.err));
+                    resolve({ success: false, error: ack.err });
                 }
                 else {
                     (0, logger_1.log)("Authentication completed successfully");

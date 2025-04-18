@@ -34,6 +34,7 @@
   - [Creating a Plugin](#creating-a-plugin)
   - [Registering a Plugin](#registering-a-plugin)
   - [Using the Plugin](#using-the-plugin)
+- [Stealth Transactions](#stealth-transactions)
 - [Browser Integration](#browser-integration)
   - [Setup](#setup)
   - [Examples](#examples)
@@ -213,6 +214,28 @@ if (metamaskPlugin) {
 if (walletPlugin) {
   const wallet = await walletPlugin.createWallet();
   const mainWallet = walletPlugin.getMainWallet();
+}
+
+// Utilizzo dello Stealth Plugin
+if (shogun.hasPlugin(CorePlugins.Stealth)) {
+  const stealthPlugin = shogun.getPlugin(CorePlugins.Stealth);
+
+  // Genera un indirizzo stealth per ricevere pagamenti in modo privato
+  const stealthAddress = await stealthPlugin.generateStealthAddress();
+  console.log("Indirizzo stealth generato:", stealthAddress);
+
+  // Crea una transazione privata verso un indirizzo stealth
+  const receiverStealthAddress = "0xEccetera..."; // Indirizzo stealth del destinatario
+  const amount = "0.01"; // Quantità in ETH
+  const txResult = await stealthPlugin.createStealthTransaction(
+    receiverStealthAddress,
+    amount
+  );
+  console.log("Transazione stealth inviata:", txResult);
+
+  // Scansiona la blockchain per trovare pagamenti stealth indirizzati a te
+  const payments = await stealthPlugin.scanStealthPayments();
+  console.log("Pagamenti stealth trovati:", payments);
 }
 
 // Ottenere i plugin per categoria
@@ -491,6 +514,116 @@ Available categories include:
 - `PluginCategory.Privacy`: plugins for privacy and anonymization
 - `PluginCategory.Identity`: plugins for decentralized identity
 - `PluginCategory.Utility`: plugins for other functionalities
+
+## Stealth Transactions
+
+Shogun SDK supporta transazioni stealth per maggiore privacy nelle operazioni blockchain. Il plugin Stealth permette di creare indirizzi stealth che nascondono il vero destinatario di una transazione.
+
+```typescript
+import { ShogunCore, CorePlugins } from "shogun-core";
+
+// Inizializza Shogun con il plugin Stealth abilitato
+const shogun = new ShogunCore({
+  // Configurazione...
+  stealth: { enabled: true },
+});
+
+// Accesso al plugin Stealth
+const stealthPlugin = shogun.getPlugin(CorePlugins.Stealth);
+
+// Esempio di funzionalità Stealth
+
+// 1. Generazione di un nuovo indirizzo stealth
+async function generateStealthAddress() {
+  const stealthResult = await stealthPlugin.generateStealthAddress();
+  console.log("Nuovo indirizzo stealth:", stealthResult.stealthAddress);
+  console.log("Chiave di scansione:", stealthResult.scanKey);
+  return stealthResult;
+}
+
+// 2. Invio di una transazione stealth
+async function sendStealthPayment(recipientStealthAddress, amountInEth) {
+  try {
+    // Ottieni il wallet principale
+    const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
+    const senderWallet = walletPlugin.getMainWallet();
+
+    // Crea e invia la transazione stealth
+    const txResult = await stealthPlugin.createStealthTransaction(
+      recipientStealthAddress,
+      amountInEth,
+      {
+        gasLimit: 150000,
+        maxFeePerGas: "50", // in gwei
+      }
+    );
+
+    console.log("Transazione stealth inviata:", txResult);
+    console.log("Hash della transazione:", txResult.hash);
+
+    return txResult;
+  } catch (error) {
+    console.error("Errore nell'invio della transazione stealth:", error);
+    throw error;
+  }
+}
+
+// 3. Scansione per transazioni stealth in entrata
+async function scanForPayments() {
+  try {
+    // Scansiona la blockchain per pagamenti stealth ricevuti
+    const payments = await stealthPlugin.scanStealthPayments();
+
+    console.log(`Trovati ${payments.length} pagamenti stealth`);
+    payments.forEach((payment, index) => {
+      console.log(`Pagamento ${index + 1}:`);
+      console.log(`- Indirizzo: ${payment.address}`);
+      console.log(`- Valore: ${payment.amount} ETH`);
+      console.log(`- Blocco: ${payment.blockNumber}`);
+    });
+
+    return payments;
+  } catch (error) {
+    console.error("Errore durante la scansione dei pagamenti stealth:", error);
+    throw error;
+  }
+}
+
+// 4. Reclama una transazione stealth ricevuta
+async function claimStealthPayment(paymentInfo) {
+  try {
+    // Reclama il pagamento stealth spostando i fondi al wallet principale
+    const claimResult = await stealthPlugin.claimStealthPayment(
+      paymentInfo.address,
+      paymentInfo.privateKey
+    );
+
+    console.log("Pagamento stealth reclamato:", claimResult);
+    console.log("Hash della transazione di claim:", claimResult.hash);
+
+    return claimResult;
+  } catch (error) {
+    console.error("Errore nel reclamo del pagamento stealth:", error);
+    throw error;
+  }
+}
+```
+
+### Vantaggi delle Transazioni Stealth
+
+- **Maggiore Privacy**: Gli indirizzi stealth nascondono la vera identità del destinatario
+- **Transazioni Non Collegabili**: Ogni transazione utilizza un indirizzo diverso
+- **Compatibilità**: Funziona con qualsiasi portafoglio Ethereum
+- **Sicurezza**: Solo il destinatario può rilevare e riscattare i pagamenti stealth
+
+### Come Funziona
+
+1. **Generazione**: Il destinatario genera un indirizzo stealth utilizzando una chiave di scansione
+2. **Pagamento**: Il mittente utilizza l'indirizzo stealth per inviare fondi
+3. **Scansione**: Il destinatario scansiona la blockchain utilizzando la sua chiave di scansione
+4. **Reclamo**: Il destinatario reclama i fondi trasferendoli a un indirizzo di sua scelta
+
+Questa implementazione utilizza il protocollo Stealth Address per migliorare la privacy delle transazioni sulla blockchain Ethereum.
 
 ## Browser Integration
 

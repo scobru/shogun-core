@@ -107,4 +107,4 @@ export declare class Webauthn extends EventEmitter {
      */
     sign(data: Record<string, unknown>): Promise<unknown>;
 }
-export { WebAuthnCredentials, DeviceInfo, CredentialResult };
+export type { WebAuthnCredentials, DeviceInfo, CredentialResult };

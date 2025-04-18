@@ -1,3 +1,4 @@
+// Esporta l'interfaccia di base per i plugin
 export { BasePlugin } from "./base";
 // Esporta i plugin standard
 export * from "./wallet";

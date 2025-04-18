@@ -62,6 +62,26 @@ declare class GunDB {
      */
     getUser(): any;
     /**
+     * Get data from a specific path
+     * @param path - Path to get data from
+     * @returns Node reference
+     */
+    get(path: string): any;
+    /**
+     * Put data at a specific path
+     * @param path - Path to put data at
+     * @param data - Data to put
+     * @returns Promise with success result
+     */
+    put(path: string, data: any): Promise<any>;
+    /**
+     * Set data in a collection
+     * @param path - Path to collection
+     * @param data - Data to set
+     * @returns Promise with success result
+     */
+    set(path: string, data: any): Promise<any>;
+    /**
      * Set certificate for current user
      * @param certificate - Certificate to use
      */

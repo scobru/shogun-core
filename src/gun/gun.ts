@@ -107,7 +107,7 @@ class GunDB {
    */
   private async retry<T>(
     operation: () => Promise<T>,
-    context: string,
+    context: string
   ): Promise<T> {
     let lastError: Error;
 
@@ -140,7 +140,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -208,6 +208,51 @@ class GunDB {
   }
 
   /**
+   * Get data from a specific path
+   * @param path - Path to get data from
+   * @returns Node reference
+   */
+  get(path: string): any {
+    return this.gun.get(path);
+  }
+
+  /**
+   * Put data at a specific path
+   * @param path - Path to put data at
+   * @param data - Data to put
+   * @returns Promise with success result
+   */
+  async put(path: string, data: any): Promise<any> {
+    return new Promise((resolve) => {
+      this.gun.get(path).put(data, (ack: any) => {
+        if (ack.err) {
+          resolve({ success: false, error: ack.err });
+        } else {
+          resolve({ success: true });
+        }
+      });
+    });
+  }
+
+  /**
+   * Set data in a collection
+   * @param path - Path to collection
+   * @param data - Data to set
+   * @returns Promise with success result
+   */
+  async set(path: string, data: any): Promise<any> {
+    return new Promise((resolve) => {
+      this.gun.get(path).set(data, (ack: any) => {
+        if (ack.err) {
+          resolve({ success: false, error: ack.err });
+        } else {
+          resolve({ success: true });
+        }
+      });
+    });
+  }
+
+  /**
    * Set certificate for current user
    * @param certificate - Certificate to use
    */
@@ -242,15 +287,22 @@ class GunDB {
             resolve({ success: false, error: ack.err });
           } else {
             // Automatic login after registration
-            const loginResult = await this.login(username, password);
-
-            if (loginResult.success) {
-              log("Registration and login completed successfully");
-            } else {
-              logError("Registration completed but login failed");
+            try {
+              const loginResult = await this.login(username, password);
+              if (loginResult.success) {
+                log("Registration and login completed successfully");
+              } else {
+                logError("Registration completed but login failed");
+              }
+              resolve(loginResult);
+            } catch (error) {
+              resolve({
+                success: true,
+                userPub: ack.pub,
+                username,
+                loginError: "Auto-login failed, but registration successful",
+              });
             }
-
-            resolve(loginResult);
           }
         });
       });
@@ -273,7 +325,7 @@ class GunDB {
   login(
     username: string,
     password: string,
-    callback?: (result: any) => void,
+    callback?: (result: any) => void
   ): Promise<any> {
     log(`Attempting login for user: ${username}`);
 
@@ -282,7 +334,7 @@ class GunDB {
         const error = "Username and password are required";
         log(error);
         if (callback) callback({ err: error });
-        reject(new Error(error));
+        resolve({ success: false, error });
         return;
       }
 
@@ -294,13 +346,22 @@ class GunDB {
         // Ignoriamo errori qui
       }
 
+      // Imponiamo un timeout per evitare blocchi infiniti
+      const timeoutId = setTimeout(() => {
+        log("Login timeout reached - resolving with error");
+        if (callback) callback({ err: "Login timeout" });
+        resolve({ success: false, error: "Login timeout" });
+      }, 3000); // 3 secondi di timeout
+
       // Eseguiamo login con una nuova istanza di Gun per evitare conflitti
       log(`Performing auth with Gun for user: ${username}`);
       this.gun.user().auth(username, password, (ack: any) => {
+        clearTimeout(timeoutId);
+
         if (ack.err) {
           log(`Login error: ${ack.err}`);
           if (callback) callback({ err: ack.err });
-          reject(new Error(ack.err));
+          resolve({ success: false, error: ack.err });
         } else {
           log("Authentication completed successfully");
           // Salviamo il pair
@@ -399,7 +460,7 @@ class GunDB {
   private async saveWithRetry(
     node: any,
     data: any,
-    options?: any,
+    options?: any
   ): Promise<any> {
     return this.retry(
       () =>
@@ -410,10 +471,10 @@ class GunDB {
               if (ack.err) reject(new Error(ack.err));
               else resolve(data);
             },
-            options,
+            options
           );
         }),
-      "data save operation",
+      "data save operation"
     );
   }
 
@@ -426,7 +487,7 @@ class GunDB {
         new Promise((resolve) => {
           node.once((data: any) => resolve(data));
         }),
-      "data read operation",
+      "data read operation"
     );
   }
 
@@ -449,7 +510,7 @@ class GunDB {
         ErrorType.GUN,
         "SAVE_USER_DATA_ERROR",
         `Error saving data to path ${path}`,
-        error,
+        error
       );
       throw error;
     }
@@ -478,7 +539,7 @@ class GunDB {
         ErrorType.GUN,
         "GET_USER_DATA_ERROR",
         `Error retrieving data from path ${path}`,
-        error,
+        error
       );
       throw error;
     }
@@ -507,7 +568,7 @@ class GunDB {
               resolve(data);
             }
           },
-          options,
+          options
         );
     });
   }
