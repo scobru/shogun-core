@@ -73,7 +73,7 @@ const mockGun = {
     once: jest.fn().mockImplementation((cb) => {
       if (path === "master_mnemonic") {
         cb(
-          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
         );
       } else if (path === "wallet_paths") {
         cb({
@@ -113,7 +113,7 @@ global.Gun = {
     decrypt: jest.fn().mockImplementation((data) => {
       if (data === "mnemonic-criptato") {
         return Promise.resolve(
-          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
         );
       } else if (data === "chiavi-criptate") {
         return Promise.resolve(
@@ -126,7 +126,7 @@ global.Gun = {
                 path: "m/44'/60'/0'/0/0",
               },
             ],
-          })
+          }),
         );
       }
       return Promise.resolve(data);
@@ -253,7 +253,7 @@ describe("WalletManager", () => {
     expect(newManager.gun).toBe(mockGun);
     expect(newManager.storage).toBe(storage);
     expect(newManager.config.rpcUrl).toBe(
-      "https://ethereum-goerli.publicnode.com"
+      "https://ethereum-goerli.publicnode.com",
     );
   });
 
@@ -288,13 +288,13 @@ describe("WalletManager", () => {
       // Chiamiamo il metodo
       await walletManager.saveWalletPath(
         "0x1234567890123456789012345678901234567890",
-        "m/44'/60'/0'/0/0"
+        "m/44'/60'/0'/0/0",
       );
 
       // Verifichiamo che il metodo sia stato chiamato
       expect(spyMethod).toHaveBeenCalledWith(
         "0x1234567890123456789012345678901234567890",
-        "m/44'/60'/0'/0/0"
+        "m/44'/60'/0'/0/0",
       );
     } finally {
       // Ripristiniamo il metodo originale
@@ -327,7 +327,7 @@ describe("WalletManager", () => {
   test("dovrebbe recuperare il mnemonic dell'utente", async () => {
     const mnemonic = await walletManager.getUserMnemonic();
     expect(mnemonic).toBe(
-      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
     );
   });
 

@@ -1600,15 +1600,6 @@ class WalletManager extends eventEmitter_1.EventEmitter {
     async deriveWallet(path) {
         try {
             // Per i test, ritorniamo un wallet predefinito
-            if (process.env.NODE_ENV === "test") {
-                return {
-                    address: "0x1234567890123456789012345678901234567890",
-                    privateKey: "0xprivatekey",
-                    signMessage: jest.fn
-                        ? jest.fn().mockResolvedValue("0xfirma123")
-                        : () => { },
-                };
-            }
             // Ottieni il mnemonic dell'utente
             const mnemonic = await this.getUserMasterMnemonic();
             if (!mnemonic) {

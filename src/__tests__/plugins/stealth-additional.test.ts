@@ -44,7 +44,7 @@ global.Gun = {
         priv: "testPriv123",
         epub: "testEpub123",
         epriv: "testEpriv123",
-      })
+      }),
     ),
     secret: jest.fn().mockImplementation((pubKey, pair, cb) => {
       if (typeof cb === "function") {
@@ -92,7 +92,7 @@ describe("StealthAddresses", () => {
     // Generiamo un indirizzo stealth usando le chiavi
     const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
-      keys.spending.publicKey
+      keys.spending.publicKey,
     );
 
     expect(stealthAddress).toBeDefined();
@@ -107,14 +107,14 @@ describe("StealthAddresses", () => {
     // Generiamo un indirizzo stealth
     const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
-      keys.spending.publicKey
+      keys.spending.publicKey,
     );
 
     // Recuperiamo la chiave privata
     const privateKey = stealth.scanningKeyToPrivateKey(
       keys.scanning.privateKey,
       keys.spending.privateKey,
-      stealthAddress.ephemeralPublicKey
+      stealthAddress.ephemeralPublicKey,
     );
 
     expect(privateKey).toBeDefined();
@@ -127,13 +127,13 @@ describe("StealthAddresses", () => {
     // Generiamo un indirizzo stealth
     const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
-      keys.spending.publicKey
+      keys.spending.publicKey,
     );
 
     // Generiamo i metadati
     const metadata = stealth.generateStealthMetadata(
       stealthAddress.ephemeralPublicKey,
-      stealthAddress.stealthAddress
+      stealthAddress.stealthAddress,
     );
 
     expect(metadata).toBeDefined();
@@ -151,13 +151,13 @@ describe("StealthAddresses", () => {
     // Generiamo un indirizzo stealth
     const stealthAddress = await stealth.generateStealthAddress(
       keys.scanning.publicKey,
-      keys.spending.publicKey
+      keys.spending.publicKey,
     );
 
     // Generiamo i metadati
     const metadata = stealth.generateStealthMetadata(
       stealthAddress.ephemeralPublicKey,
-      stealthAddress.stealthAddress
+      stealthAddress.stealthAddress,
     );
 
     // Verifichiamo l'indirizzo
@@ -165,7 +165,7 @@ describe("StealthAddresses", () => {
       metadata.ephemeralPublicKey,
       keys.scanning.publicKey,
       keys.spending.publicKey,
-      metadata.stealthAddress
+      metadata.stealthAddress,
     );
 
     expect(isValid).toBeTruthy();

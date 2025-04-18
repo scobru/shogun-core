@@ -147,7 +147,7 @@ export class ShogunCore implements IShogunCore {
       // Default provider (can be replaced as needed)
       this.provider = ethers.getDefaultProvider("mainnet");
       log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL."
+        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
       );
     }
 
@@ -336,7 +336,7 @@ export class ShogunCore implements IShogunCore {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean
+    matchFn?: (data: any) => boolean,
   ): Observable<T[]> {
     return this.rx.match<T>(path, matchFn);
   }
@@ -378,7 +378,7 @@ export class ShogunCore implements IShogunCore {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R
+    computeFn: (...values: T[]) => R,
   ): Observable<R> {
     return this.rx.compute<T, R>(sources, computeFn);
   }
@@ -481,7 +481,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -569,7 +569,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error
+        error,
       );
 
       return {
@@ -591,7 +591,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -711,7 +711,7 @@ export class ShogunCore implements IShogunCore {
    * @private
    */
   private async ensureUserHasDID(
-    options?: DIDCreateOptions
+    options?: DIDCreateOptions,
   ): Promise<string | null> {
     try {
       const didPlugin = this.getPlugin<DIDPluginInterface>("did");
@@ -737,7 +737,7 @@ export class ShogunCore implements IShogunCore {
    */
   private createUserWithGunDB(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     log(`Ensuring user exists with GunDB: ${username}`);
 
@@ -796,7 +796,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`
+          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`,
         );
         const createResult = await createUser();
 
@@ -810,7 +810,7 @@ export class ShogunCore implements IShogunCore {
         }
 
         log(
-          `User created successfully, attempting login again for confirmation...`
+          `User created successfully, attempting login again for confirmation...`,
         );
         loginResult = await authUser();
 
@@ -822,7 +822,7 @@ export class ShogunCore implements IShogunCore {
           });
         } else {
           logError(
-            `Post-creation login failed unexpectedly: ${loginResult.err}`
+            `Post-creation login failed unexpectedly: ${loginResult.err}`,
           );
           resolve({
             success: false,

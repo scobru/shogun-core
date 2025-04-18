@@ -49,7 +49,7 @@ export function createError(
   type: ErrorType,
   code: string,
   message: string,
-  originalError?: Error | unknown
+  originalError?: Error | unknown,
 ): ShogunError {
   return {
     type,
@@ -92,7 +92,7 @@ export interface ErrorResult {
  */
 export function handleError(
   error: any,
-  options: ErrorOptions = {}
+  options: ErrorOptions = {},
 ): ErrorResult | any {
   // Impostazioni di default
   const {
@@ -169,7 +169,7 @@ export class ErrorHandler {
     code: string,
     message: string,
     originalError?: Error | unknown,
-    logLevel: LogLevel = "error"
+    logLevel: LogLevel = "error",
   ): ShogunError {
     // Create a formatted error message
     const finalMessage = originalError
@@ -280,7 +280,7 @@ export class ErrorHandler {
     errorType: ErrorType,
     errorCode: string,
     maxRetries = 3,
-    retryDelay = 1000
+    retryDelay = 1000,
   ): Promise<T> {
     let lastError: unknown;
 
@@ -293,7 +293,7 @@ export class ErrorHandler {
 
         if (attempt < maxRetries) {
           log(
-            `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`
+            `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`,
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
@@ -305,7 +305,7 @@ export class ErrorHandler {
       errorType,
       errorCode,
       `Operation failed after ${maxRetries} attempts`,
-      lastError
+      lastError,
     );
   }
 }
