@@ -1,4 +1,4 @@
-import { ShogunCore } from "../src/index";
+import { ShogunCore } from "../index";
 import { Observable, combineLatest } from "rxjs";
 import { map, switchMap, filter, take } from "rxjs/operators";
 

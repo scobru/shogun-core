@@ -23,6 +23,7 @@ export class WalletManager extends EventEmitter {
         this.mainWallet = null;
         this.balanceCache = new Map();
         this.pendingTransactions = new Map();
+        this.transactionMonitoringInterval = null;
         this.gun = gun;
         this.storage = storage;
         this.config = {
@@ -148,11 +149,24 @@ export class WalletManager extends EventEmitter {
      * Setup transaction monitoring
      */
     setupTransactionMonitoring() {
-        setInterval(() => {
+        this.transactionMonitoringInterval = setInterval(() => {
             if (this.getProvider() !== null) {
                 this.checkPendingTransactions();
             }
-        }, 15000); // Check every 15 seconds
+        }, 15000);
+    }
+    cleanup() {
+        if (this.transactionMonitoringInterval) {
+            clearInterval(this.transactionMonitoringInterval);
+            this.transactionMonitoringInterval = null;
+        }
+        // Pulisci eventuali altri timer
+        const globalObj = typeof window !== "undefined" ? window : global;
+        const highestTimeoutId = Number(setTimeout(() => { }, 0));
+        for (let i = 0; i < highestTimeoutId; i++) {
+            clearTimeout(i);
+            clearInterval(i);
+        }
     }
     /**
      * Check status of pending transactions

@@ -18,18 +18,21 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:esm && npm run build:cjs && npm run build:browser",
+    "build": "npm run build:esm && npm run build:cjs && npm run build:browser && npm run clean-mocks",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs",
     "build:browser": "webpack --config webpack.config.cjs",
     "build:light": "webpack --config webpack.light.config.cjs",
     "build:all": "npm run build && npm run build:light",
+    "clean-mocks": "node clean-mocks.js",
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
     "test:watch": "jest --watch --runInBand",
-    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
+    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit",
+    "prebuild": "rimraf dist",
+    "test:clean": "npm run clean-mocks && npm run test"
   },
   "keywords": [
     "gun",
@@ -59,6 +62,7 @@
     "path-browserify": "^1.0.1",
     "prettier": "^3.5.3",
     "process": "^0.11.10",
+    "rimraf": "^5.0.5",
     "rollup-plugin-polyfill-node": "^0.8.0",
     "stream-browserify": "^3.0.0",
     "ts-jest": "^29.3.2",

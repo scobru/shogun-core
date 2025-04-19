@@ -39,7 +39,7 @@ const mockGun = {
       once: jest.fn().mockImplementation((cb) => {
         if (path === "master_mnemonic") {
           cb(
-            "test one two three four five six seven eight nine ten eleven twelve"
+            "test one two three four five six seven eight nine ten eleven twelve",
           );
         } else if (path === "wallet_paths") {
           cb({
@@ -97,7 +97,7 @@ global.Gun = {
     decrypt: jest.fn().mockImplementation((data) => {
       if (data === "encrypted-mnemonic") {
         return Promise.resolve(
-          "test one two three four five six seven eight nine ten eleven twelve"
+          "test one two three four five six seven eight nine ten eleven twelve",
         );
       }
       return Promise.resolve(data);
@@ -168,7 +168,7 @@ describe("WalletManager - Transazioni", () => {
     walletManager.generateNewMnemonic = jest
       .fn()
       .mockReturnValue(
-        "test one two three four five six seven eight nine ten eleven twelve"
+        "test one two three four five six seven eight nine ten eleven twelve",
       );
 
     walletManager.getProvider = jest.fn().mockReturnValue(mockProvider);
@@ -202,7 +202,7 @@ describe("WalletManager - Transazioni", () => {
   test("dovrebbe recuperare il mnemonic dell'utente", async () => {
     const mnemonic = await walletManager.getUserMasterMnemonic();
     expect(mnemonic).toBe(
-      "test one two three four five six seven eight nine ten eleven twelve"
+      "test one two three four five six seven eight nine ten eleven twelve",
     );
   });
 
@@ -213,7 +213,7 @@ describe("WalletManager - Transazioni", () => {
     const result = await walletManager.sendTransaction(
       { address: "0x1234567890123456789012345678901234567890" },
       "0x2345678901234567890123456789012345678901",
-      "0.01"
+      "0.01",
     );
 
     expect(result).toBeDefined();
@@ -230,7 +230,7 @@ describe("WalletManager - Transazioni", () => {
     // Il metodo originale di signMessage dovrebbe funzionare
     const signature = await walletManager.signMessage(
       mockWallet,
-      "Test message"
+      "Test message",
     );
 
     expect(signature).toBeDefined();
@@ -248,7 +248,7 @@ describe("WalletManager - Transazioni", () => {
       await walletManager.sendTransaction(
         { address: "0x1234567890123456789012345678901234567890" },
         "0x2345678901234567890123456789012345678901",
-        "0.01"
+        "0.01",
       );
       // Dovrebbe lanciare un errore, quindi non dovremmo arrivare qui
       expect(true).toBe(false);

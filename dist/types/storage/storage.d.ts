@@ -6,6 +6,7 @@
 export declare class ShogunStorage {
     private store;
     private isTestMode;
+    private useLocalStorage;
     /**
      * Initializes storage and loads any existing keypair from localStorage if available
      */

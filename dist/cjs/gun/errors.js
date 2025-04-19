@@ -1,11 +1,11 @@
 "use strict";
 /**
- * Classi di errore per Gun e Auth
+ * Error classes for Gun and Auth
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NetworkError = exports.MultipleAuthError = exports.TimeoutError = exports.UserExists = exports.InvalidCredentials = exports.AuthError = exports.GunError = void 0;
 /**
- * Errore di base per Gun
+ * Base error for Gun
  */
 class GunError extends Error {
     constructor(message) {
@@ -15,7 +15,7 @@ class GunError extends Error {
 }
 exports.GunError = GunError;
 /**
- * Errore di autenticazione generico
+ * Generic authentication error
  */
 class AuthError extends GunError {
     constructor(message) {
@@ -25,7 +25,7 @@ class AuthError extends GunError {
 }
 exports.AuthError = AuthError;
 /**
- * Errore di credenziali non valide
+ * Invalid credentials error
  */
 class InvalidCredentials extends AuthError {
     constructor(message = "Credenziali non valide") {
@@ -35,7 +35,7 @@ class InvalidCredentials extends AuthError {
 }
 exports.InvalidCredentials = InvalidCredentials;
 /**
- * Errore di utente già esistente
+ * User already exists error
  */
 class UserExists extends AuthError {
     constructor(message = "Utente già esistente") {
@@ -45,7 +45,7 @@ class UserExists extends AuthError {
 }
 exports.UserExists = UserExists;
 /**
- * Errore di timeout
+ * Timeout error
  */
 class TimeoutError extends GunError {
     constructor(message = "Timeout durante l'operazione") {
@@ -55,7 +55,7 @@ class TimeoutError extends GunError {
 }
 exports.TimeoutError = TimeoutError;
 /**
- * Errore di multiple autenticazioni
+ * Multiple authentication error
  */
 class MultipleAuthError extends AuthError {
     constructor(message = "Autenticazione multipla in corso") {

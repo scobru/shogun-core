@@ -14,17 +14,24 @@ class ShogunStorage {
         this.store = new Map();
         // Controlla se siamo in ambiente di test
         this.isTestMode = process.env.NODE_ENV === "test";
-        // Try loading data from localStorage in browser environments
-        if (typeof localStorage !== "undefined") {
+        this.useLocalStorage = false;
+        // Check if localStorage is available
+        if (typeof localStorage !== "undefined" && !this.isTestMode) {
             try {
+                // Test localStorage access
+                localStorage.setItem("_shogun_test", "_shogun_test");
+                localStorage.removeItem("_shogun_test");
+                this.useLocalStorage = true;
+                // Load existing keypair if available
                 const storedPair = localStorage.getItem("shogun_keypair");
                 if (storedPair) {
                     this.store.set("keypair", JSON.parse(storedPair));
                 }
             }
             catch (error) {
+                this.useLocalStorage = false;
                 if (!this.isTestMode) {
-                    console.error("Error retrieving data from localStorage:", error);
+                    console.error("localStorage not available:", error);
                 }
             }
         }
@@ -50,7 +57,7 @@ class ShogunStorage {
     async setPair(pair) {
         this.store.set("keypair", pair);
         // Also save to localStorage in browser environments
-        if (typeof localStorage !== "undefined") {
+        if (this.useLocalStorage) {
             try {
                 localStorage.setItem("shogun_keypair", JSON.stringify(pair));
             }
@@ -67,7 +74,7 @@ class ShogunStorage {
     clearAll() {
         this.store.clear();
         // Also clear localStorage in browser environments
-        if (typeof localStorage !== "undefined") {
+        if (this.useLocalStorage) {
             try {
                 localStorage.removeItem("shogun_keypair");
             }
@@ -97,7 +104,7 @@ class ShogunStorage {
             const parsedValue = JSON.parse(value);
             this.store.set(key, parsedValue);
             // Also save to localStorage in browser environments
-            if (typeof localStorage !== "undefined") {
+            if (this.useLocalStorage) {
                 try {
                     localStorage.setItem(key, value);
                 }
@@ -112,7 +119,7 @@ class ShogunStorage {
             // If not valid JSON, store as string
             this.store.set(key, value);
             // Also save to localStorage in browser environments
-            if (typeof localStorage !== "undefined") {
+            if (this.useLocalStorage) {
                 try {
                     localStorage.setItem(key, value);
                 }
@@ -131,7 +138,7 @@ class ShogunStorage {
     removeItem(key) {
         this.store.delete(key);
         // Also remove from localStorage in browser environments
-        if (typeof localStorage !== "undefined") {
+        if (this.useLocalStorage) {
             try {
                 localStorage.removeItem(key);
             }

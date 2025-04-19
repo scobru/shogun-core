@@ -75,11 +75,11 @@ export class StealthPlugin
    */
   async generateStealthAddress(
     publicKey: string,
-    ephemeralPrivateKey: string
+    ephemeralPrivateKey: string,
   ): Promise<StealthAddressResult> {
     return this.assertStealth().generateStealthAddress(
       publicKey,
-      ephemeralPrivateKey
+      ephemeralPrivateKey,
     );
   }
 
@@ -88,11 +88,11 @@ export class StealthPlugin
    */
   async scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<StealthData[]> {
     return this.assertStealth().scanStealthAddresses(
       addresses,
-      privateKeyOrSpendKey
+      privateKeyOrSpendKey,
     );
   }
 
@@ -101,11 +101,11 @@ export class StealthPlugin
    */
   async isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<boolean> {
     return this.assertStealth().isStealthAddressMine(
       stealthData,
-      privateKeyOrSpendKey
+      privateKeyOrSpendKey,
     );
   }
 
@@ -114,11 +114,11 @@ export class StealthPlugin
    */
   async getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise<string> {
     return this.assertStealth().getStealthPrivateKey(
       stealthData,
-      privateKeyOrSpendKey
+      privateKeyOrSpendKey,
     );
   }
 
@@ -128,12 +128,12 @@ export class StealthPlugin
   async openStealthAddress(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair
+    pair: EphemeralKeyPair,
   ): Promise<ethers.Wallet> {
     return this.assertStealth().openStealthAddress(
       stealthAddress,
       ephemeralPublicKey,
-      pair
+      pair,
     );
   }
 }

@@ -21,7 +21,7 @@ describe("ShogunStorage", () => {
     storage.setItem(testKey, testValueStr);
     const retrievedValue = storage.getItem(testKey);
     expect(retrievedValue !== null ? JSON.parse(retrievedValue) : null).toEqual(
-      testValue
+      testValue,
     );
   });
 
@@ -59,7 +59,7 @@ describe("ShogunStorage", () => {
     storage.setItem(testKey, JSON.stringify(complexData));
     const retrievedValue = storage.getItem(testKey);
     expect(retrievedValue !== null ? JSON.parse(retrievedValue) : null).toEqual(
-      complexData
+      complexData,
     );
   });
 
@@ -67,19 +67,19 @@ describe("ShogunStorage", () => {
     // Salva i metodi originali
     const originalGetItem = Object.getOwnPropertyDescriptor(
       Storage.prototype,
-      "getItem"
+      "getItem",
     );
     const originalSetItem = Object.getOwnPropertyDescriptor(
       Storage.prototype,
-      "setItem"
+      "setItem",
     );
     const originalRemoveItem = Object.getOwnPropertyDescriptor(
       Storage.prototype,
-      "removeItem"
+      "removeItem",
     );
     const originalClear = Object.getOwnPropertyDescriptor(
       Storage.prototype,
-      "clear"
+      "clear",
     );
 
     // Ridefinisci i metodi per lanciare errori
@@ -130,7 +130,7 @@ describe("ShogunStorage", () => {
         Object.defineProperty(
           Storage.prototype,
           "removeItem",
-          originalRemoveItem
+          originalRemoveItem,
         );
       if (originalClear)
         Object.defineProperty(Storage.prototype, "clear", originalClear);

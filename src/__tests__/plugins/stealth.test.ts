@@ -215,7 +215,7 @@ describe("Stealth", () => {
     expect((stealth as any).lastMethodUsed).toBe("unknown");
     expect((stealth as any).logs).toHaveLength(1);
     expect((stealth as any).logs[0].message).toBe(
-      "Sensitive data cleanup completed"
+      "Sensitive data cleanup completed",
     );
   });
 
@@ -224,7 +224,7 @@ describe("Stealth", () => {
     jest
       .spyOn(ethers, "keccak256")
       .mockReturnValue(
-        "0x61fe818178a7993728303a9b0bba572747585f93ceb3d8af19fe23ce1c103855"
+        "0x61fe818178a7993728303a9b0bba572747585f93ceb3d8af19fe23ce1c103855",
       );
     jest.spyOn(ethers, "Wallet").mockReturnValue({
       address: "0xdB078fA5af9f38ACc32BBdbAfd30616514D8617F",
@@ -236,7 +236,7 @@ describe("Stealth", () => {
     expect(wallet).toBeDefined();
     expect(wallet.address).toBe("0xdB078fA5af9f38ACc32BBdbAfd30616514D8617F");
     expect(wallet.privateKey).toBe(
-      "0x61fe818178a7993728303a9b0bba572747585f93ceb3d8af19fe23ce1c103855"
+      "0x61fe818178a7993728303a9b0bba572747585f93ceb3d8af19fe23ce1c103855",
     );
   });
 
@@ -285,10 +285,10 @@ describe("Stealth", () => {
 
     // Verifica che le chiavi pubbliche siano state salvate
     expect(savedData.ephemeralKeyPair.pub).toBe(
-      stealthData.ephemeralKeyPair.pub
+      stealthData.ephemeralKeyPair.pub,
     );
     expect(savedData.ephemeralKeyPair.epub).toBe(
-      stealthData.ephemeralKeyPair.epub
+      stealthData.ephemeralKeyPair.epub,
     );
     // Verifica altri campi
     expect(savedData.recipientPublicKey).toBe(stealthData.recipientPublicKey);
@@ -319,12 +319,12 @@ describe("Stealth", () => {
 
     const result = await stealth.isStealthAddressMine(
       stealthData,
-      userPrivateKey
+      userPrivateKey,
     );
     expect(result).toBe(true);
     expect(stealth.getStealthPrivateKey).toHaveBeenCalledWith(
       stealthData,
-      userPrivateKey
+      userPrivateKey,
     );
   });
 
@@ -366,7 +366,7 @@ describe("Stealth", () => {
 
     const result = await stealth.getStealthPrivateKey(
       stealthData,
-      userPrivateKey
+      userPrivateKey,
     );
 
     // Verifica che SEA.secret NON sia stato chiamato
@@ -374,7 +374,7 @@ describe("Stealth", () => {
 
     // Il risultato è il keccak256 del segreto fornito
     const expectedPrivateKey = ethers.keccak256(
-      ethers.toUtf8Bytes("alreadyKnownSecret")
+      ethers.toUtf8Bytes("alreadyKnownSecret"),
     );
     expect(result).toBe(expectedPrivateKey);
   });
@@ -391,7 +391,7 @@ describe("Stealth", () => {
           address: "0x1234567890123456789012345678901234567890",
           privateKey: mockPrivateKey,
           publicKey: mockPublicKey,
-        }) as any
+        }) as any,
     );
 
     const keys = stealth.generateStealthKeys();
@@ -413,7 +413,7 @@ describe("Stealth", () => {
       "ephemeralPublicKey123",
       "scanningPublicKey123",
       "spendingPublicKey123",
-      "stealthAddress123"
+      "stealthAddress123",
     );
     expect(result).toBe(true);
   });
@@ -423,7 +423,7 @@ describe("Stealth", () => {
     const result = stealth.scanningKeyToPrivateKey(
       "scanningPrivateKey123",
       "spendingPrivateKey123",
-      "ephemeralPublicKey123"
+      "ephemeralPublicKey123",
     );
     expect(result).toBe("derived-private-key");
   });
@@ -434,7 +434,7 @@ describe("Stealth", () => {
 
     const metadata = stealth.generateStealthMetadata(
       ephemeralPublicKey,
-      stealthAddress
+      stealthAddress,
     );
 
     expect(metadata).toBeDefined();
@@ -471,7 +471,7 @@ describe("Stealth", () => {
 
     const result = await stealth.scanStealthAddresses(
       addresses,
-      "privateKey123"
+      "privateKey123",
     );
 
     expect(result.length).toBe(1); // Solo il primo
@@ -507,7 +507,7 @@ describe("Stealth", () => {
 
     try {
       await expect(stealth.generateEphemeralKeyPair()).rejects.toThrow(
-        mockError
+        mockError,
       );
       expect(spy).toHaveBeenCalled();
     } finally {
@@ -519,7 +519,7 @@ describe("Stealth", () => {
   test.skip("dovrebbe generare un indirizzo stealth", async () => {
     // Mock complessi per SEA.secret, ethers.Wallet, ecc.
     const result = await stealth.generateStealthAddress(
-      "recipientPublicKey123"
+      "recipientPublicKey123",
     );
     expect(result).toBeDefined();
   });
@@ -527,7 +527,7 @@ describe("Stealth", () => {
   test.skip("dovrebbe generare un indirizzo stealth con chiave privata effimera fornita", async () => {
     const result = await stealth.generateStealthAddress(
       "recipientPublicKey123",
-      "0x" + "e".repeat(64)
+      "0x" + "e".repeat(64),
     );
     expect(result).toBeDefined();
   });
@@ -535,10 +535,10 @@ describe("Stealth", () => {
   test("dovrebbe lanciare un errore per chiave pubblica del destinatario mancante in generateStealthAddress", async () => {
     // L'errore viene lanciato prima della chiamata a SEA
     await expect(stealth.generateStealthAddress("")).rejects.toThrow(
-      "Invalid keys"
+      "Invalid keys",
     );
     await expect(stealth.generateStealthAddress(null as any)).rejects.toThrow(
-      "Invalid keys"
+      "Invalid keys",
     );
   });
 
@@ -555,7 +555,7 @@ describe("Stealth", () => {
     const wallet = await stealth.openStealthAddress(
       stealthAddress,
       "epub123",
-      {} as EphemeralKeyPair /* pair non usato qui */
+      {} as EphemeralKeyPair /* pair non usato qui */,
     );
     expect(wallet).toBeDefined();
     expect(wallet.address).toBe(stealthAddress);
@@ -589,7 +589,7 @@ describe("Stealth", () => {
     expect(openStandardSpy).toHaveBeenCalledWith(
       stealthAddress,
       "epub123",
-      expect.anything()
+      expect.anything(),
     );
   });
   // --- Fine test saltati ---
@@ -616,13 +616,13 @@ describe("Stealth", () => {
       epriv: "epriv",
     } as any;
     expect(() =>
-      stealth.prepareStealthKeysForSaving(invalidKeyPairMissingPriv)
+      stealth.prepareStealthKeysForSaving(invalidKeyPairMissingPriv),
     ).toThrow("Invalid stealth keys");
     expect(() =>
-      stealth.prepareStealthKeysForSaving(invalidKeyPairMissingEpub)
+      stealth.prepareStealthKeysForSaving(invalidKeyPairMissingEpub),
     ).toThrow("Invalid stealth keys");
     expect(() => stealth.prepareStealthKeysForSaving(null as any)).toThrow(
-      "Invalid stealth keys"
+      "Invalid stealth keys",
     );
   });
 
@@ -712,7 +712,7 @@ describe("Stealth", () => {
     // Verifica che console.error (il mock) sia stato chiamato
     expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining("Error during stealth data validation"),
-      expect.any(Error)
+      expect.any(Error),
     );
   });
 

@@ -152,7 +152,8 @@ class Stealth {
             };
         }
         catch (error) {
-            console.error("Error creating stealth account:", error);
+            this.log("error", "Error creating stealth account:", error);
+            // Propaga l'errore per gestirlo correttamente nei test
             throw error;
         }
     }
@@ -173,6 +174,7 @@ class Stealth {
         }
         catch (error) {
             this.log("error", "Error generating ephemeral key pair", error);
+            // Propaga l'errore preciso per gestirlo nei test
             throw error;
         }
     }

@@ -1,38 +1,38 @@
 /**
- * Classi di errore per Gun e Auth
+ * Error classes for Gun and Auth
  */
 /**
- * Errore di base per Gun
+ * Base error for Gun
  */
 export declare class GunError extends Error {
     constructor(message: string);
 }
 /**
- * Errore di autenticazione generico
+ * Generic authentication error
  */
 export declare class AuthError extends GunError {
     constructor(message: string);
 }
 /**
- * Errore di credenziali non valide
+ * Invalid credentials error
  */
 export declare class InvalidCredentials extends AuthError {
     constructor(message?: string);
 }
 /**
- * Errore di utente già esistente
+ * User already exists error
  */
 export declare class UserExists extends AuthError {
     constructor(message?: string);
 }
 /**
- * Errore di timeout
+ * Timeout error
  */
 export declare class TimeoutError extends GunError {
     constructor(message?: string);
 }
 /**
- * Errore di multiple autenticazioni
+ * Multiple authentication error
  */
 export declare class MultipleAuthError extends AuthError {
     constructor(message?: string);

@@ -37,9 +37,4 @@ module.exports = {
   collectCoverage: true,
   coverageReporters: ["lcov", "text", "html"],
   coverageDirectory: "coverage",
-  globals: {
-    "ts-jest": {
-      tsconfig: "tsconfig.json",
-    },
-  },
 };

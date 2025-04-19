@@ -1,12 +1,12 @@
 import { stringify } from "qs";
 
 /**
- * Estrae l'ID di un nodo Gun
+ * Extracts the ID of a Gun node
  */
 export const getId = (node: { _: { [x: string]: any } }) => node?._?.["#"];
 
 /**
- * Estrae la chiave pubblica da un ID Gun (es: ~pubKey)
+ * Extracts the public key from a Gun ID (e.g., ~pubKey)
  */
 export const getPub = (id: string) => {
   const match = /~([^@][^\.]+\.[^\.]+)/.exec(id);
@@ -14,7 +14,7 @@ export const getPub = (id: string) => {
 };
 
 /**
- * Estrae la chiave pubblica finale da ID concatenato (es: trust chain)
+ * Extracts the final public key from a concatenated ID (e.g., trust chain)
  */
 export const getTargetPub = (id: string) => {
   const match = /~[^@][^\.]+\.[^\.]+.*~([^@][^\.]+\.[^\.]+)$/.exec(id);
@@ -22,7 +22,7 @@ export const getTargetPub = (id: string) => {
 };
 
 /**
- * UUID unico generato dalla configurazione di Gun
+ * Generates a unique UUID from Gun configuration
  */
 export const getUUID = (gun: {
   opt: () => {
@@ -37,7 +37,7 @@ export const getUUID = (gun: {
 }) => gun.opt()._.opt.uuid();
 
 /**
- * Converte un set Gun in un array di nodi
+ * Converts a Gun set into an array of nodes
  */
 export const getSet = (data: { [x: string]: any }, id: string | number) => {
   const set = data[id];
@@ -51,11 +51,11 @@ export const getSet = (data: { [x: string]: any }, id: string | number) => {
 };
 
 /**
- * Serializza un oggetto in query string
+ * Serializes an object into a query string
  */
 export const qs = (
   o: { [s: string]: unknown } | ArrayLike<unknown>,
-  prefix = "?"
+  prefix = "?",
 ) => {
   const filtered = Object.fromEntries(Object.entries(o).filter(([_, v]) => v));
   const stringified = stringify(filtered);

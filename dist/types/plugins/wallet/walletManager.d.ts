@@ -21,6 +21,7 @@ export declare class WalletManager extends EventEmitter {
     private readonly balanceCache;
     private readonly pendingTransactions;
     private readonly config;
+    private transactionMonitoringInterval;
     /**
      * Creates a new WalletManager instance
      * @param gun Raw Gun instance
@@ -54,6 +55,7 @@ export declare class WalletManager extends EventEmitter {
      * Setup transaction monitoring
      */
     private setupTransactionMonitoring;
+    cleanup(): void;
     /**
      * Check status of pending transactions
      */

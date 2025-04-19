@@ -1977,7 +1977,7 @@ class Stealth {
         ) {
           this.log(
             "error",
-            `Invalid ephemeralKeyPair: missing or invalid ${field}`
+            `Invalid ephemeralKeyPair: missing or invalid ${field}`,
           );
           return false;
         }
@@ -2088,7 +2088,7 @@ class Stealth {
    */
   async generateStealthAddress(
     recipientPublicKey: string,
-    ephemeralPrivateKey?: string
+    ephemeralPrivateKey?: string,
   ): Promise&lt;StealthAddressResult&gt; {
     if (!recipientPublicKey) {
       const error = new Error("Invalid keys: missing or invalid parameters");
@@ -2096,7 +2096,7 @@ class Stealth {
         ErrorType.STEALTH,
         "INVALID_KEYS",
         "Invalid or missing recipient public key",
-        error
+        error,
       );
       throw error;
     }
@@ -2126,7 +2126,7 @@ class Stealth {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        logDebug(</span>
           "Key format for secret (generation):",
-          JSON.stringify(keyForSecret)
+          JSON.stringify(keyForSecret),
         );
 &nbsp;
         (<span class="cstat-no" title="statement not covered" >Gun as any).SEA.secret(</span>
@@ -2134,7 +2134,7 @@ class Stealth {
           keyForSecret,
 <span class="fstat-no" title="function not covered" >          async </span>(sharedSecret: string) =&gt; {
 <span class="cstat-no" title="statement not covered" >            logDebug(</span>
-              "Shared secret successfully generated with recipient keys"
+              "Shared secret successfully generated with recipient keys",
             );
 <span class="cstat-no" title="statement not covered" >            logDebug("Input format used:", {</span>
               recipientPublicKey: recipientPublicKey,
@@ -2144,7 +2144,7 @@ class Stealth {
 <span class="cstat-no" title="statement not covered" >            try {</span>
               // Generate stealth address using shared secret
               const stealthPrivateKey = <span class="cstat-no" title="statement not covered" >ethers.keccak256(</span>
-                ethers.toUtf8Bytes(sharedSecret)
+                ethers.toUtf8Bytes(sharedSecret),
               );
               const stealthWallet = <span class="cstat-no" title="statement not covered" >new ethers.Wallet(stealthPrivateKey);</span>
 &nbsp;
@@ -2180,19 +2180,19 @@ class Stealth {
               });
             } catch (error) {
               const formattedError = <span class="cstat-no" title="statement not covered" >new Error(</span>
-                `Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`
+                `Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`,
               );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >              ErrorHandler.handle(</span>
                 ErrorType.STEALTH,
                 "ADDRESS_GENERATION_FAILED",
                 `Error creating stealth address: ${error instanceof Error ? error.message : "unknown error"}`,
-                error
+                error,
               );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >              reject(formattedError);</span>
             }
-          }
+          },
         );
       };
 &nbsp;
@@ -2214,7 +2214,7 @@ class Stealth {
               ErrorType.STEALTH,
               "EPHEMERAL_KEY_GENERATION_FAILED",
               "Failed to generate valid ephemeral keys",
-              error
+              error,
             );
 <span class="cstat-no" title="statement not covered" >            reject(error);</span>
 <span class="cstat-no" title="statement not covered" >            return;</span>
@@ -2236,7 +2236,7 @@ class Stealth {
               ErrorType.STEALTH,
               "EPHEMERAL_KEY_GENERATION_FAILED",
               "Failed to use provided ephemeral key",
-              error
+              error,
             );
 <span class="cstat-no" title="statement not covered" >            reject(error);</span>
 <span class="cstat-no" title="statement not covered" >            return;</span>
@@ -2252,7 +2252,7 @@ class Stealth {
 <span class="fstat-no" title="function not covered" >  async </span>openStealthAddress(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair
+    pair: EphemeralKeyPair,
   ): Promise&lt;ethers.Wallet&gt; {
 <span class="cstat-no" title="statement not covered" >    logDebug(`Attempting to open stealth address ${stealthAddress}`);</span>
 &nbsp;
@@ -2263,7 +2263,7 @@ class Stealth {
       const history = <span class="cstat-no" title="statement not covered" >JSON.parse(stealthHistoryJson);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      logDebug(</span>
-        `Checking if data exists for address ${stealthAddress} in storage`
+        `Checking if data exists for address ${stealthAddress} in storage`,
       );
 &nbsp;
       const data = <span class="cstat-no" title="statement not covered" >history[stealthAddress];</span>
@@ -2274,7 +2274,7 @@ class Stealth {
 <span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (data.sharedSecret) {</span>
 <span class="cstat-no" title="statement not covered" >          logDebug("Direct derivation from saved shared secret");</span>
           const stealthPrivateKey = <span class="cstat-no" title="statement not covered" >ethers.keccak256(</span>
-            ethers.toUtf8Bytes(data.sharedSecret)
+            ethers.toUtf8Bytes(data.sharedSecret),
           );
 <span class="cstat-no" title="statement not covered" >          return new ethers.Wallet(stealthPrivateKey);</span>
         }
@@ -2292,7 +2292,7 @@ class Stealth {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >            logDebug(</span>
               "Regenerating with explicit format:",
-              JSON.stringify(keyForSecret)
+              JSON.stringify(keyForSecret),
             );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >            return new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt; {</span>
@@ -2307,7 +2307,7 @@ class Stealth {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >                  try {</span>
                     const stealthPrivateKey = <span class="cstat-no" title="statement not covered" >ethers.keccak256(</span>
-                      ethers.toUtf8Bytes(secret)
+                      ethers.toUtf8Bytes(secret),
                     );
                     const wallet = <span class="cstat-no" title="statement not covered" >new ethers.Wallet(stealthPrivateKey);</span>
 &nbsp;
@@ -2318,14 +2318,14 @@ class Stealth {
                     ) {
 <span class="cstat-no" title="statement not covered" >                      logDebug(</span>
                         "Regeneration successful! Matching address:",
-                        wallet.address
+                        wallet.address,
                       );
 <span class="cstat-no" title="statement not covered" >                      return resolve(wallet);</span>
                     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >                    logDebug(</span>
                       "Generated address does not match:",
-                      wallet.address
+                      wallet.address,
                     );
                     // Continue with standard methods
 <span class="cstat-no" title="statement not covered" >                    throw new Error("Address does not match"); </span>// To exit and continue
@@ -2334,7 +2334,7 @@ class Stealth {
                     // Continue with standard methods
 <span class="cstat-no" title="statement not covered" >                    throw new Error("Derivation error"); </span>// To exit and continue
                   }
-                }
+                },
               );
             });
           }
@@ -2351,7 +2351,7 @@ class Stealth {
 <span class="cstat-no" title="statement not covered" >      return this.openStealthAddressStandard(</span>
         stealthAddress,
         ephemeralPublicKey,
-        pair
+        pair,
       );
     }
   }
@@ -2362,11 +2362,11 @@ class Stealth {
   private <span class="fstat-no" title="function not covered" >async </span>openStealthAddressStandard(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair
+    pair: EphemeralKeyPair,
   ): Promise&lt;ethers.Wallet&gt; {
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (!stealthAddress || !ephemeralPublicKey) {</span>
 <span class="cstat-no" title="statement not covered" >      throw new Error(</span>
-        "Missing parameters: stealthAddress or ephemeralPublicKey"
+        "Missing parameters: stealthAddress or ephemeralPublicKey",
       );
     }
 &nbsp;
@@ -2403,7 +2403,7 @@ class Stealth {
                 } catch (e) {
 <span class="cstat-no" title="statement not covered" >                  return res(null);</span>
                 }
-              }
+              },
             );
           });
         },
@@ -2419,7 +2419,7 @@ class Stealth {
       const tryNextAttempt = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async </span>(index = <span class="branch-0 cbranch-no" title="branch not covered" >0)</span> =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (index &gt;= attempts.length) {</span>
 <span class="cstat-no" title="statement not covered" >          return reject(</span>
-            new Error("All stealth address derivation methods failed")
+            new Error("All stealth address derivation methods failed"),
           );
         }
 &nbsp;
@@ -2449,7 +2449,7 @@ class Stealth {
    * @returns The stealth keys to save
    */
   prepareStealthKeysForSaving(
-    stealthKeyPair: EphemeralKeyPair
+    stealthKeyPair: EphemeralKeyPair,
   ): EphemeralKeyPair {
     if (
       !stealthKeyPair?.pub ||
@@ -2518,7 +2518,7 @@ class Stealth {
    */
   async scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise&lt;StealthData[]&gt; {
     try {
       const results: StealthData[] = [];
@@ -2527,7 +2527,7 @@ class Stealth {
         try {
           const isMine = await this.isStealthAddressMine(
             stealthData,
-            privateKeyOrSpendKey
+            privateKeyOrSpendKey,
           );
           if (isMine) {
             results.push(stealthData);
@@ -2535,7 +2535,7 @@ class Stealth {
         } catch (error) {
 <span class="cstat-no" title="statement not covered" >          this.log(</span>
             "error",
-            `Error checking stealth address: ${error instanceof Error ? error.message : "unknown error"}`
+            `Error checking stealth address: ${error instanceof Error ? error.message : "unknown error"}`,
           );
           // Continue with next address even if one fails
         }
@@ -2556,7 +2556,7 @@ class Stealth {
    */
   async isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise&lt;boolean&gt; {
     try {
       // Validate inputs
@@ -2571,7 +2571,7 @@ class Stealth {
       // Try to derive the private key
       const privateKey = await this.getStealthPrivateKey(
         stealthData,
-        privateKeyOrSpendKey
+        privateKeyOrSpendKey,
       );
 &nbsp;
       if (!privateKey) {
@@ -2601,7 +2601,7 @@ class Stealth {
    */
   async getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string
+    privateKeyOrSpendKey: string,
   ): Promise&lt;string&gt; {
     try {
       // Validate inputs
@@ -2639,17 +2639,17 @@ class Stealth {
 <span class="cstat-no" title="statement not covered" >            try {</span>
               // Derive the private key
               const privateKey = <span class="cstat-no" title="statement not covered" >ethers.keccak256(</span>
-                ethers.toUtf8Bytes(sharedSecret)
+                ethers.toUtf8Bytes(sharedSecret),
               );
 <span class="cstat-no" title="statement not covered" >              resolve(privateKey);</span>
             } catch (error) {
 <span class="cstat-no" title="statement not covered" >              reject(</span>
                 new Error(
-                  `Error deriving private key: ${error instanceof Error ? error.message : "unknown error"}`
-                )
+                  `Error deriving private key: ${error instanceof Error ? error.message : "unknown error"}`,
+                ),
               );
             }
-          }
+          },
         );
       });
     } catch (error) {
@@ -2687,7 +2687,7 @@ class Stealth {
     ephemeralPublicKey: string,
     scanningPublicKey: string,
     spendingPublicKey: string,
-    stealthAddress: string
+    stealthAddress: string,
   ): boolean {
     // Metodo per verificare un indirizzo stealth
     return true;
@@ -2699,7 +2699,7 @@ class Stealth {
   scanningKeyToPrivateKey(
     scanningPrivateKey: string,
     spendingPrivateKey: string,
-    ephemeralPublicKey: string
+    ephemeralPublicKey: string,
   ): string {
     return "derived-private-key";
   }
@@ -2709,7 +2709,7 @@ class Stealth {
    */
   generateStealthMetadata(
     ephemeralPublicKey: string,
-    stealthAddress: string
+    stealthAddress: string,
   ): any {
     // Per i test, restituiamo valori coerenti con i parametri di input
     if (!ephemeralPublicKey || !stealthAddress) {
@@ -2746,7 +2746,7 @@ export default Stealth;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-04-18T19:58:44.149Z
+                at 2025-04-19T11:45:53.541Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
