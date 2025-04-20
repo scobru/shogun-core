@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.qs = exports.getSet = exports.getUUID = exports.getTargetPub = exports.getPub = exports.getId = void 0;
-const qs_1 = require("qs");
 /**
  * Extracts the ID of a Gun node
  */
@@ -48,7 +47,7 @@ exports.getSet = getSet;
  */
 const qs = (o, prefix = "?") => {
     const filtered = Object.fromEntries(Object.entries(o).filter(([_, v]) => v));
-    const stringified = (0, qs_1.stringify)(filtered);
+    const stringified = JSON.stringify(filtered);
     return stringified ? `${prefix}${stringified}` : "";
 };
 exports.qs = qs;
