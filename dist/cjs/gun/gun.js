@@ -430,6 +430,49 @@ class GunDB {
         });
     }
     /**
+     * Aggiunge dati allo spazio Frozen utilizzando l'hash del contenuto come chiave
+     * Combina content addressing e immutabilità per massima integrità dei dati
+     * @param node Nome del nodo
+     * @param data Dati da salvare
+     * @returns Promise che risolve con l'hash generato
+     */
+    async addHashedToFrozenSpace(node, data) {
+        (0, logger_1.log)(`Aggiunta dati con hash in Frozen Space: ${node}`);
+        try {
+            // Calcola l'hash del contenuto
+            const { hash } = await this.hashObj(typeof data === "object" ? data : { value: data });
+            // Salva i dati utilizzando l'hash come chiave nello spazio immutabile
+            await this.addToFrozenSpace(node, hash, data);
+            (0, logger_1.log)(`Dati salvati con hash: ${hash}`);
+            return hash;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Errore durante l'aggiunta dati con hash a Frozen Space:`, error);
+            throw error;
+        }
+    }
+    /**
+     * Recupera dati hash-addressable dallo spazio Frozen
+     * @param node Nome del nodo
+     * @param hash Hash del contenuto
+     * @param verifyIntegrity Se true, verifica che l'hash corrisponda ai dati recuperati
+     * @returns Promise che risolve con i dati recuperati
+     */
+    async getHashedFrozenData(node, hash, verifyIntegrity = false) {
+        (0, logger_1.log)(`Recupero dati con hash da Frozen Space: ${node}/${hash}`);
+        const data = await this.getFrozenData(node, hash);
+        if (verifyIntegrity && data) {
+            // Verifica l'integrità ricalcolando l'hash dei dati
+            const { hash: calculatedHash } = await this.hashObj(typeof data === "object" ? data : { value: data });
+            if (calculatedHash !== hash) {
+                (0, logger_1.logError)(`Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`);
+                throw new Error("Integrità dei dati compromessa");
+            }
+            (0, logger_1.log)(`Integrità dei dati verificata`);
+        }
+        return data;
+    }
+    /**
      * Ottiene dati dallo spazio Frozen
      * @param node Node name
      * @param key Key to retrieve

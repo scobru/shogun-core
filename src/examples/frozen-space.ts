@@ -52,7 +52,7 @@ async function freezeData() {
       console.log(
         "✗ La transazione è stata modificata (importo ora = " +
           transazioneDopo.importo +
-          ")"
+          ")",
       );
     }
   } catch (err) {
@@ -81,7 +81,7 @@ async function linkAcrossSpaces() {
 
   // Creazione di un riferimento in Public Space che punta al record in Frozen Space
   console.log(
-    "Creazione di un link in Public Space che punta al dato in Frozen Space..."
+    "Creazione di un link in Public Space che punta al dato in Frozen Space...",
   );
   await gun.savePublicData("lista_valute", "europa", {
     valutaUfficiale: { "#": "valute:::/EUR" }, // Link al record in Frozen Space

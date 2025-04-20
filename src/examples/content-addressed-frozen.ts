@@ -22,7 +22,7 @@ async function contentAddressedStorage() {
   };
 
   console.log(
-    "=== SALVATAGGIO DOCUMENTO USANDO CONTENT ADDRESSING E FROZEN SPACE ==="
+    "=== SALVATAGGIO DOCUMENTO USANDO CONTENT ADDRESSING E FROZEN SPACE ===",
   );
   console.log("Documento originale:", documentoLegale);
 
@@ -35,7 +35,7 @@ async function contentAddressedStorage() {
     console.log("\n=== RECUPERO DOCUMENTO USANDO L'HASH ===");
     const documentoRecuperato = await gun.getHashedFrozenData(
       "documenti",
-      hash
+      hash,
     );
     console.log("Documento recuperato:", documentoRecuperato);
 
@@ -45,11 +45,11 @@ async function contentAddressedStorage() {
       const documentoVerificato = await gun.getHashedFrozenData(
         "documenti",
         hash,
-        true
+        true,
       );
       console.log("✓ Integrità verificata: i dati corrispondono all'hash");
     } catch (error) {
-      console.error("✗ Errore di integrità:", error.message);
+      console.error("✗ Errore di integrità:", error);
     }
 
     // 4. Tentativo di modifica (non dovrebbe essere possibile)
@@ -69,11 +69,11 @@ async function contentAddressedStorage() {
 
       if (documentoDopo.contenuto === documentoLegale.contenuto) {
         console.log(
-          "✓ Il documento è rimasto immutato (protezione Frozen Space funzionante)"
+          "✓ Il documento è rimasto immutato (protezione Frozen Space funzionante)",
         );
       } else {
         console.log(
-          "✗ Il documento è stato modificato (protezione Frozen Space non funzionante)"
+          "✗ Il documento è stato modificato (protezione Frozen Space non funzionante)",
         );
       }
     } catch (err) {
@@ -94,7 +94,7 @@ async function contentAddressedStorage() {
     console.log("\n=== RECUPERO TRAMITE INDICE ===");
     const indice = await gun.getPublicData(
       "indice_documenti",
-      "contratto_servizio_v1"
+      "contratto_servizio_v1",
     );
     console.log("Indice recuperato:", indice);
 
@@ -102,7 +102,7 @@ async function contentAddressedStorage() {
       console.log("Recupero documento tramite hash nell'indice...");
       const docDaIndice = await gun.getHashedFrozenData(
         "documenti",
-        indice.hash
+        indice.hash,
       );
       console.log("Documento recuperato tramite indice:", docDaIndice);
     }

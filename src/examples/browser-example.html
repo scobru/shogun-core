@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
       background-color: #f5f5f5;
       color: #333;
     }
+
     .container {
       max-width: 800px;
       margin: 0 auto;
@@ -21,10 +23,12 @@
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
+
     h1 {
       color: #0066cc;
       margin-top: 0;
     }
+
     button {
       background-color: #0066cc;
       color: white;
@@ -35,13 +39,16 @@
       font-size: 16px;
       margin: 5px 0;
     }
+
     button:hover {
       background-color: #0055aa;
     }
+
     button:disabled {
       background-color: #cccccc;
       cursor: not-allowed;
     }
+
     #results {
       margin-top: 20px;
       padding: 15px;
@@ -50,17 +57,20 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
+
     .action-group {
       margin-bottom: 15px;
       padding-bottom: 15px;
       border-bottom: 1px solid #eee;
     }
+
     .auth-methods {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       margin-top: 10px;
     }
+
     .auth-method {
       border: 1px solid #ddd;
       border-radius: 5px;
@@ -68,10 +78,12 @@
       flex: 1;
       min-width: 200px;
     }
+
     .auth-method h3 {
       margin-top: 0;
       color: #0066cc;
     }
+
     .status-badge {
       display: inline-block;
       padding: 3px 8px;
@@ -79,16 +91,19 @@
       font-size: 12px;
       margin-left: 5px;
     }
+
     .status-supported {
       background-color: #4caf50;
       color: white;
     }
+
     .status-not-supported {
       background-color: #f44336;
       color: white;
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1>Shogun Core - Demo Browser</h1>
@@ -102,45 +117,49 @@
 
     <div class="action-group">
       <h2>Autenticazione</h2>
-      
+
       <div class="auth-methods">
         <!-- Username e Password -->
         <div class="auth-method">
           <h3>Username e Password</h3>
           <form id="loginForm" onsubmit="return false;">
-            <input type="text" id="username" placeholder="Username" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
-            <input type="password" id="password" placeholder="Password" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="current-password">
+            <input type="text" id="username" placeholder="Username"
+              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
+            <input type="password" id="password" placeholder="Password"
+              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="current-password">
             <div>
               <button type="button" id="loginBtn">Login</button>
               <button type="button" id="signupBtn">Registrati</button>
             </div>
           </form>
         </div>
-        
+
         <!-- WebAuthn -->
         <div class="auth-method">
           <h3>WebAuthn <span id="webauthnStatus" class="status-badge"></span></h3>
           <form id="webauthnForm" onsubmit="return false;">
-            <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn" style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
+            <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn"
+              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
             <div>
               <button type="button" id="webauthnLoginBtn" disabled>Login con WebAuthn</button>
               <button type="button" id="webauthnSignupBtn" disabled>Registra con WebAuthn</button>
             </div>
           </form>
         </div>
-        
+
         <!-- MetaMask -->
         <div class="auth-method">
           <h3>MetaMask <span id="metamaskStatus" class="status-badge"></span></h3>
-          <div id="metamaskAddress" style="font-size: 12px; word-break: break-all; margin-bottom: 10px; color: #666;">Indirizzo non rilevato</div>
+          <div id="metamaskAddress" style="font-size: 12px; word-break: break-all; margin-bottom: 10px; color: #666;">
+            Indirizzo non rilevato</div>
           <div>
-            <button id="metamaskConnectBtn" >Connetti MetaMask</button>
-            <button id="metamaskLoginBtn" >Login con MetaMask</button>
-            <button id="metamaskSignupBtn" >Registra con MetaMask</button>
+            <button id="metamaskConnectBtn">Connetti MetaMask</button>
+            <button id="metamaskLoginBtn">Login con MetaMask</button>
+            <button id="metamaskSignupBtn">Registra con MetaMask</button>
           </div>
         </div>
       </div>
-      
+
       <div style="margin-top: 15px;">
         <button id="logoutBtn">Logout</button>
       </div>
@@ -159,7 +178,7 @@
 
   <!-- Includi la libreria Shogun Core dalla directory dist/browser -->
   <script src="../../dist/browser/shogun-core.js"></script>
-  
+
   <script>
     // Riferimenti agli elementi DOM
     const initBtn = document.getElementById('initBtn');
@@ -172,13 +191,13 @@
     const passwordInput = document.getElementById('password');
     const resultsDiv = document.getElementById('results');
     const supportStatusDiv = document.getElementById('supportStatus');
-    
+
     // Elementi WebAuthn
     const webauthnStatusSpan = document.getElementById('webauthnStatus');
     const webauthnUsernameInput = document.getElementById('webauthnUsername');
     const webauthnLoginBtn = document.getElementById('webauthnLoginBtn');
     const webauthnSignupBtn = document.getElementById('webauthnSignupBtn');
-    
+
     // Elementi MetaMask
     const metamaskStatusSpan = document.getElementById('metamaskStatus');
     const metamaskAddressDiv = document.getElementById('metamaskAddress');
@@ -207,25 +226,25 @@
     // Funzione per verificare il supporto a WebAuthn
     function checkWebAuthnSupport() {
       const isSupported = typeof window.PublicKeyCredential !== 'undefined';
-      
+
       webauthnStatusSpan.textContent = isSupported ? 'SUPPORTATO' : 'NON SUPPORTATO';
       webauthnStatusSpan.className = `status-badge ${isSupported ? 'status-supported' : 'status-not-supported'}`;
-      
+
       webauthnLoginBtn.disabled = !isSupported;
       webauthnSignupBtn.disabled = !isSupported;
-      
+
       return isSupported;
     }
 
     // Funzione per verificare il supporto a MetaMask
     function checkMetaMaskSupport() {
       const isSupported = typeof window.ethereum !== 'undefined';
-      
+
       metamaskStatusSpan.textContent = isSupported ? 'RILEVATO' : 'NON RILEVATO';
       metamaskStatusSpan.className = `status-badge ${isSupported ? 'status-supported' : 'status-not-supported'}`;
-      
+
       metamaskConnectBtn.disabled = !isSupported;
-      
+
       return isSupported;
     }
 
@@ -261,7 +280,7 @@
         // Configurazione per l'ambiente browser
         const config = {
           gundb: {
-            peers: ['http://localhost:3000/gun'],
+            peers: ['http://localhost:8765/gun'],
             websocket: false,
             localStorage: false,
             radisk: false,
@@ -289,23 +308,23 @@
 
         // Utilizziamo la funzione di inizializzazione specifica per browser
         shogun = window.initShogunBrowser(config);
-        
+
         // Otteniamo i riferimenti ai plugin
         walletPlugin = shogun.getPlugin("wallet");
         webauthnPlugin = shogun.getPlugin("webauthn");
         metamaskPlugin = shogun.getPlugin("metamask");
-        
+
         // Verifica il supporto di WebAuthn e MetaMask
         const webauthnSupported = checkWebAuthnSupport();
         const metamaskSupported = checkMetaMaskSupport();
-        
+
         // Aggiorna lo stato del supporto
         let supportText = '';
         supportText += `WebAuthn: ${webauthnSupported ? 'Supportato' : 'Non supportato'}\n`;
         supportText += `MetaMask: ${metamaskSupported ? 'Rilevato' : 'Non rilevato'}`;
-        
-        showResult('Shogun Inizializzato', { 
-          stato: 'Successo', 
+
+        showResult('Shogun Inizializzato', {
+          stato: 'Successo',
           connesso: true,
           webauthn: webauthnSupported,
           metamask: metamaskSupported,
@@ -383,25 +402,25 @@
           showError('Login MetaMask', new Error('Plugin MetaMask non disponibile'));
           return;
         }
-        
+
         console.log('Login with MetaMask');
-        
+
         // Prima connettiti a MetaMask se non lo siamo già
         if (!metamaskAddress) {
           showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
           const connectResult = await metamaskPlugin.connectMetaMask();
-          
+
           if (!connectResult.success) {
             showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
             return;
           }
-          
+
           metamaskAddress = connectResult.address;
           metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
         }
-        
+
         showResult('MetaMask', { message: 'Login in corso...', address: metamaskAddress });
-        
+
         // Aggiungiamo un timeout più lungo per il login
         const loginWithTimeout = async () => {
           try {
@@ -412,15 +431,15 @@
             throw error;
           }
         };
-        
+
         // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
         const loginPromise = loginWithTimeout();
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error("Timeout durante il login (2 minuti)")), 120000);
         });
-        
+
         const result = await Promise.race([loginPromise, timeoutPromise]);
-        
+
         if (result.success) {
           showResult('Login con MetaMask completato', result);
         } else {
@@ -443,23 +462,23 @@
           showError('Registrazione MetaMask', new Error('Plugin MetaMask non disponibile'));
           return;
         }
-        
+
         // Prima connettiti a MetaMask se non lo siamo già
         if (!metamaskAddress) {
           showResult('MetaMask', { message: 'Connessione a MetaMask in corso...' });
           const connectResult = await metamaskPlugin.connectMetaMask();
-          
+
           if (!connectResult.success) {
             showError('Connessione MetaMask', new Error(connectResult.error || 'Errore durante la connessione a MetaMask'));
             return;
           }
-          
+
           metamaskAddress = connectResult.address;
           metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
         }
 
         showResult('MetaMask', { message: 'Registrazione in corso...', address: metamaskAddress });
-        
+
         // Aggiungiamo un timeout più lungo per la registrazione
         const signupWithTimeout = async () => {
           try {
@@ -470,15 +489,15 @@
             throw error;
           }
         };
-        
+
         // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
         const signupPromise = signupWithTimeout();
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error("Timeout durante la registrazione (2 minuti)")), 120000);
         });
-        
+
         const result = await Promise.race([signupPromise, timeoutPromise]);
-        
+
         if (result.success) {
           showResult('Registrazione con MetaMask completata', result);
         } else {
@@ -573,7 +592,7 @@
           showError('Creazione Wallet', new Error('Plugin Wallet non disponibile'));
           return;
         }
-        
+
         const wallet = await walletPlugin.createWallet();
         showResult('Wallet Creato', wallet);
       } catch (error) {
@@ -598,7 +617,7 @@
           showError('Ottenimento Wallets', new Error('Plugin Wallet non disponibile'));
           return;
         }
-        
+
         const wallets = await walletPlugin.loadWallets();
         showResult('Wallets Disponibili', wallets);
       } catch (error) {
@@ -613,4 +632,5 @@
     });
   </script>
 </body>
-</html> 
+
+</html>

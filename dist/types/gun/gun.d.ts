@@ -166,6 +166,22 @@ declare class GunDB {
      */
     addToFrozenSpace(node: string, key: string, data: any): Promise<any>;
     /**
+     * Aggiunge dati allo spazio Frozen utilizzando l'hash del contenuto come chiave
+     * Combina content addressing e immutabilità per massima integrità dei dati
+     * @param node Nome del nodo
+     * @param data Dati da salvare
+     * @returns Promise che risolve con l'hash generato
+     */
+    addHashedToFrozenSpace(node: string, data: any): Promise<string>;
+    /**
+     * Recupera dati hash-addressable dallo spazio Frozen
+     * @param node Nome del nodo
+     * @param hash Hash del contenuto
+     * @param verifyIntegrity Se true, verifica che l'hash corrisponda ai dati recuperati
+     * @returns Promise che risolve con i dati recuperati
+     */
+    getHashedFrozenData(node: string, hash: string, verifyIntegrity?: boolean): Promise<any>;
+    /**
      * Ottiene dati dallo spazio Frozen
      * @param node Node name
      * @param key Key to retrieve

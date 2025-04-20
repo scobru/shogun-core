@@ -149,6 +149,10 @@ export class WalletManager extends EventEmitter {
      * Setup transaction monitoring
      */
     setupTransactionMonitoring() {
+        // Non creare intervalli quando è in esecuzione in ambiente di test
+        if (process.env.NODE_ENV === "test") {
+            return;
+        }
         this.transactionMonitoringInterval = setInterval(() => {
             if (this.getProvider() !== null) {
                 this.checkPendingTransactions();
