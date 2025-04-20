@@ -1,5 +1,3 @@
-import { stringify } from "qs";
-
 /**
  * Extracts the ID of a Gun node
  */
@@ -55,9 +53,9 @@ export const getSet = (data: { [x: string]: any }, id: string | number) => {
  */
 export const qs = (
   o: { [s: string]: unknown } | ArrayLike<unknown>,
-  prefix = "?",
+  prefix = "?"
 ) => {
   const filtered = Object.fromEntries(Object.entries(o).filter(([_, v]) => v));
-  const stringified = stringify(filtered);
+  const stringified = JSON.stringify(filtered);
   return stringified ? `${prefix}${stringified}` : "";
 };
