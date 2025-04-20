@@ -246,8 +246,14 @@ afterEach(() => {
   // Pulisci tutti i mock
   jest.clearAllMocks();
 
-  // Resetta i timer
+  // Pulisci i timer
   jest.useRealTimers();
+  const globalObj = typeof window !== "undefined" ? window : global;
+  const highestTimeoutId = setTimeout(() => {}, 0);
+  for (let i = 0; i < highestTimeoutId; i++) {
+    clearTimeout(i);
+    clearInterval(i);
+  }
 
   // Pulizia di localStorage e sessionStorage
   localStorage.clear();
@@ -263,6 +269,14 @@ afterEach(() => {
 afterAll(() => {
   // Assicurati che non ci siano timer attivi
   jest.useRealTimers();
+
+  // Puliamo eventuali setInterval o setTimeout aperti
+  const globalObj = typeof window !== "undefined" ? window : global;
+  const highestTimeoutId = setTimeout(() => {}, 0);
+  for (let i = 0; i < highestTimeoutId; i++) {
+    clearTimeout(i);
+    clearInterval(i);
+  }
 
   // Pulizia delle reference circolari che potrebbero causare memory leaks
   if (global.gc) {
@@ -310,17 +324,42 @@ if (!global.jasmine) {
 }
 
 // Definisci le variabili globali di Gun per i test
-global.Gun = {
-  SEA: {
-    encrypt: jest.fn().mockResolvedValue("encrypted-data"),
-    decrypt: jest.fn().mockResolvedValue("decrypted-data"),
-    sign: jest.fn().mockResolvedValue("signed-data"),
-    verify: jest.fn().mockResolvedValue(true),
-    pair: jest.fn().mockReturnValue({
-      pub: "pub-key",
-      priv: "priv-key",
-      epub: "epub-key",
-      epriv: "epriv-key",
-    }),
-  },
+const mockGunSEA = {
+  pair: jest.fn(() =>
+    Promise.resolve({
+      pub: "mock-pub",
+      priv: "mock-priv",
+      epub: "mock-epub",
+      epriv: "mock-epriv",
+    })
+  ),
+  encrypt: jest.fn((data) => Promise.resolve(`encrypted:${data}`)),
+  decrypt: jest.fn((data) => {
+    if (typeof data === "string" && data.startsWith("encrypted:")) {
+      return Promise.resolve(data.replace("encrypted:", ""));
+    }
+    return Promise.resolve(null);
+  }),
+  sign: jest.fn((data) => Promise.resolve(`signed:${data}`)),
+  verify: jest.fn(() => Promise.resolve(true)),
+  secret: jest.fn((_key, _pair, cb) => {
+    if (typeof cb === "function") {
+      setTimeout(() => cb("sharedSecret123"), 0);
+      return Promise.resolve();
+    }
+    return Promise.resolve("sharedSecret123");
+  }),
+  work: jest.fn(() => Promise.resolve("mock-work-result")),
 };
+
+const mockGun = {
+  log: jest.fn(),
+  SEA: mockGunSEA,
+  text: {
+    random: jest.fn(() => "random-string"),
+  },
+  on: jest.fn(),
+};
+
+// Assegna l'istanza mockata a global.Gun
+global.Gun = mockGun;

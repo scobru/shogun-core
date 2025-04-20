@@ -53,19 +53,12 @@ declare class Stealth {
         publicKey: string;
     }>;
     /**
-     * Metodo compatibile con i test-additional per generare un indirizzo stealth
-     * @param scanningPublicKey chiave pubblica di scansione
-     * @param spendingPublicKey chiave pubblica di spesa
-     * @returns risultato con indirizzo stealth e chiave pubblica effimera
-     */
-    generateStealthAddress(scanningPublicKey: string, spendingPublicKey?: string): any;
-    /**
      * Implementazione originale di generateStealthAddress
      * @param recipientPublicKey Recipient's public key
      * @param ephemeralPrivateKey Ephemeral private key (optional)
      * @returns Promise with the stealth address result
      */
-    generateStealthAddress2(recipientPublicKey: string, ephemeralPrivateKey?: string): Promise<StealthAddressResult>;
+    generateStealthAddress(recipientPublicKey: string, ephemeralPrivateKey?: string): Promise<StealthAddressResult>;
     /**
      * Opens a stealth address by deriving the private key
      */

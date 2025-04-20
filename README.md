@@ -377,6 +377,367 @@ if (shogun.isLoggedIn()) {
 }
 ```
 
+### Advanced GunDB Features
+
+Shogun Core includes advanced GunDB features that allow you to build complex and robust decentralized applications.
+
+#### Repository Pattern
+
+The Repository Pattern provides an elegant abstraction for data access, with support for typing, transformation, and encryption.
+
+```typescript
+import { ShogunCore, GunRepository } from "shogun-core";
+
+// Define an interface for your data type
+interface User {
+  id?: string;
+  name: string;
+  email: string;
+  role: string;
+  lastLogin?: number;
+}
+
+// Create a typed repository class
+class UserRepository extends GunRepository<User> {
+  constructor(shogun: ShogunCore) {
+    // Initialize with options: userScope=true, encryption=true
+    super(shogun.gun, "users", {
+      userScope: true,
+      useEncryption: true,
+      encryptionKey: shogun.gun.getCurrentUser()?.user._?.sea,
+    });
+  }
+
+  // Implement transformation from raw data to entity
+  protected mapToEntity(data: any): User {
+    return {
+      id: data.id,
+      name: data.name || "",
+      email: data.email || "",
+      role: data.role || "user",
+      lastLogin: data.lastLogin || Date.now(),
+    };
+  }
+
+  // Implement transformation from entity to data to save
+  protected mapToData(entity: User): any {
+    // Remove computed or unnecessary fields
+    const { id, ...data } = entity;
+    return data;
+  }
+
+  // Add entity-specific methods
+  async findByRole(role: string): Promise<User[]> {
+    const all = await this.findAll();
+    return all.filter((user) => user.role === role);
+  }
+}
+
+// Usage:
+const shogun = new ShogunCore({
+  /* config */
+});
+const userRepo = new UserRepository(shogun);
+
+// Create a new user
+const userId = await userRepo.save({
+  name: "John Smith",
+  email: "john@example.com",
+  role: "admin",
+});
+
+// Find a specific user
+const user = await userRepo.findById(userId);
+
+// Update a user
+await userRepo.update(userId, { role: "superadmin" });
+
+// Delete a user
+await userRepo.remove(userId);
+```
+
+#### Distributed Consensus
+
+The Consensus module allows you to implement decentralized decision-making mechanisms based on voting.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+
+const shogun = new ShogunCore({
+  /* config */
+});
+
+// Consensus configuration (optional)
+const consensusConfig = {
+  threshold: 0.66, // Require 66% of votes in favor
+  timeWindow: 3600000, // 1 hour voting window
+  minVotes: 5, // Require at least 5 votes
+};
+
+// Access the consensus system
+const consensus = shogun.gun.consensus(consensusConfig);
+
+// 1. Propose a change
+async function proposeChange() {
+  const proposalId = await consensus.proposeChange(
+    "config-update",
+    { maxUsers: 1000, featureFlag: true },
+    { importance: "high" }
+  );
+  console.log(`Proposal created: ${proposalId}`);
+  return proposalId;
+}
+
+// 2. Vote on a proposal
+async function vote(proposalId, approve) {
+  await consensus.vote(proposalId, approve, "Reason for vote");
+  console.log(`Vote recorded: ${approve ? "Approved" : "Rejected"}`);
+}
+
+// 3. Check proposal status
+async function checkProposal(proposalId) {
+  const proposal = await consensus.getProposal(proposalId);
+  console.log(`Proposal status: ${proposal.status}`);
+
+  // Count votes
+  const voteCount = await consensus.countVotes(proposalId);
+  console.log(
+    `Votes: ${voteCount.approvalCount} approvals, ${voteCount.rejectionCount} rejections`
+  );
+  console.log(
+    `The proposal is ${voteCount.approved ? "approved" : "rejected or pending"}`
+  );
+}
+```
+
+#### Immutable Data Space (Frozen Space)
+
+The Frozen Space provides a mechanism for immutable data, ideal for logs, audit trails, and content archiving.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+
+const shogun = new ShogunCore({
+  /* config */
+});
+
+// Save immutable data
+async function savePermanentData() {
+  const data = {
+    content: "This content cannot be modified",
+    timestamp: Date.now(),
+    author: "John Smith",
+  };
+
+  // Add to Frozen Space
+  await shogun.gun.addToFrozenSpace("documents", "doc1", data);
+  console.log("Document saved immutably");
+
+  // Alternative: use content hash as key
+  const contentHash = await shogun.gun.addHashedToFrozenSpace(
+    "documents",
+    data
+  );
+  console.log(`Document saved with hash: ${contentHash}`);
+
+  return contentHash;
+}
+
+// Retrieve immutable data
+async function getPermanentData(hash) {
+  // Retrieve data using hash, with integrity verification
+  const data = await shogun.gun.getHashedFrozenData("documents", hash, true);
+  console.log("Document retrieved:", data);
+  return data;
+}
+```
+
+#### Authorization Certificates
+
+The certificate system enables decentralized and delegated authorizations.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+
+const shogun = new ShogunCore({
+  /* config */
+});
+
+// Generate authorization certificates
+async function generateCertificates() {
+  // Get the key pair from the current user
+  const pair = shogun.gun.getCurrentUser()?.user._?.sea;
+
+  // Generate a single certificate
+  const cert = await shogun.gun.issueCert({
+    pair,
+    tag: "write", // Authorization type
+    dot: "tasks", // Authorized path
+    users: "*", // For all users ('*') or specific ('~pubKey')
+  });
+
+  // Generate multiple certificates at once
+  const certs = await shogun.gun.generateCerts({
+    pair,
+    list: [
+      { tag: "read", dot: "profiles", users: "*" },
+      { tag: "write", dot: "profiles", users: "~ABCDEF" }, // Specific user
+      { tag: "admin", dot: "settings", personal: true }, // For personal use only
+    ],
+  });
+
+  return { cert, certs };
+}
+
+// Verify a certificate
+async function verifyCertificate(cert, pubKey) {
+  const isValid = await shogun.gun.verifyCert(cert, pubKey);
+  console.log(`Certificate is ${isValid ? "valid" : "invalid"}`);
+
+  // Extract policy from certificate
+  const policy = await shogun.gun.extractCertPolicy(cert);
+  console.log("Certificate policy:", policy);
+
+  return isValid;
+}
+```
+
+#### Managed Collections
+
+The Collections API simplifies managing collections of data with common operations.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+
+const shogun = new ShogunCore({
+  /* config */
+});
+
+// Access the Collections module
+const collections = shogun.gun.collections();
+
+// Add an item to a collection
+async function addToCollection() {
+  const itemId = await collections.add("products", {
+    name: "Smartphone XYZ",
+    price: 499.99,
+    category: "electronics",
+    inStock: true,
+  });
+  console.log(`Product added with ID: ${itemId}`);
+  return itemId;
+}
+
+// Update an item
+async function updateCollectionItem(id) {
+  await collections.update("products", id, {
+    price: 449.99,
+    inStock: false,
+  });
+  console.log("Product updated");
+}
+
+// Retrieve all items
+async function getAllItems() {
+  const items = await collections.findAll("products");
+  console.log(`Found ${items.length} products`);
+  return items;
+}
+
+// Retrieve a specific item
+async function getItem(id) {
+  const item = await collections.findById("products", id);
+  console.log("Product found:", item);
+  return item;
+}
+
+// Remove an item
+async function removeItem(id) {
+  await collections.remove("products", id);
+  console.log("Product removed");
+}
+```
+
+#### Advanced Cryptographic Utilities
+
+Shogun Core provides advanced cryptographic utilities for encryption, signing, and hash management.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+
+const shogun = new ShogunCore({
+  /* config */
+});
+
+// Cryptographic operations examples
+async function cryptoExamples() {
+  // Generate key pair
+  const keyPair = await shogun.gun.generateKeyPair();
+
+  // Encryption
+  const encrypted = await shogun.gun.encrypt("Secret message", keyPair.epriv);
+  const decrypted = await shogun.gun.decrypt(encrypted, keyPair.epriv);
+
+  // Signing and verification
+  const signed = await shogun.gun.sign({ data: "Authenticated data" }, keyPair);
+  const verified = await shogun.gun.verify(signed, keyPair.pub);
+
+  // Hashing
+  const textHash = await shogun.gun.hashText("Text to hash");
+  const objHash = await shogun.gun.hashObj({
+    complex: "object",
+    with: ["arrays"],
+  });
+
+  // Short hashes (useful for identifiers)
+  const shortHash = await shogun.gun.getShortHash(
+    "user@example.com",
+    "salt123"
+  );
+
+  // URL-safe hashes
+  const safeHash = shogun.gun.safeHash(textHash);
+  const originalHash = shogun.gun.unsafeHash(safeHash);
+
+  return {
+    encrypted,
+    decrypted,
+    verified,
+    textHash,
+    objHash,
+    shortHash,
+    safeHash,
+  };
+}
+
+// End-to-end encryption between users
+async function encryptForUser(receiverPub) {
+  const senderPair = shogun.gun.getCurrentUser()?.user._?.sea;
+  const receiverKey = { epub: receiverPub };
+
+  // Encrypt data for a specific recipient
+  const message = "This message is only readable by the recipient";
+  const encrypted = await shogun.gun.encFor(message, senderPair, receiverKey);
+
+  return encrypted;
+}
+
+// Decrypt data from a specific sender
+async function decryptFromUser(senderPub, encryptedData) {
+  const receiverPair = shogun.gun.getCurrentUser()?.user._?.sea;
+  const senderKey = { epub: senderPub };
+
+  // Decrypt data coming from a specific sender
+  const decrypted = await shogun.gun.decFrom(
+    encryptedData,
+    senderKey,
+    receiverPair
+  );
+
+  return decrypted;
+}
+```
+
 ## Use Cases
 
 Shogun is particularly suitable for:

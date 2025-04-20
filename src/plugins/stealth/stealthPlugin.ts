@@ -2,8 +2,13 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Stealth } from "./stealth";
 import { StealthPluginInterface } from "./types";
-import { StealthAddressResult, StealthData } from "../../types/stealth";
+import {
+  StealthAddressResult,
+  StealthData,
+  EphemeralKeyPair,
+} from "../../types/stealth";
 import { log } from "../../utils/logger";
+import { ethers } from "ethers";
 
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore
@@ -114,6 +119,21 @@ export class StealthPlugin
     return this.assertStealth().getStealthPrivateKey(
       stealthData,
       privateKeyOrSpendKey,
+    );
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async openStealthAddress(
+    stealthAddress: string,
+    ephemeralPublicKey: string,
+    pair: EphemeralKeyPair,
+  ): Promise<ethers.Wallet> {
+    return this.assertStealth().openStealthAddress(
+      stealthAddress,
+      ephemeralPublicKey,
+      pair,
     );
   }
 }

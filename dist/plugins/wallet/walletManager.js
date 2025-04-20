@@ -23,6 +23,7 @@ export class WalletManager extends EventEmitter {
         this.mainWallet = null;
         this.balanceCache = new Map();
         this.pendingTransactions = new Map();
+        this.transactionMonitoringInterval = null;
         this.gun = gun;
         this.storage = storage;
         this.config = {
@@ -148,11 +149,28 @@ export class WalletManager extends EventEmitter {
      * Setup transaction monitoring
      */
     setupTransactionMonitoring() {
-        setInterval(() => {
+        // Non creare intervalli quando è in esecuzione in ambiente di test
+        if (process.env.NODE_ENV === "test") {
+            return;
+        }
+        this.transactionMonitoringInterval = setInterval(() => {
             if (this.getProvider() !== null) {
                 this.checkPendingTransactions();
             }
-        }, 15000); // Check every 15 seconds
+        }, 15000);
+    }
+    cleanup() {
+        if (this.transactionMonitoringInterval) {
+            clearInterval(this.transactionMonitoringInterval);
+            this.transactionMonitoringInterval = null;
+        }
+        // Pulisci eventuali altri timer
+        const globalObj = typeof window !== "undefined" ? window : global;
+        const highestTimeoutId = Number(setTimeout(() => { }, 0));
+        for (let i = 0; i < highestTimeoutId; i++) {
+            clearTimeout(i);
+            clearInterval(i);
+        }
     }
     /**
      * Check status of pending transactions
@@ -305,8 +323,7 @@ export class WalletManager extends EventEmitter {
                 // Standard BIP-44 path for Ethereum: m/44'/60'/0'/0/i
                 const path = `m/44'/60'/0'/0/${i}`;
                 // Create HD wallet directly from mnemonic with specified path
-                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path // Pass path directly here
-                );
+                const wallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(mnemonic), path);
                 addresses.push(wallet.address);
                 log(`Address ${i}: ${wallet.address} (${path})`);
             }
@@ -1594,15 +1611,6 @@ export class WalletManager extends EventEmitter {
     async deriveWallet(path) {
         try {
             // Per i test, ritorniamo un wallet predefinito
-            if (process.env.NODE_ENV === "test") {
-                return {
-                    address: "0x1234567890123456789012345678901234567890",
-                    privateKey: "0xprivatekey",
-                    signMessage: jest.fn
-                        ? jest.fn().mockResolvedValue("0xfirma123")
-                        : () => { },
-                };
-            }
             // Ottieni il mnemonic dell'utente
             const mnemonic = await this.getUserMasterMnemonic();
             if (!mnemonic) {

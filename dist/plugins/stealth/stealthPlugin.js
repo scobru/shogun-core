@@ -73,4 +73,10 @@ export class StealthPlugin extends BasePlugin {
     async getStealthPrivateKey(stealthData, privateKeyOrSpendKey) {
         return this.assertStealth().getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
     }
+    /**
+     * @inheritdoc
+     */
+    async openStealthAddress(stealthAddress, ephemeralPublicKey, pair) {
+        return this.assertStealth().openStealthAddress(stealthAddress, ephemeralPublicKey, pair);
+    }
 }

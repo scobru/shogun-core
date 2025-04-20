@@ -126,7 +126,7 @@ global.Gun = {
     decrypt: jest.fn().mockImplementation((data) => {
       if (data === "dato-criptato" || data === "mnemonic-criptato") {
         return Promise.resolve(
-          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+          "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
         );
       } else if (data === "chiavi-criptate") {
         return Promise.resolve(
@@ -139,7 +139,7 @@ global.Gun = {
                 path: "m/44'/60'/0'/0/0",
               },
             ],
-          })
+          }),
         );
       }
       return Promise.resolve(data);
@@ -200,7 +200,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
     walletManager.getUserMnemonic = jest
       .fn()
       .mockResolvedValue(
-        "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+        "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
       );
     walletManager.getWalletBalance = jest.fn().mockResolvedValue("1.0");
     walletManager.sendTransaction = jest.fn().mockResolvedValue({
@@ -211,7 +211,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
     walletManager.exportMnemonic = jest
       .fn()
       .mockResolvedValue(
-        "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+        "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
       );
     walletManager.importMnemonic = jest.fn().mockResolvedValue(true);
     walletManager.exportWalletKeys = jest.fn().mockResolvedValue(
@@ -224,7 +224,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
             path: "m/44'/60'/0'/0/0",
           },
         ],
-      })
+      }),
     );
     walletManager.importWalletKeys = jest.fn().mockResolvedValue(1);
     walletManager.getBalanceCache = jest.fn().mockReturnValue({});
@@ -247,6 +247,12 @@ describe("WalletManager - Funzionalità Avanzate", () => {
     });
   });
 
+  afterEach(() => {
+    if (walletManager) {
+      walletManager.cleanup();
+    }
+  });
+
   test("dovrebbe generare un nuovo mnemonic", () => {
     const mnemonic = walletManager.generateNewMnemonic();
     expect(mnemonic).toBeDefined();
@@ -256,7 +262,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
   test("dovrebbe recuperare il mnemonic dell'utente", async () => {
     const mnemonic = await walletManager.getUserMnemonic();
     expect(mnemonic).toBe(
-      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
     );
   });
 
@@ -265,7 +271,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
     process.env.NODE_ENV = "test";
 
     await walletManager.saveUserMasterMnemonic(
-      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
     );
     // Verifichiamo solo che la funzione completi con successo
     expect(true).toBe(true);
@@ -285,7 +291,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
   test("dovrebbe inviare una transazione", async () => {
     const tx = await walletManager.sendTransaction(
       "0x9876543210987654321098765432109876543210",
-      "0.1"
+      "0.1",
     );
     expect(tx).toBeDefined();
     expect(tx.hash).toBe("0xtxhash");
@@ -299,7 +305,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
   test("dovrebbe esportare/importare il mnemonic", async () => {
     const mnemonic = await walletManager.exportMnemonic();
     expect(mnemonic).toBe(
-      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
     );
 
     await walletManager.importMnemonic(mnemonic);
@@ -323,7 +329,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
   test("dovrebbe impostare l'URL RPC", () => {
     walletManager.setRpcUrl("https://ethereum-mainnet.publicnode.com");
     expect(walletManager.config.rpcUrl).toBe(
-      "https://ethereum-mainnet.publicnode.com"
+      "https://ethereum-mainnet.publicnode.com",
     );
   });
 
@@ -336,7 +342,7 @@ describe("WalletManager - Funzionalità Avanzate", () => {
     const userData = await walletManager.exportAllUserData();
     expect(userData).toBeDefined();
     expect(userData.mnemonic).toBe(
-      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa"
+      "casa gatto cane topo elefante leone tigre orso scimmia panda zebra giraffa",
     );
     expect(userData.wallets).toBeDefined();
   });

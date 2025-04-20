@@ -1,9 +1,9 @@
 /**
- * Classi di errore per Gun e Auth
+ * Error classes for Gun and Auth
  */
 
 /**
- * Errore di base per Gun
+ * Base error for Gun
  */
 export class GunError extends Error {
   constructor(message: string) {
@@ -13,7 +13,7 @@ export class GunError extends Error {
 }
 
 /**
- * Errore di autenticazione generico
+ * Generic authentication error
  */
 export class AuthError extends GunError {
   constructor(message: string) {
@@ -23,7 +23,7 @@ export class AuthError extends GunError {
 }
 
 /**
- * Errore di credenziali non valide
+ * Invalid credentials error
  */
 export class InvalidCredentials extends AuthError {
   constructor(message = "Credenziali non valide") {
@@ -33,7 +33,7 @@ export class InvalidCredentials extends AuthError {
 }
 
 /**
- * Errore di utente già esistente
+ * User already exists error
  */
 export class UserExists extends AuthError {
   constructor(message = "Utente già esistente") {
@@ -43,7 +43,7 @@ export class UserExists extends AuthError {
 }
 
 /**
- * Errore di timeout
+ * Timeout error
  */
 export class TimeoutError extends GunError {
   constructor(message = "Timeout durante l'operazione") {
@@ -53,7 +53,7 @@ export class TimeoutError extends GunError {
 }
 
 /**
- * Errore di multiple autenticazioni
+ * Multiple authentication error
  */
 export class MultipleAuthError extends AuthError {
   constructor(message = "Autenticazione multipla in corso") {

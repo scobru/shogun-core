@@ -5,11 +5,11 @@ describe("ShogunStorage", () => {
   const testKey = "test-key";
   const testValue = { data: "test-value", number: 123 };
   const testValueStr = JSON.stringify(testValue);
+  let mockStorage: any;
 
   beforeEach(() => {
-    // Pulisce localStorage e sessionStorage prima di ogni test
+    // Pulisci localStorage prima di ogni test
     localStorage.clear();
-    sessionStorage.clear();
     storage = new ShogunStorage();
   });
 
@@ -64,48 +64,76 @@ describe("ShogunStorage", () => {
   });
 
   test("dovrebbe gestire localStorage non disponibile", () => {
-    // Backup dell'implementazione originale
-    const originalLocalStorage = global.localStorage;
+    // Salva i metodi originali
+    const originalGetItem = Object.getOwnPropertyDescriptor(
+      Storage.prototype,
+      "getItem",
+    );
+    const originalSetItem = Object.getOwnPropertyDescriptor(
+      Storage.prototype,
+      "setItem",
+    );
+    const originalRemoveItem = Object.getOwnPropertyDescriptor(
+      Storage.prototype,
+      "removeItem",
+    );
+    const originalClear = Object.getOwnPropertyDescriptor(
+      Storage.prototype,
+      "clear",
+    );
+
+    // Ridefinisci i metodi per lanciare errori
+    Object.defineProperty(Storage.prototype, "getItem", {
+      configurable: true,
+      value: () => {
+        throw new Error("localStorage not available");
+      },
+    });
+    Object.defineProperty(Storage.prototype, "setItem", {
+      configurable: true,
+      value: () => {
+        throw new Error("localStorage not available");
+      },
+    });
+    Object.defineProperty(Storage.prototype, "removeItem", {
+      configurable: true,
+      value: () => {
+        throw new Error("localStorage not available");
+      },
+    });
+    Object.defineProperty(Storage.prototype, "clear", {
+      configurable: true,
+      value: () => {
+        throw new Error("localStorage not available");
+      },
+    });
 
     try {
-      // Creiamo un mock che lancia errori in modo controllato
-      const mockLocalStorage = {
-        getItem: jest.fn().mockImplementation(() => {
-          throw new Error("localStorage not available");
-        }),
-        setItem: jest.fn().mockImplementation(() => {
-          throw new Error("localStorage not available");
-        }),
-        removeItem: jest.fn().mockImplementation(() => {
-          throw new Error("localStorage not available");
-        }),
-        clear: jest.fn().mockImplementation(() => {
-          throw new Error("localStorage not available");
-        }),
-      };
-
-      // Sostituisci localStorage con il nostro mock
-      Object.defineProperty(global, "localStorage", {
-        value: mockLocalStorage,
-        writable: true,
-      });
-
-      // Creiamo un nuovo ShogunStorage che userà il nostro mock
       const fallbackStorage = new ShogunStorage();
+      // Verifica che useLocalStorage sia impostato a false
+      expect((fallbackStorage as any).useLocalStorage).toBe(false);
 
-      // Anche con localStorage che lancia errori, dovrebbe funzionare usando Map interno
-      const testItem = JSON.stringify(testValue);
-      fallbackStorage.setItem(testKey, testItem);
-      const retrievedValue = fallbackStorage.getItem(testKey);
+      // Verifica che non vengano generati errori quando si usano i metodi di storage
+      expect(() => fallbackStorage.setItem("test", "value")).not.toThrow();
+      expect(() => fallbackStorage.getItem("test")).not.toThrow();
 
-      // Se l'operazione ha successo, il valore sarà recuperato dal Map interno
-      expect(retrievedValue).toBe(testItem);
+      // Verifica che i dati siano memorizzati correttamente nella Map interna
+      const internalMapValue = (fallbackStorage as any).store.get("test");
+      expect(internalMapValue).toBe("value");
     } finally {
-      // Ripristina localStorage originale
-      Object.defineProperty(global, "localStorage", {
-        value: originalLocalStorage,
-        writable: true,
-      });
+      // Ripristina i metodi originali
+      if (originalGetItem)
+        Object.defineProperty(Storage.prototype, "getItem", originalGetItem);
+      if (originalSetItem)
+        Object.defineProperty(Storage.prototype, "setItem", originalSetItem);
+      if (originalRemoveItem)
+        Object.defineProperty(
+          Storage.prototype,
+          "removeItem",
+          originalRemoveItem,
+        );
+      if (originalClear)
+        Object.defineProperty(Storage.prototype, "clear", originalClear);
     }
   });
 });

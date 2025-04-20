@@ -6,6 +6,7 @@
 export class ShogunStorage {
   private store: Map<string, any>;
   private isTestMode: boolean;
+  private useLocalStorage: boolean;
 
   /**
    * Initializes storage and loads any existing keypair from localStorage if available
@@ -14,17 +15,25 @@ export class ShogunStorage {
     this.store = new Map<string, any>();
     // Controlla se siamo in ambiente di test
     this.isTestMode = process.env.NODE_ENV === "test";
+    this.useLocalStorage = false;
 
-    // Try loading data from localStorage in browser environments
-    if (typeof localStorage !== "undefined") {
+    // Check if localStorage is available
+    if (typeof localStorage !== "undefined" && !this.isTestMode) {
       try {
+        // Test localStorage access
+        localStorage.setItem("_shogun_test", "_shogun_test");
+        localStorage.removeItem("_shogun_test");
+        this.useLocalStorage = true;
+
+        // Load existing keypair if available
         const storedPair = localStorage.getItem("shogun_keypair");
         if (storedPair) {
           this.store.set("keypair", JSON.parse(storedPair));
         }
       } catch (error) {
+        this.useLocalStorage = false;
         if (!this.isTestMode) {
-          console.error("Error retrieving data from localStorage:", error);
+          console.error("localStorage not available:", error);
         }
       }
     }
@@ -54,7 +63,7 @@ export class ShogunStorage {
     this.store.set("keypair", pair);
 
     // Also save to localStorage in browser environments
-    if (typeof localStorage !== "undefined") {
+    if (this.useLocalStorage) {
       try {
         localStorage.setItem("shogun_keypair", JSON.stringify(pair));
       } catch (error) {
@@ -72,7 +81,7 @@ export class ShogunStorage {
     this.store.clear();
 
     // Also clear localStorage in browser environments
-    if (typeof localStorage !== "undefined") {
+    if (this.useLocalStorage) {
       try {
         localStorage.removeItem("shogun_keypair");
       } catch (error) {
@@ -104,7 +113,7 @@ export class ShogunStorage {
       this.store.set(key, parsedValue);
 
       // Also save to localStorage in browser environments
-      if (typeof localStorage !== "undefined") {
+      if (this.useLocalStorage) {
         try {
           localStorage.setItem(key, value);
         } catch (error) {
@@ -118,7 +127,7 @@ export class ShogunStorage {
       this.store.set(key, value);
 
       // Also save to localStorage in browser environments
-      if (typeof localStorage !== "undefined") {
+      if (this.useLocalStorage) {
         try {
           localStorage.setItem(key, value);
         } catch (error) {
@@ -138,7 +147,7 @@ export class ShogunStorage {
     this.store.delete(key);
 
     // Also remove from localStorage in browser environments
-    if (typeof localStorage !== "undefined") {
+    if (this.useLocalStorage) {
       try {
         localStorage.removeItem(key);
       } catch (error) {

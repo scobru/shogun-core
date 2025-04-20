@@ -1,7 +1,8 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { StealthPluginInterface } from "./types";
-import { StealthAddressResult, StealthData } from "../../types/stealth";
+import { StealthAddressResult, StealthData, EphemeralKeyPair } from "../../types/stealth";
+import { ethers } from "ethers";
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore
  */
@@ -46,4 +47,8 @@ export declare class StealthPlugin extends BasePlugin implements StealthPluginIn
      * @inheritdoc
      */
     getStealthPrivateKey(stealthData: StealthData, privateKeyOrSpendKey: string): Promise<string>;
+    /**
+     * @inheritdoc
+     */
+    openStealthAddress(stealthAddress: string, ephemeralPublicKey: string, pair: EphemeralKeyPair): Promise<ethers.Wallet>;
 }
