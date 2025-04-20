@@ -48,6 +48,7 @@
     "ethers": "^6.13.5",
     "gun": "latest",
     "keccak256": "^1.0.6",
+    "qs": "^6.14.0",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
