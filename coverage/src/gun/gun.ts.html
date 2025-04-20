@@ -2020,7 +2020,7 @@ class GunDB {
 &nbsp;
   private <span class="fstat-no" title="function not covered" >async </span>retry&lt;T&gt;(
     operation: () =&gt; Promise&lt;T&gt;,
-    context: string
+    context: string,
   ): Promise&lt;T&gt; {
     let lastError: Error;
 &nbsp;
@@ -2049,7 +2049,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
 <span class="cstat-no" title="statement not covered" >        this.notifyAuthListeners(ack.sea?.pub || "");</span>
@@ -2130,7 +2130,7 @@ class GunDB {
     return new Promise((resolve) =&gt; {
       this.gun.get(path).put(data, (ack: any) =&gt; {
         resolve(
-          ack.err ? <span class="branch-0 cbranch-no" title="branch not covered" >{ success: false, error: ack.err } </span>: { success: true }
+          ack.err ? <span class="branch-0 cbranch-no" title="branch not covered" >{ success: false, error: ack.err } </span>: { success: true },
         );
       });
     });
@@ -2146,7 +2146,7 @@ class GunDB {
     return new Promise((resolve) =&gt; {
       this.gun.get(path).set(data, (ack: any) =&gt; {
         resolve(
-          ack.err ? <span class="branch-0 cbranch-no" title="branch not covered" >{ success: false, error: ack.err } </span>: { success: true }
+          ack.err ? <span class="branch-0 cbranch-no" title="branch not covered" >{ success: false, error: ack.err } </span>: { success: true },
         );
       });
     });
@@ -2161,7 +2161,7 @@ class GunDB {
 <span class="cstat-no" title="statement not covered" >    return new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >      this.gun.get(path).put(null, <span class="fstat-no" title="function not covered" >(a</span>ck: any) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        resolve(</span>
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -2177,7 +2177,7 @@ class GunDB {
 <span class="cstat-no" title="statement not covered" >    return new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >      this.gun.get(path).put(null, <span class="fstat-no" title="function not covered" >(a</span>ck: any) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        resolve(</span>
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -2214,7 +2214,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) =&gt; void
+    callback?: (result: any) =&gt; void,
   ): Promise&lt;any&gt; {
     <span class="missing-if-branch" title="if path not taken" >I</span>if (this.isAuthenticating()) {
       const err = <span class="cstat-no" title="statement not covered" >"Authentication already in progress";</span>
@@ -2307,10 +2307,10 @@ class GunDB {
 <span class="fstat-no" title="function not covered" >      () =</span>&gt;
 <span class="cstat-no" title="statement not covered" >        new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >          node.put(data, <span class="fstat-no" title="function not covered" >(a</span>ck: any) =&gt;</span>
-<span class="cstat-no" title="statement not covered" >            ack.err ? reject(new Error(ack.err)) : resolve(data)</span>
+<span class="cstat-no" title="statement not covered" >            ack.err ? reject(new Error(ack.err)) : resolve(data),</span>
           );
         }),
-      "data save operation"
+      "data save operation",
     );
   }
 &nbsp;
@@ -2320,7 +2320,7 @@ class GunDB {
 <span class="cstat-no" title="statement not covered" >        new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >          node.once(<span class="fstat-no" title="function not covered" >(d</span>ata: any) =&gt; <span class="cstat-no" title="statement not covered" >resolve(data))</span>;</span>
         }),
-      "data read operation"
+      "data read operation",
     );
   }
 &nbsp;
@@ -2418,7 +2418,7 @@ class GunDB {
 <span class="cstat-no" title="statement not covered" >    try {</span>
       // Calcola l'hash del contenuto
       const { hash } = <span class="cstat-no" title="statement not covered" >await this.hashObj(</span>
-        typeof data === "object" ? data : { value: data }
+        typeof data === "object" ? data : { value: data },
       );
 &nbsp;
       // Salva i dati utilizzando l'hash come chiave nello spazio immutabile
@@ -2429,7 +2429,7 @@ class GunDB {
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      logError(</span>
         `Errore durante l'aggiunta dati con hash a Frozen Space:`,
-        error
+        error,
       );
 <span class="cstat-no" title="statement not covered" >      throw error;</span>
     }
@@ -2445,7 +2445,7 @@ class GunDB {
 <span class="fstat-no" title="function not covered" >  async </span>getHashedFrozenData(
     node: string,
     hash: string,
-    verifyIntegrity: boolean = <span class="branch-0 cbranch-no" title="branch not covered" >false</span>
+    verifyIntegrity: boolean = <span class="branch-0 cbranch-no" title="branch not covered" >false,</span>
   ): Promise&lt;any&gt; {
 <span class="cstat-no" title="statement not covered" >    log(`Recupero dati con hash da Frozen Space: ${node}/${hash}`);</span>
     const data = <span class="cstat-no" title="statement not covered" >await this.getFrozenData(node, hash);</span>
@@ -2453,11 +2453,11 @@ class GunDB {
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (verifyIntegrity &amp;&amp; data) {</span>
       // Verifica l'integrità ricalcolando l'hash dei dati
       const { hash: calculatedHash } = <span class="cstat-no" title="statement not covered" >await this.hashObj(</span>
-        typeof data === "object" ? data : { value: data }
+        typeof data === "object" ? data : { value: data },
       );
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (calculatedHash !== hash) {</span>
 <span class="cstat-no" title="statement not covered" >        logError(</span>
-          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`
+          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`,
         );
 <span class="cstat-no" title="statement not covered" >        throw new Error("Integrità dei dati compromessa");</span>
       }
@@ -2535,7 +2535,7 @@ class GunDB {
 <span class="fstat-no" title="function not covered" >  repository&lt;</span>T, R extends GunRepository&lt;T&gt;&gt;(
     collection: string,
     repository: new (gun: GunDB, collection: string, options?: any) =&gt; R,
-    options?: any
+    options?: any,
   ): R {
 <span class="cstat-no" title="statement not covered" >    return new repository(this, collection, options);</span>
   }
@@ -2741,7 +2741,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise&lt;{ success: boolean; error?: string }&gt; {
 <span class="cstat-no" title="statement not covered" >    log("Impostazione suggerimento password per:", username);</span>
 &nbsp;
@@ -2769,7 +2769,7 @@ class GunDB {
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      logError(</span>
         "Errore durante l'impostazione del suggerimento password:",
-        error
+        error,
       );
 <span class="cstat-no" title="statement not covered" >      return { success: false, error: String(error) };</span>
     }
@@ -2783,7 +2783,7 @@ class GunDB {
    */
 <span class="fstat-no" title="function not covered" >  async </span>forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise&lt;{ success: boolean; hint?: string; error?: string }&gt; {
 <span class="cstat-no" title="statement not covered" >    log("Tentativo di recupero password per:", username);</span>
 &nbsp;
@@ -2836,7 +2836,7 @@ export { GunDB };
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-04-19T11:45:54.030Z
+                at 2025-04-20T17:47:06.701Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
