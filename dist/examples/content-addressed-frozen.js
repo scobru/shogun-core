@@ -1,13 +1,15 @@
+"use strict";
 /**
  * Esempio di utilizzo di content addressing (hash) combinato con Frozen Space
  * Questa combinazione offre sia immutabilità che riferimenti deterministici
  */
-import { GunDB } from "../gun/gun";
+Object.defineProperty(exports, "__esModule", { value: true });
+const gun_1 = require("../gun/gun");
 /**
  * Dimostra come salvare e recuperare dati usando content addressing in Frozen Space
  */
 async function contentAddressedStorage() {
-    const gun = new GunDB();
+    const gun = new gun_1.GunDB();
     // Dati di esempio da rendere immutabili
     const documentoLegale = {
         titolo: "Contratto di Servizio",

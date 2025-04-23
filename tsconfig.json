@@ -1,24 +1,30 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
     "declaration": true,
     "declarationDir": "./dist/types",
     "outDir": "./dist",
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "target": "es2022", // Target modern JavaScript
+    "module": "commonjs", // Specify module code generation
+    "lib": ["es2022", "dom"], // Include modern JavaScript and DOM libraries
+    "moduleResolution": "node", // Use Node.js module resolution
+    "typeRoots": ["./node_modules/@types"], // Specify type definition directories
+    "allowJs": true, // Allow JavaScript files to be included in the project
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "esModuleInterop": true, // Enable interoperability between CommonJS and ES modules
+    "forceConsistentCasingInFileNames": true, // Ensure consistent casing in import paths
+    "strict": true, // Enable all strict type-checking options
+    "noImplicitAny": true, // Raise error on expressions and declarations with an implied 'any' type
+    "strictNullChecks": true, // Enable strict null checks
+    "strictFunctionTypes": true, // Enable strict function types
+    "strictPropertyInitialization": true, // Enable strict property initialization
+    "noImplicitThis": true, // Raise error on 'this' expressions with an implied 'any' type
+    "alwaysStrict": true, // Parse in strict mode and emit "use strict" for each source file
+    "noUnusedLocals": false, // Report errors on unused locals
+    "noUnusedParameters": false, // Report errors on unused parameters
+    "noImplicitReturns": true, // Report error when not all code paths in function return a value
+    "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statements
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/hedgehog/*",
-    "src/__tests__/**/*",
-    "**/*.test.ts"
-  ]
+  "exclude": ["node_modules", "dist", "src/__tests__/**/*", "**/*.test.ts"]
 }

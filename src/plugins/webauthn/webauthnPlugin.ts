@@ -20,15 +20,13 @@ export class WebauthnPlugin
   description = "Provides WebAuthn authentication functionality for ShogunCore";
 
   private webauthn: Webauthn | null = null;
-
   /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-
     // Inizializziamo il modulo WebAuthn
-    this.webauthn = new Webauthn();
+    this.webauthn = new Webauthn(core.gun);
 
     log("WebAuthn plugin initialized");
   }
@@ -67,12 +65,12 @@ export class WebauthnPlugin
   async generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
-    isLogin: boolean = false,
+    isLogin: boolean = false
   ): Promise<CredentialResult> {
     return this.assertWebauthn().generateCredentials(
       username,
       existingCredential,
-      isLogin,
+      isLogin
     );
   }
 
@@ -82,12 +80,12 @@ export class WebauthnPlugin
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice: boolean = false,
+    isNewDevice: boolean = false
   ): Promise<CredentialResult> {
     return this.assertWebauthn().createAccount(
       username,
       credentials,
-      isNewDevice,
+      isNewDevice
     );
   }
 
@@ -97,7 +95,7 @@ export class WebauthnPlugin
   async authenticateUser(
     username: string,
     salt: string | null,
-    options?: any,
+    options?: any
   ): Promise<CredentialResult> {
     return this.assertWebauthn().authenticateUser(username, salt, options);
   }
@@ -115,12 +113,12 @@ export class WebauthnPlugin
   async removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials,
+    credentials: WebAuthnCredentials
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }> {
     return this.assertWebauthn().removeDevice(
       username,
       credentialId,
-      credentials,
+      credentials
     );
   }
 
@@ -150,17 +148,17 @@ export class WebauthnPlugin
       const assertionResult = await this.generateCredentials(
         username,
         null,
-        true,
+        true
       );
 
       if (!assertionResult?.success) {
         throw new Error(
-          assertionResult?.error || "WebAuthn verification failed",
+          assertionResult?.error || "WebAuthn verification failed"
         );
       }
 
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(assertionResult.credentialId || ""),
+        ethers.toUtf8Bytes(assertionResult.credentialId || "")
       );
 
       const loginResult = await core.login(username, hashedCredentialId);
@@ -184,7 +182,6 @@ export class WebauthnPlugin
         return {
           ...loginResult,
           username,
-          password: hashedCredentialId,
           credentialId: assertionResult.credentialId,
         };
       } else {
@@ -197,7 +194,7 @@ export class WebauthnPlugin
         ErrorType.WEBAUTHN,
         "WEBAUTHN_LOGIN_ERROR",
         error.message || "Error during WebAuthn login",
-        error,
+        error
       );
 
       return {
@@ -233,24 +230,24 @@ export class WebauthnPlugin
       const attestationResult = await this.generateCredentials(
         username,
         null,
-        false,
+        false
       );
 
       if (!attestationResult?.success) {
         throw new Error(
-          attestationResult?.error || "Unable to generate WebAuthn credentials",
+          attestationResult?.error || "Unable to generate WebAuthn credentials"
         );
       }
 
       const hashedCredentialId = ethers.keccak256(
-        ethers.toUtf8Bytes(attestationResult.credentialId || ""),
+        ethers.toUtf8Bytes(attestationResult.credentialId || "")
       );
 
       const signupResult = await core.signUp(username, hashedCredentialId);
 
       if (signupResult.success) {
         log(
-          `WebAuthn registration completed successfully for user: ${username}`,
+          `WebAuthn registration completed successfully for user: ${username}`
         );
 
         if (!signupResult.did) {
@@ -291,7 +288,6 @@ export class WebauthnPlugin
         return {
           ...signupResult,
           username,
-          password: "*******",
           credentialId: attestationResult.credentialId,
         };
       } else {
@@ -304,7 +300,7 @@ export class WebauthnPlugin
         ErrorType.WEBAUTHN,
         "WEBAUTHN_SIGNUP_ERROR",
         error.message || "Error during WebAuthn registration",
-        error,
+        error
       );
 
       return {

@@ -61,4 +61,11 @@ export declare class DIDPlugin extends BasePlugin implements DIDPluginInterface 
      * @inheritdoc
      */
     ensureUserHasDID(options?: DIDCreateOptions): Promise<string | null>;
+    /**
+     * Implementation of the ensureUserHasDID with timeout handling
+     * @param options DID creation options
+     * @returns The DID identifier or null if failed
+     * @private
+     */
+    private _ensureUserHasDIDWithTimeout;
 }

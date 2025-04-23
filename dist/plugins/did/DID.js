@@ -1,7 +1,10 @@
-import { ethers } from "ethers";
-import { log, logError } from "../../utils/logger";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
-import { EventEmitter } from "../../utils/eventEmitter";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShogunDID = void 0;
+const ethers_1 = require("ethers");
+const logger_1 = require("../../utils/logger");
+const errorHandler_1 = require("../../utils/errorHandler");
+const eventEmitter_1 = require("../../utils/eventEmitter");
 /**
  * Genera una password casuale sicura
  * @param length Lunghezza della password
@@ -29,29 +32,31 @@ async function deriveEncryptionKey(username, password) {
 /**
  * ShogunDID class for decentralized identity management
  */
-export class ShogunDID extends EventEmitter {
+class ShogunDID extends eventEmitter_1.EventEmitter {
+    core;
+    methodName = "shogun";
+    didCache = new Map();
+    DEFAULT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+    DEFAULT_TIMEOUT = 10000; // 10 seconds
+    DEFAULT_MAX_RETRIES = 3;
+    DEFAULT_RETRY_DELAY = 1000; // 1 second
+    options;
+    registryConfig = {
+        address: "0x1234...", // Da configurare
+        network: "mainnet",
+        timeout: this.DEFAULT_TIMEOUT,
+        maxRetries: this.DEFAULT_MAX_RETRIES,
+        retryDelay: this.DEFAULT_RETRY_DELAY,
+    };
     /**
      * Initialize ShogunDID manager
      */
     constructor(shogunCore, registryConfig, options) {
         super();
-        this.methodName = "shogun";
-        this.didCache = new Map();
-        this.DEFAULT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-        this.DEFAULT_TIMEOUT = 10000; // 10 seconds
-        this.DEFAULT_MAX_RETRIES = 3;
-        this.DEFAULT_RETRY_DELAY = 1000; // 1 second
-        this.registryConfig = {
-            address: "0x1234...", // Da configurare
-            network: "mainnet",
-            timeout: this.DEFAULT_TIMEOUT,
-            maxRetries: this.DEFAULT_MAX_RETRIES,
-            retryDelay: this.DEFAULT_RETRY_DELAY,
-        };
         this.core = shogunCore;
         this.registryConfig = { ...this.registryConfig, ...registryConfig };
         this.options = options || { useSecureRandomPassword: true };
-        log("ShogunDID initialized");
+        (0, logger_1.log)("ShogunDID initialized");
     }
     /**
      * Create a new Shogun DID
@@ -65,8 +70,8 @@ export class ShogunDID extends EventEmitter {
             if (!userPub) {
                 throw new Error("Cannot retrieve user's public key");
             }
-            let methodSpecificId = ethers
-                .keccak256(ethers.toUtf8Bytes(userPub))
+            let methodSpecificId = ethers_1.ethers
+                .keccak256(ethers_1.ethers.toUtf8Bytes(userPub))
                 .slice(2, 42);
             if (options.network) {
                 methodSpecificId = `${options.network}:${methodSpecificId}`;
@@ -74,12 +79,12 @@ export class ShogunDID extends EventEmitter {
             const did = `did:${this.methodName}:${methodSpecificId}`;
             await this.storeDID(did, options);
             this.emit("didCreated", { did });
-            log(`Created DID: ${did}`);
+            (0, logger_1.log)(`Created DID: ${did}`);
             return did;
         }
         catch (error) {
-            logError("Error creating DID:", error);
-            ErrorHandler.handle(ErrorType.DID, "CREATE_DID_ERROR", error instanceof Error ? error.message : "Error creating DID", error);
+            (0, logger_1.logError)("Error creating DID:", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.DID, "CREATE_DID_ERROR", error instanceof Error ? error.message : "Error creating DID", error);
             throw error;
         }
     }
@@ -117,7 +122,7 @@ export class ShogunDID extends EventEmitter {
                             .get("did")
                             .put(did, (userAck) => {
                             if (userAck.err) {
-                                logError(`Warning: DID created but not associated with user: ${userAck.err}`);
+                                (0, logger_1.logError)(`Warning: DID created but not associated with user: ${userAck.err}`);
                             }
                             resolve();
                         });
@@ -128,7 +133,7 @@ export class ShogunDID extends EventEmitter {
             });
         }
         catch (error) {
-            logError("Error storing DID:", error);
+            (0, logger_1.logError)("Error storing DID:", error);
             throw error;
         }
     }
@@ -153,7 +158,7 @@ export class ShogunDID extends EventEmitter {
                     id: `${did}#keys-1`,
                     type: "Ed25519VerificationKey2020",
                     controller: did,
-                    publicKeyMultibase: `z${this.getUserPublicKey() || ethers.keccak256(ethers.toUtf8Bytes(did))}`,
+                    publicKeyMultibase: `z${this.getUserPublicKey() || ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(did))}`,
                 },
             ],
             authentication: [`${did}#keys-1`],
@@ -183,7 +188,7 @@ export class ShogunDID extends EventEmitter {
             return pub ?? null;
         }
         catch (error) {
-            logError("Error getting user public key:", error);
+            (0, logger_1.logError)("Error getting user public key:", error);
             return null;
         }
     }
@@ -250,7 +255,7 @@ export class ShogunDID extends EventEmitter {
             });
         }
         catch (error) {
-            logError("Error resolving DID:", error);
+            (0, logger_1.logError)("Error resolving DID:", error);
             return this.createErrorResolution("internalError", error instanceof Error ? error.message : "Unknown error");
         }
     }
@@ -269,13 +274,13 @@ export class ShogunDID extends EventEmitter {
             const didRegistryABI = [
                 "function registerDID(string did, string controller) public returns (bool)",
             ];
-            const didRegistryContract = new ethers.Contract(this.registryConfig.address, didRegistryABI, effectiveSigner);
+            const didRegistryContract = new ethers_1.ethers.Contract(this.registryConfig.address, didRegistryABI, effectiveSigner);
             for (let attempt = 1; attempt <= this.registryConfig.maxRetries; attempt++) {
                 try {
                     const tx = await didRegistryContract.registerDID(did, this.getUserPublicKey());
                     const receipt = await tx.wait();
                     this.emit("didRegistered", { did, txHash: receipt.hash });
-                    log(`DID registered on blockchain: ${did}, tx: ${receipt.hash}`);
+                    (0, logger_1.log)(`DID registered on blockchain: ${did}, tx: ${receipt.hash}`);
                     return {
                         success: true,
                         txHash: receipt.hash,
@@ -290,7 +295,7 @@ export class ShogunDID extends EventEmitter {
             throw new Error("Failed to register DID after retries");
         }
         catch (error) {
-            logError("Error registering DID on blockchain:", error);
+            (0, logger_1.logError)("Error registering DID on blockchain:", error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Unknown error",
@@ -328,7 +333,7 @@ export class ShogunDID extends EventEmitter {
             });
         }
         catch (error) {
-            logError("Error getting current user DID:", error);
+            (0, logger_1.logError)("Error getting current user DID:", error);
             return null;
         }
     }
@@ -340,7 +345,7 @@ export class ShogunDID extends EventEmitter {
      */
     async authenticateWithDID(did, challenge) {
         try {
-            log(`Authenticating with DID: ${did}`);
+            (0, logger_1.log)(`Authenticating with DID: ${did}`);
             // Verify DID format
             if (!this.isValidDID(did)) {
                 return {
@@ -379,7 +384,7 @@ export class ShogunDID extends EventEmitter {
             }
         }
         catch (error) {
-            logError("Error authenticating with DID:", error);
+            (0, logger_1.logError)("Error authenticating with DID:", error);
             return {
                 success: false,
                 error: error instanceof Error
@@ -453,12 +458,12 @@ export class ShogunDID extends EventEmitter {
                 network: methodSpecificId.split(":")[0] || "main",
             });
             this.emit("didUpdated", { did, document: updatedDoc });
-            log(`Updated DID Document: ${did}`);
+            (0, logger_1.log)(`Updated DID Document: ${did}`);
             return true;
         }
         catch (error) {
-            logError("Error updating DID document:", error);
-            ErrorHandler.handle(ErrorType.DID, "UPDATE_DID_ERROR", error instanceof Error ? error.message : "Error updating DID", error);
+            (0, logger_1.logError)("Error updating DID document:", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.DID, "UPDATE_DID_ERROR", error instanceof Error ? error.message : "Error updating DID", error);
             return false;
         }
     }
@@ -485,11 +490,11 @@ export class ShogunDID extends EventEmitter {
                     updated: new Date().toISOString(),
                 }, (ack) => {
                     if (ack.err) {
-                        logError(`Error deactivating DID: ${ack.err}`);
+                        (0, logger_1.logError)(`Error deactivating DID: ${ack.err}`);
                         resolve(false);
                     }
                     else {
-                        log(`Successfully deactivated DID: ${did}`);
+                        (0, logger_1.log)(`Successfully deactivated DID: ${did}`);
                         resolve(true);
                     }
                 });
@@ -498,7 +503,7 @@ export class ShogunDID extends EventEmitter {
             });
         }
         catch (error) {
-            logError("Error deactivating DID:", error);
+            (0, logger_1.logError)("Error deactivating DID:", error);
             return false;
         }
     }
@@ -569,7 +574,7 @@ export class ShogunDID extends EventEmitter {
             }
             catch (e) {
                 // If parsing fails, create a new basic document
-                logError("Error parsing stored DID Document, creating a basic one", e);
+                (0, logger_1.logError)("Error parsing stored DID Document, creating a basic one", e);
             }
         }
         // Create a basic DID Document if none exists or parsing failed
@@ -677,7 +682,7 @@ export class ShogunDID extends EventEmitter {
     }
     async authenticateWithGunDB(username, challenge) {
         try {
-            log("Authenticating with GunDB using password method", username);
+            (0, logger_1.log)("Authenticating with GunDB using password method", username);
             // Estraiamo la password dalla sfida o generiamo una password sicura
             let password = challenge ?? "";
             // Se abilitato, genera una password casuale sicura
@@ -699,7 +704,7 @@ export class ShogunDID extends EventEmitter {
             return await passwordAuth.authenticate(username, encryptionKey);
         }
         catch (error) {
-            log("Error authenticating with GunDB:", error);
+            (0, logger_1.log)("Error authenticating with GunDB:", error);
             throw error;
         }
     }
@@ -724,7 +729,7 @@ export class ShogunDID extends EventEmitter {
                 throw new Error("Provider non disponibile per verificare il DID on-chain");
             }
             // Creare un'istanza del contratto con il provider
-            const didRegistryContract = new ethers.Contract(didRegistryAddress, didRegistryABI, provider);
+            const didRegistryContract = new ethers_1.ethers.Contract(didRegistryAddress, didRegistryABI, provider);
             // Verificare se il DID è registrato
             const isRegistered = await didRegistryContract.isDIDRegistered(did);
             if (!isRegistered) {
@@ -738,7 +743,7 @@ export class ShogunDID extends EventEmitter {
             };
         }
         catch (error) {
-            logError("Error verifying DID on blockchain:", error);
+            (0, logger_1.logError)("Error verifying DID on blockchain:", error);
             return {
                 isRegistered: false,
                 error: error instanceof Error ? error.message : "Unknown error",
@@ -774,3 +779,4 @@ export class ShogunDID extends EventEmitter {
         return null;
     }
 }
+exports.ShogunDID = ShogunDID;

@@ -111,6 +111,13 @@ export declare class WalletManager extends EventEmitter {
      */
     getMainWallet(): ethers.Wallet;
     /**
+     * Get the main wallet credentials
+     */
+    getMainWalletCredentials(): {
+        address: string;
+        priv: string;
+    };
+    /**
      * Encrypt sensitive text using SEA
      * @param text Text to encrypt
      * @returns Encrypted text

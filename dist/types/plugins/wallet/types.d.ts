@@ -10,6 +10,14 @@ export interface WalletPluginInterface {
      */
     getMainWallet(): ethers.Wallet | null;
     /**
+     * Ottiene il credenziali wallet principale
+     * @returns Il wallet principale o null se non disponibile
+     */
+    getMainWalletCredentials(): {
+        address: string;
+        priv: string;
+    };
+    /**
      * Crea un nuovo wallet
      * @returns Promise con l'informazione del wallet creato
      */

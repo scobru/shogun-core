@@ -1,9 +1,17 @@
-import { encrypt, decrypt } from "./encryption";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GunRepository = void 0;
+const encryption_1 = require("./encryption");
 /**
  * Generic repository for Gun
  * Implements the repository pattern with optional encryption support
  */
-export class GunRepository {
+class GunRepository {
+    gun;
+    collection;
+    useEncryption;
+    userScope;
+    encryptionKey;
     /**
      * Initializes a new repository
      * @param gun - GunDB instance
@@ -32,7 +40,7 @@ export class GunRepository {
                 }
                 if (this.useEncryption && this.encryptionKey) {
                     try {
-                        const decrypted = await decrypt(data, this.encryptionKey);
+                        const decrypted = await (0, encryption_1.decrypt)(data, this.encryptionKey);
                         resolve(this.mapToEntity(decrypted));
                     }
                     catch (error) {
@@ -61,7 +69,7 @@ export class GunRepository {
                 try {
                     let item = data;
                     if (this.useEncryption && this.encryptionKey) {
-                        item = await decrypt(data, this.encryptionKey);
+                        item = await (0, encryption_1.decrypt)(data, this.encryptionKey);
                     }
                     items.push(this.mapToEntity(item));
                 }
@@ -89,7 +97,7 @@ export class GunRepository {
             try {
                 // Encrypt the data if necessary
                 const saveData = this.useEncryption && this.encryptionKey
-                    ? await encrypt(entityData, this.encryptionKey)
+                    ? await (0, encryption_1.encrypt)(entityData, this.encryptionKey)
                     : entityData;
                 // Save the data
                 this.getBaseNode()
@@ -125,7 +133,7 @@ export class GunRepository {
             try {
                 // Encrypt the data if necessary
                 const saveData = this.useEncryption && this.encryptionKey
-                    ? await encrypt(entityData, this.encryptionKey)
+                    ? await (0, encryption_1.encrypt)(entityData, this.encryptionKey)
                     : entityData;
                 // Update the data
                 this.getBaseNode()
@@ -188,3 +196,4 @@ export class GunRepository {
             Math.random().toString(36).substring(2, 15));
     }
 }
+exports.GunRepository = GunRepository;

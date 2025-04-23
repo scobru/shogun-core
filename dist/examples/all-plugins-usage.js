@@ -1,19 +1,21 @@
-import { ShogunCore, WalletPlugin, StealthPlugin, DIDPlugin, PluginCategory, } from "../index";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const index_1 = require("../index");
 /**
  * Esempio di utilizzo di tutti i plugin di ShogunCore
  */
 async function exampleAllPlugins() {
     // Inizializziamo ShogunCore con configurazione di base
-    const core = new ShogunCore({
+    const core = new index_1.ShogunCore({
         gundb: {
             peers: ["http://localhost:8765/gun"],
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
     // Creiamo le istanze dei plugin
-    const walletPlugin = new WalletPlugin();
-    const stealthPlugin = new StealthPlugin();
-    const didPlugin = new DIDPlugin();
+    const walletPlugin = new index_1.WalletPlugin();
+    const stealthPlugin = new index_1.StealthPlugin();
+    const didPlugin = new index_1.DIDPlugin();
     // Registriamo i plugin
     core.register(walletPlugin);
     core.register(stealthPlugin);
@@ -76,15 +78,15 @@ async function exampleAllPlugins() {
  */
 async function exampleAutoRegisterPlugins() {
     // Creiamo le istanze dei plugin
-    const walletPlugin = new WalletPlugin();
-    const stealthPlugin = new StealthPlugin();
-    const didPlugin = new DIDPlugin();
+    const walletPlugin = new index_1.WalletPlugin();
+    const stealthPlugin = new index_1.StealthPlugin();
+    const didPlugin = new index_1.DIDPlugin();
     // Aggiungiamo informazioni di categoria ai plugin
-    walletPlugin._category = PluginCategory.Wallet;
-    stealthPlugin._category = PluginCategory.Privacy;
-    didPlugin._category = PluginCategory.Identity;
+    walletPlugin._category = index_1.PluginCategory.Wallet;
+    stealthPlugin._category = index_1.PluginCategory.Privacy;
+    didPlugin._category = index_1.PluginCategory.Identity;
     // Inizializziamo ShogunCore con auto-registrazione dei plugin
-    const core = new ShogunCore({
+    const core = new index_1.ShogunCore({
         gundb: {
             peers: ["https://gun-server.example.com/gun"],
         },
@@ -106,19 +108,19 @@ async function exampleAutoRegisterPlugins() {
     console.log(`Stealth plugin available: ${!!stealth}`);
     console.log(`DID plugin available: ${!!did}`);
     // Otteniamo i plugin per categoria
-    console.log("Wallet plugins:", core.getPluginsByCategory(PluginCategory.Wallet).length);
-    console.log("Privacy plugins:", core.getPluginsByCategory(PluginCategory.Privacy).length);
-    console.log("Identity plugins:", core.getPluginsByCategory(PluginCategory.Identity).length);
+    console.log("Wallet plugins:", core.getPluginsByCategory(index_1.PluginCategory.Wallet).length);
+    console.log("Privacy plugins:", core.getPluginsByCategory(index_1.PluginCategory.Privacy).length);
+    console.log("Identity plugins:", core.getPluginsByCategory(index_1.PluginCategory.Identity).length);
 }
 /**
  * Esempio di interazione tra plugin
  */
 async function examplePluginInteractions() {
     // Inizializziamo ShogunCore con tutti i plugin
-    const core = new ShogunCore({});
-    core.register(new WalletPlugin());
-    core.register(new StealthPlugin());
-    core.register(new DIDPlugin());
+    const core = new index_1.ShogunCore({});
+    core.register(new index_1.WalletPlugin());
+    core.register(new index_1.StealthPlugin());
+    core.register(new index_1.DIDPlugin());
     // Login utente
     await core.login("username", "password");
     // Recuperiamo i plugin

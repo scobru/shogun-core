@@ -1,4 +1,5 @@
+"use strict";
 /**
  * Type definitions for Gun and SEA
  */
-export {};
+Object.defineProperty(exports, "__esModule", { value: true });

@@ -202,6 +202,12 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     /**
+     * Ensure the current user has a DID associated asynchronously
+     * @param signUpResult The result of the signup process
+     * @private
+     */
+    private ensureUserHasDIDAsync;
+    /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
      *   - network: The network to use (default: 'main')

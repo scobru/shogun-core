@@ -1,7 +1,11 @@
+"use strict";
 /**
  * Gun module for Shogun
  * Provides the main interface for interacting with GunDB
  * with all modules integrated into the main class
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GunDB = void 0;
 // Export the main class
-export * from "./gun";
+var gun_1 = require("./gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_1.GunDB; } });

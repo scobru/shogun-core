@@ -1,13 +1,16 @@
+"use strict";
 /**
  * Esempio di utilizzo del sistema di recupero password
  * Questo file mostra come utilizzare le funzioni setPasswordHint e forgotPassword
  */
-import { GunDB } from "../gun/gun";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.runExamples = runExamples;
+const gun_1 = require("../gun/gun");
 /**
  * Esempio di configurazione delle domande di sicurezza e del suggerimento per la password
  */
 async function setupPasswordRecovery() {
-    const gun = new GunDB();
+    const gun = new gun_1.GunDB();
     // Registrazione utente (se necessario)
     const username = "mario.rossi";
     const password = "PasswordSicura123!";
@@ -43,7 +46,7 @@ async function setupPasswordRecovery() {
  * Esempio di recupero del suggerimento della password
  */
 async function recoverPasswordHint() {
-    const gun = new GunDB();
+    const gun = new gun_1.GunDB();
     const username = "mario.rossi";
     // Risposte alle domande di sicurezza
     const securityAnswers = ["Fido", "Bianchi"];
@@ -58,7 +61,7 @@ async function recoverPasswordHint() {
     }
 }
 // Esecuzione degli esempi
-export async function runExamples() {
+async function runExamples() {
     console.log("Configurazione del recupero password...");
     await setupPasswordRecovery();
     console.log("\nRecupero del suggerimento password...");

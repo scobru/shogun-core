@@ -2,7 +2,7 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { logDebug, logError, logWarn } from "../../utils/logger";
+import { log, logDebug, logError, logWarn } from "../../utils/logger";
 import CONFIG from "../../config";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -65,7 +65,7 @@ class MetaMask extends EventEmitter {
     if (typeof window !== "undefined" && window.ethereum) {
       try {
         this.provider = new ethers.BrowserProvider(
-          window.ethereum as ethers.Eip1193Provider,
+          window.ethereum as ethers.Eip1193Provider
         );
         logDebug("BrowserProvider initialized successfully");
       } catch (error) {
@@ -83,7 +83,7 @@ class MetaMask extends EventEmitter {
     try {
       if (typeof window !== "undefined" && window.ethereum) {
         this.provider = new ethers.BrowserProvider(
-          window.ethereum as ethers.Eip1193Provider,
+          window.ethereum as ethers.Eip1193Provider
         );
         logDebug("BrowserProvider initialized successfully");
       } else {
@@ -168,7 +168,7 @@ class MetaMask extends EventEmitter {
         ErrorType.VALIDATION,
         "INVALID_ADDRESS",
         "Invalid Ethereum address provided",
-        error,
+        error
       );
       throw error;
     }
@@ -186,7 +186,7 @@ class MetaMask extends EventEmitter {
         this.initProvider();
         if (!this.provider) {
           throw new Error(
-            "MetaMask is not available. Please install MetaMask extension.",
+            "MetaMask is not available. Please install MetaMask extension."
           );
         }
       }
@@ -201,7 +201,7 @@ class MetaMask extends EventEmitter {
             method: "eth_requestAccounts",
           });
           logDebug(
-            `Accounts requested successfully: ${accounts.length} accounts returned`,
+            `Accounts requested successfully: ${accounts.length} accounts returned`
           );
         } catch (requestError) {
           logError("Error requesting MetaMask accounts:", requestError);
@@ -237,7 +237,7 @@ class MetaMask extends EventEmitter {
           if (attempt === this.config.maxRetries!) throw error;
           logDebug(`Retrying in ${this.config.retryDelay}ms...`);
           await new Promise((resolve) =>
-            setTimeout(resolve, this.config.retryDelay),
+            setTimeout(resolve, this.config.retryDelay)
           );
         }
       }
@@ -249,7 +249,7 @@ class MetaMask extends EventEmitter {
         ErrorType.NETWORK,
         "METAMASK_CONNECTION_ERROR",
         error.message ?? "Unknown error while connecting to MetaMask",
-        error,
+        error
       );
       return { success: false, error: error.message };
     }
@@ -259,26 +259,29 @@ class MetaMask extends EventEmitter {
    * Generates credentials with caching
    */
   async generateCredentials(address: string): Promise<MetaMaskCredentials> {
-    logDebug("Generating credentials for address:", address);
+    log("Generating credentials for address:", address);
     try {
       const validAddress = this.validateAddress(address);
+
+      log("Valid Address:", validAddress);
 
       // Check cache first
       const cachedSignature = this.getCachedSignature(validAddress);
       if (cachedSignature) {
-        logDebug("Using cached signature for address:", validAddress);
+        log("Using cached signature for address:", validAddress);
         return this.generateCredentialsFromSignature(
           validAddress,
-          cachedSignature,
+          cachedSignature
         );
       }
 
       try {
+        log("Request signature with timeout");
         // Tentiamo di ottenere la firma con timeout
         const signature = await this.requestSignatureWithTimeout(
           validAddress,
           this.MESSAGE_TO_SIGN,
-          this.config.timeout,
+          this.config.timeout
         );
 
         // Cache the new signature
@@ -288,7 +291,7 @@ class MetaMask extends EventEmitter {
       } catch (signingError) {
         // Gestione del fallimento di firma
         logWarn(
-          `Failed to get signature: ${signingError}. Using fallback method.`,
+          `Failed to get signature: ${signingError}. Using fallback method.`
         );
 
         // Generiamo credenziali deterministiche basate solo sull'indirizzo
@@ -300,7 +303,7 @@ class MetaMask extends EventEmitter {
         ErrorType.AUTHENTICATION,
         "CREDENTIALS_GENERATION_ERROR",
         error.message ?? "Error generating MetaMask credentials",
-        error,
+        error
       );
       throw error;
     }
@@ -311,11 +314,12 @@ class MetaMask extends EventEmitter {
    */
   private generateCredentialsFromSignature(
     address: string,
-    signature: string,
+    signature: string
   ): MetaMaskCredentials {
+    log("Generating credentials from signature");
     const username = `mm_${address.toLowerCase()}`;
     const password = ethers.keccak256(
-      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`),
+      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`)
     );
     const message = this.MESSAGE_TO_SIGN;
     return { username, password, message, signature };
@@ -361,7 +365,7 @@ class MetaMask extends EventEmitter {
   private requestSignatureWithTimeout(
     address: string,
     message: string,
-    timeout: number = 30000,
+    timeout: number = 30000
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
@@ -389,6 +393,8 @@ class MetaMask extends EventEmitter {
         window.ethereum.on("accountsChanged", errorHandler);
       }
 
+      log("Initialize and Sign");
+
       const initializeAndSign = async () => {
         try {
           if (!this.provider) {
@@ -401,17 +407,20 @@ class MetaMask extends EventEmitter {
           const signer = await this.provider.getSigner();
           const signerAddress = await signer.getAddress();
 
+          log("Signer:", signer);
+          log("Signer Address:", signerAddress);
+
           if (signerAddress.toLowerCase() !== address.toLowerCase()) {
             throw new Error(
-              `Signer address (${signerAddress}) does not match expected address (${address})`,
+              `Signer address (${signerAddress}) does not match expected address (${address})`
             );
           }
 
-          logDebug(`Requesting signature for message: ${message}`);
+          log(`Requesting signature for message: ${message}`);
           const signature = await signer.signMessage(message);
-          logDebug("Signature obtained successfully");
+          log("Signature obtained successfully");
 
-          cleanup();
+          cleanup();  
           resolve(signature);
         } catch (error: any) {
           logError("Failed to request signature:", error);
@@ -420,7 +429,9 @@ class MetaMask extends EventEmitter {
         }
       };
 
-      initializeAndSign();
+      const signature = initializeAndSign();
+
+      return signature;
     });
   }
 
@@ -452,7 +463,7 @@ class MetaMask extends EventEmitter {
       logDebug("Custom provider configured successfully");
     } catch (error: any) {
       throw new Error(
-        `Error configuring provider: ${error.message ?? "Unknown error"}`,
+        `Error configuring provider: ${error.message ?? "Unknown error"}`
       );
     }
   }
@@ -477,7 +488,7 @@ class MetaMask extends EventEmitter {
       return await this.provider.getSigner();
     } catch (error: any) {
       throw new Error(
-        `Unable to get Ethereum signer: ${error.message || "Unknown error"}`,
+        `Unable to get Ethereum signer: ${error.message || "Unknown error"}`
       );
     }
   }
@@ -506,7 +517,7 @@ class MetaMask extends EventEmitter {
    */
   public async verifySignature(
     message: string,
-    signature: string,
+    signature: string
   ): Promise<string> {
     if (!message || !signature) {
       throw new Error("Invalid message or signature");
@@ -527,7 +538,7 @@ class MetaMask extends EventEmitter {
   public async getEthereumSigner(): Promise<ethers.Signer> {
     if (!MetaMask.isMetaMaskAvailable()) {
       throw new Error(
-        "MetaMask not found. Please install MetaMask to continue.",
+        "MetaMask not found. Please install MetaMask to continue."
       );
     }
 
@@ -541,7 +552,7 @@ class MetaMask extends EventEmitter {
       return provider.getSigner();
     } catch (error: any) {
       throw new Error(
-        `Error accessing MetaMask: ${error.message ?? "Unknown error"}`,
+        `Error accessing MetaMask: ${error.message ?? "Unknown error"}`
       );
     }
   }

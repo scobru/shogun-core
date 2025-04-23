@@ -31,6 +31,13 @@ export declare class WalletPlugin extends BasePlugin implements WalletPluginInte
     /**
      * @inheritdoc
      */
+    getMainWalletCredentials(): {
+        address: string;
+        priv: string;
+    };
+    /**
+     * @inheritdoc
+     */
     createWallet(): Promise<WalletInfo>;
     /**
      * @inheritdoc

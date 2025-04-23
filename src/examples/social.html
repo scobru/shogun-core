@@ -1,0 +1,2828 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shogun Social</title>
+    <style>
+        :root {
+            --primary-color: #1DA1F2;
+            --secondary-color: #657786;
+            --background-color: #ffffff;
+            --light-gray: #f5f8fa;
+            --border-color: #E1E8ED;
+            --text-color: #14171A;
+            --success-color: #4CAF50;
+            --danger-color: #E0245E;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 0;
+            background: var(--light-gray);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--background-color);
+            min-height: 100vh;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1,
+        h2 {
+            color: var(--text-color);
+            font-weight: bold;
+            padding: 16px;
+        }
+
+        h1 {
+            font-size: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 0;
+            padding-bottom: 8px;
+        }
+
+        .action-group {
+            margin-bottom: 0;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: #0b7bc1;
+        }
+
+        button:disabled {
+            background: var(--secondary-color);
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.active {
+            background-color: var(--success-color);
+        }
+
+        .unlike-button {
+            display: none;
+            background-color: var(--danger-color);
+        }
+
+        .unlike-button.visible {
+            display: inline-block;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            font-family: var(--font-family);
+        }
+
+        textarea {
+            height: 100px;
+            resize: none;
+        }
+
+        #results {
+            margin: 16px;
+            padding: 16px;
+            background: var(--light-gray);
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .post {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 3px solid #0066cc;
+        }
+
+        .post-author {
+            font-weight: bold;
+            color: #0066cc
+        }
+
+        .post-content {
+            margin: 10px 0
+        }
+
+        .post-timestamp {
+            font-size: 12px;
+            color: #777
+        }
+
+        .post-actions button {
+            padding: 5px 10px;
+            font-size: 14px
+        }
+
+        .like-count,
+        .comment-count {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            min-width: 18px;
+            height: 18px;
+            text-align: center;
+            border-radius: 50%;
+            background: #f0f0f0;
+            margin-left: 4px;
+        }
+
+        .comments-section {
+            display: none;
+            margin-top: 10px
+        }
+
+        .comment {
+            margin: 10px 0 10px 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            border-left: 2px solid #999
+        }
+
+        .comment-author {
+            font-weight: bold
+        }
+
+        .comment-timestamp {
+            font-size: 11px;
+            color: #777
+        }
+
+        .profile {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #0066cc
+        }
+
+        .profile-bio {
+            margin: 10px 0;
+            font-style: italic
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0
+        }
+
+        .profile-stat {
+            font-size: 14px
+        }
+
+        .profile-actions button {
+            margin-right: 5px
+        }
+
+        .timeline {
+            margin-top: 20px
+        }
+
+        .comment-section {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+
+        .comment-controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .refresh-comments {
+            background-color: #ff9800;
+            color: white;
+            font-size: 12px;
+            padding: 3px 8px;
+        }
+
+        .no-comments {
+            padding: 10px;
+            text-align: center;
+            color: #777;
+            font-style: italic;
+        }
+
+        .comments-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .comment {
+            margin: 10px 0 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            border-left: 2px solid #999
+        }
+
+        .comment-author {
+            font-weight: bold
+        }
+
+        .comment-timestamp {
+            font-size: 11px;
+            color: #777
+        }
+
+        .profile {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #0066cc
+        }
+
+        .profile-bio {
+            margin: 10px 0;
+            font-style: italic
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0
+        }
+
+        .profile-stat {
+            font-size: 14px
+        }
+
+        .profile-actions button {
+            margin-right: 5px
+        }
+
+        .timeline {
+            margin-top: 20px
+        }
+
+        .comment-form {
+            display: flex;
+            margin-top: 10px;
+        }
+
+        .comment-input {
+            flex: 1;
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+
+        .submit-comment {
+            white-space: nowrap;
+        }
+
+        .timeline-header {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .post-section {
+            margin-bottom: 10px;
+        }
+
+        .post-section-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .own-post {
+            background-color: #e0f7fa;
+        }
+
+        .profile-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .profile-stat-section {
+            margin-bottom: 15px;
+        }
+
+        .followers-list,
+        .following-list {
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .follower-item,
+        .following-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .follower-name,
+        .following-name {
+            flex-grow: 1;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .view-profile,
+        .unfollow-user {
+            margin-left: 8px;
+            padding: 2px 8px;
+            font-size: 12px;
+        }
+
+        .unfollow-user {
+            background-color: #f44336;
+        }
+
+        .empty-list {
+            padding: 10px;
+            color: #888;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .loading {
+            padding: 8px;
+            color: #666;
+            text-align: center;
+        }
+
+        .toggle-list {
+            margin-left: 8px;
+            padding: 2px 8px;
+            font-size: 12px;
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .refresh-list {
+            margin-left: 8px;
+            padding: 2px 8px;
+            font-size: 12px;
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .list-header h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .list-content {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .post-delete {
+            float: right;
+        }
+
+        .delete-post-button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .delete-post-button:hover {
+            background-color: #d32f2f;
+        }
+
+        .delete-post-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Stili per la lista utenti */
+        .users-section {
+            margin-bottom: 0;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .users-list {
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--light-gray);
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .user-id {
+            font-size: 13px;
+            color: var(--secondary-color);
+            margin-top: 2px;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .loading-users {
+            padding: 16px;
+            text-align: center;
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="app-header">
+            <div class="app-title">Shogun Social</div>
+            <div id="currentUserInfo" class="current-user" style="display: none;">
+                <strong></strong>
+            </div>
+        </div>
+
+        <div class="action-group">
+            <button id="initBtn">Inizializza</button>
+            <button id="loginBtn" disabled>Accedi</button>
+            <div id="loginForm" style="display:none;">
+                <form onsubmit="return false;">
+                    <input type="text" id="username" placeholder="Username" autocomplete="username">
+                    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+                    <button type="button" id="performLoginBtn"
+                        style="background-color: #4CAF50; margin-top: 10px; width: 100%;">Accedi</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="post-composer" style="display: none;" id="postComposer">
+            <textarea id="postContent" placeholder="A cosa stai pensando?"></textarea>
+            <button id="createPostBtn" disabled>Pubblica</button>
+        </div>
+
+        <div class="timeline-actions" style="display: none;" id="timelineActions">
+            <button id="getTimelineBtn">Aggiorna</button>
+        </div>
+
+        <div id="timelineContainer" class="timeline"></div>
+
+        <div class="action-group" id="profileSection">
+            <h2>Profilo</h2>
+            <input type="text" id="userPubInput" placeholder="Chiave pubblica utente">
+            <button id="getProfileBtn" disabled>Visualizza Profilo</button>
+            <div id="profileContainer"></div>
+        </div>
+
+        <div class="users-section" id="usersSection" style="display: none;">
+            <h2>Utenti sulla rete</h2>
+            <button id="loadUsersBtn">Carica utenti</button>
+            <div class="users-list" id="usersList"></div>
+        </div>
+
+        <div id="results" style="display: none;">I risultati appariranno qui...</div>
+    </div>
+
+    <script src="../../dist/browser/shogun-core.js" defer></script>
+    <script>
+        // Controlliamo esplicitamente lo stato del pulsante al caricamento
+        window.addEventListener('DOMContentLoaded', function () {
+            console.log("DOM completamente caricato, verifica elementi critici:");
+
+            // Verifica i pulsanti critici
+            const loginBtnCheck = document.getElementById('loginBtn');
+            console.log("loginBtn:", loginBtnCheck ? "trovato" : "NON trovato");
+
+            const performLoginCheck = document.getElementById('performLoginBtn');
+            console.log("performLoginBtn:", performLoginCheck ? "trovato" : "NON trovato");
+
+            if (performLoginCheck) {
+                console.log("Configurazione listener pulsante login...");
+
+                // Aggiungi debug inline
+                performLoginCheck.onclick = function () {
+                    console.log("Click diretto sul pulsante di login rilevato");
+                    performLoginHandler();
+                };
+
+                // Aggiungi un attributo data per debugging
+                performLoginCheck.setAttribute('data-debug', 'listener-attivo');
+                performLoginCheck.style.cursor = 'pointer';
+
+                // Test visual feedback
+                performLoginCheck.addEventListener('mouseover', function () {
+                    this.style.opacity = '0.9';
+                });
+                performLoginCheck.addEventListener('mouseout', function () {
+                    this.style.opacity = '1';
+                });
+            }
+        });
+
+        // Polyfill (se serve)
+        if (!crypto.randomUUID) {
+            crypto.randomUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => ((Math.random() * 16 | 0) & (c == 'x' ? 1 : 3) | 8).toString(16));
+        }
+
+        // DOM refs
+        const initBtn = document.getElementById('initBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginForm = document.getElementById('loginForm');
+        const performLogin = document.getElementById('performLoginBtn');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        const userPubInput = document.getElementById('userPubInput');
+        const getProfileBtn = document.getElementById('getProfileBtn');
+        const profileDiv = document.getElementById('profileContainer');
+
+        const postComposer = document.getElementById('postComposer');
+        const postContent = document.getElementById('postContent');
+        const createPostBtn = document.getElementById('createPostBtn');
+
+        const timelineActions = document.getElementById('timelineActions');
+        const getTimelineBtn = document.getElementById('getTimelineBtn');
+        const timelineDiv = document.getElementById('timelineContainer');
+
+        const resultsDiv = document.getElementById('results');
+        const currentUserInfo = document.getElementById('currentUserInfo');
+
+        // Verifica che tutti gli elementi DOM necessari siano stati trovati
+        if (!loginForm || !performLogin || !usernameInput || !passwordInput) {
+            console.error("Elementi DOM mancanti:", {
+                loginForm: !!loginForm,
+                performLogin: !!performLogin,
+                usernameInput: !!usernameInput,
+                passwordInput: !!passwordInput
+            });
+            setTimeout(() => {
+                alert("Errore: Alcuni elementi dell'interfaccia non sono stati trovati. Potrebbe essere necessario ricaricare la pagina.");
+            }, 1000);
+        } else {
+            // Aggiungi event listener per l'evento keydown sui campi di input
+            usernameInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (passwordInput.value) {
+                        performLoginHandler();
+                    } else {
+                        passwordInput.focus();
+                    }
+                }
+            });
+
+            passwordInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    performLoginHandler();
+                }
+            });
+
+            // Previeni l'invio del form (che potrebbe ricaricare la pagina)
+            loginForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                performLoginHandler();
+            });
+
+            console.log("Event listeners aggiunti ai campi di input");
+        }
+
+        let shogun, socialPlugin, currentUserPub;
+        let refreshCount = 0, lastRefreshTime = 0, refreshPausedUntil = 0;
+        const MAX_REFRESH = 5, WINDOW_MS = 10000;
+
+        // Funzione per sincronizzare lo stato dell'UI con lo stato di autenticazione
+        function syncAuthState() {
+            try {
+                if (socialPlugin && socialPlugin.user && socialPlugin.user.is) {
+                    const userPub = socialPlugin.user.is.pub;
+                    if (userPub) {
+                        console.log("Utente autenticato rilevato:", userPub);
+                        currentUserPub = userPub;
+
+                        // Aggiorna la UI
+                        loginBtn.disabled = true;
+                        loginBtn.textContent = 'Accesso effettuato';
+                        getProfileBtn.disabled = false;
+                        createPostBtn.disabled = false;
+
+                        // Imposta la chiave pubblica nel campo di input 
+                        if (userPubInput) {
+                            userPubInput.value = userPub;
+                        }
+
+                        // Carica il profilo se necessario
+                        if (profileDiv.innerHTML === '') {
+                            console.log("Caricamento automatico del profilo dopo auth check");
+                            getProfileBtn.click();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Errore sincronizzazione stato auth:", err);
+            }
+        }
+
+        function canRefresh() {
+            const now = Date.now();
+            if (now < refreshPausedUntil) return false;
+            if (now - lastRefreshTime > WINDOW_MS) refreshCount = 0;
+            refreshCount++; lastRefreshTime = now;
+            if (refreshCount > MAX_REFRESH) {
+                refreshPausedUntil = now + 30000;
+                showError('Attenzione', 'Ciclo di aggiornamenti sospeso 30s');
+                return false;
+            }
+            return true;
+        }
+
+        function showResult(title, data) {
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `<strong>${title}</strong>\n\n${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}`;
+
+            // Nascondi il risultato dopo 5 secondi
+            setTimeout(() => {
+                resultsDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showError(title, msg) {
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `<strong>${title} - ERRORE</strong>\n\n${msg.message || msg}`;
+            console.error(msg);
+
+            // Nascondi l'errore dopo 8 secondi
+            setTimeout(() => {
+                resultsDiv.style.display = 'none';
+            }, 8000);
+        }
+
+        function fmt(ts) { return new Date(ts).toLocaleString(); }
+
+        // Display profile
+        function displayProfile(p) {
+            console.log("Visualizzazione profilo:", p);
+
+            // Verifica che il profilo sia valido
+            if (!p || !p.pub) {
+                console.error("Tentativo di visualizzare un profilo non valido:", p);
+                profileDiv.innerHTML = '<div class="error-message">Profilo non valido o non disponibile</div>';
+                return;
+            }
+
+            profileDiv.innerHTML = '';
+            const me = currentUserPub;
+            const isMe = p.pub === me;
+
+            // Aggiungi debug info
+            console.log("Profilo:", {
+                pub: p.pub,
+                isCurrentUser: isMe,
+                currentUserPub: me,
+                followersCount: p.followers ? p.followers.length : 0,
+                followingCount: p.following ? p.following.length : 0
+            });
+
+            // Assicurati che followers e following siano array validi
+            if (!Array.isArray(p.followers)) p.followers = [];
+            if (!Array.isArray(p.following)) p.following = [];
+
+            // Crea intestazione profilo
+            const profileHeader = document.createElement('div');
+            profileHeader.className = 'profile-header';
+            profileHeader.innerHTML = `
+                <div class="profile-name">${p.alias || p.pub.slice(0, 8) + '...'}</div>
+                <div class="profile-bio">${p.bio || 'Nessuna bio'}</div>
+                <div class="profile-pub">Chiave pubblica: ${p.pub}</div>
+                ${isMe ? '<div class="profile-status">Questo è il tuo profilo</div>' : ''}
+            `;
+            profileDiv.appendChild(profileHeader);
+
+            // Crea sezione statistiche
+            const statsSection = document.createElement('div');
+            statsSection.className = 'profile-stats';
+
+            // Crea sezione followers con elenco espandibile
+            const followersSection = document.createElement('div');
+            followersSection.className = 'profile-stat-section';
+            followersSection.innerHTML = `
+                <div class="profile-stat">
+                    <strong>Followers:</strong> ${p.followers.length}
+                    ${p.followers.length > 0 ? '<button class="toggle-list">Mostra</button>' : ''}
+                </div>
+                <div class="followers-list" style="display:none;">
+                    <div class="list-header">
+                        <h4>Persone che ti seguono</h4>
+                        <button class="refresh-list">🔄</button>
+                    </div>
+                    <div class="list-content"></div>
+                </div>
+            `;
+
+            // Se ci sono follower, aggiungi la lista
+            if (p.followers.length > 0) {
+                const followersList = followersSection.querySelector('.followers-list');
+                const followersContent = followersList.querySelector('.list-content');
+                const toggleBtn = followersSection.querySelector('.toggle-list');
+                const refreshBtn = followersList.querySelector('.refresh-list');
+
+                // Funzione per caricare/ricaricare i follower
+                const loadFollowerProfiles = async () => {
+                    followersContent.innerHTML = '<div class="loading">Caricamento dei follower...</div>';
+
+                    try {
+                        // Array per memorizzare i profili e gli elementi HTML
+                        const followerProfiles = [];
+                        const followerElements = [];
+
+                        // Per ciascun follower, recuperiamo il profilo
+                        for (const followerPub of p.followers) {
+                            try {
+                                const profile = await socialPlugin.getProfile(followerPub);
+                                followerProfiles.push(profile);
+
+                                // Crea l'elemento HTML con il nome utente o l'alias
+                                const displayName = profile.alias || followerPub.slice(0, 10) + '...';
+
+                                followerElements.push(`
+                                    <div class="follower-item">
+                                        <span class="follower-name">${displayName}</span>
+                                        <button class="view-profile" data-pub="${followerPub}">Profilo</button>
+                                    </div>
+                                `);
+                            } catch (err) {
+                                console.error('Errore recupero profilo follower:', followerPub, err);
+                                // Fallback all'ID pubblico in caso di errore
+                                followerElements.push(`
+                                    <div class="follower-item">
+                                        <span class="follower-name">${followerPub.slice(0, 15)}...</span>
+                                        <button class="view-profile" data-pub="${followerPub}">Profilo</button>
+                                    </div>
+                                `);
+                            }
+                        }
+
+                        // Aggiorna la lista con gli elementi HTML generati
+                        followersContent.innerHTML = followerElements.join('') || '<div class="empty-list">Nessun follower</div>';
+
+                        // Aggiungi event listener ai bottoni della vista profilo
+                        followersContent.querySelectorAll('.view-profile').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const pub = btn.getAttribute('data-pub');
+                                if (pub) {
+                                    userPubInput.value = pub;
+                                    getProfileBtn.click();
+                                }
+                            });
+                        });
+                    } catch (err) {
+                        console.error('Errore caricamento profili follower:', err);
+                        followersContent.innerHTML = '<div class="error-message">Errore nel caricamento dei follower</div>';
+                    }
+                };
+
+                // Aggiungi event listener al pulsante di aggiornamento
+                refreshBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evita che l'evento raggiunga il toggle
+                    loadFollowerProfiles();
+                });
+
+                toggleBtn.addEventListener('click', () => {
+                    const isHidden = followersList.style.display === 'none';
+                    followersList.style.display = isHidden ? 'block' : 'none';
+                    toggleBtn.textContent = isHidden ? 'Nascondi' : 'Mostra';
+
+                    if (isHidden && followersContent.innerHTML === '') {
+                        loadFollowerProfiles();
+                    }
+                });
+            }
+
+            statsSection.appendChild(followersSection);
+
+            // Crea sezione following con elenco espandibile
+            const followingSection = document.createElement('div');
+            followingSection.className = 'profile-stat-section';
+            followingSection.innerHTML = `
+                <div class="profile-stat">
+                    <strong>Following:</strong> ${p.following.length}
+                    ${p.following.length > 0 ? '<button class="toggle-list">Mostra</button>' : ''}
+                </div>
+                <div class="following-list" style="display:none;">
+                    <div class="list-header">
+                        <h4>Persone che segui</h4>
+                        <button class="refresh-list">🔄</button>
+                    </div>
+                    <div class="list-content"></div>
+                </div>
+            `;
+
+            // Se ci sono following, aggiungi la lista
+            if (p.following.length > 0) {
+                const followingList = followingSection.querySelector('.following-list');
+                const followingContent = followingList.querySelector('.list-content');
+                const toggleBtn = followingSection.querySelector('.toggle-list');
+                const refreshBtn = followingList.querySelector('.refresh-list');
+
+                // Funzione per caricare/ricaricare gli utenti seguiti
+                const loadFollowingProfiles = async () => {
+                    followingContent.innerHTML = '<div class="loading">Caricamento dei profili seguiti...</div>';
+
+                    try {
+                        // Array per memorizzare i profili e gli elementi HTML
+                        const followingProfiles = [];
+                        const followingElements = [];
+
+                        // Per ciascun utente seguito, recuperiamo il profilo
+                        for (const followingPub of p.following) {
+                            try {
+                                const profile = await socialPlugin.getProfile(followingPub);
+                                followingProfiles.push(profile);
+
+                                // Crea l'elemento HTML con il nome utente o l'alias
+                                const displayName = profile.alias || followingPub.slice(0, 10) + '...';
+
+                                followingElements.push(`
+                                    <div class="following-item">
+                                        <span class="following-name">${displayName}</span>
+                                        <button class="view-profile" data-pub="${followingPub}">Profilo</button>
+                                        ${me === p.pub ? `<button class="unfollow-user" data-pub="${followingPub}">Smetti di seguire</button>` : ''}
+                                    </div>
+                                `);
+                            } catch (err) {
+                                console.error('Errore recupero profilo:', followingPub, err);
+                                // Fallback all'ID pubblico in caso di errore
+                                followingElements.push(`
+                                    <div class="following-item">
+                                        <span class="following-name">${followingPub.slice(0, 15)}...</span>
+                                        <button class="view-profile" data-pub="${followingPub}">Profilo</button>
+                                        ${me === p.pub ? `<button class="unfollow-user" data-pub="${followingPub}">Smetti di seguire</button>` : ''}
+                                    </div>
+                                `);
+                            }
+                        }
+
+                        // Aggiorna la lista con gli elementi HTML generati
+                        followingContent.innerHTML = followingElements.join('') || '<div class="empty-list">Non segue nessuno</div>';
+
+                        // Aggiungi event listener ai bottoni
+                        followingContent.querySelectorAll('.view-profile').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const pub = btn.getAttribute('data-pub');
+                                if (pub) {
+                                    userPubInput.value = pub;
+                                    getProfileBtn.click();
+                                }
+                            });
+                        });
+
+                        followingContent.querySelectorAll('.unfollow-user').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                const pub = btn.getAttribute('data-pub');
+                                if (!pub) return;
+
+                                btn.disabled = true;
+                                btn.textContent = 'Rimozione...';
+
+                                try {
+                                    // Utilizziamo la nuova funzione performUnfollow
+                                    const result = await performUnfollow(pub);
+                                    if (!result) {
+                                        btn.disabled = false;
+                                        btn.textContent = 'Smetti di seguire';
+                                    }
+                                } catch (err) {
+                                    console.error('Errore unfollow:', err);
+                                    showError('Unfollow', err.message || 'Errore sconosciuto');
+                                    btn.disabled = false;
+                                    btn.textContent = 'Smetti di seguire';
+                                }
+                            });
+                        });
+                    } catch (err) {
+                        console.error('Errore caricamento profili:', err);
+                        followingContent.innerHTML = '<div class="error-message">Errore nel caricamento dei profili</div>';
+                    }
+                };
+
+                // Aggiungi event listener al pulsante di aggiornamento
+                refreshBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evita che l'evento raggiunga il toggle
+                    loadFollowingProfiles();
+                });
+
+                toggleBtn.addEventListener('click', () => {
+                    const isHidden = followingList.style.display === 'none';
+                    followingList.style.display = isHidden ? 'block' : 'none';
+                    toggleBtn.textContent = isHidden ? 'Nascondi' : 'Mostra';
+
+                    if (isHidden && followingContent.innerHTML === '') {
+                        loadFollowingProfiles();
+                    }
+                });
+            }
+
+            statsSection.appendChild(followingSection);
+            profileDiv.appendChild(statsSection);
+
+            // Crea sezione azioni
+            if (!isMe) {
+                const isFollowing = me && p.followers.includes(me);
+
+                const actionsSection = document.createElement('div');
+                actionsSection.className = 'profile-actions';
+
+                const followBtn = document.createElement('button');
+                followBtn.id = 'btnFollow';
+                followBtn.textContent = isFollowing ? 'Già seguito' : 'Segui';
+                followBtn.disabled = isFollowing;
+
+                if (isFollowing) {
+                    followBtn.style.backgroundColor = '#4caf50';
+                }
+
+                followBtn.addEventListener('click', async () => {
+                    // Utilizza la nuova funzione performFollow
+                    await performFollow(p.pub);
+                });
+
+                const unfollowBtn = document.createElement('button');
+                unfollowBtn.id = 'btnUnfollow';
+                unfollowBtn.textContent = 'Smetti di seguire';
+                unfollowBtn.disabled = !isFollowing;
+
+                unfollowBtn.addEventListener('click', async () => {
+                    // Utilizza la nuova funzione performUnfollow
+                    await performUnfollow(p.pub);
+                });
+
+                actionsSection.appendChild(followBtn);
+                actionsSection.appendChild(unfollowBtn);
+                profileDiv.appendChild(actionsSection);
+            } else {
+                // Se è il proprio profilo
+                const selfInfo = document.createElement('div');
+                selfInfo.className = 'self-profile-info';
+                selfInfo.innerHTML = '<em>Questo è il tuo profilo</em>';
+                profileDiv.appendChild(selfInfo);
+            }
+        }
+
+        // Funzione per verificare lo stato dei like e aggiornare la UI
+        async function checkLikeStatus(postId) {
+            if (!currentUserPub) return false;
+
+            try {
+                const likes = await socialPlugin.getLikes(postId);
+                const hasLiked = likes.includes(currentUserPub);
+
+                // Aggiorna l'aspetto visivo dei pulsanti
+                const postEl = document.querySelector(`.post[data-id="${postId}"]`);
+                if (postEl) {
+                    const likeButton = postEl.querySelector('.like-button');
+                    const unlikeButton = postEl.querySelector('.unlike-button');
+
+                    if (likeButton) {
+                        if (hasLiked) {
+                            likeButton.classList.add('active');
+                            likeButton.style.backgroundColor = '#4caf50';
+                            // Mostra il pulsante di rimozione
+                            if (unlikeButton) {
+                                unlikeButton.classList.add('visible');
+                            }
+                        } else {
+                            likeButton.classList.remove('active');
+                            likeButton.style.backgroundColor = '';
+                            // Nascondi il pulsante di rimozione
+                            if (unlikeButton) {
+                                unlikeButton.classList.remove('visible');
+                            }
+                        }
+                    }
+                }
+
+                return hasLiked;
+            } catch (err) {
+                console.error(`Errore verifica stato like per ${postId}:`, err);
+                return false;
+            }
+        }
+
+        // Funzione per aggiornare i like
+        const updateLikes = async (postId) => {
+            try {
+                console.log(`Richiesta aggiornamento like per post: ${postId}`);
+
+                // Verifico che l'ID sia valido
+                if (!postId || typeof postId !== 'string') {
+                    console.error(`ID post non valido:`, postId);
+                    return [];
+                }
+
+                // Attesa prima di richiedere gli aggiornamenti
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Ottieni il conteggio totale dei like dal nuovo metodo
+                const likeCount = await socialPlugin.getLikeCount(postId);
+
+                // Ottieni anche gli utenti che hanno messo like (per aggiornare lo stato del pulsante)
+                const likes = await socialPlugin.getLikes(postId);
+
+                console.log(`Ricevuti ${likes.length} like per il post ${postId}, conteggio totale: ${likeCount}`);
+
+                // Aggiorna eventuali badge di like nella UI
+                const postEl = document.querySelector(`.post[data-id="${postId}"]`);
+                if (postEl) {
+                    const likeBadge = postEl.querySelector('.like-count');
+                    if (likeBadge) {
+                        likeBadge.textContent = likeCount > 0 ? likeCount : '';
+                    }
+
+                    // Aggiorna lo stato visivo del pulsante like
+                    if (currentUserPub) {
+                        const hasLiked = likes.includes(currentUserPub);
+                        const likeButton = postEl.querySelector('.like-button');
+                        const unlikeButton = postEl.querySelector('.unlike-button');
+
+                        if (likeButton) {
+                            if (hasLiked) {
+                                likeButton.classList.add('active');
+                                likeButton.style.backgroundColor = '#4caf50';
+                                // Mostra pulsante rimozione
+                                if (unlikeButton) {
+                                    unlikeButton.classList.add('visible');
+                                }
+                            } else {
+                                likeButton.classList.remove('active');
+                                likeButton.style.backgroundColor = '';
+                                // Nascondi pulsante rimozione
+                                if (unlikeButton) {
+                                    unlikeButton.classList.remove('visible');
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return likes;
+            } catch (err) {
+                console.error('Errore in updateLikes:', err);
+                return [];
+            }
+        };
+
+        // Aggiungi commento
+        async function addComment(postId, content) {
+            if (!content.trim()) {
+                console.error('Contenuto commento vuoto');
+                return null;
+            }
+
+            console.log(`Invio commento a post ${postId}: "${content}"`);
+            showResult('Operazione', { message: 'Invio commento in corso...' });
+
+            try {
+                // Aggiunta del commento con timeout
+                const commentPromise = socialPlugin.addComment(postId, content);
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Timeout durante l\'invio del commento')), 10000);
+                });
+
+                const comment = await Promise.race([commentPromise, timeoutPromise]);
+
+                if (!comment) {
+                    console.error('Errore durante l\'invio del commento: risultato null');
+                    return null;
+                }
+
+                console.log('Commento inviato:', comment);
+
+                // Verifica che il commento sia stato effettivamente registrato
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const comments = await socialPlugin.getComments(postId);
+                console.log(`Verifica commenti dopo invio: trovati ${comments.length} commenti`);
+
+                const commentFound = comments.some(c => c.id === comment.id);
+                console.log(`Verifica commento ${comment.id}: ${commentFound ? 'trovato' : 'NON trovato'}`);
+
+                return comment;
+            } catch (err) {
+                console.error('Errore addComment:', err);
+                return null;
+            }
+        }
+
+        // Funzione per generare un ID DOM sicuro
+        function generateSafeId(postId) {
+            if (!postId) return 'unknown';
+
+            // Se l'ID è molto lungo, usa un hash
+            if (postId.length > 40) {
+                // Crea un hash semplice basato sull'ID
+                let hash = 0;
+                for (let i = 0; i < postId.length; i++) {
+                    hash = ((hash << 5) - hash) + postId.charCodeAt(i);
+                    hash |= 0; // Converti a integer a 32 bit
+                }
+                return 'post-' + Math.abs(hash).toString(16);
+            }
+
+            // Altrimenti, sanifica l'ID rimuovendo caratteri problematici
+            return 'post-' + postId.replace(/[^\w-]/g, '_');
+        }
+
+        function loadComments(postId) {
+            if (!postId) {
+                console.error("loadComments: ID del post non valido");
+                return;
+            }
+
+            console.log(`loadComments: Caricamento commenti per il post ${postId}`);
+
+            // Usa un ID sicuro per il DOM
+            const safeId = generateSafeId(postId);
+            console.log(`loadComments: Usando ID sicuro: ${safeId}`);
+
+            // Creazione del contenitore per i commenti
+            let commentsList = document.getElementById(`comments-list-${safeId}`);
+            if (!commentsList) {
+                console.error(`loadComments: Contenitore commenti non trovato per il post ${postId}`);
+                console.log("Elementi disponibili:", document.querySelectorAll('.comments-container').length);
+
+                // Prova a recuperare il contenitore dei commenti tramite il genitore
+                const postElement = document.querySelector(`.post[data-id="${postId}"]`);
+                if (postElement) {
+                    const commentsContainer = postElement.querySelector('.comments-container');
+                    if (commentsContainer) {
+                        // Crea dinamicamente il contenitore dei commenti se non esiste
+                        commentsList = document.createElement('div');
+                        commentsList.id = `comments-list-${safeId}`;
+                        commentsList.className = 'comments-list';
+                        commentsContainer.appendChild(commentsList);
+                        console.log(`loadComments: Creato nuovo contenitore commenti con ID: comments-list-${safeId}`);
+                    } else {
+                        console.error(`loadComments: Contenitore generico dei commenti non trovato per il post ${postId}`);
+                        return;
+                    }
+                } else {
+                    console.error(`loadComments: Elemento post non trovato per l'ID ${postId}`);
+                    return;
+                }
+            }
+
+            // Mostra messaggio di caricamento
+            commentsList.innerHTML = '<div class="comment-loading">Caricamento commenti...</div>';
+
+            // Utilizziamo il metodo diretto per recuperare i commenti
+            getCommentsDirectly(postId, safeId);
+        }
+
+        // Recupera commenti direttamente da Gun (aggiornata per usare safeId)
+        function getCommentsDirectly(postId, safeId) {
+            // Validazione iniziale
+            if (!postId) {
+                console.error('getCommentsDirectly: ID post non valido');
+                return Promise.reject('ID post non valido');
+            }
+
+            // Usa l'ID sicuro fornito o generalo
+            const actualSafeId = safeId || generateSafeId(postId);
+
+            const commentsList = document.getElementById(`comments-list-${actualSafeId}`);
+            if (!commentsList) {
+                console.error(`getCommentsDirectly: Elemento comments-list-${actualSafeId} non trovato`);
+                return Promise.reject(`Elemento comments-list-${actualSafeId} non trovato`);
+            }
+
+            // Mostra messaggio di caricamento
+            commentsList.innerHTML = '<div class="loading-comments">Caricamento commenti...</div>';
+
+            return new Promise((resolve, reject) => {
+                const comments = [];
+                const processedIds = new Set(); // Per evitare duplicati
+                let timeoutId;
+
+                // Imposta un timeout per evitare attese infinite
+                timeoutId = setTimeout(() => {
+                    console.warn(`Timeout raggiunto per il caricamento dei commenti del post ${postId}`);
+
+                    if (comments.length > 0) {
+                        console.log(`Risolvo con ${comments.length} commenti trovati prima del timeout`);
+                        updateCommentCount(postId, comments.length);
+                        displayComments(postId, comments, actualSafeId);
+                        resolve(comments); // Risolvi con i commenti trovati finora
+                    } else {
+                        // Se non abbiamo trovato commenti, proviamo con un approccio alternativo
+                        console.log("Tentativo alternativo di recupero commenti...");
+
+                        // Prima proviamo a cercare nel nuovo formato
+                        try {
+                            console.log("Ricerca commenti nel nuovo formato (posts/postId/comments)...");
+
+                            // Metodo 1: Ricerca diretta nei commenti del post
+                            gun.get('posts').get(postId).get('comments').map().once(function (data, key) {
+                                try {
+                                    if (data && key !== '_') {
+                                        console.log(`Trovato commento nel formato posts/${postId}/comments/${key}:`, data);
+
+                                        if (!processedIds.has(key)) {
+                                            processedIds.add(key);
+
+                                            // Verifica se abbiamo un riferimento al payload
+                                            let commentContent = 'Caricamento...';
+                                            let hasPayloadReference = false;
+
+                                            if (data.payload && typeof data.payload === 'object' && data.payload['#']) {
+                                                // Recupera il riferimento al payload
+                                                const payloadRef = data.payload['#'];
+                                                console.log(`Riferimento al payload: ${payloadRef}`);
+                                                hasPayloadReference = true;
+
+                                                // Funzione che crea il commento una volta recuperato il contenuto
+                                                const createCommentWithPayload = (payloadData) => {
+                                                    if (payloadData) {
+                                                        // Estrai il contenuto dal payload
+                                                        const content = payloadData.text || payloadData.content || 'Contenuto non disponibile';
+                                                        console.log(`Contenuto recuperato: ${content}`);
+
+                                                        // Crea commento con contenuto
+                                                        const comment = {
+                                                            id: key,
+                                                            author: data.creator || 'Anonimo',
+                                                            content: content,
+                                                            timestamp: data.createdAt || Date.now(),
+                                                            postId: postId,
+                                                            _source: 'payload_reference'
+                                                        };
+
+                                                        // Aggiungi alla lista e aggiorna UI
+                                                        comments.push(comment);
+                                                        console.log(`Commento completo aggiunto:`, comment);
+                                                        updateCommentCount(postId, comments.length);
+                                                        displayComments(postId, comments, actualSafeId);
+                                                    }
+                                                };
+
+                                                // Tenta di accedere al payload attraverso il riferimento
+                                                // Metodo 1: accesso diretto al nodo del payload
+                                                const payloadPath = payloadRef.split('/');
+                                                const payloadId = payloadPath[payloadPath.length - 1];
+
+                                                // Tenta diverse vie per recuperare il payload
+                                                gun.get(payloadId).once(createCommentWithPayload);
+                                                gun.get(`${payloadRef}`).once(createCommentWithPayload);
+                                                gun.get(`messages/${key}/payload`).once(createCommentWithPayload);
+                                            }
+
+                                            // Se non c'è un riferimento al payload o come fallback temporaneo
+                                            if (!hasPayloadReference) {
+                                                // Crea un oggetto commento base
+                                                const comment = {
+                                                    id: key,
+                                                    author: data.creator || 'Anonimo',
+                                                    content: (data.payload && data.payload.text) || 'Contenuto non disponibile',
+                                                    timestamp: data.createdAt || Date.now(),
+                                                    postId: postId,
+                                                    _source: 'direct'
+                                                };
+
+                                                comments.push(comment);
+                                                console.log("Commento aggiunto dal nuovo formato:", comment);
+                                            }
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.error("Errore elaborazione commento (nuovo formato):", err);
+                                }
+                            });
+
+                            // Dopo un breve ritardo, verifichiamo se abbiamo trovato commenti
+                            setTimeout(() => {
+                                if (comments.length > 0) {
+                                    console.log(`Trovati ${comments.length} commenti nel nuovo formato`);
+                                    updateCommentCount(postId, comments.length);
+                                    displayComments(postId, comments, actualSafeId);
+                                    resolve(comments);
+                                } else {
+                                    // Se ancora niente, proviamo il vecchio formato
+                                    tryOldFormat();
+                                }
+                            }, 2000);
+                        } catch (newFormatErr) {
+                            console.error("Errore nella ricerca nel nuovo formato:", newFormatErr);
+                            tryOldFormat();
+                        }
+
+                        // Funzione per provare il vecchio formato
+                        function tryOldFormat() {
+                            try {
+                                console.log("Ricerca commenti nel vecchio formato (messages)...");
+
+                                // Metodo alternativo: cercare direttamente i messaggi con reference al post
+                                gun.get('messages').map().once(function (data, key) {
+                                    try {
+                                        if (data && data.type === 'POST' && data.subtype === 'REPLY' &&
+                                            data.payload && data.payload.reference === postId) {
+
+                                            if (!processedIds.has(key)) {
+                                                processedIds.add(key);
+
+                                                // Converti in un formato di commento
+                                                const comment = {
+                                                    id: key,
+                                                    type: 'MESSAGE',
+                                                    subtype: 'COMMENT',
+                                                    payload: {
+                                                        postId: postId,
+                                                        text: data.payload.content || '',
+                                                        author: data.creator || 'Anonimo'
+                                                    },
+                                                    timestamp: data.createdAt || new Date().toISOString()
+                                                };
+
+                                                comments.push(comment);
+                                                console.log("Trovato commento con metodo alternativo:", comment);
+                                            }
+                                        }
+                                    } catch (err) {
+                                        console.error("Errore elaborazione commento (metodo alternativo):", err);
+                                    }
+                                });
+
+                                // Dopo un breve ritardo, visualizza i commenti trovati con il metodo alternativo
+                                setTimeout(() => {
+                                    updateCommentCount(postId, comments.length);
+                                    displayComments(postId, comments, actualSafeId);
+
+                                    if (comments.length > 0) {
+                                        resolve(comments);
+                                    } else {
+                                        commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
+                                        resolve([]);
+                                    }
+                                }, 2000);
+                            } catch (oldFormatErr) {
+                                console.error("Errore nel metodo alternativo:", oldFormatErr);
+                                commentsList.innerHTML = '<div class="no-comments">Nessun commento disponibile</div>';
+                                resolve([]);
+                            }
+                        }
+                    }
+                }, 5000);
+
+                try {
+                    // Metodo 1: Cerca tutti i messaggi e filtra
+                    gun.get('messages').map().on(function (data, key) {
+                        try {
+                            // Estrai i dati del commento dalla struttura potenzialmente complessa
+                            const commentData = extractCommentData(data, key);
+
+                            // Se è un commento valido 
+                            if (commentData &&
+                                ((commentData.type === 'MESSAGE' && commentData.subtype === 'COMMENT') ||
+                                    (commentData.type === 'POST' && commentData.subtype === 'REPLY')) &&
+                                commentData.payload) {
+
+                                // Verifica la relazione con il post
+                                // Può essere nell'oggetto payload o come proprietà esterna
+                                const commentPostId = commentData.payload.postId ||
+                                    commentData.payload.reference ||
+                                    commentData.postId ||
+                                    commentData.reference;
+
+                                if (commentPostId === postId) {
+                                    // Evita duplicati controllando un ID univoco
+                                    const commentId = commentData.id || key;
+                                    if (!processedIds.has(commentId)) {
+                                        processedIds.add(commentId);
+
+                                        // Accedi al payload nel caso sia un riferimento
+                                        if (data.payload && typeof data.payload === 'object' && data.payload['#']) {
+                                            const payloadRef = data.payload['#'];
+                                            console.log(`Riferimento al payload (metodo principale): ${payloadRef}`);
+
+                                            // Accedi direttamente al payload usando il percorso completo
+                                            gun.get(payloadRef).once((payloadData) => {
+                                                if (payloadData) {
+                                                    console.log(`Payload recuperato (metodo principale): ${JSON.stringify(payloadData)}`);
+
+                                                    // Aggiorna il commentData con i dati del payload
+                                                    if (payloadData.content) {
+                                                        commentData.payload.text = payloadData.content;
+                                                    } else if (payloadData.text) {
+                                                        commentData.payload.text = payloadData.text;
+                                                    }
+
+                                                    // Aggiungi il commento con i dati aggiornati
+                                                    comments.push(commentData);
+                                                    console.log(`Commento aggiornato con payload: ${commentData.payload.text}`);
+
+                                                    // Aggiorna immediatamente l'UI
+                                                    updateCommentCount(postId, comments.length);
+                                                    displayComments(postId, comments, actualSafeId);
+                                                }
+                                            });
+                                        } else {
+                                            // Payload diretto
+                                            comments.push(commentData);
+                                            console.log(`Commento trovato per il post ${postId}:`, commentData);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Errore durante l\'elaborazione del commento:', err);
+                        }
+                    });
+
+                    // Dopo un breve ritardo, aggiorna l'UI con i commenti trovati finora
+                    setTimeout(() => {
+                        if (comments.length > 0) {
+                            clearTimeout(timeoutId); // Annulla il timeout se abbiamo trovato commenti
+                            console.log(`Trovati ${comments.length} commenti per il post ${postId}`);
+                            updateCommentCount(postId, comments.length);
+                            displayComments(postId, comments, actualSafeId);
+                            resolve(comments);
+                        }
+                        // Altrimenti lascia che il timeout continui
+                    }, 2000);
+
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    console.error(`Errore durante il recupero dei commenti per il post ${postId}:`, err);
+                    commentsList.innerHTML = '<div class="error-loading-comments">Errore nel caricamento dei commenti</div>';
+                    reject(err);
+                }
+            });
+        }
+
+        // Estrae i dati del commento dalla struttura GunDB
+        function extractCommentData(data, key) {
+            try {
+                // Log dettagliato della struttura dei dati ricevuti
+                console.log(`Analisi dati per chiave ${key}:`, JSON.stringify(data));
+
+                // Caso 1: Abbiamo direttamente un oggetto dati ben formato
+                if (data && data.type && data.payload) {
+                    // Verifica se il payload è un riferimento o un oggetto diretto
+                    if (typeof data.payload === 'object' && data.payload['#']) {
+                        // È un riferimento, carica i dati effettivi in modo sincrono
+                        const payloadRef = data.payload['#'];
+                        console.log(`Trovato riferimento payload: ${payloadRef}`);
+
+                        // Crea una struttura temporanea
+                        const tempObj = {
+                            id: key,
+                            type: data.type,
+                            subtype: data.subtype || '',
+                            creator: data.creator,
+                            createdAt: data.createdAt,
+                            payload: {
+                                reference: '', // Verrà completato in seguito
+                                content: 'Caricamento...'
+                            }
+                        };
+
+                        // Richiedi accesso diretto al payload attraverso il suo percorso
+                        const payloadParts = payloadRef.split('/');
+                        if (payloadParts.length >= 2) {
+                            // Estrai e prova a caricare direttamente dal percorso del payload
+                            const payloadNode = payloadParts[payloadParts.length - 1];
+
+                            // Effettua una richiesta immediata per i dati del payload
+                            gun.get(`${payloadNode}`).once((payloadData) => {
+                                if (payloadData) {
+                                    console.log(`Payload trovato per ${key}:`, payloadData);
+
+                                    // Aggiorna la struttura temporanea
+                                    if (payloadData.reference) tempObj.payload.reference = payloadData.reference;
+                                    if (payloadData.postId) tempObj.payload.postId = payloadData.postId;
+                                    if (payloadData.content) tempObj.payload.content = payloadData.content;
+                                    if (payloadData.text) tempObj.payload.text = payloadData.text;
+                                }
+                            });
+
+                            // Tenta anche di caricare il payload dal percorso completo
+                            gun.get(`messages/${key}/payload`).once((payloadData) => {
+                                if (payloadData) {
+                                    console.log(`Payload diretto trovato per ${key}:`, payloadData);
+
+                                    // Aggiorna la struttura temporanea
+                                    if (payloadData.reference) tempObj.payload.reference = payloadData.reference;
+                                    if (payloadData.postId) tempObj.payload.postId = payloadData.postId;
+                                    if (payloadData.content) tempObj.payload.content = payloadData.content;
+                                    if (payloadData.text) tempObj.payload.text = payloadData.text;
+                                }
+                            });
+                        }
+
+                        return tempObj;
+                    }
+
+                    // Payload diretto
+                    return {
+                        id: key,
+                        ...data
+                    };
+                }
+
+                // Caso 2: Potremmo avere un riferimento GunDB
+                if (data && data._ && data._['#']) {
+                    const reference = data._['#'];
+                    console.log(`Rilevato riferimento GunDB: ${reference}`);
+
+                    // Estrai l'ID del target dal percorso del riferimento
+                    const targetId = extractTargetFromPath(reference);
+
+                    if (targetId) {
+                        console.log(`Target ID estratto: ${targetId}`);
+
+                        // Crea una struttura temporanea mentre carichiamo i dati effettivi
+                        const tempComment = {
+                            id: key,
+                            type: 'MESSAGE',
+                            subtype: 'COMMENT',
+                            payload: {
+                                postId: extractTargetFromId(targetId), // Estrai postId dal targetId
+                                text: 'Caricamento contenuto...',
+                                author: 'Caricamento...'
+                            },
+                            timestamp: new Date().toISOString(),
+                            _pendingLoad: true,  // Flag per indicare che i dati sono ancora in caricamento
+                            _originalReference: reference
+                        };
+
+                        // Avvia un caricamento asincrono per ottenere i dati effettivi
+                        setTimeout(() => {
+                            gun.get(targetId).once((actualData) => {
+                                if (actualData) {
+                                    console.log(`Dati effettivi per ${targetId}:`, actualData);
+
+                                    // Aggiorna la struttura temporanea con i dati effettivi
+                                    if (actualData.payload && actualData.payload.content) {
+                                        tempComment.payload.text = actualData.payload.content;
+                                    }
+
+                                    if (actualData.creator) {
+                                        tempComment.payload.author = actualData.creator;
+                                    }
+
+                                    if (actualData.createdAt) {
+                                        tempComment.timestamp = actualData.createdAt;
+                                    }
+
+                                    tempComment._pendingLoad = false;
+                                }
+                            });
+
+                            // Tenta anche di accedere al payload direttamente
+                            gun.get(`${targetId}/payload`).once((payloadData) => {
+                                if (payloadData) {
+                                    console.log(`Payload diretto trovato per ${targetId}:`, payloadData);
+                                    if (payloadData.content) tempComment.payload.text = payloadData.content;
+                                    if (payloadData.reference) tempComment.payload.postId = payloadData.reference;
+                                }
+                            });
+                        }, 0);
+
+                        return tempComment;
+                    }
+                }
+
+                // Caso 3: Potremmo avere una struttura annidatada
+                if (data && (data.message || data.data)) {
+                    const messageData = data.message || data.data;
+
+                    if (messageData && messageData.type && messageData.payload) {
+                        return {
+                            id: key,
+                            ...messageData
+                        };
+                    }
+                }
+
+                // Caso 4: Potremmo avere una struttura specifica per commenti
+                if (data && data.payload && (data.payload.text || data.payload.content)) {
+                    const commentType = {
+                        type: data.type || 'MESSAGE',
+                        subtype: data.subtype || 'COMMENT',
+                        payload: {
+                            postId: data.payload.postId || data.payload.reference || data.reference,
+                            text: data.payload.text || data.payload.content,
+                            author: data.payload.author || data.creator || data.author || 'Anonimo'
+                        },
+                        timestamp: data.timestamp || data.createdAt || new Date().toISOString(),
+                        id: key
+                    };
+
+                    return commentType;
+                }
+
+                console.warn('Dati non riconosciuti come commento:', data);
+                return null;
+            } catch (err) {
+                console.error('Errore in extractCommentData:', err);
+                return null;
+            }
+        }
+
+        // Funzione di utilità per estrarre l'ID target da un percorso GunDB
+        function extractTargetFromPath(path) {
+            if (!path) return null;
+
+            // Formato tipico: 'messages/ID' o simili
+            const parts = path.split('/');
+            if (parts.length >= 2) {
+                return parts.slice(1).join('/'); // Tutto dopo il primo '/'
+            }
+
+            return path; // Fallback al percorso originale
+        }
+
+        // Funzione di utilità per estrarre l'ID del post da un messageId
+        function extractTargetFromId(messageId) {
+            if (!messageId) return null;
+
+            // I messaggi a volte hanno IDs come 'postId/commentId'
+            const parts = messageId.split('/');
+            if (parts.length >= 2) {
+                return parts[0]; // La prima parte è l'ID del post
+            }
+
+            return messageId; // Fallback all'ID originale
+        }
+
+        // Aggiornata per supportare safeId
+        function displayComments(postId, comments, safeId) {
+            console.log(`Visualizzazione di ${comments.length} commenti per il post ${postId}`);
+
+            // Usa l'ID sicuro fornito o generalo
+            const actualSafeId = safeId || generateSafeId(postId);
+
+            const commentsList = document.getElementById(`comments-list-${actualSafeId}`);
+            if (!commentsList) {
+                console.error(`displayComments: Elemento commenti-list-${actualSafeId} non trovato`);
+                return;
+            }
+
+            // Pulisci il contenitore
+            commentsList.innerHTML = '';
+
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
+                return;
+            }
+
+            // Ordina i commenti per timestamp (dal più recente al più vecchio)
+            const sortedComments = [...comments].sort((a, b) => {
+                const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                return timeB - timeA;
+            });
+
+            // Crea gli elementi dei commenti
+            sortedComments.forEach(comment => {
+                try {
+                    console.log("Elaborazione commento per visualizzazione:", comment);
+
+                    // Gestione caso in cui comment non ha payload
+                    if (!comment) {
+                        console.error('displayComments: Commento non valido', comment);
+                        return;
+                    }
+
+                    // Ottieni il payload o creane uno se non esiste
+                    const payload = comment.payload || {};
+
+                    // Ottieni il testo del commento in vari modi possibili
+                    let text = '';
+                    if (payload.text) {
+                        text = payload.text;
+                    } else if (payload.content) {
+                        text = payload.content;
+                    } else if (comment.content) {
+                        text = comment.content;
+                    }
+
+                    // Se non abbiamo testo ma abbiamo un ID, mostriamo un messaggio appropriato
+                    if (!text && comment.id) {
+                        text = 'Contenuto non disponibile';
+                        console.warn(`Commento ${comment.id} senza contenuto visibile`);
+                    }
+
+                    // Ottieni l'autore del commento in vari modi possibili
+                    let author = 'Anonimo';
+                    if (payload.author) {
+                        author = payload.author;
+                    } else if (comment.author) {
+                        author = comment.author;
+                    } else if (comment.creator) {
+                        author = comment.creator;
+                    }
+
+                    // Formatta l'autore per una visualizzazione più leggibile
+                    if (author !== 'Anonimo') {
+                        // Se l'autore è l'utente corrente, mostra "Tu"
+                        if (currentUserPub && (author === currentUserPub)) {
+                            author = 'Tu';
+                        } else {
+                            // Altrimenti mostra una versione abbreviata
+                            author = author.slice(0, 8) + '...';
+                        }
+                    }
+
+                    // Ottieni il timestamp del commento
+                    const timestamp = comment.timestamp || payload.timestamp || comment.createdAt || new Date().toISOString();
+                    const formattedTime = typeof timestamp === 'string' ? timestamp : new Date(timestamp).toLocaleString();
+
+                    // Crea l'elemento del commento
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment';
+
+                    // Costruisci HTML del commento
+                    commentDiv.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(author)}</span>
+                            <span class="comment-time">${escapeHtml(formattedTime)}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(text)}</div>
+                    `;
+
+                    commentsList.appendChild(commentDiv);
+                } catch (err) {
+                    console.error('Errore durante la visualizzazione del commento:', err, comment);
+                }
+            });
+        }
+
+        // Funzione di utilità per evitare XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function updateCommentCount(postId, count) {
+            const postEl = document.querySelector(`.post[data-id="${postId}"]`);
+            if (!postEl) {
+                console.error(`updateCommentCount: Post non trovato con ID ${postId}`);
+                return;
+            }
+
+            const commentCount = postEl.querySelector('.comment-count');
+            if (commentCount) {
+                commentCount.textContent = count > 0 ? count : '';
+                console.log(`Aggiornato contatore commenti per ${postId}: ${count}`);
+            }
+        }
+
+        // Create post element
+        function createPost(post) {
+            if (!post || !post.id) {
+                console.error('Post non valido:', post);
+                return null;
+            }
+
+            // Usa un ID sicuro per il DOM
+            const safeId = generateSafeId(post.id);
+
+            const p = document.createElement('div');
+            p.className = 'post';
+            p.setAttribute('data-id', post.id);
+            p.setAttribute('data-safe-id', safeId);
+
+            // Limita la visualizzazione dell'autore a una forma leggibile
+            let author = 'Sconosciuto';
+            if (post.author) {
+                // Se l'autore è l'utente corrente, mostra "Tu"
+                if (currentUserPub && post.author === currentUserPub) {
+                    author = 'Tu';
+                } else {
+                    // Altrimenti mostra solo i primi 8 caratteri
+                    author = post.author.slice(0, 8) + '...';
+                }
+            }
+
+            // Assicurati che il contenuto sia sempre una stringa valida
+            let content = '';
+            if (post.content) {
+                content = post.content;
+            } else if (post.payload && post.payload.content) {
+                content = post.payload.content;
+            }
+
+            // Se ancora non c'è contenuto, mostra messaggio predefinito
+            if (!content || content.trim() === '') {
+                content = 'Contenuto non disponibile';
+            }
+
+            // Verifica se il post è dell'utente corrente
+            const isOwnPost = currentUserPub && (post.author === currentUserPub || post.creator === currentUserPub);
+
+            // Formatta il timestamp in forma leggibile
+            const timestamp = new Date(post.timestamp).toLocaleString();
+
+            p.innerHTML = `
+                <div class="post-header">
+                    <span class="post-author">${author}</span>
+                    <span class="post-timestamp">${timestamp}</span>
+                </div>
+                <div class="post-content">${content}</div>
+                <div class="post-actions">
+                    <button class="like-button" data-post-id="${post.id}">
+                        <span class="like-icon">❤️</span> <span class="like-count"></span>
+                    </button>
+                    <button class="comment-button" data-post-id="${post.id}">
+                        <span class="comment-icon">💬</span> <span class="comment-count"></span>
+                    </button>
+                    ${isOwnPost ?
+                    `<button class="delete-button" data-post-id="${post.id}">
+                        <span class="delete-icon">🗑️</span>
+                    </button>` : ''}
+                </div>
+                <div class="comment-section" data-post-id="${post.id}">
+                    <div class="comments-container">
+                        <div id="comments-list-${safeId}" class="comments-list"></div>
+                    </div>
+                    <div class="comment-form">
+                        <input type="text" class="comment-input" placeholder="Scrivi un commento..." />
+                        <button class="submit-comment" data-post-id="${post.id}">Invia</button>
+                    </div>
+                </div>`;
+
+            // Gestione clic pulsante like
+            const likeButton = p.querySelector('.like-button');
+            likeButton.addEventListener('click', async () => {
+                if (!canRefresh()) return;
+                if (!currentUserPub) {
+                    alert('Devi effettuare il login per mettere like.');
+                    return;
+                }
+
+                try {
+                    // Verifico prima se l'utente ha già messo like
+                    const likes = await socialPlugin.getLikes(post.id);
+                    const hasAlreadyLiked = likes.includes(currentUserPub);
+
+                    if (hasAlreadyLiked) {
+                        // Se ha già messo like, rimuovilo
+                        likeButton.disabled = true;
+                        likeButton.querySelector('.like-icon').textContent = '...';
+
+                        const result = await socialPlugin.unlikePost(post.id);
+                        console.log(`Rimozione like: ${result ? 'successo' : 'fallito'}`);
+
+                        // Attendo sincronizzazione e aggiorno UI
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        updateLikes(post.id);
+                    } else {
+                        // Altrimenti aggiungi il like
+                        likeButton.disabled = true;
+                        likeButton.querySelector('.like-icon').textContent = '...';
+
+                        const result = await socialPlugin.likePost(post.id);
+                        console.log(`Aggiunta like: ${result ? 'successo' : 'fallito'}`);
+
+                        // Attendo sincronizzazione e aggiorno UI
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        updateLikes(post.id);
+                    }
+                } catch (err) {
+                    console.error('Errore gestione like:', err);
+                } finally {
+                    likeButton.disabled = false;
+                    likeButton.querySelector('.like-icon').textContent = '❤️';
+                }
+            });
+
+            // Gestione commenti
+            const commentButton = p.querySelector('.comment-button');
+            const commentSection = p.querySelector('.comment-section');
+
+            commentButton.addEventListener('click', () => {
+                if (commentSection.style.display === 'block') {
+                    commentSection.style.display = 'none';
+                } else {
+                    commentSection.style.display = 'block';
+                    loadComments(post.id);
+                }
+            });
+
+            // Invio commento
+            const submitComment = p.querySelector('.submit-comment');
+            const commentInput = p.querySelector('.comment-input');
+
+            submitComment.addEventListener('click', async () => {
+                const content = commentInput.value.trim();
+                if (!content) return;
+                if (!canRefresh()) return;
+
+                try {
+                    submitComment.disabled = true;
+                    commentInput.disabled = true;
+                    submitComment.textContent = '...';
+
+                    const comment = await addComment(post.id, content);
+
+                    if (comment) {
+                        commentInput.value = '';
+                        // Ricarica i commenti dopo un breve ritardo
+                        setTimeout(() => loadComments(post.id), 1000);
+                    }
+                } catch (err) {
+                    console.error('Errore aggiunta commento:', err);
+                } finally {
+                    submitComment.disabled = false;
+                    submitComment.textContent = 'Invia';
+                    commentInput.disabled = false;
+                }
+            });
+
+            commentInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitComment.click();
+                }
+            });
+
+            // Se è un post dell'utente corrente, aggiungi il pulsante elimina
+            if (isOwnPost) {
+                const deleteButton = p.querySelector('.delete-button');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', async () => {
+                        if (!canRefresh()) return;
+
+                        if (confirm('Sei sicuro di voler eliminare questo post?')) {
+                            try {
+                                deleteButton.disabled = true;
+
+                                const result = await socialPlugin.deletePost(post.id);
+                                if (result) {
+                                    p.remove(); // Rimuovi il post dalla UI
+                                    showResult('Post eliminato', 'Il post è stato eliminato con successo');
+                                } else {
+                                    showError('Errore', 'Impossibile eliminare il post');
+                                    deleteButton.disabled = false;
+                                }
+                            } catch (err) {
+                                console.error('Errore eliminazione post:', err);
+                                showError('Errore', 'Errore durante l\'eliminazione del post');
+                                deleteButton.disabled = false;
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Inizializza i like
+            updateLikes(post.id);
+
+            return p;
+        }
+
+        // Display timeline
+        function displayTimeline(res) {
+            timelineDiv.innerHTML = '';
+
+            console.log("displayTimeline - Dati ricevuti:", res);
+
+            if (res.error) {
+                timelineDiv.innerHTML = `Errore: ${res.error}`;
+                return;
+            }
+
+            if (!res.messages || !res.messages.length) {
+                timelineDiv.innerHTML = '<p>Nessun post nella timeline. Segui altri utenti per vedere i loro post.</p>';
+                return;
+            }
+
+            // Controlla se i messaggi hanno la struttura corretta
+            res.messages.forEach((msg, idx) => {
+                if (!msg.id) {
+                    console.warn(`Messaggio #${idx} senza ID:`, msg);
+                }
+
+                // Controlla se c'è un contenuto
+                const hasContent = msg.content || (msg.payload && msg.payload.content);
+                if (!hasContent) {
+                    console.warn(`Messaggio #${idx} (${msg.id || 'senza ID'}) senza contenuto:`, msg);
+                }
+            });
+
+            // Aggiungi bottone di debug
+            const debugBtn = document.createElement('button');
+            debugBtn.textContent = 'Debug GunDB';
+            debugBtn.style.backgroundColor = '#9c27b0';
+            debugBtn.addEventListener('click', debugGunDb);
+            timelineDiv.appendChild(debugBtn);
+
+            // Aggiungi una intestazione per la timeline
+            const header = document.createElement('div');
+            header.className = 'timeline-header';
+            header.innerHTML = `<h3>I tuoi post e quelli delle persone che segui</h3>`;
+            timelineDiv.appendChild(header);
+
+            // Se disponibile, ottieni il profilo per avere la lista dei following
+            const currentProfile = { following: [] };
+            (async () => {
+                if (currentUserPub) {
+                    try {
+                        const profile = await socialPlugin.getProfile(currentUserPub);
+                        Object.assign(currentProfile, profile);
+                        console.log(`Utente segue ${profile.following.length} profili`);
+                    } catch (err) {
+                        console.error('Errore recupero profilo:', err);
+                    }
+                }
+            })();
+
+            // Organizziamo i post in gruppi: propri e degli utenti seguiti
+            const myPosts = res.messages.filter(msg => msg.creator === currentUserPub);
+            const followingPosts = res.messages.filter(msg => msg.creator !== currentUserPub);
+
+            // Log informativo
+            console.log(`Timeline: ${myPosts.length} post propri, ${followingPosts.length} post di utenti seguiti`);
+
+            // Funzione per creare un post con titolo personalizzato
+            const createPostWithTitle = (msg, title) => {
+                const section = document.createElement('div');
+                section.className = 'post-section';
+                if (title) {
+                    const sectionTitle = document.createElement('div');
+                    sectionTitle.className = 'post-section-title';
+                    sectionTitle.textContent = title;
+                    section.appendChild(sectionTitle);
+                }
+
+                // Debug del messaggio
+                console.log(`createPostWithTitle - Messaggio completo:`, msg);
+
+                // Estrai contenuto del post da diverse fonti possibili
+                let content = '';
+
+                // Controllo diretto su content
+                if (msg.content) {
+                    content = msg.content;
+                    console.log(`createPostWithTitle - Contenuto trovato in msg.content: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`);
+                }
+                // Controllo nel payload
+                else if (msg.payload && typeof msg.payload === 'object') {
+                    if (msg.payload.content) {
+                        content = msg.payload.content;
+                        console.log(`createPostWithTitle - Contenuto trovato in msg.payload.content: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`);
+                    }
+                }
+
+                // Se ancora vuoto, prova altre proprietà che potrebbero contenere il testo
+                if (!content && msg.text) {
+                    content = msg.text;
+                    console.log(`createPostWithTitle - Contenuto trovato in msg.text: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`);
+                }
+
+                // Se il contenuto è vuoto e abbiamo un hash lungo, mostra messaggio appropriato
+                if (!content) {
+                    content = 'Contenuto non disponibile';
+                    console.warn(`Post ${msg.id} senza contenuto visibile (ID: ${msg.id})`);
+                }
+
+                const postEl = createPost({
+                    id: msg.id,
+                    author: msg.creator || msg.author,
+                    content: content,
+                    timestamp: msg.createdAt || msg.timestamp || Date.now()
+                });
+
+                if (postEl) {
+                    // Aggiungi classe speciale per i post propri
+                    if ((msg.creator === currentUserPub) || (msg.author === currentUserPub)) {
+                        postEl.classList.add('own-post');
+                    }
+                    section.appendChild(postEl);
+                }
+
+                return section;
+            };
+
+            // Aggiungi tutti i post alla timeline
+            res.messages.forEach(msg => {
+                try {
+                    // Debug dei dati del post
+                    console.log("Elaborazione post nella timeline:", {
+                        id: msg.id,
+                        creator: msg.creator || msg.author,
+                        content: msg.content || (msg.payload && msg.payload.content) || "Nessun contenuto",
+                        payload: msg.payload,
+                        timestamp: msg.createdAt || msg.timestamp
+                    });
+
+                    let title = '';
+                    const postAuthor = msg.creator || msg.author;
+
+                    if (postAuthor === currentUserPub) {
+                        title = 'Il tuo post';
+                    } else if (currentProfile.following.includes(postAuthor)) {
+                        title = `Post di ${postAuthor.substring(0, 8)}... (segui questo utente)`;
+                    } else {
+                        title = `Post di ${postAuthor.substring(0, 8)}...`;
+                    }
+
+                    const postSection = createPostWithTitle(msg, title);
+                    timelineDiv.appendChild(postSection);
+                } catch (err) {
+                    console.error("Errore nella visualizzazione del post:", err, msg);
+                }
+            });
+        }
+
+        // Handlers for follow/unfollow
+        async function follow(pub) {
+            const ok = await socialPlugin.follow(pub);
+            showResult('Segui', { pub, success: ok });
+        }
+        async function unfollow(pub) {
+            const ok = await socialPlugin.unfollow(pub);
+            showResult('Unfollow', { pub, success: ok });
+        }
+
+        // Init Shogun
+        initBtn.onclick = () => {
+            const cfg = {
+                gundb: { peers: ['//localhost:8765/gun'], localStorage: false, radisk: false, authToken: 'TOKEN' },
+                walletManager: { enabled: false },  // Disattiva il wallet manager per evitare errori RPC
+                social: { enabled: true },
+                logging: { enabled: true, level: 'debug', prefix: '[Shogun]' }
+            };
+            shogun = window.initShogunBrowser(cfg);
+            socialPlugin = shogun.getPlugin('social');
+            gun = shogun.gun;
+            if (socialPlugin) {
+                showResult('Inizializzazione completata', 'Il sistema è pronto per l\'uso');
+                loginBtn.disabled = false;
+                initBtn.disabled = true;
+                initBtn.textContent = 'Inizializzato';
+
+                // Controlla se l'utente è già autenticato
+                setTimeout(syncAuthState, 500);
+            } else {
+                showError('Errore', 'Plugin social non trovato');
+            }
+        };
+
+        // Login
+        loginBtn.onclick = function () {
+            console.log("Click sul pulsante Accedi (mostra form)");
+            if (loginForm && typeof loginForm !== 'undefined') {
+                loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
+                console.log("Cambio visibilità form login:", loginForm.style.display);
+
+                // Focus sul campo username dopo aver mostrato il form
+                if (loginForm.style.display === 'block' && usernameInput) {
+                    setTimeout(() => usernameInput.focus(), 100);
+                }
+            } else {
+                console.error('Form di login non trovato nel DOM');
+                showError('Errore', 'Form di login non disponibile');
+            }
+        };
+
+        // Assicuriamoci che il pulsante "Accedi" nel form abbia un event listener diretto
+        if (performLogin) {
+            console.log("Aggiunta del listener al pulsante di login");
+            // Rimuovi eventuali listener esistenti
+            performLogin.removeEventListener('click', performLoginHandler);
+            // Aggiungi il nuovo listener
+            performLogin.addEventListener('click', performLoginHandler);
+        } else {
+            console.error("Pulsante performLogin non trovato nel DOM");
+        }
+
+        // Funzione separata per gestire il login
+        async function performLoginHandler() {
+            console.log("performLogin - Inizio procedura");
+            const u = usernameInput.value, p = passwordInput.value;
+            if (!u || !p) { showError('Login', 'Inserisci credenziali'); return; }
+
+            // Verifica che shogun sia inizializzato
+            if (!shogun) {
+                showError('Login', 'Shogun non inizializzato. Clicca prima su "Inizializza"');
+                return;
+            }
+
+            // Disabilita i pulsanti durante il login
+            performLogin.disabled = true;
+            performLogin.textContent = 'Accesso in corso...';
+
+            try {
+                console.log("Tentativo di login con", { username: u, password: "***" });
+                const res = await shogun.login(u, p);
+                console.log("Risposta login:", res);
+
+                if (res && res.success) {
+                    showResult('Accesso effettuato', res);
+                    currentUserPub = res.userPub;
+                    userPubInput.value = currentUserPub;
+
+                    // Aggiorna UI dopo login
+                    getProfileBtn.disabled = false;
+                    createPostBtn.disabled = false;
+                    loginForm.style.display = 'none';
+                    loginBtn.disabled = true;
+                    loginBtn.textContent = 'Accesso effettuato';
+
+                    // Mostra il composer dei post e le azioni della timeline
+                    postComposer.style.display = 'block';
+                    timelineActions.style.display = 'block';
+
+                    // Mostra info utente nell'header
+                    currentUserInfo.style.display = 'block';
+                    if (currentUserInfo.querySelector('strong')) {
+                        currentUserInfo.querySelector('strong').textContent = u;
+                    }
+
+                    // Carica subito il profilo dell'utente
+                    try {
+                        console.log("Caricamento profilo per l'utente autenticato:", currentUserPub);
+                        const profile = await socialPlugin.getProfile(currentUserPub);
+                        console.log("Profilo utente caricato:", profile);
+                        displayProfile(profile);
+
+                        // Imposta la chiave pubblica nel campo di input
+                        if (userPubInput) {
+                            userPubInput.value = currentUserPub;
+                        }
+                    } catch (profileErr) {
+                        console.error("Errore caricamento profilo dopo login:", profileErr);
+                        showError('Caricamento profilo', profileErr.message || 'Errore recupero dati utente');
+                    }
+
+                    // Carica anche la timeline
+                    setTimeout(loadTimeline, 500);
+
+                    // Sincronizza lo stato dell'autenticazione
+                    syncAuthState();
+                } else {
+                    showError('Errore di accesso', (res && res.error) ? res.error : 'Credenziali non valide o risposta non valida');
+                    performLogin.disabled = false;
+                    performLogin.textContent = 'Accedi';
+                }
+            } catch (error) {
+                console.error("Errore completo durante il login:", error);
+                showError('Errore di accesso', error.message || 'Errore durante il login');
+                performLogin.disabled = false;
+                performLogin.textContent = 'Accedi';
+            }
+        }
+
+        // Manteniamo anche l'onclick per retrocompatibilità
+        performLogin.onclick = performLoginHandler;
+
+        // Profile buttons
+        getProfileBtn.onclick = async () => {
+            const pub = userPubInput.value.trim();
+            if (!pub) {
+                showError('Profilo', 'Chiave pubblica utente richiesta');
+                return;
+            }
+
+            // Mostra un indicatore di caricamento
+            profileDiv.innerHTML = '<div class="loading">Caricamento del profilo in corso...</div>';
+
+            try {
+                console.log("Richiesta profilo per:", pub);
+
+                // Se siamo autenticati ma non c'è un valore currentUserPub, lo impostiamo
+                if (socialPlugin.user && socialPlugin.user.is && socialPlugin.user.is.pub && !currentUserPub) {
+                    currentUserPub = socialPlugin.user.is.pub;
+                    console.log("Impostato currentUserPub dal plugin:", currentUserPub);
+                }
+
+                const p = await socialPlugin.getProfile(pub);
+                console.log("Profilo ricevuto:", p);
+
+                if (!p || !p.pub) {
+                    throw new Error("Profilo non valido ricevuto dal server");
+                }
+
+                showResult('Profilo', p);
+                displayProfile(p);
+            } catch (err) {
+                console.error("Errore recupero profilo:", err);
+                profileDiv.innerHTML = `<div class="error-message">Errore caricamento profilo: ${err.message || 'Errore sconosciuto'}</div>`;
+                showError('Errore Profilo', err.message || 'Impossibile caricare il profilo');
+            }
+        };
+
+        // Create post
+        createPostBtn.onclick = async () => {
+            const txt = postContent.value.trim();
+            if (!txt) { showError('Post', 'Contenuto vuoto'); return; }
+            const p = await socialPlugin.post(txt);
+            showResult('Post creato', p);
+            postContent.value = '';
+            setTimeout(loadTimeline, 500);
+        };
+
+        // Follow/Unfollow handling
+        async function performFollow(pub) {
+            if (!currentUserPub) {
+                alert('Devi effettuare il login per seguire utenti');
+                return false;
+            }
+
+            if (pub === currentUserPub) {
+                showError('Follow', 'Non puoi seguire te stesso');
+                return false;
+            }
+
+            const followBtn = document.getElementById('btnFollow');
+            const unfollowBtn = document.getElementById('btnUnfollow');
+
+            if (followBtn) followBtn.disabled = true;
+            if (followBtn) followBtn.textContent = 'Seguendo...';
+
+            try {
+                showResult('Operazione', { message: 'Invio richiesta follow...' });
+                const result = await socialPlugin.follow(pub);
+
+                if (result) {
+                    showResult('Follow', { pub, success: true, message: 'Follow completato con successo' });
+
+                    // Aggiorna lo stato visivo dei pulsanti
+                    if (followBtn) {
+                        followBtn.textContent = 'Seguito';
+                        followBtn.style.backgroundColor = '#4caf50';
+                        followBtn.disabled = true;
+                    }
+
+                    if (unfollowBtn) {
+                        unfollowBtn.disabled = false;
+                    }
+
+                    // Aggiorna la timeline e la view del profilo per riflettere le modifiche
+                    await loadTimeline();
+
+                    // Ricarica anche il profilo corrente per vedere l'aggiornamento dei contatori
+                    const reloadedProfile = await socialPlugin.getProfile(pub);
+                    displayProfile(reloadedProfile);
+
+                    return true;
+                } else {
+                    showError('Follow', 'Operazione fallita - I dati potrebbero non essere persistenti');
+
+                    if (followBtn) {
+                        followBtn.disabled = false;
+                        followBtn.textContent = 'Segui';
+                    }
+
+                    return false;
+                }
+            } catch (err) {
+                console.error('Errore follow:', err);
+                showError('Follow', err.message || 'Errore sconosciuto');
+
+                if (followBtn) {
+                    followBtn.disabled = false;
+                    followBtn.textContent = 'Segui';
+                }
+
+                return false;
+            }
+        }
+
+        async function performUnfollow(pub) {
+            if (!currentUserPub) {
+                alert('Devi effettuare il login per gestire i tuoi following');
+                return false;
+            }
+
+            const followBtn = document.getElementById('btnFollow');
+            const unfollowBtn = document.getElementById('btnUnfollow');
+
+            if (unfollowBtn) unfollowBtn.disabled = true;
+            if (unfollowBtn) unfollowBtn.textContent = 'Rimozione...';
+
+            try {
+                showResult('Operazione', { message: 'Invio richiesta unfollow...' });
+                const result = await socialPlugin.unfollow(pub);
+
+                if (result) {
+                    showResult('Unfollow', { pub, success: true, message: 'Unfollow completato con successo' });
+
+                    // Aggiorna lo stato visivo dei pulsanti
+                    if (followBtn) {
+                        followBtn.textContent = 'Segui';
+                        followBtn.disabled = false;
+                        followBtn.style.backgroundColor = '';
+                    }
+
+                    if (unfollowBtn) {
+                        unfollowBtn.disabled = true;
+                    }
+
+                    // Aggiorna la timeline e la view del profilo per riflettere le modifiche
+                    await loadTimeline();
+
+                    // Ricarica anche il profilo corrente per vedere l'aggiornamento dei contatori
+                    const reloadedProfile = await socialPlugin.getProfile(pub);
+                    displayProfile(reloadedProfile);
+
+                    return true;
+                } else {
+                    showError('Unfollow', 'Operazione fallita - I dati potrebbero non essere persistenti');
+
+                    if (unfollowBtn) {
+                        unfollowBtn.disabled = false;
+                        unfollowBtn.textContent = 'Smetti di seguire';
+                    }
+
+                    return false;
+                }
+            } catch (err) {
+                console.error('Errore unfollow:', err);
+                showError('Unfollow', err.message || 'Errore sconosciuto');
+
+                if (unfollowBtn) {
+                    unfollowBtn.disabled = false;
+                    unfollowBtn.textContent = 'Smetti di seguire';
+                }
+
+                return false;
+            }
+        }
+
+        // Load timeline
+        async function loadTimeline() {
+            if (!canRefresh()) return;
+
+            getTimelineBtn.disabled = true;
+            getTimelineBtn.textContent = 'Caricamento...';
+            timelineDiv.innerHTML = '<div class="loading-timeline">Caricamento del feed...</div>';
+
+            try {
+                // Aggiungiamo un timeout per evitare attese infinite
+                const timelinePromise = socialPlugin.getTimeline();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Timeout durante il caricamento della timeline')), 15000);
+                });
+
+                const res = await Promise.race([timelinePromise, timeoutPromise]);
+
+                if (res.error) {
+                    timelineDiv.innerHTML = `<div class="error-message">Errore: ${res.error}</div>`;
+                    return;
+                }
+
+                if (!res.messages || res.messages.length === 0) {
+                    timelineDiv.innerHTML = `
+                        <div class="empty-timeline">
+                            <p>Non ci sono post da visualizzare.</p>
+                            <p>Crea il tuo primo post o segui altri utenti per vedere i loro contenuti.</p>
+                        </div>`;
+                    return;
+                }
+
+                // Pulisci e prepara la timeline
+                timelineDiv.innerHTML = '';
+
+                // Ordina i post dal più recente al più vecchio
+                const sortedMessages = [...res.messages].sort((a, b) => {
+                    const timeA = a.createdAt || a.timestamp || 0;
+                    const timeB = b.createdAt || b.timestamp || 0;
+                    return timeB - timeA;
+                });
+
+                // Aggiungi i post alla timeline
+                sortedMessages.forEach(msg => {
+                    try {
+                        // Converti il messaggio in formato post
+                        const postData = {
+                            id: msg.id,
+                            author: msg.creator || msg.author,
+                            content: msg.content || (msg.payload && msg.payload.content) || '',
+                            timestamp: msg.createdAt || msg.timestamp || Date.now()
+                        };
+
+                        const postEl = createPost(postData);
+                        if (postEl) {
+                            timelineDiv.appendChild(postEl);
+                        }
+                    } catch (err) {
+                        console.error("Errore nella creazione del post:", err, msg);
+                    }
+                });
+
+                console.log(`Timeline caricata: ${res.messages.length} post`);
+            } catch (e) {
+                console.error('Errore durante il caricamento della timeline:', e);
+                timelineDiv.innerHTML = '<div class="error-message">Errore durante il caricamento del feed. Riprova più tardi.</div>';
+            } finally {
+                getTimelineBtn.disabled = false;
+                getTimelineBtn.textContent = 'Aggiorna';
+            }
+        }
+        getTimelineBtn.onclick = loadTimeline;
+
+        // Funzione di debug per testare direttamente Gun
+        async function debugGunDb() {
+            if (!shogun || !shogun.gun) {
+                console.error('GunDB non inizializzato');
+                return;
+            }
+
+            console.log('Test diretto di GunDB');
+
+            // ID message da cercare
+            const messageId = prompt('Inserisci ID del messaggio da cercare:');
+            if (!messageId) return;
+
+            console.log(`Ricerca messaggio: ${messageId}`);
+
+            // Accesso diretto tramite Gun
+            shogun.gun.get('messages').get(messageId).once((data) => {
+                console.log('Risultato .once():', data);
+                showResult('Gun.once()', data || 'Non trovato');
+            });
+
+            shogun.gun.get('messages').get(messageId).on((data) => {
+                console.log('Risultato .on():', data);
+                showResult('Gun.on()', data || 'Non trovato');
+            });
+        }
+
+        // Elementi DOM per la sezione utenti
+        const usersSection = document.getElementById('usersSection');
+        const loadUsersBtn = document.getElementById('loadUsersBtn');
+        const usersList = document.getElementById('usersList');
+
+        // ... resta del codice JavaScript esistente ...
+
+        // Funzione per caricare tutti gli utenti
+        async function loadAllUsers() {
+            if (!socialPlugin) {
+                showError('Errore', 'Plugin social non inizializzato');
+                return;
+            }
+
+            loadUsersBtn.disabled = true;
+            loadUsersBtn.textContent = 'Caricamento...';
+            usersList.innerHTML = '<div class="loading-users">Caricamento utenti in corso...</div>';
+
+            try {
+                const users = await socialPlugin.getAllUsers();
+                displayUsersList(users);
+            } catch (err) {
+                console.error('Errore caricamento utenti:', err);
+                usersList.innerHTML = '<div class="loading-users">Errore durante il caricamento degli utenti</div>';
+            } finally {
+                loadUsersBtn.disabled = false;
+                loadUsersBtn.textContent = 'Ricarica utenti';
+            }
+        }
+
+        // Funzione per visualizzare la lista degli utenti
+        function displayUsersList(users) {
+            if (!users || users.length === 0) {
+                usersList.innerHTML = '<div class="loading-users">Nessun utente trovato</div>';
+                return;
+            }
+
+            // Ordina gli utenti: prima quelli con alias, poi per ID
+            const sortedUsers = [...users].sort((a, b) => {
+                if (a.alias && !b.alias) return -1;
+                if (!a.alias && b.alias) return 1;
+                if (a.alias && b.alias) return a.alias.localeCompare(b.alias);
+                return a.pub.localeCompare(b.pub);
+            });
+
+            usersList.innerHTML = '';
+
+            sortedUsers.forEach(user => {
+                const isCurrentUser = currentUserPub && user.pub === currentUserPub;
+                const displayName = user.alias || user.pub.slice(0, 12) + '...';
+                const firstLetter = (user.alias || user.pub.slice(0, 1)).toUpperCase();
+
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+
+                // Verifica se l'utente è seguito dall'utente corrente
+                const isFollowing = currentUserPub && user.followers && user.followers.includes(currentUserPub);
+
+                userItem.innerHTML = `
+                    <div class="user-avatar">
+                        ${user.profileImage
+                        ? `<img src="${user.profileImage}" alt="${displayName}" />`
+                        : firstLetter}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">${displayName} ${isCurrentUser ? '(Tu)' : ''}</div>
+                        <div class="user-id">${user.pub}</div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="view-profile-btn" data-pub="${user.pub}">Profilo</button>
+                        ${!isCurrentUser ? `
+                            <button class="follow-btn ${isFollowing ? 'active' : ''}" 
+                                    data-pub="${user.pub}" 
+                                    ${isFollowing ? 'disabled' : ''}>
+                                ${isFollowing ? 'Seguito' : 'Segui'}
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Eventi dei pulsanti
+                const viewProfileBtn = userItem.querySelector('.view-profile-btn');
+                viewProfileBtn.addEventListener('click', () => {
+                    userPubInput.value = user.pub;
+                    getProfileBtn.click();
+                });
+
+                const followBtn = userItem.querySelector('.follow-btn');
+                if (followBtn) {
+                    followBtn.addEventListener('click', async () => {
+                        if (!currentUserPub) {
+                            showError('Errore', 'Devi accedere per seguire altri utenti');
+                            return;
+                        }
+
+                        followBtn.disabled = true;
+                        followBtn.textContent = 'In corso...';
+
+                        try {
+                            const success = await socialPlugin.follow(user.pub);
+                            if (success) {
+                                followBtn.classList.add('active');
+                                followBtn.textContent = 'Seguito';
+                                showResult('Seguito', `Ora segui ${displayName}`);
+                            } else {
+                                followBtn.disabled = false;
+                                followBtn.textContent = 'Segui';
+                                showError('Errore', 'Impossibile seguire questo utente');
+                            }
+                        } catch (err) {
+                            console.error('Errore follow:', err);
+                            followBtn.disabled = false;
+                            followBtn.textContent = 'Segui';
+                            showError('Errore', 'Impossibile seguire questo utente');
+                        }
+                    });
+                }
+
+                usersList.appendChild(userItem);
+            });
+        }
+
+        // Collega il pulsante alla funzione di caricamento
+        loadUsersBtn.addEventListener('click', loadAllUsers);
+
+        // Aggiorna inizializzazione
+        initBtn.onclick = () => {
+            const cfg = {
+                gundb: { peers: ['//localhost:8765/gun'], localStorage: false, radisk: false, authToken: 'TOKEN' },
+                walletManager: { enabled: false },  // Disattiva il wallet manager per evitare errori RPC
+                social: { enabled: true },
+                logging: { enabled: true, level: 'debug', prefix: '[Shogun]' }
+            };
+            shogun = window.initShogunBrowser(cfg);
+            socialPlugin = shogun.getPlugin('social');
+            gun = shogun.gun;
+            if (socialPlugin) {
+                showResult('Inizializzazione completata', 'Il sistema è pronto per l\'uso');
+                loginBtn.disabled = false;
+                initBtn.disabled = true;
+                initBtn.textContent = 'Inizializzato';
+
+                // Mostra la sezione utenti subito dopo l'inizializzazione
+                usersSection.style.display = 'block';
+            } else {
+                showError('Errore', 'Plugin social non trovato');
+            }
+        };
+
+        // Aggiorna login per ricaricare la lista utenti
+        performLogin.onclick = async () => {
+            // ... codice di login esistente ...
+
+            try {
+                const res = await shogun.login(u, p);
+                if (res.success) {
+                    // ... resto del codice login esistente ...
+
+                    // Carica gli utenti dopo il login
+                    loadAllUsers();
+                }
+                // ... resto del codice ...
+            } catch (error) {
+                // ... gestione errori ...
+            }
+        };
+
+        // ... resto del codice JavaScript ...
+    </script>
+</body>
+
+</html>

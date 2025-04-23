@@ -1,11 +1,14 @@
-import { ShogunCore } from "../index";
-import { map } from "rxjs/operators";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.chatAppExample = exports.runRxJSExample = void 0;
+const index_1 = require("../index");
+const operators_1 = require("rxjs/operators");
 /**
  * Example showing how to use RxJS integration with GunDB
  */
 const runRxJSExample = async () => {
     // Initialize Shogun Core with RxJS support
-    const shogun = new ShogunCore({
+    const shogun = new index_1.ShogunCore({
         gundb: {
             peers: ["https://gun-server.example.com/gun"],
             localStorage: true,
@@ -57,7 +60,7 @@ const runRxJSExample = async () => {
         .match("todos")
         .pipe(
     // Use RxJS operators to filter array
-    map((todos) => todos.filter((todo) => todo.completed)));
+    (0, operators_1.map)((todos) => todos.filter((todo) => todo.completed)));
     const subscription3 = completedTodos$.subscribe({
         next: (todos) => console.log("Completed todos:", todos),
         error: (err) => console.error("Error filtering todos:", err),
@@ -107,6 +110,7 @@ const runRxJSExample = async () => {
         // subscription5 might not exist if user is not logged in
     }, 10000);
 };
+exports.runRxJSExample = runRxJSExample;
 // Run the example
 runRxJSExample().catch((err) => console.error("Example failed:", err));
 /**
@@ -114,7 +118,7 @@ runRxJSExample().catch((err) => console.error("Example failed:", err));
  */
 const chatAppExample = async () => {
     // Initialize Shogun Core
-    const shogun = new ShogunCore({
+    const shogun = new index_1.ShogunCore({
         gundb: {
             peers: ["https://gun-server.example.com/gun"],
             localStorage: true,
@@ -147,7 +151,7 @@ const chatAppExample = async () => {
     const messagesSubscription = messages$
         .pipe(
     // Sort messages by timestamp
-    map((messages) => messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))))
+    (0, operators_1.map)((messages) => messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))))
         .subscribe({
         next: (messages) => {
             console.log("Messages updated:", messages.length);
@@ -165,7 +169,7 @@ const chatAppExample = async () => {
     const usersSubscription = activeUsers$
         .pipe(
     // Only show recently active users (last 5 minutes)
-    map((users) => users.filter((user) => user.lastSeen && Date.now() - user.lastSeen < 5 * 60 * 1000)))
+    (0, operators_1.map)((users) => users.filter((user) => user.lastSeen && Date.now() - user.lastSeen < 5 * 60 * 1000)))
         .subscribe({
         next: (users) => console.log("Active users:", users.map((u) => u.name).join(", ")),
         error: (err) => console.error("Error tracking users:", err),
@@ -214,6 +218,4 @@ const chatAppExample = async () => {
         shogun.logout();
     }, 15000);
 };
-// Uncomment to run the chat example
-// chatAppExample().catch(err => console.error('Chat example failed:', err));
-export { runRxJSExample, chatAppExample };
+exports.chatAppExample = chatAppExample;

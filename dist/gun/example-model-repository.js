@@ -1,9 +1,12 @@
-import { GunRepository } from "./repository";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TodoRepository = void 0;
+const repository_1 = require("./repository");
 /**
  * Repository for managing Todo items
  * Extends the generic repository
  */
-export class TodoRepository extends GunRepository {
+class TodoRepository extends repository_1.GunRepository {
     /**
      * Initializes the Todo repository
      * @param gun - GunDB instance
@@ -75,6 +78,7 @@ export class TodoRepository extends GunRepository {
         return data;
     }
 }
+exports.TodoRepository = TodoRepository;
 /**
  * Usage example:
  *

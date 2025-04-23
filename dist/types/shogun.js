@@ -1,7 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CorePlugins = exports.PluginCategory = void 0;
 /**
  * Categorie di plugin standard in ShogunCore
  */
-export var PluginCategory;
+var PluginCategory;
 (function (PluginCategory) {
     /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
     PluginCategory["Authentication"] = "authentication";
@@ -13,11 +16,13 @@ export var PluginCategory;
     PluginCategory["Identity"] = "identity";
     /** Plugin per altre funzionalità */
     PluginCategory["Utility"] = "utility";
-})(PluginCategory || (PluginCategory = {}));
+    /** Plugin per la social network */
+    PluginCategory["Social"] = "social";
+})(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
  * Nomi standard dei plugin integrati
  */
-export var CorePlugins;
+var CorePlugins;
 (function (CorePlugins) {
     /** Plugin WebAuthn */
     CorePlugins["WebAuthn"] = "webauthn";
@@ -29,4 +34,6 @@ export var CorePlugins;
     CorePlugins["DID"] = "did";
     /** Plugin Wallet Manager */
     CorePlugins["WalletManager"] = "wallet";
-})(CorePlugins || (CorePlugins = {}));
+    /** Plugin Social */
+    CorePlugins["Social"] = "social";
+})(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

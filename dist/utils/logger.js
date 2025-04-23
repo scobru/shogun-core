@@ -1,3 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.enableDebug = enableDebug;
+exports.disableDebug = disableDebug;
+exports.configureLogging = configureLogging;
+exports.log = log;
+exports.logError = logError;
+exports.logWarn = logWarn;
+exports.logDebug = logDebug;
+exports.logWithLevel = logWithLevel;
 // Default configuration
 let logConfig = {
     enabled: process.env.NODE_ENV === "development" || process.env.DEBUG === "true",
@@ -11,21 +21,21 @@ let debugMode = false;
 /**
  * Enables debug mode for logging
  */
-export function enableDebug() {
+function enableDebug() {
     debugMode = true;
     log("Debug mode enabled");
 }
 /**
  * Disables debug mode for logging
  */
-export function disableDebug() {
+function disableDebug() {
     debugMode = false;
 }
 /**
  * Configure logging behavior
  * @param config - Logging configuration
  */
-export function configureLogging(config) {
+function configureLogging(config) {
     logConfig = {
         ...logConfig,
         ...config,
@@ -36,7 +46,7 @@ export function configureLogging(config) {
  * @param message - The message to log
  * @param args - Additional arguments to log
  */
-export function log(message, ...args) {
+function log(message, ...args) {
     const timestamp = new Date().toISOString();
     const formattedMessage = `[${timestamp}] ${message}`;
     console.log(formattedMessage, ...args);
@@ -46,7 +56,7 @@ export function log(message, ...args) {
  * @param message - The error message
  * @param args - Additional arguments, including any Error objects
  */
-export function logError(message, ...args) {
+function logError(message, ...args) {
     const timestamp = new Date().toISOString();
     console.error(`[${timestamp}] ERROR: ${message}`, ...args);
 }
@@ -55,7 +65,7 @@ export function logError(message, ...args) {
  * @param message - The warning message
  * @param args - Additional arguments
  */
-export function logWarn(message, ...args) {
+function logWarn(message, ...args) {
     const timestamp = new Date().toISOString();
     console.warn(`[${timestamp}] WARNING: ${message}`, ...args);
 }
@@ -64,7 +74,7 @@ export function logWarn(message, ...args) {
  * @param message - The debug message
  * @param args - Additional arguments
  */
-export function logDebug(message, ...args) {
+function logDebug(message, ...args) {
     if (!debugMode)
         return;
     const timestamp = new Date().toISOString();
@@ -76,7 +86,7 @@ export function logDebug(message, ...args) {
  * @param message - The message to log
  * @param args - Additional arguments
  */
-export function logWithLevel(level, message, ...args) {
+function logWithLevel(level, message, ...args) {
     switch (level) {
         case "error":
             logError(message, ...args);

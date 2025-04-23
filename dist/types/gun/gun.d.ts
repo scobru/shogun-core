@@ -25,7 +25,7 @@ declare class GunDB {
     private readonly onAuthCallbacks;
     private readonly retryConfig;
     private _authenticating;
-    private authToken?;
+    private readonly authToken?;
     private _collections?;
     private _consensus?;
     private _rxjs?;

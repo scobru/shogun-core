@@ -41,6 +41,7 @@ import {
 } from "./certificates";
 import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
+import { create } from "domain";
 
 export interface AuthResult {
   success: boolean;
@@ -60,7 +61,7 @@ class GunDB {
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private readonly retryConfig: RetryConfig;
   private _authenticating: boolean = false;
-  private authToken?: string;
+  private readonly authToken?: string;
 
   // Integrated modules
   private _collections?: GunCollections;
@@ -111,7 +112,7 @@ class GunDB {
 
   private async retry<T>(
     operation: () => Promise<T>,
-    context: string,
+    context: string
   ): Promise<T> {
     let lastError: Error;
 
@@ -140,7 +141,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -221,7 +222,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -237,7 +238,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -252,7 +253,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -268,7 +269,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -282,16 +283,83 @@ class GunDB {
    */
   async signUp(username: string, password: string): Promise<any> {
     log("Attempting user registration:", username);
+
+    // Implementiamo una versione semplificata con passaggi sequenziali invece di callback nidificati
     return new Promise((resolve) => {
-      this.gun.user().create(username, password, async (ack: any) => {
-        if (ack.err) {
-          logError(`Registration error: ${ack.err}`);
-          resolve({ success: false, error: ack.err });
-        } else {
-          const loginResult = await this.login(username, password);
-          resolve(loginResult);
+      // Aggiungiamo un timeout di sicurezza per evitare chiamate bloccate
+      const timeout = setTimeout(() => {
+        logError(`Timeout durante la registrazione per l'utente: ${username}`);
+        resolve({ success: false, error: "Registration timeout in GunDB" });
+      }, 10000); // Timeout di 10 secondi
+
+      // Funzione per eseguire i passaggi in sequenza
+      const executeSignUp = async () => {
+        try {
+          // STEP 1: Creiamo l'utente
+          const createResult = await new Promise<{
+            err?: string;
+            pub?: string;
+          }>((resolveCreate) => {
+            log(`Creating user: ${username}`);
+            this.gun.user().create(username, password, (ack: any) => {
+              if (ack.err) {
+                logError(`User creation error: ${ack.err}`);
+                resolveCreate({ err: ack.err });
+              } else {
+                log(`User created successfully: ${username}`);
+                resolveCreate({ pub: ack.pub });
+              }
+            });
+          });
+
+          // Se la creazione fallisce, usciamo
+          if (createResult.err) {
+            clearTimeout(timeout);
+            return resolve({ success: false, error: createResult.err });
+          }
+
+          const user = this.gun.get(createResult.pub!).put({
+            username: username,
+          });
+
+          this.gun.get("users").set(user);
+
+          // STEP 2: Effettuiamo il login
+          log(`Attempting login after registration for: ${username}`);
+          try {
+            const loginResult = await this.login(username, password);
+            clearTimeout(timeout);
+
+            if (!loginResult.success) {
+              logError(`Login after registration failed: ${loginResult.error}`);
+              return resolve({
+                success: false,
+                error: `Registration completed but login failed: ${loginResult.error}`,
+              });
+            }
+
+            log(`Login after registration successful for: ${username}`);
+            return resolve(loginResult);
+          } catch (loginError) {
+            clearTimeout(timeout);
+            logError(`Exception during post-registration login: ${loginError}`);
+            return resolve({
+              success: false,
+              error: "Exception during post-registration login",
+            });
+          }
+        } catch (error) {
+          clearTimeout(timeout);
+          logError(`Unexpected error during registration flow: ${error}`);
+          return resolve({
+            success: false,
+            error: `Unexpected error during registration: ${error}`,
+          });
         }
-      });
+      };
+
+      // Avvia il processo di registrazione
+      executeSignUp();
     });
   }
 
@@ -305,7 +373,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void,
+    callback?: (result: any) => void
   ): Promise<any> {
     if (this.isAuthenticating()) {
       const err = "Authentication already in progress";
@@ -317,29 +385,59 @@ class GunDB {
     log(`Attempting login for user: ${username}`);
 
     return new Promise((resolve) => {
-      try {
+      if (this.gun.user()) {
+        // Tentativo di logout pulito per evitare conflitti di autenticazione
         this.gun.user().leave();
-      } catch {}
+        log(`Previous session cleaned for: ${username}`);
+      }
 
+      // Aumentiamo il timeout a 8 secondi per dare più tempo all'operazione
       const timeout = setTimeout(() => {
         this._setAuthenticating(false);
+        logError(`Login timeout for user: ${username}`);
         resolve({ success: false, error: "Login timeout" });
-      }, 3000);
+      }, 8000);
 
+      log(`Starting authentication for: ${username}`);
       this.gun.user().auth(username, password, (ack: any) => {
         clearTimeout(timeout);
         this._setAuthenticating(false);
 
         if (ack.err) {
-          log(`Login error: ${ack.err}`);
+          logError(`Login error for ${username}: ${ack.err}`);
           resolve({ success: false, error: ack.err });
         } else {
-          this._savePair();
-          resolve({
-            success: true,
-            userPub: this.gun.user().is?.pub,
-            username,
+          const userPub = this.gun.user().is?.pub;
+          const user = this.gun.get("users").map((user) => {
+            if (user.pub === userPub) {
+              return user;
+            }
           });
+          // se non è dentro users, aggiungilo
+          if (!user) {
+            const user = this.gun.get(userPub!).put({
+              username: username,
+            });
+            this.gun.get("users").set(user);
+          }
+
+          if (!user) {
+            logError(
+              `Authentication succeeded but no user.pub available for: ${username}`
+            );
+            resolve({
+              success: false,
+              error: "Authentication inconsistency: user.pub not available",
+            });
+          } else {
+            log(`Login successful for: ${username} (${userPub})`);
+            this._savePair();
+            resolve({
+              success: true,
+              userPub,
+              username,
+            });
+          }
         }
       });
     });
@@ -398,10 +496,10 @@ class GunDB {
       () =>
         new Promise((resolve, reject) => {
           node.put(data, (ack: any) =>
-            ack.err ? reject(new Error(ack.err)) : resolve(data),
+            ack.err ? reject(new Error(ack.err)) : resolve(data)
           );
         }),
-      "data save operation",
+      "data save operation"
     );
   }
 
@@ -411,7 +509,7 @@ class GunDB {
         new Promise((resolve) => {
           node.once((data: any) => resolve(data));
         }),
-      "data read operation",
+      "data read operation"
     );
   }
 
@@ -509,7 +607,7 @@ class GunDB {
     try {
       // Calcola l'hash del contenuto
       const { hash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data },
+        typeof data === "object" ? data : { value: data }
       );
 
       // Salva i dati utilizzando l'hash come chiave nello spazio immutabile
@@ -520,7 +618,7 @@ class GunDB {
     } catch (error) {
       logError(
         `Errore durante l'aggiunta dati con hash a Frozen Space:`,
-        error,
+        error
       );
       throw error;
     }
@@ -536,7 +634,7 @@ class GunDB {
   async getHashedFrozenData(
     node: string,
     hash: string,
-    verifyIntegrity: boolean = false,
+    verifyIntegrity: boolean = false
   ): Promise<any> {
     log(`Recupero dati con hash da Frozen Space: ${node}/${hash}`);
     const data = await this.getFrozenData(node, hash);
@@ -544,11 +642,11 @@ class GunDB {
     if (verifyIntegrity && data) {
       // Verifica l'integrità ricalcolando l'hash dei dati
       const { hash: calculatedHash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data },
+        typeof data === "object" ? data : { value: data }
       );
       if (calculatedHash !== hash) {
         logError(
-          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`,
+          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`
         );
         throw new Error("Integrità dei dati compromessa");
       }
@@ -626,7 +724,7 @@ class GunDB {
   repository<T, R extends GunRepository<T>>(
     collection: string,
     repository: new (gun: GunDB, collection: string, options?: any) => R,
-    options?: any,
+    options?: any
   ): R {
     return new repository(this, collection, options);
   }
@@ -832,7 +930,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; error?: string }> {
     log("Impostazione suggerimento password per:", username);
 
@@ -860,7 +958,7 @@ class GunDB {
     } catch (error) {
       logError(
         "Errore durante l'impostazione del suggerimento password:",
-        error,
+        error
       );
       return { success: false, error: String(error) };
     }
@@ -874,7 +972,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Tentativo di recupero password per:", username);
 

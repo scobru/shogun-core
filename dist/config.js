@@ -1,4 +1,7 @@
-export const CONFIG = {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CONFIG = void 0;
+exports.CONFIG = {
     TIMEOUT: {
         AUTH: 60000,
         GUN: 5000,
@@ -30,4 +33,4 @@ export const CONFIG = {
     PEERS: [],
     MESSAGE_TO_SIGN: "Access With Shogun",
 };
-export default CONFIG;
+exports.default = exports.CONFIG;

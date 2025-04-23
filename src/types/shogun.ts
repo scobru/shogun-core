@@ -10,6 +10,7 @@ import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
+import { SocialPlugin } from "../plugins";
 
 /**
  * Categorie di plugin standard in ShogunCore
@@ -25,6 +26,8 @@ export enum PluginCategory {
   Identity = "identity",
   /** Plugin per altre funzionalità */
   Utility = "utility",
+  /** Plugin per la social network */
+  Social = "social",
 }
 
 /**
@@ -41,6 +44,8 @@ export enum CorePlugins {
   DID = "did",
   /** Plugin Wallet Manager */
   WalletManager = "wallet",
+  /** Plugin Social */
+  Social = "social",
 }
 
 // Definizione dell'interfaccia DID
@@ -53,7 +58,7 @@ export interface DID {
   deactivateDID(did: string): Promise<boolean>;
   registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer,
+    signer?: ethers.Signer
   ): Promise<{ success: boolean; txHash?: string; error?: string }>;
 }
 
@@ -94,6 +99,9 @@ export interface IShogunCore extends PluginManager {
   stealth?: Stealth;
   /** @deprecated Use getPlugin(CorePlugins.DID) instead */
   did?: DID;
+
+  social?: SocialPlugin;
+
   rx: GunRxJS; // RxJS integration
   storage: ShogunStorage;
   config: ShogunSDKConfig;
@@ -130,7 +138,7 @@ export interface IShogunCore extends PluginManager {
   signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string,
+    passwordConfirmation?: string
   ): Promise<SignUpResult>;
   /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
   signUpWithMetaMask?(address: string): Promise<AuthResult>;
@@ -152,14 +160,14 @@ export interface IShogunCore extends PluginManager {
   observe<T>(path: string | any): Observable<T>;
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean,
+    matchFn?: (data: any) => boolean
   ): Observable<T[]>;
   rxPut<T>(path: string | any, data: T): Observable<T>;
   rxSet<T>(path: string | any, data: T): Observable<T>;
   onceObservable<T>(path: string | any): Observable<T>;
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
+    computeFn: (...values: T[]) => R
   ): Observable<R>;
   rxUserPut<T>(path: string, data: T): Observable<T>;
   observeUser<T>(path: string): Observable<T>;
@@ -236,6 +244,7 @@ export interface ShogunSDKConfig {
     /** Enable stealth functionalities */
     enabled?: boolean;
   };
+  social?: { enabled: boolean };
   /** Logging configuration */
   logging?: LoggingConfig;
   /** Timeout configuration in milliseconds */

@@ -1,13 +1,15 @@
+"use strict";
 /**
  * Esempio di utilizzo di Frozen Space in GunDB
  * Frozen Space contiene dati che possono essere solo aggiunti, non modificati o rimossi.
  */
-import { GunDB } from "../gun/gun";
+Object.defineProperty(exports, "__esModule", { value: true });
+const gun_1 = require("../gun/gun");
 /**
  * Esempio di creazione e lettura di dati in Frozen Space
  */
 async function freezeData() {
-    const gun = new GunDB();
+    const gun = new gun_1.GunDB();
     // Esempi di dati che potrebbero essere immutabili
     const recordImmodificabile = {
         id: "tx123456",
@@ -57,7 +59,7 @@ async function freezeData() {
  * Mostra come un dato in Public Space può essere collegato a dati in Frozen Space
  */
 async function linkAcrossSpaces() {
-    const gun = new GunDB();
+    const gun = new gun_1.GunDB();
     // Creazione di un record in Frozen Space
     const infoValuta = {
         codice: "EUR",

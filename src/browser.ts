@@ -11,7 +11,7 @@ const loadStealthModule = () => import("./plugins/stealth/stealth");
 const loadDIDModule = () => import("./plugins/did/DID");
 const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
 const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
-
+const loadSocialModule = () => import("./plugins/social/socialPlugin");
 let shogunCoreInstance;
 
 /**
@@ -37,13 +37,13 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   // Warn users who don't provide custom peers or providerUrl
   if (!config.gundb?.peers) {
     log(
-      "WARNING: Using default GunDB peers. For production, always configure custom peers.",
+      "WARNING: Using default GunDB peers. For production, always configure custom peers."
     );
   }
 
   if (!config.providerUrl) {
     log(
-      "WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits.",
+      "WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits."
     );
   }
 
@@ -61,6 +61,10 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
 
   if (shogunCoreInstance.hasPlugin(CorePlugins.WalletManager)) {
     log("Wallet plugin initialized", { category: "init", level: "info" });
+  }
+
+  if (shogunCoreInstance.hasPlugin(CorePlugins.Social)) {
+    log("Social plugin initialized", { category: "init", level: "debug" });
   }
 
   return shogunCoreInstance;

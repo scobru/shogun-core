@@ -1,4 +1,5 @@
+"use strict";
 /**
  * Common types shared across modules
  */
-export {};
+Object.defineProperty(exports, "__esModule", { value: true });

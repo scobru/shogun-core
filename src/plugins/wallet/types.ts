@@ -12,6 +12,12 @@ export interface WalletPluginInterface {
   getMainWallet(): ethers.Wallet | null;
 
   /**
+   * Ottiene il credenziali wallet principale
+   * @returns Il wallet principale o null se non disponibile
+   */
+  getMainWalletCredentials(): { address: string; priv: string };
+
+  /**
    * Crea un nuovo wallet
    * @returns Promise con l'informazione del wallet creato
    */
@@ -31,7 +37,7 @@ export interface WalletPluginInterface {
    */
   signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array,
+    message: string | Uint8Array
   ): Promise<string>;
 
   /**
@@ -52,7 +58,7 @@ export interface WalletPluginInterface {
   signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string,
+    value: string
   ): Promise<string>;
 
   /**
@@ -86,7 +92,7 @@ export interface WalletPluginInterface {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    },
+    }
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;

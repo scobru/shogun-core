@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Stealth = void 0;
 /**
  * Stealth stub for light version
  * Include only basic functionality - advanced features must be lazy loaded
@@ -28,5 +31,5 @@ class StealthStub {
         throw new Error("Stealth functionality disabled in light version");
     }
 }
-export { StealthStub as Stealth };
-export default StealthStub;
+exports.Stealth = StealthStub;
+exports.default = StealthStub;

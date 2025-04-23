@@ -8,6 +8,7 @@ export * from "./stealth";
 export * from "./did";
 export * from "./metamask";
 export * from "./webauthn";
+export * from "./social/social";
 
 // Esporta i plugin per gli autenticatori
 export { WebauthnPlugin } from "./webauthn/webauthnPlugin";
@@ -24,3 +25,6 @@ export type { DIDPluginInterface } from "./did/types";
 
 export { StealthPlugin } from "./stealth/stealthPlugin";
 export type { StealthPluginInterface } from "./stealth/types";
+
+export { SocialPlugin } from "./social/socialPlugin";
+export type { SocialPluginInterface } from "./social/types";

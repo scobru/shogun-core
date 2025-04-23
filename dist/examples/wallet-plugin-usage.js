@@ -1,16 +1,18 @@
-import { ShogunCore, WalletPlugin, PluginCategory, } from "../index";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const index_1 = require("../index");
 // Primo modo: inizializzazione manuale del plugin
 function exampleManualPluginInit() {
     // Inizializza ShogunCore senza il wallet manager
-    const core = new ShogunCore({
+    const core = new index_1.ShogunCore({
         gundb: {
             peers: ["http://localhost:8765/gun"],
         },
         providerUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
     });
     // Crea e registra il plugin wallet
-    const walletPlugin = new WalletPlugin();
-    walletPlugin._category = PluginCategory.Wallet;
+    const walletPlugin = new index_1.WalletPlugin();
+    walletPlugin._category = index_1.PluginCategory.Wallet;
     core.register(walletPlugin);
     // Usa il plugin wallet
     async function useWalletPlugin() {
@@ -46,10 +48,10 @@ function exampleManualPluginInit() {
 // Secondo modo: inizializzazione automatica del plugin tramite configurazione
 function exampleAutoPluginInit() {
     // Crea il plugin prima dell'inizializzazione di ShogunCore
-    const walletPlugin = new WalletPlugin();
-    walletPlugin._category = PluginCategory.Wallet;
+    const walletPlugin = new index_1.WalletPlugin();
+    walletPlugin._category = index_1.PluginCategory.Wallet;
     // Inizializza ShogunCore con auto-registrazione del plugin
-    const core = new ShogunCore({
+    const core = new index_1.ShogunCore({
         gundb: {
             peers: ["http://localhost:8765/gun"],
         },
@@ -94,9 +96,9 @@ function exampleAutoPluginInit() {
 }
 // Esempi di utilizzo con Type Safety
 function typeChecking() {
-    const core = new ShogunCore({});
-    const plugin = new WalletPlugin();
-    plugin._category = PluginCategory.Wallet;
+    const core = new index_1.ShogunCore({});
+    const plugin = new index_1.WalletPlugin();
+    plugin._category = index_1.PluginCategory.Wallet;
     core.register(plugin);
     // Type-safe access to plugin methods
     const typedPlugin = core.getPlugin("wallet");
@@ -106,6 +108,6 @@ function typeChecking() {
         typedPlugin.createWallet();
     }
     // Esempio di utilizzo del getPluginsByCategory
-    const walletPlugins = core.getPluginsByCategory(PluginCategory.Wallet);
+    const walletPlugins = core.getPluginsByCategory(index_1.PluginCategory.Wallet);
     console.log(`Found ${walletPlugins.length} wallet plugins`);
 }

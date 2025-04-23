@@ -1,5 +1,14 @@
-import Gun from "gun";
-import "gun/sea";
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.issueCert = issueCert;
+exports.generateCerts = generateCerts;
+exports.verifyCert = verifyCert;
+exports.extractCertPolicy = extractCertPolicy;
+const gun_1 = __importDefault(require("gun"));
+require("gun/sea");
 /**
  * Issues a certificate using the SEA API
  * @param options Certificate options
@@ -10,7 +19,7 @@ import "gun/sea";
  * @param options.personal Whether certificate is personal (default: false)
  * @returns Generated certificate
  */
-export async function issueCert({ pair, tag = "word", dot = "", users = "*", personal = false, }) {
+async function issueCert({ pair, tag = "word", dot = "", users = "*", personal = false, }) {
     const policy = { "*": `${tag}` };
     if (dot) {
         policy["."] = dot;
@@ -19,7 +28,7 @@ export async function issueCert({ pair, tag = "word", dot = "", users = "*", per
         policy["+"] = "*";
     }
     try {
-        const cert = await Gun.SEA.certify(users, policy, pair, null);
+        const cert = await gun_1.default.SEA.certify(users, policy, pair, null);
         return cert || "";
     }
     catch (e) {
@@ -34,7 +43,7 @@ export async function issueCert({ pair, tag = "word", dot = "", users = "*", per
  * @param options.list List of certificate configurations
  * @returns Object containing all generated certificates
  */
-export async function generateCerts({ pair, list = [], }) {
+async function generateCerts({ pair, list = [], }) {
     const all = {};
     for (const opt of list) {
         all[opt.tag] = await issueCert({ ...opt, pair });
@@ -47,11 +56,11 @@ export async function generateCerts({ pair, list = [], }) {
  * @param pub Issuer's public key
  * @returns Verification result
  */
-export async function verifyCert(cert, pub) {
+async function verifyCert(cert, pub) {
     if (!cert)
         return null;
     try {
-        return await Gun.SEA.verify(cert, pub);
+        return await gun_1.default.SEA.verify(cert, pub);
     }
     catch (e) {
         console.log("Errore verifica certificato: ", e);
@@ -63,7 +72,7 @@ export async function verifyCert(cert, pub) {
  * @param cert Certificate to analyze
  * @returns Extracted policy or null if error
  */
-export async function extractCertPolicy(cert) {
+async function extractCertPolicy(cert) {
     if (!cert)
         return null;
     try {

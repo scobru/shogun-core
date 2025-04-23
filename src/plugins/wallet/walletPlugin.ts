@@ -73,6 +73,13 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
   /**
    * @inheritdoc
    */
+  getMainWalletCredentials(): { address: string; priv: string } {
+    return this.assertWalletManager().getMainWalletCredentials();
+  }
+
+  /**
+   * @inheritdoc
+   */
   async createWallet(): Promise<WalletInfo> {
     return this.assertWalletManager().createWallet();
   }
@@ -92,7 +99,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
           ErrorType.AUTHENTICATION,
           "AUTH_REQUIRED",
           "User authentication required to load wallets",
-          null,
+          null
         );
 
         return [];
@@ -105,7 +112,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
         ErrorType.WALLET,
         "LOAD_WALLETS_ERROR",
         `Error loading wallets: ${error instanceof Error ? error.message : String(error)}`,
-        error,
+        error
       );
 
       // Ritorniamo un array vuoto
@@ -119,7 +126,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
   getStandardBIP44Addresses(mnemonic: string, count: number = 5): string[] {
     return this.assertWalletManager().getStandardBIP44Addresses(
       mnemonic,
-      count,
+      count
     );
   }
 
@@ -145,7 +152,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
    */
   async signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array,
+    message: string | Uint8Array
   ): Promise<string> {
     return this.assertWalletManager().signMessage(wallet, message);
   }
@@ -163,7 +170,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
   async signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string,
+    value: string
   ): Promise<string> {
     return this.assertWalletManager().signTransaction(wallet, toAddress, value);
   }
@@ -201,7 +208,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
    */
   async importMnemonic(
     mnemonicData: string,
-    password?: string,
+    password?: string
   ): Promise<boolean> {
     return this.assertWalletManager().importMnemonic(mnemonicData, password);
   }
@@ -211,7 +218,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
    */
   async importWalletKeys(
     walletsData: string,
-    password?: string,
+    password?: string
   ): Promise<number> {
     return this.assertWalletManager().importWalletKeys(walletsData, password);
   }
@@ -233,7 +240,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    } = { importMnemonic: true, importWallets: true, importGunPair: true },
+    } = { importMnemonic: true, importWallets: true, importGunPair: true }
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;
@@ -243,7 +250,7 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
     return this.assertWalletManager().importAllUserData(
       backupData,
       password,
-      options,
+      options
     );
   }
 

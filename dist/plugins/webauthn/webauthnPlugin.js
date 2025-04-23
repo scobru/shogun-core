@@ -1,27 +1,27 @@
-import { BasePlugin } from "../base";
-import { Webauthn } from "./webauthn";
-import { log, logError } from "../../utils/logger";
-import { ethers } from "ethers";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebauthnPlugin = void 0;
+const base_1 = require("../base");
+const webauthn_1 = require("./webauthn");
+const logger_1 = require("../../utils/logger");
+const ethers_1 = require("ethers");
+const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
-export class WebauthnPlugin extends BasePlugin {
-    constructor() {
-        super(...arguments);
-        this.name = "webauthn";
-        this.version = "1.0.0";
-        this.description = "Provides WebAuthn authentication functionality for ShogunCore";
-        this.webauthn = null;
-    }
+class WebauthnPlugin extends base_1.BasePlugin {
+    name = "webauthn";
+    version = "1.0.0";
+    description = "Provides WebAuthn authentication functionality for ShogunCore";
+    webauthn = null;
     /**
      * @inheritdoc
      */
     initialize(core) {
         super.initialize(core);
         // Inizializziamo il modulo WebAuthn
-        this.webauthn = new Webauthn();
-        log("WebAuthn plugin initialized");
+        this.webauthn = new webauthn_1.Webauthn(core.gun);
+        (0, logger_1.log)("WebAuthn plugin initialized");
     }
     /**
      * @inheritdoc
@@ -29,7 +29,7 @@ export class WebauthnPlugin extends BasePlugin {
     destroy() {
         this.webauthn = null;
         super.destroy();
-        log("WebAuthn plugin destroyed");
+        (0, logger_1.log)("WebAuthn plugin destroyed");
     }
     /**
      * Assicura che il modulo WebAuthn sia inizializzato
@@ -87,10 +87,10 @@ export class WebauthnPlugin extends BasePlugin {
      * Requires browser support for WebAuthn and existing credentials.
      */
     async login(username) {
-        log("Login with WebAuthn");
+        (0, logger_1.log)("Login with WebAuthn");
         try {
             const core = this.assertInitialized();
-            log(`Attempting WebAuthn login for user: ${username}`);
+            (0, logger_1.log)(`Attempting WebAuthn login for user: ${username}`);
             if (!username) {
                 throw new Error("Username required for WebAuthn login");
             }
@@ -101,10 +101,10 @@ export class WebauthnPlugin extends BasePlugin {
             if (!assertionResult?.success) {
                 throw new Error(assertionResult?.error || "WebAuthn verification failed");
             }
-            const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(assertionResult.credentialId || ""));
+            const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(assertionResult.credentialId || ""));
             const loginResult = await core.login(username, hashedCredentialId);
             if (loginResult.success) {
-                log(`WebAuthn login completed successfully for user: ${username}`);
+                (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
                 if (!loginResult.did) {
                     try {
                         // Utilizziamo il metodo privato del core per la gestione del DID
@@ -115,13 +115,12 @@ export class WebauthnPlugin extends BasePlugin {
                         }
                     }
                     catch (didError) {
-                        logError("Error ensuring DID for WebAuthn user:", didError);
+                        (0, logger_1.logError)("Error ensuring DID for WebAuthn user:", didError);
                     }
                 }
                 return {
                     ...loginResult,
                     username,
-                    password: hashedCredentialId,
                     credentialId: assertionResult.credentialId,
                 };
             }
@@ -130,8 +129,8 @@ export class WebauthnPlugin extends BasePlugin {
             }
         }
         catch (error) {
-            logError(`Error during WebAuthn login: ${error}`);
-            ErrorHandler.handle(ErrorType.WEBAUTHN, "WEBAUTHN_LOGIN_ERROR", error.message || "Error during WebAuthn login", error);
+            (0, logger_1.logError)(`Error during WebAuthn login: ${error}`);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_LOGIN_ERROR", error.message || "Error during WebAuthn login", error);
             return {
                 success: false,
                 error: error.message || "Error during WebAuthn login",
@@ -147,10 +146,10 @@ export class WebauthnPlugin extends BasePlugin {
      * Requires browser support for WebAuthn.
      */
     async signUp(username) {
-        log("Sign up with WebAuthn");
+        (0, logger_1.log)("Sign up with WebAuthn");
         try {
             const core = this.assertInitialized();
-            log(`Attempting WebAuthn registration for user: ${username}`);
+            (0, logger_1.log)(`Attempting WebAuthn registration for user: ${username}`);
             if (!username) {
                 throw new Error("Username required for WebAuthn registration");
             }
@@ -161,10 +160,10 @@ export class WebauthnPlugin extends BasePlugin {
             if (!attestationResult?.success) {
                 throw new Error(attestationResult?.error || "Unable to generate WebAuthn credentials");
             }
-            const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(attestationResult.credentialId || ""));
+            const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(attestationResult.credentialId || ""));
             const signupResult = await core.signUp(username, hashedCredentialId);
             if (signupResult.success) {
-                log(`WebAuthn registration completed successfully for user: ${username}`);
+                (0, logger_1.log)(`WebAuthn registration completed successfully for user: ${username}`);
                 if (!signupResult.did) {
                     try {
                         // Utilizziamo il metodo privato del core per la gestione del DID
@@ -182,7 +181,7 @@ export class WebauthnPlugin extends BasePlugin {
                         }
                     }
                     catch (didError) {
-                        logError("Error creating DID for WebAuthn user:", didError);
+                        (0, logger_1.logError)("Error creating DID for WebAuthn user:", didError);
                     }
                 }
                 // Emettiamo un evento personalizzato per il registrazione WebAuthn
@@ -200,7 +199,6 @@ export class WebauthnPlugin extends BasePlugin {
                 return {
                     ...signupResult,
                     username,
-                    password: "*******",
                     credentialId: attestationResult.credentialId,
                 };
             }
@@ -209,8 +207,8 @@ export class WebauthnPlugin extends BasePlugin {
             }
         }
         catch (error) {
-            logError(`Error during WebAuthn registration: ${error}`);
-            ErrorHandler.handle(ErrorType.WEBAUTHN, "WEBAUTHN_SIGNUP_ERROR", error.message || "Error during WebAuthn registration", error);
+            (0, logger_1.logError)(`Error during WebAuthn registration: ${error}`);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_SIGNUP_ERROR", error.message || "Error during WebAuthn registration", error);
             return {
                 success: false,
                 error: error.message || "Error during WebAuthn registration",
@@ -232,3 +230,4 @@ export class WebauthnPlugin extends BasePlugin {
         return this.signUp(username);
     }
 }
+exports.WebauthnPlugin = WebauthnPlugin;
