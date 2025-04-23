@@ -2376,10 +2376,16 @@
                 <div class="post-header">
                     <span class="post-author">${author}</span>
                     <span class="post-timestamp">${timestamp}</span>
+                    ${(currentUserPub && post.author === currentUserPub) ?
+                    `<div class="post-delete">
+                            <button class="delete-post-button" data-post-id="${post.id}">🗑️</button>
+                         </div>` : ''
+                }
                 </div>
                 <div class="post-content">${content}</div>
                 <div class="post-actions">
                     <button class="like-button" data-post-id="${post.id}">❤️ <span class="like-count"></span></button>
+                    <button class="unlike-button" data-post-id="${post.id}" style="display: none;">💔</button>
                     <button class="comment-button" data-post-id="${post.id}">💬 <span class="comment-count"></span></button>
                 </div>
                 <div class="comment-section" data-post-id="${post.id}" style="display:none">
@@ -2396,7 +2402,8 @@
             // Aggiungi event listeners
             // Like button
             const likeButton = p.querySelector('.like-button');
-            if (likeButton) {
+            const unlikeButton = p.querySelector('.unlike-button');
+            if (likeButton && unlikeButton) {
                 likeButton.addEventListener('click', async () => {
                     if (!currentUserPub) {
                         showError('Errore', 'Devi effettuare il login per mettere like');
@@ -2404,12 +2411,35 @@
                     }
                     likeButton.disabled = true;
                     try {
-                        await socialPlugin.likePost(post.id);
+                        const hasLiked = await checkLikeStatus(post.id);
+                        if (!hasLiked) {
+                            await socialPlugin.likePost(post.id);
+                            likeButton.classList.add('active');
+                            unlikeButton.style.display = 'inline-block';
+                        }
                         updateLikes(post.id);
                     } catch (err) {
                         console.error('Errore like:', err);
                     } finally {
                         likeButton.disabled = false;
+                    }
+                });
+
+                unlikeButton.addEventListener('click', async () => {
+                    if (!currentUserPub) {
+                        showError('Errore', 'Devi effettuare il login per rimuovere il like');
+                        return;
+                    }
+                    unlikeButton.disabled = true;
+                    try {
+                        await socialPlugin.unlikePost(post.id);
+                        likeButton.classList.remove('active');
+                        unlikeButton.style.display = 'none';
+                        updateLikes(post.id);
+                    } catch (err) {
+                        console.error('Errore unlike:', err);
+                    } finally {
+                        unlikeButton.disabled = false;
                     }
                 });
             }
@@ -2422,6 +2452,35 @@
                     commentSection.style.display = commentSection.style.display === 'block' ? 'none' : 'block';
                     if (commentSection.style.display === 'block') {
                         loadComments(post.id);
+                    }
+                });
+            }
+
+            // Delete post button (solo per i post dell'utente corrente)
+            const deletePostButton = p.querySelector('.delete-post-button');
+            if (deletePostButton) {
+                deletePostButton.addEventListener('click', async () => {
+                    if (!currentUserPub) {
+                        showError('Errore', 'Devi effettuare il login per eliminare il post');
+                        return;
+                    }
+
+                    if (confirm('Sei sicuro di voler eliminare questo post?')) {
+                        deletePostButton.disabled = true;
+                        try {
+                            const result = await socialPlugin.deletePost(post.id);
+                            if (result) {
+                                showResult('Operazione', 'Post eliminato con successo');
+                                p.remove(); // Rimuove il post dalla UI
+                            } else {
+                                showError('Errore', 'Impossibile eliminare il post');
+                            }
+                        } catch (err) {
+                            console.error('Errore eliminazione post:', err);
+                            showError('Errore', `Impossibile eliminare il post: ${err.message || 'errore sconosciuto'}`);
+                        } finally {
+                            deletePostButton.disabled = false;
+                        }
                     }
                 });
             }
