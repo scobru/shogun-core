@@ -587,6 +587,17 @@
 
     <script src="../../dist/browser/shogun-core.js" defer></script>
     <script>
+        // Funzione di utilità per sanitizzare l'HTML
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // Controlliamo esplicitamente lo stato del pulsante al caricamento
         window.addEventListener('DOMContentLoaded', function () {
             console.log("DOM completamente caricato, verifica elementi critici:");
@@ -1184,6 +1195,12 @@
             showResult('Operazione', { message: 'Invio commento in corso...' });
 
             try {
+                // Verifica che l'utente sia autenticato
+                if (!currentUserPub) {
+                    showError('Errore', 'Devi effettuare il login per commentare');
+                    return null;
+                }
+
                 // Aggiunta del commento con timeout
                 const commentPromise = socialPlugin.addComment(postId, content);
                 const timeoutPromise = new Promise((_, reject) => {
@@ -1194,22 +1211,97 @@
 
                 if (!comment) {
                     console.error('Errore durante l\'invio del commento: risultato null');
+                    showError('Errore', 'Impossibile inviare il commento');
                     return null;
                 }
 
-                console.log('Commento inviato:', comment);
+                console.log('Commento inviato con successo:', comment);
 
                 // Verifica che il commento sia stato effettivamente registrato
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                const comments = await socialPlugin.getComments(postId);
-                console.log(`Verifica commenti dopo invio: trovati ${comments.length} commenti`);
+                // Fai più tentativi per leggere il commento, per assicurarti che sia stato salvato
+                let commentFound = false;
+                let comments = [];
+                let attempts = 0;
+                const maxAttempts = 3;
 
-                const commentFound = comments.some(c => c.id === comment.id);
-                console.log(`Verifica commento ${comment.id}: ${commentFound ? 'trovato' : 'NON trovato'}`);
+                while (!commentFound && attempts < maxAttempts) {
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // aumenta il tempo tra i tentativi
+
+                    // Tenta di recuperare i commenti e verificare se il nostro è presente
+                    try {
+                        comments = await socialPlugin.getComments(postId);
+                        console.log(`Verifica commento tentativo ${attempts}: trovati ${comments.length} commenti`);
+
+                        // Cerca il commento che abbiamo appena aggiunto
+                        commentFound = comments.some(c => c.id === comment.id && c.content === content);
+
+                        if (commentFound) {
+                            console.log(`Commento ${comment.id} verificato e salvato correttamente`);
+                            break;
+                        } else {
+                            console.warn(`Commento ${comment.id} non trovato al tentativo ${attempts}`);
+
+                            // Tenta di recuperare il commento direttamente
+                            gun.get("posts").get(postId).get("comments").get(comment.id).once(function (data) {
+                                console.log(`Verifica diretta del commento ${comment.id}:`, data);
+                                if (data && data.content === content) {
+                                    console.log(`Commento ${comment.id} verificato direttamente da GunDB`);
+                                    commentFound = true;
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Errore durante la verifica del commento (tentativo ${attempts}):`, err);
+                    }
+                }
+
+                if (!commentFound) {
+                    console.warn(`Il commento potrebbe non essere stato salvato correttamente. Riprova.`);
+
+                    // Tenta di riscriverlo una volta in più, direttamente
+                    await new Promise((resolve) => {
+                        gun.get("posts")
+                            .get(postId)
+                            .get("comments")
+                            .get(comment.id)
+                            .put({
+                                id: comment.id,
+                                postId,
+                                author: currentUserPub,
+                                content: content.trim(),
+                                timestamp: comment.timestamp || Date.now(),
+                            }, ack => {
+                                console.log("Risultato secondo tentativo di salvataggio commento:", ack);
+                                resolve();
+                            });
+                    });
+                }
+
+                // Aggiorna immediatamente la UI con il nuovo commento anche se non troviamo conferma
+                // del salvataggio, per dare feedback all'utente
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment';
+                commentElement.setAttribute('data-comment-id', comment.id);
+                commentElement.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">Tu</span>
+                        <span class="comment-time">${new Date().toLocaleString()}</span>
+                    </div>
+                    <div class="comment-text">${escapeHtml(content)}</div>
+                `;
+
+                const safeId = generateSafeId(postId);
+                const commentsList = document.getElementById(`comments-list-${safeId}`);
+                if (commentsList) {
+                    // Aggiungi il nuovo commento all'inizio (è il più recente)
+                    commentsList.insertBefore(commentElement, commentsList.firstChild);
+                }
 
                 return comment;
             } catch (err) {
                 console.error('Errore addComment:', err);
+                showError('Errore', `Errore durante l'invio del commento: ${err.message || 'errore sconosciuto'}`);
                 return null;
             }
         }
@@ -1297,792 +1389,76 @@
             }
 
             // Mostra messaggio di caricamento
-            commentsList.innerHTML = '<div class="loading-comments">Caricamento commenti...</div>';
+            commentsList.innerHTML = '<div class="comment-loading">Caricamento commenti...</div>';
 
-            return new Promise((resolve, reject) => {
-                const comments = [];
-                const processedIds = new Set(); // Per evitare duplicati
-                let timeoutId;
+            console.log(`getCommentsDirectly: Inizio recupero commenti per il post ${postId}`);
 
-                // Imposta un timeout per evitare attese infinite
-                timeoutId = setTimeout(() => {
-                    console.warn(`Timeout raggiunto per il caricamento dei commenti del post ${postId}`);
+            // Nuova implementazione migliorata:
+            // 1. Prima prova con il metodo standard dell'API
+            // 2. Poi con accesso diretto a GunDB
+            // 3. Infine cerca anche nei nodi alternativi
+
+            // Promessa per il recupero commenti
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Primo tentativo: usa il metodo ufficiale API
+                    console.log(`getCommentsDirectly: Primo tentativo con socialPlugin.getComments`);
+                    const comments = await socialPlugin.getComments(postId);
+                    console.log(`getCommentsDirectly: Tentativo #1 - Ricevuti ${comments.length} commenti per ${postId}`);
 
                     if (comments.length > 0) {
-                        console.log(`Risolvo con ${comments.length} commenti trovati prima del timeout`);
-                        updateCommentCount(postId, comments.length);
+                        // Abbiamo trovato commenti, visualizzali
                         displayComments(postId, comments, actualSafeId);
-                        resolve(comments); // Risolvi con i commenti trovati finora
-                    } else {
-                        // Se non abbiamo trovato commenti, proviamo con un approccio alternativo
-                        console.log("Tentativo alternativo di recupero commenti...");
-
-                        // Prima proviamo a cercare nel nuovo formato
-                        try {
-                            console.log("Ricerca commenti nel nuovo formato (posts/postId/comments)...");
-
-                            // Metodo 1: Ricerca diretta nei commenti del post
-                            gun.get('posts').get(postId).get('comments').map().once(function (data, key) {
-                                try {
-                                    if (data && key !== '_') {
-                                        console.log(`Trovato commento nel formato posts/${postId}/comments/${key}:`, data);
-
-                                        if (!processedIds.has(key)) {
-                                            processedIds.add(key);
-
-                                            // Verifica se abbiamo un riferimento al payload
-                                            let commentContent = 'Caricamento...';
-                                            let hasPayloadReference = false;
-
-                                            if (data.payload && typeof data.payload === 'object' && data.payload['#']) {
-                                                // Recupera il riferimento al payload
-                                                const payloadRef = data.payload['#'];
-                                                console.log(`Riferimento al payload: ${payloadRef}`);
-                                                hasPayloadReference = true;
-
-                                                // Funzione che crea il commento una volta recuperato il contenuto
-                                                const createCommentWithPayload = (payloadData) => {
-                                                    if (payloadData) {
-                                                        // Estrai il contenuto dal payload
-                                                        const content = payloadData.text || payloadData.content || 'Contenuto non disponibile';
-                                                        console.log(`Contenuto recuperato: ${content}`);
-
-                                                        // Crea commento con contenuto
-                                                        const comment = {
-                                                            id: key,
-                                                            author: data.creator || 'Anonimo',
-                                                            content: content,
-                                                            timestamp: data.createdAt || Date.now(),
-                                                            postId: postId,
-                                                            _source: 'payload_reference'
-                                                        };
-
-                                                        // Aggiungi alla lista e aggiorna UI
-                                                        comments.push(comment);
-                                                        console.log(`Commento completo aggiunto:`, comment);
-                                                        updateCommentCount(postId, comments.length);
-                                                        displayComments(postId, comments, actualSafeId);
-                                                    }
-                                                };
-
-                                                // Tenta di accedere al payload attraverso il riferimento
-                                                // Metodo 1: accesso diretto al nodo del payload
-                                                const payloadPath = payloadRef.split('/');
-                                                const payloadId = payloadPath[payloadPath.length - 1];
-
-                                                // Tenta diverse vie per recuperare il payload
-                                                gun.get(payloadId).once(createCommentWithPayload);
-                                                gun.get(`${payloadRef}`).once(createCommentWithPayload);
-                                                gun.get(`messages/${key}/payload`).once(createCommentWithPayload);
-                                            }
-
-                                            // Se non c'è un riferimento al payload o come fallback temporaneo
-                                            if (!hasPayloadReference) {
-                                                // Crea un oggetto commento base
-                                                const comment = {
-                                                    id: key,
-                                                    author: data.creator || 'Anonimo',
-                                                    content: (data.payload && data.payload.text) || 'Contenuto non disponibile',
-                                                    timestamp: data.createdAt || Date.now(),
-                                                    postId: postId,
-                                                    _source: 'direct'
-                                                };
-
-                                                comments.push(comment);
-                                                console.log("Commento aggiunto dal nuovo formato:", comment);
-                                            }
-                                        }
-                                    }
-                                } catch (err) {
-                                    console.error("Errore elaborazione commento (nuovo formato):", err);
-                                }
-                            });
-
-                            // Dopo un breve ritardo, verifichiamo se abbiamo trovato commenti
-                            setTimeout(() => {
-                                if (comments.length > 0) {
-                                    console.log(`Trovati ${comments.length} commenti nel nuovo formato`);
-                                    updateCommentCount(postId, comments.length);
-                                    displayComments(postId, comments, actualSafeId);
-                                    resolve(comments);
-                                } else {
-                                    // Se ancora niente, proviamo il vecchio formato
-                                    tryOldFormat();
-                                }
-                            }, 2000);
-                        } catch (newFormatErr) {
-                            console.error("Errore nella ricerca nel nuovo formato:", newFormatErr);
-                            tryOldFormat();
-                        }
-
-                        // Funzione per provare il vecchio formato
-                        function tryOldFormat() {
-                            try {
-                                console.log("Ricerca commenti nel vecchio formato (messages)...");
-
-                                // Metodo alternativo: cercare direttamente i messaggi con reference al post
-                                gun.get('messages').map().once(function (data, key) {
-                                    try {
-                                        if (data && data.type === 'POST' && data.subtype === 'REPLY' &&
-                                            data.payload && data.payload.reference === postId) {
-
-                                            if (!processedIds.has(key)) {
-                                                processedIds.add(key);
-
-                                                // Converti in un formato di commento
-                                                const comment = {
-                                                    id: key,
-                                                    type: 'MESSAGE',
-                                                    subtype: 'COMMENT',
-                                                    payload: {
-                                                        postId: postId,
-                                                        text: data.payload.content || '',
-                                                        author: data.creator || 'Anonimo'
-                                                    },
-                                                    timestamp: data.createdAt || new Date().toISOString()
-                                                };
-
-                                                comments.push(comment);
-                                                console.log("Trovato commento con metodo alternativo:", comment);
-                                            }
-                                        }
-                                    } catch (err) {
-                                        console.error("Errore elaborazione commento (metodo alternativo):", err);
-                                    }
-                                });
-
-                                // Dopo un breve ritardo, visualizza i commenti trovati con il metodo alternativo
-                                setTimeout(() => {
-                                    updateCommentCount(postId, comments.length);
-                                    displayComments(postId, comments, actualSafeId);
-
-                                    if (comments.length > 0) {
-                                        resolve(comments);
-                                    } else {
-                                        commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
-                                        resolve([]);
-                                    }
-                                }, 2000);
-                            } catch (oldFormatErr) {
-                                console.error("Errore nel metodo alternativo:", oldFormatErr);
-                                commentsList.innerHTML = '<div class="no-comments">Nessun commento disponibile</div>';
-                                resolve([]);
-                            }
-                        }
-                    }
-                }, 5000);
-
-                try {
-                    // Metodo 1: Cerca tutti i messaggi e filtra
-                    gun.get('messages').map().on(function (data, key) {
-                        try {
-                            // Estrai i dati del commento dalla struttura potenzialmente complessa
-                            const commentData = extractCommentData(data, key);
-
-                            // Se è un commento valido 
-                            if (commentData &&
-                                ((commentData.type === 'MESSAGE' && commentData.subtype === 'COMMENT') ||
-                                    (commentData.type === 'POST' && commentData.subtype === 'REPLY')) &&
-                                commentData.payload) {
-
-                                // Verifica la relazione con il post
-                                // Può essere nell'oggetto payload o come proprietà esterna
-                                const commentPostId = commentData.payload.postId ||
-                                    commentData.payload.reference ||
-                                    commentData.postId ||
-                                    commentData.reference;
-
-                                if (commentPostId === postId) {
-                                    // Evita duplicati controllando un ID univoco
-                                    const commentId = commentData.id || key;
-                                    if (!processedIds.has(commentId)) {
-                                        processedIds.add(commentId);
-
-                                        // Accedi al payload nel caso sia un riferimento
-                                        if (data.payload && typeof data.payload === 'object' && data.payload['#']) {
-                                            const payloadRef = data.payload['#'];
-                                            console.log(`Riferimento al payload (metodo principale): ${payloadRef}`);
-
-                                            // Accedi direttamente al payload usando il percorso completo
-                                            gun.get(payloadRef).once((payloadData) => {
-                                                if (payloadData) {
-                                                    console.log(`Payload recuperato (metodo principale): ${JSON.stringify(payloadData)}`);
-
-                                                    // Aggiorna il commentData con i dati del payload
-                                                    if (payloadData.content) {
-                                                        commentData.payload.text = payloadData.content;
-                                                    } else if (payloadData.text) {
-                                                        commentData.payload.text = payloadData.text;
-                                                    }
-
-                                                    // Aggiungi il commento con i dati aggiornati
-                                                    comments.push(commentData);
-                                                    console.log(`Commento aggiornato con payload: ${commentData.payload.text}`);
-
-                                                    // Aggiorna immediatamente l'UI
-                                                    updateCommentCount(postId, comments.length);
-                                                    displayComments(postId, comments, actualSafeId);
-                                                }
-                                            });
-                                        } else {
-                                            // Payload diretto
-                                            comments.push(commentData);
-                                            console.log(`Commento trovato per il post ${postId}:`, commentData);
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (err) {
-                            console.error('Errore durante l\'elaborazione del commento:', err);
-                        }
-                    });
-
-                    // Dopo un breve ritardo, aggiorna l'UI con i commenti trovati finora
-                    setTimeout(() => {
-                        if (comments.length > 0) {
-                            clearTimeout(timeoutId); // Annulla il timeout se abbiamo trovato commenti
-                            console.log(`Trovati ${comments.length} commenti per il post ${postId}`);
-                            updateCommentCount(postId, comments.length);
-                            displayComments(postId, comments, actualSafeId);
-                            resolve(comments);
-                        }
-                        // Altrimenti lascia che il timeout continui
-                    }, 2000);
-
-                } catch (err) {
-                    clearTimeout(timeoutId);
-                    console.error(`Errore durante il recupero dei commenti per il post ${postId}:`, err);
-                    commentsList.innerHTML = '<div class="error-loading-comments">Errore nel caricamento dei commenti</div>';
-                    reject(err);
-                }
-            });
-        }
-
-        // Estrae i dati del commento dalla struttura GunDB
-        function extractCommentData(data, key) {
-            try {
-                // Log dettagliato della struttura dei dati ricevuti
-                console.log(`Analisi dati per chiave ${key}:`, JSON.stringify(data));
-
-                // Caso 1: Abbiamo direttamente un oggetto dati ben formato
-                if (data && data.type && data.payload) {
-                    // Verifica se il payload è un riferimento o un oggetto diretto
-                    if (typeof data.payload === 'object' && data.payload['#']) {
-                        // È un riferimento, carica i dati effettivi in modo sincrono
-                        const payloadRef = data.payload['#'];
-                        console.log(`Trovato riferimento payload: ${payloadRef}`);
-
-                        // Crea una struttura temporanea
-                        const tempObj = {
-                            id: key,
-                            type: data.type,
-                            subtype: data.subtype || '',
-                            creator: data.creator,
-                            createdAt: data.createdAt,
-                            payload: {
-                                reference: '', // Verrà completato in seguito
-                                content: 'Caricamento...'
-                            }
-                        };
-
-                        // Richiedi accesso diretto al payload attraverso il suo percorso
-                        const payloadParts = payloadRef.split('/');
-                        if (payloadParts.length >= 2) {
-                            // Estrai e prova a caricare direttamente dal percorso del payload
-                            const payloadNode = payloadParts[payloadParts.length - 1];
-
-                            // Effettua una richiesta immediata per i dati del payload
-                            gun.get(`${payloadNode}`).once((payloadData) => {
-                                if (payloadData) {
-                                    console.log(`Payload trovato per ${key}:`, payloadData);
-
-                                    // Aggiorna la struttura temporanea
-                                    if (payloadData.reference) tempObj.payload.reference = payloadData.reference;
-                                    if (payloadData.postId) tempObj.payload.postId = payloadData.postId;
-                                    if (payloadData.content) tempObj.payload.content = payloadData.content;
-                                    if (payloadData.text) tempObj.payload.text = payloadData.text;
-                                }
-                            });
-
-                            // Tenta anche di caricare il payload dal percorso completo
-                            gun.get(`messages/${key}/payload`).once((payloadData) => {
-                                if (payloadData) {
-                                    console.log(`Payload diretto trovato per ${key}:`, payloadData);
-
-                                    // Aggiorna la struttura temporanea
-                                    if (payloadData.reference) tempObj.payload.reference = payloadData.reference;
-                                    if (payloadData.postId) tempObj.payload.postId = payloadData.postId;
-                                    if (payloadData.content) tempObj.payload.content = payloadData.content;
-                                    if (payloadData.text) tempObj.payload.text = payloadData.text;
-                                }
-                            });
-                        }
-
-                        return tempObj;
-                    }
-
-                    // Payload diretto
-                    return {
-                        id: key,
-                        ...data
-                    };
-                }
-
-                // Caso 2: Potremmo avere un riferimento GunDB
-                if (data && data._ && data._['#']) {
-                    const reference = data._['#'];
-                    console.log(`Rilevato riferimento GunDB: ${reference}`);
-
-                    // Estrai l'ID del target dal percorso del riferimento
-                    const targetId = extractTargetFromPath(reference);
-
-                    if (targetId) {
-                        console.log(`Target ID estratto: ${targetId}`);
-
-                        // Crea una struttura temporanea mentre carichiamo i dati effettivi
-                        const tempComment = {
-                            id: key,
-                            type: 'MESSAGE',
-                            subtype: 'COMMENT',
-                            payload: {
-                                postId: extractTargetFromId(targetId), // Estrai postId dal targetId
-                                text: 'Caricamento contenuto...',
-                                author: 'Caricamento...'
-                            },
-                            timestamp: new Date().toISOString(),
-                            _pendingLoad: true,  // Flag per indicare che i dati sono ancora in caricamento
-                            _originalReference: reference
-                        };
-
-                        // Avvia un caricamento asincrono per ottenere i dati effettivi
-                        setTimeout(() => {
-                            gun.get(targetId).once((actualData) => {
-                                if (actualData) {
-                                    console.log(`Dati effettivi per ${targetId}:`, actualData);
-
-                                    // Aggiorna la struttura temporanea con i dati effettivi
-                                    if (actualData.payload && actualData.payload.content) {
-                                        tempComment.payload.text = actualData.payload.content;
-                                    }
-
-                                    if (actualData.creator) {
-                                        tempComment.payload.author = actualData.creator;
-                                    }
-
-                                    if (actualData.createdAt) {
-                                        tempComment.timestamp = actualData.createdAt;
-                                    }
-
-                                    tempComment._pendingLoad = false;
-                                }
-                            });
-
-                            // Tenta anche di accedere al payload direttamente
-                            gun.get(`${targetId}/payload`).once((payloadData) => {
-                                if (payloadData) {
-                                    console.log(`Payload diretto trovato per ${targetId}:`, payloadData);
-                                    if (payloadData.content) tempComment.payload.text = payloadData.content;
-                                    if (payloadData.reference) tempComment.payload.postId = payloadData.reference;
-                                }
-                            });
-                        }, 0);
-
-                        return tempComment;
-                    }
-                }
-
-                // Caso 3: Potremmo avere una struttura annidatada
-                if (data && (data.message || data.data)) {
-                    const messageData = data.message || data.data;
-
-                    if (messageData && messageData.type && messageData.payload) {
-                        return {
-                            id: key,
-                            ...messageData
-                        };
-                    }
-                }
-
-                // Caso 4: Potremmo avere una struttura specifica per commenti
-                if (data && data.payload && (data.payload.text || data.payload.content)) {
-                    const commentType = {
-                        type: data.type || 'MESSAGE',
-                        subtype: data.subtype || 'COMMENT',
-                        payload: {
-                            postId: data.payload.postId || data.payload.reference || data.reference,
-                            text: data.payload.text || data.payload.content,
-                            author: data.payload.author || data.creator || data.author || 'Anonimo'
-                        },
-                        timestamp: data.timestamp || data.createdAt || new Date().toISOString(),
-                        id: key
-                    };
-
-                    return commentType;
-                }
-
-                console.warn('Dati non riconosciuti come commento:', data);
-                return null;
-            } catch (err) {
-                console.error('Errore in extractCommentData:', err);
-                return null;
-            }
-        }
-
-        // Funzione di utilità per estrarre l'ID target da un percorso GunDB
-        function extractTargetFromPath(path) {
-            if (!path) return null;
-
-            // Formato tipico: 'messages/ID' o simili
-            const parts = path.split('/');
-            if (parts.length >= 2) {
-                return parts.slice(1).join('/'); // Tutto dopo il primo '/'
-            }
-
-            return path; // Fallback al percorso originale
-        }
-
-        // Funzione di utilità per estrarre l'ID del post da un messageId
-        function extractTargetFromId(messageId) {
-            if (!messageId) return null;
-
-            // I messaggi a volte hanno IDs come 'postId/commentId'
-            const parts = messageId.split('/');
-            if (parts.length >= 2) {
-                return parts[0]; // La prima parte è l'ID del post
-            }
-
-            return messageId; // Fallback all'ID originale
-        }
-
-        // Aggiornata per supportare safeId
-        function displayComments(postId, comments, safeId) {
-            console.log(`Visualizzazione di ${comments.length} commenti per il post ${postId}`);
-
-            // Usa l'ID sicuro fornito o generalo
-            const actualSafeId = safeId || generateSafeId(postId);
-
-            const commentsList = document.getElementById(`comments-list-${actualSafeId}`);
-            if (!commentsList) {
-                console.error(`displayComments: Elemento commenti-list-${actualSafeId} non trovato`);
-                return;
-            }
-
-            // Pulisci il contenitore
-            commentsList.innerHTML = '';
-
-            if (comments.length === 0) {
-                commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
-                return;
-            }
-
-            // Ordina i commenti per timestamp (dal più recente al più vecchio)
-            const sortedComments = [...comments].sort((a, b) => {
-                const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-                const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-                return timeB - timeA;
-            });
-
-            // Crea gli elementi dei commenti
-            sortedComments.forEach(comment => {
-                try {
-                    console.log("Elaborazione commento per visualizzazione:", comment);
-
-                    // Gestione caso in cui comment non ha payload
-                    if (!comment) {
-                        console.error('displayComments: Commento non valido', comment);
+                        resolve(comments);
                         return;
                     }
 
-                    // Ottieni il payload o creane uno se non esiste
-                    const payload = comment.payload || {};
+                    // Se non abbiamo trovato commenti, tenta di accedere direttamente alla struttura GunDB
+                    console.log(`getCommentsDirectly: Nessun commento trovato con il metodo API, proviamo accesso diretto a GunDB`);
 
-                    // Ottieni il testo del commento in vari modi possibili
-                    let text = '';
-                    if (payload.text) {
-                        text = payload.text;
-                    } else if (payload.content) {
-                        text = payload.content;
-                    } else if (comment.content) {
-                        text = comment.content;
-                    }
+                    // Secondo tentativo: accesso diretto a GunDB
+                    const directAttempt = await new Promise(resolveAttempt => {
+                        const commentsFound = [];
+                        gun.get("posts").get(postId).get("comments").map().once((data, key) => {
+                            if (key !== "_" && data) {
+                                console.log(`Trovato commento nel formato posts/${postId}/comments/${key}:`, data);
 
-                    // Se non abbiamo testo ma abbiamo un ID, mostriamo un messaggio appropriato
-                    if (!text && comment.id) {
-                        text = 'Contenuto non disponibile';
-                        console.warn(`Commento ${comment.id} senza contenuto visibile`);
-                    }
+                                // Controlla se il commento ha già un contenuto
+                                const comment = {
+                                    id: data.id || key,
+                                    author: data.author || "Anonimo",
+                                    content: data.content || "",
+                                    timestamp: data.timestamp || Date.now(),
+                                    postId: postId
+                                };
 
-                    // Ottieni l'autore del commento in vari modi possibili
-                    let author = 'Anonimo';
-                    if (payload.author) {
-                        author = payload.author;
-                    } else if (comment.author) {
-                        author = comment.author;
-                    } else if (comment.creator) {
-                        author = comment.creator;
-                    }
-
-                    // Formatta l'autore per una visualizzazione più leggibile
-                    if (author !== 'Anonimo') {
-                        // Se l'autore è l'utente corrente, mostra "Tu"
-                        if (currentUserPub && (author === currentUserPub)) {
-                            author = 'Tu';
-                        } else {
-                            // Altrimenti mostra una versione abbreviata
-                            author = author.slice(0, 8) + '...';
-                        }
-                    }
-
-                    // Ottieni il timestamp del commento
-                    const timestamp = comment.timestamp || payload.timestamp || comment.createdAt || new Date().toISOString();
-                    const formattedTime = typeof timestamp === 'string' ? timestamp : new Date(timestamp).toLocaleString();
-
-                    // Crea l'elemento del commento
-                    const commentDiv = document.createElement('div');
-                    commentDiv.className = 'comment';
-
-                    // Costruisci HTML del commento
-                    commentDiv.innerHTML = `
-                        <div class="comment-header">
-                            <span class="comment-author">${escapeHtml(author)}</span>
-                            <span class="comment-time">${escapeHtml(formattedTime)}</span>
-                        </div>
-                        <div class="comment-text">${escapeHtml(text)}</div>
-                    `;
-
-                    commentsList.appendChild(commentDiv);
-                } catch (err) {
-                    console.error('Errore durante la visualizzazione del commento:', err, comment);
-                }
-            });
-        }
-
-        // Funzione di utilità per evitare XSS
-        function escapeHtml(text) {
-            if (!text) return '';
-            return String(text)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        function updateCommentCount(postId, count) {
-            const postEl = document.querySelector(`.post[data-id="${postId}"]`);
-            if (!postEl) {
-                console.error(`updateCommentCount: Post non trovato con ID ${postId}`);
-                return;
-            }
-
-            const commentCount = postEl.querySelector('.comment-count');
-            if (commentCount) {
-                commentCount.textContent = count > 0 ? count : '';
-                console.log(`Aggiornato contatore commenti per ${postId}: ${count}`);
-            }
-        }
-
-        // Create post element
-        function createPost(post) {
-            if (!post || !post.id) {
-                console.error('Post non valido:', post);
-                return null;
-            }
-
-            // Usa un ID sicuro per il DOM
-            const safeId = generateSafeId(post.id);
-
-            const p = document.createElement('div');
-            p.className = 'post';
-            p.setAttribute('data-id', post.id);
-            p.setAttribute('data-safe-id', safeId);
-
-            // Limita la visualizzazione dell'autore a una forma leggibile
-            let author = 'Sconosciuto';
-            if (post.author) {
-                // Se l'autore è l'utente corrente, mostra "Tu"
-                if (currentUserPub && post.author === currentUserPub) {
-                    author = 'Tu';
-                } else {
-                    // Altrimenti mostra solo i primi 8 caratteri
-                    author = post.author.slice(0, 8) + '...';
-                }
-            }
-
-            // Assicurati che il contenuto sia sempre una stringa valida
-            let content = '';
-            if (post.content) {
-                content = post.content;
-            } else if (post.payload && post.payload.content) {
-                content = post.payload.content;
-            }
-
-            // Se ancora non c'è contenuto, mostra messaggio predefinito
-            if (!content || content.trim() === '') {
-                content = 'Contenuto non disponibile';
-            }
-
-            // Verifica se il post è dell'utente corrente
-            const isOwnPost = currentUserPub && (post.author === currentUserPub || post.creator === currentUserPub);
-
-            // Formatta il timestamp in forma leggibile
-            const timestamp = new Date(post.timestamp).toLocaleString();
-
-            p.innerHTML = `
-                <div class="post-header">
-                    <span class="post-author">${author}</span>
-                    <span class="post-timestamp">${timestamp}</span>
-                </div>
-                <div class="post-content">${content}</div>
-                <div class="post-actions">
-                    <button class="like-button" data-post-id="${post.id}">
-                        <span class="like-icon">❤️</span> <span class="like-count"></span>
-                    </button>
-                    <button class="comment-button" data-post-id="${post.id}">
-                        <span class="comment-icon">💬</span> <span class="comment-count"></span>
-                    </button>
-                    ${isOwnPost ?
-                    `<button class="delete-button" data-post-id="${post.id}">
-                        <span class="delete-icon">🗑️</span>
-                    </button>` : ''}
-                </div>
-                <div class="comment-section" data-post-id="${post.id}">
-                    <div class="comments-container">
-                        <div id="comments-list-${safeId}" class="comments-list"></div>
-                    </div>
-                    <div class="comment-form">
-                        <input type="text" class="comment-input" placeholder="Scrivi un commento..." />
-                        <button class="submit-comment" data-post-id="${post.id}">Invia</button>
-                    </div>
-                </div>`;
-
-            // Gestione clic pulsante like
-            const likeButton = p.querySelector('.like-button');
-            likeButton.addEventListener('click', async () => {
-                if (!canRefresh()) return;
-                if (!currentUserPub) {
-                    alert('Devi effettuare il login per mettere like.');
-                    return;
-                }
-
-                try {
-                    // Verifico prima se l'utente ha già messo like
-                    const likes = await socialPlugin.getLikes(post.id);
-                    const hasAlreadyLiked = likes.includes(currentUserPub);
-
-                    if (hasAlreadyLiked) {
-                        // Se ha già messo like, rimuovilo
-                        likeButton.disabled = true;
-                        likeButton.querySelector('.like-icon').textContent = '...';
-
-                        const result = await socialPlugin.unlikePost(post.id);
-                        console.log(`Rimozione like: ${result ? 'successo' : 'fallito'}`);
-
-                        // Attendo sincronizzazione e aggiorno UI
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        updateLikes(post.id);
-                    } else {
-                        // Altrimenti aggiungi il like
-                        likeButton.disabled = true;
-                        likeButton.querySelector('.like-icon').textContent = '...';
-
-                        const result = await socialPlugin.likePost(post.id);
-                        console.log(`Aggiunta like: ${result ? 'successo' : 'fallito'}`);
-
-                        // Attendo sincronizzazione e aggiorno UI
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        updateLikes(post.id);
-                    }
-                } catch (err) {
-                    console.error('Errore gestione like:', err);
-                } finally {
-                    likeButton.disabled = false;
-                    likeButton.querySelector('.like-icon').textContent = '❤️';
-                }
-            });
-
-            // Gestione commenti
-            const commentButton = p.querySelector('.comment-button');
-            const commentSection = p.querySelector('.comment-section');
-
-            commentButton.addEventListener('click', () => {
-                if (commentSection.style.display === 'block') {
-                    commentSection.style.display = 'none';
-                } else {
-                    commentSection.style.display = 'block';
-                    loadComments(post.id);
-                }
-            });
-
-            // Invio commento
-            const submitComment = p.querySelector('.submit-comment');
-            const commentInput = p.querySelector('.comment-input');
-
-            submitComment.addEventListener('click', async () => {
-                const content = commentInput.value.trim();
-                if (!content) return;
-                if (!canRefresh()) return;
-
-                try {
-                    submitComment.disabled = true;
-                    commentInput.disabled = true;
-                    submitComment.textContent = '...';
-
-                    const comment = await addComment(post.id, content);
-
-                    if (comment) {
-                        commentInput.value = '';
-                        // Ricarica i commenti dopo un breve ritardo
-                        setTimeout(() => loadComments(post.id), 1000);
-                    }
-                } catch (err) {
-                    console.error('Errore aggiunta commento:', err);
-                } finally {
-                    submitComment.disabled = false;
-                    submitComment.textContent = 'Invia';
-                    commentInput.disabled = false;
-                }
-            });
-
-            commentInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    submitComment.click();
-                }
-            });
-
-            // Se è un post dell'utente corrente, aggiungi il pulsante elimina
-            if (isOwnPost) {
-                const deleteButton = p.querySelector('.delete-button');
-                if (deleteButton) {
-                    deleteButton.addEventListener('click', async () => {
-                        if (!canRefresh()) return;
-
-                        if (confirm('Sei sicuro di voler eliminare questo post?')) {
-                            try {
-                                deleteButton.disabled = true;
-
-                                const result = await socialPlugin.deletePost(post.id);
-                                if (result) {
-                                    p.remove(); // Rimuovi il post dalla UI
-                                    showResult('Post eliminato', 'Il post è stato eliminato con successo');
-                                } else {
-                                    showError('Errore', 'Impossibile eliminare il post');
-                                    deleteButton.disabled = false;
-                                }
-                            } catch (err) {
-                                console.error('Errore eliminazione post:', err);
-                                showError('Errore', 'Errore durante l\'eliminazione del post');
-                                deleteButton.disabled = false;
+                                commentsFound.push(comment);
                             }
-                        }
+                        });
+
+                        // Attendi un po' per raccogliere dati
+                        setTimeout(() => {
+                            console.log(`getCommentsDirectly: Tentativo #2 - Ricevuti ${commentsFound.length} commenti direttamente da GunDB`);
+                            resolveAttempt(commentsFound);
+                        }, 1000);
                     });
+
+                    if (directAttempt.length > 0) {
+                        displayComments(postId, directAttempt, actualSafeId);
+                        resolve(directAttempt);
+                        return;
+                    }
+
+                    // Se nessun tentativo ha prodotto risultati
+                    console.log(`getCommentsDirectly: Nessun commento trovato per il post ${postId} dopo tutti i tentativi`);
+                    commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
+                    resolve([]);
+                } catch (err) {
+                    console.error(`getCommentsDirectly: Errore durante il recupero dei commenti:`, err);
+                    commentsList.innerHTML = '<div class="error-message">Errore durante il recupero dei commenti</div>';
+                    reject(err);
                 }
-            }
-
-            // Inizializza i like
-            updateLikes(post.id);
-
-            return p;
+            });
         }
 
         // Display timeline
@@ -2822,6 +2198,271 @@
         };
 
         // ... resto del codice JavaScript ...
+
+        // Aggiornata per supportare safeId
+        function displayComments(postId, comments, safeId) {
+            console.log(`Visualizzazione di ${comments.length} commenti per il post ${postId}`);
+
+            // Usa l'ID sicuro fornito o generalo
+            const actualSafeId = safeId || generateSafeId(postId);
+
+            const commentsList = document.getElementById(`comments-list-${actualSafeId}`);
+            if (!commentsList) {
+                console.error(`displayComments: Elemento commenti-list-${actualSafeId} non trovato`);
+                return;
+            }
+
+            // Pulisci il contenitore
+            commentsList.innerHTML = '';
+
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<div class="no-comments">Nessun commento per questo post</div>';
+                return;
+            }
+
+            // Ordina i commenti per timestamp (dal più recente al più vecchio)
+            const sortedComments = [...comments].sort((a, b) => {
+                const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                return timeB - timeA;
+            });
+
+            // Crea gli elementi dei commenti
+            sortedComments.forEach(comment => {
+                try {
+                    console.log("Elaborazione commento per visualizzazione:", comment);
+
+                    // Gestione caso in cui comment non ha payload
+                    if (!comment) {
+                        console.error('displayComments: Commento non valido', comment);
+                        return;
+                    }
+
+                    // Ottieni il payload o creane uno se non esiste
+                    const payload = comment.payload || {};
+
+                    // Ottieni il testo del commento in vari modi possibili
+                    let text = '';
+                    if (payload.text) {
+                        text = payload.text;
+                    } else if (payload.content) {
+                        text = payload.content;
+                    } else if (comment.content) {
+                        text = comment.content;
+                    }
+
+                    // Controllo di sicurezza: se text è undefined, assegna stringa vuota
+                    if (text === undefined) {
+                        text = '';
+                    }
+
+                    // Se non abbiamo testo ma abbiamo un ID, tentiamo un recupero diretto
+                    if ((!text || text === '') && comment.id) {
+                        // Il commento esiste ma il contenuto potrebbe non essere stato caricato correttamente
+                        console.warn(`Commento ${comment.id} senza contenuto visibile, tentativo di recupero diretto`);
+
+                        // Crea un segnaposto temporaneo
+                        text = "Recupero contenuto...";
+
+                        // Aggiorna l'ID commento per poterlo riferire dopo
+                        const commentId = comment.id;
+
+                        // Tenta di recuperare il contenuto direttamente da GunDB
+                        gun.get("posts").get(postId).get("comments").get(commentId).once(function (data) {
+                            if (data && data.content) {
+                                console.log(`Recuperato contenuto commento ${commentId} direttamente:`, data.content);
+
+                                // Trova l'elemento del commento per aggiornarlo
+                                const commentElement = commentsList.querySelector(`[data-comment-id="${commentId}"]`);
+                                if (commentElement) {
+                                    const textElement = commentElement.querySelector('.comment-text');
+                                    if (textElement) {
+                                        textElement.textContent = data.content || "Contenuto non disponibile";
+                                        console.log(`Aggiornato contenuto commento ${commentId} nella UI`);
+                                    }
+                                }
+                            } else {
+                                console.warn(`Contenuto commento ${commentId} non trovato in GunDB`);
+                            }
+                        });
+                    }
+
+                    // Se dopo tutti i tentativi il testo è ancora vuoto, mostra un messaggio
+                    if (!text || text === '') {
+                        text = 'Contenuto non disponibile';
+                    }
+
+                    // Ottieni l'autore del commento in vari modi possibili
+                    let author = 'Anonimo';
+                    if (payload.author) {
+                        author = payload.author;
+                    } else if (comment.author) {
+                        author = comment.author;
+                    } else if (comment.creator) {
+                        author = comment.creator;
+                    }
+
+                    // Formatta l'autore per una visualizzazione più leggibile
+                    if (author !== 'Anonimo') {
+                        // Se l'autore è l'utente corrente, mostra "Tu"
+                        if (currentUserPub && (author === currentUserPub)) {
+                            author = 'Tu';
+                        } else {
+                            // Altrimenti mostra una versione abbreviata
+                            author = author.slice(0, 8) + '...';
+                        }
+                    }
+
+                    // Ottieni il timestamp del commento
+                    const timestamp = comment.timestamp || payload.timestamp || comment.createdAt || new Date().toISOString();
+                    const formattedTime = typeof timestamp === 'string' ? timestamp : new Date(timestamp).toLocaleString();
+
+                    // Crea l'elemento del commento
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment';
+
+                    // Assegna un data attribute per poterlo riferire più tardi
+                    if (comment.id) {
+                        commentDiv.setAttribute('data-comment-id', comment.id);
+                    }
+
+                    // Costruisci HTML del commento
+                    commentDiv.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(author)}</span>
+                            <span class="comment-time">${escapeHtml(formattedTime)}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(text)}</div>
+                    `;
+
+                    commentsList.appendChild(commentDiv);
+                } catch (err) {
+                    console.error('Errore durante la visualizzazione del commento:', err, comment);
+                }
+            });
+        }
+
+        // ... existing code ...
+        // Funzione base per creare un post
+        function createPost(post) {
+            if (!post || !post.id) {
+                console.error('Post non valido:', post);
+                return null;
+            }
+
+            const safeId = generateSafeId(post.id);
+            const p = document.createElement('div');
+            p.className = 'post';
+            p.setAttribute('data-id', post.id);
+            p.setAttribute('data-safe-id', safeId);
+
+            // Formatta autore
+            let author = 'Sconosciuto';
+            if (post.author) {
+                author = (currentUserPub && post.author === currentUserPub)
+                    ? 'Tu'
+                    : post.author.slice(0, 8) + '...';
+            }
+
+            // Assicura contenuto valido
+            let content = post.content || (post.payload && post.payload.content) || 'Contenuto non disponibile';
+            if (!content || content.trim() === '') content = 'Contenuto non disponibile';
+
+            // Timestamp
+            const timestamp = new Date(post.timestamp).toLocaleString();
+
+            // Struttura HTML base
+            p.innerHTML = `
+                <div class="post-header">
+                    <span class="post-author">${author}</span>
+                    <span class="post-timestamp">${timestamp}</span>
+                </div>
+                <div class="post-content">${content}</div>
+                <div class="post-actions">
+                    <button class="like-button" data-post-id="${post.id}">❤️ <span class="like-count"></span></button>
+                    <button class="comment-button" data-post-id="${post.id}">💬 <span class="comment-count"></span></button>
+                </div>
+                <div class="comment-section" data-post-id="${post.id}" style="display:none">
+                    <div class="comments-container">
+                        <div id="comments-list-${safeId}" class="comments-list"></div>
+                    </div>
+                    <div class="comment-form">
+                        <input type="text" class="comment-input" placeholder="Scrivi un commento..." />
+                        <button class="submit-comment" data-post-id="${post.id}">Invia</button>
+                    </div>
+                </div>
+            `;
+
+            // Aggiungi event listeners
+            // Like button
+            const likeButton = p.querySelector('.like-button');
+            if (likeButton) {
+                likeButton.addEventListener('click', async () => {
+                    if (!currentUserPub) {
+                        showError('Errore', 'Devi effettuare il login per mettere like');
+                        return;
+                    }
+                    likeButton.disabled = true;
+                    try {
+                        await socialPlugin.likePost(post.id);
+                        updateLikes(post.id);
+                    } catch (err) {
+                        console.error('Errore like:', err);
+                    } finally {
+                        likeButton.disabled = false;
+                    }
+                });
+            }
+
+            // Comment button
+            const commentButton = p.querySelector('.comment-button');
+            const commentSection = p.querySelector('.comment-section');
+            if (commentButton && commentSection) {
+                commentButton.addEventListener('click', () => {
+                    commentSection.style.display = commentSection.style.display === 'block' ? 'none' : 'block';
+                    if (commentSection.style.display === 'block') {
+                        loadComments(post.id);
+                    }
+                });
+            }
+
+            // Submit comment
+            const submitComment = p.querySelector('.submit-comment');
+            const commentInput = p.querySelector('.comment-input');
+            if (submitComment && commentInput) {
+                submitComment.addEventListener('click', async () => {
+                    const content = commentInput.value.trim();
+                    if (!content || !canRefresh()) return;
+
+                    submitComment.disabled = true;
+                    commentInput.disabled = true;
+                    try {
+                        const comment = await addComment(post.id, content);
+                        if (comment) {
+                            commentInput.value = '';
+                            setTimeout(() => loadComments(post.id), 1000);
+                        }
+                    } catch (err) {
+                        console.error('Errore commento:', err);
+                    } finally {
+                        submitComment.disabled = false;
+                        commentInput.disabled = false;
+                    }
+                });
+
+                commentInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') submitComment.click();
+                });
+            }
+
+            // Inizializza like
+            updateLikes(post.id);
+
+            return p;
+        }
+
+        // ... existing code ...
+
     </script>
 </body>
 
