@@ -276,6 +276,10 @@ class GunDB {
                         clearTimeout(timeout);
                         return resolve({ success: false, error: createResult.err });
                     }
+                    const user = this.gun.get(createResult.pub).put({
+                        username: username,
+                    });
+                    this.gun.get("users").set(user);
                     // STEP 2: Effettuiamo il login
                     (0, logger_1.log)(`Attempting login after registration for: ${username}`);
                     try {
@@ -350,7 +354,19 @@ class GunDB {
                 }
                 else {
                     const userPub = this.gun.user().is?.pub;
-                    if (!userPub) {
+                    const user = this.gun.get("users").map((user) => {
+                        if (user.pub === userPub) {
+                            return user;
+                        }
+                    });
+                    // se non è dentro users, aggiungilo
+                    if (!user) {
+                        const user = this.gun.get(userPub).put({
+                            username: username,
+                        });
+                        this.gun.get("users").set(user);
+                    }
+                    if (!user) {
                         (0, logger_1.logError)(`Authentication succeeded but no user.pub available for: ${username}`);
                         resolve({
                             success: false,

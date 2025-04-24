@@ -5,6 +5,7 @@ exports.SocialPlugin = void 0;
 const base_1 = require("../base");
 const social_1 = require("./social");
 const logger_1 = require("../../utils/logger");
+const rxjs_1 = require("rxjs");
 class SocialPlugin extends base_1.BasePlugin {
     name = "social";
     version = "1.0.2";
@@ -19,16 +20,58 @@ class SocialPlugin extends base_1.BasePlugin {
         (0, logger_1.log)("Social plugin initialized");
     }
     destroy() {
-        this.social?.cleanup();
+        if (this.social && typeof this.social.cleanup === "function") {
+            this.social.cleanup();
+        }
         this.social = null;
         super.destroy();
         (0, logger_1.log)("Social plugin destroyed");
     }
     async getProfile(pub) {
-        return this.social.getProfile(pub);
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.getProfile === "function") {
+            return this.social.getProfile(pub);
+        }
+        (0, logger_1.logError)("getProfile method not available");
+        return {
+            pub,
+            followers: [],
+            following: [],
+            customFields: {},
+        };
     }
     async post(content) {
         return this.social.post(content);
+    }
+    /**
+     * Crea un nuovo post con immagine allegata
+     * @param content Contenuto del post
+     * @param imageData Dati dell'immagine (Base64 o URL)
+     * @returns Post creato o null in caso di errore
+     */
+    async postWithImage(content, imageData) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.post === "function") {
+            return this.social.post(content, imageData);
+        }
+        (0, logger_1.logError)("postWithImage method not available");
+        return null;
+    }
+    /**
+     * Cerca post per hashtag
+     * @param hashtag Hashtag da cercare (con o senza #)
+     * @returns Array di post che contengono l'hashtag
+     */
+    async searchByHashtag(hashtag) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.searchByHashtag === "function") {
+            return this.social.searchByHashtag(hashtag);
+        }
+        (0, logger_1.logError)("searchByHashtag method not available");
+        return [];
     }
     async likePost(postId) {
         return this.social.likePost(postId);
@@ -39,23 +82,208 @@ class SocialPlugin extends base_1.BasePlugin {
     async getLikes(postId) {
         return this.social.getLikes(postId);
     }
+    async getLikeCount(postId) {
+        return this.social.getLikeCount(postId);
+    }
     async addComment(postId, content) {
         return this.social.addComment(postId, content);
     }
     async getComments(postId) {
         return this.social.getComments(postId);
     }
+    async deletePost(postId) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.deletePost === "function") {
+            return this.social.deletePost(postId);
+        }
+        (0, logger_1.logError)("deletePost method not available");
+        return false;
+    }
     async getTimeline() {
-        return this.social.getTimeline();
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.getTimeline === "function") {
+            return this.social.getTimeline();
+        }
+        (0, logger_1.logError)("getTimeline method not available");
+        return { messages: [], error: "Method not implemented" };
     }
     async follow(pub) {
-        return this.social.follow(pub);
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.follow === "function") {
+            return this.social.follow(pub);
+        }
+        (0, logger_1.logError)("follow method not available");
+        return false;
     }
     async unfollow(pub) {
-        return this.social.unfollow(pub);
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.unfollow === "function") {
+            return this.social.unfollow(pub);
+        }
+        (0, logger_1.logError)("unfollow method not available");
+        return false;
     }
     cleanup() {
-        this.social.cleanup();
+        if (this.social && typeof this.social.cleanup === "function") {
+            this.social.cleanup();
+        }
+    }
+    /**
+     * Ottieni la timeline come Observable per aggiornamenti in tempo reale
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Observable della timeline
+     */
+    getTimelineObservable(limit = 10, options = { includeLikes: true }) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.getTimelineObservable === "function") {
+            return this.social.getTimelineObservable(limit, options);
+        }
+        (0, logger_1.logError)("getTimelineObservable method not available");
+        return (0, rxjs_1.of)([]);
+    }
+    /**
+     * Ottieni i commenti di un post come Observable
+     * @param postId ID del post
+     * @returns Observable dei commenti
+     */
+    getCommentsObservable(postId) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.getCommentsObservable === "function") {
+            return this.social.getCommentsObservable(postId);
+        }
+        (0, logger_1.logError)("getCommentsObservable method not available");
+        return (0, rxjs_1.of)([]);
+    }
+    /**
+     * Ottieni gli utenti che hanno messo like a un post come Observable
+     * @param postId ID del post
+     * @returns Observable dei like
+     */
+    getLikesObservable(postId) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.getLikesObservable === "function") {
+            return this.social.getLikesObservable(postId);
+        }
+        (0, logger_1.logError)("getLikesObservable method not available");
+        return (0, rxjs_1.of)([]);
+    }
+    /**
+     * Ottieni il conteggio dei like come Observable
+     * @param postId ID del post
+     * @returns Observable del conteggio like
+     */
+    getLikeCountObservable(postId) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)(0);
+        }
+        if (typeof this.social.getLikeCountObservable === "function") {
+            return this.social.getLikeCountObservable(postId);
+        }
+        (0, logger_1.logError)("getLikeCountObservable method not available");
+        return (0, rxjs_1.of)(0);
+    }
+    /**
+     * Ottieni un post arricchito con dettagli dell'autore
+     * @param postId ID del post
+     * @returns Observable del post con dettagli aggiuntivi
+     */
+    getEnrichedPostObservable(postId) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)(null);
+        }
+        if (typeof this.social.getEnrichedPostObservable === "function") {
+            return this.social.getEnrichedPostObservable(postId);
+        }
+        (0, logger_1.logError)("getEnrichedPostObservable method not available");
+        return (0, rxjs_1.of)(null);
+    }
+    /**
+     * Cerca post per hashtag con aggiornamenti in tempo reale
+     * @param hashtag Hashtag da cercare
+     * @returns Observable di post con l'hashtag specificato
+     */
+    searchByHashtagObservable(hashtag) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.searchByHashtagObservable === "function") {
+            return this.social.searchByHashtagObservable(hashtag);
+        }
+        (0, logger_1.logError)("searchByHashtagObservable method not available");
+        return (0, rxjs_1.of)([]);
+    }
+    /**
+     * Osserva un profilo utente in tempo reale
+     * @param pub Chiave pubblica dell'utente
+     * @returns Observable del profilo utente
+     */
+    getProfileObservable(pub) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)({
+                pub,
+                followers: [],
+                following: [],
+                customFields: {},
+            });
+        }
+        if (typeof this.social.getProfileObservable === "function") {
+            return this.social.getProfileObservable(pub);
+        }
+        (0, logger_1.logError)("getProfileObservable method not available");
+        return (0, rxjs_1.of)({
+            pub,
+            followers: [],
+            following: [],
+            customFields: {},
+        });
+    }
+    /**
+     * Ottieni tutti gli utenti registrati sulla rete
+     * @returns Array di profili utente base
+     */
+    async getAllUsers() {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return [];
+        }
+        if (typeof this.social.getAllUsers === "function") {
+            return this.social.getAllUsers();
+        }
+        (0, logger_1.logError)("getAllUsers method not available");
+        return [];
+    }
+    /**
+     * Ottieni tutti gli utenti come Observable
+     * @returns Observable di profili utente
+     */
+    getAllUsersObservable() {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.getAllUsersObservable === "function") {
+            return this.social.getAllUsersObservable();
+        }
+        (0, logger_1.logError)("getAllUsersObservable method not available");
+        return (0, rxjs_1.of)([]);
     }
 }
 exports.SocialPlugin = SocialPlugin;

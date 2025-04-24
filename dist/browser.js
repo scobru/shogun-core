@@ -91,7 +91,7 @@ function initShogunBrowser(config) {
         (0, logger_1.log)("Wallet plugin initialized", { category: "init", level: "info" });
     }
     if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.Social)) {
-        (0, logger_1.log)("Social plugin initialized", { category: "init", level: "info" });
+        (0, logger_1.log)("Social plugin initialized", { category: "init", level: "debug" });
     }
     return shogunCoreInstance;
 }

@@ -1,8 +1,15 @@
+export interface GunDataRecord {
+    _: {
+        "#": string;
+        ">": {
+            [key: string]: number;
+        };
+        [key: string]: any;
+    };
+    [key: string]: any;
+}
 /**
- * Type definitions for Gun and SEA
- */
-/**
- * Interface for a Gun chain reference
+ * Interface for a Gun chain referenceGunDataRecord
  */
 export interface IGunChainReference<T = unknown> {
     /**

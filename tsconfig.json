@@ -26,5 +26,11 @@
     "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statements
   },
   "include": ["src/**/*", "src/examples/social/css/tui.min.js"],
-  "exclude": ["node_modules", "dist", "src/__tests__/**/*", "**/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/__tests__/**/*",
+    "**/*.test.ts",
+    "src/examples/**/*"
+  ]
 }

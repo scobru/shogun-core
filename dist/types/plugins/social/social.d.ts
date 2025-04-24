@@ -1,9 +1,9 @@
-import { IGunInstance } from "gun";
 import { EventEmitter } from "../../utils/eventEmitter";
 import { Post, Comment, UserProfile, TimelineResult, Message } from "../../types/social";
 import { Observable } from "rxjs";
+import { IGunInstance } from "gun";
 /**
- * Plugin Social semplificato che utilizza direttamente Gun DB
+ * Plugin Social che utilizza Gun DB
  */
 export declare class Social extends EventEmitter {
     private readonly gun;

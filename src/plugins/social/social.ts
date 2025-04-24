@@ -1,5 +1,5 @@
 import { logDebug, logError, logWarn } from "../../utils/logger";
-import { IGunInstance } from "gun";
+import { GunDataRecord } from "../../types/gun";
 import * as crypto from "crypto";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
@@ -15,42 +15,14 @@ import {
 import { GunRxJS } from "../../gun/rxjs-integration";
 import { Observable, of, combineLatest } from "rxjs";
 import { map, switchMap, tap, catchError } from "rxjs/operators";
-
-// Interfacce per risolvere gli errori di tipo
-interface GunPostData {
-  id?: string;
-  author?: string;
-  creator?: string;
-  content?: string;
-  timestamp?: number;
-  imageData?: string;
-  payload?: {
-    content?: string;
-    imageData?: string;
-  };
-  [key: string]: any; // Indice per proprietà aggiuntive
-}
-
-interface GunProfileData {
-  alias?: string;
-  bio?: string;
-  profileImage?: string;
-  [key: string]: any; // Indice per proprietà aggiuntive
-}
-
-interface GunCollectionData {
-  [key: string]: any; // Permette accesso con indice stringa
-}
-
-// Type Record generico per dati Gun che permette qualsiasi proprietà
-type GunDataRecord = Record<string, any>;
+import { IGunInstance } from "gun";
 
 /**
- * Plugin Social semplificato che utilizza direttamente Gun DB
+ * Plugin Social che utilizza Gun DB
  */
 export class Social extends EventEmitter {
   private readonly gun: IGunInstance<any>;
-  public user: any; // Gun user instance
+  public user: any;
   private readonly profileCache = new Map<
     string,
     { data: UserProfile; timestamp: number }
@@ -178,14 +150,7 @@ export class Social extends EventEmitter {
         author: userPub,
         content: trimmedContent,
         timestamp,
-        creator: userPub, // per compatibilità con codice esistente
-        createdAt: timestamp, // per compatibilità con codice esistente
-        type: "POST", // per compatibilità con codice esistente
-        subtype: "EMPTY", // per compatibilità con codice esistente
-        payload: {
-          // per compatibilità con codice esistente
-          content: trimmedContent,
-        },
+        payload: {}, // Inizializza l'oggetto payload
       };
 
       // Aggiungi imageData solo se presente, per evitare valori undefined
@@ -514,6 +479,12 @@ export class Social extends EventEmitter {
         this.debug(
           `getTimeline - Timeout dopo ${options.timeout || 5000}ms - Restituisco ${messages.length} posts`
         );
+
+        // Ordina per data (più recenti prima)
+        messages.sort(
+          (a, b) => (b.createdAt as number) - (a.createdAt as number)
+        );
+
         resolve({ messages });
       }, options.timeout || 5000);
 
@@ -587,6 +558,12 @@ export class Social extends EventEmitter {
             // Se abbiamo raggiunto il limite, conclude
             if (messages.length >= limit) {
               clearTimeout(timeoutId);
+
+              // Ordina per data (più recenti prima)
+              messages.sort(
+                (a, b) => (b.createdAt as number) - (a.createdAt as number)
+              );
+
               resolve({ messages });
             }
           } catch (err) {

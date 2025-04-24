@@ -1,13 +1,6 @@
-import { Observable, from, of, throwError } from "rxjs";
-import {
-  map,
-  catchError,
-  switchMap,
-  tap,
-  distinctUntilChanged,
-} from "rxjs/operators";
+import { Observable } from "rxjs";
+import { distinctUntilChanged } from "rxjs/operators";
 import { IGunInstance, IGunUserInstance } from "gun/types";
-import { log, logError } from "../utils/logger";
 
 /**
  * RxJS Integration for GunDB
@@ -77,7 +70,7 @@ export class GunRxJS {
     }).pipe(
       distinctUntilChanged((prev, curr) => {
         return JSON.stringify(prev) === JSON.stringify(curr);
-      }),
+      })
     );
   }
 
@@ -89,7 +82,7 @@ export class GunRxJS {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean,
+    matchFn?: (data: any) => boolean
   ): Observable<T[]> {
     return new Observable<T[]>((subscriber) => {
       const node = typeof path === "string" ? this.gun.get(path) : path;
@@ -198,7 +191,7 @@ export class GunRxJS {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
+    computeFn: (...values: T[]) => R
   ): Observable<R> {
     // Convert all sources to observables
     const observables = sources.map((source) => {
