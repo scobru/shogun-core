@@ -28,7 +28,7 @@ const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const didPlugin_1 = require("./plugins/did/didPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
-const plugins_1 = require("./plugins");
+const socialPlugin_1 = require("./plugins/social/socialPlugin");
 var DID_1 = require("./plugins/did/DID");
 Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
 var errorHandler_2 = require("./utils/errorHandler");
@@ -183,7 +183,7 @@ class ShogunCore {
             }
             // Social plugins group
             if (config.social?.enabled) {
-                const socialPlugin = new plugins_1.SocialPlugin();
+                const socialPlugin = new socialPlugin_1.SocialPlugin();
                 socialPlugin._category = shogun_1.PluginCategory.Social;
                 this.register(socialPlugin);
                 (0, logger_1.log)("Social plugin registered");
@@ -453,7 +453,7 @@ class ShogunCore {
                 }, timeoutDuration);
                 try {
                     // Utilizziamo il metodo login di GunDB
-                    const gunLoginResult = await this.gundb.login(username, password);
+                    const gunLoginResult = (await this.gundb.login(username, password));
                     clearTimeout(timeoutId);
                     // const walletPlugin = this.getPlugin(
                     //   CorePlugins.WalletManager
@@ -601,7 +601,7 @@ class ShogunCore {
                 // la creazione del DID durante il signup finché il problema non è risolto completamente
                 // Invece, creeremo il DID al primo accesso successivo dell'utente
                 // Commentiamo la creazione asincrona del DID durante il signup
-                // this.ensureUserHasDIDAsync(result);
+                this.ensureUserHasDIDAsync(result);
                 // Emettiamo un evento di debug per monitorare il flusso
                 this.eventEmitter.emit("debug", {
                     action: "signup_complete",

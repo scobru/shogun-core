@@ -1,5 +1,3 @@
-import { IGunInstance } from "gun";
-
 /**
  * Configurazione per il Social Plugin
  */

@@ -2,53 +2,71 @@ export const PostSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",
   title: "Post",
   type: "object",
-  required: ["id", "author", "content", "timestamp"],
+  required: ["id", "timestamp"],
   properties: {
     id: { type: "string", description: "UUID univoco del post" },
-    author: { type: "string", description: "Chiave pubblica dell'autore" },
-    content: { type: "string", description: "Testo del post" },
-    timestamp: { type: "integer", description: "Data di creazione in millisecondi" },
-    imageData: { type: "string", description: "Dati dell'immagine (base64 o URL)", nullable: true },
+    author: {
+      oneOf: [
+        { type: "string", description: "Chiave pubblica dell'autore" },
+        { type: ["object", "null"], description: "Oggetto autore complesso" },
+      ],
+    },
+    content: { type: "string", description: "Testo del post", default: "" },
+    timestamp: {
+      type: "integer",
+      description: "Data di creazione in millisecondi",
+    },
+    imageData: {
+      type: ["string", "null"],
+      description: "Dati dell'immagine (base64 o URL)",
+    },
     payload: {
-      type: "object",
+      type: ["object", "null"],
       description: "Dati supplementari",
       properties: {
-        imageData: { type: "string", description: "Duplicato dell'immagine", nullable: true },
-        content: { type: "string", description: "Duplicato del contenuto" }
+        imageData: {
+          type: ["string", "null"],
+          description: "Duplicato dell'immagine",
+        },
+        content: {
+          type: "string",
+          description: "Duplicato del contenuto",
+          default: "",
+        },
       },
-      additionalProperties: true
+      additionalProperties: true,
     },
     hashtags: {
-      type: "object",
+      type: ["object", "null"],
       description: "Hashtag usati, con valori booleani",
       patternProperties: {
-        "^[a-z0-9_]+$": { type: "boolean" }
+        "^[a-z0-9_]+$": { type: "boolean" },
       },
-      additionalProperties: false
+      additionalProperties: true,
     },
     _hashtagsList: {
-      type: "array",
+      type: ["array", "null"],
       description: "Lista interna di hashtag normalizzati",
-      items: { type: "string" }
+      items: { type: "string" },
     },
     likes: {
-      type: "object",
+      type: ["object", "null"],
       description: "Utenti che hanno messo like",
       patternProperties: {
-        "^[a-zA-Z0-9-_]+$": { type: "boolean" }
+        "^[a-zA-Z0-9-_]+$": { type: "boolean" },
       },
-      additionalProperties: false
+      additionalProperties: true,
     },
     comments: {
-      type: "object",
+      type: ["object", "null"],
       description: "Commenti associati al post",
       patternProperties: {
-        "^[a-zA-Z0-9-_]+$": { type: "object" }
+        "^[a-zA-Z0-9-_]+$": { type: "object" },
       },
-      additionalProperties: true
-    }
+      additionalProperties: true,
+    },
   },
-  additionalProperties: true
+  additionalProperties: true,
 };
 
 export const CommentSchema = {
@@ -59,11 +77,14 @@ export const CommentSchema = {
   properties: {
     id: { type: "string", description: "UUID univoco del commento" },
     postId: { type: "string", description: "ID del post a cui è associato" },
-    author: { type: "string", description: "Chiave pubblica dell'autore del commento" },
+    author: {
+      type: "string",
+      description: "Chiave pubblica dell'autore del commento",
+    },
     content: { type: "string", description: "Contenuto testuale del commento" },
-    timestamp: { type: "integer", description: "Data/ora di creazione (ms)" }
+    timestamp: { type: "integer", description: "Data/ora di creazione (ms)" },
   },
-  additionalProperties: true
+  additionalProperties: true,
 };
 
 export const UserProfileSchema = {
@@ -73,26 +94,38 @@ export const UserProfileSchema = {
   required: ["pub", "followers", "following", "customFields"],
   properties: {
     pub: { type: "string", description: "Chiave pubblica dell'utente" },
-    alias: { type: "string", description: "Nome o alias dell'utente", nullable: true },
-    bio: { type: "string", description: "Biografia dell'utente", nullable: true },
-    profileImage: { type: "string", description: "Immagine del profilo (base64 o URL)", nullable: true },
+    alias: {
+      type: "string",
+      description: "Nome o alias dell'utente",
+      nullable: true,
+    },
+    bio: {
+      type: "string",
+      description: "Biografia dell'utente",
+      nullable: true,
+    },
+    profileImage: {
+      type: "string",
+      description: "Immagine del profilo (base64 o URL)",
+      nullable: true,
+    },
     followers: {
       type: "array",
       description: "Chiavi pubbliche dei follower",
-      items: { type: "string" }
+      items: { type: "string" },
     },
     following: {
       type: "array",
       description: "Chiavi pubbliche seguite",
-      items: { type: "string" }
+      items: { type: "string" },
     },
     customFields: {
       type: "object",
       description: "Campi personalizzati aggiuntivi",
       additionalProperties: {
-        type: ["string", "number", "boolean", "null"]
-      }
-    }
+        type: ["string", "number", "boolean", "null"],
+      },
+    },
   },
-  additionalProperties: true
+  additionalProperties: true,
 };

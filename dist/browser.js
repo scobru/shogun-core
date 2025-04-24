@@ -80,6 +80,9 @@ function initShogunBrowser(config) {
     }
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
+    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.DID)) {
+        (0, logger_1.log)("DID plugin initialized", { category: "init", level: "info" });
+    }
     // Log the plugin status
     if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.WebAuthn)) {
         (0, logger_1.log)("WebAuthn plugin initialized", { category: "init", level: "info" });
@@ -102,6 +105,7 @@ exports.modules = {
     loadDID: loadDIDModule,
     loadWallet: loadWalletModule,
     loadMetaMask: loadMetaMaskModule,
+    loadSocial: loadSocialModule,
 };
 // Export main types as well
 __exportStar(require("./types/shogun"), exports);
@@ -110,4 +114,5 @@ if (typeof window !== "undefined") {
     window.ShogunCore = shogunCoreInstance;
     window.initShogunBrowser = initShogunBrowser;
     window.ShogunModules = exports.modules;
+    window.shogun = shogunCoreInstance;
 }

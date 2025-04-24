@@ -21,6 +21,7 @@ export declare const modules: {
     loadDID: () => Promise<typeof import("./plugins/did/DID")>;
     loadWallet: () => Promise<typeof import("./plugins/wallet/walletPlugin")>;
     loadMetaMask: () => Promise<typeof import("./plugins/metamask/metamaskPlugin")>;
+    loadSocial: () => Promise<typeof import("./plugins/social/socialPlugin")>;
 };
 export { ShogunCore };
 export * from "./types/shogun";

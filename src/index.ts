@@ -26,7 +26,7 @@ import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
-import { SocialPlugin, WalletManager } from "./plugins";
+import { SocialPlugin } from "./plugins/social/socialPlugin";
 
 export { ShogunDID } from "./plugins/did/DID";
 export type {
@@ -533,10 +533,13 @@ export class ShogunCore implements IShogunCore {
 
           try {
             // Utilizziamo il metodo login di GunDB
-            const gunLoginResult = await this.gundb.login(username, password);
+            const gunLoginResult = (await this.gundb.login(
+              username,
+              password
+            )) as AuthResult;
 
             clearTimeout(timeoutId);
-            
+
             // const walletPlugin = this.getPlugin(
             //   CorePlugins.WalletManager
             // ) as WalletManager;
@@ -715,7 +718,7 @@ export class ShogunCore implements IShogunCore {
         // Invece, creeremo il DID al primo accesso successivo dell'utente
 
         // Commentiamo la creazione asincrona del DID durante il signup
-        // this.ensureUserHasDIDAsync(result);
+        this.ensureUserHasDIDAsync(result);
 
         // Emettiamo un evento di debug per monitorare il flusso
         this.eventEmitter.emit("debug", {

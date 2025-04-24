@@ -109,6 +109,22 @@ class SocialPlugin extends base_1.BasePlugin {
         (0, logger_1.logError)("getTimeline method not available");
         return { messages: [], error: "Method not implemented" };
     }
+    /**
+     * Ottieni la timeline degli utenti seguiti (esclude i propri post)
+     * @returns Timeline con i post degli utenti seguiti
+     */
+    async getFollowingTimeline() {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.getTimeline === "function") {
+            return this.social.getTimeline(10, {
+                includeLikes: true,
+                onlyFollowing: true,
+            });
+        }
+        (0, logger_1.logError)("getFollowingTimeline method not available");
+        return { messages: [], error: "Method not implemented" };
+    }
     async follow(pub) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
@@ -117,6 +133,33 @@ class SocialPlugin extends base_1.BasePlugin {
         }
         (0, logger_1.logError)("follow method not available");
         return false;
+    }
+    /**
+     * Aggiorna i campi del profilo utente
+     * @param fields Oggetto con i campi da aggiornare (es. {bio: "Nuova bio"})
+     * @returns true se l'operazione è riuscita
+     */
+    async updateProfile(fields) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.updateProfile !== "function") {
+            (0, logger_1.logError)("updateProfile method not available");
+            return false;
+        }
+        try {
+            let success = true;
+            // Aggiorna ogni campo nell'oggetto
+            for (const [field, value] of Object.entries(fields)) {
+                const result = await this.social.updateProfile(field, value);
+                if (!result)
+                    success = false;
+            }
+            return success;
+        }
+        catch (err) {
+            (0, logger_1.logError)(`Errore nell'aggiornamento del profilo: ${err}`);
+            return false;
+        }
     }
     async unfollow(pub) {
         if (!this.social)
@@ -283,6 +326,40 @@ class SocialPlugin extends base_1.BasePlugin {
             return this.social.getAllUsersObservable();
         }
         (0, logger_1.logError)("getAllUsersObservable method not available");
+        return (0, rxjs_1.of)([]);
+    }
+    /**
+     * Ottieni i post creati dall'utente corrente
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Risultato della timeline con i post dell'utente
+     */
+    async getUserPosts(limit = 10, options = {
+        includeLikes: true,
+    }) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (typeof this.social.getUserPosts === "function") {
+            return this.social.getUserPosts(limit, options);
+        }
+        (0, logger_1.logError)("getUserPosts method not available");
+        return { messages: [], error: "Method not implemented" };
+    }
+    /**
+     * Ottieni i post creati dall'utente corrente come Observable
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Observable di post in tempo reale
+     */
+    getUserPostsObservable(limit = 10, options = { includeLikes: true }) {
+        if (!this.social) {
+            (0, logger_1.logError)("Social plugin not initialized");
+            return (0, rxjs_1.of)([]);
+        }
+        if (typeof this.social.getUserPostsObservable === "function") {
+            return this.social.getUserPostsObservable(limit, options);
+        }
+        (0, logger_1.logError)("getUserPostsObservable method not available");
         return (0, rxjs_1.of)([]);
     }
 }

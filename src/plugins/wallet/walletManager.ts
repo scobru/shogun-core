@@ -531,7 +531,7 @@ export class WalletManager extends EventEmitter {
    * Get the main wallet credentials
    */
   getMainWalletCredentials(): { address: string; priv: string } {
-    const user = this.gun.user().recall({sessionStorage:true});
+    const user = this.gun.user().recall({ sessionStorage: true });
     if (!user || !user.is) {
       log("getMainWallet: User not authenticated");
       throw new Error("User not authenticated");
@@ -645,7 +645,8 @@ export class WalletManager extends EventEmitter {
         if (gunMnemonic) {
           log("Mnemonic retrieved from GunDB");
           log("gunMnemonic: ", gunMnemonic);
-          return gunMnemonic;
+          const decrypted = await this.decryptSensitiveData(gunMnemonic);
+          return decrypted;
         }
       }
 
@@ -694,7 +695,9 @@ export class WalletManager extends EventEmitter {
           return;
         }
 
-        await user.get("master_mnemonic").put(mnemonic);
+        // encrypt mnemonic before saving to GunDB
+        const encryptedMnemonic = await this.encryptSensitiveData(mnemonic);
+        await user.get("master_mnemonic").put(encryptedMnemonic);
         log("Mnemonic saved to GunDB");
       }
 

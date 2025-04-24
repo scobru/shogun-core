@@ -34,7 +34,18 @@ export declare class SocialPlugin extends BasePlugin implements SocialPluginInte
     getComments(postId: string): Promise<Comment[]>;
     deletePost(postId: string): Promise<boolean>;
     getTimeline(): Promise<TimelineResult>;
+    /**
+     * Ottieni la timeline degli utenti seguiti (esclude i propri post)
+     * @returns Timeline con i post degli utenti seguiti
+     */
+    getFollowingTimeline(): Promise<TimelineResult>;
     follow(pub: string): Promise<boolean>;
+    /**
+     * Aggiorna i campi del profilo utente
+     * @param fields Oggetto con i campi da aggiornare (es. {bio: "Nuova bio"})
+     * @returns true se l'operazione è riuscita
+     */
+    updateProfile(fields: Record<string, string>): Promise<boolean>;
     unfollow(pub: string): Promise<boolean>;
     cleanup(): void;
     /**
@@ -92,4 +103,23 @@ export declare class SocialPlugin extends BasePlugin implements SocialPluginInte
      * @returns Observable di profili utente
      */
     getAllUsersObservable(): Observable<UserProfile[]>;
+    /**
+     * Ottieni i post creati dall'utente corrente
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Risultato della timeline con i post dell'utente
+     */
+    getUserPosts(limit?: number, options?: {
+        includeLikes: boolean;
+        timeout?: number;
+    }): Promise<TimelineResult>;
+    /**
+     * Ottieni i post creati dall'utente corrente come Observable
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Observable di post in tempo reale
+     */
+    getUserPostsObservable(limit?: number, options?: {
+        includeLikes: boolean;
+    }): Observable<Message[]>;
 }

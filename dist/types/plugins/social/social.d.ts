@@ -1,16 +1,25 @@
 import { EventEmitter } from "../../utils/eventEmitter";
 import { Post, Comment, UserProfile, TimelineResult, Message } from "../../types/social";
+import { GunRxJS } from "../../gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { IGunInstance } from "gun";
+import { FriendService } from "./friends/friends";
+import { MessageService } from "./messagges/messages";
+import { CertificateService } from "./certificates/certs";
+import { PostService } from "./posts/posts";
 /**
  * Plugin Social che utilizza Gun DB
  */
 export declare class Social extends EventEmitter {
     private readonly gun;
-    user: any;
+    readonly user: any;
     private readonly profileCache;
     private readonly cacheDuration;
-    private readonly gunRx;
+    readonly gunRx: GunRxJS;
+    readonly friendService: FriendService;
+    readonly messageService: MessageService;
+    readonly certificateService: CertificateService;
+    readonly postService: PostService;
     constructor(gunInstance: IGunInstance<any>);
     /**
      * Metodo per loggare messaggi di debug
@@ -21,32 +30,9 @@ export declare class Social extends EventEmitter {
      */
     private error;
     /**
-     * Genera un ID univoco (UUID v4)
-     */
-    private generateUUID;
-    /**
      * Pulisce le cache e i listener
      */
     cleanup(): void;
-    /**
-     * Estrae gli hashtag dal testo
-     * @param text Testo da analizzare
-     * @returns Array di hashtag trovati
-     */
-    private extractHashtags;
-    /**
-     * Indicizza un post per hashtag
-     * @param postId ID del post
-     * @param hashtags Array di hashtag da indicizzare
-     */
-    private indexPostByHashtags;
-    /**
-     * Crea un nuovo post
-     * @param content Contenuto del post
-     * @param imageData Dati dell'immagine (Base64 o URL)
-     * @returns Dati del post creato o null in caso di errore
-     */
-    post(content: string, imageData?: string): Promise<Post | null>;
     /**
      * Segui un altro utente
      * @param targetPub Chiave pubblica dell'utente da seguire
@@ -73,112 +59,61 @@ export declare class Social extends EventEmitter {
      */
     updateProfile(field: string, value: string): Promise<boolean>;
     /**
-     * Ottieni la timeline (post propri e di chi segui)
-     * @returns Risultato della timeline
+     * Crea un nuovo post - delegato a PostService
+     */
+    post(content: string, imageData?: string): Promise<Post | null>;
+    /**
+     * Ottieni la timeline - delegato a PostService
      */
     getTimeline(limit?: number, options?: {
         includeLikes: boolean;
         timeout?: number;
+        onlyFollowing?: boolean;
     }): Promise<TimelineResult>;
     /**
-     * Ottieni l'oggetto dei like di un post
-     * @private
-     * @param postId ID del post
-     * @returns Oggetto con i like
-     */
-    private getLikesObject;
-    /**
-     * Aggiungi un commento a un post
-     * @param postId ID del post
-     * @param content Contenuto del commento
-     * @returns Dati del commento o null in caso di errore
+     * Aggiungi un commento a un post - delegato a PostService
      */
     addComment(postId: string, content: string): Promise<Comment | null>;
     /**
-     * Ottieni i commenti di un post
-     * @param postId ID del post
-     * @returns Array di commenti
+     * Ottieni i commenti di un post - delegato a PostService
      */
     getComments(postId: string): Promise<Comment[]>;
     /**
-     * Metti like a un post
-     * @param postId ID del post
-     * @returns true se l'operazione è riuscita
+     * Metti like a un post - delegato a PostService
      */
     likePost(postId: string): Promise<boolean>;
     /**
-     * Rimuovi like da un post
-     * @param postId ID del post
-     * @returns true se l'operazione è riuscita
+     * Rimuovi like da un post - delegato a PostService
      */
     unlikePost(postId: string): Promise<boolean>;
     /**
-     * Ottieni gli utenti che hanno messo like a un post
-     * @param postId ID del post
-     * @returns Array di ID utenti che hanno messo like
+     * Ottieni gli utenti che hanno messo like a un post - delegato a PostService
      */
     getLikes(postId: string): Promise<string[]>;
     /**
-     * Ottieni il conteggio dei like di un post
-     * @param postId ID del post
-     * @returns Numero di like
+     * Ottieni il conteggio dei like di un post - delegato a PostService
      */
     getLikeCount(postId: string): Promise<number>;
     /**
-     * Cerca post per hashtag
-     * @param hashtag Hashtag da cercare (senza #)
-     * @returns Array di post che contengono l'hashtag
+     * Cerca post per hashtag - delegato a PostService
      */
     searchByHashtag(hashtag: string): Promise<Post[]>;
     /**
-     * Elimina un post
-     * @param postId ID del post da eliminare
-     * @returns true se l'operazione è riuscita, false altrimenti
+     * Elimina un post - delegato a PostService
      */
     deletePost(postId: string): Promise<boolean>;
     /**
-     * Ottieni la timeline (post propri e di chi segui) come Observable
-     * @returns Observable di post in tempo reale
+     * Ottieni la timeline come Observable - delegato a PostService
      */
     getTimelineObservable(limit?: number, options?: {
         includeLikes: boolean;
     }): Observable<Message[]>;
-    /**
-     * Ottieni i commenti di un post come Observable
-     * @param postId ID del post
-     * @returns Observable di commenti in tempo reale
-     */
-    getCommentsObservable(postId: string): Observable<Comment[]>;
-    /**
-     * Ottieni i like di un post come Observable
-     * @param postId ID del post
-     * @returns Observable del conteggio like in tempo reale
-     */
-    getLikesObservable(postId: string): Observable<string[]>;
-    /**
-     * Ottieni il conteggio dei like di un post come Observable
-     * @param postId ID del post
-     * @returns Observable con il numero di like in tempo reale
-     */
-    getLikeCountObservable(postId: string): Observable<number>;
     /**
      * Ottieni un post specifico con dettagli dell'autore in tempo reale
      * @param postId ID del post
      * @returns Observable del post arricchito con dettagli utente
      */
     getEnrichedPostObservable(postId: string): Observable<any>;
-    /**
-     * Cerca post per hashtag con aggiornamenti in tempo reale
-     * @param hashtag Hashtag da cercare
-     * @returns Observable di post con l'hashtag specificato
-     */
-    searchByHashtagObservable(hashtag: string): Observable<Post[]>;
-    /**
-     * Osserva il profilo di un utente in tempo reale
-     * @param pub Chiave pubblica dell'utente
-     * @returns Observable del profilo utente
-     */
-    getProfileObservable(pub: string): Observable<UserProfile>;
     /**
      * Ottieni tutti gli utenti registrati sulla rete
      * @returns Array di UserProfile base
@@ -189,4 +124,20 @@ export declare class Social extends EventEmitter {
      * @returns Observable di UserProfile
      */
     getAllUsersObservable(): Observable<UserProfile[]>;
+    /**
+     * Ottieni i post creati dall'utente corrente - delegato a PostService
+     */
+    getUserPosts(limit?: number, options?: {
+        includeLikes: boolean;
+        timeout?: number;
+    }): Promise<TimelineResult>;
+    /**
+     * Ottieni i post creati dall'utente corrente come Observable
+     * @param limit Numero massimo di post da recuperare
+     * @param options Opzioni aggiuntive
+     * @returns Observable di post in tempo reale
+     */
+    getUserPostsObservable(limit?: number, options?: {
+        includeLikes: boolean;
+    }): Observable<Message[]>;
 }

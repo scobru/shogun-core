@@ -542,7 +542,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                 if (gunMnemonic) {
                     (0, logger_1.log)("Mnemonic retrieved from GunDB");
                     (0, logger_1.log)("gunMnemonic: ", gunMnemonic);
-                    return gunMnemonic;
+                    const decrypted = await this.decryptSensitiveData(gunMnemonic);
+                    return decrypted;
                 }
             }
             // 2. If not found in GunDB, check localStorage
@@ -583,7 +584,9 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                     await user.get().put({});
                     return;
                 }
-                await user.get("master_mnemonic").put(mnemonic);
+                // encrypt mnemonic before saving to GunDB
+                const encryptedMnemonic = await this.encryptSensitiveData(mnemonic);
+                await user.get("master_mnemonic").put(encryptedMnemonic);
                 (0, logger_1.log)("Mnemonic saved to GunDB");
             }
             // 2. Also save to localStorage as backup
