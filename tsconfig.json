@@ -25,6 +25,6 @@
     "noImplicitReturns": true, // Report error when not all code paths in function return a value
     "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statements
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/examples/social/css/tui.min.js"],
   "exclude": ["node_modules", "dist", "src/__tests__/**/*", "**/*.test.ts"]
 }

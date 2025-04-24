@@ -7,15 +7,18 @@
     <title>Shogun Social</title>
     <style>
         :root {
-            --primary-color: #1DA1F2;
-            --secondary-color: #657786;
+            --primary-color: #4a6fa5;
+            --primary-dark: #3d5d8a;
+            --secondary-color: #95a5a6;
             --background-color: #ffffff;
-            --light-gray: #f5f8fa;
-            --border-color: #E1E8ED;
-            --text-color: #14171A;
-            --success-color: #4CAF50;
-            --danger-color: #E0245E;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --light-gray: #f8f9fa;
+            --border-color: #e9ecef;
+            --text-color: #2c3e50;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            --box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            --border-radius: 12px;
         }
 
         * {
@@ -28,7 +31,7 @@
             font-family: var(--font-family);
             margin: 0;
             padding: 0;
-            background: var(--light-gray);
+            background: #f0f2f5;
             color: var(--text-color);
             line-height: 1.5;
         }
@@ -38,7 +41,31 @@
             margin: 0 auto;
             background: var(--background-color);
             min-height: 100vh;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--box-shadow);
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--primary-dark);
+        }
+
+        .app-title {
+            font-weight: bold;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+        }
+
+        .current-user {
+            padding: 8px 16px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         h1,
@@ -49,20 +76,21 @@
         }
 
         h1 {
-            font-size: 20px;
+            font-size: 22px;
             border-bottom: 1px solid var(--border-color);
         }
 
         h2 {
-            font-size: 18px;
+            font-size: 20px;
             margin-top: 0;
             padding-bottom: 8px;
         }
 
         .action-group {
             margin-bottom: 0;
-            padding: 16px;
+            padding: 20px;
             border-bottom: 1px solid var(--border-color);
+            background-color: var(--light-gray);
         }
 
         button {
@@ -70,25 +98,55 @@
             color: white;
             border: none;
             padding: 8px 16px;
-            border-radius: 50px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 500;
             font-size: 14px;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         button:hover {
-            background: #0b7bc1;
+            background: var(--primary-dark);
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        button:active {
+            opacity: 0.9;
         }
 
         button:disabled {
             background: var(--secondary-color);
-            opacity: 0.5;
+            opacity: 0.7;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         button.active {
             background-color: var(--success-color);
+        }
+
+        .primary-button,
+        .login-button,
+        #performLoginBtn,
+        .submit-comment,
+        .view-profile-btn,
+        .follow-btn,
+        .toggle-list,
+        .refresh-list {
+            background-color: var(--primary-color);
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .button-icon {
+            margin-right: 6px;
+            font-size: 14px;
         }
 
         .unlike-button {
@@ -103,409 +161,364 @@
         input,
         textarea {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             font-size: 16px;
             font-family: var(--font-family);
+            transition: all 0.3s;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
         }
 
         textarea {
-            height: 100px;
+            height: 120px;
             resize: none;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .post-composer {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .composer-header {
+            margin-bottom: 12px;
+            font-weight: 500;
+            color: var(--primary-color);
+            font-size: 16px;
+        }
+
+        .composer-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .search-profile {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-profile input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .search-profile button {
+            white-space: nowrap;
+        }
+
+        .timeline-actions {
+            padding: 14px 20px;
+            background-color: var(--light-gray);
+            border-bottom: 1px solid var(--border-color);
         }
 
         #results {
             margin: 16px;
             padding: 16px;
             background: var(--light-gray);
-            margin-top: 20px;
-            padding: 15px;
-            background: #f0f0f0;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
+        /* Rimuovo le ombre e i bordi complessi per un design più minimal */
         .post {
-            margin: 15px 0;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px;
-            border-left: 3px solid #0066cc;
+            margin: 16px;
+            padding: 20px;
+            background: var(--background-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border-left: 2px solid var(--primary-color);
+            transition: none;
+        }
+
+        .post:hover {
+            transform: none;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
 
         .post-author {
             font-weight: bold;
-            color: #0066cc
-        }
-
-        .post-content {
-            margin: 10px 0
+            color: var(--primary-color);
+            font-size: 16px;
         }
 
         .post-timestamp {
-            font-size: 12px;
-            color: #777
+            font-size: 13px;
+            color: var(--secondary-color);
+        }
+
+        .post-content {
+            margin: 16px 0;
+            word-wrap: break-word;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
         }
 
         .post-actions button {
-            padding: 5px 10px;
-            font-size: 14px
+            padding: 8px 16px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 8px;
         }
 
         .like-count,
         .comment-count {
-            display: inline-block;
-            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
             font-weight: bold;
-            color: #333;
-            min-width: 18px;
-            height: 18px;
-            text-align: center;
-            border-radius: 50%;
-            background: #f0f0f0;
-            margin-left: 4px;
-        }
-
-        .comments-section {
-            display: none;
-            margin-top: 10px
-        }
-
-        .comment {
-            margin: 10px 0 10px 20px;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            border-left: 2px solid #999
-        }
-
-        .comment-author {
-            font-weight: bold
-        }
-
-        .comment-timestamp {
-            font-size: 11px;
-            color: #777
-        }
-
-        .profile {
-            margin: 15px 0;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px
-        }
-
-        .profile-name {
-            font-weight: bold;
-            font-size: 18px;
-            color: #0066cc
-        }
-
-        .profile-bio {
-            margin: 10px 0;
-            font-style: italic
-        }
-
-        .profile-stats {
-            display: flex;
-            gap: 15px;
-            margin: 10px 0
-        }
-
-        .profile-stat {
-            font-size: 14px
-        }
-
-        .profile-actions button {
-            margin-right: 5px
-        }
-
-        .timeline {
-            margin-top: 20px
+            color: var(--text-color);
+            background: var(--light-gray);
+            border-radius: 8px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
         }
 
         .comment-section {
-            display: none;
-            margin-top: 10px;
-            padding: 10px;
-            background: #f8f8f8;
-            border-radius: 4px;
-            border: 1px solid #eee;
-        }
-
-        .comment-controls {
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .refresh-comments {
-            background-color: #ff9800;
-            color: white;
-            font-size: 12px;
-            padding: 3px 8px;
-        }
-
-        .no-comments {
-            padding: 10px;
-            text-align: center;
-            color: #777;
-            font-style: italic;
+            margin-top: 14px;
+            padding: 16px;
+            background: var(--light-gray);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
         }
 
         .comments-container {
-            max-height: 300px;
+            max-height: 250px;
             overflow-y: auto;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
+            padding-right: 5px;
         }
 
+        /* Semplifica i commenti */
         .comment {
-            margin: 10px 0 10px 0;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            border-left: 2px solid #999
+            margin: 10px 0;
+            padding: 14px;
+            background: var(--background-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
         }
 
         .comment-author {
-            font-weight: bold
-        }
-
-        .comment-timestamp {
-            font-size: 11px;
-            color: #777
-        }
-
-        .profile {
-            margin: 15px 0;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px
-        }
-
-        .profile-name {
             font-weight: bold;
-            font-size: 18px;
-            color: #0066cc
+            font-size: 14px;
+            color: var(--primary-color);
         }
 
-        .profile-bio {
-            margin: 10px 0;
-            font-style: italic
+        .comment-time {
+            font-size: 12px;
+            color: var(--secondary-color);
         }
 
-        .profile-stats {
-            display: flex;
-            gap: 15px;
-            margin: 10px 0
+        .comment-text {
+            font-size: 14px;
+            line-height: 1.5;
         }
 
-        .profile-stat {
-            font-size: 14px
-        }
-
-        .profile-actions button {
-            margin-right: 5px
-        }
-
-        .timeline {
-            margin-top: 20px
+        .no-comments {
+            padding: 14px;
+            text-align: center;
+            color: var(--secondary-color);
+            font-style: italic;
         }
 
         .comment-form {
             display: flex;
-            margin-top: 10px;
+            gap: 10px;
+            align-items: center;
         }
 
         .comment-input {
             flex: 1;
-            margin-right: 10px;
             margin-bottom: 0;
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 20px;
         }
 
         .submit-comment {
             white-space: nowrap;
+            font-size: 14px;
+            padding: 8px 16px;
         }
 
-        .timeline-header {
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .post-section {
-            margin-bottom: 10px;
-        }
-
-        .post-section-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .own-post {
-            background-color: #e0f7fa;
+        /* Semplifica il profilo */
+        .profile {
+            margin: 16px;
+            padding: 20px;
+            background: var(--background-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .profile-header {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 20px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .profile-bio {
+            margin: 12px 0;
+            font-style: italic;
+            color: var(--secondary-color);
+            line-height: 1.6;
+        }
+
+        .profile-pub {
+            font-size: 13px;
+            color: var(--secondary-color);
+            word-break: break-all;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
         }
 
         .profile-stat-section {
-            margin-bottom: 15px;
+            flex: 1;
         }
 
-        .followers-list,
-        .following-list {
-            margin-top: 8px;
-            padding: 8px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
+        .profile-stat {
+            padding: 12px;
+            background: var(--light-gray);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: none;
         }
 
+        .profile-stat strong {
+            font-size: 15px;
+        }
+
+        /* Uniformo i pulsanti nelle liste */
         .follower-item,
         .following-item {
-            padding: 6px 0;
-            border-bottom: 1px solid #eee;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
+            gap: 10px;
         }
 
-        .follower-name,
-        .following-name {
-            flex-grow: 1;
-            font-size: 14px;
-            color: #555;
+        .follower-item button,
+        .following-item button {
+            padding: 6px 12px;
+            font-size: 13px;
+            margin-left: 5px;
+            box-shadow: none;
         }
 
         .view-profile,
         .unfollow-user {
-            margin-left: 8px;
-            padding: 2px 8px;
-            font-size: 12px;
+            white-space: nowrap;
+            min-width: 60px;
+            padding: 6px 12px;
+            font-size: 13px;
         }
 
-        .unfollow-user {
-            background-color: #f44336;
-        }
-
-        .empty-list {
-            padding: 10px;
-            color: #888;
-            font-style: italic;
-            text-align: center;
-        }
-
-        .loading {
-            padding: 8px;
-            color: #666;
-            text-align: center;
-        }
-
-        .toggle-list {
-            margin-left: 8px;
-            padding: 2px 8px;
-            font-size: 12px;
-            background-color: #e0e0e0;
-            color: #333;
-        }
-
-        .refresh-list {
-            margin-left: 8px;
-            padding: 2px 8px;
-            font-size: 12px;
-            background-color: #ff9800;
-            color: white;
-        }
-
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .list-header h4 {
-            margin: 0;
-            font-size: 14px;
-            color: #444;
-        }
-
-        .list-content {
-            max-height: 180px;
+        /* Uniformo i componenti delle schede profilo */
+        .followers-list,
+        .following-list {
+            margin-top: 10px;
+            padding: 14px;
+            background-color: var(--background-color);
+            border-radius: 8px;
+            max-height: 200px;
             overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .post-delete {
-            float: right;
-        }
-
-        .delete-post-button {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .delete-post-button:hover {
-            background-color: #d32f2f;
-        }
-
-        .delete-post-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* Stili per la lista utenti */
-        .users-section {
-            margin-bottom: 0;
-            padding: 16px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .users-list {
-            margin-top: 16px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
+        /* Semplifica gli elementi utente */
         .user-item {
             display: flex;
             align-items: center;
-            padding: 12px;
+            padding: 16px;
             border-bottom: 1px solid var(--border-color);
+            transition: none;
+        }
+
+        .user-item:hover {
+            background-color: transparent;
         }
 
         .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background-color: var(--light-gray);
-            margin-right: 12px;
+            background-color: var(--primary-color);
+            margin-right: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            color: var(--secondary-color);
-        }
-
-        .user-avatar img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
+            font-size: 16px;
+            color: white;
+            box-shadow: none;
         }
 
         .user-info {
@@ -514,24 +527,159 @@
 
         .user-name {
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
+            margin-bottom: 4px;
         }
 
         .user-id {
             font-size: 13px;
             color: var(--secondary-color);
-            margin-top: 2px;
+            margin-top: 3px;
+            word-break: break-all;
         }
 
         .user-actions {
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
 
-        .loading-users {
-            padding: 16px;
+        .loading-users,
+        .loading {
+            padding: 20px;
             text-align: center;
             color: var(--secondary-color);
+            font-style: italic;
+        }
+
+        /* Form di login */
+        #loginForm {
+            background-color: white;
+            padding: 20px;
+            margin-top: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        #performLoginBtn {
+            background-color: var(--success-color);
+            width: 100%;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        /* Animazioni e miglioramenti */
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .loading-timeline,
+        .loading-users,
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Media query per dispositivi mobili */
+        @media (max-width: 600px) {
+            .container {
+                width: 100%;
+                max-width: none;
+            }
+
+            .post,
+            .profile,
+            .comment-section {
+                margin: 12px;
+                padding: 16px;
+            }
+
+            .action-group,
+            .post-composer,
+            .users-section {
+                padding: 16px;
+            }
+
+            .profile-stats {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        .follower-name,
+        .following-name {
+            flex-grow: 1;
+            font-size: 14px;
+        }
+
+        .toggle-list {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: var(--light-gray);
+            color: var(--text-color);
+        }
+
+        .refresh-list {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: var(--primary-color);
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .list-header h4 {
+            margin: 0;
+            font-size: 15px;
+        }
+
+        .profile-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .profile-actions button {
+            flex: 1;
+        }
+
+        .delete-post-button {
+            background-color: var(--danger-color);
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .own-post {
+            background-color: rgba(74, 111, 165, 0.03);
+            border-left-color: var(--success-color);
+        }
+
+        .users-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .users-list {
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: var(--background-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
     </style>
 </head>
@@ -546,39 +694,58 @@
         </div>
 
         <div class="action-group">
-            <button id="initBtn">Inizializza</button>
-            <button id="loginBtn" disabled>Accedi</button>
+            <button id="initBtn" class="primary-button">Inizializza</button>
+            <button id="loginBtn" disabled class="login-button">Accedi</button>
             <div id="loginForm" style="display:none;">
                 <form onsubmit="return false;">
-                    <input type="text" id="username" placeholder="Username" autocomplete="username">
-                    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
-                    <button type="button" id="performLoginBtn"
-                        style="background-color: #4CAF50; margin-top: 10px; width: 100%;">Accedi</button>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Inserisci username" autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Inserisci password"
+                            autocomplete="current-password">
+                    </div>
+                    <button type="button" id="performLoginBtn">Accedi</button>
                 </form>
             </div>
         </div>
 
         <div class="post-composer" style="display: none;" id="postComposer">
+            <div class="composer-header">
+                <span>Nuovo post</span>
+            </div>
             <textarea id="postContent" placeholder="A cosa stai pensando?"></textarea>
-            <button id="createPostBtn" disabled>Pubblica</button>
+            <div class="composer-footer">
+                <button id="createPostBtn" disabled>Pubblica</button>
+            </div>
         </div>
 
         <div class="timeline-actions" style="display: none;" id="timelineActions">
-            <button id="getTimelineBtn">Aggiorna</button>
+            <button id="getTimelineBtn">
+                <span class="button-icon">🔄</span>
+                Aggiorna
+            </button>
         </div>
 
         <div id="timelineContainer" class="timeline"></div>
 
         <div class="action-group" id="profileSection">
             <h2>Profilo</h2>
-            <input type="text" id="userPubInput" placeholder="Chiave pubblica utente">
-            <button id="getProfileBtn" disabled>Visualizza Profilo</button>
+            <div class="search-profile">
+                <input type="text" id="userPubInput" placeholder="Chiave pubblica utente">
+                <button id="getProfileBtn" disabled>Visualizza</button>
+            </div>
             <div id="profileContainer"></div>
         </div>
 
         <div class="users-section" id="usersSection" style="display: none;">
             <h2>Utenti sulla rete</h2>
-            <button id="loadUsersBtn">Carica utenti</button>
+            <button id="loadUsersBtn">
+                <span class="button-icon">👥</span>
+                Carica utenti
+            </button>
             <div class="users-list" id="usersList"></div>
         </div>
 
@@ -596,6 +763,22 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        // Funzione per rendere i pulsanti più minimali
+        function shortenButtonLabels() {
+            // Abbrevia i testi dei pulsanti
+            document.querySelectorAll('.unfollow-user').forEach(btn => {
+                btn.textContent = 'Smetti';
+            });
+
+            document.querySelectorAll('#btnUnfollow').forEach(btn => {
+                btn.textContent = 'Smetti';
+            });
+
+            document.querySelectorAll('.view-profile, .view-profile-btn').forEach(btn => {
+                btn.textContent = 'Profilo';
+            });
         }
 
         // Controlliamo esplicitamente lo stato del pulsante al caricamento
@@ -630,6 +813,12 @@
                     this.style.opacity = '1';
                 });
             }
+
+            // Avvia il processo di abbreviazione dei pulsanti
+            shortenButtonLabels();
+
+            // Ripeti periodicamente per gestire i pulsanti aggiunti dinamicamente
+            setInterval(shortenButtonLabels, 2000);
         });
 
         // Polyfill (se serve)
