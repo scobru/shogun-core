@@ -12,7 +12,7 @@ class SocialPlugin extends base_1.BasePlugin {
     description = "Social plugin using GunDB for storage and real-time updates";
     social = null;
     get user() {
-        return this.social?.user || null;
+        return this.social?.user;
     }
     initialize(core) {
         super.initialize(core);

@@ -103,6 +103,18 @@ export declare class PostService extends EventEmitter {
      */
     private getLikesObject;
     /**
+     * Ottieni i like di un post come Observable
+     * @param postId ID del post
+     * @returns Observable di chiavi pubbliche che hanno messo like
+     */
+    getLikesObservable(postId: string): Observable<string[]>;
+    /**
+     * Ottieni il conteggio dei like come Observable
+     * @param postId ID del post
+     * @returns Observable del numero di like
+     */
+    getLikeCountObservable(postId: string): Observable<number>;
+    /**
      * Pulisce la cache
      */
     clearCache(): void;

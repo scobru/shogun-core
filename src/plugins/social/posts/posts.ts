@@ -36,7 +36,7 @@ export class PostService extends EventEmitter {
   constructor(gunInstance: IGunInstance<any>) {
     super();
     this.gun = gunInstance;
-    this.user = this.gun.user();
+    this.user = this.gun.user().recall({ sessionStorage: true });
     this.gunRx = new GunRxJS(gunInstance);
     this.validatePost = this.ajv.compile(PostSchema);
     this.validateComment = this.ajv.compile(CommentSchema);
@@ -936,18 +936,66 @@ export class PostService extends EventEmitter {
   private async getLikesObject(
     postId: string
   ): Promise<Record<string, boolean>> {
-    const likes: Record<string, boolean> = {};
-    return new Promise((resolve) => {
-      this.gun
+    try {
+      return new Promise<Record<string, boolean>>((resolve) => {
+        this.gun
+          .get("posts")
+          .get(postId)
+          .get("likes")
+          .once((likes: any) => {
+            if (!likes) {
+              resolve({});
+            } else {
+              resolve(likes);
+            }
+          });
+      });
+    } catch (err) {
+      this.error(`Errore recupero oggetto likes: ${err}`);
+      return {};
+    }
+  }
+
+  /**
+   * Ottieni i like di un post come Observable
+   * @param postId ID del post
+   * @returns Observable di chiavi pubbliche che hanno messo like
+   */
+  public getLikesObservable(postId: string): Observable<string[]> {
+    return new Observable((subscriber) => {
+      // Sottoscrizione ai cambiamenti dei like
+      const unsub = this.gun
         .get("posts")
         .get(postId)
         .get("likes")
-        .map()
-        .once((val: any, key: string) => {
-          if (key !== "_" && val === true) likes[key] = true;
+        .on((likes: any) => {
+          if (!likes) {
+            subscriber.next([]);
+            return;
+          }
+
+          // Filtra solo i valori true (like attivi)
+          const likesList = Object.entries(likes)
+            .filter(([key, value]) => key !== "_" && value === true)
+            .map(([key]) => key);
+
+          subscriber.next(likesList);
         });
-      setTimeout(() => resolve(likes), 500);
+
+      // Funzione di pulizia
+      return (): void => {
+        console.log("unsub");
+      };
     });
+  }
+
+  /**
+   * Ottieni il conteggio dei like come Observable
+   * @param postId ID del post
+   * @returns Observable del numero di like
+   */
+  public getLikeCountObservable(postId: string): Observable<number> {
+    return this.getLikesObservable(postId).pipe(map((likes) => likes.length));
   }
 
   /**

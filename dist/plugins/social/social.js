@@ -27,7 +27,7 @@ class Social extends eventEmitter_1.EventEmitter {
     constructor(gunInstance) {
         super();
         this.gun = gunInstance;
-        this.user = this.gun.user();
+        this.user = this.gun.user().recall({ sessionStorage: true });
         this.gunRx = new rxjs_integration_1.GunRxJS(gunInstance);
         this.friendService = new friends_1.FriendService(gunInstance);
         this.messageService = new messages_1.MessageService(gunInstance);

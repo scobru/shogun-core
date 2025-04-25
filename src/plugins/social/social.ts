@@ -41,7 +41,7 @@ export class Social extends EventEmitter {
   constructor(gunInstance: IGunInstance<any>) {
     super();
     this.gun = gunInstance;
-    this.user = this.gun.user();
+    this.user = this.gun.user().recall({ sessionStorage: true });
     this.gunRx = new GunRxJS(gunInstance);
     this.friendService = new FriendService(gunInstance);
     this.messageService = new MessageService(gunInstance);

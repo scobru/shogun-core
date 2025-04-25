@@ -82,26 +82,91 @@
     </script>
 
     <link rel="stylesheet" href="shogun.css">
+
+    <style>
+        /* ... existing styles ... */
+
+        /* Stili per le transizioni Alpine.js */
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .tab-content {
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .tab-content.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Animazioni per Alpine.js */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s;
+        }
+
+        .fade-enter,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* Tutorial popup */
+        .tutorial-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .tutorial-popup h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .tutorial-popup .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container">
+    <div class="app-container" x-data="socialApp">
         <div class="app-header">
             <div class="app-title">Shogun Social</div>
             <div id="currentUserInfo" class="current-user" style="display: none;">
-                <strong></strong>
+                <strong id="currentUserName"></strong>
             </div>
         </div>
 
         <div class="app-tabs">
-            <button type="button" class="tab-button active" data-tab="timeline">Timeline</button>
-            <button type="button" class="tab-button" data-tab="myPosts">Miei Post</button>
-            <button type="button" class="tab-button" data-tab="profile">Profilo</button>
+            <button type="button" class="tab-button" id="timeline-tab-btn"
+                onclick="changeTab('timeline')">Timeline</button>
+            <button type="button" class="tab-button" id="myPosts-tab-btn" onclick="changeTab('myPosts')">Miei
+                Post</button>
+            <button type="button" class="tab-button" id="profile-tab-btn"
+                onclick="changeTab('profile')">Profilo</button>
+            <button type="button" class="tab-button" id="users-tab-btn" onclick="changeTab('users')">Utenti</button>
         </div>
 
         <div class="action-group">
             <button id="initBtn" type="button" class="primary-button">Inizializza</button>
-            <button id="loginBtn" type="button" disabled class="login-button">Accedi</button>
+            <button id="loginBtn" type="button" class="login-button"
+                onclick="if(window.shogunInitialized) toggleLoginForm()" disabled>Accedi</button>
             <div id="loginForm" style="display:none;">
                 <form onsubmit="return false;">
                     <div class="form-group">
@@ -119,14 +184,14 @@
         </div>
 
         <!-- Contenuti dei tab -->
-        <div id="timeline-tab" class="tab-content active">
+        <div id="timeline-tab" class="tab-content">
             <div class="post-composer" style="display: none;" id="postComposer">
                 <div class="composer-header">
                     <span>Nuovo post</span>
                 </div>
                 <textarea id="postContent" placeholder="A cosa stai pensando?"></textarea>
                 <div class="composer-footer">
-                    <button type="button" id="createPostBtn" disabled>Pubblica</button>
+                    <button type="button" id="createPostBtn">Pubblica</button>
                 </div>
             </div>
 
@@ -156,8 +221,10 @@
                 </div>
                 <div id="profileContainer"></div>
             </div>
+        </div>
 
-            <div class="users-section" id="usersSection" style="display: none;">
+        <div id="users-tab" class="tab-content">
+            <div class="users-section" id="usersSection">
                 <h2>Utenti sulla rete</h2>
                 <button type="button" id="loadUsersBtn">
                     <span class="button-icon">👥</span>
@@ -173,8 +240,32 @@
     <!-- Aggiungi indicatore no-refresh -->
     <div id="noRefreshIndicator" class="no-refresh-indicator">Azione eseguita senza refresh</div>
 
+    <!-- Tutorial popup -->
+    <div id="tutorialPopup" class="tutorial-popup" style="display: none;">
+        <button id="closeTutorialBtn" class="close-btn">&times;</button>
+        <h3>Benvenuto su Shogun Social!</h3>
+        <p>Segui questi semplici passi:</p>
+        <ol>
+            <li>Clicca su <strong>Inizializza</strong> per iniziare</li>
+            <li>Clicca su <strong>Accedi</strong> e inserisci le tue credenziali</li>
+            <li>Esplora le tab per scoprire le funzionalità</li>
+            <li>Nella tab <strong>Utenti</strong> puoi vedere tutti gli utenti sulla rete</li>
+        </ol>
+        <button id="gotItBtn" class="primary-button">Ho capito</button>
+    </div>
+
     <script src="../../dist/browser/shogun-core.js" defer></script>
     <script>
+        // Variabili di stato globali (precedentemente gestite da Alpine)
+        let currentUser = '';
+        let isLoggedIn = false;
+        let showLoginForm = false;
+        let showPostComposer = false;
+        let showTimelineActions = false;
+        let activeTab = 'timeline';
+        let showTutorial = !localStorage.getItem('tutorialShown');
+        let shogunInitialized = false;
+
         // Funzione di utilità per sanitizzare l'HTML
         function escapeHtml(unsafe) {
             if (typeof unsafe !== 'string') return '';
@@ -306,6 +397,11 @@
         const performLogin = document.getElementById('performLoginBtn');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
+
+        // Impostiamo le funzioni da invocare quando Alpine è pronto
+        window.initShogunApp = null;
+        window.shogunInitialized = false;
+        window.toggleLoginForm = null;
 
         const userPubInput = document.getElementById('userPubInput');
         const getProfileBtn = document.getElementById('getProfileBtn');
@@ -1359,53 +1455,88 @@
         }
 
         // Init Shogun
-        initBtn.onclick = function (e) {
-            e.preventDefault(); // Previene esplicitamente il comportamento di default
+        initBtn.onclick = () => {
+            console.log("Inizializzazione Shogun avviata...");
+            try {
+                const cfg = {
+                    gundb: { peers: ['//localhost:8765/gun'], localStorage: false, radisk: false, authToken: 'thisIsTheTokenForReals' },
+                    walletManager: { enabled: false },  // Disattiva il wallet manager per evitare errori RPC
+                    social: { enabled: true },
+                    logging: { enabled: true, level: 'debug', prefix: '[Shogun]' }
+                };
 
-            const cfg = {
-                gundb: { peers: ['//localhost:8765/gun'], localStorage: false, radisk: false, authToken: 'thisIsTheTokenForReals' },
-                walletManager: { enabled: false },  // Disattiva il wallet manager per evitare errori RPC
-                social: { enabled: true },
-                logging: { enabled: true, level: 'debug', prefix: '[Shogun]' }
-            };
-            shogun = window.initShogunBrowser(cfg);
-            socialPlugin = shogun.getPlugin('social');
-            gun = shogun.gun;
-            if (socialPlugin) {
-                showResult('Inizializzazione completata', 'Il sistema è pronto per l\'uso');
-                loginBtn.disabled = false;
-                initBtn.disabled = true;
-                initBtn.textContent = 'Inizializzato';
+                shogun = window.initShogunBrowser(cfg);
+                socialPlugin = shogun.getPlugin('social');
+                gun = shogun.gun;
 
-                // Controlla se l'utente è già autenticato
-                setTimeout(syncAuthState, 500);
-            } else {
-                showError('Errore', 'Plugin social non trovato');
+                if (socialPlugin) {
+                    // Inizializzazione completata con successo
+                    window.shogunInitialized = shogunInitialized = true;
+
+                    showResult('Inizializzazione completata', 'Il sistema è pronto per l\'uso');
+
+                    // Abilita il pulsante di login direttamente
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        console.log("Pulsante login abilitato");
+                    }
+
+                    // Abilita anche il pulsante di accesso nel form
+                    if (performLogin) {
+                        performLogin.disabled = false;
+                        console.log("Pulsante accedi nel form abilitato");
+                    }
+
+                    // Disabilita il pulsante di inizializzazione
+                    initBtn.disabled = true;
+                    initBtn.textContent = 'Inizializzato';
+
+                    console.log("Inizializzazione completata con successo");
+                } else {
+                    window.shogunInitialized = shogunInitialized = false;
+                    showError('Errore', 'Plugin social non trovato');
+                }
+            } catch (error) {
+                console.error("Errore durante l'inizializzazione:", error);
+                showError('Errore', 'Si è verificato un errore durante l\'inizializzazione: ' + error.message);
             }
-
-            return false; // Assicura che non ci sia refresh
         };
 
-        // Login
+        // Login - non più utilizzato poiché usiamo Alpine.js con @click="toggleLoginForm()"
+        /*
         loginBtn.onclick = function (e) {
-            e.preventDefault(); // Previene esplicitamente il comportamento di default
+            e.preventDefault();
+            console.log("Click su pulsante Accedi");
 
-            console.log("Click sul pulsante Accedi (mostra form)");
-            if (loginForm && typeof loginForm !== 'undefined') {
+            try {
+                const appContainer = document.querySelector('.app-container');
+                // Verifica se Alpine.js è disponibile e inizializzato
+                if (appContainer && appContainer.__x) {
+                    const appData = appContainer.__x.$data;
+                    appData.showLoginForm = !appData.showLoginForm;
+                    console.log("Alpine.js: showLoginForm =", appData.showLoginForm);
+                } else {
+                    // Fallback tradizionale se Alpine non è disponibile
+                    console.log("Alpine.js non disponibile, utilizzo metodo tradizionale");
+                }
+
+                // In entrambi i casi, gestisci manualmente la visualizzazione
                 loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
-                console.log("Cambio visibilità form login:", loginForm.style.display);
+                console.log("Visualizzazione form login:", loginForm.style.display);
 
                 // Focus sul campo username dopo aver mostrato il form
                 if (loginForm.style.display === 'block' && usernameInput) {
                     setTimeout(() => usernameInput.focus(), 100);
                 }
-            } else {
-                console.error('Form di login non trovato nel DOM');
-                showError('Errore', 'Form di login non disponibile');
+            } catch (error) {
+                console.error("Errore nell'apertura del form di login:", error);
+                // Fallback sicuro
+                loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
             }
 
-            return false; // Assicura che non ci sia refresh
+            return false; // Previeni comportamento di default
         };
+        */
 
         // Assicuriamoci che il pulsante "Accedi" nel form abbia un event listener diretto
         if (performLogin) {
@@ -1424,79 +1555,68 @@
 
         // Funzione separata per gestire il login
         async function performLoginHandler() {
-            console.log("performLogin - Inizio procedura");
-            const u = usernameInput.value, p = passwordInput.value;
-            if (!u || !p) { showError('Login', 'Inserisci credenziali'); return; }
+            console.log("Handler di login eseguito");
 
-            // Verifica che shogun sia inizializzato
-            if (!shogun) {
-                showError('Login', 'Shogun non inizializzato. Clicca prima su "Inizializza"');
+            // Blocca eventuali submit
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Se manca il plugin social, mostra errore
+            if (!socialPlugin) {
+                showError('Errore', 'Plugin social non inizializzato. Clicca su Inizializza');
                 return;
             }
 
-            // Disabilita i pulsanti durante il login
+            const u = usernameInput.value;
+            const p = passwordInput.value;
+
+            if (!u || !p) {
+                showError('Errore di accesso', 'Inserisci sia username che password');
+                return;
+            }
+
             performLogin.disabled = true;
             performLogin.textContent = 'Accesso in corso...';
 
             try {
-                console.log("Tentativo di login con", { username: u, password: "***" });
                 const res = await shogun.login(u, p);
-                console.log("Risposta login:", res);
+                if (res.success) {
+                    console.log("Login riuscito:", res);
+                    currentUserPub = res.pub;
 
-                if (res && res.success) {
-                    showResult('Accesso effettuato', res);
-                    currentUserPub = res.userPub;
+                    // Aggiorna lo stato dell'interfaccia
+                    updateLoginState({
+                        alias: u,
+                        username: u,
+                        pub: res.pub
+                    });
+
+                    // Nascondi form login
+                    toggleLoginForm();
+                    loginBtn.style.display = 'none';
+
+                    // Abilita input di ricerca profilo
                     userPubInput.value = currentUserPub;
-
-                    // Aggiorna UI dopo login
                     getProfileBtn.disabled = false;
-                    createPostBtn.disabled = false;
-                    loginForm.style.display = 'none';
-                    loginBtn.disabled = true;
-                    loginBtn.textContent = 'Accesso effettuato';
 
-                    // Mostra il composer dei post e le azioni della timeline
-                    postComposer.style.display = 'block';
-                    timelineActions.style.display = 'block';
+                    // Carica timeline
+                    getTimelineBtn.click();
 
-                    // Mostra info utente nell'header
-                    currentUserInfo.style.display = 'block';
-                    if (currentUserInfo.querySelector('strong')) {
-                        currentUserInfo.querySelector('strong').textContent = u;
-                    }
-
-                    // Carica subito il profilo dell'utente
-                    try {
-                        console.log("Caricamento profilo per l'utente autenticato:", currentUserPub);
-                        const profile = await socialPlugin.getProfile(currentUserPub);
-                        console.log("Profilo utente caricato:", profile);
-                        displayProfile(profile);
-
-                        // Imposta la chiave pubblica nel campo di input
-                        if (userPubInput) {
-                            userPubInput.value = currentUserPub;
-                        }
-                    } catch (profileErr) {
-                        console.error("Errore caricamento profilo dopo login:", profileErr);
-                        showError('Caricamento profilo', profileErr.message || 'Errore recupero dati utente');
-                    }
-
-                    // Carica anche la timeline
-                    setTimeout(loadTimeline, 500);
-
-                    // Sincronizza lo stato dell'autenticazione
-                    syncAuthState();
+                    // Carica anche il profilo
+                    getProfileBtn.click();
 
                     // Carica anche i miei post
                     setTimeout(loadMyPosts, 1000);
+
+                    // Login avvenuto con successo
+                    showResult('Login', 'Accesso effettuato come ' + u);
                 } else {
                     showError('Errore di accesso', (res && res.error) ? res.error : 'Credenziali non valide o risposta non valida');
-                    performLogin.disabled = false;
-                    performLogin.textContent = 'Accedi';
                 }
             } catch (error) {
-                console.error("Errore completo durante il login:", error);
-                showError('Errore di accesso', error.message || 'Errore durante il login');
+                console.error('Errore durante login:', error);
+                showError('Errore di accesso', error.message || 'Si è verificato un errore durante il login');
+            } finally {
                 performLogin.disabled = false;
                 performLogin.textContent = 'Accedi';
             }
@@ -1935,16 +2055,75 @@
             gun = shogun.gun;
             if (socialPlugin) {
                 showResult('Inizializzazione completata', 'Il sistema è pronto per l\'uso');
+
+                // Abilita il pulsante di login manualmente
                 loginBtn.disabled = false;
+
+                // Disabilita il pulsante di inizializzazione
                 initBtn.disabled = true;
                 initBtn.textContent = 'Inizializzato';
 
-                // Mostra la sezione utenti subito dopo l'inizializzazione
-                usersSection.style.display = 'block';
+                // Modifica per Alpine.js - aggiorna lo stato
+                try {
+                    const appContainer = document.querySelector('.app-container');
+                    if (appContainer && appContainer.__x) {
+                        const appData = appContainer.__x.$data;
+                        appData.shogunInitialized = true;
+
+                        // Se siamo nella tab utenti, carica subito gli utenti
+                        if (appData.activeTab === 'users') {
+                            loadAllUsers();
+                        }
+                    } else {
+                        console.warn("Alpine.js non disponibile per l'aggiornamento dello stato");
+                    }
+                } catch (error) {
+                    console.error("Errore nell'aggiornamento dello stato Alpine:", error);
+                }
             } else {
                 showError('Errore', 'Plugin social non trovato');
             }
         };
+
+        // Assicura Alpine.js sia inizializzato correttamente
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log("DOMContentLoaded - Inizializzazione Alpine.js");
+
+            // Verifica se Alpine è caricato
+            if (window.Alpine) {
+                console.log("Alpine.js è caricato correttamente");
+
+                // Se il pulsante 'Accedi' ha già un listener, lo rimuoviamo
+                // per evitare conflitti con Alpine.js
+                if (loginBtn) {
+                    console.log("Rimozione di eventuali listener esistenti sul pulsante login");
+                    loginBtn.replaceWith(loginBtn.cloneNode(true));
+
+                    // Recuperiamo il riferimento aggiornato
+                    const newLoginBtn = document.getElementById('loginBtn');
+                    console.log("Nuovo pulsante login:", newLoginBtn);
+                }
+            } else {
+                console.warn("Alpine.js non sembra essere caricato!");
+            }
+
+            // Verifica se shogun è già inizializzato
+            if (shogun && socialPlugin) {
+                console.log("Shogun è già inizializzato, abilito il pulsante di login");
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                }
+                if (initBtn) {
+                    initBtn.disabled = true;
+                    initBtn.textContent = 'Inizializzato';
+                }
+            } else {
+                console.log("Shogun non è ancora inizializzato");
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                }
+            }
+        });
 
         // Aggiorna login per ricaricare la lista utenti
         performLogin.onclick = async () => {
@@ -2312,22 +2491,8 @@
 
         // Funzione per gestire i tab
         function setupTabs() {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tabName = button.getAttribute('data-tab');
-
-                    // Rimuovi la classe active da tutti i tab
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
-
-                    // Aggiungi la classe active al tab selezionato
-                    button.classList.add('active');
-                    document.getElementById(`${tabName}-tab`).classList.add('active');
-                });
-            });
+            // Non serve più questa funzione dato che ora usiamo Alpine.js
+            // Ma la manteniamo vuota per evitare errori con il codice esistente che la chiama
         }
 
         // Funzione per caricare i miei post
@@ -2553,6 +2718,240 @@
             document.querySelectorAll('.submit-comment').forEach(button => {
                 button.type = 'button'; // Imposta esplicitamente il tipo
             });
+        });
+
+        // Definisco i dati globali di Alpine.js
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('socialApp', () => ({
+                activeTab: 'timeline',
+                isLoggedIn: false,
+                currentUser: '',
+                showPostComposer: false,
+                showTimelineActions: false,
+                showLoginForm: false,
+                shogunInitialized: false,
+                showTutorial: !localStorage.getItem('tutorialShown'),
+
+                init() {
+                    // Inizializza Alpine con i dati esistenti
+                    if (currentUserPub) {
+                        this.isLoggedIn = true;
+                        this.currentUser = currentUserInfo.querySelector('strong').textContent;
+                        this.showPostComposer = true;
+                        this.showTimelineActions = true;
+                    }
+
+                    // Verifica se il login è già visibile (potrebbe essere stato aperto manualmente)
+                    if (loginForm && loginForm.style.display === 'block') {
+                        this.showLoginForm = true;
+                    }
+
+                    // Gestisce callback per login
+                    window.addEventListener('user:login', (event) => {
+                        this.isLoggedIn = true;
+                        this.currentUser = event.detail.username || currentUserPub;
+                        this.showPostComposer = true;
+                        this.showTimelineActions = true;
+                        this.showLoginForm = false;
+
+                        // Mostra l'info utente corrente
+                        document.getElementById('currentUserInfo').style.display = 'block';
+                    });
+
+                    // Mostra il tutorial dopo 2 secondi se è la prima visita
+                    if (this.showTutorial) {
+                        setTimeout(() => {
+                            this.showTutorial = true;
+                        }, 2000);
+                    }
+                },
+
+                toggleLoginForm() {
+                    console.log("Alpine: Toggle login form, prima:", this.showLoginForm);
+
+                    // Verifica se shogun è inizializzato prima di aprire il form
+                    if (!shogun || !socialPlugin) {
+                        console.warn("Tentativo di aprire il form di login ma Shogun non è inizializzato");
+                        showError('Errore', 'Devi prima inizializzare il sistema. Clicca su "Inizializza".');
+                        return;
+                    }
+
+                    this.showLoginForm = !this.showLoginForm;
+                    console.log("Alpine: Toggle login form, dopo:", this.showLoginForm);
+
+                    // Assicura che la visualizzazione UI sia coerente
+                    setTimeout(() => {
+                        if (loginForm) {
+                            loginForm.style.display = this.showLoginForm ? 'block' : 'none';
+
+                            // Focus sul campo username dopo aver mostrato il form
+                            if (this.showLoginForm && usernameInput) {
+                                usernameInput.focus();
+                            }
+                        }
+                    }, 0);
+                },
+
+                changeTab(tab) {
+                    this.activeTab = tab;
+                    // Carica contenuti specifici del tab quando necessario
+                    if (tab === 'myPosts' && this.isLoggedIn) {
+                        loadMyPosts();
+                    } else if (tab === 'users') {
+                        loadAllUsers();
+                    }
+                }
+            }));
+        });
+
+        // ... existing code ...
+        // Funzioni di cambio tab e visualizzazione ui
+        function changeTab(tab) {
+            activeTab = tab;
+
+            // Rimuovi la classe active da tutti i tab e pulsanti
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            document.querySelectorAll('.tab-button').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Aggiungi la classe active al tab e pulsante selezionato
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            document.getElementById(`${tab}-tab-btn`).classList.add('active');
+
+            // Carica contenuti specifici del tab quando necessario
+            if (tab === 'myPosts' && isLoggedIn) {
+                loadMyPosts();
+            } else if (tab === 'users') {
+                loadAllUsers();
+            }
+        }
+
+        // Toggle del form di login
+        function toggleLoginForm() {
+            console.log("Toggle login form chiamato");
+            if (!shogunInitialized) {
+                showError("Errore", "Devi prima inizializzare il sistema");
+                return;
+            }
+
+            showLoginForm = !showLoginForm;
+            const loginForm = document.getElementById('loginForm');
+
+            if (loginForm) {
+                loginForm.style.display = showLoginForm ? 'block' : 'none';
+
+                // Focus su username
+                if (showLoginForm) {
+                    const usernameInput = document.getElementById('username');
+                    if (usernameInput) {
+                        setTimeout(() => usernameInput.focus(), 10);
+                    }
+                }
+            }
+        }
+
+        // Aggiorna lo stato dell'UI con lo stato di login
+        function updateLoginState(user) {
+            isLoggedIn = !!user;
+            if (user) {
+                currentUser = user.alias || user.username || user.pub.substring(0, 8) + '...';
+
+                // Mostra info utente
+                const currentUserInfo = document.getElementById('currentUserInfo');
+                const currentUserName = document.getElementById('currentUserName');
+
+                if (currentUserInfo && currentUserName) {
+                    currentUserInfo.style.display = 'block';
+                    currentUserName.textContent = currentUser;
+                }
+
+                // Abilita pulsanti
+                document.getElementById('createPostBtn').disabled = false;
+
+                // Mostra elementi
+                document.getElementById('postComposer').style.display = 'block';
+                document.getElementById('timelineActions').style.display = 'block';
+            } else {
+                // Nascondi info utente
+                const currentUserInfo = document.getElementById('currentUserInfo');
+                if (currentUserInfo) {
+                    currentUserInfo.style.display = 'none';
+                }
+
+                // Disabilita pulsanti
+                document.getElementById('createPostBtn').disabled = true;
+
+                // Nascondi elementi
+                document.getElementById('postComposer').style.display = 'none';
+                document.getElementById('timelineActions').style.display = 'none';
+            }
+        }
+
+        // Mostra/nascondi tutorial
+        function updateTutorialVisibility() {
+            const tutorialPopup = document.getElementById('tutorialPopup');
+            if (tutorialPopup) {
+                tutorialPopup.style.display = showTutorial ? 'block' : 'none';
+            }
+        }
+
+        // Aggiungi listener per il tutorial
+        document.addEventListener('DOMContentLoaded', function () {
+            const closeTutorialBtn = document.getElementById('closeTutorialBtn');
+            const gotItBtn = document.getElementById('gotItBtn');
+
+            if (closeTutorialBtn) {
+                closeTutorialBtn.addEventListener('click', function () {
+                    showTutorial = false;
+                    updateTutorialVisibility();
+                });
+            }
+
+            if (gotItBtn) {
+                gotItBtn.addEventListener('click', function () {
+                    showTutorial = false;
+                    localStorage.setItem('tutorialShown', 'true');
+                    updateTutorialVisibility();
+                });
+            }
+
+            // Inizializza visibilità tutorial
+            updateTutorialVisibility();
+
+            // Imposta il tab iniziale
+            changeTab('timeline');
+        });
+
+        // ... existing code ...
+        // Inizializza elementi dell'interfaccia al caricamento della pagina
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log("DOMContentLoaded - Inizializzazione UI");
+
+            // Verifica se shogun è già inizializzato
+            if (shogun && socialPlugin) {
+                console.log("Shogun è già inizializzato, abilito il pulsante di login");
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                }
+                if (initBtn) {
+                    initBtn.disabled = true;
+                    initBtn.textContent = 'Inizializzato';
+                }
+                shogunInitialized = true;
+            } else {
+                console.log("Shogun non è ancora inizializzato");
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                }
+                shogunInitialized = false;
+            }
+
+            // Imposta il tab attivo iniziale
+            changeTab('timeline');
         });
     </script>
 </body>

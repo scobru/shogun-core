@@ -21,7 +21,7 @@ export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
   private social: Social | null = null;
 
   public get user() {
-    return this.social?.user || null;
+    return this.social?.user;
   }
 
   initialize(core: ShogunCore): void {
