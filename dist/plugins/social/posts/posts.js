@@ -885,6 +885,7 @@ class PostService extends eventEmitter_1.EventEmitter {
             // Funzione di pulizia
             return () => {
                 console.log("unsub");
+                unsub.off();
             };
         });
     }
