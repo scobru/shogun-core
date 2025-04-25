@@ -3,7 +3,7 @@
  */
 import { ethers } from "ethers";
 import { ShogunStorage } from "../../storage/storage";
-import { EphemeralKeyPair, StealthData, StealthAddressResult } from "../../types/stealth";
+import { EphemeralKeyPair, StealthData, StealthAddressResult } from "./types";
 declare global {
     interface Window {
         Stealth?: typeof Stealth;

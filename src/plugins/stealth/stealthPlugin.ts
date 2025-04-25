@@ -1,12 +1,12 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Stealth } from "./stealth";
-import { StealthPluginInterface } from "./types";
 import {
   StealthAddressResult,
   StealthData,
   EphemeralKeyPair,
-} from "../../types/stealth";
+  StealthPluginInterface
+} from "./types";
 import { log } from "../../utils/logger";
 import { ethers } from "ethers";
 

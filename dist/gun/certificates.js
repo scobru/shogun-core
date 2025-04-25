@@ -8,7 +8,6 @@ exports.generateCerts = generateCerts;
 exports.verifyCert = verifyCert;
 exports.extractCertPolicy = extractCertPolicy;
 const gun_1 = __importDefault(require("gun"));
-require("gun/sea");
 /**
  * Issues a certificate using the SEA API
  * @param options Certificate options

@@ -41,36 +41,27 @@ class SocialPlugin extends base_1.BasePlugin {
             customFields: {},
         };
     }
-    async post(content) {
-        return this.social.post(content);
-    }
-    /**
-     * Crea un nuovo post con immagine allegata
-     * @param content Contenuto del post
-     * @param imageData Dati dell'immagine (Base64 o URL)
-     * @returns Post creato o null in caso di errore
-     */
-    async postWithImage(content, imageData) {
+    async post(content, options) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
         if (typeof this.social.post === "function") {
-            return this.social.post(content, imageData);
+            return this.social.post(content, options);
         }
-        (0, logger_1.logError)("postWithImage method not available");
+        (0, logger_1.logError)("post method not available");
         return null;
     }
     /**
-     * Cerca post per hashtag
-     * @param hashtag Hashtag da cercare (con o senza #)
-     * @returns Array di post che contengono l'hashtag
+     * Cerca post per topic o hashtag
+     * @param topic Argomento o hashtag da cercare
+     * @returns Array di post che contengono l'argomento/hashtag
      */
-    async searchByHashtag(hashtag) {
+    async searchByTopic(topic) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.searchByHashtag === "function") {
-            return this.social.searchByHashtag(hashtag);
+        if (typeof this.social.searchByTopic === "function") {
+            return this.social.searchByTopic(topic);
         }
-        (0, logger_1.logError)("searchByHashtag method not available");
+        (0, logger_1.logError)("searchByTopic method not available");
         return [];
     }
     async likePost(postId) {
@@ -257,19 +248,19 @@ class SocialPlugin extends base_1.BasePlugin {
         return (0, rxjs_1.of)(null);
     }
     /**
-     * Cerca post per hashtag con aggiornamenti in tempo reale
-     * @param hashtag Hashtag da cercare
-     * @returns Observable di post con l'hashtag specificato
+     * Cerca post per topic con aggiornamenti in tempo reale
+     * @param topic Argomento o hashtag da cercare
+     * @returns Observable di post con il topic specificato
      */
-    searchByHashtagObservable(hashtag) {
+    searchByTopicObservable(topic) {
         if (!this.social) {
             (0, logger_1.logError)("Social plugin not initialized");
             return (0, rxjs_1.of)([]);
         }
-        if (typeof this.social.searchByHashtagObservable === "function") {
-            return this.social.searchByHashtagObservable(hashtag);
+        if (typeof this.social.searchByTopicObservable === "function") {
+            return this.social.searchByTopicObservable(topic);
         }
-        (0, logger_1.logError)("searchByHashtagObservable method not available");
+        (0, logger_1.logError)("searchByTopicObservable method not available");
         return (0, rxjs_1.of)([]);
     }
     /**

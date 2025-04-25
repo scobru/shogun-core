@@ -1,7 +1,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { SocialPluginInterface } from "./types";
-import { UserProfile, TimelineResult, Post, Comment, Message } from "../../types/social";
+import { UserProfile, TimelineResult, Post, Comment, Message, SocialPluginInterface } from "./types";
 import { Observable } from "rxjs";
 export declare class SocialPlugin extends BasePlugin implements SocialPluginInterface {
     name: string;
@@ -12,20 +11,18 @@ export declare class SocialPlugin extends BasePlugin implements SocialPluginInte
     initialize(core: ShogunCore): void;
     destroy(): void;
     getProfile(pub: string): Promise<UserProfile>;
-    post(content: string): Promise<Post | null>;
+    post(content: string, options?: {
+        title?: string;
+        topic?: string;
+        attachment?: string;
+        reference?: string;
+    }): Promise<Post | null>;
     /**
-     * Crea un nuovo post con immagine allegata
-     * @param content Contenuto del post
-     * @param imageData Dati dell'immagine (Base64 o URL)
-     * @returns Post creato o null in caso di errore
+     * Cerca post per topic o hashtag
+     * @param topic Argomento o hashtag da cercare
+     * @returns Array di post che contengono l'argomento/hashtag
      */
-    postWithImage(content: string, imageData: string): Promise<Post | null>;
-    /**
-     * Cerca post per hashtag
-     * @param hashtag Hashtag da cercare (con o senza #)
-     * @returns Array di post che contengono l'hashtag
-     */
-    searchByHashtag(hashtag: string): Promise<Post[]>;
+    searchByTopic(topic: string): Promise<Post[]>;
     likePost(postId: string): Promise<boolean>;
     unlikePost(postId: string): Promise<boolean>;
     getLikes(postId: string): Promise<string[]>;
@@ -82,11 +79,11 @@ export declare class SocialPlugin extends BasePlugin implements SocialPluginInte
      */
     getEnrichedPostObservable(postId: string): Observable<any>;
     /**
-     * Cerca post per hashtag con aggiornamenti in tempo reale
-     * @param hashtag Hashtag da cercare
-     * @returns Observable di post con l'hashtag specificato
+     * Cerca post per topic con aggiornamenti in tempo reale
+     * @param topic Argomento o hashtag da cercare
+     * @returns Observable di post con il topic specificato
      */
-    searchByHashtagObservable(hashtag: string): Observable<Post[]>;
+    searchByTopicObservable(topic: string): Observable<Post[]>;
     /**
      * Osserva un profilo utente in tempo reale
      * @param pub Chiave pubblica dell'utente

@@ -5,17 +5,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shogun Auth</title>
-  <link rel="stylesheet" href="auth.css">
-
+  <link rel="stylesheet" href="shogun.css">
 </head>
 
 <body>
   <div class="container">
-    <h1>Shogun Auth</h1>
+    <div class="app-header">
+      <div class="app-title">Shogun Auth</div>
+    </div>
 
     <div class="action-group">
       <h2>Inizializzazione</h2>
-      <button id="initBtn">Inizializza Shogun</button>
+      <button id="initBtn" type="button" class="primary-button">Inizializza Shogun</button>
       <div id="supportStatus"></div>
     </div>
 
@@ -27,13 +28,15 @@
         <div class="auth-method">
           <h3>Username e Password</h3>
           <form id="loginForm" onsubmit="return false;">
-            <input type="text" id="username" placeholder="Username"
-              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
-            <input type="password" id="password" placeholder="Password"
-              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="current-password">
-            <div>
-              <button type="button" id="loginBtn">Login</button>
-              <button type="button" id="signupBtn">Registrati</button>
+            <div class="form-group">
+              <input type="text" id="username" placeholder="Username" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+            </div>
+            <div class="form-actions">
+              <button type="button" id="loginBtn" type="button" class="action-button">Login</button>
+              <button type="button" id="signupBtn" type="button" class="action-button">Registrati</button>
             </div>
           </form>
         </div>
@@ -42,9 +45,10 @@
         <div class="auth-method">
           <h3>WebAuthn <span id="webauthnStatus" class="status-badge"></span></h3>
           <form id="webauthnForm" onsubmit="return false;">
-            <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn"
-              style="padding: 8px; width: 90%; margin-bottom: 10px;" autocomplete="username">
-            <div>
+            <div class="form-group">
+              <input type="text" id="webauthnUsername" placeholder="Username per WebAuthn" autocomplete="username">
+            </div>
+            <div class="form-actions">
               <button type="button" id="webauthnLoginBtn" disabled>Login con WebAuthn</button>
               <button type="button" id="webauthnSignupBtn" disabled>Registra con WebAuthn</button>
             </div>
@@ -54,9 +58,8 @@
         <!-- MetaMask -->
         <div class="auth-method">
           <h3>MetaMask <span id="metamaskStatus" class="status-badge"></span></h3>
-          <div id="metamaskAddress" style="font-size: 12px; word-break: break-all; margin-bottom: 10px; color: #666;">
-            Indirizzo non rilevato</div>
-          <div>
+          <div id="metamaskAddress" class="user-id mb-2">Indirizzo non rilevato</div>
+          <div class="form-actions">
             <button id="metamaskConnectBtn">Connetti MetaMask</button>
             <button id="metamaskLoginBtn">Login con MetaMask</button>
             <button id="metamaskSignupBtn">Registra con MetaMask</button>
@@ -64,15 +67,17 @@
         </div>
       </div>
 
-      <div style="margin-top: 15px;">
-        <button id="logoutBtn">Logout</button>
+      <div class="mt-2">
+        <button id="logoutBtn" type="button" class="action-button">Logout</button>
       </div>
     </div>
 
     <div class="action-group">
       <h2>Wallet</h2>
-      <button id="createWalletBtn">Crea Wallet</button>
-      <button id="getWalletsBtn">Ottieni Wallets</button>
+      <div class="form-actions">
+        <button id="createWalletBtn" type="button" class="action-button">Crea Wallet</button>
+        <button id="getWalletsBtn" type="button" class="action-button">Ottieni Wallets</button>
+      </div>
     </div>
 
     <div id="results">
@@ -81,7 +86,7 @@
   </div>
 
   <!-- Includi la libreria Shogun Core dalla directory dist/browser -->
-  <script src="../../dist/browser/shogun-core.js"></script>
+  <script src="../../dist/browser/shogun-core.js" defer></script>
 
   <script>
     // Riferimenti agli elementi DOM
@@ -179,7 +184,9 @@
     }
 
     // Inizializzazione di Shogun
-    initBtn.addEventListener('click', () => {
+    initBtn.addEventListener('click', function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       try {
         // Configurazione per l'ambiente browser
         const config = {
@@ -245,7 +252,9 @@
     });
 
     // Login con username e password
-    loginBtn.addEventListener('click', async () => {
+    loginBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Login', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -268,7 +277,9 @@
     });
 
     // Registrazione con username e password
-    signupBtn.addEventListener('click', async () => {
+    signupBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Registrazione', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -292,12 +303,15 @@
     });
 
     // Collegamento a MetaMask
-    metamaskConnectBtn.addEventListener('click', async () => {
+    metamaskConnectBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
       await connectMetaMask();
     });
 
     // Login con MetaMask
-    metamaskLoginBtn.addEventListener('click', async () => {
+    metamaskLoginBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Login MetaMask', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -357,7 +371,9 @@
     });
 
     // Registrazione con MetaMask
-    metamaskSignupBtn.addEventListener('click', async () => {
+    metamaskSignupBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Registrazione MetaMask', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -415,7 +431,9 @@
     });
 
     // Login con WebAuthn
-    webauthnLoginBtn.addEventListener('click', async () => {
+    webauthnLoginBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Login WebAuthn', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -441,7 +459,9 @@
     });
 
     // Registrazione con WebAuthn
-    webauthnSignupBtn.addEventListener('click', async () => {
+    webauthnSignupBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Registrazione WebAuthn', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -467,7 +487,9 @@
     });
 
     // Logout
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Logout', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -482,7 +504,9 @@
     });
 
     // Creazione di un nuovo wallet
-    createWalletBtn.addEventListener('click', async () => {
+    createWalletBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Creazione Wallet', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -507,7 +531,9 @@
     });
 
     // Ottenimento dei wallet esistenti
-    getWalletsBtn.addEventListener('click', async () => {
+    getWalletsBtn.addEventListener('click', async function (e) {
+      e.preventDefault(); // Previene il comportamento di default
+
       if (!shogun) {
         showError('Ottenimento Wallets', new Error('Shogun non è stato inizializzato!'));
         return;
@@ -528,6 +554,20 @@
         showResult('Wallets Disponibili', wallets);
       } catch (error) {
         showError('Ottenimento Wallets', error);
+      }
+    });
+
+    // Previeni il submit del form su tutti gli input
+    document.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        e.preventDefault(); // Previene il refresh della pagina
+      }
+    });
+
+    // Previeni il comportamento predefinito per tutti i pulsanti nei form
+    document.addEventListener('click', function (e) {
+      if (e.target.tagName === 'BUTTON' && e.target.type !== 'button') {
+        e.preventDefault(); // Previene il refresh della pagina per i pulsanti senza type="button"
       }
     });
 

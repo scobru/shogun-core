@@ -1,5 +1,4 @@
 import Gun from "gun";
-import "gun/sea";
 
 /**
  * Interface for certificate policy
@@ -83,7 +82,7 @@ export async function generateCerts({
  */
 export async function verifyCert(
   cert: string,
-  pub: string | { pub: string },
+  pub: string | { pub: string }
 ): Promise<any> {
   if (!cert) return null;
   try {

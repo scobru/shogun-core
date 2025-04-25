@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MetaMask = void 0;
 /**
@@ -9,14 +6,12 @@ exports.MetaMask = void 0;
  */
 const ethers_1 = require("ethers");
 const logger_1 = require("../../utils/logger");
-const config_1 = __importDefault(require("../../config"));
 const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
 /**
  * Class for MetaMask connection
  */
 class MetaMask extends eventEmitter_1.EventEmitter {
-    AUTH_DATA_TABLE;
     MESSAGE_TO_SIGN = "I Love Shogun!";
     DEFAULT_CONFIG = {
         cacheDuration: 30 * 60 * 1000, // 30 minutes
@@ -32,8 +27,6 @@ class MetaMask extends eventEmitter_1.EventEmitter {
     constructor(config = {}) {
         super();
         this.config = { ...this.DEFAULT_CONFIG, ...config };
-        this.AUTH_DATA_TABLE =
-            config_1.default.GUN_TABLES.AUTHENTICATIONS || "Authentications";
         this.initProvider();
         this.setupEventListeners();
     }

@@ -1,8 +1,7 @@
 import { ShogunStorage } from "../../storage/storage";
-import { WalletInfo } from "../../types/shogun";
 import { ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions } from "../../types/wallet";
+import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions, WalletInfo } from "./types";
 export type WalletPath = IWalletPath;
 export type BalanceCache = IBalanceCache;
 export type WalletExport = IWalletExport;

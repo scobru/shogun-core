@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { DIDPluginInterface } from "./types";
-import { DIDCreateOptions } from "../../types/did";
+import { DIDPluginInterface, DIDCreateOptions } from "./types";
 import { AuthResult } from "../../types/shogun";
 /**
  * Plugin per la gestione delle identità decentralizzate (DID) in ShogunCore

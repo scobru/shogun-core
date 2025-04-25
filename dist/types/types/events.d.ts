@@ -1,4 +1,4 @@
-import { EventEmitter } from "./utils/eventEmitter";
+import { EventEmitter } from "../utils/eventEmitter";
 /**
  * Interface representing authentication event data
  * @interface AuthEventData

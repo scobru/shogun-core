@@ -16,6 +16,10 @@ module.exports = {
   },
   resolve: {
     extensions: [".ts", ".js"],
+    alias: {
+      // Alias per le dipendenze di gun, non per i file locali
+      gun$: path.resolve(__dirname, "node_modules/gun"),
+    },
     fallback: {
       crypto: require.resolve("crypto-browserify"),
       stream: require.resolve("stream-browserify"),
@@ -41,6 +45,11 @@ module.exports = {
     new webpack.ProvidePlugin({
       Buffer: ["buffer", "Buffer"],
       process: "process/browser",
+    }),
+    // Aggiungi un polyfill per crypto.randomUUID
+    new webpack.DefinePlugin({
+      "crypto.randomUUID":
+        'function() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0, v = c == "x" ? r : (r & 0x3 | 0x8); return v.toString(16); })}',
     }),
     // Ignora avvisi specifici per Gun.js
     new webpack.IgnorePlugin({

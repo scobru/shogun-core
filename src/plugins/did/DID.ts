@@ -10,8 +10,7 @@ import {
   DIDRegistryConfig,
   DIDCacheEntry,
   DIDResolutionOptions,
-} from "../../types/did";
-import { IGunInstance } from "../../types/gun";
+} from "./types";
 
 // Re-export types from types/did.ts
 export type { DIDDocument, DIDResolutionResult, DIDCreateOptions };

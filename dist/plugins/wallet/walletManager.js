@@ -8,7 +8,7 @@ const logger_1 = require("../../utils/logger");
 const sea_1 = __importDefault(require("gun/sea"));
 const ethers_1 = require("ethers");
 const eventEmitter_1 = require("../../utils/eventEmitter");
-const wallet_1 = require("../../types/wallet");
+const types_1 = require("./types");
 /**
  * Class that manages Ethereum wallet functionality including:
  * - Wallet creation and derivation
@@ -196,8 +196,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                         if (tx && typeof tx === "object") {
                             tx.status = "success";
                         }
-                        this.emit(wallet_1.WalletEventType.TRANSACTION_CONFIRMED, {
-                            type: wallet_1.WalletEventType.TRANSACTION_CONFIRMED,
+                        this.emit(types_1.WalletEventType.TRANSACTION_CONFIRMED, {
+                            type: types_1.WalletEventType.TRANSACTION_CONFIRMED,
                             data: { txHash, receipt },
                             timestamp: Date.now(),
                         });
@@ -207,8 +207,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                         if (tx && typeof tx === "object") {
                             tx.status = "failed";
                         }
-                        this.emit(wallet_1.WalletEventType.ERROR, {
-                            type: wallet_1.WalletEventType.ERROR,
+                        this.emit(types_1.WalletEventType.ERROR, {
+                            type: types_1.WalletEventType.ERROR,
                             data: { txHash, error: "Transaction failed" },
                             timestamp: Date.now(),
                         });
@@ -744,8 +744,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                 balance: formattedBalance,
                 timestamp: now,
             });
-            this.emit(wallet_1.WalletEventType.BALANCE_UPDATED, {
-                type: wallet_1.WalletEventType.BALANCE_UPDATED,
+            this.emit(types_1.WalletEventType.BALANCE_UPDATED, {
+                type: types_1.WalletEventType.BALANCE_UPDATED,
                 data: { address, balance: formattedBalance },
                 timestamp: now,
             });
@@ -794,8 +794,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                     // Store pending transaction
                     this.pendingTransactions.set(txResponse.hash, txResponse);
                     // Emit event
-                    this.emit(wallet_1.WalletEventType.TRANSACTION_SENT, {
-                        type: wallet_1.WalletEventType.TRANSACTION_SENT,
+                    this.emit(types_1.WalletEventType.TRANSACTION_SENT, {
+                        type: types_1.WalletEventType.TRANSACTION_SENT,
                         data: { txHash: txResponse.hash, tx },
                         timestamp: Date.now(),
                     });
@@ -817,8 +817,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
         }
         catch (error) {
             (0, logger_1.logError)("Error sending transaction:", error);
-            this.emit(wallet_1.WalletEventType.ERROR, {
-                type: wallet_1.WalletEventType.ERROR,
+            this.emit(types_1.WalletEventType.ERROR, {
+                type: types_1.WalletEventType.ERROR,
                 data: { error, wallet: wallet.address },
                 timestamp: Date.now(),
             });
@@ -1616,8 +1616,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
             }
             // Save updated paths
             await this.saveWalletPathsToLocalStorage();
-            this.emit(wallet_1.WalletEventType.WALLET_IMPORTED, {
-                type: wallet_1.WalletEventType.WALLET_IMPORTED,
+            this.emit(types_1.WalletEventType.WALLET_IMPORTED, {
+                type: types_1.WalletEventType.WALLET_IMPORTED,
                 data: { count: importedCount },
                 timestamp: Date.now(),
             });

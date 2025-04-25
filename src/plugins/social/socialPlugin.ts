@@ -2,7 +2,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Social } from "./social";
-import { SocialPluginInterface } from "./types";
 import { log, logError } from "../../utils/logger";
 import {
   UserProfile,
@@ -10,7 +9,8 @@ import {
   Post,
   Comment,
   Message,
-} from "../../types/social";
+  SocialPluginInterface,
+} from "./types";
 import { Observable, of } from "rxjs";
 
 export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
@@ -53,39 +53,34 @@ export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
     };
   }
 
-  async post(content: string): Promise<Post | null> {
-    return this.social!.post(content);
-  }
-
-  /**
-   * Crea un nuovo post con immagine allegata
-   * @param content Contenuto del post
-   * @param imageData Dati dell'immagine (Base64 o URL)
-   * @returns Post creato o null in caso di errore
-   */
-  async postWithImage(
+  async post(
     content: string,
-    imageData: string
+    options?: {
+      title?: string;
+      topic?: string;
+      attachment?: string;
+      reference?: string;
+    }
   ): Promise<Post | null> {
     if (!this.social) throw new Error("Social plugin not initialized");
     if (typeof (this.social as any).post === "function") {
-      return (this.social as any).post(content, imageData);
+      return (this.social as any).post(content, options);
     }
-    logError("postWithImage method not available");
+    logError("post method not available");
     return null;
   }
 
   /**
-   * Cerca post per hashtag
-   * @param hashtag Hashtag da cercare (con o senza #)
-   * @returns Array di post che contengono l'hashtag
+   * Cerca post per topic o hashtag
+   * @param topic Argomento o hashtag da cercare
+   * @returns Array di post che contengono l'argomento/hashtag
    */
-  async searchByHashtag(hashtag: string): Promise<Post[]> {
+  async searchByTopic(topic: string): Promise<Post[]> {
     if (!this.social) throw new Error("Social plugin not initialized");
-    if (typeof (this.social as any).searchByHashtag === "function") {
-      return (this.social as any).searchByHashtag(hashtag);
+    if (typeof (this.social as any).searchByTopic === "function") {
+      return (this.social as any).searchByTopic(topic);
     }
-    logError("searchByHashtag method not available");
+    logError("searchByTopic method not available");
     return [];
   }
 
@@ -299,21 +294,21 @@ export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
   }
 
   /**
-   * Cerca post per hashtag con aggiornamenti in tempo reale
-   * @param hashtag Hashtag da cercare
-   * @returns Observable di post con l'hashtag specificato
+   * Cerca post per topic con aggiornamenti in tempo reale
+   * @param topic Argomento o hashtag da cercare
+   * @returns Observable di post con il topic specificato
    */
-  searchByHashtagObservable(hashtag: string): Observable<Post[]> {
+  searchByTopicObservable(topic: string): Observable<Post[]> {
     if (!this.social) {
       logError("Social plugin not initialized");
       return of([]);
     }
 
-    if (typeof (this.social as any).searchByHashtagObservable === "function") {
-      return (this.social as any).searchByHashtagObservable(hashtag);
+    if (typeof (this.social as any).searchByTopicObservable === "function") {
+      return (this.social as any).searchByTopicObservable(topic);
     }
 
-    logError("searchByHashtagObservable method not available");
+    logError("searchByTopicObservable method not available");
     return of([]);
   }
 

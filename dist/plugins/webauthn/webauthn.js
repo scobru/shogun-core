@@ -10,7 +10,7 @@ const ethers_1 = require("ethers");
 const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
 const logger_1 = require("../../utils/logger");
-const webauthn_1 = require("../../types/webauthn");
+const types_1 = require("./types");
 /**
  * Constants for WebAuthn configuration
  */
@@ -71,8 +71,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                 try {
                     const result = await this.generateCredentials(username, credentials, isNewDevice);
                     if (result.success) {
-                        this.emit(webauthn_1.WebAuthnEventType.DEVICE_REGISTERED, {
-                            type: webauthn_1.WebAuthnEventType.DEVICE_REGISTERED,
+                        this.emit(types_1.WebAuthnEventType.DEVICE_REGISTERED, {
+                            type: types_1.WebAuthnEventType.DEVICE_REGISTERED,
                             data: { username, deviceInfo: result.deviceInfo },
                             timestamp: Date.now(),
                         });
@@ -91,8 +91,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             throw lastError || new Error("Failed to create account after retries");
         }
         catch (error) {
-            this.emit(webauthn_1.WebAuthnEventType.ERROR, {
-                type: webauthn_1.WebAuthnEventType.ERROR,
+            this.emit(types_1.WebAuthnEventType.ERROR, {
+                type: types_1.WebAuthnEventType.ERROR,
                 data: { error: error.message },
                 timestamp: Date.now(),
             });
@@ -141,8 +141,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     credentialId: this.bufferToBase64(assertion.rawId),
                     deviceInfo,
                 };
-                this.emit(webauthn_1.WebAuthnEventType.AUTHENTICATION_SUCCESS, {
-                    type: webauthn_1.WebAuthnEventType.AUTHENTICATION_SUCCESS,
+                this.emit(types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS, {
+                    type: types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS,
                     data: { username, deviceInfo },
                     timestamp: Date.now(),
                 });
@@ -155,8 +155,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown WebAuthn error";
-            this.emit(webauthn_1.WebAuthnEventType.AUTHENTICATION_FAILED, {
-                type: webauthn_1.WebAuthnEventType.AUTHENTICATION_FAILED,
+            this.emit(types_1.WebAuthnEventType.AUTHENTICATION_FAILED, {
+                type: types_1.WebAuthnEventType.AUTHENTICATION_FAILED,
                 data: { username, error: errorMessage },
                 timestamp: Date.now(),
             });

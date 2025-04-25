@@ -5,20 +5,13 @@
  * - Dynamic peer linking
  * - Support for remove/unset operations
  */
-import "gun/sea";
-import { IGunInstance, IGunUserInstance } from "gun/types";
-import { GunDBOptions } from "../types/gun";
+import { IGunInstance, IGunUserInstance } from "gun";
+import { GunDBOptions } from "./types";
 import { GunCollections } from "./collections";
 import { GunConsensus } from "./consensus";
 import * as GunErrors from "./errors";
 import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
-export interface AuthResult {
-    success: boolean;
-    userPub?: string;
-    username?: string;
-    error?: string;
-}
 declare class GunDB {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;

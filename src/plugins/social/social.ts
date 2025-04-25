@@ -1,6 +1,5 @@
 import { logDebug, logError, logWarn } from "../../utils/logger";
-import { GunDataRecord } from "../../types/gun";
-import * as crypto from "crypto";
+import { GunDataRecord } from "../../gun/types";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
   Post,
@@ -11,7 +10,7 @@ import {
   PostMessage,
   MessageType,
   MessageSubtype,
-} from "../../types/social";
+} from "./types";
 import { GunRxJS } from "../../gun/rxjs-integration";
 import { Observable, of, combineLatest } from "rxjs";
 import { map, switchMap, tap, catchError } from "rxjs/operators";
@@ -301,8 +300,16 @@ export class Social extends EventEmitter {
   /**
    * Crea un nuovo post - delegato a PostService
    */
-  public async post(content: string, imageData?: string): Promise<Post | null> {
-    return this.postService.createPost(content, imageData);
+  public async post(
+    content: string,
+    options?: {
+      title?: string;
+      topic?: string;
+      attachment?: string;
+      reference?: string;
+    }
+  ): Promise<Post | null> {
+    return this.postService.createPost(content, options);
   }
 
   /**
@@ -366,10 +373,10 @@ export class Social extends EventEmitter {
   }
 
   /**
-   * Cerca post per hashtag - delegato a PostService
+   * Cerca post per topic/hashtag - delegato a PostService
    */
-  public async searchByHashtag(hashtag: string): Promise<Post[]> {
-    return this.postService.searchByHashtag(hashtag);
+  public async searchByTopic(topic: string): Promise<Post[]> {
+    return this.postService.searchByTopic(topic);
   }
 
   /**

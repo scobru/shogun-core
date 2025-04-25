@@ -193,9 +193,7 @@ class ShogunCore {
             (0, logger_1.logError)("Error registering builtin plugins:", error);
         }
     }
-    // *********************************************************************************************************
     // 🔌 PLUGIN MANAGER 🔌
-    // *********************************************************************************************************
     /**
      * Register a new plugin with the SDK
      * @param plugin The plugin to register
@@ -281,15 +279,13 @@ class ShogunCore {
                 };
         }
     }
-    // *********************************************************************************************************
     // 🔄 RXJS INTEGRATION 🔄
-    // *********************************************************************************************************
     /**
      * Observe a Gun node for changes
      * @param path - Path to observe (can be a string or a Gun chain)
      * @returns Observable that emits whenever the node changes
      */
-    observe(path) {
+    rxGet(path) {
         return this.rx.observe(path);
     }
     /**
@@ -304,7 +300,7 @@ class ShogunCore {
     /**
      * Put data and return an Observable
      * @param path - Path where to put the data
-     * @param data - Data to put
+     * @param oata - Data to put
      * @returns Observable that completes when the put is acknowledged
      */
     rxPut(path, data) {
@@ -324,7 +320,7 @@ class ShogunCore {
      * @param path - Path to get data from
      * @returns Observable that emits the data once
      */
-    onceObservable(path) {
+    rxOnce(path) {
         return this.rx.once(path);
     }
     /**
@@ -658,9 +654,7 @@ class ShogunCore {
             }
         }, 100); // Ritarda leggermente l'esecuzione per dare priorità al completamento della registrazione
     }
-    // *********************************************************************************************************
     // 🤫 PRIVATE HELPER METHODS 🤫
-    // *********************************************************************************************************
     /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
@@ -784,9 +778,7 @@ class ShogunCore {
             }
         });
     }
-    // *********************************************************************************************************
     // 🔫 GUN ACTIONS 🔫
-    // *********************************************************************************************************
     /**
      * Retrieves data from a Gun node at the specified path
      * @param path - The path to the Gun node
@@ -858,9 +850,7 @@ class ShogunCore {
             });
         });
     }
-    // *********************************************************************************************************
     // 🔌 PROVIDER 🔌
-    // *********************************************************************************************************
     /**
      * Set the RPC URL used for Ethereum network connections
      * @param rpcUrl The RPC provider URL to use
@@ -892,9 +882,7 @@ class ShogunCore {
             ? (this.provider.connection?.url ?? null)
             : null;
     }
-    // *********************************************************************************************************
     // 📢 EVENT EMITTER 📢
-    // *********************************************************************************************************
     /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
@@ -955,5 +943,5 @@ var webauthn_1 = require("./plugins/webauthn/webauthn");
 Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_1.Webauthn; } });
 var storage_2 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_2.ShogunStorage; } });
-var events_1 = require("./events");
+var events_1 = require("./types/events");
 Object.defineProperty(exports, "ShogunEventEmitter", { enumerable: true, get: function () { return events_1.ShogunEventEmitter; } });

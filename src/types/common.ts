@@ -1,8 +1,4 @@
 /**
- * Common types shared across modules
- */
-
-/**
  * Base event interface
  */
 export interface BaseEvent {

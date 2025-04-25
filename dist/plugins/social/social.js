@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Social = void 0;
 const logger_1 = require("../../utils/logger");
 const eventEmitter_1 = require("../../utils/eventEmitter");
-const social_1 = require("../../types/social");
+const types_1 = require("./types");
 const rxjs_integration_1 = require("../../gun/rxjs-integration");
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
@@ -266,8 +266,8 @@ class Social extends eventEmitter_1.EventEmitter {
     /**
      * Crea un nuovo post - delegato a PostService
      */
-    async post(content, imageData) {
-        return this.postService.createPost(content, imageData);
+    async post(content, options) {
+        return this.postService.createPost(content, options);
     }
     /**
      * Ottieni la timeline - delegato a PostService
@@ -313,10 +313,10 @@ class Social extends eventEmitter_1.EventEmitter {
         return likes.length;
     }
     /**
-     * Cerca post per hashtag - delegato a PostService
+     * Cerca post per topic/hashtag - delegato a PostService
      */
-    async searchByHashtag(hashtag) {
-        return this.postService.searchByHashtag(hashtag);
+    async searchByTopic(topic) {
+        return this.postService.searchByTopic(topic);
     }
     /**
      * Elimina un post - delegato a PostService
@@ -563,8 +563,8 @@ class Social extends eventEmitter_1.EventEmitter {
                 // Crea messaggio di tipo PostMessage
                 const postMsg = {
                     id,
-                    type: social_1.MessageType.POST,
-                    subtype: social_1.MessageSubtype.EMPTY,
+                    type: types_1.MessageType.POST,
+                    subtype: types_1.MessageSubtype.EMPTY,
                     creator,
                     createdAt,
                     payload: {

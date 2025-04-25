@@ -7,7 +7,7 @@ interface CertificateCallbackResponse {
 }
 type CertificateCallback = (response: CertificateCallbackResponse) => void;
 export declare class CertificateService {
-    private gun;
+    private readonly gun;
     constructor(gunInstance: IGunInstance);
     generateFriendRequestsCertificate(callback?: CertificateCallback): Promise<void>;
     generateAddFriendCertificate(publicKey: string, callback?: CertificateCallback): Promise<void>;

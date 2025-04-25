@@ -5,7 +5,7 @@ import { Webauthn } from "../plugins/webauthn/webauthn";
 import { MetaMask } from "../plugins/metamask/metamask";
 import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
-import { GunDBOptions } from "./gun";
+import { GunDBOptions } from "../gun/types";
 import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
@@ -58,6 +58,7 @@ export interface DID {
         error?: string;
     }>;
 }
+export type AuthMethod = "password" | "webauthn" | "metamask";
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -67,6 +68,7 @@ export interface AuthResult {
     credentialId?: string;
     did?: string;
     wallet?: any;
+    authMethod?: AuthMethod;
 }
 /**
  * Sign up result interface
@@ -123,11 +125,11 @@ export interface IShogunCore extends PluginManager {
     getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
     logout(): void;
     isLoggedIn(): boolean;
-    observe<T>(path: string | any): Observable<T>;
+    rxGet<T>(path: string | any): Observable<T>;
     match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
     rxPut<T>(path: string | any, data: T): Observable<T>;
     rxSet<T>(path: string | any, data: T): Observable<T>;
-    onceObservable<T>(path: string | any): Observable<T>;
+    rxOnce<T>(path: string | any): Observable<T>;
     compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
     rxUserPut<T>(path: string, data: T): Observable<T>;
     observeUser<T>(path: string): Observable<T>;
@@ -217,12 +219,6 @@ export interface ShogunSDKConfig {
         /** List of plugins to automatically register on initialization */
         autoRegister?: ShogunPlugin[];
     };
-}
-export interface WalletInfo {
-    wallet: any;
-    path: string;
-    address: string;
-    getAddressString(): string;
 }
 export interface ShogunEvents {
     error: (data: {

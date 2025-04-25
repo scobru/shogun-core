@@ -1,7 +1,7 @@
 /**
  * Generic utility functions
  */
-import { IGunChainReference } from "../types/gun";
+import { IGunChainReference } from "../gun/types";
 
 /**
  * Checks if an object is a Gun instance

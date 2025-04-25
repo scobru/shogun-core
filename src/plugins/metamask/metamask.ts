@@ -12,7 +12,7 @@ import {
   EthereumProvider,
   SignatureCache,
   MetaMaskConfig,
-} from "../../types/metamask";
+} from "./types";
 
 // Extend the Window interface to include ethereum
 declare global {
@@ -34,7 +34,6 @@ declare global {
  * Class for MetaMask connection
  */
 class MetaMask extends EventEmitter {
-  public readonly AUTH_DATA_TABLE: string;
   private readonly MESSAGE_TO_SIGN = "I Love Shogun!";
   private readonly DEFAULT_CONFIG: MetaMaskConfig = {
     cacheDuration: 30 * 60 * 1000, // 30 minutes
@@ -52,8 +51,6 @@ class MetaMask extends EventEmitter {
   constructor(config: Partial<MetaMaskConfig> = {}) {
     super();
     this.config = { ...this.DEFAULT_CONFIG, ...config };
-    this.AUTH_DATA_TABLE =
-      CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
     this.initProvider();
     this.setupEventListeners();
   }

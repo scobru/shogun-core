@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.safeJSONParse = exports.unsafeHash = exports.safeHash = exports.getShortHash = exports.hashObj = exports.hashText = exports.decFrom = exports.encFor = exports.isHash = exports.clearCache = exports.generateKeyPair = exports.verify = exports.sign = exports.decrypt = exports.encrypt = void 0;
 const gun_1 = __importDefault(require("gun"));
-require("gun/sea");
 /** Cache for encrypted/decrypted values */
 const seaMemo = new Map();
 /** Maximum cache size to prevent memory issues */

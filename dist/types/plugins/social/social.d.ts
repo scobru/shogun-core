@@ -1,5 +1,5 @@
 import { EventEmitter } from "../../utils/eventEmitter";
-import { Post, Comment, UserProfile, TimelineResult, Message } from "../../types/social";
+import { Post, Comment, UserProfile, TimelineResult, Message } from "./types";
 import { GunRxJS } from "../../gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { IGunInstance } from "gun";
@@ -61,7 +61,12 @@ export declare class Social extends EventEmitter {
     /**
      * Crea un nuovo post - delegato a PostService
      */
-    post(content: string, imageData?: string): Promise<Post | null>;
+    post(content: string, options?: {
+        title?: string;
+        topic?: string;
+        attachment?: string;
+        reference?: string;
+    }): Promise<Post | null>;
     /**
      * Ottieni la timeline - delegato a PostService
      */
@@ -95,9 +100,9 @@ export declare class Social extends EventEmitter {
      */
     getLikeCount(postId: string): Promise<number>;
     /**
-     * Cerca post per hashtag - delegato a PostService
+     * Cerca post per topic/hashtag - delegato a PostService
      */
-    searchByHashtag(hashtag: string): Promise<Post[]>;
+    searchByTopic(topic: string): Promise<Post[]>;
     /**
      * Elimina un post - delegato a PostService
      */

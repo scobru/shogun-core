@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { WalletInfo } from "../../types/shogun";
-import { WalletPluginInterface } from "./types";
+import { WalletPluginInterface, WalletInfo } from "./types";
 /**
  * Plugin per la gestione dei wallet in ShogunCore
  */

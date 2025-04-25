@@ -1,14 +1,14 @@
 import { Observable } from "rxjs";
 import { distinctUntilChanged } from "rxjs/operators";
-import { IGunInstance, IGunUserInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun";
 
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
  */
 export class GunRxJS {
-  private gun: IGunInstance<any>;
-  private user: IGunUserInstance<any>;
+  private readonly gun: IGunInstance<any>;
+  private readonly user: IGunUserInstance<any>;
 
   /**
    * Initialize GunRxJS with a GunDB instance

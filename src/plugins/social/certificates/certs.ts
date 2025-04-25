@@ -1,5 +1,4 @@
 import { IGunInstance, SEA } from "gun";
-import type Gun from "gun";
 
 interface CertificateCallbackResponse {
   errMessage?: string;
@@ -11,7 +10,7 @@ interface CertificateCallbackResponse {
 type CertificateCallback = (response: CertificateCallbackResponse) => void;
 
 export class CertificateService {
-  private gun: IGunInstance;
+  private readonly gun: IGunInstance;
 
   constructor(gunInstance: IGunInstance) {
     this.gun = gunInstance;

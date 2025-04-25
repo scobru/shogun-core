@@ -1,7 +1,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { MetaMaskPluginInterface } from "./types";
-import { MetaMaskCredentials, ConnectionResult } from "../../types/metamask";
+import { MetaMaskCredentials, ConnectionResult, MetaMaskPluginInterface } from "./types";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 /**

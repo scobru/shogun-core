@@ -5,7 +5,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shogun Social</title>
-    <link rel="stylesheet" href="social.css">
+
+    <!-- Script anti-refresh immediato prima di qualsiasi altro script -->
+    <script>
+        (function () {
+            // Blocca il comportamento submit di tutti i form in modo aggressivo
+            document.addEventListener('submit', function (e) {
+                console.log('INTERCETTATO SUBMIT DI FORM', e.target);
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, true);  // true = useCapture, intercetta l'evento nella fase di capturing
+
+            // Blocca il comportamento default di Enter su input
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    if (e.target.classList.contains('comment-input') ||
+                        (e.target.type !== 'textarea' && !e.target.classList.contains('enter-allowed'))) {
+                        console.log('INTERCETTATO ENTER KEY SU INPUT', e.target);
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Se è un campo di commento, tenta di inviare il commento
+                        if (e.target.classList.contains('comment-input')) {
+                            const submitBtn = e.target.closest('.comment-form')?.querySelector('.submit-comment');
+                            if (submitBtn) {
+                                setTimeout(() => submitBtn.click(), 10);
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }, true);  // true = useCapture, intercetta l'evento nella fase di capturing
+
+            // Blocca anche eventi click che potrebbero causare invio di form
+            document.addEventListener('click', function (e) {
+                if (e.target.tagName === 'BUTTON' && e.target.type !== 'button') {
+                    // Se un pulsante non ha type="button", intercettiamo e preveniamo il comportamento di default
+                    console.log('INTERCETTATO CLICK SU BUTTON NON-TYPE-BUTTON', e.target);
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Forza il tipo del pulsante come "button"
+                    e.target.type = 'button';
+                    return false;
+                }
+            }, true);  // true = useCapture, intercetta l'evento nella fase di capturing
+
+            // Quando il DOM è completamente caricato
+            window.addEventListener('DOMContentLoaded', function () {
+                console.log('DOM caricato, applicazione patch anti-refresh');
+
+                // Imposta type="button" per tutti i pulsanti di submit nei form
+                document.querySelectorAll('form button:not([type])').forEach(button => {
+                    button.type = 'button';
+                    console.log('Forzato type="button" su:', button);
+                });
+
+                // Assicura che tutti i form abbiano onsubmit="return false"
+                document.querySelectorAll('form:not([onsubmit])').forEach(form => {
+                    form.onsubmit = function (e) {
+                        e.preventDefault();
+                        return false;
+                    };
+                    console.log('Forzato onsubmit="return false" su:', form);
+                });
+
+                // Aggiungi un indicatore quando il refresh è prevenuto
+                const indicator = document.createElement('div');
+                indicator.id = 'noRefreshIndicator';
+                indicator.className = 'no-refresh-indicator';
+                indicator.textContent = 'Azione eseguita senza refresh';
+                document.body.appendChild(indicator);
+            });
+        })();
+    </script>
+
+    <link rel="stylesheet" href="shogun.css">
 </head>
 
 <body>
@@ -18,14 +94,14 @@
         </div>
 
         <div class="app-tabs">
-            <button class="tab-button active" data-tab="timeline">Timeline</button>
-            <button class="tab-button" data-tab="myPosts">Miei Post</button>
-            <button class="tab-button" data-tab="profile">Profilo</button>
+            <button type="button" class="tab-button active" data-tab="timeline">Timeline</button>
+            <button type="button" class="tab-button" data-tab="myPosts">Miei Post</button>
+            <button type="button" class="tab-button" data-tab="profile">Profilo</button>
         </div>
 
         <div class="action-group">
-            <button id="initBtn" class="primary-button">Inizializza</button>
-            <button id="loginBtn" disabled class="login-button">Accedi</button>
+            <button id="initBtn" type="button" class="primary-button">Inizializza</button>
+            <button id="loginBtn" type="button" disabled class="login-button">Accedi</button>
             <div id="loginForm" style="display:none;">
                 <form onsubmit="return false;">
                     <div class="form-group">
@@ -50,12 +126,12 @@
                 </div>
                 <textarea id="postContent" placeholder="A cosa stai pensando?"></textarea>
                 <div class="composer-footer">
-                    <button id="createPostBtn" disabled>Pubblica</button>
+                    <button type="button" id="createPostBtn" disabled>Pubblica</button>
                 </div>
             </div>
 
             <div class="timeline-actions" style="display: none;" id="timelineActions">
-                <button id="getTimelineBtn">
+                <button type="button" id="getTimelineBtn">
                     <span class="button-icon">🔄</span>
                     Aggiorna
                 </button>
@@ -76,14 +152,14 @@
                 <h2>Profilo</h2>
                 <div class="search-profile">
                     <input type="text" id="userPubInput" placeholder="Chiave pubblica utente">
-                    <button id="getProfileBtn" disabled>Visualizza</button>
+                    <button type="button" id="getProfileBtn" disabled>Visualizza</button>
                 </div>
                 <div id="profileContainer"></div>
             </div>
 
             <div class="users-section" id="usersSection" style="display: none;">
                 <h2>Utenti sulla rete</h2>
-                <button id="loadUsersBtn">
+                <button type="button" id="loadUsersBtn">
                     <span class="button-icon">👥</span>
                     Carica utenti
                 </button>
@@ -93,6 +169,9 @@
 
         <div id="results" style="display: none;">I risultati appariranno qui...</div>
     </div>
+
+    <!-- Aggiungi indicatore no-refresh -->
+    <div id="noRefreshIndicator" class="no-refresh-indicator">Azione eseguita senza refresh</div>
 
     <script src="../../dist/browser/shogun-core.js" defer></script>
     <script>
@@ -123,6 +202,57 @@
             });
         }
 
+        // Prevenzione globale di submit e click problematici
+        document.addEventListener('click', function (e) {
+            // Prevenire il comportamento di default per tutti i pulsanti che potrebbero causare refresh
+            if (e.target.tagName === 'BUTTON' && e.target.type !== 'button') {
+                e.preventDefault();
+                console.log("Prevented default for button:", e.target);
+            }
+
+            // Previeni il comportamento di default per tutti i pulsanti di submit nei form
+            if (e.target.tagName === 'BUTTON' && e.target.type === 'submit') {
+                e.preventDefault();
+                console.log("Prevented form submission via button click");
+            }
+
+            // Previeni il comportamento di default per i pulsanti di invio commento
+            if (e.target.classList.contains('submit-comment')) {
+                e.preventDefault();
+                console.log("Prevented default for submit comment button");
+            }
+        });
+
+        // Prevenire il refresh su invio nei form
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                // Non prevenire Enter in textarea se non è Ctrl+Enter
+                if (e.target.tagName === 'TEXTAREA' && !e.ctrlKey) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Prevented Enter key submission:", e.target);
+
+                // Controlla se è un campo di commento
+                if (e.target.classList.contains('comment-input')) {
+                    console.log("Enter in comment field - triggering submit");
+                    const submitBtn = e.target.closest('.comment-form').querySelector('.submit-comment');
+                    if (submitBtn) {
+                        submitBtn.click();
+                    }
+                }
+            }
+        });
+
+        // Preveniamo il comportamento di default su tutti i form
+        document.addEventListener('submit', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Prevented form submission:", e.target);
+            return false;
+        });
+
         // Controlliamo esplicitamente lo stato del pulsante al caricamento
         window.addEventListener('DOMContentLoaded', function () {
             console.log("DOM completamente caricato, verifica elementi critici:");
@@ -138,7 +268,8 @@
                 console.log("Configurazione listener pulsante login...");
 
                 // Aggiungi debug inline
-                performLoginCheck.onclick = function () {
+                performLoginCheck.onclick = function (e) {
+                    e.preventDefault(); // Esplicitamente previene il comportamento di default
                     console.log("Click diretto sul pulsante di login rilevato");
                     performLoginHandler();
                 };
@@ -226,6 +357,7 @@
             loginForm.addEventListener('submit', function (event) {
                 event.preventDefault();
                 performLoginHandler();
+                return false;
             });
 
             console.log("Event listeners aggiunti ai campi di input");
@@ -1227,7 +1359,9 @@
         }
 
         // Init Shogun
-        initBtn.onclick = () => {
+        initBtn.onclick = function (e) {
+            e.preventDefault(); // Previene esplicitamente il comportamento di default
+
             const cfg = {
                 gundb: { peers: ['//localhost:8765/gun'], localStorage: false, radisk: false, authToken: 'thisIsTheTokenForReals' },
                 walletManager: { enabled: false },  // Disattiva il wallet manager per evitare errori RPC
@@ -1248,10 +1382,14 @@
             } else {
                 showError('Errore', 'Plugin social non trovato');
             }
+
+            return false; // Assicura che non ci sia refresh
         };
 
         // Login
-        loginBtn.onclick = function () {
+        loginBtn.onclick = function (e) {
+            e.preventDefault(); // Previene esplicitamente il comportamento di default
+
             console.log("Click sul pulsante Accedi (mostra form)");
             if (loginForm && typeof loginForm !== 'undefined') {
                 loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
@@ -1265,6 +1403,8 @@
                 console.error('Form di login non trovato nel DOM');
                 showError('Errore', 'Form di login non disponibile');
             }
+
+            return false; // Assicura che non ci sia refresh
         };
 
         // Assicuriamoci che il pulsante "Accedi" nel form abbia un event listener diretto
@@ -1273,7 +1413,11 @@
             // Rimuovi eventuali listener esistenti
             performLogin.removeEventListener('click', performLoginHandler);
             // Aggiungi il nuovo listener
-            performLogin.addEventListener('click', performLoginHandler);
+            performLogin.addEventListener('click', function (e) {
+                e.preventDefault(); // Previene esplicitamente il comportamento di default
+                performLoginHandler();
+                return false;
+            });
         } else {
             console.error("Pulsante performLogin non trovato nel DOM");
         }
@@ -1359,10 +1503,16 @@
         }
 
         // Manteniamo anche l'onclick per retrocompatibilità
-        performLogin.onclick = performLoginHandler;
+        performLogin.onclick = function (e) {
+            e.preventDefault(); // Previene esplicitamente il comportamento di default
+            performLoginHandler();
+            return false;
+        };
 
         // Profile buttons
-        getProfileBtn.onclick = async () => {
+        getProfileBtn.onclick = async function (e) {
+            e.preventDefault(); // Previene esplicitamente il comportamento di default
+
             const pub = userPubInput.value.trim();
             if (!pub) {
                 showError('Profilo', 'Chiave pubblica utente richiesta');
@@ -1395,13 +1545,23 @@
                 profileDiv.innerHTML = `<div class="error-message">Errore caricamento profilo: ${err.message || 'Errore sconosciuto'}</div>`;
                 showError('Errore Profilo', err.message || 'Impossibile caricare il profilo');
             }
+
+            return false;
         };
 
         // Create post
-        createPostBtn.onclick = async () => {
+        createPostBtn.onclick = async function (e) {
+            e.preventDefault(); // Previene esplicitamente il comportamento di default
+
             const txt = postContent.value.trim();
             if (!txt) { showError('Post', 'Contenuto vuoto'); return; }
-            const p = await socialPlugin.post(txt);
+
+            // Utilizzo il nuovo formato con options
+            const options = {
+                // Se necessario, aggiungi topic o altri campi qui
+            };
+
+            const p = await socialPlugin.post(txt, options);
             showResult('Post creato', p);
             postContent.value = '';
             setTimeout(loadTimeline, 500);
@@ -1999,7 +2159,7 @@
                     </div>
                     <div class="comment-form">
                         <input type="text" class="comment-input" placeholder="Scrivi un commento..." />
-                        <button class="submit-comment" data-post-id="${post.id}">Invia</button>
+                        <button type="button" class="submit-comment" data-post-id="${post.id}">Invia</button>
                     </div>
                 </div>
             `;
@@ -2094,28 +2254,51 @@
             const submitComment = p.querySelector('.submit-comment');
             const commentInput = p.querySelector('.comment-input');
             if (submitComment && commentInput) {
-                submitComment.addEventListener('click', async () => {
+                submitComment.addEventListener('mousedown', function (e) {
+                    e.preventDefault(); // Previeni il comportamento di default
+                    return false;
+                });
+
+                submitComment.addEventListener('click', async (e) => {
+                    e.preventDefault(); // Previeni il comportamento di default
+                    e.stopPropagation(); // Ferma la propagazione dell'evento
+
                     const content = commentInput.value.trim();
-                    if (!content || !canRefresh()) return;
+                    if (!content) return;
 
                     submitComment.disabled = true;
-                    commentInput.disabled = true;
+                    submitComment.textContent = 'Invio...';
+
                     try {
                         const comment = await addComment(post.id, content);
                         if (comment) {
                             commentInput.value = '';
-                            setTimeout(() => loadComments(post.id), 1000);
+                            // Mostra l'indicatore di nessun refresh
+                            const indicator = document.getElementById('noRefreshIndicator');
+                            if (indicator) {
+                                indicator.classList.add('visible');
+                                setTimeout(() => {
+                                    indicator.classList.remove('visible');
+                                }, 2000);
+                            }
                         }
                     } catch (err) {
-                        console.error('Errore commento:', err);
+                        console.error('Errore invio commento:', err);
                     } finally {
                         submitComment.disabled = false;
-                        commentInput.disabled = false;
+                        submitComment.textContent = 'Invia';
                     }
+
+                    return false; // Importante per prevenire ulteriori azioni
                 });
 
-                commentInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') submitComment.click();
+                // Gestisci anche il tasto Enter nel campo di input
+                commentInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault(); // Previeni il comportamento di default
+                        submitComment.click(); // Simula il click sul pulsante
+                        return false;
+                    }
                 });
             }
 
@@ -2202,10 +2385,175 @@
         // Inizializza i tab e aggiorna la funzione di login per caricare i miei post
         window.addEventListener('DOMContentLoaded', function () {
             setupTabs();
-
-            // ... codice di controllo esistente ...
         });
 
+        // Modifica anche i gestori di eventi per i campi di input generali
+        // Aggiungi questi gestori di eventi dopo la definizione delle variabili DOM
+        window.addEventListener('DOMContentLoaded', function () {
+            // Previeni il submit del form su tutti gli input text e password
+            document.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    e.preventDefault(); // Previene il refresh della pagina
+                }
+            });
+
+            // Imposta anche per il campo di input del post
+            if (postContent) {
+                postContent.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault(); // Previene il refresh della pagina
+                        // Non invia il post automaticamente, permette l'uso di Enter per andare a capo
+                    }
+                });
+            }
+
+            // Gestori di eventi già esistenti...
+            setupTabs();
+            shortenButtonLabels();
+        });
+
+        // ... existing code ...
+
+        // Prevenzione più stringente per i refresh su tutti i campi input
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ottieni riferimento all'indicatore no-refresh
+            const noRefreshIndicator = document.getElementById('noRefreshIndicator');
+
+            // Funzione per mostrare l'indicatore temporaneamente
+            function showNoRefreshIndicator(message = 'Azione eseguita senza refresh') {
+                if (noRefreshIndicator) {
+                    noRefreshIndicator.textContent = message;
+                    noRefreshIndicator.classList.add('visible');
+                    setTimeout(() => {
+                        noRefreshIndicator.classList.remove('visible');
+                    }, 1500);
+                }
+            }
+
+            // Previeni il comportamento predefinito su tutti i form
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    console.log("Form submission prevented");
+                    showNoRefreshIndicator('Form non inviato - Prevenuto refresh pagina');
+                    return false;
+                });
+            });
+
+            // Previeni il comportamento di default su tutti i campi input quando si preme Enter
+            document.querySelectorAll('input').forEach(input => {
+                // Aggiungi classe typing durante la digitazione
+                input.addEventListener('input', function () {
+                    this.classList.add('typing');
+                });
+
+                // Rimuovi la classe dopo un po'
+                input.addEventListener('blur', function () {
+                    this.classList.remove('typing');
+                });
+
+                // Gestisci il tasto Enter
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Enter keypress prevented on input field:", input.id || 'unnamed');
+
+                        // Se è un campo di ricerca o un campo di login, esegui l'azione relativa
+                        if (input.id === 'userPubInput' && getProfileBtn) {
+                            getProfileBtn.click();
+                            showNoRefreshIndicator('Ricerca profilo avviata');
+                        } else if (input.id === 'username' && passwordInput.value && performLogin) {
+                            performLogin.click();
+                            showNoRefreshIndicator('Login in corso...');
+                        } else if (input.id === 'password' && usernameInput.value && performLogin) {
+                            performLogin.click();
+                            showNoRefreshIndicator('Login in corso...');
+                        } else if (input.classList.contains('comment-input')) {
+                            // Trova il pulsante di invio più vicino e fai clic
+                            const submitBtn = input.closest('.comment-form').querySelector('.submit-comment');
+                            if (submitBtn) {
+                                submitBtn.click();
+                                showNoRefreshIndicator('Commento inviato');
+                            }
+                        } else {
+                            showNoRefreshIndicator('Invio premuto - Prevenuto refresh pagina');
+                        }
+                        return false;
+                    }
+                });
+            });
+
+            // Gestisci anche l'area di testo per i post
+            if (postContent) {
+                postContent.addEventListener('keydown', function (e) {
+                    // Consenti l'invio del post con Ctrl+Enter o Shift+Enter
+                    if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey) && createPostBtn && !createPostBtn.disabled) {
+                        e.preventDefault();
+                        createPostBtn.click();
+                        showNoRefreshIndicator('Post inviato');
+                    }
+                });
+            }
+        });
+
+        // ... existing code ...
+
+        // Aggiungi un listener super-aggressivo per tutti gli eventi di submit
+        document.addEventListener('DOMContentLoaded', function () {
+            // Super-intercettore di submit a livello di documento
+            document.addEventListener('submit', function (e) {
+                console.log('INTERCETTATO SUBMIT A LIVELLO DOCUMENTO', e.target);
+                // Blocca sempre tutti i submit
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                // Mostra feedback all'utente
+                const noRefreshIndicator = document.getElementById('noRefreshIndicator');
+                if (noRefreshIndicator) {
+                    noRefreshIndicator.textContent = 'Submit bloccato - nessun refresh';
+                    noRefreshIndicator.classList.add('visible');
+                    setTimeout(() => {
+                        noRefreshIndicator.classList.remove('visible');
+                    }, 1500);
+                }
+
+                return false;
+            }, true); // Usa capturing per intercettare prima di tutti
+
+            // Blocca tutti gli Enter su input
+            document.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    console.log('INTERCETTATO ENTER SU INPUT', e.target);
+                    // Blocca sempre il comportamento predefinito
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Se è un campo commento, gestisci manualmente
+                    if (e.target.classList.contains('comment-input')) {
+                        const form = e.target.closest('.comment-form');
+                        if (form) {
+                            const submitBtn = form.querySelector('.submit-comment');
+                            if (submitBtn) {
+                                // Ritarda leggermente per interrompere la catena di eventi
+                                setTimeout(() => {
+                                    console.log('Trigger manuale click su submit commento');
+                                    submitBtn.click();
+                                }, 10);
+                            }
+                        }
+                    }
+
+                    return false;
+                }
+            }, true); // Usa capturing per intercettare prima di tutti
+
+            // Applica a tutti i pulsanti di submit commento esistenti
+            document.querySelectorAll('.submit-comment').forEach(button => {
+                button.type = 'button'; // Imposta esplicitamente il tipo
+            });
+        });
     </script>
 </body>
 

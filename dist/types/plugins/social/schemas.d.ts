@@ -26,7 +26,7 @@ export declare const PostSchema: {
             type: string;
             description: string;
         };
-        imageData: {
+        attachment: {
             type: string[];
             description: string;
         };
@@ -34,34 +34,29 @@ export declare const PostSchema: {
             type: string[];
             description: string;
             properties: {
-                imageData: {
-                    type: string[];
-                    description: string;
-                };
                 content: {
                     type: string;
                     description: string;
                     default: string;
                 };
-            };
-            additionalProperties: boolean;
-        };
-        hashtags: {
-            type: string[];
-            description: string;
-            patternProperties: {
-                "^[a-z0-9_]+$": {
-                    type: string;
+                attachment: {
+                    type: string[];
+                    description: string;
                 };
             };
             additionalProperties: boolean;
         };
-        _hashtagsList: {
+        title: {
             type: string[];
             description: string;
-            items: {
-                type: string;
-            };
+        };
+        topic: {
+            type: string[];
+            description: string;
+        };
+        reference: {
+            type: string[];
+            description: string;
         };
         likes: {
             type: string[];

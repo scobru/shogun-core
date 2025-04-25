@@ -1,6 +1,5 @@
 import { log, logError, logWarn } from "../../utils/logger";
 import { ShogunStorage } from "../../storage/storage";
-import { WalletInfo } from "../../types/shogun";
 import SEA from "gun/sea";
 import { HDNodeWallet, ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -13,7 +12,8 @@ import {
   WalletBackupOptions,
   WalletImportOptions,
   WalletEventType,
-} from "../../types/wallet";
+  WalletInfo,
+} from "./types";
 
 // Rinominiamo le interfacce locali per evitare conflitti
 export type WalletPath = IWalletPath;

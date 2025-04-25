@@ -1,9 +1,49 @@
-import {
-  StealthAddressResult,
-  StealthData,
-  EphemeralKeyPair,
-} from "../../types/stealth";
 import { ethers } from "ethers";
+
+/**
+ * Interface for ephemeral key pairs used in stealth transactions
+ */
+export interface EphemeralKeyPair {
+  pub: string;
+  priv: string;
+  epub: string;
+  epriv: string;
+}
+
+/**
+ * Interface for stealth transaction data
+ */
+export interface StealthData {
+  recipientPublicKey: string;
+  ephemeralKeyPair: EphemeralKeyPair;
+  timestamp: number;
+  method?: "standard" | "legacy";
+  sharedSecret?: string;
+}
+
+/**
+ * Interface for stealth address generation result
+ */
+export interface StealthAddressResult {
+  stealthAddress: string;
+  ephemeralPublicKey: string;
+  recipientPublicKey: string;
+}
+
+/**
+ * Type for log levels in stealth operations
+ */
+export type LogLevel = "info" | "error" | "debug" | "warn";
+
+/**
+ * Interface for structured logging messages
+ */
+export interface LogMessage {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
 
 /**
  * Interfaccia per il plugin Stealth
@@ -26,7 +66,7 @@ export interface StealthPluginInterface {
    */
   generateStealthAddress(
     publicKey: string,
-    ephemeralPrivateKey: string,
+    ephemeralPrivateKey: string
   ): Promise<StealthAddressResult>;
 
   /**
@@ -37,7 +77,7 @@ export interface StealthPluginInterface {
    */
   scanStealthAddresses(
     addresses: StealthData[],
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<StealthData[]>;
 
   /**
@@ -48,7 +88,7 @@ export interface StealthPluginInterface {
    */
   isStealthAddressMine(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<boolean>;
 
   /**
@@ -59,7 +99,7 @@ export interface StealthPluginInterface {
    */
   getStealthPrivateKey(
     stealthData: StealthData,
-    privateKeyOrSpendKey: string,
+    privateKeyOrSpendKey: string
   ): Promise<string>;
 
   /**
@@ -72,6 +112,6 @@ export interface StealthPluginInterface {
   openStealthAddress(
     stealthAddress: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair,
+    pair: EphemeralKeyPair
   ): Promise<ethers.Wallet>;
 }

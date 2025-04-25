@@ -45,7 +45,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GunDB = void 0;
 const gun_1 = __importDefault(require("gun"));
-require("gun/sea");
 const config_1 = __importDefault(require("../config"));
 const logger_1 = require("../utils/logger");
 const errorHandler_1 = require("../utils/errorHandler");

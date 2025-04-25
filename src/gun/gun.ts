@@ -6,13 +6,12 @@
  * - Support for remove/unset operations
  */
 
-import Gun from "gun";
-import "gun/sea";
-import { IGunInstance, IGunUserInstance } from "gun/types";
+import Gun, { IGunInstance, IGunUserInstance } from "gun";
 import CONFIG from "../config";
+
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { GunDBOptions } from "../types/gun";
+import { GunDBOptions } from "./types";
 import { GunCollections } from "./collections";
 import { GunConsensus } from "./consensus";
 import * as GunErrors from "./errors";
@@ -41,14 +40,6 @@ import {
 } from "./certificates";
 import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
-import { create } from "domain";
-
-export interface AuthResult {
-  success: boolean;
-  userPub?: string;
-  username?: string;
-  error?: string;
-}
 
 interface RetryConfig {
   attempts: number;

@@ -1,10 +1,9 @@
 import { GunDB } from "./gun/gun";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
-import { IGunInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "./utils/errorHandler";
-import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
@@ -103,7 +102,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to observe (can be a string or a Gun chain)
      * @returns Observable that emits whenever the node changes
      */
-    observe<T>(path: string): Observable<T>;
+    rxGet<T>(path: string): Observable<T>;
     /**
      * Match data based on Gun's '.map()' and convert to Observable
      * @param path - Path to the collection
@@ -114,7 +113,7 @@ export declare class ShogunCore implements IShogunCore {
     /**
      * Put data and return an Observable
      * @param path - Path where to put the data
-     * @param data - Data to put
+     * @param oata - Data to put
      * @returns Observable that completes when the put is acknowledged
      */
     rxPut<T>(path: string | any, data: T): Observable<T>;
@@ -130,7 +129,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to get data from
      * @returns Observable that emits the data once
      */
-    onceObservable<T>(path: string | any): Observable<T>;
+    rxOnce<T>(path: string | any): Observable<T>;
     /**
      * Compute derived values from gun data
      * @param sources - Array of paths or observables to compute from
@@ -298,7 +297,7 @@ export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
-export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
+export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
-export { ShogunEventEmitter } from "./events";
+export { ShogunEventEmitter } from "./types/events";

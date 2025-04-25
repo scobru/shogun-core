@@ -1,7 +1,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { StealthPluginInterface } from "./types";
-import { StealthAddressResult, StealthData, EphemeralKeyPair } from "../../types/stealth";
+import { StealthAddressResult, StealthData, EphemeralKeyPair, StealthPluginInterface } from "./types";
 import { ethers } from "ethers";
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore

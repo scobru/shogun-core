@@ -1,5 +1,5 @@
 import { EventEmitter } from "../../../utils/eventEmitter";
-import { Post, Comment, TimelineResult, Message } from "../../../types/social";
+import { Post, Comment, TimelineResult, Message } from "../types";
 import { GunRxJS } from "../../../gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { IGunInstance } from "gun";
@@ -29,37 +29,29 @@ export declare class PostService extends EventEmitter {
      */
     private generateUUID;
     /**
-     * Estrae gli hashtag dal testo
-     */
-    private extractHashtags;
-    /**
-     * Indicizza un post per hashtag
-     */
-    private indexPostByHashtags;
-    /**
-     * Pulisce la cache
-     */
-    clearCache(): void;
-    /**
-     * Normalizza l'oggetto autore per garantire compatibilità con il database
-     * @param postData Dati del post da normalizzare
-     */
-    private normalizeAuthor;
-    /**
-     * Crea un nuovo post con validazione dello schema
-     */
-    createPost(content: string, imageData?: string): Promise<Post | null>;
-    /**
-     * Ottieni un post specifico
-     */
-    getPost(postId: string): Promise<Post | null>;
-    /**
      * Normalizza un post recuperato da Gun per evitare problemi di validazione
      * @param post Post da normalizzare
      * @param id ID del post
      * @returns Post normalizzato
      */
     private normalizePost;
+    /**
+     * Estrae gli hashtag dal testo o dal topic
+     */
+    private extractHashtags;
+    /**
+     * Crea un nuovo post con validazione dello schema
+     */
+    createPost(content: string, options?: {
+        title?: string;
+        topic?: string;
+        attachment?: string;
+        reference?: string;
+    }): Promise<Post | null>;
+    /**
+     * Ottieni un post specifico
+     */
+    getPost(postId: string): Promise<Post | null>;
     /**
      * Recupera la timeline (post propri e di chi segui)
      */
@@ -95,9 +87,13 @@ export declare class PostService extends EventEmitter {
      */
     getLikes(postId: string): Promise<string[]>;
     /**
-     * Cerca post per hashtag
+     * Cerca post per topic/hashtag
      */
-    searchByHashtag(hashtag: string): Promise<Post[]>;
+    searchByTopic(topic: string): Promise<Post[]>;
+    /**
+     * Cerca post che contengono il topic nel testo
+     */
+    private searchPostsByTopicText;
     /**
      * Elimina un post
      */
@@ -106,4 +102,8 @@ export declare class PostService extends EventEmitter {
      * Helper privato: recupera likes come oggetto
      */
     private getLikesObject;
+    /**
+     * Pulisce la cache
+     */
+    clearCache(): void;
 }

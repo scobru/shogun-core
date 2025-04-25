@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostService = void 0;
 const logger_1 = require("../../../utils/logger");
 const eventEmitter_1 = require("../../../utils/eventEmitter");
-const social_1 = require("../../../types/social");
+const types_1 = require("../types");
 const rxjs_integration_1 = require("../../../gun/rxjs-integration");
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
@@ -90,7 +90,90 @@ class PostService extends eventEmitter_1.EventEmitter {
             });
     }
     /**
-     * Estrae gli hashtag dal testo
+     * Normalizza un post recuperato da Gun per evitare problemi di validazione
+     * @param post Post da normalizzare
+     * @param id ID del post
+     * @returns Post normalizzato
+     */
+    normalizePost(post, id) {
+        if (!post)
+            return post;
+        // Clona l'oggetto per non modificare l'originale
+        const normalized = { ...post };
+        // Assicura che l'id sia presente
+        normalized.id = normalized.id || id;
+        // Normalizza l'autore
+        normalized.author =
+            typeof normalized.author === "string"
+                ? normalized.author
+                : this.user?.is?.pub || "sconosciuto";
+        // Assicura che timestamp sia un numero
+        normalized.timestamp = normalized.timestamp || Date.now();
+        // Assicura che content sia una stringa
+        normalized.content = normalized.content || "";
+        // Gestione allegati: spostare imageData in attachment se necessario
+        if (normalized.imageData && !normalized.attachment) {
+            normalized.attachment = normalized.imageData;
+            delete normalized.imageData;
+        }
+        // Assicura che altri campi siano del tipo corretto
+        if (normalized.attachment !== null &&
+            normalized.attachment !== undefined &&
+            typeof normalized.attachment !== "string") {
+            normalized.attachment = null;
+        }
+        // Normalizza il payload se esiste
+        if (normalized.payload) {
+            if (!normalized.payload.content && normalized.content) {
+                normalized.payload.content = normalized.content;
+            }
+            // Sposta imageData in attachment nel payload
+            if (normalized.payload.imageData && !normalized.payload.attachment) {
+                normalized.payload.attachment = normalized.payload.imageData;
+                delete normalized.payload.imageData;
+            }
+        }
+        else {
+            // Crea un payload se non esiste
+            normalized.payload = {
+                content: normalized.content,
+                attachment: normalized.attachment || null,
+            };
+        }
+        // Converti i vecchi campi hashtag nel nuovo formato topic
+        if ((normalized.hashtags ||
+            normalized.hashtagsList ||
+            normalized._hashtagsList) &&
+            !normalized.topic) {
+            let hashtags = [];
+            if (normalized.hashtagsList) {
+                hashtags = normalized.hashtagsList;
+            }
+            else if (normalized._hashtagsList) {
+                hashtags = normalized._hashtagsList;
+            }
+            else if (normalized.hashtags &&
+                typeof normalized.hashtags === "object") {
+                hashtags = Object.keys(normalized.hashtags).filter((k) => normalized.hashtags[k]);
+            }
+            if (hashtags.length > 0) {
+                normalized.topic = hashtags.map((tag) => `#${tag}`).join(" ");
+            }
+        }
+        // Campi opzionali aggiuntivi
+        if (normalized.title && typeof normalized.title !== "string") {
+            normalized.title = String(normalized.title);
+        }
+        if (normalized.topic && typeof normalized.topic !== "string") {
+            normalized.topic = String(normalized.topic);
+        }
+        if (normalized.reference && typeof normalized.reference !== "string") {
+            normalized.reference = String(normalized.reference);
+        }
+        return normalized;
+    }
+    /**
+     * Estrae gli hashtag dal testo o dal topic
      */
     extractHashtags(text) {
         if (!text)
@@ -102,60 +185,9 @@ class PostService extends eventEmitter_1.EventEmitter {
         return matches.map((tag) => tag.substring(1).toLowerCase());
     }
     /**
-     * Indicizza un post per hashtag
-     */
-    async indexPostByHashtags(postId, hashtags) {
-        if (!hashtags || hashtags.length === 0)
-            return;
-        this.debug(`Indicizzazione post ${postId} per ${hashtags.length} hashtag`);
-        for (const tag of hashtags) {
-            await new Promise((resolve) => {
-                this.gun
-                    .get("hashtags")
-                    .get(tag)
-                    .get(postId)
-                    .put(true, () => resolve());
-            });
-        }
-    }
-    /**
-     * Pulisce la cache
-     */
-    clearCache() {
-        this.postCache.clear();
-        this.debug("Cache dei post pulita");
-    }
-    /**
-     * Normalizza l'oggetto autore per garantire compatibilità con il database
-     * @param postData Dati del post da normalizzare
-     */
-    normalizeAuthor(postData) {
-        if (!postData)
-            return postData;
-        // Clona l'oggetto per non modificare l'originale
-        const normalized = { ...postData };
-        // Se author non è una stringa, lo imposta come stringa
-        if (normalized.author && typeof normalized.author !== "string") {
-            this.debug(`Normalizzazione author per post ${normalized.id}`);
-            // Salva il pub originale se presente nell'oggetto complesso
-            if (normalized.author.pub) {
-                normalized.author = normalized.author.pub;
-            }
-            else if (this.user && this.user.is && this.user.is.pub) {
-                // Usa il pub dell'utente corrente come fallback
-                normalized.author = this.user.is.pub;
-            }
-            else {
-                // Ultimo caso, converti a stringa
-                normalized.author = String(normalized.author);
-            }
-        }
-        return normalized;
-    }
-    /**
      * Crea un nuovo post con validazione dello schema
      */
-    async createPost(content, imageData) {
+    async createPost(content, options) {
         if (!this.user.is || !this.user.is.pub) {
             throw new Error("Non autenticato");
         }
@@ -167,45 +199,48 @@ class PostService extends eventEmitter_1.EventEmitter {
             const postId = this.generateUUID();
             const timestamp = Date.now();
             const trimmedContent = content.trim();
-            const hashtags = this.extractHashtags(trimmedContent);
-            const hasHashtags = hashtags.length > 0;
-            const hashtagsObj = {};
-            hashtags.forEach((tag) => {
-                hashtagsObj[tag] = true;
-            });
             // Creiamo un oggetto post che rispetta l'interfaccia Post
             const post = {
                 id: postId,
                 author: userPub,
                 content: trimmedContent,
                 timestamp,
-                imageData: imageData || undefined,
             };
+            // Aggiungi campi opzionali se forniti
+            if (options) {
+                if (options.title)
+                    post.title = options.title;
+                if (options.topic)
+                    post.topic = options.topic;
+                if (options.attachment)
+                    post.attachment = options.attachment;
+                if (options.reference)
+                    post.reference = options.reference;
+            }
             // Crea una struttura semplificata per Gun DB che evita i problemi di validazione
-            // Usa SOLO stringhe per author, mai oggetti complessi
             const simplePostData = {
                 id: postId,
                 author: userPub, // Usa sempre e solo la stringa
                 content: trimmedContent,
                 timestamp: timestamp,
-                imageData: imageData || null,
             };
-            if (imageData) {
-                simplePostData.payload = {
-                    content: trimmedContent,
-                    imageData: imageData,
-                };
+            // Aggiungi campi opzionali alla struttura semplificata
+            if (options) {
+                if (options.title)
+                    simplePostData.title = options.title;
+                if (options.topic)
+                    simplePostData.topic = options.topic;
+                if (options.attachment)
+                    simplePostData.attachment = options.attachment;
+                if (options.reference)
+                    simplePostData.reference = options.reference;
             }
-            else {
-                simplePostData.payload = {
-                    content: trimmedContent,
-                };
-            }
-            if (hasHashtags) {
-                post.hashtags = hashtagsObj;
-                post.hashtagsList = hashtags;
-                simplePostData.hashtags = hashtagsObj;
-                simplePostData._hashtagsList = hashtags;
+            // Crea il payload
+            simplePostData.payload = {
+                content: trimmedContent,
+            };
+            if (options?.attachment) {
+                simplePostData.payload.attachment = options.attachment;
             }
             // Validazione con schema JSON
             const isValid = this.validatePost(simplePostData);
@@ -228,6 +263,21 @@ class PostService extends eventEmitter_1.EventEmitter {
                     resolve();
                 });
             });
+            // Indicizza per topic/hashtag se presente
+            if (options?.topic) {
+                const hashtags = this.extractHashtags(options.topic);
+                if (hashtags.length > 0) {
+                    for (const tag of hashtags) {
+                        await new Promise((resolve) => {
+                            this.gun
+                                .get("topics")
+                                .get(tag)
+                                .get(postId)
+                                .put(true, () => resolve());
+                        });
+                    }
+                }
+            }
             // Aggiunge anche ai post dell'utente
             await new Promise((resolve) => {
                 this.user
@@ -287,12 +337,10 @@ class PostService extends eventEmitter_1.EventEmitter {
                         author: post.author || "sconosciuto",
                         content: post.content || "",
                         timestamp: post.timestamp || Date.now(),
-                        imageData: post.imageData,
-                        hashtags: post.hashtags,
-                        hashtagsList: post._hashtagsList ||
-                            (post.hashtags
-                                ? Object.keys(post.hashtags).filter((k) => post.hashtags[k])
-                                : undefined),
+                        attachment: post.attachment || post.imageData,
+                        title: post.title,
+                        topic: post.topic,
+                        reference: post.reference,
                     };
                     // Salta la validazione per evitare errori con dati esistenti
                     // La normalizzazione dovrebbe aver già risolto i problemi principali
@@ -310,36 +358,6 @@ class PostService extends eventEmitter_1.EventEmitter {
             this.error(`Errore recupero post ${postId}: ${err}`);
             return null;
         }
-    }
-    /**
-     * Normalizza un post recuperato da Gun per evitare problemi di validazione
-     * @param post Post da normalizzare
-     * @param id ID del post
-     * @returns Post normalizzato
-     */
-    normalizePost(post, id) {
-        if (!post)
-            return post;
-        // Clona l'oggetto per non modificare l'originale
-        const normalized = { ...post };
-        // Assicura che l'id sia presente
-        normalized.id = normalized.id || id;
-        // Normalizza l'autore
-        normalized.author =
-            typeof normalized.author === "string"
-                ? normalized.author
-                : this.user?.is?.pub || "sconosciuto";
-        // Assicura che timestamp sia un numero
-        normalized.timestamp = normalized.timestamp || Date.now();
-        // Assicura che content sia una stringa
-        normalized.content = normalized.content || "";
-        // Assicura che altri campi siano del tipo corretto
-        if (normalized.imageData !== null &&
-            normalized.imageData !== undefined &&
-            typeof normalized.imageData !== "string") {
-            normalized.imageData = null;
-        }
-        return normalized;
     }
     /**
      * Recupera la timeline (post propri e di chi segui)
@@ -401,27 +419,28 @@ class PostService extends eventEmitter_1.EventEmitter {
                 }
                 this.debug(`getTimeline - Post trovato: ${id}`);
                 let content = post.content || "";
-                let imageData = post.imageData || null;
-                if ((!content || !imageData) && post.payload) {
+                let attachment = post.attachment || post.imageData || null;
+                if ((!content || !attachment) && post.payload) {
                     if (post.payload.content && !content) {
                         content = post.payload.content;
                         this.debug(`getTimeline - Contenuto recuperato da payload diretto: ${content.substring(0, 20)}...`);
                     }
-                    if (post.payload.imageData && !imageData) {
-                        imageData = post.payload.imageData;
-                        this.debug(`getTimeline - Immagine recuperata da payload diretto per post: ${id}`);
+                    if ((post.payload.attachment || post.payload.imageData) &&
+                        !attachment) {
+                        attachment = post.payload.attachment || post.payload.imageData;
+                        this.debug(`getTimeline - Allegato recuperato da payload diretto per post: ${id}`);
                     }
                 }
                 const postMsg = {
                     id,
-                    type: social_1.MessageType.POST,
-                    subtype: social_1.MessageSubtype.EMPTY,
+                    type: types_1.MessageType.POST,
+                    subtype: types_1.MessageSubtype.EMPTY,
                     creator: postAuthor || "sconosciuto",
                     createdAt: post.timestamp || Date.now(),
                     payload: { content },
                 };
-                if (imageData) {
-                    postMsg.payload.attachment = imageData;
+                if (attachment) {
+                    postMsg.payload.attachment = attachment;
                 }
                 if (options.includeLikes) {
                     try {
@@ -458,21 +477,22 @@ class PostService extends eventEmitter_1.EventEmitter {
                 const creator = post.author || post.creator || "sconosciuto";
                 const createdAt = post.timestamp || post.createdAt || Date.now();
                 let content = post.content || "";
-                let imageData = null;
-                if ((!content || !imageData) && post.payload) {
+                let attachment = post.attachment || post.imageData || null;
+                if ((!content || !attachment) && post.payload) {
                     content = post.payload.content || content;
-                    imageData = post.payload.imageData || null;
+                    attachment =
+                        post.payload.attachment || post.payload.imageData || null;
                 }
                 const msg = {
                     id,
-                    type: social_1.MessageType.POST,
-                    subtype: social_1.MessageSubtype.EMPTY,
+                    type: types_1.MessageType.POST,
+                    subtype: types_1.MessageSubtype.EMPTY,
                     creator,
                     createdAt,
                     payload: { content },
                 };
-                if (imageData)
-                    msg.payload.attachment = imageData;
+                if (attachment)
+                    msg.payload.attachment = attachment;
                 return msg;
             });
         }), (0, operators_1.tap)((msgs) => this.debug(`Timeline observable: ricevuti ${msgs.length} post`)));
@@ -668,21 +688,24 @@ class PostService extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Cerca post per hashtag
+     * Cerca post per topic/hashtag
      */
-    async searchByHashtag(hashtag) {
-        if (!hashtag)
-            throw new Error("Hashtag non valido");
-        const normalized = hashtag.startsWith("#")
-            ? hashtag.slice(1).toLowerCase()
-            : hashtag.toLowerCase();
-        this.debug(`Ricerca post con hashtag #${normalized}`);
+    async searchByTopic(topic) {
+        if (!topic)
+            throw new Error("Topic non valido");
+        // Se è un hashtag, estraiamo il termine di ricerca
+        let searchTerm = topic;
+        if (topic.startsWith("#")) {
+            searchTerm = topic.slice(1).toLowerCase();
+        }
+        this.debug(`Ricerca post con topic/hashtag: ${searchTerm}`);
         try {
+            // Prima cerchiamo nei topics indicizzati
             const refs = [];
             await new Promise((resolve) => {
                 this.gun
-                    .get("hashtags")
-                    .get(normalized)
+                    .get("topics")
+                    .get(searchTerm)
                     .map()
                     .once((val, key) => {
                     if (key !== "_" && val === true)
@@ -690,8 +713,23 @@ class PostService extends eventEmitter_1.EventEmitter {
                 });
                 setTimeout(resolve, 1000);
             });
-            if (!refs.length)
-                return [];
+            // Per compatibilità, cerchiamo anche nei vecchi hashtags
+            await new Promise((resolve) => {
+                this.gun
+                    .get("hashtags")
+                    .get(searchTerm)
+                    .map()
+                    .once((val, key) => {
+                    if (key !== "_" && val === true && !refs.includes(key))
+                        refs.push(key);
+                });
+                setTimeout(resolve, 1000);
+            });
+            if (refs.length === 0) {
+                // Cercheremo come parte di un testo nel topic dei post
+                this.debug(`Nessun post indicizzato per ${searchTerm}, cercheremo in tutti i post`);
+                return this.searchPostsByTopicText(searchTerm);
+            }
             const posts = [];
             for (const id of refs) {
                 // Prima controlla la cache
@@ -705,22 +743,55 @@ class PostService extends eventEmitter_1.EventEmitter {
                     setTimeout(() => resolve(null), 500);
                 });
                 if (data && data.content) {
-                    const p = { ...data };
-                    if (!p.hashtagsList) {
-                        if (p._hashtagsList)
-                            p.hashtagsList = p._hashtagsList;
-                        else if (p.hashtags && typeof p.hashtags === "object")
-                            p.hashtagsList = Object.keys(p.hashtags).filter((k) => p.hashtags[k]);
-                    }
-                    posts.push(p);
+                    // Normalizza il post
+                    const normalizedPost = this.normalizePost(data, id);
+                    posts.push(normalizedPost);
                     // Aggiungi alla cache
-                    this.postCache.set(id, { data: p, timestamp: Date.now() });
+                    this.postCache.set(id, {
+                        data: normalizedPost,
+                        timestamp: Date.now(),
+                    });
                 }
             }
             return posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         }
         catch (err) {
-            (0, logger_1.logError)(`Errore ricerca hashtag: ${err}`);
+            (0, logger_1.logError)(`Errore ricerca topic: ${err}`);
+            return [];
+        }
+    }
+    /**
+     * Cerca post che contengono il topic nel testo
+     */
+    async searchPostsByTopicText(searchTerm) {
+        this.debug(`Ricerca post con topic nel testo: ${searchTerm}`);
+        try {
+            const posts = [];
+            const seen = new Set();
+            // Recupera tutti i post e filtra per topic
+            await new Promise((resolve) => {
+                this.gun
+                    .get("posts")
+                    .map()
+                    .once((post, id) => {
+                    if (!post || seen.has(id))
+                        return;
+                    seen.add(id);
+                    const normalizedPost = this.normalizePost(post, id);
+                    if (normalizedPost.topic &&
+                        normalizedPost.topic
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase())) {
+                        posts.push(normalizedPost);
+                    }
+                });
+                // Timeout per limitare la ricerca
+                setTimeout(resolve, 3000);
+            });
+            return posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        }
+        catch (err) {
+            (0, logger_1.logError)(`Errore ricerca nel testo: ${err}`);
             return [];
         }
     }
@@ -780,6 +851,13 @@ class PostService extends eventEmitter_1.EventEmitter {
             });
             setTimeout(() => resolve(likes), 500);
         });
+    }
+    /**
+     * Pulisce la cache
+     */
+    clearCache() {
+        this.postCache.clear();
+        this.debug("Cache dei post pulita");
     }
 }
 exports.PostService = PostService;

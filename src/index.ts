@@ -10,12 +10,11 @@ import {
   PluginCategory,
   CorePlugins,
 } from "./types/shogun";
-import { IGunInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-import { DIDCreateOptions } from "./types/did";
-import { IGunUserInstance } from "gun";
+import { DIDCreateOptions } from "./plugins/did";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
@@ -228,9 +227,7 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  // *********************************************************************************************************
   // 🔌 PLUGIN MANAGER 🔌
-  // *********************************************************************************************************
 
   /**
    * Register a new plugin with the SDK
@@ -326,16 +323,14 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  // *********************************************************************************************************
   // 🔄 RXJS INTEGRATION 🔄
-  // *********************************************************************************************************
 
   /**
    * Observe a Gun node for changes
    * @param path - Path to observe (can be a string or a Gun chain)
    * @returns Observable that emits whenever the node changes
    */
-  observe<T>(path: string): Observable<T> {
+  rxGet<T>(path: string): Observable<T> {
     return this.rx.observe<T>(path);
   }
 
@@ -355,7 +350,7 @@ export class ShogunCore implements IShogunCore {
   /**
    * Put data and return an Observable
    * @param path - Path where to put the data
-   * @param data - Data to put
+   * @param oata - Data to put
    * @returns Observable that completes when the put is acknowledged
    */
   rxPut<T>(path: string | any, data: T): Observable<T> {
@@ -377,7 +372,7 @@ export class ShogunCore implements IShogunCore {
    * @param path - Path to get data from
    * @returns Observable that emits the data once
    */
-  onceObservable<T>(path: string | any): Observable<T> {
+  rxOnce<T>(path: string | any): Observable<T> {
     return this.rx.once<T>(path);
   }
 
@@ -781,9 +776,7 @@ export class ShogunCore implements IShogunCore {
     }, 100); // Ritarda leggermente l'esecuzione per dare priorità al completamento della registrazione
   }
 
-  // *********************************************************************************************************
   // 🤫 PRIVATE HELPER METHODS 🤫
-  // *********************************************************************************************************
 
   /**
    * Ensure the current user has a DID associated, creating one if needed
@@ -927,9 +920,7 @@ export class ShogunCore implements IShogunCore {
     });
   }
 
-  // *********************************************************************************************************
   // 🔫 GUN ACTIONS 🔫
-  // *********************************************************************************************************
 
   /**
    * Retrieves data from a Gun node at the specified path
@@ -1002,9 +993,7 @@ export class ShogunCore implements IShogunCore {
     });
   }
 
-  // *********************************************************************************************************
   // 🔌 PROVIDER 🔌
-  // *********************************************************************************************************
 
   /**
    * Set the RPC URL used for Ethereum network connections
@@ -1040,9 +1029,7 @@ export class ShogunCore implements IShogunCore {
       : null;
   }
 
-  // *********************************************************************************************************
   // 📢 EVENT EMITTER 📢
-  // *********************************************************************************************************
 
   /**
    * Emits an event through the core's event emitter.
@@ -1108,7 +1095,7 @@ export type {
   StealthAddressResult,
   LogLevel,
   LogMessage,
-} from "./types/stealth";
+} from "./plugins/stealth/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
-export { ShogunEventEmitter } from "./events";
+export { ShogunEventEmitter } from "./types/events";

@@ -16,38 +16,38 @@ export const PostSchema = {
       type: "integer",
       description: "Data di creazione in millisecondi",
     },
-    imageData: {
+    attachment: {
       type: ["string", "null"],
-      description: "Dati dell'immagine (base64 o URL)",
+      description:
+        "URL o dati Base64 di qualsiasi allegato (immagine, file, ecc.)",
     },
     payload: {
       type: ["object", "null"],
       description: "Dati supplementari",
       properties: {
-        imageData: {
-          type: ["string", "null"],
-          description: "Duplicato dell'immagine",
-        },
         content: {
           type: "string",
           description: "Duplicato del contenuto",
           default: "",
         },
+        attachment: {
+          type: ["string", "null"],
+          description: "Duplicato dell'allegato",
+        },
       },
       additionalProperties: true,
     },
-    hashtags: {
-      type: ["object", "null"],
-      description: "Hashtag usati, con valori booleani",
-      patternProperties: {
-        "^[a-z0-9_]+$": { type: "boolean" },
-      },
-      additionalProperties: true,
+    title: {
+      type: ["string", "null"],
+      description: "Titolo opzionale del post",
     },
-    _hashtagsList: {
-      type: ["array", "null"],
-      description: "Lista interna di hashtag normalizzati",
-      items: { type: "string" },
+    topic: {
+      type: ["string", "null"],
+      description: "Argomento o hashtags del post (es. '#tech #news')",
+    },
+    reference: {
+      type: ["string", "null"],
+      description: "Riferimento ad altro contenuto",
     },
     likes: {
       type: ["object", "null"],

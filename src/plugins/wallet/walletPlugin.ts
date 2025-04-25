@@ -2,8 +2,7 @@ import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { WalletManager } from "./walletManager";
-import { WalletInfo } from "../../types/shogun";
-import { WalletPluginInterface } from "./types";
+import { WalletPluginInterface, WalletInfo } from "./types";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 

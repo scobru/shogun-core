@@ -1,5 +1,5 @@
 import { EventEmitter } from "../../utils/eventEmitter";
-import { DeviceInfo, WebAuthnCredentials, CredentialResult, WebAuthnConfig, WebAuthnOperationOptions } from "../../types/webauthn";
+import { DeviceInfo, WebAuthnCredentials, CredentialResult, WebAuthnConfig, WebAuthnOperationOptions } from "./types";
 import { IGunInstance } from "gun";
 /**
  * Extends Window interface to include WebauthnAuth

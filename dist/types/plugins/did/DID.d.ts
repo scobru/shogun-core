@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { AuthResult, IShogunCore } from "../../types/shogun";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { DIDDocument, DIDResolutionResult, DIDCreateOptions, DIDRegistryConfig, DIDResolutionOptions } from "../../types/did";
+import { DIDDocument, DIDResolutionResult, DIDCreateOptions, DIDRegistryConfig, DIDResolutionOptions } from "./types";
 export type { DIDDocument, DIDResolutionResult, DIDCreateOptions };
 /**
  * ShogunDID class for decentralized identity management

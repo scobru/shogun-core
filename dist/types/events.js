@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunEventEmitter = void 0;
-const eventEmitter_1 = require("./utils/eventEmitter");
+const eventEmitter_1 = require("../utils/eventEmitter");
 /**
  * Extended EventEmitter class with typed events for Shogun
  * @class ShogunEventEmitter

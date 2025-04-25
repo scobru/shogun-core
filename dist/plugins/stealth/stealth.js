@@ -11,7 +11,7 @@ const ethers_1 = require("ethers");
 const storage_1 = require("../../storage/storage");
 const errorHandler_1 = require("../../utils/errorHandler");
 const logger_1 = require("../../utils/logger");
-const gun_1 = __importDefault(require("gun"));
+const sea_1 = __importDefault(require("gun/sea"));
 class Stealth {
     STEALTH_DATA_TABLE;
     lastEphemeralKeyPair = null;
@@ -138,7 +138,7 @@ class Stealth {
     async createAccount() {
         try {
             // Generate a new key pair
-            const keyPair = await gun_1.default.SEA.pair();
+            const keyPair = await sea_1.default.pair();
             if (!keyPair ||
                 !keyPair.pub ||
                 !keyPair.priv ||
@@ -165,7 +165,7 @@ class Stealth {
      */
     async generateEphemeralKeyPair() {
         try {
-            const keyPair = await gun_1.default.SEA.pair();
+            const keyPair = await sea_1.default.pair();
             if (!keyPair || !keyPair.epriv || !keyPair.epub) {
                 throw new Error("Failed to generate ephemeral key pair");
             }
@@ -211,7 +211,7 @@ class Stealth {
                     epriv: ephemeralKeyPair.epriv,
                 };
                 (0, logger_1.logDebug)("Key format for secret (generation):", JSON.stringify(keyForSecret));
-                gun_1.default.SEA.secret(recipientPublicKey, keyForSecret, async (sharedSecret) => {
+                sea_1.default.secret(recipientPublicKey, keyForSecret, async (sharedSecret) => {
                     (0, logger_1.logDebug)("Shared secret successfully generated with recipient keys");
                     (0, logger_1.logDebug)("Input format used:", {
                         recipientPublicKey: recipientPublicKey,
@@ -219,7 +219,7 @@ class Stealth {
                     });
                     try {
                         // Generate stealth address using shared secret
-                        const stealthPrivateKey = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(sharedSecret));
+                        const stealthPrivateKey = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(sharedSecret || ""));
                         const stealthWallet = new ethers_1.ethers.Wallet(stealthPrivateKey);
                         (0, logger_1.logDebug)("Stealth address generated:", {
                             address: stealthWallet.address,
@@ -324,7 +324,7 @@ class Stealth {
                         };
                         (0, logger_1.logDebug)("Regenerating with explicit format:", JSON.stringify(keyForSecret));
                         return new Promise((resolve, reject) => {
-                            gun_1.default.SEA.secret(data.recipientPublicKey, keyForSecret, async (secret) => {
+                            sea_1.default.secret(data.recipientPublicKey, keyForSecret, async (secret) => {
                                 if (!secret) {
                                     reject(new Error("Unable to regenerate shared secret"));
                                     return;
@@ -383,7 +383,7 @@ class Stealth {
                 () => {
                     (0, logger_1.logDebug)("Attempt 1: Standard method with ephemeral keys");
                     return new Promise((res) => {
-                        gun_1.default.SEA.secret(ephemeralPublicKey, pair, async (secret) => {
+                        sea_1.default.secret(ephemeralPublicKey, pair, async (secret) => {
                             try {
                                 if (!secret) {
                                     return res(null);
@@ -571,11 +571,11 @@ class Stealth {
             return new Promise((resolve, reject) => {
                 // Use the private key to create the key format needed for SEA.secret
                 const keyForSecret = {
-                    priv: privateKeyOrSpendKey,
+                    epriv: privateKeyOrSpendKey,
                     epub: stealthData.ephemeralKeyPair.epub,
                 };
                 // Generate shared secret
-                gun_1.default.SEA.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {
+                sea_1.default.secret(stealthData.ephemeralKeyPair.epub, keyForSecret, (sharedSecret) => {
                     if (!sharedSecret) {
                         reject(new Error("Failed to generate shared secret"));
                         return;

@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Webauthn } from "./webauthn";
 import { WebauthnPluginInterface } from "./types";
-import { WebAuthnCredentials, CredentialResult } from "../../types/webauthn";
+import { WebAuthnCredentials, CredentialResult } from "./types";
 import { log, logError } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";

@@ -14,9 +14,9 @@ export interface FriendEntity {
     about?: string;
 }
 export declare class FriendService {
-    private gun;
-    private currentUser;
-    private certificateManager;
+    private readonly gun;
+    private readonly currentUser;
+    private readonly certificateManager;
     friendRequests$: Observable<FriendEntity | undefined>;
     friendsList$: Observable<FriendEntity | undefined>;
     constructor(gunInstance: IGunInstance);

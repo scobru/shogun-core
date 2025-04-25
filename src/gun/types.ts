@@ -22,7 +22,7 @@ export interface IGunChainReference<T = unknown> {
   put(
     data: unknown,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions,
+    options?: IGunOptions
   ): IGunChainReference;
 
   /**
@@ -41,7 +41,7 @@ export interface IGunChainReference<T = unknown> {
    */
   recall(
     options?: IGunOptions,
-    callback?: (ack: IGunAck) => void,
+    callback?: (ack: IGunAck) => void
   ): IGunChainReference;
 
   /**
@@ -56,12 +56,12 @@ export interface IGunChainReference<T = unknown> {
     username: string,
     password: string,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions,
+    options?: IGunOptions
   ): IGunChainReference;
   auth(
     pair: IGunCryptoKeyPair,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions,
+    options?: IGunOptions
   ): IGunChainReference;
 
   /**
@@ -70,13 +70,13 @@ export interface IGunChainReference<T = unknown> {
   create(
     username: string,
     password: string,
-    callback?: (ack: IGunAck) => void,
+    callback?: (ack: IGunAck) => void
   ): IGunChainReference;
   create(
     username: string,
     password: string,
     pair: IGunCryptoKeyPair,
-    callback?: (ack: IGunAck) => void,
+    callback?: (ack: IGunAck) => void
   ): IGunChainReference;
 
   /**
@@ -85,7 +85,7 @@ export interface IGunChainReference<T = unknown> {
   delete(
     username: string,
     password: string,
-    callback?: (ack: IGunAck) => void,
+    callback?: (ack: IGunAck) => void
   ): IGunChainReference;
 
   /**
@@ -168,7 +168,7 @@ export interface IGunOptions {
  */
 export interface IGunSEA {
   pair(
-    callback?: (pair: IGunCryptoKeyPair) => void,
+    callback?: (pair: IGunCryptoKeyPair) => void
   ): Promise<IGunCryptoKeyPair>;
   sign(data: unknown, pair: IGunCryptoKeyPair): Promise<string>;
   verify(data: string, pair: IGunCryptoKeyPair): Promise<unknown>;
@@ -177,7 +177,7 @@ export interface IGunSEA {
   secret(
     key: string,
     pair: IGunCryptoKeyPair,
-    callback?: Function,
+    callback?: Function
   ): Promise<string>;
   work(data: string, salt: string, callback?: Function): Promise<string>;
 }

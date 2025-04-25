@@ -17,7 +17,7 @@ import {
   WebAuthnOperationOptions,
   WebAuthnCredentialData,
   WebAuthnVerificationResult,
-} from "../../types/webauthn";
+} from "./types";
 import { IGunInstance } from "gun";
 
 /**
