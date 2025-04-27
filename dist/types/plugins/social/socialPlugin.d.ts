@@ -1,16 +1,21 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { UserProfile, TimelineResult, Post, Comment, Message, SocialPluginInterface } from "./types";
-import { Observable } from "rxjs";
+import { Post, Comment, SocialPluginInterface } from "./types";
 export declare class SocialPlugin extends BasePlugin implements SocialPluginInterface {
     name: string;
     version: string;
     description: string;
     private social;
+    private gun;
     get user(): any;
     initialize(core: ShogunCore): void;
     destroy(): void;
-    getProfile(pub: string): Promise<UserProfile>;
+    /**
+     * Creates a new post using the standardized Post message format
+     * @param content Content of the post
+     * @param options Additional options for the post
+     * @returns Promise with the created post or null
+     */
     post(content: string, options?: {
         title?: string;
         topic?: string;
@@ -18,105 +23,94 @@ export declare class SocialPlugin extends BasePlugin implements SocialPluginInte
         reference?: string;
     }): Promise<Post | null>;
     /**
-     * Cerca post per topic o hashtag
-     * @param topic Argomento o hashtag da cercare
-     * @returns Array di post che contengono l'argomento/hashtag
+     * Likes a post by creating a MODERATION message with LIKE subtype
+     * @param postId ID of the post to like
+     * @returns Promise with operation result
      */
-    searchByTopic(topic: string): Promise<Post[]>;
     likePost(postId: string): Promise<boolean>;
-    unlikePost(postId: string): Promise<boolean>;
-    getLikes(postId: string): Promise<string[]>;
-    getLikeCount(postId: string): Promise<number>;
-    addComment(postId: string, content: string): Promise<Comment | null>;
-    getComments(postId: string): Promise<Comment[]>;
-    deletePost(postId: string): Promise<boolean>;
-    getTimeline(): Promise<TimelineResult>;
     /**
-     * Ottieni la timeline degli utenti seguiti (esclude i propri post)
-     * @returns Timeline con i post degli utenti seguiti
+     * Unlikes a post by creating a MODERATION message with BLOCK subtype (to cancel the like)
+     * @param postId ID of the post to unlike
+     * @returns Promise with operation result
      */
-    getFollowingTimeline(): Promise<TimelineResult>;
+    unlikePost(postId: string): Promise<boolean>;
+    /**
+     * Adds a comment to a post by creating a POST message with REPLY subtype
+     * @param postId ID of the post to comment on
+     * @param content Content of the comment
+     * @returns Promise with the created comment or null on failure
+     */
+    addComment(postId: string, content: string): Promise<Comment | null>;
+    /**
+     * Deletes a post by creating a MODERATION message with GLOBAL subtype
+     * @param postId ID of the post to delete
+     * @returns Promise with operation result
+     */
+    deletePost(postId: string): Promise<boolean>;
+    /**
+     * Follows a user by creating a CONNECTION message with FOLLOW subtype
+     * @param pub Public key of the user to follow
+     * @returns Promise with operation result
+     */
     follow(pub: string): Promise<boolean>;
     /**
-     * Aggiorna i campi del profilo utente
-     * @param fields Oggetto con i campi da aggiornare (es. {bio: "Nuova bio"})
-     * @returns true se l'operazione è riuscita
+     * Unfollows a user by creating a CONNECTION message that removes the follow relationship
+     * @param pub Public key of the user to unfollow
+     * @returns Promise with operation result
+     */
+    unfollow(pub: string): Promise<boolean>;
+    /**
+     * Updates user profile fields using PROFILE messages
+     * @param fields Object with fields to update (e.g. {bio: "New bio"})
+     * @returns Promise with operation result
      */
     updateProfile(fields: Record<string, string>): Promise<boolean>;
-    unfollow(pub: string): Promise<boolean>;
     cleanup(): void;
+    storeMessage(message: {
+        type: string;
+        subtype?: string;
+        creator: string;
+        createdAt: number;
+        payload: any;
+    }): Promise<string>;
     /**
-     * Ottieni la timeline come Observable per aggiornamenti in tempo reale
-     * @param limit Numero massimo di post da recuperare
+     * Invia un messaggio privato a un utente
+     * @param recipient ID pubblico del destinatario
+     * @param content Contenuto del messaggio
      * @param options Opzioni aggiuntive
-     * @returns Observable della timeline
+     * @returns Promise con l'ID del messaggio o null in caso di errore
      */
-    getTimelineObservable(limit?: number, options?: {
-        includeLikes: boolean;
-    }): Observable<Message[]>;
+    sendPrivateMessage(recipient: string, content: string, options?: {
+        isEncrypted?: boolean;
+        attachmentType?: string;
+        attachmentUrl?: string;
+        replyToId?: string;
+        recipients?: string[];
+    }): Promise<string | null>;
     /**
-     * Ottieni i commenti di un post come Observable
-     * @param postId ID del post
-     * @returns Observable dei commenti
+     * Segna un messaggio privato come letto
+     * @param messageId ID del messaggio
+     * @returns Promise con esito dell'operazione
      */
-    getCommentsObservable(postId: string): Observable<Comment[]>;
+    markMessageAsRead(messageId: string): Promise<boolean>;
     /**
-     * Ottieni gli utenti che hanno messo like a un post come Observable
-     * @param postId ID del post
-     * @returns Observable dei like
+     * Carica un file
+     * @param file Dati del file (base64 o URL)
+     * @param metadata Metadati del file
+     * @returns Promise con l'ID del file o null in caso di errore
      */
-    getLikesObservable(postId: string): Observable<string[]>;
+    uploadFile(file: string, metadata: {
+        filename: string;
+        mimetype: string;
+        size?: number;
+        description?: string;
+        isPublic?: boolean;
+    }): Promise<string | null>;
     /**
-     * Ottieni il conteggio dei like come Observable
-     * @param postId ID del post
-     * @returns Observable del conteggio like
+     * Condivide un file con un altro utente
+     * @param fileId ID del file
+     * @param recipient ID pubblico del destinatario
+     * @returns Promise con esito dell'operazione
      */
-    getLikeCountObservable(postId: string): Observable<number>;
-    /**
-     * Ottieni un post arricchito con dettagli dell'autore
-     * @param postId ID del post
-     * @returns Observable del post con dettagli aggiuntivi
-     */
-    getEnrichedPostObservable(postId: string): Observable<any>;
-    /**
-     * Cerca post per topic con aggiornamenti in tempo reale
-     * @param topic Argomento o hashtag da cercare
-     * @returns Observable di post con il topic specificato
-     */
-    searchByTopicObservable(topic: string): Observable<Post[]>;
-    /**
-     * Osserva un profilo utente in tempo reale
-     * @param pub Chiave pubblica dell'utente
-     * @returns Observable del profilo utente
-     */
-    getProfileObservable(pub: string): Observable<UserProfile>;
-    /**
-     * Ottieni tutti gli utenti registrati sulla rete
-     * @returns Array di profili utente base
-     */
-    getAllUsers(): Promise<UserProfile[]>;
-    /**
-     * Ottieni tutti gli utenti come Observable
-     * @returns Observable di profili utente
-     */
-    getAllUsersObservable(): Observable<UserProfile[]>;
-    /**
-     * Ottieni i post creati dall'utente corrente
-     * @param limit Numero massimo di post da recuperare
-     * @param options Opzioni aggiuntive
-     * @returns Risultato della timeline con i post dell'utente
-     */
-    getUserPosts(limit?: number, options?: {
-        includeLikes: boolean;
-        timeout?: number;
-    }): Promise<TimelineResult>;
-    /**
-     * Ottieni i post creati dall'utente corrente come Observable
-     * @param limit Numero massimo di post da recuperare
-     * @param options Opzioni aggiuntive
-     * @returns Observable di post in tempo reale
-     */
-    getUserPostsObservable(limit?: number, options?: {
-        includeLikes: boolean;
-    }): Observable<Message[]>;
+    shareFile(fileId: string, recipient: string): Promise<boolean>;
 }

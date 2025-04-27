@@ -107,13 +107,6 @@ export interface TimelineResult {
  */
 export interface SocialPluginInterface {
   /**
-   * Ottiene il profilo di un utente
-   * @param pub Identificativo pubblico dell'utente
-   * @returns Promise con il profilo utente
-   */
-  getProfile(pub: string): Promise<UserProfile>;
-
-  /**
    * Crea un nuovo post
    * @param content Contenuto del post
    * @param options Opzioni aggiuntive (titolo, argomento, allegato, riferimento)
@@ -143,12 +136,7 @@ export interface SocialPluginInterface {
    */
   unlikePost(postId: string): Promise<boolean>;
 
-  /**
-   * Ottiene i like di un post
-   * @param postId ID del post
-   * @returns Promise con lista di ID utenti che hanno messo like
-   */
-  getLikes(postId: string): Promise<string[]>;
+
 
   /**
    * Aggiunge un commento a un post
@@ -158,18 +146,6 @@ export interface SocialPluginInterface {
    */
   addComment(postId: string, content: string): Promise<Comment | null>;
 
-  /**
-   * Ottiene i commenti di un post
-   * @param postId ID del post
-   * @returns Promise con lista di commenti
-   */
-  getComments(postId: string): Promise<Comment[]>;
-
-  /**
-   * Ottiene la timeline dell'utente
-   * @returns Promise con il risultato della timeline
-   */
-  getTimeline(): Promise<TimelineResult>;
 
   /**
    * Segue un utente
@@ -190,10 +166,14 @@ export interface SocialPluginInterface {
    */
   cleanup(): void;
 
-  /**
-   * Cerca post per argomento/hashtag
-   * @param topic Argomento o hashtag da cercare
-   * @returns Promise con lista di post che contengono l'argomento
-   */
-  searchByTopic(topic: string): Promise<Post[]>;
+
+  storeMessage(message: {
+    type: string;
+    subtype?: string;
+    creator: string;
+    createdAt: number;
+    payload: any;
+  }): Promise<string>;
 }
+
+

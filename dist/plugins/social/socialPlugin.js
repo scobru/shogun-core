@@ -5,18 +5,20 @@ exports.SocialPlugin = void 0;
 const base_1 = require("../base");
 const social_1 = require("./social");
 const logger_1 = require("../../utils/logger");
-const rxjs_1 = require("rxjs");
+const message_1 = require("./message");
 class SocialPlugin extends base_1.BasePlugin {
     name = "social";
     version = "1.0.2";
     description = "Social plugin using GunDB for storage and real-time updates";
     social = null;
+    gun;
     get user() {
         return this.social?.user;
     }
     initialize(core) {
         super.initialize(core);
-        this.social = new social_1.Social(core.gun);
+        this.gun = core.gun;
+        this.social = new social_1.Social(this.gun);
         (0, logger_1.log)("Social plugin initialized");
     }
     destroy() {
@@ -27,331 +29,577 @@ class SocialPlugin extends base_1.BasePlugin {
         super.destroy();
         (0, logger_1.log)("Social plugin destroyed");
     }
-    async getProfile(pub) {
-        if (!this.social)
-            throw new Error("Social plugin not initialized");
-        if (typeof this.social.getProfile === "function") {
-            return this.social.getProfile(pub);
-        }
-        (0, logger_1.logError)("getProfile method not available");
-        return {
-            pub,
-            followers: [],
-            following: [],
-            customFields: {},
-        };
-    }
+    /**
+     * Creates a new post using the standardized Post message format
+     * @param content Content of the post
+     * @param options Additional options for the post
+     * @returns Promise with the created post or null
+     */
     async post(content, options) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.post === "function") {
-            return this.social.post(content, options);
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("post: user not authenticated");
+            return null;
         }
-        (0, logger_1.logError)("post method not available");
-        return null;
+        try {
+            // Create a new Post message
+            const createdAt = new Date();
+            // Create message with createdAt as a number for proper storeMessage compatibility
+            const messageData = {
+                type: message_1.MessageType.Post,
+                subtype: message_1.PostMessageSubType.Default,
+                creator: this.user.is.pub,
+                createdAt: createdAt.getTime(),
+                payload: {
+                    topic: options?.topic || "",
+                    title: options?.title || "",
+                    content: content,
+                    reference: options?.reference || "",
+                    attachment: options?.attachment || "",
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("post: failed to store post message");
+                return null;
+            }
+            // For backward compatibility, also use the existing implementation if available
+            if (typeof this.social.post === "function") {
+                await this.social.post(content, options);
+            }
+            // Convert to the API Post format used by clients
+            return {
+                id: messageId,
+                author: this.user.is.pub,
+                content: content,
+                timestamp: createdAt.getTime(),
+                title: options?.title,
+                topic: options?.topic,
+                attachment: options?.attachment,
+                reference: options?.reference,
+                likes: {},
+                comments: {},
+            };
+        }
+        catch (error) {
+            (0, logger_1.logError)(`post: error - ${error}`);
+            return null;
+        }
     }
     /**
-     * Cerca post per topic o hashtag
-     * @param topic Argomento o hashtag da cercare
-     * @returns Array di post che contengono l'argomento/hashtag
+     * Likes a post by creating a MODERATION message with LIKE subtype
+     * @param postId ID of the post to like
+     * @returns Promise with operation result
      */
-    async searchByTopic(topic) {
+    async likePost(postId) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.searchByTopic === "function") {
-            return this.social.searchByTopic(topic);
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("likePost: user not authenticated");
+            return false;
         }
-        (0, logger_1.logError)("searchByTopic method not available");
-        return [];
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Moderation,
+                subtype: message_1.ModerationMessageSubType.Like,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    reference: postId, // The ID of the post to like
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("likePost: failed to store moderation message");
+                return false;
+            }
+            // For backward compatibility, also use the existing implementation
+            if (typeof this.social.likePost === "function") {
+                await this.social.likePost(postId);
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`likePost: error - ${error}`);
+            return false;
+        }
     }
-    async likePost(postId) {
-        return this.social.likePost(postId);
-    }
+    /**
+     * Unlikes a post by creating a MODERATION message with BLOCK subtype (to cancel the like)
+     * @param postId ID of the post to unlike
+     * @returns Promise with operation result
+     */
     async unlikePost(postId) {
-        return this.social.unlikePost(postId);
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("unlikePost: user not authenticated");
+            return false;
+        }
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Moderation,
+                subtype: message_1.ModerationMessageSubType.Block,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    reference: postId, // The ID of the post to unlike
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("unlikePost: failed to store moderation message");
+                return false;
+            }
+            // For backward compatibility, also use the existing implementation
+            if (typeof this.social.unlikePost === "function") {
+                await this.social.unlikePost(postId);
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`unlikePost: error - ${error}`);
+            return false;
+        }
     }
-    async getLikes(postId) {
-        return this.social.getLikes(postId);
-    }
-    async getLikeCount(postId) {
-        return this.social.getLikeCount(postId);
-    }
+    /**
+     * Adds a comment to a post by creating a POST message with REPLY subtype
+     * @param postId ID of the post to comment on
+     * @param content Content of the comment
+     * @returns Promise with the created comment or null on failure
+     */
     async addComment(postId, content) {
-        return this.social.addComment(postId, content);
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("addComment: user not authenticated");
+            return null;
+        }
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Post,
+                subtype: message_1.PostMessageSubType.Reply,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    topic: "",
+                    title: "",
+                    content: content,
+                    reference: postId, // The ID of the post being replied to
+                    attachment: "",
+                },
+            };
+            // Store the message
+            const commentId = await this.storeMessage(messageData);
+            if (!commentId) {
+                (0, logger_1.logError)("addComment: failed to store comment message");
+                return null;
+            }
+            // For backward compatibility, also use the existing implementation
+            if (typeof this.social.addComment === "function") {
+                await this.social.addComment(postId, content);
+            }
+            // Return the comment in the format expected by clients
+            return {
+                id: commentId,
+                author: this.user.is.pub,
+                content: content,
+                timestamp: new Date().getTime(),
+                postId: postId,
+            };
+        }
+        catch (error) {
+            (0, logger_1.logError)(`addComment: error - ${error}`);
+            return null;
+        }
     }
-    async getComments(postId) {
-        return this.social.getComments(postId);
-    }
+    /**
+     * Deletes a post by creating a MODERATION message with GLOBAL subtype
+     * @param postId ID of the post to delete
+     * @returns Promise with operation result
+     */
     async deletePost(postId) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.deletePost === "function") {
-            return this.social.deletePost(postId);
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("deletePost: user not authenticated");
+            return false;
         }
-        (0, logger_1.logError)("deletePost method not available");
-        return false;
-    }
-    async getTimeline() {
-        if (!this.social)
-            throw new Error("Social plugin not initialized");
-        if (typeof this.social.getTimeline === "function") {
-            return this.social.getTimeline();
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Moderation,
+                subtype: message_1.ModerationMessageSubType.Global,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    reference: postId, // The ID of the post to delete
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("deletePost: failed to store moderation message");
+                return false;
+            }
+            // For backward compatibility, also use the existing implementation
+            if (typeof this.social.deletePost === "function") {
+                await this.social.deletePost(postId);
+            }
+            return true;
         }
-        (0, logger_1.logError)("getTimeline method not available");
-        return { messages: [], error: "Method not implemented" };
+        catch (error) {
+            (0, logger_1.logError)(`deletePost: error - ${error}`);
+            return false;
+        }
     }
     /**
-     * Ottieni la timeline degli utenti seguiti (esclude i propri post)
-     * @returns Timeline con i post degli utenti seguiti
+     * Follows a user by creating a CONNECTION message with FOLLOW subtype
+     * @param pub Public key of the user to follow
+     * @returns Promise with operation result
      */
-    async getFollowingTimeline() {
-        if (!this.social)
-            throw new Error("Social plugin not initialized");
-        if (typeof this.social.getTimeline === "function") {
-            return this.social.getTimeline(10, {
-                includeLikes: true,
-                onlyFollowing: true,
-            });
-        }
-        (0, logger_1.logError)("getFollowingTimeline method not available");
-        return { messages: [], error: "Method not implemented" };
-    }
     async follow(pub) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.follow === "function") {
-            return this.social.follow(pub);
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("follow: user not authenticated");
+            return false;
         }
-        (0, logger_1.logError)("follow method not available");
-        return false;
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Connection,
+                subtype: message_1.ConnectionMessageSubType.Follow,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    name: pub, // The public key of the user to follow
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("follow: failed to store connection message");
+                return false;
+            }
+            // Also update the social graph in GunDB directly for backward compatibility
+            if (typeof this.social.follow === "function") {
+                await this.social.follow(pub);
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`follow: error - ${error}`);
+            return false;
+        }
     }
     /**
-     * Aggiorna i campi del profilo utente
-     * @param fields Oggetto con i campi da aggiornare (es. {bio: "Nuova bio"})
-     * @returns true se l'operazione è riuscita
+     * Unfollows a user by creating a CONNECTION message that removes the follow relationship
+     * @param pub Public key of the user to unfollow
+     * @returns Promise with operation result
+     */
+    async unfollow(pub) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("unfollow: user not authenticated");
+            return false;
+        }
+        try {
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Connection,
+                subtype: message_1.ConnectionMessageSubType.Block,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    name: pub, // The public key of the user to unfollow/block
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("unfollow: failed to store connection message");
+                return false;
+            }
+            // Also update the social graph in GunDB directly for backward compatibility
+            if (typeof this.social.unfollow === "function") {
+                await this.social.unfollow(pub);
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`unfollow: error - ${error}`);
+            return false;
+        }
+    }
+    /**
+     * Updates user profile fields using PROFILE messages
+     * @param fields Object with fields to update (e.g. {bio: "New bio"})
+     * @returns Promise with operation result
      */
     async updateProfile(fields) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.updateProfile !== "function") {
-            (0, logger_1.logError)("updateProfile method not available");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("updateProfile: user not authenticated");
             return false;
         }
         try {
             let success = true;
-            // Aggiorna ogni campo nell'oggetto
+            // Create and store a Profile message for each field
             for (const [field, value] of Object.entries(fields)) {
-                const result = await this.social.updateProfile(field, value);
-                if (!result)
+                // Map field names to appropriate subtypes
+                let subtype;
+                switch (field.toLowerCase()) {
+                    case "name":
+                        subtype = message_1.ProfileMessageSubType.Name;
+                        break;
+                    case "bio":
+                        subtype = message_1.ProfileMessageSubType.Bio;
+                        break;
+                    case "profileimage":
+                        subtype = message_1.ProfileMessageSubType.ProfileImage;
+                        break;
+                    case "coverimage":
+                        subtype = message_1.ProfileMessageSubType.CoverImage;
+                        break;
+                    case "website":
+                        subtype = message_1.ProfileMessageSubType.Website;
+                        break;
+                    default:
+                        subtype = message_1.ProfileMessageSubType.Custom;
+                        break;
+                }
+                // Create message data with proper format
+                const messageData = {
+                    type: message_1.MessageType.Profile,
+                    subtype: subtype,
+                    creator: this.user.is.pub,
+                    createdAt: new Date().getTime(),
+                    payload: {
+                        key: field,
+                        value: value,
+                    },
+                };
+                // Store the message
+                const messageId = await this.storeMessage(messageData);
+                if (!messageId) {
+                    (0, logger_1.logError)(`updateProfile: failed to store profile message for field ${field}`);
                     success = false;
+                    continue;
+                }
+            }
+            // For backward compatibility, also use the existing implementation
+            if (typeof this.social.updateProfile === "function") {
+                for (const [field, value] of Object.entries(fields)) {
+                    const result = await this.social.updateProfile(field, value);
+                    if (!result)
+                        success = false;
+                }
             }
             return success;
         }
         catch (err) {
-            (0, logger_1.logError)(`Errore nell'aggiornamento del profilo: ${err}`);
+            (0, logger_1.logError)(`updateProfile: error - ${err}`);
             return false;
         }
-    }
-    async unfollow(pub) {
-        if (!this.social)
-            throw new Error("Social plugin not initialized");
-        if (typeof this.social.unfollow === "function") {
-            return this.social.unfollow(pub);
-        }
-        (0, logger_1.logError)("unfollow method not available");
-        return false;
     }
     cleanup() {
         if (this.social && typeof this.social.cleanup === "function") {
             this.social.cleanup();
         }
     }
-    /**
-     * Ottieni la timeline come Observable per aggiornamenti in tempo reale
-     * @param limit Numero massimo di post da recuperare
-     * @param options Opzioni aggiuntive
-     * @returns Observable della timeline
-     */
-    getTimelineObservable(limit = 10, options = { includeLikes: true }) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
-        }
-        if (typeof this.social.getTimelineObservable === "function") {
-            return this.social.getTimelineObservable(limit, options);
-        }
-        (0, logger_1.logError)("getTimelineObservable method not available");
-        return (0, rxjs_1.of)([]);
-    }
-    /**
-     * Ottieni i commenti di un post come Observable
-     * @param postId ID del post
-     * @returns Observable dei commenti
-     */
-    getCommentsObservable(postId) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
-        }
-        if (typeof this.social.getCommentsObservable === "function") {
-            return this.social.getCommentsObservable(postId);
-        }
-        (0, logger_1.logError)("getCommentsObservable method not available");
-        return (0, rxjs_1.of)([]);
-    }
-    /**
-     * Ottieni gli utenti che hanno messo like a un post come Observable
-     * @param postId ID del post
-     * @returns Observable dei like
-     */
-    getLikesObservable(postId) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
-        }
-        if (typeof this.social.getLikesObservable === "function") {
-            return this.social.getLikesObservable(postId);
-        }
-        (0, logger_1.logError)("getLikesObservable method not available");
-        return (0, rxjs_1.of)([]);
-    }
-    /**
-     * Ottieni il conteggio dei like come Observable
-     * @param postId ID del post
-     * @returns Observable del conteggio like
-     */
-    getLikeCountObservable(postId) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)(0);
-        }
-        if (typeof this.social.getLikeCountObservable === "function") {
-            return this.social.getLikeCountObservable(postId);
-        }
-        (0, logger_1.logError)("getLikeCountObservable method not available");
-        return (0, rxjs_1.of)(0);
-    }
-    /**
-     * Ottieni un post arricchito con dettagli dell'autore
-     * @param postId ID del post
-     * @returns Observable del post con dettagli aggiuntivi
-     */
-    getEnrichedPostObservable(postId) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)(null);
-        }
-        if (typeof this.social.getEnrichedPostObservable === "function") {
-            return this.social.getEnrichedPostObservable(postId);
-        }
-        (0, logger_1.logError)("getEnrichedPostObservable method not available");
-        return (0, rxjs_1.of)(null);
-    }
-    /**
-     * Cerca post per topic con aggiornamenti in tempo reale
-     * @param topic Argomento o hashtag da cercare
-     * @returns Observable di post con il topic specificato
-     */
-    searchByTopicObservable(topic) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
-        }
-        if (typeof this.social.searchByTopicObservable === "function") {
-            return this.social.searchByTopicObservable(topic);
-        }
-        (0, logger_1.logError)("searchByTopicObservable method not available");
-        return (0, rxjs_1.of)([]);
-    }
-    /**
-     * Osserva un profilo utente in tempo reale
-     * @param pub Chiave pubblica dell'utente
-     * @returns Observable del profilo utente
-     */
-    getProfileObservable(pub) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)({
-                pub,
-                followers: [],
-                following: [],
-                customFields: {},
-            });
-        }
-        if (typeof this.social.getProfileObservable === "function") {
-            return this.social.getProfileObservable(pub);
-        }
-        (0, logger_1.logError)("getProfileObservable method not available");
-        return (0, rxjs_1.of)({
-            pub,
-            followers: [],
-            following: [],
-            customFields: {},
-        });
-    }
-    /**
-     * Ottieni tutti gli utenti registrati sulla rete
-     * @returns Array di profili utente base
-     */
-    async getAllUsers() {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return [];
-        }
-        if (typeof this.social.getAllUsers === "function") {
-            return this.social.getAllUsers();
-        }
-        (0, logger_1.logError)("getAllUsers method not available");
-        return [];
-    }
-    /**
-     * Ottieni tutti gli utenti come Observable
-     * @returns Observable di profili utente
-     */
-    getAllUsersObservable() {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
-        }
-        if (typeof this.social.getAllUsersObservable === "function") {
-            return this.social.getAllUsersObservable();
-        }
-        (0, logger_1.logError)("getAllUsersObservable method not available");
-        return (0, rxjs_1.of)([]);
-    }
-    /**
-     * Ottieni i post creati dall'utente corrente
-     * @param limit Numero massimo di post da recuperare
-     * @param options Opzioni aggiuntive
-     * @returns Risultato della timeline con i post dell'utente
-     */
-    async getUserPosts(limit = 10, options = {
-        includeLikes: true,
-    }) {
+    async storeMessage(message) {
         if (!this.social)
             throw new Error("Social plugin not initialized");
-        if (typeof this.social.getUserPosts === "function") {
-            return this.social.getUserPosts(limit, options);
+        const result = await this.social.storeMessage(message);
+        if (result === null) {
+            throw new Error("Failed to store message");
         }
-        (0, logger_1.logError)("getUserPosts method not available");
-        return { messages: [], error: "Method not implemented" };
+        return result;
     }
     /**
-     * Ottieni i post creati dall'utente corrente come Observable
-     * @param limit Numero massimo di post da recuperare
+     * Invia un messaggio privato a un utente
+     * @param recipient ID pubblico del destinatario
+     * @param content Contenuto del messaggio
      * @param options Opzioni aggiuntive
-     * @returns Observable di post in tempo reale
+     * @returns Promise con l'ID del messaggio o null in caso di errore
      */
-    getUserPostsObservable(limit = 10, options = { includeLikes: true }) {
-        if (!this.social) {
-            (0, logger_1.logError)("Social plugin not initialized");
-            return (0, rxjs_1.of)([]);
+    async sendPrivateMessage(recipient, content, options) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("sendPrivateMessage: user not authenticated");
+            return null;
         }
-        if (typeof this.social.getUserPostsObservable === "function") {
-            return this.social.getUserPostsObservable(limit, options);
+        try {
+            // Determine if it's a direct message or group chat
+            const subtype = options?.recipients && options.recipients.length > 0
+                ? message_1.PrivateMessageSubType.GroupChat
+                : message_1.PrivateMessageSubType.Direct;
+            // Create message data with proper format
+            const messageData = {
+                type: message_1.MessageType.Private,
+                subtype: subtype,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    recipient: recipient,
+                    recipients: options?.recipients || [],
+                    content: content,
+                    isEncrypted: options?.isEncrypted || false,
+                    metadata: {
+                        attachmentType: options?.attachmentType || '',
+                        attachmentUrl: options?.attachmentUrl || '',
+                        replyToId: options?.replyToId || '',
+                    },
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("sendPrivateMessage: failed to store private message");
+                return null;
+            }
+            return messageId;
         }
-        (0, logger_1.logError)("getUserPostsObservable method not available");
-        return (0, rxjs_1.of)([]);
+        catch (error) {
+            (0, logger_1.logError)(`sendPrivateMessage: error - ${error}`);
+            return null;
+        }
+    }
+    /**
+     * Segna un messaggio privato come letto
+     * @param messageId ID del messaggio
+     * @returns Promise con esito dell'operazione
+     */
+    async markMessageAsRead(messageId) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("markMessageAsRead: user not authenticated");
+            return false;
+        }
+        try {
+            // Create a read receipt message
+            const messageData = {
+                type: message_1.MessageType.Private,
+                subtype: message_1.PrivateMessageSubType.ReadReceipt,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    recipient: '', // Will be determined from the original message
+                    content: '',
+                    isEncrypted: false,
+                    metadata: {
+                        replyToId: messageId, // Reference to the message being marked as read
+                    },
+                },
+            };
+            // Store the message
+            const receiptId = await this.storeMessage(messageData);
+            if (!receiptId) {
+                (0, logger_1.logError)("markMessageAsRead: failed to store read receipt");
+                return false;
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`markMessageAsRead: error - ${error}`);
+            return false;
+        }
+    }
+    /**
+     * Carica un file
+     * @param file Dati del file (base64 o URL)
+     * @param metadata Metadati del file
+     * @returns Promise con l'ID del file o null in caso di errore
+     */
+    async uploadFile(file, metadata) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("uploadFile: user not authenticated");
+            return null;
+        }
+        try {
+            // Create a File message
+            const messageData = {
+                type: message_1.MessageType.File,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    data: file,
+                    filename: metadata.filename,
+                    mimetype: metadata.mimetype,
+                    size: metadata.size || 0,
+                    description: metadata.description || '',
+                    isPublic: metadata.isPublic || false,
+                },
+            };
+            // Store the message
+            const fileId = await this.storeMessage(messageData);
+            if (!fileId) {
+                (0, logger_1.logError)("uploadFile: failed to store file message");
+                return null;
+            }
+            return fileId;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`uploadFile: error - ${error}`);
+            return null;
+        }
+    }
+    /**
+     * Condivide un file con un altro utente
+     * @param fileId ID del file
+     * @param recipient ID pubblico del destinatario
+     * @returns Promise con esito dell'operazione
+     */
+    async shareFile(fileId, recipient) {
+        if (!this.social)
+            throw new Error("Social plugin not initialized");
+        if (!this.user.is || !this.user.is.pub) {
+            (0, logger_1.logError)("shareFile: user not authenticated");
+            return false;
+        }
+        try {
+            // Create a private message that references the file
+            const messageData = {
+                type: message_1.MessageType.Private,
+                subtype: message_1.PrivateMessageSubType.Direct,
+                creator: this.user.is.pub,
+                createdAt: new Date().getTime(),
+                payload: {
+                    recipient: recipient,
+                    content: '',
+                    isEncrypted: false,
+                    metadata: {
+                        attachmentType: 'file',
+                        attachmentUrl: fileId, // Reference to the file
+                    },
+                },
+            };
+            // Store the message
+            const messageId = await this.storeMessage(messageData);
+            if (!messageId) {
+                (0, logger_1.logError)("shareFile: failed to store share message");
+                return false;
+            }
+            return true;
+        }
+        catch (error) {
+            (0, logger_1.logError)(`shareFile: error - ${error}`);
+            return false;
+        }
     }
 }
 exports.SocialPlugin = SocialPlugin;
