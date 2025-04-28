@@ -22,6 +22,12 @@ export declare class Social extends EventEmitter {
      */
     cleanup(): void;
     /**
+     * Sanitize and validate a message object
+     * @param message The message to validate
+     * @returns The sanitized message or throws an error if invalid
+     */
+    private sanitizeMessage;
+    /**
      * Stores any message conforming to the standard message schema
      * @param message Message object following the message schema
      * @returns The message ID (hash)

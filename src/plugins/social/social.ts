@@ -5,7 +5,6 @@ import {
 } from "./types";
 
 import { IGunInstance } from "gun";
-import { Message } from "./message";
 import Ajv from "ajv";
 
 // AJV schema validator instance
@@ -21,7 +20,8 @@ const messageSchema = {
     createdAt: { 
       oneOf: [
         { type: "number" },
-        { instanceof: "Date" }
+        { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z$" }, // ISO date string
+        { type: "object" } // For Date objects, we'll validate them in code
       ]
     },
     subtype: { type: "string" },
@@ -94,6 +94,14 @@ export class Social extends EventEmitter {
    * @returns The sanitized message or throws an error if invalid
    */
   private sanitizeMessage(message: any): any {
+    // Convert Date objects to timestamps before validation
+    if (message.createdAt instanceof Date) {
+      message = {
+        ...message,
+        createdAt: message.createdAt.getTime()
+      };
+    }
+
     // Basic validation using AJV
     const valid = validateMessage(message);
     if (!valid) {
@@ -131,7 +139,7 @@ export class Social extends EventEmitter {
    * @param message Message object following the message schema
    * @returns The message ID (hash)
    */
-  public async storeMessage(message: Message): Promise<string | null> {
+  public async storeMessage(message: any): Promise<string | null> {
     console.log("storeMessage called with:", JSON.stringify(message));
 
     if (!this.user.is || !this.user.is.pub) {
@@ -158,8 +166,17 @@ export class Social extends EventEmitter {
     }
 
     // Validate POST message content is not empty
-    if (message.type === "POST" || message.type === "Post") {
-      const content = message.payload?.content || message.content || "";
+    const messageType = typeof message.type === 'string' ? message.type.toUpperCase() : '';
+    const isPostType = messageType === 'POST';
+    
+    if (isPostType) {
+      // Access content safely with type checking
+      const content = 
+        (message.payload && typeof message.payload === 'object' && typeof message.payload.content === 'string'
+          ? message.payload.content
+          : '') || 
+        (typeof message.content === 'string' ? message.content : '');
+          
       if (!content.trim()) {
         console.error("storeMessage failed: POST message with empty content");
         throw new Error("Post content cannot be empty");
@@ -168,13 +185,19 @@ export class Social extends EventEmitter {
 
     try {
       // Generate hash as per message algorithm
-      const type = message.type?.toUpperCase() || '';
-      const creator = message.creator || '';
+      const type = typeof message.type === 'string' ? message.type.toUpperCase() : '';
+      const creator = typeof message.creator === 'string' ? message.creator : '';
       const createdAt = message.createdAt instanceof Date ? 
         message.createdAt.getTime() : 
         (typeof message.createdAt === 'number' ? message.createdAt : Date.now());
-      const messageSubtype = message.subtype || '';
-      const messagePayload = JSON.stringify(message.payload || {});
+      
+      // Safely extract subtype
+      const messageSubtype = typeof message.subtype === 'string' ? message.subtype : '';
+      
+      // Safely extract and stringify payload
+      const messagePayload = message.payload ? 
+        (typeof message.payload === 'string' ? message.payload : JSON.stringify(message.payload)) : 
+        '{}';
 
       // Simplified version - we use a standardized format for hashing
       const content = `${type}:${messageSubtype}:${creator}:${createdAt}:${messagePayload}`;
@@ -196,19 +219,30 @@ export class Social extends EventEmitter {
       console.log("storeMessage: storing message in GunDB");
       
       // Create a flattened version of the message for GunDB storage
+      // Safely extract all properties with type checks
       const storableMessage = {
         ...message,
         // Ensure payload is a string to prevent GunDB nested object issues
         payload: typeof message.payload === 'string' 
           ? message.payload 
-          : JSON.stringify(message.payload),
+          : JSON.stringify(message.payload || {}),
         // Add top-level content field for backward compatibility
-        content: message.payload?.content || '',
+        content: message.payload && typeof message.payload === 'object' && typeof message.payload.content === 'string'
+          ? message.payload.content
+          : (typeof message.content === 'string' ? message.content : ''),
         // Store all important payload fields at the top level for better indexing
-        topic: message.payload?.topic || '',
-        title: message.payload?.title || '',
-        attachment: message.payload?.attachment || '',
-        reference: message.payload?.reference || ''
+        topic: message.payload && typeof message.payload === 'object' && typeof message.payload.topic === 'string'
+          ? message.payload.topic 
+          : '',
+        title: message.payload && typeof message.payload === 'object' && typeof message.payload.title === 'string'
+          ? message.payload.title 
+          : '',
+        attachment: message.payload && typeof message.payload === 'object' && typeof message.payload.attachment === 'string'
+          ? message.payload.attachment 
+          : '',
+        reference: message.payload && typeof message.payload === 'object' && typeof message.payload.reference === 'string'
+          ? message.payload.reference 
+          : ''
       };
       
       console.log("storeMessage: prepared message for storage:", JSON.stringify(storableMessage));

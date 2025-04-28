@@ -211,6 +211,8 @@ export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
     }
 
     try {
+      log(`[SocialPlugin] Attempting to like post ${postId} by user ${this.user.is.pub}`);
+
       // Create a moderation message for the like
       const messageData: MessageAdapter = {
         type: MessageType.Moderation,
@@ -222,8 +224,12 @@ export class SocialPlugin extends BasePlugin implements SocialPluginInterface {
         },
       };
 
+      log(`[SocialPlugin] Created like message:`, messageData);
+
       // Store the message
       const likeId = await this.storeMessage(messageData);
+      log(`[SocialPlugin] Like message stored with ID: ${likeId}`);
+
       return !!likeId;
     } catch (error) {
       logError(`likePost: error - ${error}`);

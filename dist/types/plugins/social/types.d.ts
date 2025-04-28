@@ -139,11 +139,5 @@ export interface SocialPluginInterface {
      * Rilascia le risorse e pulisce le cache
      */
     cleanup(): void;
-    storeMessage(message: {
-        type: string;
-        subtype?: string;
-        creator: string;
-        createdAt: number;
-        payload: any;
-    }): Promise<string>;
+    storeMessage(message: Message): Promise<string>;
 }
