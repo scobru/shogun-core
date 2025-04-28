@@ -6,6 +6,45 @@ import {
 
 import { IGunInstance } from "gun";
 import { Message } from "./message";
+import Ajv from "ajv";
+
+// AJV schema validator instance
+const ajv = new Ajv();
+
+// Schema for validating messages
+const messageSchema = {
+  type: "object",
+  required: ["type", "creator"],
+  properties: {
+    type: { type: "string" },
+    creator: { type: "string" },
+    createdAt: { 
+      oneOf: [
+        { type: "number" },
+        { instanceof: "Date" }
+      ]
+    },
+    subtype: { type: "string" },
+    payload: {
+      type: "object",
+      properties: {
+        content: { type: "string" },
+        topic: { type: "string" },
+        title: { type: "string" },
+        reference: { type: "string" },
+        attachment: { type: "string" },
+        key: { type: "string" },
+        value: { type: "string" },
+        recipient: { type: "string" },
+        name: { type: "string" }
+      }
+    }
+  },
+  additionalProperties: true
+};
+
+// Compile schema
+const validateMessage = ajv.compile(messageSchema);
 
 /**
  * Plugin Social che utilizza Gun DB
@@ -50,6 +89,44 @@ export class Social extends EventEmitter {
   }
 
   /**
+   * Sanitize and validate a message object
+   * @param message The message to validate
+   * @returns The sanitized message or throws an error if invalid
+   */
+  private sanitizeMessage(message: any): any {
+    // Basic validation using AJV
+    const valid = validateMessage(message);
+    if (!valid) {
+      console.error("Message validation failed:", validateMessage.errors);
+      throw new Error(`Invalid message format: ${JSON.stringify(validateMessage.errors)}`);
+    }
+
+    // Sanitize content fields and prevent XSS
+    if (message.payload && typeof message.payload === 'object') {
+      const payload = message.payload as Record<string, unknown>;
+      
+      if (typeof payload.content === 'string') {
+        // Basic content sanitization - strip HTML tags
+        payload.content = payload.content
+          .replace(/<[^>]*>/g, '')
+          .trim();
+      }
+      
+      // Sanitize other text fields
+      const fieldsToSanitize = ['topic', 'title', 'reference', 'attachment', 'key', 'value', 'recipient', 'name'];
+      fieldsToSanitize.forEach(field => {
+        if (typeof payload[field] === 'string') {
+          payload[field] = (payload[field] as string)
+            .replace(/<[^>]*>/g, '')
+            .trim();
+        }
+      });
+    }
+
+    return message;
+  }
+
+  /**
    * Stores any message conforming to the standard message schema
    * @param message Message object following the message schema
    * @returns The message ID (hash)
@@ -71,6 +148,14 @@ export class Social extends EventEmitter {
     }
 
     console.log("storeMessage: authentication checks passed");
+
+    // Sanitize and validate message
+    try {
+      message = this.sanitizeMessage(message);
+    } catch (error) {
+      console.error("storeMessage failed: message validation error", error);
+      throw error;
+    }
 
     // Validate POST message content is not empty
     if (message.type === "POST" || message.type === "Post") {
