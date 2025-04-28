@@ -167,13 +167,7 @@ export interface SocialPluginInterface {
   cleanup(): void;
 
 
-  storeMessage(message: {
-    type: string;
-    subtype?: string;
-    creator: string;
-    createdAt: number;
-    payload: any;
-  }): Promise<string>;
+  storeMessage(message: Message): Promise<string>;
 }
 
 

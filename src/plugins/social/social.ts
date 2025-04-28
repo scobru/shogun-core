@@ -5,6 +5,7 @@ import {
 } from "./types";
 
 import { IGunInstance } from "gun";
+import { Message } from "./message";
 
 /**
  * Plugin Social che utilizza Gun DB
@@ -53,7 +54,7 @@ export class Social extends EventEmitter {
    * @param message Message object following the message schema
    * @returns The message ID (hash)
    */
-  public async storeMessage(message: any): Promise<string | null> {
+  public async storeMessage(message: Message): Promise<string | null> {
     console.log("storeMessage called with:", JSON.stringify(message));
 
     if (!this.user.is || !this.user.is.pub) {
