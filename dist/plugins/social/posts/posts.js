@@ -250,8 +250,7 @@ class PostService extends eventEmitter_1.EventEmitter {
             }
             // Salva il post nel database con la struttura semplificata
             await new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .put(simplePostData, (ack) => {
                     if (ack && ack.err) {
@@ -269,8 +268,7 @@ class PostService extends eventEmitter_1.EventEmitter {
                 if (hashtags.length > 0) {
                     for (const tag of hashtags) {
                         await new Promise((resolve) => {
-                            this.gun
-                                .get("topics")
+                            this.gun.user().get("topics")
                                 .get(tag)
                                 .get(postId)
                                 .put(true, () => resolve());
@@ -320,8 +318,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         }
         try {
             return new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .once((post) => {
                     if (!post) {
@@ -378,8 +375,7 @@ class PostService extends eventEmitter_1.EventEmitter {
                     // recupero following da Social.getProfile o qui direttamente
                     await new Promise((resolveFollowing) => {
                         this.gun
-                            .get("users")
-                            .get(userPub)
+                            .user()
                             .get("following")
                             .map()
                             .once((val, key) => {
@@ -399,7 +395,7 @@ class PostService extends eventEmitter_1.EventEmitter {
                 messages.sort((a, b) => b.createdAt - a.createdAt);
                 resolve({ messages });
             }, options.timeout || 5000);
-            this.gun
+            this.gun.user()
                 .get("posts")
                 .map()
                 .once(async (post, id) => {
@@ -523,8 +519,7 @@ class PostService extends eventEmitter_1.EventEmitter {
                 return null;
             }
             return new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("comments")
                     .get(commentId)
@@ -577,8 +572,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         try {
             const comments = [];
             await new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("comments")
                     .map()
@@ -619,8 +613,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         try {
             const userPub = this.user.is.pub;
             await new Promise((resolve, reject) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("likes")
                     .get(userPub)
@@ -644,8 +637,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         try {
             const userPub = this.user.is.pub;
             await new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("likes")
                     .get(userPub)
@@ -669,8 +661,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         try {
             const likes = [];
             await new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("likes")
                     .map()
@@ -703,8 +694,7 @@ class PostService extends eventEmitter_1.EventEmitter {
             // Prima cerchiamo nei topics indicizzati
             const refs = [];
             await new Promise((resolve) => {
-                this.gun
-                    .get("topics")
+                this.gun.user().get("topics")
                     .get(searchTerm)
                     .map()
                     .once((val, key) => {
@@ -715,8 +705,7 @@ class PostService extends eventEmitter_1.EventEmitter {
             });
             // Per compatibilità, cerchiamo anche nei vecchi hashtags
             await new Promise((resolve) => {
-                this.gun
-                    .get("hashtags")
+                this.gun.user().get("hashtags")
                     .get(searchTerm)
                     .map()
                     .once((val, key) => {
@@ -739,7 +728,7 @@ class PostService extends eventEmitter_1.EventEmitter {
                     continue;
                 }
                 const data = await new Promise((resolve) => {
-                    this.gun.get("posts").get(id).once(resolve);
+                    this.gun.user().get("posts").get(id).once(resolve);
                     setTimeout(() => resolve(null), 500);
                 });
                 if (data && data.content) {
@@ -770,8 +759,7 @@ class PostService extends eventEmitter_1.EventEmitter {
             const seen = new Set();
             // Recupera tutti i post e filtra per topic
             await new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .map()
                     .once((post, id) => {
                     if (!post || seen.has(id))
@@ -802,7 +790,7 @@ class PostService extends eventEmitter_1.EventEmitter {
         if (!this.user.is || !this.user.is.pub)
             throw new Error("Non autenticato");
         try {
-            const post = await new Promise((res) => this.gun.get("posts").get(postId).once(res));
+            const post = await new Promise((res) => this.gun.user().get("posts").get(postId).once(res));
             if (!post) {
                 this.error(`Post ${postId} non trovato`);
                 return false;
@@ -819,10 +807,10 @@ class PostService extends eventEmitter_1.EventEmitter {
             else if (post.hashtags && typeof post.hashtags === "object")
                 tags = Object.keys(post.hashtags).filter((k) => post.hashtags[k]);
             for (const t of tags) {
-                await new Promise((r) => this.gun.get("hashtags").get(t).get(postId).put(null, r));
+                await new Promise((r) => this.gun.user().get("hashtags").get(t).get(postId).put(null, r));
             }
-            await new Promise((r) => this.gun.get("users").get(userPub).get("posts").get(postId).put(null, r));
-            await new Promise((r) => this.gun.get("posts").get(postId).put(null, r));
+            await new Promise((r) => this.gun.user().get("posts").get(postId).put(null, r));
+            await new Promise((r) => this.gun.user().get("posts").get(postId).put(null, r));
             // Rimuovi dalla cache
             this.postCache.delete(postId);
             this.emit("delete:post", { id: postId, author: userPub });
@@ -840,8 +828,7 @@ class PostService extends eventEmitter_1.EventEmitter {
     async getLikesObject(postId) {
         try {
             return new Promise((resolve) => {
-                this.gun
-                    .get("posts")
+                this.gun.user().get("posts")
                     .get(postId)
                     .get("likes")
                     .once((likes) => {
@@ -867,7 +854,7 @@ class PostService extends eventEmitter_1.EventEmitter {
     getLikesObservable(postId) {
         return new rxjs_1.Observable((subscriber) => {
             // Sottoscrizione ai cambiamenti dei like
-            const unsub = this.gun
+            const unsub = this.gun.user()
                 .get("posts")
                 .get(postId)
                 .get("likes")

@@ -261,8 +261,7 @@ export class PostService extends EventEmitter {
 
       // Salva il post nel database con la struttura semplificata
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .put(simplePostData, (ack: any) => {
             if (ack && ack.err) {
@@ -280,8 +279,7 @@ export class PostService extends EventEmitter {
         if (hashtags.length > 0) {
           for (const tag of hashtags) {
             await new Promise<void>((resolve) => {
-              this.gun
-                .get("topics")
+              this.gun.user().get("topics")
                 .get(tag)
                 .get(postId)
                 .put(true, () => resolve());
@@ -338,8 +336,7 @@ export class PostService extends EventEmitter {
 
     try {
       return new Promise((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .once((post: any) => {
             if (!post) {
@@ -411,8 +408,7 @@ export class PostService extends EventEmitter {
           // recupero following da Social.getProfile o qui direttamente
           await new Promise<void>((resolveFollowing) => {
             this.gun
-              .get("users")
-              .get(userPub)
+              .user()
               .get("following")
               .map()
               .once((val: any, key: string) => {
@@ -438,7 +434,7 @@ export class PostService extends EventEmitter {
         resolve({ messages });
       }, options.timeout || 5000);
 
-      this.gun
+      this.gun.user()
         .get("posts")
         .map()
         .once(async (post: any, id: string) => {
@@ -596,8 +592,7 @@ export class PostService extends EventEmitter {
       }
 
       return new Promise((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("comments")
           .get(commentId)
@@ -651,8 +646,7 @@ export class PostService extends EventEmitter {
     try {
       const comments: Comment[] = [];
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("comments")
           .map()
@@ -694,8 +688,7 @@ export class PostService extends EventEmitter {
     try {
       const userPub = this.user.is.pub;
       await new Promise<void>((resolve, reject) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("likes")
           .get(userPub)
@@ -720,8 +713,7 @@ export class PostService extends EventEmitter {
     try {
       const userPub = this.user.is.pub;
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("likes")
           .get(userPub)
@@ -746,8 +738,7 @@ export class PostService extends EventEmitter {
     try {
       const likes: string[] = [];
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("likes")
           .map()
@@ -781,8 +772,7 @@ export class PostService extends EventEmitter {
       // Prima cerchiamo nei topics indicizzati
       const refs: string[] = [];
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("topics")
+        this.gun.user().get("topics")
           .get(searchTerm)
           .map()
           .once((val: any, key: string) => {
@@ -793,8 +783,7 @@ export class PostService extends EventEmitter {
 
       // Per compatibilità, cerchiamo anche nei vecchi hashtags
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("hashtags")
+        this.gun.user().get("hashtags")
           .get(searchTerm)
           .map()
           .once((val: any, key: string) => {
@@ -822,7 +811,7 @@ export class PostService extends EventEmitter {
         }
 
         const data: any = await new Promise((resolve) => {
-          this.gun.get("posts").get(id).once(resolve);
+          this.gun.user().get("posts").get(id).once(resolve);
           setTimeout(() => resolve(null), 500);
         });
         if (data && data.content) {
@@ -855,8 +844,7 @@ export class PostService extends EventEmitter {
 
       // Recupera tutti i post e filtra per topic
       await new Promise<void>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .map()
           .once((post: any, id: string) => {
             if (!post || seen.has(id)) return;
@@ -892,7 +880,7 @@ export class PostService extends EventEmitter {
     if (!this.user.is || !this.user.is.pub) throw new Error("Non autenticato");
     try {
       const post: any = await new Promise((res) =>
-        this.gun.get("posts").get(postId).once(res)
+        this.gun.user().get("posts").get(postId).once(res)
       );
       if (!post) {
         this.error(`Post ${postId} non trovato`);
@@ -910,13 +898,13 @@ export class PostService extends EventEmitter {
         tags = Object.keys(post.hashtags).filter((k) => post.hashtags[k]);
       for (const t of tags) {
         await new Promise((r) =>
-          this.gun.get("hashtags").get(t).get(postId).put(null, r)
+          this.gun.user().get("hashtags").get(t).get(postId).put(null, r)
         );
       }
       await new Promise((r) =>
-        this.gun.get("users").get(userPub).get("posts").get(postId).put(null, r)
+        this.gun.user().get("posts").get(postId).put(null, r)
       );
-      await new Promise((r) => this.gun.get("posts").get(postId).put(null, r));
+      await new Promise((r) => this.gun.user().get("posts").get(postId).put(null, r));
 
       // Rimuovi dalla cache
       this.postCache.delete(postId);
@@ -938,8 +926,7 @@ export class PostService extends EventEmitter {
   ): Promise<Record<string, boolean>> {
     try {
       return new Promise<Record<string, boolean>>((resolve) => {
-        this.gun
-          .get("posts")
+        this.gun.user().get("posts")
           .get(postId)
           .get("likes")
           .once((likes: any) => {
@@ -964,7 +951,7 @@ export class PostService extends EventEmitter {
   public getLikesObservable(postId: string): Observable<string[]> {
     return new Observable((subscriber) => {
       // Sottoscrizione ai cambiamenti dei like
-      const unsub = this.gun
+      const unsub = this.gun.user()
         .get("posts")
         .get(postId)
         .get("likes")

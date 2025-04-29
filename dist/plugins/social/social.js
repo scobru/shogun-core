@@ -11,19 +11,21 @@ const friends_1 = require("./friends/friends");
 const messages_1 = require("./messagges/messages");
 const certs_1 = require("./certificates/certs");
 const posts_1 = require("./posts/posts");
+const followers_1 = require("./followers/followers");
+const profile_1 = require("./profile/profile");
 /**
  * Plugin Social che utilizza Gun DB
  */
 class Social extends eventEmitter_1.EventEmitter {
     gun;
     user;
-    profileCache = new Map();
-    cacheDuration = 5 * 60 * 1000; // 5 minuti
     gunRx;
     friendService;
     messageService;
     certificateService;
     postService;
+    followerService;
+    profileService;
     constructor(gunInstance) {
         super();
         this.gun = gunInstance;
@@ -33,9 +35,17 @@ class Social extends eventEmitter_1.EventEmitter {
         this.messageService = new messages_1.MessageService(gunInstance);
         this.certificateService = new certs_1.CertificateService(gunInstance);
         this.postService = new posts_1.PostService(gunInstance);
+        this.followerService = new followers_1.Followers(gunInstance);
+        this.profileService = new profile_1.Profile(gunInstance);
         // Propagare gli eventi di PostService
         this.postService.on("new:post", (post) => this.emit("new:post", post));
         this.postService.on("delete:post", (data) => this.emit("delete:post", data));
+        // Propagare gli eventi di followerService
+        this.followerService.on("follow", (targetPub) => this.emit("follow", targetPub));
+        this.followerService.on("unfollow", (targetPub) => this.emit("unfollow", targetPub));
+        // Propagare gli eventi di profileService
+        this.profileService.on("profile:update", (data) => this.emit("profile:update", data));
+        this.profileService.on("profile:update:multiple", (data) => this.emit("profile:update:multiple", data));
     }
     /**
      * Metodo per loggare messaggi di debug
@@ -53,215 +63,63 @@ class Social extends eventEmitter_1.EventEmitter {
      * Pulisce le cache e i listener
      */
     cleanup() {
-        this.profileCache.clear();
+        this.profileService.clearCache();
         this.removeAllListeners();
     }
     /**
-     * Segui un altro utente
+     * Segui un altro utente - delegato a followerService
      * @param targetPub Chiave pubblica dell'utente da seguire
      * @returns true se l'operazione è riuscita
      */
     async follow(targetPub) {
-        if (!this.user.is || !this.user.is.pub) {
-            throw new Error("Non autenticato");
-        }
-        if (targetPub === this.user.is.pub) {
-            (0, logger_1.logWarn)("Non puoi seguire te stesso");
-            return false;
-        }
-        try {
-            const userPub = this.user.is.pub;
-            (0, logger_1.logDebug)(`Follow: ${userPub} → ${targetPub}`);
-            // Aggiungi alla lista "following" dell'utente corrente
-            await new Promise((resolve, reject) => {
-                this.gun
-                    .get("users")
-                    .get(userPub)
-                    .get("following")
-                    .get(targetPub)
-                    .put(true, (ack) => {
-                    if (ack.err)
-                        reject(new Error(ack.err));
-                    else
-                        resolve();
-                });
-            });
-            // Aggiungi alla lista "followers" dell'utente target
-            await new Promise((resolve, reject) => {
-                this.gun
-                    .get("users")
-                    .get(targetPub)
-                    .get("followers")
-                    .get(userPub)
-                    .put(true, (ack) => {
-                    if (ack.err)
-                        reject(new Error(ack.err));
-                    else
-                        resolve();
-                });
-            });
+        const result = await this.followerService.follow(targetPub);
+        if (result) {
             // Invalida cache
-            this.profileCache.delete(userPub);
-            this.profileCache.delete(targetPub);
-            // Notifica
-            this.emit("follow", targetPub);
-            return true;
+            this.profileService.clearCache();
         }
-        catch (err) {
-            (0, logger_1.logError)(`Errore follow: ${err}`);
-            return false;
-        }
+        return result;
     }
     /**
-     * Smetti di seguire un utente
+     * Smetti di seguire un utente - delegato a followerService
      * @param targetPub Chiave pubblica dell'utente da smettere di seguire
      * @returns true se l'operazione è riuscita
      */
     async unfollow(targetPub) {
-        if (!this.user.is || !this.user.is.pub) {
-            throw new Error("Non autenticato");
-        }
-        if (targetPub === this.user.is.pub) {
-            (0, logger_1.logWarn)("Non puoi smettere di seguire te stesso");
-            return false;
-        }
-        try {
-            const userPub = this.user.is.pub;
-            (0, logger_1.logDebug)(`Unfollow: ${userPub} ⊘ ${targetPub}`);
-            // Rimuovi dalla lista "following" dell'utente corrente
-            await new Promise((resolve) => {
-                this.gun
-                    .get("users")
-                    .get(userPub)
-                    .get("following")
-                    .get(targetPub)
-                    .put(null, () => resolve());
-            });
-            // Rimuovi dalla lista "followers" dell'utente target
-            await new Promise((resolve) => {
-                this.gun
-                    .get("users")
-                    .get(targetPub)
-                    .get("followers")
-                    .get(userPub)
-                    .put(null, () => resolve());
-            });
+        const result = await this.followerService.unfollow(targetPub);
+        if (result) {
             // Invalida cache
-            this.profileCache.delete(userPub);
-            this.profileCache.delete(targetPub);
-            // Notifica
-            this.emit("unfollow", targetPub);
-            return true;
+            this.profileService.clearCache();
         }
-        catch (err) {
-            (0, logger_1.logError)(`Errore unfollow: ${err}`);
-            return false;
-        }
+        return result;
     }
     /**
-     * Ottieni il profilo di un utente
+     * Ottieni il profilo di un utente - delegato a profileService
      * @param pub Chiave pubblica dell'utente
      * @returns Profilo dell'utente
      */
     async getProfile(pub) {
-        // Controlla se il profilo è nella cache
-        const cached = this.profileCache.get(pub);
-        if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
-            return cached.data;
-        }
-        // Profilo vuoto con dati minimi
-        const profile = {
-            pub,
-            followers: [],
-            following: [],
-            customFields: {},
-        };
-        try {
-            // Ottieni dati profilo
-            await new Promise((resolve) => {
-                this.gun
-                    .get("users")
-                    .get(pub)
-                    .once((userData) => {
-                    if (userData) {
-                        if (userData.alias)
-                            profile.alias = userData.alias;
-                        if (userData.bio)
-                            profile.bio = userData.bio;
-                        if (userData.profileImage)
-                            profile.profileImage = userData.profileImage;
-                    }
-                    resolve();
-                });
-            });
-            // Ottieni followers
-            await new Promise((resolve) => {
-                this.gun
-                    .get("users")
-                    .get(pub)
-                    .get("followers")
-                    .map()
-                    .once((val, key) => {
-                    if (key !== "_" && val === true) {
-                        profile.followers.push(key);
-                    }
-                });
-                setTimeout(resolve, 500);
-            });
-            // Ottieni following
-            await new Promise((resolve) => {
-                this.gun
-                    .get("users")
-                    .get(pub)
-                    .get("following")
-                    .map()
-                    .once((val, key) => {
-                    if (key !== "_" && val === true) {
-                        profile.following.push(key);
-                    }
-                });
-                setTimeout(resolve, 500);
-            });
-            // Salva in cache
-            this.profileCache.set(pub, { data: profile, timestamp: Date.now() });
-            return profile;
-        }
-        catch (err) {
-            (0, logger_1.logError)(`Errore caricamento profilo: ${err}`);
-            return profile;
-        }
+        const profile = await this.profileService.getProfile(pub);
+        // Aggiungi followers e following
+        profile.followers = await this.followerService.getFollowers(pub);
+        profile.following = await this.followerService.getFollowing(pub);
+        return profile;
     }
     /**
-     * Aggiorna un campo del profilo
+     * Aggiorna un campo del profilo - delegato a profileService
      * @param field Nome del campo da aggiornare
      * @param value Nuovo valore
      * @returns true se l'operazione è riuscita
      */
     async updateProfile(field, value) {
-        if (!this.user.is || !this.user.is.pub) {
-            throw new Error("Non autenticato");
-        }
-        try {
-            await new Promise((resolve, reject) => {
-                this.gun
-                    .get("users")
-                    .get(this.user.is.pub)
-                    .get(field)
-                    .put(value, (ack) => {
-                    if (ack.err)
-                        reject(new Error(ack.err));
-                    else
-                        resolve();
-                });
-            });
-            // Invalida cache
-            this.profileCache.delete(this.user.is.pub);
-            return true;
-        }
-        catch (err) {
-            (0, logger_1.logError)(`Errore aggiornamento profilo: ${err}`);
-            return false;
-        }
+        return this.profileService.updateProfile(field, value);
+    }
+    /**
+     * Aggiorna campi multipli del profilo - delegato a profileService
+     * @param fields Record di campo-valore da aggiornare
+     * @returns true se l'operazione è riuscita
+     */
+    async updateProfileFields(fields) {
+        return this.profileService.updateProfileFields(fields);
     }
     /**
      * Crea un nuovo post - delegato a PostService
@@ -403,6 +261,7 @@ class Social extends eventEmitter_1.EventEmitter {
             }, 5000);
             // Cerca tutti gli utenti attraverso la collezione 'users'
             this.gun
+                .user()
                 .get("users")
                 .map()
                 .once(async (userData, userPub) => {
@@ -459,6 +318,7 @@ class Social extends eventEmitter_1.EventEmitter {
             }, 5000);
             // Cerca tutti gli utenti
             this.gun
+                .user()
                 .get("users")
                 .map()
                 .on((userData, userPub) => {

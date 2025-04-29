@@ -7,19 +7,21 @@ import { FriendService } from "./friends/friends";
 import { MessageService } from "./messagges/messages";
 import { CertificateService } from "./certificates/certs";
 import { PostService } from "./posts/posts";
+import { Followers } from "./followers/followers";
+import { Profile } from "./profile/profile";
 /**
  * Plugin Social che utilizza Gun DB
  */
 export declare class Social extends EventEmitter {
     private readonly gun;
     readonly user: any;
-    private readonly profileCache;
-    private readonly cacheDuration;
     readonly gunRx: GunRxJS;
     readonly friendService: FriendService;
     readonly messageService: MessageService;
     readonly certificateService: CertificateService;
     readonly postService: PostService;
+    readonly followerService: Followers;
+    readonly profileService: Profile;
     constructor(gunInstance: IGunInstance<any>);
     /**
      * Metodo per loggare messaggi di debug
@@ -34,30 +36,36 @@ export declare class Social extends EventEmitter {
      */
     cleanup(): void;
     /**
-     * Segui un altro utente
+     * Segui un altro utente - delegato a followerService
      * @param targetPub Chiave pubblica dell'utente da seguire
      * @returns true se l'operazione è riuscita
      */
     follow(targetPub: string): Promise<boolean>;
     /**
-     * Smetti di seguire un utente
+     * Smetti di seguire un utente - delegato a followerService
      * @param targetPub Chiave pubblica dell'utente da smettere di seguire
      * @returns true se l'operazione è riuscita
      */
     unfollow(targetPub: string): Promise<boolean>;
     /**
-     * Ottieni il profilo di un utente
+     * Ottieni il profilo di un utente - delegato a profileService
      * @param pub Chiave pubblica dell'utente
      * @returns Profilo dell'utente
      */
     getProfile(pub: string): Promise<UserProfile>;
     /**
-     * Aggiorna un campo del profilo
+     * Aggiorna un campo del profilo - delegato a profileService
      * @param field Nome del campo da aggiornare
      * @param value Nuovo valore
      * @returns true se l'operazione è riuscita
      */
     updateProfile(field: string, value: string): Promise<boolean>;
+    /**
+     * Aggiorna campi multipli del profilo - delegato a profileService
+     * @param fields Record di campo-valore da aggiornare
+     * @returns true se l'operazione è riuscita
+     */
+    updateProfileFields(fields: Record<string, string>): Promise<boolean>;
     /**
      * Crea un nuovo post - delegato a PostService
      */
