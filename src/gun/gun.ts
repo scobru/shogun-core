@@ -73,7 +73,7 @@ class GunDB {
       radisk: options.radisk ?? false,
       multicast: options.multicast ?? false,
       axe: options.axe ?? false,
-      web: options.web,
+      web: options.web ?? false,
     };
 
     this.authToken = options.authToken;
