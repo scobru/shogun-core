@@ -79,6 +79,7 @@ export interface IGunCryptoKeyPair {
     epriv?: string;
 }
 export interface GunDBOptions {
+    web?: any;
     peers?: string[];
     localStorage?: boolean;
     sessionStorage?: boolean;

@@ -16,8 +16,6 @@ var PluginCategory;
     PluginCategory["Identity"] = "identity";
     /** Plugin per altre funzionalità */
     PluginCategory["Utility"] = "utility";
-    /** Plugin per la social network */
-    PluginCategory["Social"] = "social";
 })(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
  * Nomi standard dei plugin integrati
@@ -34,6 +32,4 @@ var CorePlugins;
     CorePlugins["DID"] = "did";
     /** Plugin Wallet Manager */
     CorePlugins["WalletManager"] = "wallet";
-    /** Plugin Social */
-    CorePlugins["Social"] = "social";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

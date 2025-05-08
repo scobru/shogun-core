@@ -121,6 +121,7 @@ export interface IGunCryptoKeyPair {
 }
 
 export interface GunDBOptions {
+  web?: any;
   peers?: string[];
   localStorage?: boolean;
   sessionStorage?: boolean;

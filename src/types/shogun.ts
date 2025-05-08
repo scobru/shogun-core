@@ -10,7 +10,6 @@ import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
-import { SocialPlugin } from "../plugins";
 
 /**
  * Categorie di plugin standard in ShogunCore
@@ -26,8 +25,6 @@ export enum PluginCategory {
   Identity = "identity",
   /** Plugin per altre funzionalità */
   Utility = "utility",
-  /** Plugin per la social network */
-  Social = "social",
 }
 
 /**
@@ -44,8 +41,6 @@ export enum CorePlugins {
   DID = "did",
   /** Plugin Wallet Manager */
   WalletManager = "wallet",
-  /** Plugin Social */
-  Social = "social",
 }
 
 // Definizione dell'interfaccia DID
@@ -102,8 +97,6 @@ export interface IShogunCore extends PluginManager {
   stealth?: Stealth;
   /** @deprecated Use getPlugin(CorePlugins.DID) instead */
   did?: DID;
-
-  social?: SocialPlugin;
 
   rx: GunRxJS; // RxJS integration
   storage: ShogunStorage;
@@ -247,7 +240,6 @@ export interface ShogunSDKConfig {
     /** Enable stealth functionalities */
     enabled?: boolean;
   };
-  social?: { enabled: boolean };
   /** Logging configuration */
   logging?: LoggingConfig;
   /** Timeout configuration in milliseconds */

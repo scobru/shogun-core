@@ -11,7 +11,6 @@ const loadStealthModule = () => import("./plugins/stealth/stealth");
 const loadDIDModule = () => import("./plugins/did/DID");
 const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
 const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
-const loadSocialModule = () => import("./plugins/social/socialPlugin");
 let shogunCoreInstance;
 
 /**
@@ -67,9 +66,6 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
     log("Wallet plugin initialized", { category: "init", level: "info" });
   }
 
-  if (shogunCoreInstance.hasPlugin(CorePlugins.Social)) {
-    log("Social plugin initialized", { category: "init", level: "debug" });
-  }
 
   return shogunCoreInstance;
 }
@@ -81,7 +77,6 @@ export const modules = {
   loadDID: loadDIDModule,
   loadWallet: loadWalletModule,
   loadMetaMask: loadMetaMaskModule,
-  loadSocial: loadSocialModule,
 };
 
 // Export main class for those who prefer to use it directly

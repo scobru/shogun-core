@@ -28,7 +28,6 @@ const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const didPlugin_1 = require("./plugins/did/didPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
-const socialPlugin_1 = require("./plugins/social/socialPlugin");
 var DID_1 = require("./plugins/did/DID");
 Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
 var errorHandler_2 = require("./utils/errorHandler");
@@ -105,6 +104,7 @@ class ShogunCore {
             (0, logger_1.log)("No auth token in config");
         }
         const gundbConfig = {
+            web: config.gundb?.web,
             peers: config.gundb?.peers,
             websocket: config.gundb?.websocket ?? false,
             localStorage: config.gundb?.localStorage ?? false,
@@ -180,13 +180,6 @@ class ShogunCore {
                 walletPlugin._category = shogun_1.PluginCategory.Wallet;
                 this.register(walletPlugin);
                 (0, logger_1.log)("Wallet plugin registered");
-            }
-            // Social plugins group
-            if (config.social?.enabled) {
-                const socialPlugin = new socialPlugin_1.SocialPlugin();
-                socialPlugin._category = shogun_1.PluginCategory.Social;
-                this.register(socialPlugin);
-                (0, logger_1.log)("Social plugin registered");
             }
         }
         catch (error) {

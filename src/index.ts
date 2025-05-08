@@ -25,7 +25,6 @@ import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
-import { SocialPlugin } from "./plugins/social/socialPlugin";
 
 export { ShogunDID } from "./plugins/did/DID";
 export type {
@@ -125,6 +124,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     const gundbConfig = {
+      web: config.gundb?.web,
       peers: config.gundb?.peers,
       websocket: config.gundb?.websocket ?? false,
       localStorage: config.gundb?.localStorage ?? false,
@@ -215,13 +215,6 @@ export class ShogunCore implements IShogunCore {
         log("Wallet plugin registered");
       }
 
-      // Social plugins group
-      if (config.social?.enabled) {
-        const socialPlugin = new SocialPlugin();
-        socialPlugin._category = PluginCategory.Social;
-        this.register(socialPlugin);
-        log("Social plugin registered");
-      }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
     }
