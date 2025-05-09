@@ -76,28 +76,8 @@ class GunDB {
       web: options.web ?? false,
     };
 
-    this.authToken = options.authToken;
-
-    if (this.authToken) {
-      const preview = `${this.authToken.substring(0, 3)}...${this.authToken.slice(-3)}`;
-      log(`Auth token received (${preview})`);
-    } else {
-      log("No auth token received");
-    }
-
     this.gun = new Gun(config);
     this.user = this.gun.user().recall({ sessionStorage: true });
-
-    if (this.authToken) {
-      Gun.on("opt", (ctx: any) => {
-        if (ctx.once) return;
-        ctx.on("out", (msg: any) => {
-          msg.headers = { token: this.authToken };
-          ctx.to.next(msg);
-        });
-      });
-      log("Auth token handler configured for outgoing messages");
-    }
 
     this.subscribeToAuthEvents();
   }

@@ -77,10 +77,10 @@ class GunDB {
             radisk: options.radisk ?? false,
             multicast: options.multicast ?? false,
             axe: options.axe ?? false,
-            web: options.web,
+            web: options.web ?? false,
         };
         this.authToken = options.authToken;
-        if (this.authToken) {
+        if (this.authToken && this.authToken !== "") {
             const preview = `${this.authToken.substring(0, 3)}...${this.authToken.slice(-3)}`;
             (0, logger_1.log)(`Auth token received (${preview})`);
         }
@@ -89,7 +89,7 @@ class GunDB {
         }
         this.gun = new gun_1.default(config);
         this.user = this.gun.user().recall({ sessionStorage: true });
-        if (this.authToken) {
+        if (this.authToken && this.authToken !== "") {
             gun_1.default.on("opt", (ctx) => {
                 if (ctx.once)
                     return;
