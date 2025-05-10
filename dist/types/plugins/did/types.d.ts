@@ -64,6 +64,9 @@ export interface DIDCreateOptions {
 export interface DIDRegistryConfig extends BaseConfig {
     address: string;
     network: string;
+    timeout?: number;
+    maxRetries?: number;
+    retryDelay?: number;
 }
 /**
  * DID Cache entry

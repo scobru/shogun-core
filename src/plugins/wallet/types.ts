@@ -1,6 +1,12 @@
 import { ethers } from "ethers";
 
-import { BaseEvent, BaseConfig, BaseCacheEntry, BaseBackupOptions, BaseImportOptions } from "../../types/common";
+import {
+  BaseEvent,
+  BaseConfig,
+  BaseCacheEntry,
+  BaseBackupOptions,
+  BaseImportOptions,
+} from "../../types/common";
 
 export interface WalletInfo {
   wallet: any;
@@ -123,7 +129,7 @@ export interface WalletPluginInterface {
    */
   signMessage(
     wallet: ethers.Wallet,
-    message: string | Uint8Array
+    message: string | Uint8Array,
   ): Promise<string>;
 
   /**
@@ -144,7 +150,7 @@ export interface WalletPluginInterface {
   signTransaction(
     wallet: ethers.Wallet,
     toAddress: string,
-    value: string
+    value: string,
   ): Promise<string>;
 
   /**
@@ -178,7 +184,7 @@ export interface WalletPluginInterface {
       importMnemonic?: boolean;
       importWallets?: boolean;
       importGunPair?: boolean;
-    }
+    },
   ): Promise<{
     success: boolean;
     mnemonicImported?: boolean;

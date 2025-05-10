@@ -25,6 +25,8 @@ class WalletManager extends eventEmitter_1.EventEmitter {
     pendingTransactions = new Map();
     config;
     transactionMonitoringInterval = null;
+    provider = null;
+    signer = null;
     /**
      * Creates a new WalletManager instance
      * @param gun Raw Gun instance
@@ -186,7 +188,10 @@ class WalletManager extends eventEmitter_1.EventEmitter {
      */
     async checkPendingTransactions() {
         const provider = this.getProvider();
-        // Correzione: utilizziamo entries() per iterare sulla Map
+        if (!provider) {
+            (0, logger_1.logWarn)("Provider non disponibile, impossibile controllare transazioni pendenti");
+            return;
+        }
         for (const [txHash, tx] of this.pendingTransactions.entries()) {
             try {
                 const receipt = await provider.getTransactionReceipt(txHash);
@@ -232,16 +237,31 @@ class WalletManager extends eventEmitter_1.EventEmitter {
     setRpcUrl(rpcUrl) {
         this.config.rpcUrl = rpcUrl;
         (0, logger_1.log)(`RPC Provider configured: ${rpcUrl}`);
+        if (!this.provider) {
+            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
+        }
+        this.signer = this.getSigner();
     }
     /**
      * Gets a configured JSON RPC provider instance
      * @returns An ethers.js JsonRpcProvider instance
      */
     getProvider() {
+        return this.provider;
+    }
+    getSigner() {
+        const wallet = this.getMainWallet();
+        if (!this.provider) {
+            throw new Error("Provider not available");
+        }
+        return wallet.connect(this.provider);
+    }
+    setSigner(signer) {
         if (!this.config.rpcUrl) {
             throw new Error("RPC URL not configured");
         }
-        return new ethers_1.ethers.JsonRpcProvider(this.config.rpcUrl);
+        const provider = new ethers_1.ethers.JsonRpcProvider(this.config.rpcUrl);
+        this.signer = signer.connect(provider);
     }
     /**
      * Gets a unique identifier for the current user for storage purposes
@@ -738,6 +758,9 @@ class WalletManager extends eventEmitter_1.EventEmitter {
                 return cached.balance;
             }
             const provider = this.getProvider();
+            if (!provider) {
+                throw new Error("Provider non disponibile. Imposta prima un RPC URL con setRpcUrl()");
+            }
             const balance = await provider.getBalance(address);
             const formattedBalance = ethers_1.ethers.formatEther(balance);
             this.balanceCache.set(address, {
@@ -765,12 +788,18 @@ class WalletManager extends eventEmitter_1.EventEmitter {
     }
     async getNonce(wallet) {
         const provider = this.getProvider();
+        if (!provider) {
+            throw new Error("Provider non inizializzato. Chiamare setRpcUrl prima");
+        }
         const nonce = await provider.getTransactionCount(wallet.address);
         return nonce;
     }
     async sendTransaction(wallet, toAddress, value, options = {}) {
         try {
             const provider = this.getProvider();
+            if (!provider) {
+                throw new Error("Provider not available");
+            }
             wallet = wallet.connect(provider);
             // Get latest fee data
             const feeData = await provider.getFeeData();
@@ -851,6 +880,9 @@ class WalletManager extends eventEmitter_1.EventEmitter {
             (0, logger_1.log)(`Signing transaction from wallet ${wallet.address} to ${toAddress} for ${value} ETH`);
             // If no provider supplied, use configured one
             const actualProvider = provider || this.getProvider();
+            if (!actualProvider) {
+                throw new Error("Provider not available");
+            }
             // Get nonce
             const nonce = await actualProvider.getTransactionCount(wallet.address);
             (0, logger_1.log)(`Nonce for transaction: ${nonce}`);

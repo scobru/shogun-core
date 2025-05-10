@@ -1,6 +1,3 @@
-/**
- * Entry point for the browser version of Shogun Core
- */
 import { ShogunCore } from "./index";
 import { ShogunSDKConfig } from "./types/shogun";
 /**

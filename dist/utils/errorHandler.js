@@ -28,6 +28,7 @@ var ErrorType;
     ErrorType["UNKNOWN"] = "UnknownError";
     ErrorType["CONNECTOR"] = "CONNECTOR";
     ErrorType["GENERAL"] = "GENERAL";
+    ErrorType["CONTRACT"] = "CONTRACT";
 })(ErrorType || (exports.ErrorType = ErrorType = {}));
 /**
  * Wrapper per standardizzare gli errori

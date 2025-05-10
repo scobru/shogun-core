@@ -5,15 +5,15 @@
  * - Dynamic peer linking
  * - Support for remove/unset operations
  */
-import { IGunInstance, IGunUserInstance } from "gun";
-import { GunDBOptions } from "./types";
+import { IGunUserInstance } from "gun";
+import { GunDBOptions, GunInstance } from "./types";
 import { GunCollections } from "./collections";
 import { GunConsensus } from "./consensus";
 import * as GunErrors from "./errors";
 import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
 declare class GunDB {
-    gun: IGunInstance<any>;
+    gun: GunInstance<any>;
     user: IGunUserInstance<any> | null;
     private readonly onAuthCallbacks;
     private readonly retryConfig;
@@ -26,6 +26,7 @@ declare class GunDB {
     private retry;
     private subscribeToAuthEvents;
     private notifyAuthListeners;
+    private restrictPut;
     /**
      * Creates a new GunDB instance with specified peers
      * @param peers Array of peer URLs to connect to
@@ -47,7 +48,7 @@ declare class GunDB {
      * Gets the Gun instance
      * @returns Gun instance
      */
-    getGun(): IGunInstance<any>;
+    getGun(): GunInstance<any>;
     /**
      * Gets the current user instance
      * @returns User instance

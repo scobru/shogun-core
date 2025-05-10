@@ -99,6 +99,10 @@ declare class MetaMask extends EventEmitter {
      */
     getSigner(): Promise<ethers.Signer>;
     /**
+     * Get active provider instance using BrowserProvider
+     */
+    getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
+    /**
      * Generate deterministic password from signature
      * @param signature - Cryptographic signature
      * @returns 64-character hex string

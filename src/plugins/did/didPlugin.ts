@@ -70,7 +70,7 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
    */
   async authenticateWithDID(
     did: string,
-    challenge?: string
+    challenge?: string,
   ): Promise<AuthResult> {
     return this.assertDID().authenticateWithDID(did, challenge);
   }
@@ -101,9 +101,20 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
    */
   async registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     return this.assertDID().registerDIDOnChain(did, signer);
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async verifyDIDOnChain(did: string): Promise<{
+    isRegistered: boolean;
+    controller?: string | undefined;
+    error?: string | undefined;
+  }> {
+    return this.assertDID().verifyDIDOnChain(did);
   }
 
   /**
@@ -138,7 +149,7 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
         ErrorType.DID,
         "ENSURE_DID_FAILED",
         `Error ensuring user has DID: ${error instanceof Error ? error.message : String(error)}`,
-        error
+        error,
       );
       return null;
     }
@@ -151,7 +162,7 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
    * @private
    */
   private async _ensureUserHasDIDWithTimeout(
-    options?: DIDCreateOptions
+    options?: DIDCreateOptions,
   ): Promise<string | null> {
     const core = this.assertInitialized();
 

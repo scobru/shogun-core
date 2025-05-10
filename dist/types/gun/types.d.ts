@@ -1,3 +1,5 @@
+import { IGunInstance as GunInstance } from "gun";
+export type { GunInstance };
 export interface GunDataRecord {
     _: {
         "#": string;
@@ -79,17 +81,18 @@ export interface IGunCryptoKeyPair {
     epriv?: string;
 }
 export interface GunDBOptions {
-    web?: any;
     peers?: string[];
-    localStorage?: boolean;
+    localStorage: boolean;
     sessionStorage?: boolean;
-    radisk?: boolean;
+    radisk: boolean;
     multicast?: boolean;
     axe?: boolean;
     retryAttempts?: number;
     retryDelay?: number;
     authToken?: string;
     websocket?: boolean;
+    /** External Gun instance to use instead of creating a new one */
+    externalGun?: GunInstance<any>;
 }
 /**
  * Interface for Gun instance
@@ -99,7 +102,9 @@ export interface IGunInstance<T = unknown> {
     put(data: unknown): IGunChainReference<T>;
     user(): IGunChainReference<T>;
     on(event: string, callback: (...args: unknown[]) => void): IGunInstance<T>;
-    SEA: IGunSEA;
+    SEA?: IGunSEA;
+    _?: any;
+    opt?: any;
 }
 /**
  * Interface for GunDB acknowledgment responses

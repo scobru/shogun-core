@@ -63,7 +63,7 @@ export class ShogunEventEmitter extends EventEmitter<ShogunEventMap> {
    */
   emit<K extends keyof ShogunEventMap>(
     event: K,
-    data?: ShogunEventMap[K]
+    data?: ShogunEventMap[K],
   ): boolean {
     return super.emit(event as string, data);
   }
@@ -76,7 +76,7 @@ export class ShogunEventEmitter extends EventEmitter<ShogunEventMap> {
    */
   on<K extends keyof ShogunEventMap>(
     event: K,
-    listener: (data: ShogunEventMap[K]) => void
+    listener: (data: ShogunEventMap[K]) => void,
   ): void {
     super.on(event as string, listener as (data: unknown) => void);
   }
@@ -89,7 +89,7 @@ export class ShogunEventEmitter extends EventEmitter<ShogunEventMap> {
    */
   off<K extends keyof ShogunEventMap>(
     event: K,
-    listener: (data: ShogunEventMap[K]) => void
+    listener: (data: ShogunEventMap[K]) => void,
   ): void {
     super.off(event as string, listener as (data: unknown) => void);
   }

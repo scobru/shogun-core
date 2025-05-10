@@ -35,6 +35,11 @@
   - [Registering a Plugin](#registering-a-plugin)
   - [Using the Plugin](#using-the-plugin)
 - [Stealth Transactions](#stealth-transactions)
+- [Relay Verification](#relay-verification)
+  - [RelayMembershipVerifier](#1-relaymembershipverifier)
+  - [DIDVerifier](#2-didverifier)
+  - [OracleBridge](#3-oraclebridge)
+  - [Casi d'Uso per la Relay Verification](#casi-duso-per-la-relay-verification)
 - [Browser Integration](#browser-integration)
   - [Setup](#setup)
   - [Examples](#examples)
@@ -892,79 +897,87 @@ const shogun = new ShogunCore({
 // Accesso al plugin Stealth
 const stealthPlugin = shogun.getPlugin(CorePlugins.Stealth);
 
-// Esempio di funzionalità Stealth
-
-// 1. Generazione di un nuovo indirizzo stealth
-async function generateStealthAddress() {
-  const stealthResult = await stealthPlugin.generateStealthAddress();
-  console.log("Nuovo indirizzo stealth:", stealthResult.stealthAddress);
-  console.log("Chiave di scansione:", stealthResult.scanKey);
-  return stealthResult;
+// 1. Generazione di chiavi effimere
+async function generateEphemeralKeys() {
+  const ephemeralKeys = await stealthPlugin.generateEphemeralKeyPair();
+  console.log("Chiave privata effimera:", ephemeralKeys.privateKey);
+  console.log("Chiave pubblica effimera:", ephemeralKeys.publicKey);
+  return ephemeralKeys;
 }
 
-// 2. Invio di una transazione stealth
-async function sendStealthPayment(recipientStealthAddress, amountInEth) {
+// 2. Recupero delle chiavi stealth dell'utente
+async function getMyStealthKeys() {
+  const stealthKeys = await stealthPlugin.getStealthKeys();
+  console.log("Chiave di visualizzazione:", stealthKeys.viewingKey);
+  console.log("Chiave di spesa:", stealthKeys.spendingKey);
+  return stealthKeys;
+}
+
+// 3. Generazione di un indirizzo stealth per il destinatario
+async function createStealthAddressForRecipient(recipientViewingPublicKey, recipientSpendingPublicKey) {
   try {
-    // Ottieni il wallet principale
+    // Genera un indirizzo stealth per il destinatario
+    const stealthAddressResult = await stealthPlugin.generateStealthAddress(
+      recipientViewingPublicKey,
+      recipientSpendingPublicKey
+    );
+    
+    console.log("Indirizzo stealth generato:", stealthAddressResult.stealthAddress);
+    console.log("Chiave pubblica effimera:", stealthAddressResult.ephemeralPublicKey);
+    console.log("Numero casuale crittografato:", stealthAddressResult.encryptedRandomNumber);
+    
+    return stealthAddressResult;
+  } catch (error) {
+    console.error("Errore nella generazione dell'indirizzo stealth:", error);
+    throw error;
+  }
+}
+
+// 4. Apertura di un indirizzo stealth ricevuto
+async function openReceivedStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey) {
+  try {
+    // Apre un indirizzo stealth usando le chiavi dell'utente
+    const wallet = await stealthPlugin.openStealthAddress(
+      stealthAddress,
+      encryptedRandomNumber,
+      ephemeralPublicKey
+    );
+    
+    console.log("Indirizzo wallet derivato:", wallet.address);
+    console.log("Chiave privata wallet:", wallet.privateKey);
+    
+    // Questo wallet può essere usato per accedere ai fondi inviati all'indirizzo stealth
+    return wallet;
+  } catch (error) {
+    console.error("Errore nell'apertura dell'indirizzo stealth:", error);
+    throw error;
+  }
+}
+
+// 5. Invio di fondi a un indirizzo stealth (usando ethers.js separatamente)
+async function sendFundsToStealthAddress(stealthAddress, amountInEth) {
+  try {
+    // Ottieni un wallet per inviare la transazione
     const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
     const senderWallet = walletPlugin.getMainWallet();
-
-    // Crea e invia la transazione stealth
-    const txResult = await stealthPlugin.createStealthTransaction(
-      recipientStealthAddress,
-      amountInEth,
-      {
-        gasLimit: 150000,
-        maxFeePerGas: "50", // in gwei
-      }
-    );
-
-    console.log("Transazione stealth inviata:", txResult);
-    console.log("Hash della transazione:", txResult.hash);
-
-    return txResult;
+    
+    // Prepara la transazione usando ethers.js
+    const tx = {
+      to: stealthAddress,
+      value: ethers.parseEther(amountInEth)
+    };
+    
+    // Invia la transazione
+    const txResponse = await senderWallet.sendTransaction(tx);
+    console.log("Transazione inviata:", txResponse.hash);
+    
+    // Attendi la conferma
+    const receipt = await txResponse.wait();
+    console.log("Transazione confermata nel blocco:", receipt.blockNumber);
+    
+    return receipt;
   } catch (error) {
-    console.error("Errore nell'invio della transazione stealth:", error);
-    throw error;
-  }
-}
-
-// 3. Scansione per transazioni stealth in entrata
-async function scanForPayments() {
-  try {
-    // Scansiona la blockchain per pagamenti stealth ricevuti
-    const payments = await stealthPlugin.scanStealthPayments();
-
-    console.log(`Trovati ${payments.length} pagamenti stealth`);
-    payments.forEach((payment, index) => {
-      console.log(`Pagamento ${index + 1}:`);
-      console.log(`- Indirizzo: ${payment.address}`);
-      console.log(`- Valore: ${payment.amount} ETH`);
-      console.log(`- Blocco: ${payment.blockNumber}`);
-    });
-
-    return payments;
-  } catch (error) {
-    console.error("Errore durante la scansione dei pagamenti stealth:", error);
-    throw error;
-  }
-}
-
-// 4. Reclama una transazione stealth ricevuta
-async function claimStealthPayment(paymentInfo) {
-  try {
-    // Reclama il pagamento stealth spostando i fondi al wallet principale
-    const claimResult = await stealthPlugin.claimStealthPayment(
-      paymentInfo.address,
-      paymentInfo.privateKey
-    );
-
-    console.log("Pagamento stealth reclamato:", claimResult);
-    console.log("Hash della transazione di claim:", claimResult.hash);
-
-    return claimResult;
-  } catch (error) {
-    console.error("Errore nel reclamo del pagamento stealth:", error);
+    console.error("Errore nell'invio di fondi all'indirizzo stealth:", error);
     throw error;
   }
 }
@@ -975,16 +988,188 @@ async function claimStealthPayment(paymentInfo) {
 - **Maggiore Privacy**: Gli indirizzi stealth nascondono la vera identità del destinatario
 - **Transazioni Non Collegabili**: Ogni transazione utilizza un indirizzo diverso
 - **Compatibilità**: Funziona con qualsiasi portafoglio Ethereum
-- **Sicurezza**: Solo il destinatario può rilevare e riscattare i pagamenti stealth
+- **Sicurezza**: Solo il destinatario può derivare la chiave privata necessaria per accedere ai fondi
 
 ### Come Funziona
 
-1. **Generazione**: Il destinatario genera un indirizzo stealth utilizzando una chiave di scansione
-2. **Pagamento**: Il mittente utilizza l'indirizzo stealth per inviare fondi
-3. **Scansione**: Il destinatario scansiona la blockchain utilizzando la sua chiave di scansione
-4. **Reclamo**: Il destinatario reclama i fondi trasferendoli a un indirizzo di sua scelta
+1. **Chiavi Stealth**: Ogni utente possiede una coppia di chiavi di visualizzazione e spesa
+2. **Generazione Indirizzo**: Il mittente genera un indirizzo stealth unico per il destinatario usando le sue chiavi pubbliche
+3. **Invio Fondi**: Il mittente trasferisce i fondi all'indirizzo stealth generato
+4. **Recupero Fondi**: Il destinatario può derivare la chiave privata dell'indirizzo stealth usando l'encryptedRandomNumber e la ephemeralPublicKey forniti dal mittente
+5. **Accesso Sicuro**: Solo il legittimo destinatario può calcolare la chiave privata necessaria per spostare i fondi
 
-Questa implementazione utilizza il protocollo Stealth Address per migliorare la privacy delle transazioni sulla blockchain Ethereum.
+### Note Implementative
+
+- Il protocollo stealth di Shogun utilizza la crittografia asimmetrica per garantire che solo il destinatario previsto possa derivare la chiave privata dell'indirizzo stealth
+- L'implementazione consente la creazione di portafogli effimeri per ogni transazione
+- La comunicazione delle informazioni necessarie (ephemeralPublicKey, encryptedRandomNumber) avviene off-chain tra mittente e destinatario
+
+## Relay Verification
+
+Shogun SDK include moduli per la verifica e l'interazione con sistemi di relay blockchain, fornendo funzionalità per verificare l'appartenenza, l'identità decentralizzata e la sincronizzazione dei dati.
+
+### 1. RelayMembershipVerifier
+
+Questo componente consente di verificare se un indirizzo o una chiave pubblica è autorizzato all'interno del protocollo Shogun.
+
+```typescript
+import { ShogunCore, RelayMembershipVerifier } from "shogun-core";
+
+// Inizializza Shogun
+const shogun = new ShogunCore({
+  // Configurazione...
+  providerUrl: "https://ethereum-rpc-url.com",
+});
+
+// Crea un'istanza RelayMembershipVerifier
+const verifier = new RelayMembershipVerifier({
+  contractAddress: "0xContractAddress",
+  providerUrl: "https://ethereum-rpc-url.com", // Opzionale se riutilizzi il provider di ShogunCore
+}, shogun); // Passa l'istanza ShogunCore per riutilizzare il provider
+
+// Verifica se un indirizzo è autorizzato
+async function checkAddressAuthorization(address) {
+  const isAuthorized = await verifier.isAddressAuthorized(address);
+  console.log(`L'indirizzo ${address} è ${isAuthorized ? 'autorizzato' : 'non autorizzato'}`);
+  return isAuthorized;
+}
+
+// Verifica se una chiave pubblica è autorizzata
+async function checkPublicKeyAuthorization(publicKey) {
+  const isAuthorized = await verifier.isPublicKeyAuthorized(publicKey);
+  console.log(`La chiave pubblica è ${isAuthorized ? 'autorizzata' : 'non autorizzata'}`);
+  return isAuthorized;
+}
+
+// Recupera informazioni utente
+async function getUserInformation(address) {
+  const userInfo = await verifier.getUserInfo(address);
+  if (userInfo) {
+    console.log(`Informazioni utente per ${address}:`);
+    console.log(`- Scadenza: ${userInfo.expires}`);
+    console.log(`- Chiave pubblica: ${userInfo.pubKey}`);
+  } else {
+    console.log(`Nessuna informazione trovata per ${address}`);
+  }
+  return userInfo;
+}
+```
+
+### 2. DIDVerifier
+
+Questo componente consente di verificare e interagire con Identificatori Decentralizzati (DID) registrati nel contratto DIDRegistry.
+
+```typescript
+import { ShogunCore, DIDVerifier } from "shogun-core";
+
+// Inizializza Shogun
+const shogun = new ShogunCore({
+  // Configurazione...
+  providerUrl: "https://ethereum-rpc-url.com",
+});
+
+// Crea un'istanza DIDVerifier
+const didVerifier = new DIDVerifier({
+  contractAddress: "0xDIDRegistryAddress",
+  providerUrl: "https://ethereum-rpc-url.com", // Opzionale se riutilizzi il provider di ShogunCore
+}, shogun);
+
+// Verifica un DID e ottieni il suo controller
+async function verifyDecentralizedIdentifier(did) {
+  const controller = await didVerifier.verifyDID(did);
+  if (controller) {
+    console.log(`DID ${did} verificato con successo`);
+    console.log(`Controller: ${controller}`);
+  } else {
+    console.log(`DID ${did} non trovato o non valido`);
+  }
+  return controller;
+}
+
+// Autentica un utente usando il suo DID e una firma
+async function authenticateUser(did, message, signature) {
+  const isAuthenticated = await didVerifier.authenticateWithDID(did, message, signature);
+  console.log(`Autenticazione ${isAuthenticated ? 'riuscita' : 'fallita'} per DID: ${did}`);
+  return isAuthenticated;
+}
+
+// Registra un nuovo DID (richiede un signer con diritti di amministrazione)
+async function registerNewDID(did, controller) {
+  const success = await didVerifier.registerDID(did, controller);
+  console.log(`Registrazione DID ${success ? 'completata' : 'fallita'} per ${did}`);
+  return success;
+}
+```
+
+### 3. OracleBridge
+
+Questo componente consente di interagire con il contratto OracleBridge che pubblica e verifica le radici Merkle per varie epoche, facilitando la sincronizzazione sicura tra on-chain e off-chain.
+
+```typescript
+import { ShogunCore, OracleBridge } from "shogun-core";
+import { ethers } from "ethers";
+
+// Inizializza Shogun
+const shogun = new ShogunCore({
+  // Configurazione...
+  providerUrl: "https://ethereum-rpc-url.com",
+});
+
+// Crea un'istanza OracleBridge
+const oracleBridge = new OracleBridge({
+  contractAddress: "0xOracleBridgeAddress",
+  providerUrl: "https://ethereum-rpc-url.com", // Opzionale se riutilizzi il provider di ShogunCore
+}, shogun);
+
+// Ottieni l'ID dell'epoca corrente
+async function getCurrentEpoch() {
+  const epochId = await oracleBridge.getEpochId();
+  console.log(`Epoca corrente: ${epochId}`);
+  return epochId;
+}
+
+// Ottieni la radice Merkle per un'epoca specifica
+async function getMerkleRoot(epochId) {
+  const root = await oracleBridge.getRootForEpoch(epochId);
+  console.log(`Radice Merkle per epoca ${epochId}: ${root}`);
+  return root;
+}
+
+// Verifica se la radice Merkle corrisponde al valore atteso
+async function verifyMerkleRoot(epochId, expectedRoot) {
+  const isValid = await oracleBridge.verifyRoot(epochId, expectedRoot);
+  console.log(`Verifica radice per epoca ${epochId}: ${isValid ? 'valida' : 'non valida'}`);
+  return isValid;
+}
+
+// Pubblica una nuova radice Merkle (solo admin)
+async function publishNewRoot(epochId, root, wallet) {
+  // Imposta un signer con wallet.connect(provider)
+  const signer = wallet.connect(new ethers.JsonRpcProvider("https://ethereum-rpc-url.com"));
+  oracleBridge.setSigner(signer);
+  
+  const receipt = await oracleBridge.publishRoot(epochId, root);
+  if (receipt) {
+    console.log(`Radice pubblicata con successo per epoca ${epochId}`);
+    console.log(`Transaction hash: ${receipt.hash}`);
+  } else {
+    console.log(`Pubblicazione fallita per epoca ${epochId}`);
+  }
+  return receipt;
+}
+```
+
+### Casi d'Uso per la Relay Verification
+
+I componenti di verifica relay sono particolarmente utili per:
+
+- **Autenticazione Decentralizzata**: Verifica l'identità degli utenti attraverso DID e firme crittografiche
+- **Controllo Accessi**: Limita l'accesso ai relay solo a membri autorizzati
+- **Sincronizzazione Sicura**: Garantisce l'integrità dei dati tra blockchain e sistemi off-chain
+- **Gestione del Consenso**: Implementa meccanismi di consenso per dati critici
+- **Audit e Tracciamento**: Traccia le operazioni di sincronizzazione e verifica attraverso l'Oracle Bridge
+
+Per ulteriori dettagli sulle API di verifica relay, consulta la documentazione tecnica.
 
 ## Browser Integration
 

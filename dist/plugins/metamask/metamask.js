@@ -374,6 +374,18 @@ class MetaMask extends eventEmitter_1.EventEmitter {
         }
     }
     /**
+     * Get active provider instance using BrowserProvider
+     */
+    async getProvider() {
+        if (this.customProvider) {
+            return this.customProvider;
+        }
+        if (!this.provider) {
+            this.initProvider();
+        }
+        return this.provider;
+    }
+    /**
      * Generate deterministic password from signature
      * @param signature - Cryptographic signature
      * @returns 64-character hex string

@@ -25,7 +25,7 @@ function generateSecureRandomPassword(length = 32): string {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
+    "",
   );
 }
 
@@ -37,7 +37,7 @@ function generateSecureRandomPassword(length = 32): string {
  */
 async function deriveEncryptionKey(
   username: string,
-  password: string
+  password: string,
 ): Promise<string> {
   // In un ambiente reale, usa PBKDF2 o Argon2
   const data = new TextEncoder().encode(`${username}:${password}`);
@@ -79,7 +79,7 @@ export class ShogunDID extends EventEmitter {
     options?: {
       useSecureRandomPassword?: boolean;
       [key: string]: any;
-    }
+    },
   ) {
     super();
     this.core = shogunCore;
@@ -124,7 +124,7 @@ export class ShogunDID extends EventEmitter {
         ErrorType.DID,
         "CREATE_DID_ERROR",
         error instanceof Error ? error.message : "Error creating DID",
-        error
+        error,
       );
       throw error;
     }
@@ -138,7 +138,7 @@ export class ShogunDID extends EventEmitter {
    */
   private async storeDID(
     did: string,
-    options: DIDCreateOptions
+    options: DIDCreateOptions,
   ): Promise<void> {
     try {
       if (!this.isValidDID(did)) {
@@ -172,13 +172,13 @@ export class ShogunDID extends EventEmitter {
                   .put(did, (userAck: any) => {
                     if (userAck.err) {
                       logError(
-                        `Warning: DID created but not associated with user: ${userAck.err}`
+                        `Warning: DID created but not associated with user: ${userAck.err}`,
                       );
                     }
                     resolve();
                   });
               }
-            }
+            },
           );
 
         // Set timeout to avoid hanging
@@ -198,7 +198,7 @@ export class ShogunDID extends EventEmitter {
    */
   private createDidDocument(
     did: string,
-    options: DIDCreateOptions
+    options: DIDCreateOptions,
   ): DIDDocument {
     const controller = options.controller ?? this.getUserPublicKey() ?? did;
 
@@ -258,7 +258,7 @@ export class ShogunDID extends EventEmitter {
    */
   async resolveDID(
     did: string,
-    options: DIDResolutionOptions = {}
+    options: DIDResolutionOptions = {},
   ): Promise<DIDResolutionResult> {
     try {
       const cacheDuration =
@@ -284,14 +284,14 @@ export class ShogunDID extends EventEmitter {
       if (method !== this.methodName) {
         return this.createErrorResolution(
           "unsupportedDidMethod",
-          `Unsupported DID method: ${method}`
+          `Unsupported DID method: ${method}`,
         );
       }
 
       return new Promise<DIDResolutionResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           resolve(
-            this.createErrorResolution("timeout", "DID resolution timeout")
+            this.createErrorResolution("timeout", "DID resolution timeout"),
           );
         }, timeout);
 
@@ -303,7 +303,10 @@ export class ShogunDID extends EventEmitter {
 
             if (!didDocData) {
               resolve(
-                this.createErrorResolution("notFound", "DID Document not found")
+                this.createErrorResolution(
+                  "notFound",
+                  "DID Document not found",
+                ),
               );
               return;
             }
@@ -311,7 +314,7 @@ export class ShogunDID extends EventEmitter {
             try {
               const didDocument = this.parseOrCreateDIDDocument(
                 did,
-                didDocData
+                didDocData,
               );
 
               // Cache the result
@@ -335,8 +338,8 @@ export class ShogunDID extends EventEmitter {
               resolve(
                 this.createErrorResolution(
                   "invalidDidDocument",
-                  "Error parsing DID Document"
-                )
+                  "Error parsing DID Document",
+                ),
               );
             }
           });
@@ -345,7 +348,7 @@ export class ShogunDID extends EventEmitter {
       logError("Error resolving DID:", error);
       return this.createErrorResolution(
         "internalError",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   }
@@ -355,14 +358,14 @@ export class ShogunDID extends EventEmitter {
    */
   async registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       if (!this.core.isLoggedIn()) {
         throw new Error("User must be logged in to register DID on chain");
       }
 
-      let effectiveSigner = signer || this.getWallet();
+      let effectiveSigner = signer;
       if (!effectiveSigner) {
         throw new Error("No signer provided and main wallet not available");
       }
@@ -374,7 +377,7 @@ export class ShogunDID extends EventEmitter {
       const didRegistryContract = new ethers.Contract(
         this.registryConfig.address,
         didRegistryABI,
-        effectiveSigner
+        effectiveSigner,
       );
 
       for (
@@ -385,7 +388,7 @@ export class ShogunDID extends EventEmitter {
         try {
           const tx = await didRegistryContract.registerDID(
             did,
-            this.getUserPublicKey()
+            this.getUserPublicKey(),
           );
           const receipt = await tx.wait();
 
@@ -399,7 +402,7 @@ export class ShogunDID extends EventEmitter {
         } catch (error: any) {
           if (attempt === this.registryConfig.maxRetries!) throw error;
           await new Promise((resolve) =>
-            setTimeout(resolve, this.registryConfig.retryDelay)
+            setTimeout(resolve, this.registryConfig.retryDelay),
           );
         }
       }
@@ -459,7 +462,7 @@ export class ShogunDID extends EventEmitter {
    */
   async authenticateWithDID(
     did: string,
-    challenge?: string
+    challenge?: string,
   ): Promise<AuthResult> {
     try {
       log(`Authenticating with DID: ${did}`);
@@ -483,7 +486,7 @@ export class ShogunDID extends EventEmitter {
 
       // Extract authentication details from DID Document
       const authMethod = this.extractAuthenticationMethod(
-        resolution.didDocument
+        resolution.didDocument,
       );
       if (!authMethod) {
         return {
@@ -503,7 +506,7 @@ export class ShogunDID extends EventEmitter {
         // Default to GunDB authentication
         return this.authenticateWithGunDB(
           authMethod.controller.split(":").pop() ?? "",
-          challenge
+          challenge,
         );
       }
     } catch (error) {
@@ -526,7 +529,7 @@ export class ShogunDID extends EventEmitter {
    */
   async updateDIDDocument(
     did: string,
-    updates: Partial<DIDDocument>
+    updates: Partial<DIDDocument>,
   ): Promise<boolean> {
     try {
       if (!this.core.isLoggedIn()) {
@@ -541,7 +544,7 @@ export class ShogunDID extends EventEmitter {
       const resolution = await this.resolveDID(did);
       if (resolution.didResolutionMetadata.error || !resolution.didDocument) {
         throw new Error(
-          `Cannot update DID document: ${resolution.didResolutionMetadata.error ?? "Document not found"}`
+          `Cannot update DID document: ${resolution.didResolutionMetadata.error ?? "Document not found"}`,
         );
       }
 
@@ -559,7 +562,7 @@ export class ShogunDID extends EventEmitter {
 
         for (const newService of updates.service) {
           const existingIndex = mergedServices.findIndex(
-            (s) => s.id === newService.id
+            (s) => s.id === newService.id,
           );
           if (existingIndex >= 0) {
             mergedServices[existingIndex] = newService;
@@ -577,7 +580,7 @@ export class ShogunDID extends EventEmitter {
 
         for (const newMethod of updates.verificationMethod) {
           const existingIndex = mergedMethods.findIndex(
-            (m) => m.id === newMethod.id
+            (m) => m.id === newMethod.id,
           );
           if (existingIndex >= 0) {
             mergedMethods[existingIndex] = newMethod;
@@ -611,7 +614,7 @@ export class ShogunDID extends EventEmitter {
         ErrorType.DID,
         "UPDATE_DID_ERROR",
         error instanceof Error ? error.message : "Error updating DID",
-        error
+        error,
       );
       return false;
     }
@@ -650,7 +653,7 @@ export class ShogunDID extends EventEmitter {
                 log(`Successfully deactivated DID: ${did}`);
                 resolve(true);
               }
-            }
+            },
           );
 
         // Set timeout
@@ -681,7 +684,7 @@ export class ShogunDID extends EventEmitter {
    */
   generateDIDDocument(
     did: string,
-    options: DIDCreateOptions = {}
+    options: DIDCreateOptions = {},
   ): DIDDocument {
     // Get user's public key
     const userPub = this.getUserPublicKey();
@@ -722,7 +725,7 @@ export class ShogunDID extends EventEmitter {
 
   private createErrorResolution(
     error: string,
-    message: string
+    message: string,
   ): DIDResolutionResult {
     return {
       didResolutionMetadata: {
@@ -754,7 +757,7 @@ export class ShogunDID extends EventEmitter {
   }
 
   private extractAuthenticationMethod(
-    document: DIDDocument
+    document: DIDDocument,
   ): { id: string; type: string; controller: string } | null {
     // Get authentication methods
     const authMethods = document.authentication || [];
@@ -765,7 +768,7 @@ export class ShogunDID extends EventEmitter {
         // Reference to a verification method
         const methodId = auth;
         const method = document.verificationMethod?.find(
-          (vm) => vm.id === methodId
+          (vm) => vm.id === methodId,
         );
         if (method) {
           return {
@@ -783,39 +786,9 @@ export class ShogunDID extends EventEmitter {
     return null;
   }
 
-  private getWallet(): ethers.Wallet | null {
-    try {
-      if (this.core.constructor.name === "ShogunCore") {
-        // Core moderno, usa getPlugin
-        if (!this.core.getPlugin) {
-          return null;
-        }
-
-        const walletPlugin = this.core.getPlugin(
-          this.core.constructor.name === "ShogunCore"
-            ? "wallet"
-            : "walletManager"
-        );
-        if (
-          walletPlugin &&
-          typeof walletPlugin === "object" &&
-          "getMainWallet" in walletPlugin
-        ) {
-          return (walletPlugin as any).getMainWallet();
-        }
-      } else if ("getMainWallet" in this.core) {
-        // Core legacy
-        return (this.core as any).getMainWallet();
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   private async authenticateWithEthereum(
     authMethod: { id: string; type: string; controller: string },
-    challenge?: string
+    challenge?: string,
   ): Promise<AuthResult> {
     // Extract Ethereum address from DID or authMethod
     const address = authMethod.id.split("#")[0].split(":").pop() || "";
@@ -846,7 +819,7 @@ export class ShogunDID extends EventEmitter {
 
   private async authenticateWithWebAuthn(
     authMethod: { id: string; type: string; controller: string },
-    challenge?: string
+    challenge?: string,
   ): Promise<AuthResult> {
     // Extract username from controller or other means
     const username = authMethod.controller.split(":").pop() || "";
@@ -877,7 +850,7 @@ export class ShogunDID extends EventEmitter {
 
   private async authenticateWithGunDB(
     username: string,
-    challenge?: string
+    challenge?: string,
   ): Promise<any> {
     try {
       log("Authenticating with GunDB using password method", username);
@@ -919,7 +892,8 @@ export class ShogunDID extends EventEmitter {
    * @returns Promise con il risultato della verifica
    */
   async verifyDIDOnChain(
-    did: string
+    did: string,
+    signer?: ethers.Signer,
   ): Promise<{ isRegistered: boolean; controller?: string; error?: string }> {
     try {
       // Definire l'interfaccia del contratto (ABI semplificato per esempio)
@@ -929,23 +903,13 @@ export class ShogunDID extends EventEmitter {
       ];
 
       // Indirizzo del contratto di registro DID
-      const didRegistryAddress = "0x1234..."; // Da sostituire con l'indirizzo reale
-
-      // Se non c'è un provider in ShogunCore, usiamo il signer del wallet
-      const wallet = this.getWallet();
-      const provider = wallet?.provider || this.core.provider;
-
-      if (!provider) {
-        throw new Error(
-          "Provider non disponibile per verificare il DID on-chain"
-        );
-      }
+      const didRegistryAddress = this.options.didRegistryAddress;
 
       // Creare un'istanza del contratto con il provider
       const didRegistryContract = new ethers.Contract(
         didRegistryAddress,
         didRegistryABI,
-        provider
+        signer,
       );
 
       // Verificare se il DID è registrato

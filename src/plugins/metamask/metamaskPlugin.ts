@@ -1,7 +1,11 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { MetaMask } from "./metamask";
-import { MetaMaskCredentials, ConnectionResult,MetaMaskPluginInterface } from "./types";
+import {
+  MetaMaskCredentials,
+  ConnectionResult,
+  MetaMaskPluginInterface,
+} from "./types";
 import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
@@ -26,7 +30,7 @@ export class MetaMaskPlugin
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-    
+
     // Inizializziamo il modulo MetaMask
     this.metamask = new MetaMask();
 
@@ -103,6 +107,15 @@ export class MetaMaskPlugin
   /**
    * @inheritdoc
    */
+  async getProvider(): Promise<
+    ethers.JsonRpcProvider | ethers.BrowserProvider
+  > {
+    return this.assertMetaMask().getProvider();
+  }
+
+  /**
+   * @inheritdoc
+   */
   async generatePassword(signature: string): Promise<string> {
     return this.assertMetaMask().generatePassword(signature);
   }
@@ -131,7 +144,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask login"
+          "Ethereum address required for MetaMask login",
         );
       }
 
@@ -139,7 +152,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser"
+          "MetaMask is not available in the browser",
         );
       }
 
@@ -154,27 +167,27 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing"
+          "MetaMask credentials not generated correctly or signature missing",
         );
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
       log("Verifying MetaMask signature...");
       const recoveredAddress = ethers.verifyMessage(
         credentials.message,
-        credentials.signature
+        credentials.signature,
       );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
         logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
         throw createError(
           ErrorType.SECURITY,
           "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch."
+          "MetaMask signature verification failed. Address mismatch.",
         );
       }
       log("MetaMask signature verified successfully.");
@@ -184,7 +197,7 @@ export class MetaMaskPlugin
       const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
       const result = await createUserWithGunDB(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
 
       if (!result.success || !result.userPub) {
@@ -192,7 +205,7 @@ export class MetaMaskPlugin
           ErrorType.AUTHENTICATION,
           "LOGIN_CREATE_FAILED",
           result.error ??
-            "Login or user creation failed after signature verification"
+            "Login or user creation failed after signature verification",
         );
       }
 
@@ -221,7 +234,7 @@ export class MetaMaskPlugin
           ErrorType.DID,
           "DID_ENSURE_FAILED",
           "Error ensuring DID for MetaMask user",
-          didError
+          didError,
         );
       }
 
@@ -250,7 +263,7 @@ export class MetaMaskPlugin
         errorType,
         errorCode,
         errorMessage,
-        error
+        error,
       );
 
       return {
@@ -277,7 +290,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask registration"
+          "Ethereum address required for MetaMask registration",
         );
       }
 
@@ -285,7 +298,7 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.ENVIRONMENT,
           "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser"
+          "MetaMask is not available in the browser",
         );
       }
 
@@ -300,39 +313,39 @@ export class MetaMaskPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing"
+          "MetaMask credentials not generated correctly or signature missing",
         );
       }
 
       log(
-        `Credentials generated successfully. Username: ${credentials.username}`
+        `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
       log("Verifying MetaMask signature...");
       const recoveredAddress = ethers.verifyMessage(
         credentials.message,
-        credentials.signature
+        credentials.signature,
       );
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
         logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`
+          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
         );
         throw createError(
           ErrorType.SECURITY,
           "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch."
+          "MetaMask signature verification failed. Address mismatch.",
         );
       }
       log("MetaMask signature verified successfully.");
 
       log(
-        "Attempting user creation (or login if exists) with verified credentials..."
+        "Attempting user creation (or login if exists) with verified credentials...",
       );
       // Utilizziamo il metodo privato del core per la creazione dell'utente in GunDB
       const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
       const result = await createUserWithGunDB(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
 
       if (!result.success || !result.userPub) {
@@ -340,7 +353,7 @@ export class MetaMaskPlugin
           ErrorType.AUTHENTICATION,
           "USER_CREATE_LOGIN_FAILED",
           result.error ??
-            "User creation or login failed after signature verification"
+            "User creation or login failed after signature verification",
         );
       }
 
@@ -369,7 +382,7 @@ export class MetaMaskPlugin
           ErrorType.DID,
           "DID_ENSURE_FAILED",
           "Error ensuring DID for MetaMask user during signup",
-          didError
+          didError,
         );
       }
 
@@ -398,7 +411,7 @@ export class MetaMaskPlugin
         errorType,
         errorCode,
         errorMessage,
-        error
+        error,
       );
 
       return {

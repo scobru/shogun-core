@@ -214,5 +214,23 @@ class WalletPlugin extends base_1.BasePlugin {
             ? this.core.provider.connection?.url || null
             : null;
     }
+    /**
+     * @inheritdoc
+     */
+    setSigner(signer) {
+        this.assertWalletManager().setSigner(signer);
+    }
+    /**
+     * @inheritdoc
+     */
+    getSigner() {
+        return this.assertWalletManager().getSigner();
+    }
+    /**
+     * @inheritdoc
+     */
+    getProvider() {
+        return this.assertWalletManager().getProvider();
+    }
 }
 exports.WalletPlugin = WalletPlugin;

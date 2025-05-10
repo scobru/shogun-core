@@ -24,4 +24,3 @@ export type { DIDPluginInterface } from "./did/types";
 
 export { StealthPlugin } from "./stealth/stealthPlugin";
 export type { StealthPluginInterface } from "./stealth/types";
-

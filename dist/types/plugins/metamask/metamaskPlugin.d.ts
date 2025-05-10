@@ -51,6 +51,10 @@ export declare class MetaMaskPlugin extends BasePlugin implements MetaMaskPlugin
     /**
      * @inheritdoc
      */
+    getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
+    /**
+     * @inheritdoc
+     */
     generatePassword(signature: string): Promise<string>;
     /**
      * @inheritdoc

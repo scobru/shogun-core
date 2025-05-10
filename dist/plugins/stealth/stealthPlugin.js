@@ -20,8 +20,11 @@ class StealthPlugin extends base_1.BasePlugin {
         if (!core.storage) {
             throw new Error("Storage dependency not available in core");
         }
+        if (!core.gun) {
+            throw new Error("Gun dependency not available in core");
+        }
         // Inizializziamo il modulo Stealth
-        this.stealth = new stealth_1.Stealth(core.storage);
+        this.stealth = new stealth_1.Stealth(core.gun, core.storage);
         (0, logger_1.log)("Stealth plugin initialized");
     }
     /**
@@ -47,7 +50,7 @@ class StealthPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async generateEphemeralKeyPair() {
-        return this.assertStealth().generateEphemeralKeyPair();
+        return this.assertStealth().createAccount();
     }
     /**
      * @inheritdoc
@@ -59,25 +62,52 @@ class StealthPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async scanStealthAddresses(addresses, privateKeyOrSpendKey) {
-        return this.assertStealth().scanStealthAddresses(addresses, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("scanStealthAddresses è deprecato. Usa openStealthAddress per ogni indirizzo.");
+        return Promise.resolve([]);
     }
     /**
      * @inheritdoc
      */
     async isStealthAddressMine(stealthData, privateKeyOrSpendKey) {
-        return this.assertStealth().isStealthAddressMine(stealthData, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("isStealthAddressMine è deprecato");
+        return Promise.resolve(false);
     }
     /**
      * @inheritdoc
      */
     async getStealthPrivateKey(stealthData, privateKeyOrSpendKey) {
-        return this.assertStealth().getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("getStealthPrivateKey è deprecato. Usa openStealthAddress");
+        return Promise.resolve("0x" + "0".repeat(64));
     }
     /**
      * @inheritdoc
      */
-    async openStealthAddress(stealthAddress, ephemeralPublicKey, pair) {
-        return this.assertStealth().openStealthAddress(stealthAddress, ephemeralPublicKey, pair);
+    async openStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey) {
+        // Ottieni le chiavi dell'utente
+        const keys = await this.getStealthKeys();
+        // Converti le chiavi stringhe in oggetti EphemeralKeyPair
+        const viewingKeyPair = {
+            pub: keys.viewingKey,
+            priv: keys.viewingKey,
+            epub: keys.viewingKey,
+            epriv: keys.viewingKey
+        };
+        const spendingKeyPair = {
+            pub: keys.spendingKey,
+            priv: keys.spendingKey,
+            epub: keys.spendingKey,
+            epriv: keys.spendingKey
+        };
+        return this.assertStealth().openStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey, spendingKeyPair, viewingKeyPair);
+    }
+    /**
+     * @inheritdoc
+     */
+    async getStealthKeys() {
+        return this.assertStealth().getStealthKeys();
     }
 }
 exports.StealthPlugin = StealthPlugin;

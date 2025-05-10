@@ -6,12 +6,12 @@
  * - Support for remove/unset operations
  */
 
-import Gun, { IGunInstance, IGunUserInstance } from "gun";
+import Gun, { IGunUserInstance } from "gun";
 import CONFIG from "../config";
 
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { GunDBOptions } from "./types";
+import { GunDBOptions, GunInstance } from "./types";
 import { GunCollections } from "./collections";
 import { GunConsensus } from "./consensus";
 import * as GunErrors from "./errors";
@@ -47,7 +47,7 @@ interface RetryConfig {
 }
 
 class GunDB {
-  public gun: IGunInstance<any>;
+  public gun: GunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private readonly retryConfig: RetryConfig;
@@ -67,24 +67,34 @@ class GunDB {
       delay: options.retryDelay ?? 1000,
     };
 
-    const config = {
-      peers: options.peers,
-      localStorage: options.localStorage ?? false,
-      radisk: options.radisk ?? false,
-      multicast: options.multicast ?? false,
-      axe: options.axe ?? false,
-      web: options.web ?? false,
-    };
+    this.authToken = options.authToken;
 
-    this.gun = new Gun(config);
+    if (options.externalGun) {
+      log("Using externally provided Gun instance");
+      this.gun = options.externalGun;
+    } else {
+      const config = {
+        peers: options.peers,
+        localStorage: false,
+        radisk: false,
+        multicast: options.multicast ?? false,
+        axe: options.axe ?? false,
+      };
+
+      log("Creating new Gun instance with config:", config);
+      this.gun = new Gun(config);
+    }
+
     this.user = this.gun.user().recall({ sessionStorage: true });
+
+    this.restrictPut();
 
     this.subscribeToAuthEvents();
   }
 
   private async retry<T>(
     operation: () => Promise<T>,
-    context: string
+    context: string,
   ): Promise<T> {
     let lastError: Error;
 
@@ -113,7 +123,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -126,13 +136,34 @@ class GunDB {
     this.onAuthCallbacks.forEach((cb) => cb(user));
   }
 
+  private restrictPut() {
+    Gun.on("opt", function (ctx: any) {
+      if (ctx.once) {
+        return;
+      }
+      ctx.on("out", function (msg: any) {
+        var to = msg.to;
+        // Adds headers for put
+        msg.headers = {
+          token: "thisIsTheTokenForReals",
+        };
+        to.next(msg);
+      });
+    });
+  }
+
   /**
    * Creates a new GunDB instance with specified peers
    * @param peers Array of peer URLs to connect to
    * @returns New GunDB instance
    */
   static withPeers(peers: string[] = CONFIG.PEERS): GunDB {
-    return new GunDB({ peers });
+    const options: Partial<GunDBOptions> = {
+      peers,
+      localStorage: false,
+      radisk: false,
+    };
+    return new GunDB(options);
   }
 
   /**
@@ -163,7 +194,7 @@ class GunDB {
    * Gets the Gun instance
    * @returns Gun instance
    */
-  getGun(): IGunInstance<any> {
+  getGun(): GunInstance<any> {
     return this.gun;
   }
 
@@ -194,7 +225,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -210,7 +241,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -225,7 +256,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -241,7 +272,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -345,7 +376,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void
+    callback?: (result: any) => void,
   ): Promise<any> {
     if (this.isAuthenticating()) {
       const err = "Authentication already in progress";
@@ -395,7 +426,7 @@ class GunDB {
 
           if (!user) {
             logError(
-              `Authentication succeeded but no user.pub available for: ${username}`
+              `Authentication succeeded but no user.pub available for: ${username}`,
             );
             resolve({
               success: false,
@@ -468,10 +499,10 @@ class GunDB {
       () =>
         new Promise((resolve, reject) => {
           node.put(data, (ack: any) =>
-            ack.err ? reject(new Error(ack.err)) : resolve(data)
+            ack.err ? reject(new Error(ack.err)) : resolve(data),
           );
         }),
-      "data save operation"
+      "data save operation",
     );
   }
 
@@ -481,7 +512,7 @@ class GunDB {
         new Promise((resolve) => {
           node.once((data: any) => resolve(data));
         }),
-      "data read operation"
+      "data read operation",
     );
   }
 
@@ -579,7 +610,7 @@ class GunDB {
     try {
       // Calcola l'hash del contenuto
       const { hash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data }
+        typeof data === "object" ? data : { value: data },
       );
 
       // Salva i dati utilizzando l'hash come chiave nello spazio immutabile
@@ -590,7 +621,7 @@ class GunDB {
     } catch (error) {
       logError(
         `Errore durante l'aggiunta dati con hash a Frozen Space:`,
-        error
+        error,
       );
       throw error;
     }
@@ -606,7 +637,7 @@ class GunDB {
   async getHashedFrozenData(
     node: string,
     hash: string,
-    verifyIntegrity: boolean = false
+    verifyIntegrity: boolean = false,
   ): Promise<any> {
     log(`Recupero dati con hash da Frozen Space: ${node}/${hash}`);
     const data = await this.getFrozenData(node, hash);
@@ -614,11 +645,11 @@ class GunDB {
     if (verifyIntegrity && data) {
       // Verifica l'integrità ricalcolando l'hash dei dati
       const { hash: calculatedHash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data }
+        typeof data === "object" ? data : { value: data },
       );
       if (calculatedHash !== hash) {
         logError(
-          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`
+          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`,
         );
         throw new Error("Integrità dei dati compromessa");
       }
@@ -696,7 +727,7 @@ class GunDB {
   repository<T, R extends GunRepository<T>>(
     collection: string,
     repository: new (gun: GunDB, collection: string, options?: any) => R,
-    options?: any
+    options?: any,
   ): R {
     return new repository(this, collection, options);
   }
@@ -902,7 +933,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     log("Impostazione suggerimento password per:", username);
 
@@ -930,7 +961,7 @@ class GunDB {
     } catch (error) {
       logError(
         "Errore durante l'impostazione del suggerimento password:",
-        error
+        error,
       );
       return { success: false, error: String(error) };
     }
@@ -944,7 +975,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Tentativo di recupero password per:", username);
 

@@ -10,6 +10,7 @@ import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
+import { IGunInstance as GunInstance } from "gun";
 
 /**
  * Categorie di plugin standard in ShogunCore
@@ -53,7 +54,7 @@ export interface DID {
   deactivateDID(did: string): Promise<boolean>;
   registerDIDOnChain(
     did: string,
-    signer?: ethers.Signer
+    signer?: ethers.Signer,
   ): Promise<{ success: boolean; txHash?: string; error?: string }>;
 }
 
@@ -89,20 +90,11 @@ export interface SignUpResult {
 export interface IShogunCore extends PluginManager {
   gun: IGunInstance<any>;
   gundb: GunDB;
-  /** @deprecated Use getPlugin(CorePlugins.WebAuthn) instead */
-  webauthn?: Webauthn;
-  /** @deprecated Use getPlugin(CorePlugins.MetaMask) instead */
-  metamask?: MetaMask;
-  /** @deprecated Use getPlugin(CorePlugins.Stealth) instead */
-  stealth?: Stealth;
-  /** @deprecated Use getPlugin(CorePlugins.DID) instead */
-  did?: DID;
-
   rx: GunRxJS; // RxJS integration
   storage: ShogunStorage;
   config: ShogunSDKConfig;
   provider?: ethers.Provider;
-
+  signer?: ethers.Signer;
   // Event emitter methods
   on(eventName: string | symbol, listener: (...args: any[]) => void): any;
   off(eventName: string | symbol, listener: (...args: any[]) => void): any;
@@ -115,10 +107,6 @@ export interface IShogunCore extends PluginManager {
 
   // Logging configuration
   configureLogging(config: LoggingConfig): void;
-
-  // RPC Provider methods
-  setRpcUrl(rpcUrl: string): boolean;
-  getRpcUrl(): string | null;
 
   // Wallet management methods
   /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
@@ -134,7 +122,7 @@ export interface IShogunCore extends PluginManager {
   signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult>;
   /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
   signUpWithMetaMask?(address: string): Promise<AuthResult>;
@@ -156,14 +144,14 @@ export interface IShogunCore extends PluginManager {
   rxGet<T>(path: string | any): Observable<T>;
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean
+    matchFn?: (data: any) => boolean,
   ): Observable<T[]>;
   rxPut<T>(path: string | any, data: T): Observable<T>;
   rxSet<T>(path: string | any, data: T): Observable<T>;
   rxOnce<T>(path: string | any): Observable<T>;
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R
+    computeFn: (...values: T[]) => R,
   ): Observable<R>;
   rxUserPut<T>(path: string, data: T): Observable<T>;
   observeUser<T>(path: string): Observable<T>;
@@ -217,8 +205,8 @@ export interface LoggingConfig {
 export interface ShogunSDKConfig {
   /** GunDB configuration */
   gundb?: GunDBOptions;
-  /** Ethereum provider URL */
-  providerUrl?: string;
+  /** External Gun instance to use instead of creating a new one */
+  externalGun?: GunInstance<any>;
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;
   /** MetaMask configuration */

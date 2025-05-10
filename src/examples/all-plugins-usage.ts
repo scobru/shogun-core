@@ -68,7 +68,7 @@ async function exampleAllPlugins() {
     // Esempio di generazione indirizzo stealth (utilizzando le chiavi per demo)
     const stealthAddress = await stealthPlugin.generateStealthAddress(
       ephemeralKeys.publicKey,
-      ephemeralKeys.privateKey
+      ephemeralKeys.privateKey,
     );
     console.log("Generated stealth address:", stealthAddress);
   } catch (error) {
@@ -136,15 +136,15 @@ async function exampleAutoRegisterPlugins() {
   // Otteniamo i plugin per categoria
   console.log(
     "Wallet plugins:",
-    core.getPluginsByCategory(PluginCategory.Wallet).length
+    core.getPluginsByCategory(PluginCategory.Wallet).length,
   );
   console.log(
     "Privacy plugins:",
-    core.getPluginsByCategory(PluginCategory.Privacy).length
+    core.getPluginsByCategory(PluginCategory.Privacy).length,
   );
   console.log(
     "Identity plugins:",
-    core.getPluginsByCategory(PluginCategory.Identity).length
+    core.getPluginsByCategory(PluginCategory.Identity).length,
   );
 }
 

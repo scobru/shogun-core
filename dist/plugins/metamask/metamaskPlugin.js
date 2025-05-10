@@ -85,6 +85,12 @@ class MetaMaskPlugin extends base_1.BasePlugin {
     /**
      * @inheritdoc
      */
+    async getProvider() {
+        return this.assertMetaMask().getProvider();
+    }
+    /**
+     * @inheritdoc
+     */
     async generatePassword(signature) {
         return this.assertMetaMask().generatePassword(signature);
     }

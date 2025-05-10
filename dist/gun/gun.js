@@ -71,35 +71,24 @@ class GunDB {
             attempts: options.retryAttempts ?? 3,
             delay: options.retryDelay ?? 1000,
         };
-        const config = {
-            peers: options.peers,
-            localStorage: options.localStorage ?? false,
-            radisk: options.radisk ?? false,
-            multicast: options.multicast ?? false,
-            axe: options.axe ?? false,
-            web: options.web ?? false,
-        };
         this.authToken = options.authToken;
-        if (this.authToken && this.authToken !== "") {
-            const preview = `${this.authToken.substring(0, 3)}...${this.authToken.slice(-3)}`;
-            (0, logger_1.log)(`Auth token received (${preview})`);
+        if (options.externalGun) {
+            (0, logger_1.log)("Using externally provided Gun instance");
+            this.gun = options.externalGun;
         }
         else {
-            (0, logger_1.log)("No auth token received");
+            const config = {
+                peers: options.peers,
+                localStorage: false,
+                radisk: false,
+                multicast: options.multicast ?? false,
+                axe: options.axe ?? false,
+            };
+            (0, logger_1.log)("Creating new Gun instance with config:", config);
+            this.gun = new gun_1.default(config);
         }
-        this.gun = new gun_1.default(config);
         this.user = this.gun.user().recall({ sessionStorage: true });
-        if (this.authToken && this.authToken !== "") {
-            gun_1.default.on("opt", (ctx) => {
-                if (ctx.once)
-                    return;
-                ctx.on("out", (msg) => {
-                    msg.headers = { token: this.authToken };
-                    ctx.to.next(msg);
-                });
-            });
-            (0, logger_1.log)("Auth token handler configured for outgoing messages");
-        }
+        this.restrictPut();
         this.subscribeToAuthEvents();
     }
     async retry(operation, context) {
@@ -134,13 +123,33 @@ class GunDB {
         const user = this.gun.user();
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
+    restrictPut() {
+        gun_1.default.on('opt', function (ctx) {
+            if (ctx.once) {
+                return;
+            }
+            ctx.on('out', function (msg) {
+                var to = msg.to;
+                // Adds headers for put
+                msg.headers = {
+                    token: 'thisIsTheTokenForReals'
+                };
+                to.next(msg);
+            });
+        });
+    }
     /**
      * Creates a new GunDB instance with specified peers
      * @param peers Array of peer URLs to connect to
      * @returns New GunDB instance
      */
     static withPeers(peers = config_1.default.PEERS) {
-        return new GunDB({ peers });
+        const options = {
+            peers,
+            localStorage: false,
+            radisk: false
+        };
+        return new GunDB(options);
     }
     /**
      * Adds a new peer to the network

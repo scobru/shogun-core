@@ -32,13 +32,13 @@ export class RsaSigner {
         hash: "SHA-256",
       },
       true,
-      ["sign", "verify"]
+      ["sign", "verify"],
     );
 
     const pub = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
     const priv = await window.crypto.subtle.exportKey(
       "pkcs8",
-      keyPair.privateKey
+      keyPair.privateKey,
     );
 
     return {
@@ -68,7 +68,7 @@ export class RsaSigner {
         try {
           const decryptedPriv = await Gun.SEA.decrypt(
             data.privateKey,
-            this.user._.sea
+            this.user._.sea,
           );
           resolve({ publicKey: data.publicKey, privateKey: decryptedPriv });
         } catch {
@@ -80,7 +80,7 @@ export class RsaSigner {
 
   async signHttpRequest(
     headers: Record<string, string>,
-    requestTarget: string
+    requestTarget: string,
   ): Promise<string> {
     const keys = await this.getStoredKeys();
     if (!keys) throw new Error("No RSA key pair found");
@@ -93,7 +93,7 @@ export class RsaSigner {
       .map((h) =>
         h === "(request-target)"
           ? `(request-target): ${requestTarget}`
-          : `${h}: ${headers[h]}`
+          : `${h}: ${headers[h]}`,
       )
       .join("\n");
 
@@ -102,11 +102,11 @@ export class RsaSigner {
     const signature = await window.crypto.subtle.sign(
       { name: "RSASSA-PKCS1-v1_5" },
       privateKey,
-      encoder.encode(signatureBase)
+      encoder.encode(signatureBase),
     );
 
     const signatureB64 = btoa(
-      String.fromCharCode(...new Uint8Array(signature))
+      String.fromCharCode(...new Uint8Array(signature)),
     );
     const keyId = `${this.user.is.pub}#main-key`;
 
@@ -124,14 +124,14 @@ export class RsaSigner {
         hash: "SHA-256",
       },
       false,
-      ["sign"]
+      ["sign"],
     );
   }
 
   async createActivity(
     type: string,
     actorId: string,
-    object: any
+    object: any,
   ): Promise<any> {
     return {
       "@context": "https://www.w3.org/ns/activitystreams",
@@ -191,7 +191,7 @@ export class ActivityPubClient {
 
     const sig = await this.signer.signHttpRequest(
       headers,
-      `post ${new URL(targetInbox).pathname}`
+      `post ${new URL(targetInbox).pathname}`,
     );
 
     await fetch(targetInbox, {

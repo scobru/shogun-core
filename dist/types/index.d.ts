@@ -14,6 +14,12 @@ export type { ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
 export type { ShogunPlugin, PluginManager } from "./types/plugin";
+export { RelayMembershipVerifier } from "./relay";
+export type { RelayMembershipConfig } from "./relay";
+export { OracleBridge } from "./relay";
+export type { OracleBridgeConfig } from "./relay";
+export { DIDVerifier } from "./relay";
+export type { DIDVerifierConfig } from "./relay";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -250,17 +256,6 @@ export declare class ShogunCore implements IShogunCore {
      * @returns Promise that resolves with the user data or rejects with an error
      */
     userGet(path: string): Promise<any>;
-    /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl: string): boolean;
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl(): string | null;
     /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.

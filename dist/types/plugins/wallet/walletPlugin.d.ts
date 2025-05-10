@@ -111,4 +111,16 @@ export declare class WalletPlugin extends BasePlugin implements WalletPluginInte
      * @inheritdoc
      */
     getRpcUrl(): string | null;
+    /**
+     * @inheritdoc
+     */
+    setSigner(signer: ethers.Wallet): void;
+    /**
+     * @inheritdoc
+     */
+    getSigner(): ethers.Wallet | null;
+    /**
+     * @inheritdoc
+     */
+    getProvider(): ethers.JsonRpcProvider | null;
 }

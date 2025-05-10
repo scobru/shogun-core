@@ -5,7 +5,7 @@ import {
   StealthAddressResult,
   StealthData,
   EphemeralKeyPair,
-  StealthPluginInterface
+  StealthPluginInterface,
 } from "./types";
 import { log } from "../../utils/logger";
 import { ethers } from "ethers";
@@ -33,8 +33,12 @@ export class StealthPlugin
       throw new Error("Storage dependency not available in core");
     }
 
+    if (!core.gun) {
+      throw new Error("Gun dependency not available in core");
+    }
+
     // Inizializziamo il modulo Stealth
-    this.stealth = new Stealth(core.storage);
+    this.stealth = new Stealth(core.gun, core.storage);
 
     log("Stealth plugin initialized");
   }
@@ -67,7 +71,7 @@ export class StealthPlugin
     privateKey: string;
     publicKey: string;
   }> {
-    return this.assertStealth().generateEphemeralKeyPair();
+    return this.assertStealth().createAccount();
   }
 
   /**
@@ -90,10 +94,11 @@ export class StealthPlugin
     addresses: StealthData[],
     privateKeyOrSpendKey: string,
   ): Promise<StealthData[]> {
-    return this.assertStealth().scanStealthAddresses(
-      addresses,
-      privateKeyOrSpendKey,
+    // Implementazione per compatibilità
+    console.warn(
+      "scanStealthAddresses è deprecato. Usa openStealthAddress per ogni indirizzo.",
     );
+    return Promise.resolve([]);
   }
 
   /**
@@ -103,10 +108,9 @@ export class StealthPlugin
     stealthData: StealthData,
     privateKeyOrSpendKey: string,
   ): Promise<boolean> {
-    return this.assertStealth().isStealthAddressMine(
-      stealthData,
-      privateKeyOrSpendKey,
-    );
+    // Implementazione per compatibilità
+    console.warn("isStealthAddressMine è deprecato");
+    return Promise.resolve(false);
   }
 
   /**
@@ -116,10 +120,9 @@ export class StealthPlugin
     stealthData: StealthData,
     privateKeyOrSpendKey: string,
   ): Promise<string> {
-    return this.assertStealth().getStealthPrivateKey(
-      stealthData,
-      privateKeyOrSpendKey,
-    );
+    // Implementazione per compatibilità
+    console.warn("getStealthPrivateKey è deprecato. Usa openStealthAddress");
+    return Promise.resolve("0x" + "0".repeat(64));
   }
 
   /**
@@ -127,13 +130,43 @@ export class StealthPlugin
    */
   async openStealthAddress(
     stealthAddress: string,
+    encryptedRandomNumber: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair,
   ): Promise<ethers.Wallet> {
+    // Ottieni le chiavi dell'utente
+    const keys = await this.getStealthKeys();
+
+    // Converti le chiavi stringhe in oggetti EphemeralKeyPair
+    const viewingKeyPair: EphemeralKeyPair = {
+      pub: keys.viewingKey,
+      priv: keys.viewingKey,
+      epub: keys.viewingKey,
+      epriv: keys.viewingKey,
+    };
+
+    const spendingKeyPair: EphemeralKeyPair = {
+      pub: keys.spendingKey,
+      priv: keys.spendingKey,
+      epub: keys.spendingKey,
+      epriv: keys.spendingKey,
+    };
+
     return this.assertStealth().openStealthAddress(
       stealthAddress,
+      encryptedRandomNumber,
       ephemeralPublicKey,
-      pair,
+      spendingKeyPair,
+      viewingKeyPair,
     );
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async getStealthKeys(): Promise<{
+    spendingKey: string;
+    viewingKey: string;
+  }> {
+    return this.assertStealth().getStealthKeys();
   }
 }

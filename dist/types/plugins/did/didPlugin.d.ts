@@ -59,6 +59,14 @@ export declare class DIDPlugin extends BasePlugin implements DIDPluginInterface 
     /**
      * @inheritdoc
      */
+    verifyDIDOnChain(did: string): Promise<{
+        isRegistered: boolean;
+        controller?: string | undefined;
+        error?: string | undefined;
+    }>;
+    /**
+     * @inheritdoc
+     */
     ensureUserHasDID(options?: DIDCreateOptions): Promise<string | null>;
     /**
      * Implementation of the ensureUserHasDID with timeout handling

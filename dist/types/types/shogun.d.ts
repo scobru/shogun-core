@@ -1,15 +1,13 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/metamask";
-import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
 import { GunDBOptions } from "../gun/types";
 import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
+import { IGunInstance as GunInstance } from "gun";
 /**
  * Categorie di plugin standard in ShogunCore
  */
@@ -81,18 +79,11 @@ export interface SignUpResult {
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
     gundb: GunDB;
-    /** @deprecated Use getPlugin(CorePlugins.WebAuthn) instead */
-    webauthn?: Webauthn;
-    /** @deprecated Use getPlugin(CorePlugins.MetaMask) instead */
-    metamask?: MetaMask;
-    /** @deprecated Use getPlugin(CorePlugins.Stealth) instead */
-    stealth?: Stealth;
-    /** @deprecated Use getPlugin(CorePlugins.DID) instead */
-    did?: DID;
     rx: GunRxJS;
     storage: ShogunStorage;
     config: ShogunSDKConfig;
     provider?: ethers.Provider;
+    signer?: ethers.Signer;
     on(eventName: string | symbol, listener: (...args: any[]) => void): any;
     off(eventName: string | symbol, listener: (...args: any[]) => void): any;
     once(eventName: string | symbol, listener: (...args: any[]) => void): any;
@@ -100,8 +91,6 @@ export interface IShogunCore extends PluginManager {
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
-    setRpcUrl(rpcUrl: string): boolean;
-    getRpcUrl(): string | null;
     /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
     getMainWallet?(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
@@ -171,8 +160,8 @@ export interface LoggingConfig {
 export interface ShogunSDKConfig {
     /** GunDB configuration */
     gundb?: GunDBOptions;
-    /** Ethereum provider URL */
-    providerUrl?: string;
+    /** External Gun instance to use instead of creating a new one */
+    externalGun?: GunInstance<any>;
     /** WebAuthn configuration */
     webauthn?: WebauthnConfig;
     /** MetaMask configuration */

@@ -1,3 +1,7 @@
+import { IGunInstance as GunInstance } from "gun";
+
+export type { GunInstance };
+
 export interface GunDataRecord {
   _: {
     "#": string;
@@ -22,7 +26,7 @@ export interface IGunChainReference<T = unknown> {
   put(
     data: unknown,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions
+    options?: IGunOptions,
   ): IGunChainReference;
 
   /**
@@ -41,7 +45,7 @@ export interface IGunChainReference<T = unknown> {
    */
   recall(
     options?: IGunOptions,
-    callback?: (ack: IGunAck) => void
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
 
   /**
@@ -56,12 +60,12 @@ export interface IGunChainReference<T = unknown> {
     username: string,
     password: string,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions
+    options?: IGunOptions,
   ): IGunChainReference;
   auth(
     pair: IGunCryptoKeyPair,
     callback?: (ack: IGunAck) => void,
-    options?: IGunOptions
+    options?: IGunOptions,
   ): IGunChainReference;
 
   /**
@@ -70,13 +74,13 @@ export interface IGunChainReference<T = unknown> {
   create(
     username: string,
     password: string,
-    callback?: (ack: IGunAck) => void
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
   create(
     username: string,
     password: string,
     pair: IGunCryptoKeyPair,
-    callback?: (ack: IGunAck) => void
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
 
   /**
@@ -85,7 +89,7 @@ export interface IGunChainReference<T = unknown> {
   delete(
     username: string,
     password: string,
-    callback?: (ack: IGunAck) => void
+    callback?: (ack: IGunAck) => void,
   ): IGunChainReference;
 
   /**
@@ -121,17 +125,18 @@ export interface IGunCryptoKeyPair {
 }
 
 export interface GunDBOptions {
-  web?: any;
   peers?: string[];
-  localStorage?: boolean;
+  localStorage: boolean;
   sessionStorage?: boolean;
-  radisk?: boolean;
+  radisk: boolean;
   multicast?: boolean;
   axe?: boolean;
   retryAttempts?: number;
   retryDelay?: number;
   authToken?: string;
   websocket?: boolean;
+  /** External Gun instance to use instead of creating a new one */
+  externalGun?: GunInstance<any>;
 }
 
 /**
@@ -142,7 +147,9 @@ export interface IGunInstance<T = unknown> {
   put(data: unknown): IGunChainReference<T>;
   user(): IGunChainReference<T>;
   on(event: string, callback: (...args: unknown[]) => void): IGunInstance<T>;
-  SEA: IGunSEA;
+  SEA?: IGunSEA;
+  _?: any;
+  opt?: any;
 }
 
 /**
@@ -169,7 +176,7 @@ export interface IGunOptions {
  */
 export interface IGunSEA {
   pair(
-    callback?: (pair: IGunCryptoKeyPair) => void
+    callback?: (pair: IGunCryptoKeyPair) => void,
   ): Promise<IGunCryptoKeyPair>;
   sign(data: unknown, pair: IGunCryptoKeyPair): Promise<string>;
   verify(data: string, pair: IGunCryptoKeyPair): Promise<unknown>;
@@ -178,7 +185,7 @@ export interface IGunSEA {
   secret(
     key: string,
     pair: IGunCryptoKeyPair,
-    callback?: Function
+    callback?: Function,
   ): Promise<string>;
   work(data: string, salt: string, callback?: Function): Promise<string>;
 }

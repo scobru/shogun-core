@@ -21,6 +21,8 @@ export declare class WalletManager extends EventEmitter {
     private readonly pendingTransactions;
     private readonly config;
     private transactionMonitoringInterval;
+    private provider;
+    private signer;
     /**
      * Creates a new WalletManager instance
      * @param gun Raw Gun instance
@@ -68,7 +70,9 @@ export declare class WalletManager extends EventEmitter {
      * Gets a configured JSON RPC provider instance
      * @returns An ethers.js JsonRpcProvider instance
      */
-    getProvider(): ethers.JsonRpcProvider;
+    getProvider(): ethers.JsonRpcProvider | null;
+    getSigner(): ethers.Wallet;
+    setSigner(signer: ethers.Wallet): void;
     /**
      * Gets a unique identifier for the current user for storage purposes
      * @private

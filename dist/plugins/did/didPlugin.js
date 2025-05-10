@@ -86,6 +86,12 @@ class DIDPlugin extends base_1.BasePlugin {
     /**
      * @inheritdoc
      */
+    async verifyDIDOnChain(did) {
+        return this.assertDID().verifyDIDOnChain(did);
+    }
+    /**
+     * @inheritdoc
+     */
     async ensureUserHasDID(options) {
         try {
             const core = this.core;

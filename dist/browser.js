@@ -38,12 +38,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunCore = exports.modules = void 0;
 exports.initShogunBrowser = initShogunBrowser;
-/**
- * Entry point for the browser version of Shogun Core
- */
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
-const shogun_1 = require("./types/shogun");
 const logger_1 = require("./utils/logger");
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
@@ -51,7 +47,8 @@ const loadStealthModule = () => Promise.resolve().then(() => __importStar(requir
 const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./plugins/did/DID")));
 const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/wallet/walletPlugin")));
 const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/metamask/metamaskPlugin")));
-let shogunCoreInstance;
+let shogunCoreInstance = null;
+let shogunG = null;
 /**
  * Function to initialize Shogun in a browser environment
  *
@@ -69,29 +66,17 @@ function initShogunBrowser(config) {
         ...config,
     };
     // Assicuriamoci che la configurazione di GunDB esista
-    browserConfig.gundb ??= {};
+    browserConfig.gundb ??= {
+        localStorage: false,
+        radisk: false,
+    };
     // Warn users who don't provide custom peers or providerUrl
     if (!config.gundb?.peers) {
         (0, logger_1.log)("WARNING: Using default GunDB peers. For production, always configure custom peers.");
     }
-    if (!config.providerUrl) {
-        (0, logger_1.log)("WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits.");
-    }
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
-    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.DID)) {
-        (0, logger_1.log)("DID plugin initialized", { category: "init", level: "info" });
-    }
-    // Log the plugin status
-    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.WebAuthn)) {
-        (0, logger_1.log)("WebAuthn plugin initialized", { category: "init", level: "info" });
-    }
-    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.MetaMask)) {
-        (0, logger_1.log)("MetaMask plugin initialized", { category: "init", level: "info" });
-    }
-    if (shogunCoreInstance.hasPlugin(shogun_1.CorePlugins.WalletManager)) {
-        (0, logger_1.log)("Wallet plugin initialized", { category: "init", level: "info" });
-    }
+    shogunG = shogunCoreInstance?.gun || null;
     return shogunCoreInstance;
 }
 // Esportazione lazy loading helpers
@@ -106,8 +91,6 @@ exports.modules = {
 __exportStar(require("./types/shogun"), exports);
 // Support use as a global variable when included via <script>
 if (typeof window !== "undefined") {
-    window.ShogunCore = shogunCoreInstance;
-    window.initShogunBrowser = initShogunBrowser;
-    window.ShogunModules = exports.modules;
     window.shogun = shogunCoreInstance;
+    window.shogunGun = shogunG;
 }

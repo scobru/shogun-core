@@ -21,7 +21,8 @@ export declare enum ErrorType {
     PLUGIN = "PluginError",
     UNKNOWN = "UnknownError",
     CONNECTOR = "CONNECTOR",
-    GENERAL = "GENERAL"
+    GENERAL = "GENERAL",
+    CONTRACT = "CONTRACT"
 }
 /**
  * Interfaccia standard per errori di Shogun

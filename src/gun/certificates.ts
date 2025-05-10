@@ -82,7 +82,7 @@ export async function generateCerts({
  */
 export async function verifyCert(
   cert: string,
-  pub: string | { pub: string }
+  pub: string | { pub: string },
 ): Promise<any> {
   if (!cert) return null;
   try {

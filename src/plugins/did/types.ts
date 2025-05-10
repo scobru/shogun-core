@@ -64,6 +64,9 @@ export interface DIDCreateOptions {
 export interface DIDRegistryConfig extends BaseConfig {
   address: string;
   network: string;
+  timeout?: number;
+  maxRetries?: number;
+  retryDelay?: number;
 }
 
 /**
@@ -105,7 +108,6 @@ export interface DIDEvent extends BaseEvent {
     error?: string;
   };
 }
-
 
 /**
  * Interfaccia per il plugin DID

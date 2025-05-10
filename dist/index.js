@@ -14,13 +14,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.DIDVerifier = exports.OracleBridge = exports.RelayMembershipVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
 const logger_1 = require("./utils/logger");
-const ethers_1 = require("ethers");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
@@ -28,6 +27,7 @@ const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const didPlugin_1 = require("./plugins/did/didPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
+// Import relay verification
 var DID_1 = require("./plugins/did/DID");
 Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
 var errorHandler_2 = require("./utils/errorHandler");
@@ -36,6 +36,13 @@ Object.defineProperty(exports, "ErrorType", { enumerable: true, get: function ()
 var rxjs_integration_2 = require("./gun/rxjs-integration");
 Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return rxjs_integration_2.GunRxJS; } });
 __exportStar(require("./plugins"), exports);
+// Export relay verification
+var relay_1 = require("./relay");
+Object.defineProperty(exports, "RelayMembershipVerifier", { enumerable: true, get: function () { return relay_1.RelayMembershipVerifier; } });
+var relay_2 = require("./relay");
+Object.defineProperty(exports, "OracleBridge", { enumerable: true, get: function () { return relay_2.OracleBridge; } });
+var relay_3 = require("./relay");
+Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return relay_3.DIDVerifier; } });
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -92,40 +99,53 @@ class ShogunCore {
                 type: error.type,
             });
         });
-        if (!config.gundb) {
-            config.gundb = {};
-            (0, logger_1.log)("No GunDB configuration provided, using defaults");
+        if (!config.gundb && !config.externalGun) {
+            config.gundb = {
+                localStorage: false,
+                radisk: false,
+            };
+            (0, logger_1.log)("No GunDB configuration or external Gun instance provided, using defaults");
         }
-        if (config.gundb.authToken) {
+        else if (config.gundb) {
+            // Ensure required properties are set
+            config.gundb.localStorage = false;
+            config.gundb.radisk = false;
+        }
+        if (config.gundb?.authToken) {
             const tokenPreview = config.gundb.authToken;
             (0, logger_1.log)(`Auth token from config: ${tokenPreview}`);
         }
         else {
             (0, logger_1.log)("No auth token in config");
         }
-        const gundbConfig = {
-            web: config.gundb?.web,
-            peers: config.gundb?.peers,
-            websocket: config.gundb?.websocket ?? false,
-            localStorage: config.gundb?.localStorage ?? false,
-            radisk: config.gundb?.radisk ?? false,
-            authToken: config.gundb?.authToken,
-            multicast: config.gundb?.multicast ?? false,
-            axe: config.gundb?.axe ?? false,
-        };
-        this.gundb = new gun_1.GunDB(gundbConfig);
-        this.gun = this.gundb.getGun();
-        this.user = this.gun.user().recall({ sessionStorage: true });
-        this.rx = new rxjs_integration_1.GunRxJS(this.gun);
-        if (config.providerUrl) {
-            this.provider = new ethers_1.ethers.JsonRpcProvider(config.providerUrl);
-            (0, logger_1.log)(`Using configured provider URL: ${config.providerUrl}`);
+        // If an external Gun instance is provided, use it
+        if (config.externalGun) {
+            (0, logger_1.log)("Using externally provided Gun instance");
+            const gundbConfig = {
+                localStorage: false,
+                radisk: false,
+                authToken: config.gundb?.authToken,
+                externalGun: config.externalGun,
+            };
+            this.gundb = new gun_1.GunDB(gundbConfig);
+            this.gun = config.externalGun;
         }
         else {
-            // Default provider (can be replaced as needed)
-            this.provider = ethers_1.ethers.getDefaultProvider("mainnet");
-            (0, logger_1.log)("WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.");
+            // Otherwise create a new Gun instance
+            const gundbConfig = {
+                peers: config.gundb?.peers,
+                websocket: config.gundb?.websocket ?? false,
+                localStorage: false,
+                radisk: false,
+                authToken: config.gundb?.authToken,
+                multicast: config.gundb?.multicast ?? false,
+                axe: config.gundb?.axe ?? false,
+            };
+            this.gundb = new gun_1.GunDB(gundbConfig);
+            this.gun = this.gundb.getGun();
         }
+        this.user = this.gun.user().recall({ sessionStorage: true });
+        this.rx = new rxjs_integration_1.GunRxJS(this.gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
             config.plugins.autoRegister.length > 0) {
@@ -444,13 +464,11 @@ class ShogunCore {
                     // Utilizziamo il metodo login di GunDB
                     const gunLoginResult = (await this.gundb.login(username, password));
                     clearTimeout(timeoutId);
-                    // const walletPlugin = this.getPlugin(
-                    //   CorePlugins.WalletManager
-                    // ) as WalletManager;
-                    // if (gunLoginResult && walletPlugin) {
-                    //   const mainWallet = walletPlugin.getMainWalletCredentials();
-                    //   this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
-                    // }
+                    const walletPlugin = this.getPlugin(shogun_1.CorePlugins.WalletManager);
+                    if (gunLoginResult && walletPlugin) {
+                        const mainWallet = walletPlugin.getMainWalletCredentials();
+                        this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
+                    }
                     if (!gunLoginResult.success) {
                         resolve({
                             success: false,
@@ -842,38 +860,6 @@ class ShogunCore {
                 }
             });
         });
-    }
-    // 🔌 PROVIDER 🔌
-    /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl) {
-        try {
-            if (!rpcUrl) {
-                (0, logger_1.log)("Invalid RPC URL provided");
-                return false;
-            }
-            // Update the provider if it's already initialized
-            this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
-            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
-            return true;
-        }
-        catch (error) {
-            (0, logger_1.logError)("Failed to set RPC URL", error);
-            return false;
-        }
-    }
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl() {
-        // Access the provider URL if available
-        return this.provider instanceof ethers_1.ethers.JsonRpcProvider
-            ? (this.provider.connection?.url ?? null)
-            : null;
     }
     // 📢 EVENT EMITTER 📢
     /**

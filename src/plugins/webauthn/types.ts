@@ -130,7 +130,7 @@ export interface WebauthnPluginInterface {
   generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
-    isLogin?: boolean
+    isLogin?: boolean,
   ): Promise<CredentialResult>;
 
   /**
@@ -143,7 +143,7 @@ export interface WebauthnPluginInterface {
   createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice?: boolean
+    isNewDevice?: boolean,
   ): Promise<CredentialResult>;
 
   /**
@@ -156,7 +156,7 @@ export interface WebauthnPluginInterface {
   authenticateUser(
     username: string,
     salt: string | null,
-    options?: any
+    options?: any,
   ): Promise<CredentialResult>;
 
   /**
@@ -174,7 +174,7 @@ export interface WebauthnPluginInterface {
   removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials
+    credentials: WebAuthnCredentials,
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
 
   /**

@@ -98,7 +98,6 @@ export declare class ShogunDID extends EventEmitter {
     private createErrorResolution;
     private parseOrCreateDIDDocument;
     private extractAuthenticationMethod;
-    private getWallet;
     private authenticateWithEthereum;
     private authenticateWithWebAuthn;
     private authenticateWithGunDB;
@@ -107,7 +106,7 @@ export declare class ShogunDID extends EventEmitter {
      * @param did - Il DID da verificare
      * @returns Promise con il risultato della verifica
      */
-    verifyDIDOnChain(did: string): Promise<{
+    verifyDIDOnChain(did: string, signer?: ethers.Signer): Promise<{
         isRegistered: boolean;
         controller?: string;
         error?: string;
