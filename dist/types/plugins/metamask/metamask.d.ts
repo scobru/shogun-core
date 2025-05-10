@@ -3,7 +3,7 @@
  */
 import { ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { ConnectionResult, MetaMaskCredentials, EthereumProvider, MetaMaskConfig } from "../../types/metamask";
+import { ConnectionResult, MetaMaskCredentials, EthereumProvider, MetaMaskConfig } from "./types";
 declare global {
     interface Window {
         ethereum?: EthereumProvider;
@@ -21,7 +21,6 @@ declare global {
  * Class for MetaMask connection
  */
 declare class MetaMask extends EventEmitter {
-    readonly AUTH_DATA_TABLE: string;
     private readonly MESSAGE_TO_SIGN;
     private readonly DEFAULT_CONFIG;
     private readonly config;
@@ -99,6 +98,10 @@ declare class MetaMask extends EventEmitter {
      * Get active signer instance using BrowserProvider
      */
     getSigner(): Promise<ethers.Signer>;
+    /**
+     * Get active provider instance using BrowserProvider
+     */
+    getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
     /**
      * Generate deterministic password from signature
      * @param signature - Cryptographic signature

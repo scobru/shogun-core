@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Webauthn = void 0;
 /**
  * WebAuthn stub for light version
  * Include only basic functionality - advanced features must be lazy loaded
@@ -22,5 +25,5 @@ class WebauthnStub {
         throw new Error("WebAuthn functionality disabled in light version");
     }
 }
-export { WebauthnStub as Webauthn };
-export default WebauthnStub;
+exports.Webauthn = WebauthnStub;
+exports.default = WebauthnStub;

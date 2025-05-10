@@ -1,9 +1,13 @@
-import { getId, getSet } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GunCollections = void 0;
+const utils_1 = require("./utils");
 /**
  * Utility for managing collections in Gun
  * Simplifies common operations on lists and sets
  */
-export class GunCollections {
+class GunCollections {
+    gun;
     constructor(gun) {
         this.gun = gun;
     }
@@ -112,7 +116,7 @@ export class GunCollections {
                     return;
                 }
                 // Get array of references
-                const refs = getSet(data, getId(data));
+                const refs = (0, utils_1.getSet)(data, (0, utils_1.getId)(data));
                 resolve(refs);
             });
         });
@@ -142,3 +146,4 @@ export class GunCollections {
             Math.random().toString(36).substring(2, 15));
     }
 }
+exports.GunCollections = GunCollections;

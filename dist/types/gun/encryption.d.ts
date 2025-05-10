@@ -1,4 +1,3 @@
-import "gun/sea";
 /**
  * Encrypts a value using SEA encryption
  * @param value Value to encrypt

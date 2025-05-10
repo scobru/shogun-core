@@ -1,5 +1,4 @@
 import Gun from "gun";
-import "gun/sea";
 
 /**
  * Interface for certificate policy

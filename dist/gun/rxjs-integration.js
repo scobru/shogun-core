@@ -1,10 +1,15 @@
-import { Observable } from "rxjs";
-import { distinctUntilChanged, } from "rxjs/operators";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GunRxJS = void 0;
+const rxjs_1 = require("rxjs");
+const operators_1 = require("rxjs/operators");
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
  */
-export class GunRxJS {
+class GunRxJS {
+    gun;
+    user;
     /**
      * Initialize GunRxJS with a GunDB instance
      * @param gun - GunDB instance
@@ -33,7 +38,7 @@ export class GunRxJS {
      * @returns Observable that emits whenever the node changes
      */
     observe(path) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const node = typeof path === "string" ? this.gun.get(path) : path;
             // Subscribe to changes
             const unsub = node.on((data, key) => {
@@ -57,7 +62,7 @@ export class GunRxJS {
                 }
                 node.off();
             };
-        }).pipe(distinctUntilChanged((prev, curr) => {
+        }).pipe((0, operators_1.distinctUntilChanged)((prev, curr) => {
             return JSON.stringify(prev) === JSON.stringify(curr);
         }));
     }
@@ -68,7 +73,7 @@ export class GunRxJS {
      * @returns Observable array of matched items
      */
     match(path, matchFn) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const node = typeof path === "string" ? this.gun.get(path) : path;
             const results = {};
             const unsub = node.map().on((data, key) => {
@@ -104,7 +109,7 @@ export class GunRxJS {
      */
     put(path, data) {
         const node = typeof path === "string" ? this.gun.get(path) : path;
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             node.put(data, (ack) => {
                 if (ack.err) {
                     subscriber.error(new Error(ack.err));
@@ -124,7 +129,7 @@ export class GunRxJS {
      */
     set(path, data) {
         const node = typeof path === "string" ? this.gun.get(path) : path;
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             node.set(data, (ack) => {
                 if (ack.err) {
                     subscriber.error(new Error(ack.err));
@@ -143,7 +148,7 @@ export class GunRxJS {
      */
     once(path) {
         const node = typeof path === "string" ? this.gun.get(path) : path;
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             node.once((data) => {
                 if (data === undefined || data === null) {
                     subscriber.next(null);
@@ -171,7 +176,7 @@ export class GunRxJS {
             return source;
         });
         // Combine the latest values from all sources
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             let values = new Array(sources.length).fill(undefined);
             let completed = new Array(sources.length).fill(false);
             const subscriptions = observables.map((obs, index) => {
@@ -211,7 +216,7 @@ export class GunRxJS {
      * @returns Observable that completes when the put is acknowledged
      */
     userPut(path, data) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             this.gun
                 .user()
                 .get(path)
@@ -268,3 +273,4 @@ export class GunRxJS {
         return cleanObj;
     }
 }
+exports.GunRxJS = GunRxJS;

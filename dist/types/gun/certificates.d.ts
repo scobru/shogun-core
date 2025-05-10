@@ -1,4 +1,3 @@
-import "gun/sea";
 /**
  * Issues a certificate using the SEA API
  * @param options Certificate options

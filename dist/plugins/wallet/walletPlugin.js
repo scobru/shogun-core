@@ -1,19 +1,19 @@
-import { ethers } from "ethers";
-import { BasePlugin } from "../base";
-import { WalletManager } from "./walletManager";
-import { log, logError } from "../../utils/logger";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WalletPlugin = void 0;
+const ethers_1 = require("ethers");
+const base_1 = require("../base");
+const walletManager_1 = require("./walletManager");
+const logger_1 = require("../../utils/logger");
+const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin per la gestione dei wallet in ShogunCore
  */
-export class WalletPlugin extends BasePlugin {
-    constructor() {
-        super(...arguments);
-        this.name = "wallet";
-        this.version = "1.0.0";
-        this.description = "Provides wallet management functionality for Shogun Core";
-        this.walletManager = null;
-    }
+class WalletPlugin extends base_1.BasePlugin {
+    name = "wallet";
+    version = "1.0.0";
+    description = "Provides wallet management functionality for Shogun Core";
+    walletManager = null;
     /**
      * @inheritdoc
      */
@@ -23,14 +23,14 @@ export class WalletPlugin extends BasePlugin {
             throw new Error("Core dependencies not available");
         }
         // Creiamo un nuovo WalletManager
-        this.walletManager = new WalletManager(core.gun, core.storage, {
+        this.walletManager = new walletManager_1.WalletManager(core.gun, core.storage, {
             // Recuperiamo configurazione dal core se disponibile
             balanceCacheTTL: core.config?.walletManager?.balanceCacheTTL,
-            rpcUrl: core.provider instanceof ethers.JsonRpcProvider
+            rpcUrl: core.provider instanceof ethers_1.ethers.JsonRpcProvider
                 ? core.provider.connection?.url
                 : undefined,
         });
-        log("Wallet plugin initialized");
+        (0, logger_1.log)("Wallet plugin initialized");
     }
     /**
      * @inheritdoc
@@ -38,7 +38,7 @@ export class WalletPlugin extends BasePlugin {
     destroy() {
         this.walletManager = null;
         super.destroy();
-        log("Wallet plugin destroyed");
+        (0, logger_1.log)("Wallet plugin destroyed");
     }
     /**
      * Assicura che il wallet manager sia inizializzato
@@ -61,6 +61,12 @@ export class WalletPlugin extends BasePlugin {
     /**
      * @inheritdoc
      */
+    getMainWalletCredentials() {
+        return this.assertWalletManager().getMainWalletCredentials();
+    }
+    /**
+     * @inheritdoc
+     */
     async createWallet() {
         return this.assertWalletManager().createWallet();
     }
@@ -71,16 +77,16 @@ export class WalletPlugin extends BasePlugin {
         try {
             const manager = this.assertWalletManager();
             if (!this.core?.isLoggedIn()) {
-                log("Cannot load wallets: user not authenticated");
+                (0, logger_1.log)("Cannot load wallets: user not authenticated");
                 // Segnaliamo l'errore con il gestore centralizzato
-                ErrorHandler.handle(ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
+                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_REQUIRED", "User authentication required to load wallets", null);
                 return [];
             }
             return await manager.loadWallets();
         }
         catch (error) {
             // Gestiamo l'errore in modo dettagliato
-            ErrorHandler.handle(ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WALLET, "LOAD_WALLETS_ERROR", `Error loading wallets: ${error instanceof Error ? error.message : String(error)}`, error);
             // Ritorniamo un array vuoto
             return [];
         }
@@ -97,14 +103,14 @@ export class WalletPlugin extends BasePlugin {
     generateNewMnemonic() {
         try {
             // Generate a new mnemonic phrase using ethers.js
-            const mnemonic = ethers.Wallet.createRandom().mnemonic;
+            const mnemonic = ethers_1.ethers.Wallet.createRandom().mnemonic;
             if (!mnemonic || !mnemonic.phrase) {
                 throw new Error("Failed to generate mnemonic phrase");
             }
             return mnemonic.phrase;
         }
         catch (error) {
-            logError("Error generating mnemonic:", error);
+            (0, logger_1.logError)("Error generating mnemonic:", error);
             throw new Error("Failed to generate mnemonic phrase");
         }
     }
@@ -180,19 +186,19 @@ export class WalletPlugin extends BasePlugin {
     setRpcUrl(rpcUrl) {
         try {
             if (!rpcUrl) {
-                log("Invalid RPC URL provided");
+                (0, logger_1.log)("Invalid RPC URL provided");
                 return false;
             }
             this.assertWalletManager().setRpcUrl(rpcUrl);
             // Aggiorniamo anche il provider nel core se accessibile
             if (this.core) {
-                this.core.provider = new ethers.JsonRpcProvider(rpcUrl);
+                this.core.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
             }
-            log(`RPC URL updated to: ${rpcUrl}`);
+            (0, logger_1.log)(`RPC URL updated to: ${rpcUrl}`);
             return true;
         }
         catch (error) {
-            logError("Failed to set RPC URL", error);
+            (0, logger_1.logError)("Failed to set RPC URL", error);
             return false;
         }
     }
@@ -204,8 +210,27 @@ export class WalletPlugin extends BasePlugin {
             return null;
         }
         // Accediamo all'URL del provider se disponibile
-        return this.core.provider instanceof ethers.JsonRpcProvider
+        return this.core.provider instanceof ethers_1.ethers.JsonRpcProvider
             ? this.core.provider.connection?.url || null
             : null;
     }
+    /**
+     * @inheritdoc
+     */
+    setSigner(signer) {
+        this.assertWalletManager().setSigner(signer);
+    }
+    /**
+     * @inheritdoc
+     */
+    getSigner() {
+        return this.assertWalletManager().getSigner();
+    }
+    /**
+     * @inheritdoc
+     */
+    getProvider() {
+        return this.assertWalletManager().getProvider();
+    }
 }
+exports.WalletPlugin = WalletPlugin;

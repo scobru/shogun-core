@@ -1,5 +1,97 @@
 import { ethers } from "ethers";
-import { WalletInfo } from "../../types/shogun";
+
+import {
+  BaseEvent,
+  BaseConfig,
+  BaseCacheEntry,
+  BaseBackupOptions,
+  BaseImportOptions,
+} from "../../types/common";
+
+export interface WalletInfo {
+  wallet: any;
+  path: string;
+  address: string;
+  getAddressString(): string;
+}
+
+/**
+ * Interface defining a wallet's derivation path and creation timestamp
+ */
+export interface WalletPath {
+  path: string;
+  created: number;
+}
+
+/**
+ * Interface for caching wallet balances
+ */
+export interface BalanceCache extends BaseCacheEntry<string> {
+  balance: string;
+}
+
+/**
+ * Interface for exporting wallet data
+ */
+export interface WalletExport {
+  address: string;
+  privateKey: string;
+  path: string;
+  created: number;
+}
+
+/**
+ * Wallet configuration options
+ */
+export interface WalletConfig extends BaseConfig {
+  rpcUrl?: string;
+  defaultGasLimit?: number;
+  balanceCacheTTL?: number;
+}
+
+/**
+ * Transaction options
+ */
+export interface TransactionOptions extends BaseConfig {
+  gasLimit?: number;
+  gasPrice?: string;
+  nonce?: number;
+  maxFeePerGas?: string;
+  maxPriorityFeePerGas?: string;
+}
+
+/**
+ * Wallet backup options
+ */
+export interface WalletBackupOptions extends BaseBackupOptions {
+  includePrivateKeys?: boolean;
+}
+
+/**
+ * Wallet import options
+ */
+export interface WalletImportOptions extends BaseImportOptions {
+  validateAddresses?: boolean;
+}
+
+/**
+ * Wallet event types
+ */
+export enum WalletEventType {
+  WALLET_CREATED = "walletCreated",
+  WALLET_IMPORTED = "walletImported",
+  BALANCE_UPDATED = "balanceUpdated",
+  TRANSACTION_SENT = "transactionSent",
+  TRANSACTION_CONFIRMED = "transactionConfirmed",
+  ERROR = "error",
+}
+
+/**
+ * Wallet event data
+ */
+export interface WalletEvent extends BaseEvent {
+  type: WalletEventType;
+}
 
 /**
  * Interfaccia per il plugin del wallet manager
@@ -10,6 +102,12 @@ export interface WalletPluginInterface {
    * @returns Il wallet principale o null se non disponibile
    */
   getMainWallet(): ethers.Wallet | null;
+
+  /**
+   * Ottiene il credenziali wallet principale
+   * @returns Il wallet principale o null se non disponibile
+   */
+  getMainWalletCredentials(): { address: string; priv: string };
 
   /**
    * Crea un nuovo wallet

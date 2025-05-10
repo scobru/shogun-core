@@ -1,11 +1,12 @@
 import { ShogunCore } from "../index";
 import { ShogunPlugin } from "../types/plugin";
 import { PluginCategory } from "../types/shogun";
+import { EventEmitter } from "../utils/eventEmitter";
 /**
  * Classe base per tutti i plugin di ShogunCore
  * Fornisce funzionalità comuni e implementazione base dell'interfaccia ShogunPlugin
  */
-export declare abstract class BasePlugin implements ShogunPlugin {
+export declare abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
     /** Nome univoco del plugin - deve essere implementato dalle sottoclassi */
     abstract name: string;
     /** Versione del plugin - deve essere implementata dalle sottoclassi */

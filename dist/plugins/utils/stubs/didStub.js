@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShogunDID = void 0;
 /**
  * DID stub for light version
  * Include only basic functionality - advanced features must be lazy loaded
@@ -28,5 +31,5 @@ class DIDStub {
         throw new Error("DID functionality disabled in light version");
     }
 }
-export { DIDStub as ShogunDID };
-export default DIDStub;
+exports.ShogunDID = DIDStub;
+exports.default = DIDStub;

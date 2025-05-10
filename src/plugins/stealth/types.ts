@@ -1,9 +1,50 @@
-import {
-  StealthAddressResult,
-  StealthData,
-  EphemeralKeyPair,
-} from "../../types/stealth";
 import { ethers } from "ethers";
+
+/**
+ * Interface for ephemeral key pairs used in stealth transactions
+ */
+export interface EphemeralKeyPair {
+  pub: string;
+  priv: string;
+  epub: string;
+  epriv: string;
+}
+
+/**
+ * Interface for stealth transaction data
+ */
+export interface StealthData {
+  recipientPublicKey: string;
+  ephemeralKeyPair: EphemeralKeyPair;
+  timestamp: number;
+  encryptedRandomNumber?: string;
+  stealthAddress: string;
+}
+
+/**
+ * Interface for stealth address generation result
+ */
+export interface StealthAddressResult {
+  stealthAddress: string;
+  ephemeralPublicKey: string;
+  encryptedRandomNumber: string;
+  recipientPublicKey: string;
+}
+
+/**
+ * Type for log levels in stealth operations
+ */
+export type LogLevel = "info" | "error" | "debug" | "warn";
+
+/**
+ * Interface for structured logging messages
+ */
+export interface LogMessage {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
 
 /**
  * Interfaccia per il plugin Stealth
@@ -65,13 +106,17 @@ export interface StealthPluginInterface {
   /**
    * Apre un indirizzo stealth utilizzando la chiave pubblica effimera e le chiavi dell'utente
    * @param stealthAddress Indirizzo stealth da aprire
+   * @param encryptedRandomNumber Numero casuale crittografato
    * @param ephemeralPublicKey Chiave pubblica effimera utilizzata per generare l'indirizzo
-   * @param pair Coppia di chiavi dell'utente
+   * @param spendingKeyPair Coppia di chiavi di spesa dell'utente
+   * @param viewingKeyPair Coppia di chiavi di visualizzazione dell'utente
    * @returns Promise con il wallet dell'indirizzo stealth
    */
   openStealthAddress(
     stealthAddress: string,
+    encryptedRandomNumber: string,
     ephemeralPublicKey: string,
-    pair: EphemeralKeyPair,
+    spendingKeyPair: EphemeralKeyPair,
+    viewingKeyPair: EphemeralKeyPair,
   ): Promise<ethers.Wallet>;
 }

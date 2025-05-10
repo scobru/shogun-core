@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { WalletInfo } from "../../types/shogun";
-import { WalletPluginInterface } from "./types";
+import { WalletPluginInterface, WalletInfo } from "./types";
 /**
  * Plugin per la gestione dei wallet in ShogunCore
  */
@@ -28,6 +27,13 @@ export declare class WalletPlugin extends BasePlugin implements WalletPluginInte
      * @inheritdoc
      */
     getMainWallet(): ethers.Wallet | null;
+    /**
+     * @inheritdoc
+     */
+    getMainWalletCredentials(): {
+        address: string;
+        priv: string;
+    };
     /**
      * @inheritdoc
      */
@@ -105,4 +111,16 @@ export declare class WalletPlugin extends BasePlugin implements WalletPluginInte
      * @inheritdoc
      */
     getRpcUrl(): string | null;
+    /**
+     * @inheritdoc
+     */
+    setSigner(signer: ethers.Wallet): void;
+    /**
+     * @inheritdoc
+     */
+    getSigner(): ethers.Wallet | null;
+    /**
+     * @inheritdoc
+     */
+    getProvider(): ethers.JsonRpcProvider | null;
 }

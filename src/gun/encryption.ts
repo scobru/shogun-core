@@ -1,5 +1,4 @@
 import Gun from "gun";
-import "gun/sea";
 
 /** Cache for encrypted/decrypted values */
 const seaMemo = new Map();

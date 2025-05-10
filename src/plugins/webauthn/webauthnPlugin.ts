@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Webauthn } from "./webauthn";
 import { WebauthnPluginInterface } from "./types";
-import { WebAuthnCredentials, CredentialResult } from "../../types/webauthn";
+import { WebAuthnCredentials, CredentialResult } from "./types";
 import { log, logError } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
@@ -20,15 +20,13 @@ export class WebauthnPlugin
   description = "Provides WebAuthn authentication functionality for ShogunCore";
 
   private webauthn: Webauthn | null = null;
-
   /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
-
     // Inizializziamo il modulo WebAuthn
-    this.webauthn = new Webauthn();
+    this.webauthn = new Webauthn(core.gun);
 
     log("WebAuthn plugin initialized");
   }
@@ -184,7 +182,6 @@ export class WebauthnPlugin
         return {
           ...loginResult,
           username,
-          password: hashedCredentialId,
           credentialId: assertionResult.credentialId,
         };
       } else {
@@ -291,7 +288,6 @@ export class WebauthnPlugin
         return {
           ...signupResult,
           username,
-          password: "*******",
           credentialId: attestationResult.credentialId,
         };
       } else {

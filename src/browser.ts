@@ -1,8 +1,9 @@
 /**
  * Entry point for the browser version of Shogun Core
  */
+import { IGunInstance } from "gun";
 import { ShogunCore } from "./index";
-import { ShogunSDKConfig, CorePlugins } from "./types/shogun";
+import { ShogunSDKConfig } from "./types/shogun";
 import { log } from "./utils/logger";
 
 // Lazy loading dei moduli pesanti
@@ -11,8 +12,8 @@ const loadStealthModule = () => import("./plugins/stealth/stealth");
 const loadDIDModule = () => import("./plugins/did/DID");
 const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
 const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
-
-let shogunCoreInstance;
+let shogunCoreInstance: ShogunCore | null = null;
+let shogunG: IGunInstance | null = null;
 
 /**
  * Function to initialize Shogun in a browser environment
@@ -32,7 +33,10 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   };
 
   // Assicuriamoci che la configurazione di GunDB esista
-  browserConfig.gundb ??= {};
+  browserConfig.gundb ??= {
+    localStorage: false,
+    radisk: false,
+  };
 
   // Warn users who don't provide custom peers or providerUrl
   if (!config.gundb?.peers) {
@@ -41,28 +45,9 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
     );
   }
 
-  if (!config.providerUrl) {
-    log(
-      "WARNING: No Ethereum provider URL specified. Using default public endpoint with rate limits.",
-    );
-  }
-
   // Create a new ShogunCore instance with browser-optimized configuration
-  shogunCoreInstance = new ShogunCore(browserConfig);
-
-  // Log the plugin status
-  if (shogunCoreInstance.hasPlugin(CorePlugins.WebAuthn)) {
-    log("WebAuthn plugin initialized", { category: "init", level: "info" });
-  }
-
-  if (shogunCoreInstance.hasPlugin(CorePlugins.MetaMask)) {
-    log("MetaMask plugin initialized", { category: "init", level: "info" });
-  }
-
-  if (shogunCoreInstance.hasPlugin(CorePlugins.WalletManager)) {
-    log("Wallet plugin initialized", { category: "init", level: "info" });
-  }
-
+  shogunCoreInstance = new ShogunCore(browserConfig) as ShogunCore;
+  shogunG = shogunCoreInstance?.gun || null;
   return shogunCoreInstance;
 }
 
@@ -83,7 +68,6 @@ export * from "./types/shogun";
 
 // Support use as a global variable when included via <script>
 if (typeof window !== "undefined") {
-  (window as any).ShogunCore = shogunCoreInstance;
-  (window as any).initShogunBrowser = initShogunBrowser;
-  (window as any).ShogunModules = modules;
+  (window as any).shogun = shogunCoreInstance;
+  (window as any).shogunGun = shogunG;
 }

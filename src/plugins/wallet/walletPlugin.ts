@@ -2,8 +2,7 @@ import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { WalletManager } from "./walletManager";
-import { WalletInfo } from "../../types/shogun";
-import { WalletPluginInterface } from "./types";
+import { WalletPluginInterface, WalletInfo } from "./types";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
@@ -68,6 +67,13 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
    */
   getMainWallet(): ethers.Wallet | null {
     return this.assertWalletManager().getMainWallet();
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getMainWalletCredentials(): { address: string; priv: string } {
+    return this.assertWalletManager().getMainWalletCredentials();
   }
 
   /**
@@ -284,5 +290,26 @@ export class WalletPlugin extends BasePlugin implements WalletPluginInterface {
     return this.core.provider instanceof ethers.JsonRpcProvider
       ? (this.core.provider as any).connection?.url || null
       : null;
+  }
+
+  /**
+   * @inheritdoc
+   */
+  setSigner(signer: ethers.Wallet): void {
+    this.assertWalletManager().setSigner(signer);
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getSigner(): ethers.Wallet | null {
+    return this.assertWalletManager().getSigner();
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getProvider(): ethers.JsonRpcProvider | null {
+    return this.assertWalletManager().getProvider();
   }
 }

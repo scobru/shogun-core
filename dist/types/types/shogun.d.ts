@@ -1,15 +1,13 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/metamask";
-import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
-import { GunDBOptions } from "./gun";
+import { GunDBOptions } from "../gun/types";
 import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
+import { IGunInstance as GunInstance } from "gun";
 /**
  * Categorie di plugin standard in ShogunCore
  */
@@ -53,6 +51,7 @@ export interface DID {
         error?: string;
     }>;
 }
+export type AuthMethod = "password" | "webauthn" | "metamask";
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -62,6 +61,7 @@ export interface AuthResult {
     credentialId?: string;
     did?: string;
     wallet?: any;
+    authMethod?: AuthMethod;
 }
 /**
  * Sign up result interface
@@ -79,18 +79,11 @@ export interface SignUpResult {
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
     gundb: GunDB;
-    /** @deprecated Use getPlugin(CorePlugins.WebAuthn) instead */
-    webauthn?: Webauthn;
-    /** @deprecated Use getPlugin(CorePlugins.MetaMask) instead */
-    metamask?: MetaMask;
-    /** @deprecated Use getPlugin(CorePlugins.Stealth) instead */
-    stealth?: Stealth;
-    /** @deprecated Use getPlugin(CorePlugins.DID) instead */
-    did?: DID;
     rx: GunRxJS;
     storage: ShogunStorage;
     config: ShogunSDKConfig;
     provider?: ethers.Provider;
+    signer?: ethers.Signer;
     on(eventName: string | symbol, listener: (...args: any[]) => void): any;
     off(eventName: string | symbol, listener: (...args: any[]) => void): any;
     once(eventName: string | symbol, listener: (...args: any[]) => void): any;
@@ -98,8 +91,6 @@ export interface IShogunCore extends PluginManager {
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
-    setRpcUrl(rpcUrl: string): boolean;
-    getRpcUrl(): string | null;
     /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
     getMainWallet?(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
@@ -117,11 +108,11 @@ export interface IShogunCore extends PluginManager {
     getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
     logout(): void;
     isLoggedIn(): boolean;
-    observe<T>(path: string | any): Observable<T>;
+    rxGet<T>(path: string | any): Observable<T>;
     match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
     rxPut<T>(path: string | any, data: T): Observable<T>;
     rxSet<T>(path: string | any, data: T): Observable<T>;
-    onceObservable<T>(path: string | any): Observable<T>;
+    rxOnce<T>(path: string | any): Observable<T>;
     compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
     rxUserPut<T>(path: string, data: T): Observable<T>;
     observeUser<T>(path: string): Observable<T>;
@@ -169,8 +160,8 @@ export interface LoggingConfig {
 export interface ShogunSDKConfig {
     /** GunDB configuration */
     gundb?: GunDBOptions;
-    /** Ethereum provider URL */
-    providerUrl?: string;
+    /** External Gun instance to use instead of creating a new one */
+    externalGun?: GunInstance<any>;
     /** WebAuthn configuration */
     webauthn?: WebauthnConfig;
     /** MetaMask configuration */
@@ -208,12 +199,6 @@ export interface ShogunSDKConfig {
         /** List of plugins to automatically register on initialization */
         autoRegister?: ShogunPlugin[];
     };
-}
-export interface WalletInfo {
-    wallet: any;
-    path: string;
-    address: string;
-    getAddressString(): string;
 }
 export interface ShogunEvents {
     error: (data: {

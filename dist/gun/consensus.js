@@ -1,10 +1,15 @@
-import { sign, verify } from "./encryption";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GunConsensus = void 0;
+const encryption_1 = require("./encryption");
 /**
  * Implements a distributed consensus system for Gun
  * Useful for decentralized applications that require
  * consensus among multiple participants
  */
-export class GunConsensus {
+class GunConsensus {
+    gun;
+    config;
     /**
      * Initializes a new consensus system
      * @param gun - GunDB instance
@@ -52,7 +57,7 @@ export class GunConsensus {
         if (!pair) {
             throw new Error("Key pair not available");
         }
-        const signedProposal = await sign(proposal, pair);
+        const signedProposal = await (0, encryption_1.sign)(proposal, pair);
         // Save proposal
         return new Promise((resolve, reject) => {
             this.gun
@@ -109,7 +114,7 @@ export class GunConsensus {
         if (!pair) {
             throw new Error("Key pair not available");
         }
-        const signedVote = await sign(vote, pair);
+        const signedVote = await (0, encryption_1.sign)(vote, pair);
         // Save vote
         return new Promise((resolve, reject) => {
             this.gun
@@ -156,7 +161,7 @@ export class GunConsensus {
                         resolve(null);
                         return;
                     }
-                    verify(data, pubKey)
+                    (0, encryption_1.verify)(data, pubKey)
                         .then((verified) => {
                         if (verified) {
                             resolve(verified);
@@ -243,7 +248,7 @@ export class GunConsensus {
                         console.warn("Vote without public key");
                         return;
                     }
-                    const verified = await verify(vote, voterPub);
+                    const verified = await (0, encryption_1.verify)(vote, voterPub);
                     if (verified) {
                         totalVotes++;
                         if (verified.approve) {
@@ -299,3 +304,4 @@ export class GunConsensus {
             Math.random().toString(36).substring(2, 15));
     }
 }
+exports.GunConsensus = GunConsensus;

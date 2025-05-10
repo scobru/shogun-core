@@ -1,8 +1,7 @@
 import { ShogunStorage } from "../../storage/storage";
-import { WalletInfo } from "../../types/shogun";
 import { ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions } from "../../types/wallet";
+import { WalletPath as IWalletPath, BalanceCache as IBalanceCache, WalletExport as IWalletExport, WalletConfig, TransactionOptions, WalletBackupOptions, WalletImportOptions, WalletInfo } from "./types";
 export type WalletPath = IWalletPath;
 export type BalanceCache = IBalanceCache;
 export type WalletExport = IWalletExport;
@@ -22,6 +21,8 @@ export declare class WalletManager extends EventEmitter {
     private readonly pendingTransactions;
     private readonly config;
     private transactionMonitoringInterval;
+    private provider;
+    private signer;
     /**
      * Creates a new WalletManager instance
      * @param gun Raw Gun instance
@@ -69,7 +70,9 @@ export declare class WalletManager extends EventEmitter {
      * Gets a configured JSON RPC provider instance
      * @returns An ethers.js JsonRpcProvider instance
      */
-    getProvider(): ethers.JsonRpcProvider;
+    getProvider(): ethers.JsonRpcProvider | null;
+    getSigner(): ethers.Wallet;
+    setSigner(signer: ethers.Wallet): void;
     /**
      * Gets a unique identifier for the current user for storage purposes
      * @private
@@ -110,6 +113,13 @@ export declare class WalletManager extends EventEmitter {
      * Get the main wallet
      */
     getMainWallet(): ethers.Wallet;
+    /**
+     * Get the main wallet credentials
+     */
+    getMainWalletCredentials(): {
+        address: string;
+        priv: string;
+    };
     /**
      * Encrypt sensitive text using SEA
      * @param text Text to encrypt

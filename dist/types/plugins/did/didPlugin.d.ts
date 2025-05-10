@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { DIDPluginInterface } from "./types";
-import { DIDCreateOptions } from "../../types/did";
+import { DIDPluginInterface, DIDCreateOptions } from "./types";
 import { AuthResult } from "../../types/shogun";
 /**
  * Plugin per la gestione delle identità decentralizzate (DID) in ShogunCore
@@ -60,5 +59,20 @@ export declare class DIDPlugin extends BasePlugin implements DIDPluginInterface 
     /**
      * @inheritdoc
      */
+    verifyDIDOnChain(did: string): Promise<{
+        isRegistered: boolean;
+        controller?: string | undefined;
+        error?: string | undefined;
+    }>;
+    /**
+     * @inheritdoc
+     */
     ensureUserHasDID(options?: DIDCreateOptions): Promise<string | null>;
+    /**
+     * Implementation of the ensureUserHasDID with timeout handling
+     * @param options DID creation options
+     * @returns The DID identifier or null if failed
+     * @private
+     */
+    private _ensureUserHasDIDWithTimeout;
 }

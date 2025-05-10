@@ -10,8 +10,7 @@ import {
   DIDRegistryConfig,
   DIDCacheEntry,
   DIDResolutionOptions,
-} from "../../types/did";
-import { IGunInstance } from "../../types/gun";
+} from "./types";
 
 // Re-export types from types/did.ts
 export type { DIDDocument, DIDResolutionResult, DIDCreateOptions };
@@ -366,7 +365,7 @@ export class ShogunDID extends EventEmitter {
         throw new Error("User must be logged in to register DID on chain");
       }
 
-      let effectiveSigner = signer || this.getWallet();
+      let effectiveSigner = signer;
       if (!effectiveSigner) {
         throw new Error("No signer provided and main wallet not available");
       }
@@ -787,36 +786,6 @@ export class ShogunDID extends EventEmitter {
     return null;
   }
 
-  private getWallet(): ethers.Wallet | null {
-    try {
-      if (this.core.constructor.name === "ShogunCore") {
-        // Core moderno, usa getPlugin
-        if (!this.core.getPlugin) {
-          return null;
-        }
-
-        const walletPlugin = this.core.getPlugin(
-          this.core.constructor.name === "ShogunCore"
-            ? "wallet"
-            : "walletManager",
-        );
-        if (
-          walletPlugin &&
-          typeof walletPlugin === "object" &&
-          "getMainWallet" in walletPlugin
-        ) {
-          return (walletPlugin as any).getMainWallet();
-        }
-      } else if ("getMainWallet" in this.core) {
-        // Core legacy
-        return (this.core as any).getMainWallet();
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   private async authenticateWithEthereum(
     authMethod: { id: string; type: string; controller: string },
     challenge?: string,
@@ -924,6 +893,7 @@ export class ShogunDID extends EventEmitter {
    */
   async verifyDIDOnChain(
     did: string,
+    signer?: ethers.Signer,
   ): Promise<{ isRegistered: boolean; controller?: string; error?: string }> {
     try {
       // Definire l'interfaccia del contratto (ABI semplificato per esempio)
@@ -933,23 +903,13 @@ export class ShogunDID extends EventEmitter {
       ];
 
       // Indirizzo del contratto di registro DID
-      const didRegistryAddress = "0x1234..."; // Da sostituire con l'indirizzo reale
-
-      // Se non c'è un provider in ShogunCore, usiamo il signer del wallet
-      const wallet = this.getWallet();
-      const provider = wallet?.provider || this.core.provider;
-
-      if (!provider) {
-        throw new Error(
-          "Provider non disponibile per verificare il DID on-chain",
-        );
-      }
+      const didRegistryAddress = this.options.didRegistryAddress;
 
       // Creare un'istanza del contratto con il provider
       const didRegistryContract = new ethers.Contract(
         didRegistryAddress,
         didRegistryABI,
-        provider,
+        signer,
       );
 
       // Verificare se il DID è registrato

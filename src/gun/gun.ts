@@ -6,13 +6,12 @@
  * - Support for remove/unset operations
  */
 
-import Gun from "gun";
-import "gun/sea";
-import { IGunInstance, IGunUserInstance } from "gun/types";
+import Gun, { IGunUserInstance } from "gun";
 import CONFIG from "../config";
+
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { GunDBOptions } from "../types/gun";
+import { GunDBOptions, GunInstance } from "./types";
 import { GunCollections } from "./collections";
 import { GunConsensus } from "./consensus";
 import * as GunErrors from "./errors";
@@ -42,25 +41,18 @@ import {
 import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
 
-export interface AuthResult {
-  success: boolean;
-  userPub?: string;
-  username?: string;
-  error?: string;
-}
-
 interface RetryConfig {
   attempts: number;
   delay: number;
 }
 
 class GunDB {
-  public gun: IGunInstance<any>;
+  public gun: GunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private readonly retryConfig: RetryConfig;
   private _authenticating: boolean = false;
-  private authToken?: string;
+  private readonly authToken?: string;
 
   // Integrated modules
   private _collections?: GunCollections;
@@ -75,36 +67,27 @@ class GunDB {
       delay: options.retryDelay ?? 1000,
     };
 
-    const config = {
-      peers: options.peers,
-      localStorage: options.localStorage ?? false,
-      radisk: options.radisk ?? false,
-      multicast: options.multicast ?? false,
-      axe: options.axe ?? false,
-    };
-
     this.authToken = options.authToken;
 
-    if (this.authToken) {
-      const preview = `${this.authToken.substring(0, 3)}...${this.authToken.slice(-3)}`;
-      log(`Auth token received (${preview})`);
+    if (options.externalGun) {
+      log("Using externally provided Gun instance");
+      this.gun = options.externalGun;
     } else {
-      log("No auth token received");
+      const config = {
+        peers: options.peers,
+        localStorage: false,
+        radisk: false,
+        multicast: options.multicast ?? false,
+        axe: options.axe ?? false,
+      };
+
+      log("Creating new Gun instance with config:", config);
+      this.gun = new Gun(config);
     }
 
-    this.gun = new Gun(config);
     this.user = this.gun.user().recall({ sessionStorage: true });
 
-    if (this.authToken) {
-      Gun.on("opt", (ctx: any) => {
-        if (ctx.once) return;
-        ctx.on("out", (msg: any) => {
-          msg.headers = { token: this.authToken };
-          ctx.to.next(msg);
-        });
-      });
-      log("Auth token handler configured for outgoing messages");
-    }
+    this.restrictPut();
 
     this.subscribeToAuthEvents();
   }
@@ -153,13 +136,34 @@ class GunDB {
     this.onAuthCallbacks.forEach((cb) => cb(user));
   }
 
+  private restrictPut() {
+    Gun.on("opt", function (ctx: any) {
+      if (ctx.once) {
+        return;
+      }
+      ctx.on("out", function (msg: any) {
+        var to = msg.to;
+        // Adds headers for put
+        msg.headers = {
+          token: "thisIsTheTokenForReals",
+        };
+        to.next(msg);
+      });
+    });
+  }
+
   /**
    * Creates a new GunDB instance with specified peers
    * @param peers Array of peer URLs to connect to
    * @returns New GunDB instance
    */
   static withPeers(peers: string[] = CONFIG.PEERS): GunDB {
-    return new GunDB({ peers });
+    const options: Partial<GunDBOptions> = {
+      peers,
+      localStorage: false,
+      radisk: false,
+    };
+    return new GunDB(options);
   }
 
   /**
@@ -190,7 +194,7 @@ class GunDB {
    * Gets the Gun instance
    * @returns Gun instance
    */
-  getGun(): IGunInstance<any> {
+  getGun(): GunInstance<any> {
     return this.gun;
   }
 
@@ -282,16 +286,83 @@ class GunDB {
    */
   async signUp(username: string, password: string): Promise<any> {
     log("Attempting user registration:", username);
+
+    // Implementiamo una versione semplificata con passaggi sequenziali invece di callback nidificati
     return new Promise((resolve) => {
-      this.gun.user().create(username, password, async (ack: any) => {
-        if (ack.err) {
-          logError(`Registration error: ${ack.err}`);
-          resolve({ success: false, error: ack.err });
-        } else {
-          const loginResult = await this.login(username, password);
-          resolve(loginResult);
+      // Aggiungiamo un timeout di sicurezza per evitare chiamate bloccate
+      const timeout = setTimeout(() => {
+        logError(`Timeout durante la registrazione per l'utente: ${username}`);
+        resolve({ success: false, error: "Registration timeout in GunDB" });
+      }, 10000); // Timeout di 10 secondi
+
+      // Funzione per eseguire i passaggi in sequenza
+      const executeSignUp = async () => {
+        try {
+          // STEP 1: Creiamo l'utente
+          const createResult = await new Promise<{
+            err?: string;
+            pub?: string;
+          }>((resolveCreate) => {
+            log(`Creating user: ${username}`);
+            this.gun.user().create(username, password, (ack: any) => {
+              if (ack.err) {
+                logError(`User creation error: ${ack.err}`);
+                resolveCreate({ err: ack.err });
+              } else {
+                log(`User created successfully: ${username}`);
+                resolveCreate({ pub: ack.pub });
+              }
+            });
+          });
+
+          // Se la creazione fallisce, usciamo
+          if (createResult.err) {
+            clearTimeout(timeout);
+            return resolve({ success: false, error: createResult.err });
+          }
+
+          const user = this.gun.get(createResult.pub!).put({
+            username: username,
+          });
+
+          this.gun.get("users").set(user);
+
+          // STEP 2: Effettuiamo il login
+          log(`Attempting login after registration for: ${username}`);
+          try {
+            const loginResult = await this.login(username, password);
+            clearTimeout(timeout);
+
+            if (!loginResult.success) {
+              logError(`Login after registration failed: ${loginResult.error}`);
+              return resolve({
+                success: false,
+                error: `Registration completed but login failed: ${loginResult.error}`,
+              });
+            }
+
+            log(`Login after registration successful for: ${username}`);
+            return resolve(loginResult);
+          } catch (loginError) {
+            clearTimeout(timeout);
+            logError(`Exception during post-registration login: ${loginError}`);
+            return resolve({
+              success: false,
+              error: "Exception during post-registration login",
+            });
+          }
+        } catch (error) {
+          clearTimeout(timeout);
+          logError(`Unexpected error during registration flow: ${error}`);
+          return resolve({
+            success: false,
+            error: `Unexpected error during registration: ${error}`,
+          });
         }
-      });
+      };
+
+      // Avvia il processo di registrazione
+      executeSignUp();
     });
   }
 
@@ -317,29 +388,59 @@ class GunDB {
     log(`Attempting login for user: ${username}`);
 
     return new Promise((resolve) => {
-      try {
+      if (this.gun.user()) {
+        // Tentativo di logout pulito per evitare conflitti di autenticazione
         this.gun.user().leave();
-      } catch {}
+        log(`Previous session cleaned for: ${username}`);
+      }
 
+      // Aumentiamo il timeout a 8 secondi per dare più tempo all'operazione
       const timeout = setTimeout(() => {
         this._setAuthenticating(false);
+        logError(`Login timeout for user: ${username}`);
         resolve({ success: false, error: "Login timeout" });
-      }, 3000);
+      }, 8000);
 
+      log(`Starting authentication for: ${username}`);
       this.gun.user().auth(username, password, (ack: any) => {
         clearTimeout(timeout);
         this._setAuthenticating(false);
 
         if (ack.err) {
-          log(`Login error: ${ack.err}`);
+          logError(`Login error for ${username}: ${ack.err}`);
           resolve({ success: false, error: ack.err });
         } else {
-          this._savePair();
-          resolve({
-            success: true,
-            userPub: this.gun.user().is?.pub,
-            username,
+          const userPub = this.gun.user().is?.pub;
+          const user = this.gun.get("users").map((user) => {
+            if (user.pub === userPub) {
+              return user;
+            }
           });
+          // se non è dentro users, aggiungilo
+          if (!user) {
+            const user = this.gun.get(userPub!).put({
+              username: username,
+            });
+            this.gun.get("users").set(user);
+          }
+
+          if (!user) {
+            logError(
+              `Authentication succeeded but no user.pub available for: ${username}`,
+            );
+            resolve({
+              success: false,
+              error: "Authentication inconsistency: user.pub not available",
+            });
+          } else {
+            log(`Login successful for: ${username} (${userPub})`);
+            this._savePair();
+            resolve({
+              success: true,
+              userPub,
+              username,
+            });
+          }
         }
       });
     });
