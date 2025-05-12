@@ -13,7 +13,7 @@ import {
 import { IGunInstance, IGunUserInstance } from "gun";
 import Gun from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
-import { ethers} from "ethers";
+import { ethers } from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { DIDCreateOptions } from "./plugins/did";
 import { GunRxJS } from "./gun/rxjs-integration";
@@ -141,14 +141,14 @@ export class ShogunCore implements IShogunCore {
     } else {
       log("No external Gun instance provided, creating default GunDB");
       // Create default Gun instance instead of returning early
-      const defaultPeers = ['http://localhost:8765/gun']; // Default fallback peer
+      const defaultPeers = ["http://localhost:8765/gun"]; // Default fallback peer
       const defaultGun = new Gun({
         peers: defaultPeers,
         localStorage: false,
         radisk: false,
         authToken: config.authToken,
       });
-      
+
       this.gundb = new GunDB(defaultGun);
       this.gun = defaultGun;
     }

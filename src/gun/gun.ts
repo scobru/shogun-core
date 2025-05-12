@@ -47,7 +47,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -135,7 +135,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -151,7 +151,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -166,7 +166,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -270,7 +270,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void
+    callback?: (result: any) => void,
   ): Promise<any> {
     if (this.isAuthenticating()) {
       const err = "Authentication already in progress";
@@ -320,7 +320,7 @@ class GunDB {
 
           if (!user) {
             logError(
-              `Authentication succeeded but no user.pub available for: ${username}`
+              `Authentication succeeded but no user.pub available for: ${username}`,
             );
             resolve({
               success: false,
@@ -413,7 +413,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     log("Impostazione suggerimento password per:", username);
 
@@ -441,7 +441,7 @@ class GunDB {
     } catch (error) {
       logError(
         "Errore durante l'impostazione del suggerimento password:",
-        error
+        error,
       );
       return { success: false, error: String(error) };
     }
@@ -455,7 +455,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Tentativo di recupero password per:", username);
 
@@ -479,7 +479,7 @@ class GunDB {
       // Decripta il suggerimento della password con la prova di lavoro
       const hint = await this.decrypt(
         securityData.hint,
-        await this.hashText(securityAnswers.join("|"))
+        await this.hashText(securityAnswers.join("|")),
       );
 
       if (hint === undefined) {

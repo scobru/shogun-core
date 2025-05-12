@@ -1,5 +1,3 @@
-
-
 /**
  * Checks if the application is running in a web environment
  */
