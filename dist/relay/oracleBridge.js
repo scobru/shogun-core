@@ -6,11 +6,11 @@ const errorHandler_1 = require("../utils/errorHandler");
 const logger_1 = require("../utils/logger");
 // ABI for the OracleBridge contract
 const ORACLE_BRIDGE_ABI = [
-    'function roots(uint256) public view returns (bytes32)',
-    'function admin() public view returns (address)',
-    'function epochId() public view returns (uint256)',
-    'function getEpochId() external view returns (uint256)',
-    'function publishRoot(uint256 _epochId, bytes32 root) external'
+    "function roots(uint256) public view returns (bytes32)",
+    "function admin() public view returns (address)",
+    "function epochId() public view returns (uint256)",
+    "function getEpochId() external view returns (uint256)",
+    "function publishRoot(uint256 _epochId, bytes32 root) external",
 ];
 /**
  * OracleBridge - A class to interact with the OracleBridge contract
@@ -38,7 +38,7 @@ class OracleBridge {
             if (shogun?.provider) {
                 // Reuse the provider from ShogunCore if available
                 this.provider = shogun.provider;
-                (0, logger_1.log)('Using provider from ShogunCore instance');
+                (0, logger_1.log)("Using provider from ShogunCore instance");
             }
             else if (config.providerUrl) {
                 // Or create a new provider with the provided URL
@@ -46,7 +46,7 @@ class OracleBridge {
                 (0, logger_1.log)(`Created provider with URL: ${config.providerUrl}`);
             }
             else {
-                (0, logger_1.logError)('No provider available. Either pass a ShogunCore instance or providerUrl');
+                (0, logger_1.logError)("No provider available. Either pass a ShogunCore instance or providerUrl");
             }
             // Initialize the contract if we have a provider and a signer
             if (this.signer && this.provider) {
@@ -59,7 +59,7 @@ class OracleBridge {
             }
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'ORACLE_BRIDGE_INIT_FAILED', 'Failed to initialize OracleBridge', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ORACLE_BRIDGE_INIT_FAILED", "Failed to initialize OracleBridge", error);
         }
     }
     /**
@@ -70,13 +70,13 @@ class OracleBridge {
     async getEpochId() {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
-            const result = await this.contract.getFunction('getEpochId')();
+            const result = await this.contract.getFunction("getEpochId")();
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'GET_EPOCH_ID_FAILED', 'Failed to get current epoch ID', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_EPOCH_ID_FAILED", "Failed to get current epoch ID", error);
             return BigInt(0);
         }
     }
@@ -89,13 +89,13 @@ class OracleBridge {
     async getRootForEpoch(epochId) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
-            const result = await this.contract.getFunction('roots')(epochId);
+            const result = await this.contract.getFunction("roots")(epochId);
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'GET_ROOT_FAILED', `Failed to get root for epoch ${epochId}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_ROOT_FAILED", `Failed to get root for epoch ${epochId}`, error);
             return ethers_1.ethers.ZeroHash;
         }
     }
@@ -107,13 +107,13 @@ class OracleBridge {
     async getAdmin() {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
-            const result = await this.contract.getFunction('admin')();
+            const result = await this.contract.getFunction("admin")();
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'GET_ADMIN_FAILED', 'Failed to get admin address', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_ADMIN_FAILED", "Failed to get admin address", error);
             return ethers_1.ethers.ZeroAddress;
         }
     }
@@ -130,7 +130,7 @@ class OracleBridge {
             return actualRoot.toLowerCase() === expectedRoot.toLowerCase();
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'VERIFY_ROOT_FAILED', `Failed to verify root for epoch ${epochId}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "VERIFY_ROOT_FAILED", `Failed to verify root for epoch ${epochId}`, error);
             return false;
         }
     }
@@ -145,12 +145,12 @@ class OracleBridge {
     async publishRoot(epochId, root, externalSigner) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             // Usa il signer fornito o quello memorizzato
             const signer = externalSigner || this.signer;
             if (!signer) {
-                throw new Error('No signer available. Please provide a signer or set one with setSigner()');
+                throw new Error("No signer available. Please provide a signer or set one with setSigner()");
             }
             // Connect the contract to the signer
             const contractWithSigner = this.contract.connect(signer);
@@ -160,15 +160,15 @@ class OracleBridge {
             const adminAddress = await this.getAdmin();
             // Check if the signer is the admin
             if (signerAddress.toLowerCase() !== adminAddress.toLowerCase()) {
-                throw new Error('Only admin can publish roots');
+                throw new Error("Only admin can publish roots");
             }
             // Call the function explicitly using the function method
-            const tx = await contractWithSigner.getFunction('publishRoot')(epochId, root);
+            const tx = await contractWithSigner.getFunction("publishRoot")(epochId, root);
             // Wait for the transaction to be mined
             return await tx.wait();
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'PUBLISH_ROOT_FAILED', `Failed to publish root for epoch ${epochId}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PUBLISH_ROOT_FAILED", `Failed to publish root for epoch ${epochId}`, error);
             return null;
         }
     }
@@ -179,7 +179,7 @@ class OracleBridge {
      */
     setSigner(signer) {
         this.signer = signer;
-        (0, logger_1.log)('Signer set for OracleBridge');
+        (0, logger_1.log)("Signer set for OracleBridge");
     }
     /**
      * Updates the provider URL for the bridge
@@ -199,7 +199,7 @@ class OracleBridge {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'PROVIDER_UPDATE_FAILED', 'Failed to update provider URL', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PROVIDER_UPDATE_FAILED", "Failed to update provider URL", error);
             return false;
         }
     }
@@ -212,7 +212,7 @@ class OracleBridge {
     setContractAddress(contractAddress) {
         try {
             if (!ethers_1.ethers.isAddress(contractAddress)) {
-                throw new Error('Invalid contract address format');
+                throw new Error("Invalid contract address format");
             }
             this.contractAddress = contractAddress;
             // Reinitialize the contract with the new address
@@ -224,7 +224,7 @@ class OracleBridge {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'CONTRACT_ADDRESS_UPDATE_FAILED', 'Failed to update contract address', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "CONTRACT_ADDRESS_UPDATE_FAILED", "Failed to update contract address", error);
             return false;
         }
     }

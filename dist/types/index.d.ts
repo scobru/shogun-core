@@ -1,12 +1,13 @@
 import { GunDB } from "./gun/gun";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
-import { IGunInstance, IGunUserInstance } from "gun";
+import { IGunUserInstance } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "./utils/errorHandler";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
+import { GunInstance } from "./gun/types";
 export { ShogunDID } from "./plugins/did/DID";
 export type { DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
 export { ErrorHandler, ErrorType } from "./utils/errorHandler";
@@ -36,7 +37,7 @@ export declare class ShogunCore implements IShogunCore {
     /** Current API version - used for deprecation warnings and migration guidance */
     static readonly API_VERSION = "2.0.0";
     /** Gun database instance */
-    gun: IGunInstance<any>;
+    gun: GunInstance<any>;
     /** Gun user instance */
     user: IGunUserInstance<any> | null;
     /** GunDB wrapper */

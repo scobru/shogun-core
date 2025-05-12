@@ -87,6 +87,7 @@
 
   <!-- Includi la libreria Shogun Core dalla directory dist/browser -->
   <script src="../../dist/browser/shogun-core.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gun/dist/gun.js" defer></script>
 
   <script>
     // Riferimenti agli elementi DOM
@@ -187,13 +188,17 @@
     initBtn.addEventListener('click', function (e) {
       e.preventDefault(); // Previene il comportamento di default
 
+      const gun = new window.Gun({
+        peers: ['http://localhost:8765/gun'],
+        localStorage: false,
+        radisk: false
+      });
+
       try {
         // Configurazione per l'ambiente browser
         const config = {
-          gundb: {
-            peers: ['http://localhost:8765/gun'],
-            authToken: 'thisIsTheTokenForReals',
-          },
+          gun: gun,
+          authToken: 'thisIsTheTokenForReals',
           webauthn: {
             enabled: true,
             rpName: 'Shogun Demo',
@@ -210,14 +215,14 @@
           walletManager: {
             enabled: true
           },
-          social: {
+          did: {
             enabled: true
           }
         };
-        console.log("Initializing Shogun with authToken:", config.gundb.authToken);
+        console.log("Initializing Shogun with authToken:", config.authToken);
 
         // Utilizziamo la funzione di inizializzazione specifica per browser
-        shogun = window.initShogunBrowser(config);
+        shogun= window.initShogunBrowser(config);
 
         // Otteniamo i riferimenti ai plugin
         walletPlugin = shogun.getPlugin("wallet");

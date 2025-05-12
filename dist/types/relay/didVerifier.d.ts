@@ -1,5 +1,5 @@
-import { ethers } from 'ethers';
-import { ShogunCore } from '../index';
+import { ethers } from "ethers";
+import { ShogunCore } from "../index";
 export interface DIDVerifierConfig {
     contractAddress: string;
     providerUrl?: string;

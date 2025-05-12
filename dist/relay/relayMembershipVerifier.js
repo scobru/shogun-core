@@ -6,11 +6,11 @@ const errorHandler_1 = require("../utils/errorHandler");
 const logger_1 = require("../utils/logger");
 // ABI for the RelayMembership contract (only the methods we need)
 const RELAY_MEMBERSHIP_ABI = [
-    'function authorizedAddress(address user) external view returns (bool)',
-    'function isAuthorized(bytes calldata pubKey) external view returns (bool)',
-    'function getUserInfo(address user) external view returns (uint256 expires, bytes memory pubKey)',
-    'function userInfoByPubKey(bytes) public view returns (address)',
-    'function isActive(address user) external view returns (bool)'
+    "function authorizedAddress(address user) external view returns (bool)",
+    "function isAuthorized(bytes calldata pubKey) external view returns (bool)",
+    "function getUserInfo(address user) external view returns (uint256 expires, bytes memory pubKey)",
+    "function userInfoByPubKey(bytes) public view returns (address)",
+    "function isActive(address user) external view returns (bool)",
 ];
 /**
  * RelayMembershipVerifier - A class to verify if an address or public key is part
@@ -38,7 +38,7 @@ class RelayMembershipVerifier {
             if (shogun?.provider) {
                 // Reuse the provider from ShogunCore if available
                 this.provider = shogun.provider;
-                (0, logger_1.log)('Using provider from ShogunCore instance');
+                (0, logger_1.log)("Using provider from ShogunCore instance");
             }
             else if (config.providerUrl) {
                 // Or create a new provider with the provided URL
@@ -46,7 +46,7 @@ class RelayMembershipVerifier {
                 (0, logger_1.log)(`Created provider with URL: ${config.providerUrl}`);
             }
             else {
-                (0, logger_1.logError)('No provider available. Either pass a ShogunCore instance or providerUrl');
+                (0, logger_1.logError)("No provider available. Either pass a ShogunCore instance or providerUrl");
             }
             // Initialize the contract if we have a provider
             if (this.signer && this.provider) {
@@ -59,7 +59,7 @@ class RelayMembershipVerifier {
             }
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'RELAY_MEMBERSHIP_INIT_FAILED', 'Failed to initialize RelayMembershipVerifier', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_MEMBERSHIP_INIT_FAILED", "Failed to initialize RelayMembershipVerifier", error);
         }
     }
     /**
@@ -71,16 +71,16 @@ class RelayMembershipVerifier {
     async isAddressAuthorized(address) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error('Invalid Ethereum address format');
+                throw new Error("Invalid Ethereum address format");
             }
             // Call the contract method to check authorization
             return await this.contract.authorizedAddress(address);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'ADDRESS_AUTH_CHECK_FAILED', `Failed to check if address ${address} is authorized`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ADDRESS_AUTH_CHECK_FAILED", `Failed to check if address ${address} is authorized`, error);
             return false;
         }
     }
@@ -93,17 +93,19 @@ class RelayMembershipVerifier {
     async isPublicKeyAuthorized(publicKey) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             // Convert to properly formatted bytes if needed
-            const formattedPubKey = typeof publicKey === 'string'
-                ? (publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`)
-                : `0x${Buffer.from(publicKey).toString('hex')}`;
+            const formattedPubKey = typeof publicKey === "string"
+                ? publicKey.startsWith("0x")
+                    ? publicKey
+                    : `0x${publicKey}`
+                : `0x${Buffer.from(publicKey).toString("hex")}`;
             // Call the contract method to check authorization
             return await this.contract.isAuthorized(formattedPubKey);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'PUBKEY_AUTH_CHECK_FAILED', 'Failed to check if public key is authorized', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PUBKEY_AUTH_CHECK_FAILED", "Failed to check if public key is authorized", error);
             return false;
         }
     }
@@ -116,18 +118,20 @@ class RelayMembershipVerifier {
     async getAddressForPublicKey(publicKey) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             // Convert to properly formatted bytes if needed
-            const formattedPubKey = typeof publicKey === 'string'
-                ? (publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`)
-                : `0x${Buffer.from(publicKey).toString('hex')}`;
+            const formattedPubKey = typeof publicKey === "string"
+                ? publicKey.startsWith("0x")
+                    ? publicKey
+                    : `0x${publicKey}`
+                : `0x${Buffer.from(publicKey).toString("hex")}`;
             const address = await this.contract.userInfoByPubKey(formattedPubKey);
             // Return null if the address is the zero address (not found)
             return address === ethers_1.ethers.ZeroAddress ? null : address;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'ADDRESS_LOOKUP_FAILED', 'Failed to get address for public key', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ADDRESS_LOOKUP_FAILED", "Failed to get address for public key", error);
             return null;
         }
     }
@@ -140,16 +144,16 @@ class RelayMembershipVerifier {
     async getUserInfo(address) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error('Invalid Ethereum address format');
+                throw new Error("Invalid Ethereum address format");
             }
             const [expires, pubKey] = await this.contract.getUserInfo(address);
             return { expires, pubKey };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'USER_INFO_LOOKUP_FAILED', `Failed to get user info for address ${address}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "USER_INFO_LOOKUP_FAILED", `Failed to get user info for address ${address}`, error);
             return null;
         }
     }
@@ -162,15 +166,15 @@ class RelayMembershipVerifier {
     async isUserActive(address) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error('Invalid Ethereum address format');
+                throw new Error("Invalid Ethereum address format");
             }
             return await this.contract.isActive(address);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'USER_ACTIVE_CHECK_FAILED', `Failed to check if user ${address} is active`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "USER_ACTIVE_CHECK_FAILED", `Failed to check if user ${address} is active`, error);
             return false;
         }
     }
@@ -192,7 +196,7 @@ class RelayMembershipVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'PROVIDER_UPDATE_FAILED', 'Failed to update provider URL', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PROVIDER_UPDATE_FAILED", "Failed to update provider URL", error);
             return false;
         }
     }
@@ -205,7 +209,7 @@ class RelayMembershipVerifier {
     setContractAddress(contractAddress) {
         try {
             if (!ethers_1.ethers.isAddress(contractAddress)) {
-                throw new Error('Invalid contract address format');
+                throw new Error("Invalid contract address format");
             }
             this.contractAddress = contractAddress;
             if (this.provider) {
@@ -217,7 +221,7 @@ class RelayMembershipVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'CONTRACT_ADDRESS_UPDATE_FAILED', 'Failed to update contract address', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "CONTRACT_ADDRESS_UPDATE_FAILED", "Failed to update contract address", error);
             return false;
         }
     }
@@ -239,7 +243,7 @@ class RelayMembershipVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'SIGNER_UPDATE_FAILED', 'Failed to update signer', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "SIGNER_UPDATE_FAILED", "Failed to update signer", error);
             return false;
         }
     }

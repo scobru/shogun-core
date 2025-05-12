@@ -11,9 +11,9 @@ import {
   CorePlugins,
 } from "./types/shogun";
 import { IGunInstance, IGunUserInstance } from "gun";
-import { GunDBOptions } from "./gun/types";
+import Gun from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
-import { ethers, JsonRpcProvider, Signer } from "ethers";
+import { ethers} from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { DIDCreateOptions } from "./plugins/did";
 import { GunRxJS } from "./gun/rxjs-integration";
@@ -27,6 +27,7 @@ import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 import { WalletManager } from "./plugins";
+import { GunInstance } from "./gun/types";
 
 // Import relay verification
 
@@ -69,10 +70,10 @@ export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "2.0.0";
 
   /** Gun database instance */
-  public gun: IGunInstance<any>;
+  public gun!: GunInstance<any>;
 
   /** Gun user instance */
-  public user: IGunUserInstance<any> | null;
+  public user: IGunUserInstance<any> | null = null;
 
   /** GunDB wrapper */
   public gundb: GunDB;
@@ -90,7 +91,7 @@ export class ShogunCore implements IShogunCore {
   public config: ShogunSDKConfig;
 
   /** RxJS integration */
-  public rx: GunRxJS;
+  public rx!: GunRxJS;
 
   /** Plugin registry */
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
@@ -123,52 +124,33 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    if (!config.gundb && !config.externalGun) {
-      config.gundb = {
-        localStorage: false,
-        radisk: false,
-      };
-      log(
-        "No GunDB configuration or external Gun instance provided, using defaults",
-      );
-    } else if (config.gundb) {
-      // Ensure required properties are set
-      config.gundb.localStorage = false;
-      config.gundb.radisk = false;
-    }
-
-    if (config.gundb?.authToken) {
-      const tokenPreview = config.gundb.authToken;
-      log(`Auth token from config: ${tokenPreview}`);
-    } else {
-      log("No auth token in config");
-    }
-
     // If an external Gun instance is provided, use it
-    if (config.externalGun) {
+    if (config.gun) {
       log("Using externally provided Gun instance");
-      const gundbConfig: GunDBOptions = {
-        localStorage: false,
-        radisk: false,
-        authToken: config.gundb?.authToken,
-        externalGun: config.externalGun,
-      };
-      this.gundb = new GunDB(gundbConfig);
-      this.gun = config.externalGun;
-    } else {
-      // Otherwise create a new Gun instance
-      const gundbConfig: GunDBOptions = {
-        peers: config.gundb?.peers,
-        websocket: config.gundb?.websocket ?? false,
-        localStorage: false,
-        radisk: false,
-        authToken: config.gundb?.authToken,
-        multicast: config.gundb?.multicast ?? false,
-        axe: config.gundb?.axe ?? false,
-      };
 
-      this.gundb = new GunDB(gundbConfig);
-      this.gun = this.gundb.getGun();
+      const gun = config.gun;
+
+      gun.opt({
+        localStorage: false,
+        radisk: false,
+        authToken: config.authToken,
+      });
+
+      this.gundb = new GunDB(gun);
+      this.gun = gun;
+    } else {
+      log("No external Gun instance provided, creating default GunDB");
+      // Create default Gun instance instead of returning early
+      const defaultPeers = ['http://localhost:8765/gun']; // Default fallback peer
+      const defaultGun = new Gun({
+        peers: defaultPeers,
+        localStorage: false,
+        radisk: false,
+        authToken: config.authToken,
+      });
+      
+      this.gundb = new GunDB(defaultGun);
+      this.gun = defaultGun;
     }
 
     this.user = this.gun.user().recall({ sessionStorage: true });

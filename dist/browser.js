@@ -40,7 +40,6 @@ exports.ShogunCore = exports.modules = void 0;
 exports.initShogunBrowser = initShogunBrowser;
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
-const logger_1 = require("./utils/logger");
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
 const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
@@ -65,18 +64,14 @@ function initShogunBrowser(config) {
     const browserConfig = {
         ...config,
     };
-    // Assicuriamoci che la configurazione di GunDB esista
-    browserConfig.gundb ??= {
-        localStorage: false,
-        radisk: false,
-    };
-    // Warn users who don't provide custom peers or providerUrl
-    if (!config.gundb?.peers) {
-        (0, logger_1.log)("WARNING: Using default GunDB peers. For production, always configure custom peers.");
-    }
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
-    shogunG = shogunCoreInstance?.gun || null;
+    shogunG = shogunCoreInstance?.gun;
+    // Support use as a global variable when included via <script>
+    if (typeof window !== "undefined") {
+        window.shogun = shogunCoreInstance;
+        window.shogunGun = shogunG;
+    }
     return shogunCoreInstance;
 }
 // Esportazione lazy loading helpers
@@ -89,8 +84,6 @@ exports.modules = {
 };
 // Export main types as well
 __exportStar(require("./types/shogun"), exports);
-// Support use as a global variable when included via <script>
 if (typeof window !== "undefined") {
-    window.shogun = shogunCoreInstance;
-    window.shogunGun = shogunG;
+    window.initShogunBrowser = initShogunBrowser;
 }

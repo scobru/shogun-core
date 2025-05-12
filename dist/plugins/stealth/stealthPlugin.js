@@ -93,13 +93,13 @@ class StealthPlugin extends base_1.BasePlugin {
             pub: keys.viewingKey,
             priv: keys.viewingKey,
             epub: keys.viewingKey,
-            epriv: keys.viewingKey
+            epriv: keys.viewingKey,
         };
         const spendingKeyPair = {
             pub: keys.spendingKey,
             priv: keys.spendingKey,
             epub: keys.spendingKey,
-            epriv: keys.spendingKey
+            epriv: keys.spendingKey,
         };
         return this.assertStealth().openStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey, spendingKeyPair, viewingKeyPair);
     }

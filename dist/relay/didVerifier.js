@@ -6,8 +6,8 @@ const errorHandler_1 = require("../utils/errorHandler");
 const logger_1 = require("../utils/logger");
 // ABI for the DIDRegistry contract (only the methods we need)
 const DID_REGISTRY_ABI = [
-    'function registerDID(string memory did, string memory controller) public returns (bool success)',
-    'function getController(string memory did) public view returns (string memory controller)'
+    "function registerDID(string memory did, string memory controller) public returns (bool success)",
+    "function getController(string memory did) public view returns (string memory controller)",
 ];
 /**
  * DIDVerifier - A class to verify and interact with Decentralized Identifiers (DIDs)
@@ -35,7 +35,7 @@ class DIDVerifier {
             if (shogun?.provider) {
                 // Reuse the provider from ShogunCore if available
                 this.provider = shogun.provider;
-                (0, logger_1.log)('Using provider from ShogunCore instance');
+                (0, logger_1.log)("Using provider from ShogunCore instance");
             }
             else if (config.providerUrl) {
                 // Or create a new provider with the provided URL
@@ -43,7 +43,7 @@ class DIDVerifier {
                 (0, logger_1.log)(`Created provider with URL: ${config.providerUrl}`);
             }
             else {
-                (0, logger_1.logError)('No provider available. Either pass a ShogunCore instance or providerUrl');
+                (0, logger_1.logError)("No provider available. Either pass a ShogunCore instance or providerUrl");
             }
             // Initialize the contract if we have a provider
             if (this.signer && this.provider) {
@@ -56,7 +56,7 @@ class DIDVerifier {
             }
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'DID_VERIFIER_INIT_FAILED', 'Failed to initialize DIDVerifier', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DID_VERIFIER_INIT_FAILED", "Failed to initialize DIDVerifier", error);
         }
     }
     /**
@@ -68,18 +68,18 @@ class DIDVerifier {
     async verifyDID(did) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             if (!did || !did.trim()) {
-                throw new Error('Invalid DID format: DID cannot be empty');
+                throw new Error("Invalid DID format: DID cannot be empty");
             }
             // Call the contract method to get the controller
             const controller = await this.contract.getController(did);
             // If controller is empty, the DID is not registered
-            return controller && controller.trim() !== '' ? controller : null;
+            return controller && controller.trim() !== "" ? controller : null;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'DID_VERIFICATION_FAILED', `Failed to verify DID: ${did}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DID_VERIFICATION_FAILED", `Failed to verify DID: ${did}`, error);
             return null;
         }
     }
@@ -96,7 +96,7 @@ class DIDVerifier {
             return controller === expectedController;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'DID_CONTROLLER_CHECK_FAILED', `Failed to check if DID ${did} is controlled by ${expectedController}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DID_CONTROLLER_CHECK_FAILED", `Failed to check if DID ${did} is controlled by ${expectedController}`, error);
             return false;
         }
     }
@@ -120,7 +120,8 @@ class DIDVerifier {
             const signerAddress = ethers_1.ethers.verifyMessage(message, signature);
             // Check if the signer matches the controller (assuming controller is an Ethereum address)
             // This is a simplification - actual implementation might need to handle different controller formats
-            if (ethers_1.ethers.isAddress(controller) && controller.toLowerCase() === signerAddress.toLowerCase()) {
+            if (ethers_1.ethers.isAddress(controller) &&
+                controller.toLowerCase() === signerAddress.toLowerCase()) {
                 (0, logger_1.log)(`Successfully authenticated DID: ${did}`);
                 return true;
             }
@@ -128,7 +129,7 @@ class DIDVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'DID_AUTHENTICATION_FAILED', `Failed to authenticate with DID: ${did}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DID_AUTHENTICATION_FAILED", `Failed to authenticate with DID: ${did}`, error);
             return false;
         }
     }
@@ -150,7 +151,7 @@ class DIDVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'PROVIDER_UPDATE_FAILED', 'Failed to update provider URL', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PROVIDER_UPDATE_FAILED", "Failed to update provider URL", error);
             return false;
         }
     }
@@ -163,7 +164,7 @@ class DIDVerifier {
     setContractAddress(contractAddress) {
         try {
             if (!ethers_1.ethers.isAddress(contractAddress)) {
-                throw new Error('Invalid contract address format');
+                throw new Error("Invalid contract address format");
             }
             this.contractAddress = contractAddress;
             // Reinitialize the contract with the new address
@@ -175,7 +176,7 @@ class DIDVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'CONTRACT_ADDRESS_UPDATE_FAILED', 'Failed to update contract address', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "CONTRACT_ADDRESS_UPDATE_FAILED", "Failed to update contract address", error);
             return false;
         }
     }
@@ -189,18 +190,18 @@ class DIDVerifier {
     async registerDID(did, controller) {
         try {
             if (!this.contract) {
-                throw new Error('Contract not initialized');
+                throw new Error("Contract not initialized");
             }
             if (!this.signer) {
-                throw new Error('Signer required for registerDID');
+                throw new Error("Signer required for registerDID");
             }
             // Usa getFunction per evitare errori TypeScript
-            const tx = await this.contract.getFunction('registerDID')(did, controller);
+            const tx = await this.contract.getFunction("registerDID")(did, controller);
             const receipt = await tx.wait();
             return receipt.status === 1;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'DID_REGISTRATION_FAILED', `Failed to register DID: ${did}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DID_REGISTRATION_FAILED", `Failed to register DID: ${did}`, error);
             return false;
         }
     }
@@ -222,7 +223,7 @@ class DIDVerifier {
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, 'SIGNER_UPDATE_FAILED', 'Failed to update signer', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "SIGNER_UPDATE_FAILED", "Failed to update signer", error);
             return false;
         }
     }

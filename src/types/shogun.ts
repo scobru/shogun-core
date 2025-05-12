@@ -1,11 +1,7 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { Webauthn } from "../plugins/webauthn/webauthn";
-import { MetaMask } from "../plugins/metamask/metamask";
-import { Stealth } from "../plugins/stealth/stealth";
 import { GunDB } from "../gun/gun";
-import { GunDBOptions } from "../gun/types";
 import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
@@ -203,10 +199,8 @@ export interface LoggingConfig {
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
-  /** GunDB configuration */
-  gundb?: GunDBOptions;
-  /** External Gun instance to use instead of creating a new one */
-  externalGun?: GunInstance<any>;
+  gun: GunInstance<any>;
+  authToken?: string;
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;
   /** MetaMask configuration */

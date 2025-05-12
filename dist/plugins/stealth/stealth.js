@@ -50,7 +50,7 @@ class Stealth {
         const keys = await this.assertStealth().getStealthKeys();
         return {
             spendingKey: keys.spendingKey,
-            viewingKey: keys.viewingKey
+            viewingKey: keys.viewingKey,
         };
     }
     // Generate Viewving and Spending Key and save it tu gun userspace
@@ -106,7 +106,7 @@ class Stealth {
         const ephemeralKeyPair = await this.assertStealth().createAccount();
         return {
             privateKey: ephemeralKeyPair.privateKey,
-            publicKey: ephemeralKeyPair.publicKey
+            publicKey: ephemeralKeyPair.publicKey,
         };
     }
     /**

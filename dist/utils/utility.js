@@ -1,24 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isPlatformWeb = exports.isGunInstance = void 0;
+exports.isPlatformWeb = void 0;
 exports.delay = delay;
 exports.errorAfter = errorAfter;
 exports.randomString = randomString;
-/**
- * Checks if an object is a Gun instance
- * @param gun - The object to check
- * @returns True if the object is a Gun instance
- */
-const isGunInstance = (gun) => {
-    if (!gun || typeof gun !== "object")
-        return false;
-    // Check if it has Gun methods
-    const g = gun;
-    return (typeof g.get === "function" &&
-        typeof g.put === "function" &&
-        typeof g.once === "function");
-};
-exports.isGunInstance = isGunInstance;
 /**
  * Checks if the application is running in a web environment
  */

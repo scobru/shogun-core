@@ -7,38 +7,10 @@
  */
 
 import Gun, { IGunUserInstance } from "gun";
-import CONFIG from "../config";
-
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { GunDBOptions, GunInstance } from "./types";
-import { GunCollections } from "./collections";
-import { GunConsensus } from "./consensus";
+import { GunInstance } from "./types";
 import * as GunErrors from "./errors";
-import {
-  encrypt,
-  decrypt,
-  sign,
-  verify,
-  generateKeyPair as genKeyPair,
-  clearCache,
-  isHash,
-  encFor,
-  decFrom,
-  hashText,
-  hashObj,
-  getShortHash,
-  safeHash,
-  unsafeHash,
-  safeJSONParse,
-} from "./encryption";
-import {
-  issueCert,
-  generateCerts,
-  verifyCert,
-  extractCertPolicy,
-} from "./certificates";
-import { GunRepository } from "./repository";
 import { GunRxJS } from "./rxjs-integration";
 
 interface RetryConfig {
@@ -50,68 +22,20 @@ class GunDB {
   public gun: GunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
-  private readonly retryConfig: RetryConfig;
   private _authenticating: boolean = false;
-  private readonly authToken?: string;
+  private readonly authToken?: string | null;
 
   // Integrated modules
-  private _collections?: GunCollections;
-  private _consensus?: GunConsensus;
   private _rxjs?: GunRxJS;
+  private _sea?: typeof Gun.SEA;
 
-  constructor(options: Partial<GunDBOptions> = {}) {
+  constructor(gun: GunInstance<any>, authToken?: string) {
     log("Initializing GunDB");
-
-    this.retryConfig = {
-      attempts: options.retryAttempts ?? 3,
-      delay: options.retryDelay ?? 1000,
-    };
-
-    this.authToken = options.authToken;
-
-    if (options.externalGun) {
-      log("Using externally provided Gun instance");
-      this.gun = options.externalGun;
-    } else {
-      const config = {
-        peers: options.peers,
-        localStorage: false,
-        radisk: false,
-        multicast: options.multicast ?? false,
-        axe: options.axe ?? false,
-      };
-
-      log("Creating new Gun instance with config:", config);
-      this.gun = new Gun(config);
-    }
-
+    this.authToken = authToken;
+    this.gun = gun;
     this.user = this.gun.user().recall({ sessionStorage: true });
-
     this.restrictPut();
-
     this.subscribeToAuthEvents();
-  }
-
-  private async retry<T>(
-    operation: () => Promise<T>,
-    context: string,
-  ): Promise<T> {
-    let lastError: Error;
-
-    for (let i = 0; i < this.retryConfig.attempts; i++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (i < this.retryConfig.attempts - 1) {
-          const delay = this.retryConfig.delay * Math.pow(2, i);
-          log(`Retry attempt ${i + 1} for ${context} in ${delay}ms`);
-          await new Promise((r) => setTimeout(r, delay));
-        }
-      }
-    }
-
-    throw lastError!;
   }
 
   private subscribeToAuthEvents() {
@@ -123,7 +47,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -150,20 +74,6 @@ class GunDB {
         to.next(msg);
       });
     });
-  }
-
-  /**
-   * Creates a new GunDB instance with specified peers
-   * @param peers Array of peer URLs to connect to
-   * @returns New GunDB instance
-   */
-  static withPeers(peers: string[] = CONFIG.PEERS): GunDB {
-    const options: Partial<GunDBOptions> = {
-      peers,
-      localStorage: false,
-      radisk: false,
-    };
-    return new GunDB(options);
   }
 
   /**
@@ -225,7 +135,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -241,7 +151,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -256,23 +166,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
-        );
-      });
-    });
-  }
-
-  /**
-   * Unsets a node at the specified path
-   * @param path Path to unset
-   * @param node Node to unset
-   * @returns Promise resolving to operation result
-   */
-  async unset(path: string, node: any): Promise<any> {
-    return new Promise((resolve) => {
-      this.gun.get(path).put(null, (ack: any) => {
-        resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -376,7 +270,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void,
+    callback?: (result: any) => void
   ): Promise<any> {
     if (this.isAuthenticating()) {
       const err = "Authentication already in progress";
@@ -426,7 +320,7 @@ class GunDB {
 
           if (!user) {
             logError(
-              `Authentication succeeded but no user.pub available for: ${username}`,
+              `Authentication succeeded but no user.pub available for: ${username}`
             );
             resolve({
               success: false,
@@ -494,218 +388,6 @@ class GunDB {
     return pub ? { pub, user: this.gun.user() } : null;
   }
 
-  private async save(node: any, data: any): Promise<any> {
-    return this.retry(
-      () =>
-        new Promise((resolve, reject) => {
-          node.put(data, (ack: any) =>
-            ack.err ? reject(new Error(ack.err)) : resolve(data),
-          );
-        }),
-      "data save operation",
-    );
-  }
-
-  private async read(node: any): Promise<any> {
-    return this.retry(
-      () =>
-        new Promise((resolve) => {
-          node.once((data: any) => resolve(data));
-        }),
-      "data read operation",
-    );
-  }
-
-  /**
-   * Saves data to user's space
-   * @param path Path in user space
-   * @param data Data to save
-   * @returns Promise resolving to saved data
-   */
-  async saveUserData(path: string, data: any): Promise<any> {
-    if (!this.isLoggedIn()) throw new Error("User not authenticated");
-    return this.save(this.gun.user().get(path), data);
-  }
-
-  /**
-   * Gets data from user's space
-   * @param path Path in user space
-   * @returns Promise resolving to retrieved data
-   */
-  async getUserData(path: string): Promise<any> {
-    if (!this.isLoggedIn()) throw new Error("User not authenticated");
-    const data = await this.read(this.gun.user().get(path));
-    return data || null;
-  }
-
-  /**
-   * Saves data to public space
-   * @param node Node name
-   * @param key Key to store at
-   * @param data Data to save
-   * @returns Promise resolving to saved data
-   */
-  async savePublicData(node: string, key: string, data: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.gun
-        .get(node)
-        .get(key)
-        .put(data, (ack: any) => {
-          ack && ack.err ? reject(new Error(ack.err)) : resolve(data);
-        });
-    });
-  }
-
-  /**
-   * Gets data from public space
-   * @param node Node name
-   * @param key Key to retrieve
-   * @returns Promise resolving to retrieved data
-   */
-  async getPublicData(node: string, key: string): Promise<any> {
-    return new Promise((resolve) => {
-      this.gun
-        .get(node)
-        .get(key)
-        .once((data) => resolve(data || null));
-    });
-  }
-
-  /**
-   * Aggiunge dati allo spazio Frozen
-   * Frozen Space contiene dati che possono essere solo aggiunti, non modificati o rimossi.
-   * Utilizza un pattern specifico con ::: per indicare dati immutabili.
-   * @param node Node name
-   * @param key Key to store at
-   * @param data Data to save
-   * @returns Promise resolving to operation result
-   */
-  async addToFrozenSpace(node: string, key: string, data: any): Promise<any> {
-    log(`Aggiunta dati in Frozen Space: ${node}/${key}`);
-    return new Promise((resolve, reject) => {
-      // Utilizziamo il pattern ::: per indicare che il dato è immutabile
-      this.gun
-        .get(`${node}:::`)
-        .get(key)
-        .put(data, (ack: any) => {
-          if (ack && ack.err) {
-            logError(`Errore durante l'aggiunta a Frozen Space: ${ack.err}`);
-            reject(new Error(ack.err));
-          } else {
-            resolve(data);
-          }
-        });
-    });
-  }
-
-  /**
-   * Aggiunge dati allo spazio Frozen utilizzando l'hash del contenuto come chiave
-   * Combina content addressing e immutabilità per massima integrità dei dati
-   * @param node Nome del nodo
-   * @param data Dati da salvare
-   * @returns Promise che risolve con l'hash generato
-   */
-  async addHashedToFrozenSpace(node: string, data: any): Promise<string> {
-    log(`Aggiunta dati con hash in Frozen Space: ${node}`);
-    try {
-      // Calcola l'hash del contenuto
-      const { hash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data },
-      );
-
-      // Salva i dati utilizzando l'hash come chiave nello spazio immutabile
-      await this.addToFrozenSpace(node, hash, data);
-
-      log(`Dati salvati con hash: ${hash}`);
-      return hash;
-    } catch (error) {
-      logError(
-        `Errore durante l'aggiunta dati con hash a Frozen Space:`,
-        error,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Recupera dati hash-addressable dallo spazio Frozen
-   * @param node Nome del nodo
-   * @param hash Hash del contenuto
-   * @param verifyIntegrity Se true, verifica che l'hash corrisponda ai dati recuperati
-   * @returns Promise che risolve con i dati recuperati
-   */
-  async getHashedFrozenData(
-    node: string,
-    hash: string,
-    verifyIntegrity: boolean = false,
-  ): Promise<any> {
-    log(`Recupero dati con hash da Frozen Space: ${node}/${hash}`);
-    const data = await this.getFrozenData(node, hash);
-
-    if (verifyIntegrity && data) {
-      // Verifica l'integrità ricalcolando l'hash dei dati
-      const { hash: calculatedHash } = await this.hashObj(
-        typeof data === "object" ? data : { value: data },
-      );
-      if (calculatedHash !== hash) {
-        logError(
-          `Errore di integrità: l'hash calcolato (${calculatedHash}) non corrisponde all'hash fornito (${hash})`,
-        );
-        throw new Error("Integrità dei dati compromessa");
-      }
-      log(`Integrità dei dati verificata`);
-    }
-
-    return data;
-  }
-
-  /**
-   * Ottiene dati dallo spazio Frozen
-   * @param node Node name
-   * @param key Key to retrieve
-   * @returns Promise resolving to retrieved data
-   */
-  async getFrozenData(node: string, key: string): Promise<any> {
-    log(`Recupero dati da Frozen Space: ${node}/${key}`);
-    return new Promise((resolve) => {
-      this.gun
-        .get(`${node}:::`)
-        .get(key)
-        .once((data) => resolve(data || null));
-    });
-  }
-
-  /**
-   * Genera un nuovo set di coppie di chiavi
-   * @returns Promise resolving to generated key pair
-   */
-  async generateKeyPair(): Promise<any> {
-    return genKeyPair();
-  }
-
-  /**
-   * Accesses the Collections module for collection management
-   * @returns GunCollections instance
-   */
-  collections(): GunCollections {
-    if (!this._collections) {
-      this._collections = new GunCollections(this);
-    }
-    return this._collections;
-  }
-
-  /**
-   * Accesses the Consensus module for distributed consensus
-   * @param config Optional consensus configuration
-   * @returns GunConsensus instance
-   */
-  consensus(config?: any): GunConsensus {
-    if (!this._consensus) {
-      this._consensus = new GunConsensus(this, config);
-    }
-    return this._consensus;
-  }
-
   /**
    * Accesses the RxJS module for reactive programming
    * @returns GunRxJS instance
@@ -715,208 +397,6 @@ class GunDB {
       this._rxjs = new GunRxJS(this.gun);
     }
     return this._rxjs;
-  }
-
-  /**
-   * Creates a typed repository
-   * @param collection Collection name
-   * @param repository Repository constructor
-   * @param options Repository options
-   * @returns Typed repository instance
-   */
-  repository<T, R extends GunRepository<T>>(
-    collection: string,
-    repository: new (gun: GunDB, collection: string, options?: any) => R,
-    options?: any,
-  ): R {
-    return new repository(this, collection, options);
-  }
-
-  /**
-   * Encrypts a value
-   * @param value Value to encrypt
-   * @param epriv Private key
-   * @returns Promise resolving to encrypted value
-   */
-  async encrypt(value: any, epriv: any): Promise<string> {
-    return encrypt(value, epriv);
-  }
-
-  /**
-   * Decrypts a value
-   * @param value Value to decrypt
-   * @param epriv Private key
-   * @returns Promise resolving to decrypted value
-   */
-  async decrypt(value: string, epriv: any): Promise<any> {
-    return decrypt(value, epriv);
-  }
-
-  /**
-   * Signs data
-   * @param data Data to sign
-   * @param pair Key pair
-   * @returns Promise resolving to signed data
-   */
-  async sign(data: any, pair: { priv: string; pub: string }): Promise<string> {
-    return sign(data, pair);
-  }
-
-  /**
-   * Verifies signed data
-   * @param signed Signed data
-   * @param pub Public key
-   * @returns Promise resolving to verified data
-   */
-  async verify(signed: string, pub: string | { pub: string }): Promise<any> {
-    return verify(signed, pub);
-  }
-
-  /**
-   * Clears the encryption cache
-   */
-  clearCryptoCache(): void {
-    clearCache();
-  }
-
-  /**
-   * Checks if a string is a hash
-   * @param str String to check
-   * @returns True if valid hash
-   */
-  isHash(str: any): boolean {
-    return isHash(str);
-  }
-
-  /**
-   * Encrypts data between sender and receiver
-   * @param data Data to encrypt
-   * @param sender Sender
-   * @param receiver Receiver
-   * @returns Promise resolving to encrypted data
-   */
-  async encFor(data: any, sender: any, receiver: any): Promise<any> {
-    return encFor(data, sender, receiver);
-  }
-
-  /**
-   * Decrypts data between sender and receiver
-   * @param data Data to decrypt
-   * @param sender Sender
-   * @param receiver Receiver
-   * @returns Promise resolving to decrypted data
-   */
-  async decFrom(data: any, sender: any, receiver: any): Promise<any> {
-    return decFrom(data, sender, receiver);
-  }
-
-  /**
-   * Generates a hash for text
-   * @param text Text to hash
-   * @returns Promise resolving to generated hash
-   */
-  async hashText(text: string): Promise<string> {
-    const result = await hashText(text);
-    return result || "";
-  }
-
-  /**
-   * Generates a hash for an object
-   * @param obj Object to hash
-   * @returns Promise resolving to hash and serialized object
-   */
-  async hashObj(obj: any): Promise<any> {
-    return hashObj(obj);
-  }
-
-  /**
-   * Generates a short hash
-   * @param text Text to hash
-   * @param salt Optional salt
-   * @returns Promise resolving to short hash
-   */
-  async getShortHash(text: string, salt?: string): Promise<string> {
-    const result = await getShortHash(text, salt);
-    return result || "";
-  }
-
-  /**
-   * Converts a hash to URL-safe format
-   * @param unsafe Hash to convert
-   * @returns Safe hash
-   */
-  safeHash(unsafe: string | undefined): string | undefined {
-    return safeHash(unsafe);
-  }
-
-  /**
-   * Converts a safe hash back to original format
-   * @param safe Safe hash
-   * @returns Original hash
-   */
-  unsafeHash(safe: string | undefined): string | undefined {
-    return unsafeHash(safe);
-  }
-
-  /**
-   * Safely parses JSON
-   * @param input Input to parse
-   * @param def Default value
-   * @returns Parsed object
-   */
-  safeJSONParse(input: any, def = {}): any {
-    return safeJSONParse(input, def);
-  }
-
-  /**
-   * Issues a certificate
-   * @param options Certificate options
-   * @returns Promise resolving to generated certificate
-   */
-  async issueCert(options: {
-    pair: any;
-    tag?: string;
-    dot?: string;
-    users?: string;
-    personal?: boolean;
-  }): Promise<string> {
-    return issueCert(options);
-  }
-
-  /**
-   * Generates multiple certificates
-   * @param options Generation options
-   * @returns Promise resolving to generated certificates
-   */
-  async generateCerts(options: {
-    pair: any;
-    list: Array<{
-      tag: string;
-      dot?: string;
-      users?: string;
-      personal?: boolean;
-    }>;
-  }): Promise<Record<string, string>> {
-    return generateCerts(options);
-  }
-
-  /**
-   * Verifies a certificate
-   * @param cert Certificate to verify
-   * @param pub Public key
-   * @returns Promise resolving to verification result
-   */
-  async verifyCert(cert: string, pub: string | { pub: string }): Promise<any> {
-    return verifyCert(cert, pub);
-  }
-
-  /**
-   * Extracts policy from a certificate
-   * @param cert Certificate
-   * @returns Promise resolving to extracted policy
-   */
-  async extractCertPolicy(cert: string): Promise<any> {
-    return extractCertPolicy(cert);
   }
 
   /**
@@ -933,7 +413,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; error?: string }> {
     log("Impostazione suggerimento password per:", username);
 
@@ -961,7 +441,7 @@ class GunDB {
     } catch (error) {
       logError(
         "Errore durante l'impostazione del suggerimento password:",
-        error,
+        error
       );
       return { success: false, error: String(error) };
     }
@@ -975,7 +455,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Tentativo di recupero password per:", username);
 
@@ -996,11 +476,11 @@ class GunDB {
         };
       }
 
-      // Genera una prova di lavoro dalle risposte alle domande di sicurezza
-      const proofOfWork = await this.hashText(securityAnswers.join("|"));
-
       // Decripta il suggerimento della password con la prova di lavoro
-      const hint = await this.decrypt(securityData.hint, proofOfWork);
+      const hint = await this.decrypt(
+        securityData.hint,
+        await this.hashText(securityAnswers.join("|"))
+      );
 
       if (hint === undefined) {
         return {
@@ -1014,6 +494,87 @@ class GunDB {
       logError("Errore durante il recupero del suggerimento password:", error);
       return { success: false, error: String(error) };
     }
+  }
+
+  /**
+   * Hashes text with Gun.SEA
+   * @param text Text to hash
+   * @returns Promise that resolves with the hashed text
+   */
+  async hashText(text: string): Promise<string | any> {
+    if (!this._sea) {
+      this._sea = Gun.SEA;
+    }
+    return this._sea.work(text, undefined, undefined, { name: "SHA-256" });
+  }
+
+  /**
+   * Encrypts data with Gun.SEA
+   * @param data Data to encrypt
+   * @param key Encryption key
+   * @returns Promise that resolves with the encrypted data
+   */
+  async encrypt(data: any, key: string): Promise<string> {
+    if (!this._sea) {
+      this._sea = Gun.SEA;
+    }
+    return this._sea.encrypt(data, key);
+  }
+
+  /**
+   * Decrypts data with Gun.SEA
+   * @param encryptedData Encrypted data
+   * @param key Decryption key
+   * @returns Promise that resolves with the decrypted data
+   */
+  async decrypt(encryptedData: string, key: string): Promise<string | any> {
+    if (!this._sea) {
+      this._sea = Gun.SEA;
+    }
+    return this._sea.decrypt(encryptedData, key);
+  }
+
+  /**
+   * Saves user data at the specified path
+   * @param path Path to save the data
+   * @param data Data to save
+   * @returns Promise that resolves when the data is saved
+   */
+  async saveUserData(path: string, data: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const user = this.gun.user();
+      if (!user.is) {
+        reject(new Error("User not authenticated"));
+        return;
+      }
+
+      user.get(path).put(data, (ack: any) => {
+        if (ack.err) {
+          reject(new Error(ack.err));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Gets user data from the specified path
+   * @param path Path to get the data from
+   * @returns Promise that resolves with the data
+   */
+  async getUserData(path: string): Promise<any> {
+    return new Promise((resolve) => {
+      const user = this.gun.user();
+      if (!user.is) {
+        resolve(null);
+        return;
+      }
+
+      user.get(path).once((data: any) => {
+        resolve(data);
+      });
+    });
   }
 
   // Errors

@@ -13,12 +13,16 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.DIDVerifier = exports.OracleBridge = exports.RelayMembershipVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
+const gun_2 = __importDefault(require("gun"));
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
@@ -61,7 +65,7 @@ class ShogunCore {
     /** Gun database instance */
     gun;
     /** Gun user instance */
-    user;
+    user = null;
     /** GunDB wrapper */
     gundb;
     /** Storage implementation */
@@ -99,50 +103,30 @@ class ShogunCore {
                 type: error.type,
             });
         });
-        if (!config.gundb && !config.externalGun) {
-            config.gundb = {
-                localStorage: false,
-                radisk: false,
-            };
-            (0, logger_1.log)("No GunDB configuration or external Gun instance provided, using defaults");
-        }
-        else if (config.gundb) {
-            // Ensure required properties are set
-            config.gundb.localStorage = false;
-            config.gundb.radisk = false;
-        }
-        if (config.gundb?.authToken) {
-            const tokenPreview = config.gundb.authToken;
-            (0, logger_1.log)(`Auth token from config: ${tokenPreview}`);
-        }
-        else {
-            (0, logger_1.log)("No auth token in config");
-        }
         // If an external Gun instance is provided, use it
-        if (config.externalGun) {
+        if (config.gun) {
             (0, logger_1.log)("Using externally provided Gun instance");
-            const gundbConfig = {
+            const gun = config.gun;
+            gun.opt({
                 localStorage: false,
                 radisk: false,
-                authToken: config.gundb?.authToken,
-                externalGun: config.externalGun,
-            };
-            this.gundb = new gun_1.GunDB(gundbConfig);
-            this.gun = config.externalGun;
+                authToken: config.authToken,
+            });
+            this.gundb = new gun_1.GunDB(gun);
+            this.gun = gun;
         }
         else {
-            // Otherwise create a new Gun instance
-            const gundbConfig = {
-                peers: config.gundb?.peers,
-                websocket: config.gundb?.websocket ?? false,
+            (0, logger_1.log)("No external Gun instance provided, creating default GunDB");
+            // Create default Gun instance instead of returning early
+            const defaultPeers = ['http://localhost:8765/gun']; // Default fallback peer
+            const defaultGun = new gun_2.default({
+                peers: defaultPeers,
                 localStorage: false,
                 radisk: false,
-                authToken: config.gundb?.authToken,
-                multicast: config.gundb?.multicast ?? false,
-                axe: config.gundb?.axe ?? false,
-            };
-            this.gundb = new gun_1.GunDB(gundbConfig);
-            this.gun = this.gundb.getGun();
+                authToken: config.authToken,
+            });
+            this.gundb = new gun_1.GunDB(defaultGun);
+            this.gun = defaultGun;
         }
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.rx = new rxjs_integration_1.GunRxJS(this.gun);
@@ -912,8 +896,8 @@ exports.ShogunCore = ShogunCore;
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_2 = require("./gun/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
+var gun_3 = require("./gun/gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
 var metamask_1 = require("./plugins/metamask/metamask");
 Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_1.MetaMask; } });
 var stealth_1 = require("./plugins/stealth/stealth");

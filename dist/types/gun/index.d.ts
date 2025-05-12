@@ -4,4 +4,3 @@
  * with all modules integrated into the main class
  */
 export { GunDB } from "./gun";
-export type { Repository } from "./repository";
