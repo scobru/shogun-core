@@ -24,6 +24,7 @@ export enum ErrorType {
   UNKNOWN = "UnknownError",
   CONNECTOR = "CONNECTOR",
   GENERAL = "GENERAL",
+  CONTRACT = "CONTRACT",
 }
 
 /**

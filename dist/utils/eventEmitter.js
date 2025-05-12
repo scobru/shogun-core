@@ -1,11 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EventEmitter = void 0;
 /**
  * Type for any event data
  */
-import { logError } from "./logger";
+const logger_1 = require("./logger");
 /**
  * Simple event emitter implementation with generic event types
  */
-export class EventEmitter {
+class EventEmitter {
+    events;
     constructor() {
         this.events = new Map();
     }
@@ -30,7 +34,7 @@ export class EventEmitter {
                 listener(data);
             }
             catch (error) {
-                logError(`Error in event listener for ${String(event)}:`, error);
+                (0, logger_1.logError)(`Error in event listener for ${String(event)}:`, error);
             }
         });
         return true;
@@ -75,3 +79,4 @@ export class EventEmitter {
         }
     }
 }
+exports.EventEmitter = EventEmitter;

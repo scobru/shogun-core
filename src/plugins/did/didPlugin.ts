@@ -2,8 +2,7 @@ import { ethers } from "ethers";
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { ShogunDID } from "./DID";
-import { DIDPluginInterface } from "./types";
-import { DIDCreateOptions } from "../../types/did";
+import { DIDPluginInterface, DIDCreateOptions } from "./types";
 import { AuthResult } from "../../types/shogun";
 import { log, logError } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
@@ -110,6 +109,17 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
   /**
    * @inheritdoc
    */
+  async verifyDIDOnChain(did: string): Promise<{
+    isRegistered: boolean;
+    controller?: string | undefined;
+    error?: string | undefined;
+  }> {
+    return this.assertDID().verifyDIDOnChain(did);
+  }
+
+  /**
+   * @inheritdoc
+   */
   async ensureUserHasDID(options?: DIDCreateOptions): Promise<string | null> {
     try {
       const core = this.core;
@@ -123,52 +133,17 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
         return null;
       }
 
-      // Verifica se l'utente ha già un DID
-      let did = await this.getCurrentUserDID();
-
-      // Se l'utente ha già un DID, lo restituiamo
-      if (did) {
-        log(`User already has DID: ${did}`);
-
-        // Se sono state fornite opzioni, aggiorniamo il documento DID
-        if (options && Object.keys(options).length > 0) {
-          try {
-            const updated = await this.updateDIDDocument(did, {
-              service: options.services?.map((service, index) => ({
-                id: `${did}#service-${index + 1}`,
-                type: service.type,
-                serviceEndpoint: service.endpoint,
-              })),
-            });
-
-            if (updated) {
-              log(`Updated DID document for: ${did}`);
-            }
-          } catch (updateError) {
-            logError("Error updating DID document:", updateError);
-          }
-        }
-
-        return did;
-      }
-
-      // Se l'utente non ha un DID, ne creiamo uno nuovo
-      log("Creating new DID for authenticated user");
-      const userPub = core.gundb.gun.user().is?.pub ?? "";
-
-      const mergedOptions: DIDCreateOptions = {
-        network: "main",
-        controller: userPub,
-        ...options,
-      };
-
-      did = await this.createDID(mergedOptions);
-
-      // Emetti evento di creazione DID
-      core.emit("did:created", { did, userPub });
-
-      log(`Created new DID for user: ${did}`);
-      return did || null;
+      // Utilizziamo una Promise con timeout per evitare blocchi
+      return await Promise.race([
+        this._ensureUserHasDIDWithTimeout(options),
+        // Promise di timeout che si risolve dopo 5 secondi
+        new Promise<string | null>((resolve) => {
+          setTimeout(() => {
+            logError("Timeout during DID creation/verification");
+            resolve(null);
+          }, 5000);
+        }),
+      ]);
     } catch (error) {
       ErrorHandler.handle(
         ErrorType.DID,
@@ -178,5 +153,64 @@ export class DIDPlugin extends BasePlugin implements DIDPluginInterface {
       );
       return null;
     }
+  }
+
+  /**
+   * Implementation of the ensureUserHasDID with timeout handling
+   * @param options DID creation options
+   * @returns The DID identifier or null if failed
+   * @private
+   */
+  private async _ensureUserHasDIDWithTimeout(
+    options?: DIDCreateOptions,
+  ): Promise<string | null> {
+    const core = this.assertInitialized();
+
+    // Verifica se l'utente ha già un DID
+    let did = await this.getCurrentUserDID();
+
+    // Se l'utente ha già un DID, lo restituiamo
+    if (did) {
+      log(`User already has DID: ${did}`);
+
+      // Se sono state fornite opzioni, aggiorniamo il documento DID
+      if (options && Object.keys(options).length > 0) {
+        try {
+          const updated = await this.updateDIDDocument(did, {
+            service: options.services?.map((service, index) => ({
+              id: `${did}#service-${index + 1}`,
+              type: service.type,
+              serviceEndpoint: service.endpoint,
+            })),
+          });
+
+          if (updated) {
+            log(`Updated DID document for: ${did}`);
+          }
+        } catch (updateError) {
+          logError("Error updating DID document:", updateError);
+        }
+      }
+
+      return did;
+    }
+
+    // Se l'utente non ha un DID, ne creiamo uno nuovo
+    log("Creating new DID for authenticated user");
+    const userPub = core.gundb.gun.user().is?.pub ?? "";
+
+    const mergedOptions: DIDCreateOptions = {
+      network: "main",
+      controller: userPub,
+      ...options,
+    };
+
+    did = await this.createDID(mergedOptions);
+
+    // Emetti evento di creazione DID
+    core.emit("did:created", { did, userPub });
+
+    log(`Created new DID for user: ${did}`);
+    return did || null;
   }
 }

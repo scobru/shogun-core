@@ -2,7 +2,7 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { logDebug, logError, logWarn } from "../../utils/logger";
+import { log, logDebug, logError, logWarn } from "../../utils/logger";
 import CONFIG from "../../config";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -12,7 +12,7 @@ import {
   EthereumProvider,
   SignatureCache,
   MetaMaskConfig,
-} from "../../types/metamask";
+} from "./types";
 
 // Extend the Window interface to include ethereum
 declare global {
@@ -34,7 +34,6 @@ declare global {
  * Class for MetaMask connection
  */
 class MetaMask extends EventEmitter {
-  public readonly AUTH_DATA_TABLE: string;
   private readonly MESSAGE_TO_SIGN = "I Love Shogun!";
   private readonly DEFAULT_CONFIG: MetaMaskConfig = {
     cacheDuration: 30 * 60 * 1000, // 30 minutes
@@ -45,15 +44,14 @@ class MetaMask extends EventEmitter {
 
   private readonly config: MetaMaskConfig;
   private readonly signatureCache: Map<string, SignatureCache> = new Map();
-  private provider: ethers.BrowserProvider | null = null;
+  private provider: ethers.BrowserProvider | ethers.JsonRpcProvider | null =
+    null;
   private customProvider: ethers.JsonRpcProvider | null = null;
   private customWallet: ethers.Wallet | null = null;
 
   constructor(config: Partial<MetaMaskConfig> = {}) {
     super();
     this.config = { ...this.DEFAULT_CONFIG, ...config };
-    this.AUTH_DATA_TABLE =
-      CONFIG.GUN_TABLES.AUTHENTICATIONS || "Authentications";
     this.initProvider();
     this.setupEventListeners();
   }
@@ -259,14 +257,16 @@ class MetaMask extends EventEmitter {
    * Generates credentials with caching
    */
   async generateCredentials(address: string): Promise<MetaMaskCredentials> {
-    logDebug("Generating credentials for address:", address);
+    log("Generating credentials for address:", address);
     try {
       const validAddress = this.validateAddress(address);
+
+      log("Valid Address:", validAddress);
 
       // Check cache first
       const cachedSignature = this.getCachedSignature(validAddress);
       if (cachedSignature) {
-        logDebug("Using cached signature for address:", validAddress);
+        log("Using cached signature for address:", validAddress);
         return this.generateCredentialsFromSignature(
           validAddress,
           cachedSignature,
@@ -274,6 +274,7 @@ class MetaMask extends EventEmitter {
       }
 
       try {
+        log("Request signature with timeout");
         // Tentiamo di ottenere la firma con timeout
         const signature = await this.requestSignatureWithTimeout(
           validAddress,
@@ -313,6 +314,7 @@ class MetaMask extends EventEmitter {
     address: string,
     signature: string,
   ): MetaMaskCredentials {
+    log("Generating credentials from signature");
     const username = `mm_${address.toLowerCase()}`;
     const password = ethers.keccak256(
       ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`),
@@ -389,6 +391,8 @@ class MetaMask extends EventEmitter {
         window.ethereum.on("accountsChanged", errorHandler);
       }
 
+      log("Initialize and Sign");
+
       const initializeAndSign = async () => {
         try {
           if (!this.provider) {
@@ -401,15 +405,18 @@ class MetaMask extends EventEmitter {
           const signer = await this.provider.getSigner();
           const signerAddress = await signer.getAddress();
 
+          log("Signer:", signer);
+          log("Signer Address:", signerAddress);
+
           if (signerAddress.toLowerCase() !== address.toLowerCase()) {
             throw new Error(
               `Signer address (${signerAddress}) does not match expected address (${address})`,
             );
           }
 
-          logDebug(`Requesting signature for message: ${message}`);
+          log(`Requesting signature for message: ${message}`);
           const signature = await signer.signMessage(message);
-          logDebug("Signature obtained successfully");
+          log("Signature obtained successfully");
 
           cleanup();
           resolve(signature);
@@ -420,7 +427,9 @@ class MetaMask extends EventEmitter {
         }
       };
 
-      initializeAndSign();
+      const signature = initializeAndSign();
+
+      return signature;
     });
   }
 
@@ -480,6 +489,23 @@ class MetaMask extends EventEmitter {
         `Unable to get Ethereum signer: ${error.message || "Unknown error"}`,
       );
     }
+  }
+
+  /**
+   * Get active provider instance using BrowserProvider
+   */
+  public async getProvider(): Promise<
+    ethers.JsonRpcProvider | ethers.BrowserProvider
+  > {
+    if (this.customProvider) {
+      return this.customProvider;
+    }
+
+    if (!this.provider) {
+      this.initProvider();
+    }
+
+    return this.provider as ethers.JsonRpcProvider | ethers.BrowserProvider;
   }
 
   /**

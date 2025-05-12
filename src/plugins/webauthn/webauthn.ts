@@ -17,8 +17,8 @@ import {
   WebAuthnOperationOptions,
   WebAuthnCredentialData,
   WebAuthnVerificationResult,
-} from "../../types/webauthn";
-import { IGunInstance } from "../../types/gun";
+} from "./types";
+import { IGunInstance } from "gun";
 
 /**
  * Extends Window interface to include WebauthnAuth

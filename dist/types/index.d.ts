@@ -1,13 +1,13 @@
 import { GunDB } from "./gun/gun";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
-import { IGunInstance } from "gun/types";
+import { IGunUserInstance } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "./utils/errorHandler";
-import { IGunUserInstance } from "gun";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
+import { GunInstance } from "./gun/types";
 export { ShogunDID } from "./plugins/did/DID";
 export type { DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
 export { ErrorHandler, ErrorType } from "./utils/errorHandler";
@@ -15,6 +15,12 @@ export type { ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
 export type { ShogunPlugin, PluginManager } from "./types/plugin";
+export { RelayMembershipVerifier } from "./relay";
+export type { RelayMembershipConfig } from "./relay";
+export { OracleBridge } from "./relay";
+export type { OracleBridgeConfig } from "./relay";
+export { DIDVerifier } from "./relay";
+export type { DIDVerifierConfig } from "./relay";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -31,7 +37,7 @@ export declare class ShogunCore implements IShogunCore {
     /** Current API version - used for deprecation warnings and migration guidance */
     static readonly API_VERSION = "2.0.0";
     /** Gun database instance */
-    gun: IGunInstance<any>;
+    gun: GunInstance<any>;
     /** Gun user instance */
     user: IGunUserInstance<any> | null;
     /** GunDB wrapper */
@@ -103,7 +109,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to observe (can be a string or a Gun chain)
      * @returns Observable that emits whenever the node changes
      */
-    observe<T>(path: string): Observable<T>;
+    rxGet<T>(path: string): Observable<T>;
     /**
      * Match data based on Gun's '.map()' and convert to Observable
      * @param path - Path to the collection
@@ -114,7 +120,7 @@ export declare class ShogunCore implements IShogunCore {
     /**
      * Put data and return an Observable
      * @param path - Path where to put the data
-     * @param data - Data to put
+     * @param oata - Data to put
      * @returns Observable that completes when the put is acknowledged
      */
     rxPut<T>(path: string | any, data: T): Observable<T>;
@@ -130,7 +136,7 @@ export declare class ShogunCore implements IShogunCore {
      * @param path - Path to get data from
      * @returns Observable that emits the data once
      */
-    onceObservable<T>(path: string | any): Observable<T>;
+    rxOnce<T>(path: string | any): Observable<T>;
     /**
      * Compute derived values from gun data
      * @param sources - Array of paths or observables to compute from
@@ -202,6 +208,12 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     /**
+     * Ensure the current user has a DID associated asynchronously
+     * @param signUpResult The result of the signup process
+     * @private
+     */
+    private ensureUserHasDIDAsync;
+    /**
      * Ensure the current user has a DID associated, creating one if needed
      * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
      *   - network: The network to use (default: 'main')
@@ -246,17 +258,6 @@ export declare class ShogunCore implements IShogunCore {
      */
     userGet(path: string): Promise<any>;
     /**
-     * Set the RPC URL used for Ethereum network connections
-     * @param rpcUrl The RPC provider URL to use
-     * @returns True if the URL was successfully set
-     */
-    setRpcUrl(rpcUrl: string): boolean;
-    /**
-     * Get the currently configured RPC URL
-     * @returns The current provider URL or null if not set
-     */
-    getRpcUrl(): string | null;
-    /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
      * @param eventName The name of the event to emit.
@@ -292,7 +293,7 @@ export * from "./types/shogun";
 export { GunDB } from "./gun/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
-export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./types/stealth";
+export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
-export { ShogunEventEmitter } from "./events";
+export { ShogunEventEmitter } from "./types/events";

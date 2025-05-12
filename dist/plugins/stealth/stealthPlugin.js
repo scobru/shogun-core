@@ -1,17 +1,17 @@
-import { BasePlugin } from "../base";
-import { Stealth } from "./stealth";
-import { log } from "../../utils/logger";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StealthPlugin = void 0;
+const base_1 = require("../base");
+const stealth_1 = require("./stealth");
+const logger_1 = require("../../utils/logger");
 /**
  * Plugin per la gestione delle funzionalità Stealth in ShogunCore
  */
-export class StealthPlugin extends BasePlugin {
-    constructor() {
-        super(...arguments);
-        this.name = "stealth";
-        this.version = "1.0.0";
-        this.description = "Provides stealth address functionality for ShogunCore";
-        this.stealth = null;
-    }
+class StealthPlugin extends base_1.BasePlugin {
+    name = "stealth";
+    version = "1.0.0";
+    description = "Provides stealth address functionality for ShogunCore";
+    stealth = null;
     /**
      * @inheritdoc
      */
@@ -20,9 +20,12 @@ export class StealthPlugin extends BasePlugin {
         if (!core.storage) {
             throw new Error("Storage dependency not available in core");
         }
+        if (!core.gun) {
+            throw new Error("Gun dependency not available in core");
+        }
         // Inizializziamo il modulo Stealth
-        this.stealth = new Stealth(core.storage);
-        log("Stealth plugin initialized");
+        this.stealth = new stealth_1.Stealth(core.gun, core.storage);
+        (0, logger_1.log)("Stealth plugin initialized");
     }
     /**
      * @inheritdoc
@@ -30,7 +33,7 @@ export class StealthPlugin extends BasePlugin {
     destroy() {
         this.stealth = null;
         super.destroy();
-        log("Stealth plugin destroyed");
+        (0, logger_1.log)("Stealth plugin destroyed");
     }
     /**
      * Assicura che il modulo Stealth sia inizializzato
@@ -47,7 +50,7 @@ export class StealthPlugin extends BasePlugin {
      * @inheritdoc
      */
     async generateEphemeralKeyPair() {
-        return this.assertStealth().generateEphemeralKeyPair();
+        return this.assertStealth().createAccount();
     }
     /**
      * @inheritdoc
@@ -59,24 +62,52 @@ export class StealthPlugin extends BasePlugin {
      * @inheritdoc
      */
     async scanStealthAddresses(addresses, privateKeyOrSpendKey) {
-        return this.assertStealth().scanStealthAddresses(addresses, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("scanStealthAddresses è deprecato. Usa openStealthAddress per ogni indirizzo.");
+        return Promise.resolve([]);
     }
     /**
      * @inheritdoc
      */
     async isStealthAddressMine(stealthData, privateKeyOrSpendKey) {
-        return this.assertStealth().isStealthAddressMine(stealthData, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("isStealthAddressMine è deprecato");
+        return Promise.resolve(false);
     }
     /**
      * @inheritdoc
      */
     async getStealthPrivateKey(stealthData, privateKeyOrSpendKey) {
-        return this.assertStealth().getStealthPrivateKey(stealthData, privateKeyOrSpendKey);
+        // Implementazione per compatibilità
+        console.warn("getStealthPrivateKey è deprecato. Usa openStealthAddress");
+        return Promise.resolve("0x" + "0".repeat(64));
     }
     /**
      * @inheritdoc
      */
-    async openStealthAddress(stealthAddress, ephemeralPublicKey, pair) {
-        return this.assertStealth().openStealthAddress(stealthAddress, ephemeralPublicKey, pair);
+    async openStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey) {
+        // Ottieni le chiavi dell'utente
+        const keys = await this.getStealthKeys();
+        // Converti le chiavi stringhe in oggetti EphemeralKeyPair
+        const viewingKeyPair = {
+            pub: keys.viewingKey,
+            priv: keys.viewingKey,
+            epub: keys.viewingKey,
+            epriv: keys.viewingKey,
+        };
+        const spendingKeyPair = {
+            pub: keys.spendingKey,
+            priv: keys.spendingKey,
+            epub: keys.spendingKey,
+            epriv: keys.spendingKey,
+        };
+        return this.assertStealth().openStealthAddress(stealthAddress, encryptedRandomNumber, ephemeralPublicKey, spendingKeyPair, viewingKeyPair);
+    }
+    /**
+     * @inheritdoc
+     */
+    async getStealthKeys() {
+        return this.assertStealth().getStealthKeys();
     }
 }
+exports.StealthPlugin = StealthPlugin;

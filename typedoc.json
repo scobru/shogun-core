@@ -11,7 +11,7 @@
         "invalidLink": true,
         "notExported": false
     },
-    "exclude": ["**/*+(spec|test).ts", "**/dist/**/*", "**/node_modules/**/*"],
+    "exclude": ["**/*+(spec|test).ts", "**/dist/**/*", "**/node_modules/**/*", "**/examples/**/*"],
     "visibilityFilters": {
         "protected": false,
         "private": false,

@@ -1,6 +1,5 @@
 import { log, logError, logWarn } from "../../utils/logger";
 import { ShogunStorage } from "../../storage/storage";
-import { WalletInfo } from "../../types/shogun";
 import SEA from "gun/sea";
 import { HDNodeWallet, ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -13,7 +12,8 @@ import {
   WalletBackupOptions,
   WalletImportOptions,
   WalletEventType,
-} from "../../types/wallet";
+  WalletInfo,
+} from "./types";
 
 // Rinominiamo le interfacce locali per evitare conflitti
 export type WalletPath = IWalletPath;
@@ -41,6 +41,8 @@ export class WalletManager extends EventEmitter {
   > = new Map();
   private readonly config: WalletConfig;
   private transactionMonitoringInterval: NodeJS.Timeout | null = null;
+  private provider: ethers.JsonRpcProvider | null = null;
+  private signer: ethers.Wallet | null = null;
 
   /**
    * Creates a new WalletManager instance
@@ -231,8 +233,13 @@ export class WalletManager extends EventEmitter {
    */
   private async checkPendingTransactions() {
     const provider = this.getProvider();
+    if (!provider) {
+      logWarn(
+        "Provider non disponibile, impossibile controllare transazioni pendenti",
+      );
+      return;
+    }
 
-    // Correzione: utilizziamo entries() per iterare sulla Map
     for (const [txHash, tx] of this.pendingTransactions.entries()) {
       try {
         const receipt = await provider.getTransactionReceipt(txHash);
@@ -281,17 +288,36 @@ export class WalletManager extends EventEmitter {
   setRpcUrl(rpcUrl: string): void {
     this.config.rpcUrl = rpcUrl;
     log(`RPC Provider configured: ${rpcUrl}`);
+    if (!this.provider) {
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    }
+    this.signer = this.getSigner();
   }
 
   /**
    * Gets a configured JSON RPC provider instance
    * @returns An ethers.js JsonRpcProvider instance
    */
-  getProvider(): ethers.JsonRpcProvider {
+  getProvider(): ethers.JsonRpcProvider | null {
+    return this.provider;
+  }
+
+  getSigner(): ethers.Wallet {
+    const wallet = this.getMainWallet();
+
+    if (!this.provider) {
+      throw new Error("Provider not available");
+    }
+
+    return wallet.connect(this.provider);
+  }
+
+  setSigner(signer: ethers.Wallet): void {
     if (!this.config.rpcUrl) {
       throw new Error("RPC URL not configured");
     }
-    return new ethers.JsonRpcProvider(this.config.rpcUrl);
+    const provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
+    this.signer = signer.connect(provider);
   }
 
   /**
@@ -505,19 +531,6 @@ export class WalletManager extends EventEmitter {
             }),
           );
 
-          // Check if it's a MetaMask user and use alternative approach
-          if (user.is.alias && user.is.alias.startsWith("0x")) {
-            log(
-              "getMainWallet: MetaMask user detected, using alternative approach",
-            );
-            // For MetaMask, use address as seed
-            const address = user.is.alias;
-            const seed = `metamask-${address}-${Date.now()}`;
-            const privateKey = this.generatePrivateKeyFromString(seed);
-            this.mainWallet = new ethers.Wallet(privateKey);
-            return this.mainWallet;
-          }
-
           throw new Error("Insufficient user data to generate wallet");
         }
 
@@ -538,6 +551,45 @@ export class WalletManager extends EventEmitter {
       logError("Error retrieving main wallet:", error);
       throw error;
     }
+  }
+
+  /**
+   * Get the main wallet credentials
+   */
+  getMainWalletCredentials(): { address: string; priv: string } {
+    const user = this.gun.user().recall({ sessionStorage: true });
+    if (!user || !user.is) {
+      log("getMainWallet: User not authenticated");
+      throw new Error("User not authenticated");
+    }
+
+    // Check if we have access to required properties
+    if (!user._ || !user._.sea || !user._.sea.priv || !user._.sea.pub) {
+      log(
+        "getMainWallet: Insufficient user data",
+        JSON.stringify({
+          hasUserData: !!user._,
+          hasSea: !!(user._ && user._.sea),
+          hasPriv: !!(user._ && user._.sea && user._.sea.priv),
+          hasPub: !!(user._ && user._.sea && user._.sea.pub),
+        }),
+      );
+
+      throw new Error("Insufficient user data to generate wallet");
+    }
+
+    const userSeed = user._.sea.priv;
+    const userPub = user._.sea.pub;
+    const userAlias = user.is.alias;
+
+    // Create unique seed for this user
+    const seed = `${userSeed}|${userPub}|${userAlias}`;
+
+    // Use new secure method to generate private key
+    const privateKey = this.generatePrivateKeyFromString(seed);
+    this.mainWallet = new ethers.Wallet(privateKey);
+
+    return { address: this.mainWallet.address, priv: privateKey };
   }
 
   /**
@@ -619,7 +671,8 @@ export class WalletManager extends EventEmitter {
         if (gunMnemonic) {
           log("Mnemonic retrieved from GunDB");
           log("gunMnemonic: ", gunMnemonic);
-          return gunMnemonic;
+          const decrypted = await this.decryptSensitiveData(gunMnemonic);
+          return decrypted;
         }
       }
 
@@ -668,7 +721,9 @@ export class WalletManager extends EventEmitter {
           return;
         }
 
-        await user.get("master_mnemonic").put(mnemonic);
+        // encrypt mnemonic before saving to GunDB
+        const encryptedMnemonic = await this.encryptSensitiveData(mnemonic);
+        await user.get("master_mnemonic").put(encryptedMnemonic);
         log("Mnemonic saved to GunDB");
       }
 
@@ -855,6 +910,12 @@ export class WalletManager extends EventEmitter {
       }
 
       const provider = this.getProvider();
+      if (!provider) {
+        throw new Error(
+          "Provider non disponibile. Imposta prima un RPC URL con setRpcUrl()",
+        );
+      }
+
       const balance = await provider.getBalance(address);
       const formattedBalance = ethers.formatEther(balance);
 
@@ -886,6 +947,9 @@ export class WalletManager extends EventEmitter {
 
   async getNonce(wallet: ethers.Wallet): Promise<number> {
     const provider = this.getProvider();
+    if (!provider) {
+      throw new Error("Provider non inizializzato. Chiamare setRpcUrl prima");
+    }
     const nonce = await provider.getTransactionCount(wallet.address);
     return nonce;
   }
@@ -898,6 +962,9 @@ export class WalletManager extends EventEmitter {
   ): Promise<string> {
     try {
       const provider = this.getProvider();
+      if (!provider) {
+        throw new Error("Provider not available");
+      }
       wallet = wallet.connect(provider);
 
       // Get latest fee data
@@ -1006,6 +1073,10 @@ export class WalletManager extends EventEmitter {
 
       // If no provider supplied, use configured one
       const actualProvider = provider || this.getProvider();
+
+      if (!actualProvider) {
+        throw new Error("Provider not available");
+      }
 
       // Get nonce
       const nonce = await actualProvider.getTransactionCount(wallet.address);

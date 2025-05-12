@@ -1,8 +1,11 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { MetaMask } from "./metamask";
-import { MetaMaskPluginInterface } from "./types";
-import { MetaMaskCredentials, ConnectionResult } from "../../types/metamask";
+import {
+  MetaMaskCredentials,
+  ConnectionResult,
+  MetaMaskPluginInterface,
+} from "./types";
 import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
@@ -76,6 +79,7 @@ export class MetaMaskPlugin
    * @inheritdoc
    */
   async generateCredentials(address: string): Promise<MetaMaskCredentials> {
+    log("Calling credential generation");
     return this.assertMetaMask().generateCredentials(address);
   }
 
@@ -98,6 +102,15 @@ export class MetaMaskPlugin
    */
   async getSigner(): Promise<ethers.Signer> {
     return this.assertMetaMask().getSigner();
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async getProvider(): Promise<
+    ethers.JsonRpcProvider | ethers.BrowserProvider
+  > {
+    return this.assertMetaMask().getProvider();
   }
 
   /**
@@ -237,7 +250,6 @@ export class MetaMaskPlugin
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        password: "********",
         did: did || undefined,
       };
     } catch (error: any) {
@@ -386,7 +398,6 @@ export class MetaMaskPlugin
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        password: credentials.password,
         did: did ?? undefined,
       };
     } catch (error: any) {

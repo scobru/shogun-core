@@ -1,12 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BasePlugin = void 0;
+const eventEmitter_1 = require("../utils/eventEmitter");
 /**
  * Classe base per tutti i plugin di ShogunCore
  * Fornisce funzionalità comuni e implementazione base dell'interfaccia ShogunPlugin
  */
-export class BasePlugin {
-    constructor() {
-        /** Riferimento all'istanza di ShogunCore */
-        this.core = null;
-    }
+class BasePlugin extends eventEmitter_1.EventEmitter {
+    /** Descrizione opzionale del plugin */
+    description;
+    /** Categoria del plugin */
+    _category;
+    /** Riferimento all'istanza di ShogunCore */
+    core = null;
     /**
      * Inizializza il plugin con un'istanza di ShogunCore
      * @param core Istanza di ShogunCore
@@ -32,3 +38,4 @@ export class BasePlugin {
         return this.core;
     }
 }
+exports.BasePlugin = BasePlugin;

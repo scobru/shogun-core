@@ -10,12 +10,12 @@ import {
   PluginCategory,
   CorePlugins,
 } from "./types/shogun";
-import { IGunInstance } from "gun/types";
+import { IGunInstance, IGunUserInstance } from "gun";
+import Gun from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-import { DIDCreateOptions } from "./types/did";
-import { IGunUserInstance } from "gun";
+import { DIDCreateOptions } from "./plugins/did";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
@@ -26,6 +26,10 @@ import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
+import { WalletManager } from "./plugins";
+import { GunInstance } from "./gun/types";
+
+// Import relay verification
 
 export { ShogunDID } from "./plugins/did/DID";
 export type {
@@ -40,6 +44,14 @@ export type { ShogunError } from "./utils/errorHandler";
 export { GunRxJS } from "./gun/rxjs-integration";
 export * from "./plugins";
 export type { ShogunPlugin, PluginManager } from "./types/plugin";
+
+// Export relay verification
+export { RelayMembershipVerifier } from "./relay";
+export type { RelayMembershipConfig } from "./relay";
+export { OracleBridge } from "./relay";
+export type { OracleBridgeConfig } from "./relay";
+export { DIDVerifier } from "./relay";
+export type { DIDVerifierConfig } from "./relay";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -58,10 +70,10 @@ export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "2.0.0";
 
   /** Gun database instance */
-  public gun: IGunInstance<any>;
+  public gun!: GunInstance<any>;
 
   /** Gun user instance */
-  public user: IGunUserInstance<any> | null;
+  public user: IGunUserInstance<any> | null = null;
 
   /** GunDB wrapper */
   public gundb: GunDB;
@@ -79,7 +91,7 @@ export class ShogunCore implements IShogunCore {
   public config: ShogunSDKConfig;
 
   /** RxJS integration */
-  public rx: GunRxJS;
+  public rx!: GunRxJS;
 
   /** Plugin registry */
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
@@ -112,44 +124,38 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    if (!config.gundb) {
-      config.gundb = {};
-      log("No GunDB configuration provided, using defaults");
-    }
+    // If an external Gun instance is provided, use it
+    if (config.gun) {
+      log("Using externally provided Gun instance");
 
-    if (config.gundb.authToken) {
-      const tokenPreview = config.gundb.authToken;
-      log(`Auth token from config: ${tokenPreview}`);
+      const gun = config.gun;
+
+      gun.opt({
+        localStorage: false,
+        radisk: false,
+        authToken: config.authToken,
+      });
+
+      this.gundb = new GunDB(gun);
+      this.gun = gun;
     } else {
-      log("No auth token in config");
+      log("No external Gun instance provided, creating default GunDB");
+      // Create default Gun instance instead of returning early
+      const defaultPeers = ["http://localhost:8765/gun"]; // Default fallback peer
+      const defaultGun = new Gun({
+        peers: defaultPeers,
+        localStorage: false,
+        radisk: false,
+        authToken: config.authToken,
+      });
+
+      this.gundb = new GunDB(defaultGun);
+      this.gun = defaultGun;
     }
 
-    const gundbConfig = {
-      peers: config.gundb?.peers,
-      websocket: config.gundb?.websocket ?? false,
-      localStorage: config.gundb?.localStorage ?? false,
-      radisk: config.gundb?.radisk ?? false,
-      authToken: config.gundb?.authToken,
-      multicast: config.gundb?.multicast ?? false,
-      axe: config.gundb?.axe ?? false,
-    };
-
-    this.gundb = new GunDB(gundbConfig);
-    this.gun = this.gundb.getGun();
     this.user = this.gun.user().recall({ sessionStorage: true });
 
     this.rx = new GunRxJS(this.gun);
-
-    if (config.providerUrl) {
-      this.provider = new ethers.JsonRpcProvider(config.providerUrl);
-      log(`Using configured provider URL: ${config.providerUrl}`);
-    } else {
-      // Default provider (can be replaced as needed)
-      this.provider = ethers.getDefaultProvider("mainnet");
-      log(
-        "WARNING: Using default Ethereum provider. For production use, configure a specific provider URL.",
-      );
-    }
 
     this.registerBuiltinPlugins(config);
 
@@ -219,9 +225,7 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  // *********************************************************************************************************
   // 🔌 PLUGIN MANAGER 🔌
-  // *********************************************************************************************************
 
   /**
    * Register a new plugin with the SDK
@@ -307,24 +311,24 @@ export class ShogunCore implements IShogunCore {
       default:
         // Default authentication is provided by the core class
         return {
-          login: (username: string, password: string) =>
-            this.login(username, password),
-          signUp: (username: string, password: string, confirm?: string) =>
-            this.signUp(username, password, confirm),
+          login: (username: string, password: string) => {
+            this.login(username, password);
+          },
+          signUp: (username: string, password: string, confirm?: string) => {
+            this.signUp(username, password, confirm);
+          },
         };
     }
   }
 
-  // *********************************************************************************************************
   // 🔄 RXJS INTEGRATION 🔄
-  // *********************************************************************************************************
 
   /**
    * Observe a Gun node for changes
    * @param path - Path to observe (can be a string or a Gun chain)
    * @returns Observable that emits whenever the node changes
    */
-  observe<T>(path: string): Observable<T> {
+  rxGet<T>(path: string): Observable<T> {
     return this.rx.observe<T>(path);
   }
 
@@ -344,7 +348,7 @@ export class ShogunCore implements IShogunCore {
   /**
    * Put data and return an Observable
    * @param path - Path where to put the data
-   * @param data - Data to put
+   * @param oata - Data to put
    * @returns Observable that completes when the put is acknowledged
    */
   rxPut<T>(path: string | any, data: T): Observable<T> {
@@ -366,7 +370,7 @@ export class ShogunCore implements IShogunCore {
    * @param path - Path to get data from
    * @returns Observable that emits the data once
    */
-  onceObservable<T>(path: string | any): Observable<T> {
+  rxOnce<T>(path: string | any): Observable<T> {
     return this.rx.once<T>(path);
   }
 
@@ -507,46 +511,60 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      const loginPromise = new Promise<AuthResult>((resolve) => {
-        this.gundb.gun.user().auth(username, password, (ack: any) => {
-          if (ack.err) {
-            log(`Login error: ${ack.err}`);
-            resolve({
-              success: false,
-              error: ack.err,
-            });
-          } else {
-            const user = this.gundb.gun.user();
-            if (!user.is) {
-              resolve({
-                success: false,
-                error: "Login failed: user not authenticated",
-              });
-            } else {
-              log("Login completed successfully");
-              const userPub = user.is?.pub || "";
-              resolve({
-                success: true,
-                userPub,
-                username,
-              });
-            }
-          }
-        });
-      });
-
       // Timeout after a configurable interval (default 15 seconds)
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
-      const timeoutPromise = new Promise<AuthResult>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            success: false,
-            error: "Login timeout",
-          });
-        }, timeoutDuration);
-      });
 
-      const result = await Promise.race([loginPromise, timeoutPromise]);
+      // Utilizziamo il timeout di ShogunCore invece di quello interno di GunDB
+      const loginPromiseWithTimeout = new Promise<AuthResult>(
+        async (resolve) => {
+          const timeoutId = setTimeout(() => {
+            resolve({
+              success: false,
+              error: "Login timeout",
+            });
+          }, timeoutDuration);
+
+          try {
+            // Utilizziamo il metodo login di GunDB
+            const gunLoginResult = (await this.gundb.login(
+              username,
+              password,
+            )) as AuthResult;
+
+            clearTimeout(timeoutId);
+
+            const walletPlugin = this.getPlugin(
+              CorePlugins.WalletManager,
+            ) as WalletManager;
+
+            if (gunLoginResult && walletPlugin) {
+              const mainWallet = walletPlugin.getMainWalletCredentials();
+              this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
+            }
+
+            if (!gunLoginResult.success) {
+              resolve({
+                success: false,
+                error: gunLoginResult.error || "Login failed",
+              });
+            } else {
+              resolve({
+                success: true,
+                userPub: gunLoginResult.userPub || "",
+                username: gunLoginResult.username || username,
+              });
+            }
+          } catch (error: any) {
+            clearTimeout(timeoutId);
+            resolve({
+              success: false,
+              error: error.message || "Login error",
+            });
+          }
+        },
+      );
+
+      const result = await loginPromiseWithTimeout;
 
       if (result.success) {
         this.eventEmitter.emit("auth:login", {
@@ -619,46 +637,61 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
+      // Emettiamo un evento di debug per monitorare il flusso
+      this.eventEmitter.emit("debug", {
+        action: "signup_start",
+        username,
+        timestamp: Date.now(),
+      });
+
+      log(`Inizializzazione registrazione per utente: ${username}`);
       const signupPromise = new Promise<SignUpResult>((resolve) => {
-        this.gundb.gun.user().create(username, password, (ack: any) => {
-          if (ack.err) {
+        // Utilizziamo direttamente il metodo signUp di GunDB che ora ha il suo timeout integrato
+        this.gundb.signUp(username, password).then((gunResult) => {
+          log(
+            `GunDB registration result: ${gunResult.success ? "success" : "failed"}`,
+          );
+
+          // Emettiamo un evento di debug per monitorare il flusso
+          this.eventEmitter.emit("debug", {
+            action: "gundb_signup_complete",
+            success: gunResult.success,
+            error: gunResult.error,
+            timestamp: Date.now(),
+          });
+
+          if (!gunResult.success) {
             resolve({
               success: false,
-              error: ack.err,
+              error: gunResult.error || "Registration failed in GunDB",
             });
           } else {
-            this.gundb.gun.user().auth(username, password, (loginAck: any) => {
-              if (loginAck.err) {
-                resolve({
-                  success: false,
-                  error: "Registration completed but login failed",
-                });
-              } else {
-                const user = this.gundb.gun.user();
-                if (!user.is) {
-                  resolve({
-                    success: false,
-                    error: "Registration completed but user not authenticated",
-                  });
-                } else {
-                  resolve({
-                    success: true,
-                    userPub: user.is?.pub || "",
-                    username: username || "",
-                  });
-                }
-              }
+            resolve({
+              success: true,
+              userPub: gunResult.userPub || "",
+              username: username || "",
             });
           }
         });
       });
 
-      const timeoutDuration = this.config?.timeouts?.signup ?? 20000;
+      const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Timeout predefinito di 30 secondi
       const timeoutPromise = new Promise<SignUpResult>((resolve) => {
         setTimeout(() => {
+          logError(
+            `Timeout a livello ShogunCore durante la registrazione utente: ${username}`,
+          );
+
+          // Emettiamo un evento di debug per monitorare il flusso
+          this.eventEmitter.emit("debug", {
+            action: "signup_timeout",
+            username,
+            timestamp: Date.now(),
+          });
+
           resolve({
             success: false,
-            error: "Registration timeout",
+            error: "Registration timeout at ShogunCore level",
           });
         }, timeoutDuration);
       });
@@ -667,27 +700,50 @@ export class ShogunCore implements IShogunCore {
       const result = await Promise.race([signupPromise, timeoutPromise]);
 
       if (result.success) {
+        log(`Registrazione completata con successo per: ${username}`);
         this.eventEmitter.emit("auth:signup", {
           userPub: result.userPub ?? "",
           username,
         });
 
-        try {
-          const did = await this.ensureUserHasDID();
+        // Per evitare di complicare ulteriormente il processo, disabilita temporaneamente
+        // la creazione del DID durante il signup finché il problema non è risolto completamente
+        // Invece, creeremo il DID al primo accesso successivo dell'utente
 
-          if (did) {
-            log(`Created DID for new user: ${did}`);
+        // Commentiamo la creazione asincrona del DID durante il signup
+        this.ensureUserHasDIDAsync(result);
 
-            result.did = did;
-          }
-        } catch (didError) {
-          logError("Error creating DID for new user:", didError);
-        }
+        // Emettiamo un evento di debug per monitorare il flusso
+        this.eventEmitter.emit("debug", {
+          action: "signup_complete",
+          username,
+          userPub: result.userPub,
+          timestamp: Date.now(),
+        });
+
+        return result;
       }
+
+      // Emettiamo un evento di debug per monitorare il flusso in caso di fallimento
+      this.eventEmitter.emit("debug", {
+        action: "signup_failed",
+        username,
+        error: result.error,
+        timestamp: Date.now(),
+      });
 
       return result;
     } catch (error: any) {
       logError(`Error during registration for user ${username}:`, error);
+
+      // Emettiamo un evento di debug per monitorare il flusso in caso di eccezione
+      this.eventEmitter.emit("debug", {
+        action: "signup_exception",
+        username,
+        error: error.message || "Unknown error",
+        timestamp: Date.now(),
+      });
+
       return {
         success: false,
         error: error.message ?? "Unknown error during registration",
@@ -695,9 +751,30 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  // *********************************************************************************************************
+  /**
+   * Ensure the current user has a DID associated asynchronously
+   * @param signUpResult The result of the signup process
+   * @private
+   */
+  private ensureUserHasDIDAsync(signUpResult: SignUpResult): void {
+    if (!signUpResult.success) return;
+
+    // Eseguiamo l'operazione in un nuovo contesto asincrono
+    setTimeout(async () => {
+      try {
+        const did = await this.ensureUserHasDID();
+        if (did) {
+          log(`Created DID for new user: ${did}`);
+          // Aggiorniamo solo internamente il risultato
+          signUpResult.did = did;
+        }
+      } catch (didError) {
+        logError("Error creating DID for new user (async):", didError);
+      }
+    }, 100); // Ritarda leggermente l'esecuzione per dare priorità al completamento della registrazione
+  }
+
   // 🤫 PRIVATE HELPER METHODS 🤫
-  // *********************************************************************************************************
 
   /**
    * Ensure the current user has a DID associated, creating one if needed
@@ -751,7 +828,7 @@ export class ShogunCore implements IShogunCore {
               /* ignore logout errors */
             }
 
-            this.gundb.gun.user().auth(username, password, (ack: any) => {
+            this.gun.user().auth(username, password, (ack: any) => {
               if (ack.err) {
                 resolveAuth({ err: ack.err });
               } else {
@@ -841,9 +918,7 @@ export class ShogunCore implements IShogunCore {
     });
   }
 
-  // *********************************************************************************************************
   // 🔫 GUN ACTIONS 🔫
-  // *********************************************************************************************************
 
   /**
    * Retrieves data from a Gun node at the specified path
@@ -916,47 +991,7 @@ export class ShogunCore implements IShogunCore {
     });
   }
 
-  // *********************************************************************************************************
-  // 🔌 PROVIDER 🔌
-  // *********************************************************************************************************
-
-  /**
-   * Set the RPC URL used for Ethereum network connections
-   * @param rpcUrl The RPC provider URL to use
-   * @returns True if the URL was successfully set
-   */
-  setRpcUrl(rpcUrl: string): boolean {
-    try {
-      if (!rpcUrl) {
-        log("Invalid RPC URL provided");
-        return false;
-      }
-
-      // Update the provider if it's already initialized
-      this.provider = new ethers.JsonRpcProvider(rpcUrl);
-
-      log(`RPC URL updated to: ${rpcUrl}`);
-      return true;
-    } catch (error) {
-      logError("Failed to set RPC URL", error);
-      return false;
-    }
-  }
-
-  /**
-   * Get the currently configured RPC URL
-   * @returns The current provider URL or null if not set
-   */
-  getRpcUrl(): string | null {
-    // Access the provider URL if available
-    return this.provider instanceof ethers.JsonRpcProvider
-      ? ((this.provider as any).connection?.url ?? null)
-      : null;
-  }
-
-  // *********************************************************************************************************
   // 📢 EVENT EMITTER 📢
-  // *********************************************************************************************************
 
   /**
    * Emits an event through the core's event emitter.
@@ -1022,7 +1057,7 @@ export type {
   StealthAddressResult,
   LogLevel,
   LogMessage,
-} from "./types/stealth";
+} from "./plugins/stealth/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
-export { ShogunEventEmitter } from "./events";
+export { ShogunEventEmitter } from "./types/events";

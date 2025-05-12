@@ -1,29 +1,36 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.qs = exports.getSet = exports.getUUID = exports.getTargetPub = exports.getPub = exports.getId = void 0;
 /**
  * Extracts the ID of a Gun node
  */
-export const getId = (node) => node?._?.["#"];
+const getId = (node) => node?._?.["#"];
+exports.getId = getId;
 /**
  * Extracts the public key from a Gun ID (e.g., ~pubKey)
  */
-export const getPub = (id) => {
+const getPub = (id) => {
     const match = /~([^@][^\.]+\.[^\.]+)/.exec(id);
     return match ? match[1] : null;
 };
+exports.getPub = getPub;
 /**
  * Extracts the final public key from a concatenated ID (e.g., trust chain)
  */
-export const getTargetPub = (id) => {
+const getTargetPub = (id) => {
     const match = /~[^@][^\.]+\.[^\.]+.*~([^@][^\.]+\.[^\.]+)$/.exec(id);
     return match ? match[1] : null;
 };
+exports.getTargetPub = getTargetPub;
 /**
  * Generates a unique UUID from Gun configuration
  */
-export const getUUID = (gun) => gun.opt()._.opt.uuid();
+const getUUID = (gun) => gun.opt()._.opt.uuid();
+exports.getUUID = getUUID;
 /**
  * Converts a Gun set into an array of nodes
  */
-export const getSet = (data, id) => {
+const getSet = (data, id) => {
     const set = data[id];
     if (!set)
         return [];
@@ -34,11 +41,13 @@ export const getSet = (data, id) => {
         .map((ref) => data[ref["#"]])
         .filter(Boolean);
 };
+exports.getSet = getSet;
 /**
  * Serializes an object into a query string
  */
-export const qs = (o, prefix = "?") => {
+const qs = (o, prefix = "?") => {
     const filtered = Object.fromEntries(Object.entries(o).filter(([_, v]) => v));
     const stringified = JSON.stringify(filtered);
     return stringified ? `${prefix}${stringified}` : "";
 };
+exports.qs = qs;

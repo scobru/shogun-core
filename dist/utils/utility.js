@@ -1,36 +1,29 @@
-/**
- * Checks if an object is a Gun instance
- * @param gun - The object to check
- * @returns True if the object is a Gun instance
- */
-export const isGunInstance = (gun) => {
-    if (!gun || typeof gun !== "object")
-        return false;
-    // Check if it has Gun methods
-    const g = gun;
-    return (typeof g.get === "function" &&
-        typeof g.put === "function" &&
-        typeof g.once === "function");
-};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.isPlatformWeb = void 0;
+exports.delay = delay;
+exports.errorAfter = errorAfter;
+exports.randomString = randomString;
 /**
  * Checks if the application is running in a web environment
  */
-export const isPlatformWeb = () => {
+const isPlatformWeb = () => {
     return typeof window !== "undefined";
 };
+exports.isPlatformWeb = isPlatformWeb;
 /**
  * Delays execution for the specified time
  * @param ms - Milliseconds to delay
  * @param passthrough - Optional value to pass through the promise
  * @returns Promise that resolves with the passthrough value
  */
-export function delay(ms, passthrough) {
+function delay(ms, passthrough) {
     return new Promise((resolve) => setTimeout(() => resolve(passthrough), ms));
 }
 /**
  * Creates a timeout that rejects with an error
  */
-export async function errorAfter(ms, error) {
+async function errorAfter(ms, error) {
     return new Promise((_, reject) => {
         setTimeout(() => {
             reject(error);
@@ -42,7 +35,7 @@ export async function errorAfter(ms, error) {
  * @param length - Length of the string
  * @returns Random string
  */
-export function randomString(length = 16) {
+function randomString(length = 16) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
     const randValues = new Uint8Array(length);

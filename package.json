@@ -1,26 +1,26 @@
 {
   "name": "shogun-core",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "description": "SHOGUN SDK - Libreria semplificata per la gestione di wallet crypto con GunDB",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
+      "require": "./dist/index.js",
       "browser": "./dist/browser/shogun-core.js",
-      "default": "./dist/index.js"
+      "default": "./dist/index.js",
+      "node": "./dist/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:esm && npm run build:cjs && npm run build:browser && npm run clean-mocks",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "build": "npm run build:cjs && npm run build:browser && npm run clean-mocks",
+    "build:cjs": "tsc",
     "build:browser": "webpack --config webpack.config.cjs",
     "build:light": "webpack --config webpack.light.config.cjs",
     "build:all": "npm run build && npm run build:light",
@@ -44,12 +44,17 @@
   "author": "Scobru",
   "license": "MIT",
   "dependencies": {
+    "ajv": "^8.17.1",
+    "assert": "^2.1.0",
     "base64url": "^3.0.1",
+    "constants-browserify": "^1.0.0",
     "ethers": "^6.13.5",
     "gun": "latest",
     "keccak256": "^1.0.6",
     "qs": "^6.14.0",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "uuid": "^11.1.0",
+    "vm-browserify": "^1.1.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

@@ -1,4 +1,48 @@
-import { MetaMaskCredentials, ConnectionResult, AuthResult } from "../../types/metamask";
+import { BaseConfig, BaseResult, BaseCacheEntry } from "../../types/common";
+import { AuthResult } from "../../types/shogun";
+/**
+ * Result of connection attempt
+ */
+export interface ConnectionResult extends BaseResult {
+    address?: string;
+    username?: string;
+    randomPassword?: string;
+}
+/**
+ * Structure for credentials generated via MetaMask
+ */
+export interface MetaMaskCredentials {
+    /** Generated username based on the address */
+    username: string;
+    /** Generated password based on the signature */
+    password: string;
+    /** Original message signed by the user */
+    message: string;
+    /** Signature provided by MetaMask */
+    signature: string;
+}
+/**
+ * Ethereum provider interface
+ */
+export interface EthereumProvider {
+    request: (args: any) => Promise<any>;
+    isMetaMask?: boolean;
+    on?: (event: string, handler: (params: any) => void) => void;
+    removeListener?: (event: string, handler: (params: any) => void) => void;
+}
+/**
+ * Cache entry for signatures
+ */
+export interface SignatureCache extends BaseCacheEntry<string> {
+    signature: string;
+    address: string;
+}
+/**
+ * MetaMask configuration options
+ */
+export interface MetaMaskConfig extends BaseConfig {
+    cacheDuration?: number;
+}
 /**
  * Interfaccia per il plugin MetaMask
  */
