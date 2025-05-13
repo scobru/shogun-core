@@ -118,7 +118,7 @@ class ShogunCore {
         else {
             (0, logger_1.log)("No external Gun instance provided, creating default GunDB");
             // Create default Gun instance instead of returning early
-            const defaultPeers = ['http://localhost:8765/gun']; // Default fallback peer
+            const defaultPeers = ["http://localhost:8765/gun"]; // Default fallback peer
             const defaultGun = new gun_2.default({
                 peers: defaultPeers,
                 localStorage: false,

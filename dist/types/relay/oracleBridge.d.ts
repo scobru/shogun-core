@@ -78,4 +78,11 @@ export declare class OracleBridge {
      * @returns True if contract address was updated successfully
      */
     setContractAddress(contractAddress: string): boolean;
+    /**
+     * Gets the timestamp of when a root was published for a specific epoch
+     *
+     * @param epochId The epoch ID to get the timestamp for
+     * @returns Promise resolving to the timestamp when the root was published or 0 if not found
+     */
+    getRootTimestamp(epochId: number | bigint): Promise<bigint>;
 }

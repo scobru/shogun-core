@@ -7,6 +7,7 @@ const logger_1 = require("../utils/logger");
 // ABI for the OracleBridge contract
 const ORACLE_BRIDGE_ABI = [
     "function roots(uint256) public view returns (bytes32)",
+    "function rootTimestamps(uint256) public view returns (uint256)",
     "function admin() public view returns (address)",
     "function epochId() public view returns (uint256)",
     "function getEpochId() external view returns (uint256)",
@@ -226,6 +227,25 @@ class OracleBridge {
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "CONTRACT_ADDRESS_UPDATE_FAILED", "Failed to update contract address", error);
             return false;
+        }
+    }
+    /**
+     * Gets the timestamp of when a root was published for a specific epoch
+     *
+     * @param epochId The epoch ID to get the timestamp for
+     * @returns Promise resolving to the timestamp when the root was published or 0 if not found
+     */
+    async getRootTimestamp(epochId) {
+        try {
+            if (!this.contract) {
+                throw new Error("Contract not initialized");
+            }
+            const result = await this.contract.getFunction("rootTimestamps")(epochId);
+            return result;
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_ROOT_TIMESTAMP_FAILED", `Failed to get timestamp for root of epoch ${epochId}`, error);
+            return BigInt(0);
         }
     }
 }
