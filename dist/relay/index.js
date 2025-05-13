@@ -1,9 +1,18 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OracleBridge = exports.DIDVerifier = exports.RelayMembershipVerifier = void 0;
-var relayMembershipVerifier_1 = require("./relayMembershipVerifier");
-Object.defineProperty(exports, "RelayMembershipVerifier", { enumerable: true, get: function () { return relayMembershipVerifier_1.RelayMembershipVerifier; } });
-var didVerifier_1 = require("./didVerifier");
-Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return didVerifier_1.DIDVerifier; } });
-var oracleBridge_1 = require("./oracleBridge");
-Object.defineProperty(exports, "OracleBridge", { enumerable: true, get: function () { return oracleBridge_1.OracleBridge; } });
+__exportStar(require("./relayMembershipVerifier"), exports);
+__exportStar(require("./didVerifier"), exports);

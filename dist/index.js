@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.DIDVerifier = exports.OracleBridge = exports.RelayMembershipVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.DIDVerifier = exports.RelayVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
@@ -42,11 +42,9 @@ Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () {
 __exportStar(require("./plugins"), exports);
 // Export relay verification
 var relay_1 = require("./relay");
-Object.defineProperty(exports, "RelayMembershipVerifier", { enumerable: true, get: function () { return relay_1.RelayMembershipVerifier; } });
+Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return relay_1.RelayVerifier; } });
 var relay_2 = require("./relay");
-Object.defineProperty(exports, "OracleBridge", { enumerable: true, get: function () { return relay_2.OracleBridge; } });
-var relay_3 = require("./relay");
-Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return relay_3.DIDVerifier; } });
+Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return relay_2.DIDVerifier; } });
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
