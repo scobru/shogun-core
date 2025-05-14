@@ -1,65 +1,107 @@
 import { ethers } from "ethers";
 import { ShogunCore } from "../index";
-export interface RelayMembershipConfig {
-    contractAddress: string;
+export interface RelayConfig {
+    registryAddress: string;
     providerUrl?: string;
 }
+export interface RelayInfo {
+    address: string;
+    owner: string;
+    url: string;
+    price: bigint;
+    daysPerMonth: number;
+}
+export interface UserSubscriptionInfo {
+    expires: bigint;
+    pubKey: string;
+    active: boolean;
+}
 /**
- * RelayMembershipVerifier - A class to verify if an address or public key is part
- * of the Shogun protocol using the RelayMembership contract
+ * RelayVerifier - A class to interact with the Shogun relay network
+ * using the RelayRegistry and IndividualRelay contracts
  */
-export declare class RelayMembershipVerifier {
-    private contract;
+export declare class RelayVerifier {
+    private registryContract;
     private provider;
     private signer;
-    private contractAddress;
+    private registryAddress;
+    private relayContracts;
     private shogun?;
     /**
-     * Creates a new RelayMembershipVerifier instance
+     * Creates a new RelayVerifier instance
      *
-     * @param config Configuration for the RelayMembership verifier
+     * @param config Configuration for the relay verifier
      * @param shogun Optional ShogunCore instance to reuse its provider
      * @param signer Optional ethers.Signer instance to use for contract interactions
      */
-    constructor(config: RelayMembershipConfig, shogun?: ShogunCore, signer?: ethers.Signer);
+    constructor(config: RelayConfig, shogun?: ShogunCore, signer?: ethers.Signer);
     /**
-     * Checks if an Ethereum address is authorized in the protocol
+     * Gets an instance of the IndividualRelay contract
      *
-     * @param address The Ethereum address to check
-     * @returns Promise resolving to boolean indicating if address is authorized
+     * @param relayAddress The address of the relay contract
+     * @returns The contract instance or null if not found
      */
-    isAddressAuthorized(address: string): Promise<boolean>;
+    private getRelayContract;
     /**
-     * Checks if a public key is authorized in the protocol
+     * Gets all registered relay contracts from the registry
      *
+     * @returns Array of relay contract addresses
+     */
+    getAllRelays(): Promise<string[]>;
+    /**
+     * Gets detailed information about a relay
+     *
+     * @param relayAddress The address of the relay to query
+     * @returns Detailed relay information or null if not found
+     */
+    getRelayInfo(relayAddress: string): Promise<RelayInfo | null>;
+    /**
+     * Gets all relays a user is actively subscribed to
+     *
+     * @param userAddress The Ethereum address to check
+     * @returns Array of relay addresses the user is subscribed to
+     */
+    getUserActiveRelays(userAddress: string): Promise<string[]>;
+    /**
+     * Checks if a user is subscribed to a specific relay
+     *
+     * @param relayAddress The relay contract address to check
+     * @param userAddress The user's Ethereum address
+     * @returns True if the user is subscribed, false otherwise
+     */
+    isUserSubscribedToRelay(relayAddress: string, userAddress: string): Promise<boolean>;
+    /**
+     * Gets user subscription information for a specific relay
+     *
+     * @param relayAddress The relay contract address
+     * @param userAddress The user's Ethereum address
+     * @returns Subscription information or null if failed
+     */
+    getUserSubscriptionInfo(relayAddress: string, userAddress: string): Promise<UserSubscriptionInfo | null>;
+    /**
+     * Checks if a public key is authorized in a specific relay
+     *
+     * @param relayAddress The relay contract address
      * @param publicKey The public key to check (as a byte array or hex string)
-     * @returns Promise resolving to boolean indicating if public key is authorized
+     * @returns True if authorized, false otherwise
      */
-    isPublicKeyAuthorized(publicKey: string | Uint8Array): Promise<boolean>;
+    isPublicKeyAuthorized(relayAddress: string, publicKey: string | Uint8Array): Promise<boolean>;
     /**
-     * Gets the address associated with a public key
+     * Gets the subscription price for a relay
      *
-     * @param publicKey The public key to look up
-     * @returns Promise resolving to the associated address or null if not found
+     * @param relayAddress The relay contract address
+     * @returns The price per month in wei (as BigInt) or null if failed
      */
-    getAddressForPublicKey(publicKey: string | Uint8Array): Promise<string | null>;
+    getRelayPrice(relayAddress: string): Promise<bigint | null>;
     /**
-     * Gets user information from the contract
+     * Subscribes to a relay (requires a signer)
      *
-     * @param address The Ethereum address to look up
-     * @returns Promise resolving to user info (expiration timestamp and public key)
+     * @param relayAddress The relay contract address to subscribe to
+     * @param months Number of months to subscribe for
+     * @param pubKey Optional public key to associate with the subscription
+     * @returns Transaction response or null if failed
      */
-    getUserInfo(address: string): Promise<{
-        expires: bigint;
-        pubKey: string;
-    } | null>;
-    /**
-     * Checks if a user's subscription is active (not expired)
-     *
-     * @param address The Ethereum address to check
-     * @returns Promise resolving to boolean indicating if subscription is active
-     */
-    isUserActive(address: string): Promise<boolean>;
+    subscribeToRelay(relayAddress: string, months: number, pubKey?: string | Uint8Array): Promise<ethers.TransactionResponse | null>;
     /**
      * Updates the provider URL for the verifier
      *
@@ -68,12 +110,12 @@ export declare class RelayMembershipVerifier {
      */
     setProviderUrl(providerUrl: string): boolean;
     /**
-     * Updates the contract address for the verifier
+     * Updates the registry address for the verifier
      *
-     * @param contractAddress New contract address to use
-     * @returns True if contract address was updated successfully
+     * @param registryAddress New registry address to use
+     * @returns True if registry address was updated successfully
      */
-    setContractAddress(contractAddress: string): boolean;
+    setRegistryAddress(registryAddress: string): boolean;
     /**
      * Updates the signer for the verifier
      *

@@ -1,36 +1,50 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RelayMembershipVerifier = void 0;
+exports.RelayVerifier = void 0;
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("../utils/errorHandler");
 const logger_1 = require("../utils/logger");
-// ABI for the RelayMembership contract (only the methods we need)
-const RELAY_MEMBERSHIP_ABI = [
-    "function authorizedAddress(address user) external view returns (bool)",
-    "function isAuthorized(bytes calldata pubKey) external view returns (bool)",
-    "function getUserInfo(address user) external view returns (uint256 expires, bytes memory pubKey)",
-    "function userInfoByPubKey(bytes) public view returns (address)",
-    "function isActive(address user) external view returns (bool)",
+// ABI for the RelayRegistry contract
+const RELAY_REGISTRY_ABI = [
+    "function getRelayDetails(address _relayContractAddress) external view returns (address owner_, string memory url_)",
+    "function getAllRelayContracts() external view returns (address[] memory)",
+    "function getRelayCount() external view returns (uint256)",
+    "function isRegistered(address _relayContractAddress) external view returns (bool)",
+    "function isUserSubscribedToRelay(address _relayContractAddress, address _user) external view returns (bool)",
+    "function subscribeToRelay(address _relayContractAddress, uint256 _months, bytes calldata _pubKey) external payable",
+    "function getRelaySubscriptionPrice(address _relayContractAddress) external view returns (uint256)",
+    "function getUserActiveRelays(address _user) external view returns (address[] memory)"
+];
+// ABI for the IndividualRelay contract
+const INDIVIDUAL_RELAY_ABI = [
+    "function isSubscriptionActive(address _user) external view returns (bool)",
+    "function subscribe(uint256 _months, bytes calldata _pubKey) external payable",
+    "function getUserSubscriptionInfo(address _user) external view returns (uint256 expires, bytes memory pubKey)",
+    "function isAuthorizedByPubKey(bytes calldata _pubKey) external view returns (bool)",
+    "function pricePerMonth() external view returns (uint256)",
+    "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth)",
+    "function getOwner() external view returns (address)"
 ];
 /**
- * RelayMembershipVerifier - A class to verify if an address or public key is part
- * of the Shogun protocol using the RelayMembership contract
+ * RelayVerifier - A class to interact with the Shogun relay network
+ * using the RelayRegistry and IndividualRelay contracts
  */
-class RelayMembershipVerifier {
-    contract = null;
+class RelayVerifier {
+    registryContract = null;
     provider = null;
     signer = null;
-    contractAddress;
+    registryAddress;
+    relayContracts = new Map();
     shogun;
     /**
-     * Creates a new RelayMembershipVerifier instance
+     * Creates a new RelayVerifier instance
      *
-     * @param config Configuration for the RelayMembership verifier
+     * @param config Configuration for the relay verifier
      * @param shogun Optional ShogunCore instance to reuse its provider
      * @param signer Optional ethers.Signer instance to use for contract interactions
      */
     constructor(config, shogun, signer) {
-        this.contractAddress = config.contractAddress;
+        this.registryAddress = config.registryAddress;
         this.shogun = shogun;
         this.signer = signer || null;
         // Setup the provider
@@ -48,52 +62,181 @@ class RelayMembershipVerifier {
             else {
                 (0, logger_1.logError)("No provider available. Either pass a ShogunCore instance or providerUrl");
             }
-            // Initialize the contract if we have a provider
+            // Initialize the registry contract if we have a provider
             if (this.signer && this.provider) {
-                this.contract = new ethers_1.ethers.Contract(this.contractAddress, RELAY_MEMBERSHIP_ABI, this.signer);
-                (0, logger_1.log)(`RelayMembershipVerifier initialized with signer at ${this.contractAddress}`);
+                this.registryContract = new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.signer);
+                (0, logger_1.log)(`RelayVerifier initialized with signer at registry ${this.registryAddress}`);
             }
             else if (this.provider) {
-                this.contract = new ethers_1.ethers.Contract(this.contractAddress, RELAY_MEMBERSHIP_ABI, this.provider);
-                (0, logger_1.log)(`RelayMembershipVerifier initialized in read-only mode at ${this.contractAddress}`);
+                this.registryContract = new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.provider);
+                (0, logger_1.log)(`RelayVerifier initialized in read-only mode at registry ${this.registryAddress}`);
             }
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_MEMBERSHIP_INIT_FAILED", "Failed to initialize RelayMembershipVerifier", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_VERIFIER_INIT_FAILED", "Failed to initialize RelayVerifier", error);
         }
     }
     /**
-     * Checks if an Ethereum address is authorized in the protocol
+     * Gets an instance of the IndividualRelay contract
      *
-     * @param address The Ethereum address to check
-     * @returns Promise resolving to boolean indicating if address is authorized
+     * @param relayAddress The address of the relay contract
+     * @returns The contract instance or null if not found
      */
-    async isAddressAuthorized(address) {
+    async getRelayContract(relayAddress) {
         try {
-            if (!this.contract) {
-                throw new Error("Contract not initialized");
+            // Check if we already have this contract instance
+            if (this.relayContracts.has(relayAddress)) {
+                return this.relayContracts.get(relayAddress);
             }
-            if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error("Invalid Ethereum address format");
+            // Verify this is a valid relay contract through the registry
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
             }
-            // Call the contract method to check authorization
-            return await this.contract.authorizedAddress(address);
+            const isRegistered = await this.registryContract.isRegistered(relayAddress);
+            if (!isRegistered) {
+                throw new Error(`Address ${relayAddress} is not a registered relay`);
+            }
+            // Create and store the contract instance
+            const contract = this.signer
+                ? new ethers_1.ethers.Contract(relayAddress, INDIVIDUAL_RELAY_ABI, this.signer)
+                : new ethers_1.ethers.Contract(relayAddress, INDIVIDUAL_RELAY_ABI, this.provider);
+            this.relayContracts.set(relayAddress, contract);
+            return contract;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ADDRESS_AUTH_CHECK_FAILED", `Failed to check if address ${address} is authorized`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_CONTRACT_INIT_FAILED", `Failed to initialize relay contract at ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets all registered relay contracts from the registry
+     *
+     * @returns Array of relay contract addresses
+     */
+    async getAllRelays() {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            return await this.registryContract.getAllRelayContracts();
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_ALL_RELAYS_FAILED", "Failed to get all relay contracts", error);
+            return [];
+        }
+    }
+    /**
+     * Gets detailed information about a relay
+     *
+     * @param relayAddress The address of the relay to query
+     * @returns Detailed relay information or null if not found
+     */
+    async getRelayInfo(relayAddress) {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
+            }
+            // Get owner and URL from registry
+            const [owner, url] = await this.registryContract.getRelayDetails(relayAddress);
+            // Get additional details from the relay contract
+            const [_url, price, daysPerMonth] = await relayContract.getRelayOperationalConfig();
+            return {
+                address: relayAddress,
+                owner,
+                url,
+                price,
+                daysPerMonth
+            };
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_RELAY_INFO_FAILED", `Failed to get relay info for ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets all relays a user is actively subscribed to
+     *
+     * @param userAddress The Ethereum address to check
+     * @returns Array of relay addresses the user is subscribed to
+     */
+    async getUserActiveRelays(userAddress) {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            if (!ethers_1.ethers.isAddress(userAddress)) {
+                throw new Error("Invalid Ethereum address format");
+            }
+            return await this.registryContract.getUserActiveRelays(userAddress);
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_USER_ACTIVE_RELAYS_FAILED", `Failed to get active relays for user ${userAddress}`, error);
+            return [];
+        }
+    }
+    /**
+     * Checks if a user is subscribed to a specific relay
+     *
+     * @param relayAddress The relay contract address to check
+     * @param userAddress The user's Ethereum address
+     * @returns True if the user is subscribed, false otherwise
+     */
+    async isUserSubscribedToRelay(relayAddress, userAddress) {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            if (!ethers_1.ethers.isAddress(userAddress) || !ethers_1.ethers.isAddress(relayAddress)) {
+                throw new Error("Invalid address format");
+            }
+            return await this.registryContract.isUserSubscribedToRelay(relayAddress, userAddress);
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "USER_SUBSCRIPTION_CHECK_FAILED", `Failed to check subscription for user ${userAddress} to relay ${relayAddress}`, error);
             return false;
         }
     }
     /**
-     * Checks if a public key is authorized in the protocol
+     * Gets user subscription information for a specific relay
      *
-     * @param publicKey The public key to check (as a byte array or hex string)
-     * @returns Promise resolving to boolean indicating if public key is authorized
+     * @param relayAddress The relay contract address
+     * @param userAddress The user's Ethereum address
+     * @returns Subscription information or null if failed
      */
-    async isPublicKeyAuthorized(publicKey) {
+    async getUserSubscriptionInfo(relayAddress, userAddress) {
         try {
-            if (!this.contract) {
-                throw new Error("Contract not initialized");
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
+            }
+            if (!ethers_1.ethers.isAddress(userAddress)) {
+                throw new Error("Invalid Ethereum address format");
+            }
+            const [expires, pubKey] = await relayContract.getUserSubscriptionInfo(userAddress);
+            const active = expires > BigInt(Math.floor(Date.now() / 1000));
+            return { expires, pubKey, active };
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_USER_SUBSCRIPTION_INFO_FAILED", `Failed to get subscription info for user ${userAddress} on relay ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Checks if a public key is authorized in a specific relay
+     *
+     * @param relayAddress The relay contract address
+     * @param publicKey The public key to check (as a byte array or hex string)
+     * @returns True if authorized, false otherwise
+     */
+    async isPublicKeyAuthorized(relayAddress, publicKey) {
+        try {
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
             }
             // Convert to properly formatted bytes if needed
             const formattedPubKey = typeof publicKey === "string"
@@ -101,8 +244,7 @@ class RelayMembershipVerifier {
                     ? publicKey
                     : `0x${publicKey}`
                 : `0x${Buffer.from(publicKey).toString("hex")}`;
-            // Call the contract method to check authorization
-            return await this.contract.isAuthorized(formattedPubKey);
+            return await relayContract.isAuthorizedByPubKey(formattedPubKey);
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "PUBKEY_AUTH_CHECK_FAILED", "Failed to check if public key is authorized", error);
@@ -110,72 +252,58 @@ class RelayMembershipVerifier {
         }
     }
     /**
-     * Gets the address associated with a public key
+     * Gets the subscription price for a relay
      *
-     * @param publicKey The public key to look up
-     * @returns Promise resolving to the associated address or null if not found
+     * @param relayAddress The relay contract address
+     * @returns The price per month in wei (as BigInt) or null if failed
      */
-    async getAddressForPublicKey(publicKey) {
+    async getRelayPrice(relayAddress) {
         try {
-            if (!this.contract) {
-                throw new Error("Contract not initialized");
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
             }
-            // Convert to properly formatted bytes if needed
-            const formattedPubKey = typeof publicKey === "string"
-                ? publicKey.startsWith("0x")
-                    ? publicKey
-                    : `0x${publicKey}`
-                : `0x${Buffer.from(publicKey).toString("hex")}`;
-            const address = await this.contract.userInfoByPubKey(formattedPubKey);
-            // Return null if the address is the zero address (not found)
-            return address === ethers_1.ethers.ZeroAddress ? null : address;
+            return await this.registryContract.getRelaySubscriptionPrice(relayAddress);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ADDRESS_LOOKUP_FAILED", "Failed to get address for public key", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_RELAY_PRICE_FAILED", `Failed to get price for relay ${relayAddress}`, error);
             return null;
         }
     }
     /**
-     * Gets user information from the contract
+     * Subscribes to a relay (requires a signer)
      *
-     * @param address The Ethereum address to look up
-     * @returns Promise resolving to user info (expiration timestamp and public key)
+     * @param relayAddress The relay contract address to subscribe to
+     * @param months Number of months to subscribe for
+     * @param pubKey Optional public key to associate with the subscription
+     * @returns Transaction response or null if failed
      */
-    async getUserInfo(address) {
+    async subscribeToRelay(relayAddress, months, pubKey) {
         try {
-            if (!this.contract) {
-                throw new Error("Contract not initialized");
+            if (!this.registryContract || !this.signer) {
+                throw new Error("Registry contract not initialized or no signer available");
             }
-            if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error("Invalid Ethereum address format");
+            // Get the subscription price
+            const pricePerMonth = await this.getRelayPrice(relayAddress);
+            if (!pricePerMonth) {
+                throw new Error(`Failed to get price for relay ${relayAddress}`);
             }
-            const [expires, pubKey] = await this.contract.getUserInfo(address);
-            return { expires, pubKey };
+            // Format public key if provided
+            let formattedPubKey = "0x";
+            if (pubKey) {
+                formattedPubKey = typeof pubKey === "string"
+                    ? pubKey.startsWith("0x")
+                        ? pubKey
+                        : `0x${pubKey}`
+                    : `0x${Buffer.from(pubKey).toString("hex")}`;
+            }
+            // Calculate total payment
+            const totalPayment = pricePerMonth * BigInt(months);
+            // Subscribe through the registry
+            return await this.registryContract.subscribeToRelay(relayAddress, months, formattedPubKey, { value: totalPayment });
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "USER_INFO_LOOKUP_FAILED", `Failed to get user info for address ${address}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "SUBSCRIBE_TO_RELAY_FAILED", `Failed to subscribe to relay ${relayAddress}`, error);
             return null;
-        }
-    }
-    /**
-     * Checks if a user's subscription is active (not expired)
-     *
-     * @param address The Ethereum address to check
-     * @returns Promise resolving to boolean indicating if subscription is active
-     */
-    async isUserActive(address) {
-        try {
-            if (!this.contract) {
-                throw new Error("Contract not initialized");
-            }
-            if (!ethers_1.ethers.isAddress(address)) {
-                throw new Error("Invalid Ethereum address format");
-            }
-            return await this.contract.isActive(address);
-        }
-        catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "USER_ACTIVE_CHECK_FAILED", `Failed to check if user ${address} is active`, error);
-            return false;
         }
     }
     /**
@@ -188,8 +316,12 @@ class RelayMembershipVerifier {
         try {
             this.provider = new ethers_1.ethers.JsonRpcProvider(providerUrl);
             if (this.provider) {
-                // Reinitialize the contract with the new provider
-                this.contract = new ethers_1.ethers.Contract(this.contractAddress, RELAY_MEMBERSHIP_ABI, this.provider);
+                // Reinitialize the registry contract with the new provider
+                this.registryContract = this.signer
+                    ? new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.signer)
+                    : new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.provider);
+                // Clear cached relay contracts to force recreation with new provider
+                this.relayContracts.clear();
                 (0, logger_1.log)(`Updated provider URL to ${providerUrl}`);
                 return true;
             }
@@ -201,27 +333,31 @@ class RelayMembershipVerifier {
         }
     }
     /**
-     * Updates the contract address for the verifier
+     * Updates the registry address for the verifier
      *
-     * @param contractAddress New contract address to use
-     * @returns True if contract address was updated successfully
+     * @param registryAddress New registry address to use
+     * @returns True if registry address was updated successfully
      */
-    setContractAddress(contractAddress) {
+    setRegistryAddress(registryAddress) {
         try {
-            if (!ethers_1.ethers.isAddress(contractAddress)) {
-                throw new Error("Invalid contract address format");
+            if (!ethers_1.ethers.isAddress(registryAddress)) {
+                throw new Error("Invalid registry address format");
             }
-            this.contractAddress = contractAddress;
+            this.registryAddress = registryAddress;
             if (this.provider) {
-                // Reinitialize the contract with the new address
-                this.contract = new ethers_1.ethers.Contract(this.contractAddress, RELAY_MEMBERSHIP_ABI, this.provider);
-                (0, logger_1.log)(`Updated contract address to ${contractAddress}`);
+                // Reinitialize the registry contract with the new address
+                this.registryContract = this.signer
+                    ? new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.signer)
+                    : new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.provider);
+                // Clear cached relay contracts as they might no longer be valid
+                this.relayContracts.clear();
+                (0, logger_1.log)(`Updated registry address to ${registryAddress}`);
                 return true;
             }
             return false;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "CONTRACT_ADDRESS_UPDATE_FAILED", "Failed to update contract address", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "REGISTRY_ADDRESS_UPDATE_FAILED", "Failed to update registry address", error);
             return false;
         }
     }
@@ -235,9 +371,13 @@ class RelayMembershipVerifier {
         try {
             this.signer = signer;
             if (this.provider) {
-                // Reinitialize the contract with the new signer
-                this.contract = new ethers_1.ethers.Contract(this.contractAddress, RELAY_MEMBERSHIP_ABI, this.signer);
-                (0, logger_1.log)(`Updated signer for RelayMembershipVerifier`);
+                // Reinitialize the registry contract with the new signer
+                this.registryContract = new ethers_1.ethers.Contract(this.registryAddress, RELAY_REGISTRY_ABI, this.signer);
+                // Update all cached relay contracts with the new signer
+                for (const [address, _] of this.relayContracts) {
+                    this.relayContracts.set(address, new ethers_1.ethers.Contract(address, INDIVIDUAL_RELAY_ABI, this.signer));
+                }
+                (0, logger_1.log)(`Updated signer for RelayVerifier`);
                 return true;
             }
             return false;
@@ -248,4 +388,4 @@ class RelayMembershipVerifier {
         }
     }
 }
-exports.RelayMembershipVerifier = RelayMembershipVerifier;
+exports.RelayVerifier = RelayVerifier;

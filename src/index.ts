@@ -46,10 +46,8 @@ export * from "./plugins";
 export type { ShogunPlugin, PluginManager } from "./types/plugin";
 
 // Export relay verification
-export { RelayMembershipVerifier } from "./relay";
-export type { RelayMembershipConfig } from "./relay";
-export { OracleBridge } from "./relay";
-export type { OracleBridgeConfig } from "./relay";
+export { RelayVerifier } from "./relay";
+export type { RelayConfig } from "./relay";
 export { DIDVerifier } from "./relay";
 export type { DIDVerifierConfig } from "./relay";
 
