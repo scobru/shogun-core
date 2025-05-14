@@ -1,4 +1,4 @@
-# Shogun SDK
+# Shogun Core ☢️
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/scobru/shogun-core/tests.yml?branch=main&label=tests)](https://github.com/scobru/shogun-core/actions/workflows/tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/scobru/shogun-core/badge.svg?branch=main)](https://coveralls.io/github/scobru/shogun-core?branch=main)

@@ -10,9 +10,6 @@ export interface RelayInfo {
     url: string;
     price: bigint;
     daysPerMonth: number;
-    stake: bigint;
-    minStake: bigint;
-    withdrawalCooldown: number;
 }
 export interface UserSubscriptionInfo {
     expires: bigint;

@@ -22,7 +22,7 @@ const INDIVIDUAL_RELAY_ABI = [
     "function getUserSubscriptionInfo(address _user) external view returns (uint256 expires, bytes memory pubKey)",
     "function isAuthorizedByPubKey(bytes calldata _pubKey) external view returns (bool)",
     "function pricePerMonth() external view returns (uint256)",
-    "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth, uint256 _actualStake, uint256 _minimumStake, uint256 _withdrawalCooldown)",
+    "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth)",
     "function getOwner() external view returns (address)"
 ];
 /**
@@ -143,16 +143,13 @@ class RelayVerifier {
             // Get owner and URL from registry
             const [owner, url] = await this.registryContract.getRelayDetails(relayAddress);
             // Get additional details from the relay contract
-            const [_url, price, daysPerMonth, stake, minStake, withdrawalCooldown] = await relayContract.getRelayOperationalConfig();
+            const [_url, price, daysPerMonth] = await relayContract.getRelayOperationalConfig();
             return {
                 address: relayAddress,
                 owner,
                 url,
                 price,
-                daysPerMonth,
-                stake,
-                minStake,
-                withdrawalCooldown: Number(withdrawalCooldown)
+                daysPerMonth
             };
         }
         catch (error) {

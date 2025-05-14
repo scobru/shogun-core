@@ -22,7 +22,7 @@ const INDIVIDUAL_RELAY_ABI = [
   "function getUserSubscriptionInfo(address _user) external view returns (uint256 expires, bytes memory pubKey)",
   "function isAuthorizedByPubKey(bytes calldata _pubKey) external view returns (bool)",
   "function pricePerMonth() external view returns (uint256)",
-  "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth, uint256 _actualStake, uint256 _minimumStake, uint256 _withdrawalCooldown)",
+  "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth)",
   "function getOwner() external view returns (address)"
 ];
 
@@ -37,9 +37,6 @@ export interface RelayInfo {
   url: string;
   price: bigint;
   daysPerMonth: number;
-  stake: bigint;
-  minStake: bigint;
-  withdrawalCooldown: number;
 }
 
 export interface UserSubscriptionInfo {
@@ -112,6 +109,12 @@ export class RelayVerifier {
           `RelayVerifier initialized in read-only mode at registry ${this.registryAddress}`,
         );
       }
+
+      // Check if debug mode is enabled via environment variable
+      this.debugMode = process.env.RELAY_DEBUG_MODE === "true";
+      if (this.debugMode) {
+        console.warn("[WARNING] RelayVerifier running in DEBUG MODE - all authorizations will pass!");
+      }
     } catch (error) {
       ErrorHandler.handle(
         ErrorType.CONTRACT,
@@ -120,6 +123,22 @@ export class RelayVerifier {
         error,
       );
     }
+  }
+
+  /**
+   * Enable debug mode - WARNING: all authorization checks will pass
+   */
+  public enableDebugMode() {
+    this.debugMode = true;
+    console.warn("[WARNING] RelayVerifier DEBUG MODE enabled - all authorizations will pass!");
+  }
+
+  /**
+   * Disable debug mode - authorization checks will work normally
+   */
+  public disableDebugMode() {
+    this.debugMode = false;
+    console.log("RelayVerifier DEBUG MODE disabled - authorization checks restored");
   }
 
   /**
@@ -207,24 +226,14 @@ export class RelayVerifier {
       const [owner, url] = await this.registryContract.getRelayDetails(relayAddress);
       
       // Get additional details from the relay contract
-      const [
-        _url,
-        price,
-        daysPerMonth,
-        stake,
-        minStake,
-        withdrawalCooldown
-      ] = await relayContract.getRelayOperationalConfig();
+      const [_url, price, daysPerMonth] = await relayContract.getRelayOperationalConfig();
 
       return {
         address: relayAddress,
         owner,
         url,
         price,
-        daysPerMonth,
-        stake,
-        minStake,
-        withdrawalCooldown: Number(withdrawalCooldown)
+        daysPerMonth
       };
     } catch (error) {
       ErrorHandler.handle(
@@ -342,6 +351,12 @@ export class RelayVerifier {
     publicKey: string | Uint8Array,
   ): Promise<boolean> {
     try {
+      // If debug mode is enabled, always return true
+      if (this.debugMode) {
+        console.log(`[DEBUG MODE] Auto-authorizing pubKey: ${publicKey.toString().substring(0, 10)}...`);
+        return true;
+      }
+
       const relayContract = await this.getRelayContract(relayAddress);
       if (!relayContract) {
         throw new Error(`Failed to get relay contract at ${relayAddress}`);
