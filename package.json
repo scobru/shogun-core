@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "SHOGUN SDK - Libreria semplificata per la gestione di wallet crypto con GunDB",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -19,15 +19,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:cjs && npm run build:browser && npm run clean-mocks",
+    "build": "yarn docs && yarn format && yarn run build:cjs && yarn run build:browser",
     "build:cjs": "tsc",
     "build:browser": "webpack --config webpack.config.cjs",
     "build:light": "webpack --config webpack.light.config.cjs",
-    "build:all": "npm run build && npm run build:light",
+    "build:all": "yarn run build && yarn run build:light",
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
-    "prebuild": "rimraf dist",
+    "prebuild": "rimraf dist"
   },
   "keywords": [
     "gun",

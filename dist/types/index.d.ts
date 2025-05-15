@@ -19,6 +19,8 @@ export { RelayVerifier } from "./relay";
 export type { RelayConfig } from "./relay";
 export { DIDVerifier } from "./relay";
 export type { DIDVerifierConfig } from "./relay";
+export { RelayRegistry } from "./relay";
+export type { RelayRegistryConfig } from "./relay";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *

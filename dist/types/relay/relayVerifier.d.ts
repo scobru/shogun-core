@@ -10,11 +10,28 @@ export interface RelayInfo {
     url: string;
     price: bigint;
     daysPerMonth: number;
+    stake: bigint;
+    subscribers: number;
+    pendingRewards: bigint;
+    stakePercentage: number;
 }
 export interface UserSubscriptionInfo {
     expires: bigint;
     pubKey: string;
     active: boolean;
+}
+export interface StakeInfo {
+    currentStake: bigint;
+    lockPeriod: bigint;
+    lockedUntil: bigint;
+    canWithdraw: boolean;
+}
+export interface SystemStats {
+    totalRelays: number;
+    totalStakedAmount: bigint;
+    totalSubscribers: number;
+    totalFeesAccumulated: bigint;
+    totalRewardsDistributed: bigint;
 }
 /**
  * RelayVerifier - A class to interact with the Shogun relay network
@@ -63,6 +80,19 @@ export declare class RelayVerifier {
      */
     getUserActiveRelays(userAddress: string): Promise<string[]>;
     /**
+     * Gets the stake information for a relay
+     *
+     * @param relayAddress The relay contract address
+     * @returns Stake information or null if failed
+     */
+    getStakeInfo(relayAddress: string): Promise<StakeInfo | null>;
+    /**
+     * Gets system-wide statistics from the relay registry
+     *
+     * @returns System statistics or null if failed
+     */
+    getSystemStats(): Promise<SystemStats | null>;
+    /**
      * Checks if a user is subscribed to a specific relay
      *
      * @param relayAddress The relay contract address to check
@@ -87,6 +117,12 @@ export declare class RelayVerifier {
      */
     isPublicKeyAuthorized(relayAddress: string, publicKey: string | Uint8Array): Promise<boolean>;
     /**
+     * Gets the protocol subscription price from the registry
+     *
+     * @returns The price per month in wei (as BigInt) or null if failed
+     */
+    getProtocolPrice(): Promise<bigint | null>;
+    /**
      * Gets the subscription price for a relay
      *
      * @param relayAddress The relay contract address
@@ -102,6 +138,34 @@ export declare class RelayVerifier {
      * @returns Transaction response or null if failed
      */
     subscribeToRelay(relayAddress: string, months: number, pubKey?: string | Uint8Array): Promise<ethers.TransactionResponse | null>;
+    /**
+     * Adds stake to a relay (requires a signer and relay ownership)
+     *
+     * @param relayAddress The relay address to add stake to
+     * @param amount The amount to stake in wei
+     * @returns Transaction response or null if failed
+     */
+    addStake(relayAddress: string, amount: bigint): Promise<ethers.TransactionResponse | null>;
+    /**
+     * Withdraws stake from a relay (requires a signer and relay ownership)
+     *
+     * @param relayAddress The relay address to withdraw stake from
+     * @param amount The amount to withdraw in wei
+     * @returns Transaction response or null if failed
+     */
+    withdrawStake(relayAddress: string, amount: bigint): Promise<ethers.TransactionResponse | null>;
+    /**
+     * Checks if reward distribution is due
+     *
+     * @returns True if distribution is due, false otherwise
+     */
+    isDistributionDue(): Promise<boolean>;
+    /**
+     * Distributes rewards to relay owners (can be called by anyone)
+     *
+     * @returns Transaction response or null if failed
+     */
+    distributeRewards(): Promise<ethers.TransactionResponse | null>;
     /**
      * Updates the provider URL for the verifier
      *

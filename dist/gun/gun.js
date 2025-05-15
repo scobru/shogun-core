@@ -63,7 +63,7 @@ class GunDB {
         this.authToken = authToken;
         this.gun = gun;
         this.user = this.gun.user().recall({ sessionStorage: true });
-        this.restrictPut();
+        this.restrictPut(this.gun, authToken || "");
         this.subscribeToAuthEvents();
     }
     subscribeToAuthEvents() {
@@ -81,19 +81,21 @@ class GunDB {
         const user = this.gun.user();
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
-    restrictPut() {
-        gun_1.default.on("opt", function (ctx) {
-            if (ctx.once) {
-                return;
-            }
-            ctx.on("out", function (msg) {
-                var to = msg.to;
-                // Adds headers for put
-                msg.headers = {
-                    token: "thisIsTheTokenForReals",
-                };
-                to.next(msg);
-            });
+    restrictPut(gun, authToken) {
+        if (!authToken) {
+            (0, logger_1.logError)("No auth token provided");
+            return;
+        }
+        gun.on("out", function (ctx) {
+            var to = this.to;
+            // Adds headers for put
+            ctx.headers = {
+                token: authToken,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${authToken}`,
+            };
+            to.next(ctx); // pass to next middleware
         });
     }
     /**

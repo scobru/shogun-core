@@ -6,14 +6,22 @@ const errorHandler_1 = require("../utils/errorHandler");
 const logger_1 = require("../utils/logger");
 // ABI for the RelayRegistry contract
 const RELAY_REGISTRY_ABI = [
-    "function getRelayDetails(address _relayContractAddress) external view returns (address owner_, string memory url_)",
+    "function getRelayDetails(address _relayContractAddress) external view returns (address owner_, string memory url_, uint256 subscribers_, uint256 pendingRewards_, uint256 stake_, uint256 stakePercentage_)",
     "function getAllRelayContracts() external view returns (address[] memory)",
     "function getRelayCount() external view returns (uint256)",
     "function isRegistered(address _relayContractAddress) external view returns (bool)",
     "function isUserSubscribedToRelay(address _relayContractAddress, address _user) external view returns (bool)",
     "function subscribeToRelay(address _relayContractAddress, uint256 _months, bytes calldata _pubKey) external payable",
-    "function getRelaySubscriptionPrice(address _relayContractAddress) external view returns (uint256)",
-    "function getUserActiveRelays(address _user) external view returns (address[] memory)"
+    "function getRelaySubscriptionPrice() external view returns (uint256)",
+    "function getProtocolPrice() external view returns (uint256)",
+    "function getUserActiveRelays(address _user) external view returns (address[] memory)",
+    "function getSystemStats() external view returns (uint256 totalRelays_, uint256 totalStakedAmount_, uint256 totalSubscribers_, uint256 totalFeesAccumulated_, uint256 totalRewardsDistributed_)",
+    "function distributeRewards() external",
+    "function isDistributionDue() external view returns (bool)",
+    "function protocolPrice() external view returns (uint256)",
+    "function protocolFeePercentage() external view returns (uint256)",
+    "function minStakeRequired() external view returns (uint256)",
+    "function totalStaked() external view returns (uint256)",
 ];
 // ABI for the IndividualRelay contract
 const INDIVIDUAL_RELAY_ABI = [
@@ -22,8 +30,14 @@ const INDIVIDUAL_RELAY_ABI = [
     "function getUserSubscriptionInfo(address _user) external view returns (uint256 expires, bytes memory pubKey)",
     "function isAuthorizedByPubKey(bytes calldata _pubKey) external view returns (bool)",
     "function pricePerMonth() external view returns (uint256)",
-    "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth)",
-    "function getOwner() external view returns (address)"
+    "function getRelayOperationalConfig() external view returns (string memory _url, uint256 _price, uint256 _daysInMonth, uint256 _stake)",
+    "function getOwner() external view returns (address)",
+    "function ownerStake() external view returns (uint256)",
+    "function stakeLockPeriod() external view returns (uint256)",
+    "function getStakeStatus() external view returns (uint256 currentStake, uint256 lockPeriod, uint256 lockedUntil, bool canWithdraw)",
+    "function addStake() external payable",
+    "function withdrawStake(uint256 _amount) external",
+    "function isRegistered() external view returns (bool)",
 ];
 /**
  * RelayVerifier - A class to interact with the Shogun relay network
@@ -140,16 +154,20 @@ class RelayVerifier {
             if (!relayContract) {
                 throw new Error(`Failed to get relay contract at ${relayAddress}`);
             }
-            // Get owner and URL from registry
-            const [owner, url] = await this.registryContract.getRelayDetails(relayAddress);
+            // Get details from registry (now includes more information)
+            const [owner, url, subscribers, pendingRewards, stake, stakePercentage] = await this.registryContract.getRelayDetails(relayAddress);
             // Get additional details from the relay contract
-            const [_url, price, daysPerMonth] = await relayContract.getRelayOperationalConfig();
+            const [_url, price, daysPerMonth, _stake] = await relayContract.getRelayOperationalConfig();
             return {
                 address: relayAddress,
                 owner,
                 url,
                 price,
-                daysPerMonth
+                daysPerMonth,
+                stake,
+                subscribers,
+                pendingRewards,
+                stakePercentage,
             };
         }
         catch (error) {
@@ -176,6 +194,55 @@ class RelayVerifier {
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_USER_ACTIVE_RELAYS_FAILED", `Failed to get active relays for user ${userAddress}`, error);
             return [];
+        }
+    }
+    /**
+     * Gets the stake information for a relay
+     *
+     * @param relayAddress The relay contract address
+     * @returns Stake information or null if failed
+     */
+    async getStakeInfo(relayAddress) {
+        try {
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
+            }
+            const [currentStake, lockPeriod, lockedUntil, canWithdraw] = await relayContract.getStakeStatus();
+            return {
+                currentStake,
+                lockPeriod,
+                lockedUntil,
+                canWithdraw,
+            };
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_STAKE_INFO_FAILED", `Failed to get stake info for relay ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets system-wide statistics from the relay registry
+     *
+     * @returns System statistics or null if failed
+     */
+    async getSystemStats() {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            const [totalRelays, totalStakedAmount, totalSubscribers, totalFeesAccumulated, totalRewardsDistributed,] = await this.registryContract.getSystemStats();
+            return {
+                totalRelays: Number(totalRelays),
+                totalStakedAmount,
+                totalSubscribers: Number(totalSubscribers),
+                totalFeesAccumulated,
+                totalRewardsDistributed,
+            };
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_SYSTEM_STATS_FAILED", "Failed to get system statistics", error);
+            return null;
         }
     }
     /**
@@ -234,6 +301,7 @@ class RelayVerifier {
      */
     async isPublicKeyAuthorized(relayAddress, publicKey) {
         try {
+            // If debug mode is enabled, always return true
             const relayContract = await this.getRelayContract(relayAddress);
             if (!relayContract) {
                 throw new Error(`Failed to get relay contract at ${relayAddress}`);
@@ -252,6 +320,23 @@ class RelayVerifier {
         }
     }
     /**
+     * Gets the protocol subscription price from the registry
+     *
+     * @returns The price per month in wei (as BigInt) or null if failed
+     */
+    async getProtocolPrice() {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            return await this.registryContract.getProtocolPrice();
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_PROTOCOL_PRICE_FAILED", `Failed to get protocol price`, error);
+            return null;
+        }
+    }
+    /**
      * Gets the subscription price for a relay
      *
      * @param relayAddress The relay contract address
@@ -259,10 +344,20 @@ class RelayVerifier {
      */
     async getRelayPrice(relayAddress) {
         try {
-            if (!this.registryContract) {
-                throw new Error("Registry contract not initialized");
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
             }
-            return await this.registryContract.getRelaySubscriptionPrice(relayAddress);
+            // First check if the relay uses the protocol price
+            const isRegistered = await relayContract.isRegistered();
+            if (isRegistered) {
+                // If registered, use the protocol price
+                return await this.getProtocolPrice();
+            }
+            else {
+                // Otherwise, use the relay's own price
+                return await relayContract.pricePerMonth();
+            }
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "GET_RELAY_PRICE_FAILED", `Failed to get price for relay ${relayAddress}`, error);
@@ -290,11 +385,12 @@ class RelayVerifier {
             // Format public key if provided
             let formattedPubKey = "0x";
             if (pubKey) {
-                formattedPubKey = typeof pubKey === "string"
-                    ? pubKey.startsWith("0x")
-                        ? pubKey
-                        : `0x${pubKey}`
-                    : `0x${Buffer.from(pubKey).toString("hex")}`;
+                formattedPubKey =
+                    typeof pubKey === "string"
+                        ? pubKey.startsWith("0x")
+                            ? pubKey
+                            : `0x${pubKey}`
+                        : `0x${Buffer.from(pubKey).toString("hex")}`;
             }
             // Calculate total payment
             const totalPayment = pricePerMonth * BigInt(months);
@@ -303,6 +399,86 @@ class RelayVerifier {
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "SUBSCRIBE_TO_RELAY_FAILED", `Failed to subscribe to relay ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Adds stake to a relay (requires a signer and relay ownership)
+     *
+     * @param relayAddress The relay address to add stake to
+     * @param amount The amount to stake in wei
+     * @returns Transaction response or null if failed
+     */
+    async addStake(relayAddress, amount) {
+        try {
+            if (!this.signer) {
+                throw new Error("No signer available");
+            }
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
+            }
+            return await relayContract.addStake({ value: amount });
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "ADD_STAKE_FAILED", `Failed to add stake to relay ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Withdraws stake from a relay (requires a signer and relay ownership)
+     *
+     * @param relayAddress The relay address to withdraw stake from
+     * @param amount The amount to withdraw in wei
+     * @returns Transaction response or null if failed
+     */
+    async withdrawStake(relayAddress, amount) {
+        try {
+            if (!this.signer) {
+                throw new Error("No signer available");
+            }
+            const relayContract = await this.getRelayContract(relayAddress);
+            if (!relayContract) {
+                throw new Error(`Failed to get relay contract at ${relayAddress}`);
+            }
+            return await relayContract.withdrawStake(amount);
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "WITHDRAW_STAKE_FAILED", `Failed to withdraw stake from relay ${relayAddress}`, error);
+            return null;
+        }
+    }
+    /**
+     * Checks if reward distribution is due
+     *
+     * @returns True if distribution is due, false otherwise
+     */
+    async isDistributionDue() {
+        try {
+            if (!this.registryContract) {
+                throw new Error("Registry contract not initialized");
+            }
+            return await this.registryContract.isDistributionDue();
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "IS_DISTRIBUTION_DUE_FAILED", "Failed to check if distribution is due", error);
+            return false;
+        }
+    }
+    /**
+     * Distributes rewards to relay owners (can be called by anyone)
+     *
+     * @returns Transaction response or null if failed
+     */
+    async distributeRewards() {
+        try {
+            if (!this.registryContract || !this.signer) {
+                throw new Error("Registry contract not initialized or no signer available");
+            }
+            return await this.registryContract.distributeRewards();
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "DISTRIBUTE_REWARDS_FAILED", "Failed to distribute rewards", error);
             return null;
         }
     }

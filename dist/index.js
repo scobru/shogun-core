@@ -13,16 +13,12 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.DIDVerifier = exports.RelayVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.RelayRegistry = exports.DIDVerifier = exports.RelayVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
-const gun_2 = __importDefault(require("gun"));
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
@@ -45,6 +41,8 @@ var relay_1 = require("./relay");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return relay_1.RelayVerifier; } });
 var relay_2 = require("./relay");
 Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return relay_2.DIDVerifier; } });
+var relay_3 = require("./relay");
+Object.defineProperty(exports, "RelayRegistry", { enumerable: true, get: function () { return relay_3.RelayRegistry; } });
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -110,21 +108,12 @@ class ShogunCore {
                 radisk: false,
                 authToken: config.authToken,
             });
-            this.gundb = new gun_1.GunDB(gun);
+            this.gundb = new gun_1.GunDB(gun, config.authToken);
             this.gun = gun;
         }
         else {
-            (0, logger_1.log)("No external Gun instance provided, creating default GunDB");
-            // Create default Gun instance instead of returning early
-            const defaultPeers = ["http://localhost:8765/gun"]; // Default fallback peer
-            const defaultGun = new gun_2.default({
-                peers: defaultPeers,
-                localStorage: false,
-                radisk: false,
-                authToken: config.authToken,
-            });
-            this.gundb = new gun_1.GunDB(defaultGun);
-            this.gun = defaultGun;
+            (0, logger_1.logError)("Missing Gun instance");
+            throw new Error("Missing Gun instance");
         }
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.rx = new rxjs_integration_1.GunRxJS(this.gun);
@@ -894,8 +883,8 @@ exports.ShogunCore = ShogunCore;
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_3 = require("./gun/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
+var gun_2 = require("./gun/gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
 var metamask_1 = require("./plugins/metamask/metamask");
 Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_1.MetaMask; } });
 var stealth_1 = require("./plugins/stealth/stealth");

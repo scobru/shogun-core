@@ -20,7 +20,7 @@ declare class GunDB {
     constructor(gun: GunInstance<any>, authToken?: string);
     private subscribeToAuthEvents;
     private notifyAuthListeners;
-    private restrictPut;
+    restrictPut(gun: GunInstance<any>, authToken: string): void;
     /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add

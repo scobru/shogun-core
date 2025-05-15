@@ -1,2 +1,3 @@
-export * from './relayMembershipVerifier';
-export * from './didVerifier';
+export * from "./relayVerifier";
+export * from "./didVerifier";
+export * from "./relayRegistry";

@@ -50,6 +50,8 @@ export { RelayVerifier } from "./relay";
 export type { RelayConfig } from "./relay";
 export { DIDVerifier } from "./relay";
 export type { DIDVerifierConfig } from "./relay";
+export { RelayRegistry } from "./relay";
+export type { RelayRegistryConfig } from "./relay";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -134,21 +136,11 @@ export class ShogunCore implements IShogunCore {
         authToken: config.authToken,
       });
 
-      this.gundb = new GunDB(gun);
+      this.gundb = new GunDB(gun, config.authToken);
       this.gun = gun;
     } else {
-      log("No external Gun instance provided, creating default GunDB");
-      // Create default Gun instance instead of returning early
-      const defaultPeers = ["http://localhost:8765/gun"]; // Default fallback peer
-      const defaultGun = new Gun({
-        peers: defaultPeers,
-        localStorage: false,
-        radisk: false,
-        authToken: config.authToken,
-      });
-
-      this.gundb = new GunDB(defaultGun);
-      this.gun = defaultGun;
+      logError("Missing Gun instance");
+      throw new Error("Missing Gun instance");
     }
 
     this.user = this.gun.user().recall({ sessionStorage: true });
