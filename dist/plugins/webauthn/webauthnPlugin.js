@@ -105,19 +105,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
             const loginResult = await core.login(username, hashedCredentialId);
             if (loginResult.success) {
                 (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
-                if (!loginResult.did) {
-                    try {
-                        // Utilizziamo il metodo privato del core per la gestione del DID
-                        const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-                        const did = await ensureUserHasDID();
-                        if (did) {
-                            loginResult.did = did;
-                        }
-                    }
-                    catch (didError) {
-                        (0, logger_1.logError)("Error ensuring DID for WebAuthn user:", didError);
-                    }
-                }
                 return {
                     ...loginResult,
                     username,
@@ -164,26 +151,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
             const signupResult = await core.signUp(username, hashedCredentialId);
             if (signupResult.success) {
                 (0, logger_1.log)(`WebAuthn registration completed successfully for user: ${username}`);
-                if (!signupResult.did) {
-                    try {
-                        // Utilizziamo il metodo privato del core per la gestione del DID
-                        const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-                        const did = await ensureUserHasDID({
-                            services: [
-                                {
-                                    type: "WebAuthnVerification",
-                                    endpoint: `webauthn:${username}`,
-                                },
-                            ],
-                        });
-                        if (did) {
-                            signupResult.did = did;
-                        }
-                    }
-                    catch (didError) {
-                        (0, logger_1.logError)("Error creating DID for WebAuthn user:", didError);
-                    }
-                }
                 // Emettiamo un evento personalizzato per il registrazione WebAuthn
                 core.emit("webauthn:register", {
                     username,
@@ -194,7 +161,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
                     userPub: signupResult.userPub,
                     username,
                     method: "webauthn",
-                    did: signupResult.did || undefined,
                 });
                 return {
                     ...signupResult,

@@ -28,8 +28,6 @@ var CorePlugins;
     CorePlugins["MetaMask"] = "metamask";
     /** Plugin Stealth */
     CorePlugins["Stealth"] = "stealth";
-    /** Plugin DID */
-    CorePlugins["DID"] = "did";
     /** Plugin Wallet Manager */
     CorePlugins["WalletManager"] = "wallet";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

@@ -8,7 +8,6 @@ import { ShogunSDKConfig } from "./types/shogun";
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
 const loadStealthModule = () => import("./plugins/stealth/stealth");
-const loadDIDModule = () => import("./plugins/did/DID");
 const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
 const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
 let shogunCoreInstance: ShogunCore | null = null;
@@ -48,7 +47,6 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
 export const modules = {
   loadWebAuthn: loadWebAuthnModule,
   loadStealth: loadStealthModule,
-  loadDID: loadDIDModule,
   loadWallet: loadWalletModule,
   loadMetaMask: loadMetaMaskModule,
 };

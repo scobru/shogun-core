@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.RelayRegistry = exports.DIDVerifier = exports.RelayVerifier = exports.GunRxJS = exports.ErrorType = exports.ErrorHandler = exports.ShogunDID = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
@@ -25,24 +25,15 @@ const rxjs_integration_1 = require("./gun/rxjs-integration");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
-const didPlugin_1 = require("./plugins/did/didPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
-// Import relay verification
-var DID_1 = require("./plugins/did/DID");
-Object.defineProperty(exports, "ShogunDID", { enumerable: true, get: function () { return DID_1.ShogunDID; } });
-var errorHandler_2 = require("./utils/errorHandler");
-Object.defineProperty(exports, "ErrorHandler", { enumerable: true, get: function () { return errorHandler_2.ErrorHandler; } });
-Object.defineProperty(exports, "ErrorType", { enumerable: true, get: function () { return errorHandler_2.ErrorType; } });
-var rxjs_integration_2 = require("./gun/rxjs-integration");
-Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return rxjs_integration_2.GunRxJS; } });
+__exportStar(require("./utils/errorHandler"), exports);
+__exportStar(require("./gun/rxjs-integration"), exports);
 __exportStar(require("./plugins"), exports);
 // Export relay verification
-var relay_1 = require("./relay");
-Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return relay_1.RelayVerifier; } });
-var relay_2 = require("./relay");
-Object.defineProperty(exports, "DIDVerifier", { enumerable: true, get: function () { return relay_2.DIDVerifier; } });
-var relay_3 = require("./relay");
-Object.defineProperty(exports, "RelayRegistry", { enumerable: true, get: function () { return relay_3.RelayRegistry; } });
+__exportStar(require("./contracts/entryPoint"), exports);
+__exportStar(require("./contracts/utils"), exports);
+__exportStar(require("./contracts/registry"), exports);
+__exportStar(require("./contracts/relay"), exports);
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -157,13 +148,6 @@ class ShogunCore {
                 stealthPlugin._category = shogun_1.PluginCategory.Privacy;
                 this.register(stealthPlugin);
                 (0, logger_1.log)("Stealth plugin registered");
-            }
-            // Identity plugins group
-            if (config.did?.enabled) {
-                const didPlugin = new didPlugin_1.DIDPlugin();
-                didPlugin._category = shogun_1.PluginCategory.Identity;
-                this.register(didPlugin);
-                (0, logger_1.log)("DID plugin registered");
             }
             // Wallet plugins group
             if (config.walletManager?.enabled) {
@@ -467,15 +451,6 @@ class ShogunCore {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
                 });
-                try {
-                    const did = await this.ensureUserHasDID();
-                    if (did) {
-                        result.did = did;
-                    }
-                }
-                catch (didError) {
-                    (0, logger_1.logError)("Error ensuring DID after login:", didError);
-                }
             }
             return result;
         }
@@ -578,8 +553,6 @@ class ShogunCore {
                 // Per evitare di complicare ulteriormente il processo, disabilita temporaneamente
                 // la creazione del DID durante il signup finché il problema non è risolto completamente
                 // Invece, creeremo il DID al primo accesso successivo dell'utente
-                // Commentiamo la creazione asincrona del DID durante il signup
-                this.ensureUserHasDIDAsync(result);
                 // Emettiamo un evento di debug per monitorare il flusso
                 this.eventEmitter.emit("debug", {
                     action: "signup_complete",
@@ -613,55 +586,7 @@ class ShogunCore {
             };
         }
     }
-    /**
-     * Ensure the current user has a DID associated asynchronously
-     * @param signUpResult The result of the signup process
-     * @private
-     */
-    ensureUserHasDIDAsync(signUpResult) {
-        if (!signUpResult.success)
-            return;
-        // Eseguiamo l'operazione in un nuovo contesto asincrono
-        setTimeout(async () => {
-            try {
-                const did = await this.ensureUserHasDID();
-                if (did) {
-                    (0, logger_1.log)(`Created DID for new user: ${did}`);
-                    // Aggiorniamo solo internamente il risultato
-                    signUpResult.did = did;
-                }
-            }
-            catch (didError) {
-                (0, logger_1.logError)("Error creating DID for new user (async):", didError);
-            }
-        }, 100); // Ritarda leggermente l'esecuzione per dare priorità al completamento della registrazione
-    }
     // 🤫 PRIVATE HELPER METHODS 🤫
-    /**
-     * Ensure the current user has a DID associated, creating one if needed
-     * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
-     *   - network: The network to use (default: 'main')
-     *   - controller: The controller of the DID (default: user's public key)
-     *   - services: Array of service definitions to add to the DID document
-     * @returns {Promise<string|null>} The DID identifier string or null if operation fails
-     * @description Checks if the authenticated user already has a DID. If not, creates a new one.
-     * If the user already has a DID and options are provided, updates the DID document accordingly.
-     * @private
-     */
-    async ensureUserHasDID(options) {
-        try {
-            const didPlugin = this.getPlugin("did");
-            if (!didPlugin) {
-                (0, logger_1.log)("DID plugin not available, cannot ensure DID");
-                return null;
-            }
-            return await didPlugin.ensureUserHasDID(options);
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error ensuring user has DID:", error);
-            return null;
-        }
-    }
     /**
      * Create a new user with GunDB
      * @param username - Username

@@ -15,7 +15,6 @@ export declare function initShogunBrowser(config: ShogunSDKConfig): ShogunCore;
 export declare const modules: {
     loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
     loadStealth: () => Promise<typeof import("./plugins/stealth/stealth")>;
-    loadDID: () => Promise<typeof import("./plugins/did/DID")>;
     loadWallet: () => Promise<typeof import("./plugins/wallet/walletPlugin")>;
     loadMetaMask: () => Promise<typeof import("./plugins/metamask/metamaskPlugin")>;
 };

@@ -142,41 +142,16 @@ class MetaMaskPlugin extends base_1.BasePlugin {
                     "Login or user creation failed after signature verification");
             }
             (0, logger_1.log)(`Login/Creation successful: ${result.userPub}`);
-            let did = null;
-            try {
-                (0, logger_1.log)("Ensuring user has a DID...");
-                // Utilizziamo il metodo privato del core per la gestione del DID
-                const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-                did = await ensureUserHasDID({
-                    services: [
-                        {
-                            type: "EcdsaSecp256k1VerificationKey2019",
-                            endpoint: `ethereum:${address}`,
-                        },
-                    ],
-                });
-                if (did) {
-                    (0, logger_1.log)(`DID assigned/verified: ${did}`);
-                }
-                else {
-                    (0, logger_1.logWarn)("Could not ensure DID for user after MetaMask login.");
-                }
-            }
-            catch (didError) {
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.DID, "DID_ENSURE_FAILED", "Error ensuring DID for MetaMask user", didError);
-            }
             // Emettiamo l'evento di login tramite il core
             core.emit("auth:login", {
                 userPub: result.userPub,
                 username: credentials.username,
                 method: "metamask",
-                did: did || undefined,
             });
             return {
                 success: true,
                 userPub: result.userPub,
                 username: credentials.username,
-                did: did || undefined,
             };
         }
         catch (error) {
@@ -233,41 +208,16 @@ class MetaMaskPlugin extends base_1.BasePlugin {
                     "User creation or login failed after signature verification");
             }
             (0, logger_1.log)(`User creation/login successful: ${result.userPub}`);
-            let did = null;
-            try {
-                (0, logger_1.log)("Creating/Ensuring DID with MetaMask verification service...");
-                // Utilizziamo il metodo privato del core per la gestione del DID
-                const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-                did = await ensureUserHasDID({
-                    services: [
-                        {
-                            type: "EcdsaSecp256k1VerificationKey2019",
-                            endpoint: `ethereum:${address}`,
-                        },
-                    ],
-                });
-                if (did) {
-                    (0, logger_1.log)(`DID created/verified: ${did}`);
-                }
-                else {
-                    (0, logger_1.logWarn)("Could not ensure DID for user after MetaMask signup.");
-                }
-            }
-            catch (didError) {
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.DID, "DID_ENSURE_FAILED", "Error ensuring DID for MetaMask user during signup", didError);
-            }
             // Emettiamo l'evento di registrazione tramite il core
             core.emit("auth:signup", {
                 userPub: result.userPub,
                 username: credentials.username,
                 method: "metamask",
-                did: did ?? undefined,
             });
             return {
                 success: true,
                 userPub: result.userPub,
                 username: credentials.username,
-                did: did ?? undefined,
             };
         }
         catch (error) {

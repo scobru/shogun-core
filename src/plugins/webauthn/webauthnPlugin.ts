@@ -166,19 +166,6 @@ export class WebauthnPlugin
       if (loginResult.success) {
         log(`WebAuthn login completed successfully for user: ${username}`);
 
-        if (!loginResult.did) {
-          try {
-            // Utilizziamo il metodo privato del core per la gestione del DID
-            const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-            const did = await ensureUserHasDID();
-            if (did) {
-              loginResult.did = did;
-            }
-          } catch (didError) {
-            logError("Error ensuring DID for WebAuthn user:", didError);
-          }
-        }
-
         return {
           ...loginResult,
           username,
@@ -250,27 +237,6 @@ export class WebauthnPlugin
           `WebAuthn registration completed successfully for user: ${username}`,
         );
 
-        if (!signupResult.did) {
-          try {
-            // Utilizziamo il metodo privato del core per la gestione del DID
-            const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-            const did = await ensureUserHasDID({
-              services: [
-                {
-                  type: "WebAuthnVerification",
-                  endpoint: `webauthn:${username}`,
-                },
-              ],
-            });
-
-            if (did) {
-              signupResult.did = did;
-            }
-          } catch (didError) {
-            logError("Error creating DID for WebAuthn user:", didError);
-          }
-        }
-
         // Emettiamo un evento personalizzato per il registrazione WebAuthn
         core.emit("webauthn:register", {
           username,
@@ -282,7 +248,6 @@ export class WebauthnPlugin
           userPub: signupResult.userPub,
           username,
           method: "webauthn",
-          did: signupResult.did || undefined,
         });
 
         return {

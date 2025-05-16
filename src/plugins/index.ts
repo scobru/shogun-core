@@ -5,7 +5,6 @@ export type { ShogunPlugin, PluginManager } from "../types/plugin";
 // Esporta i plugin standard
 export * from "./wallet";
 export * from "./stealth";
-export * from "./did";
 export * from "./metamask";
 export * from "./webauthn";
 
@@ -18,9 +17,6 @@ export type { MetaMaskPluginInterface } from "./metamask/types";
 
 export { WalletPlugin } from "./wallet/walletPlugin";
 export type { WalletPluginInterface } from "./wallet/types";
-
-export { DIDPlugin } from "./did/didPlugin";
-export type { DIDPluginInterface } from "./did/types";
 
 export { StealthPlugin } from "./stealth/stealthPlugin";
 export type { StealthPluginInterface } from "./stealth/types";

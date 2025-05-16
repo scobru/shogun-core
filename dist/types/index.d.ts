@@ -8,19 +8,20 @@ import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
 import { GunInstance } from "./gun/types";
-export { ShogunDID } from "./plugins/did/DID";
-export type { DIDDocument, DIDResolutionResult, DIDCreateOptions, } from "./plugins/did/DID";
-export { ErrorHandler, ErrorType } from "./utils/errorHandler";
-export type { ShogunError } from "./utils/errorHandler";
-export { GunRxJS } from "./gun/rxjs-integration";
+export * from "./utils/errorHandler";
+export type * from "./utils/errorHandler";
+export * from "./gun/rxjs-integration";
 export * from "./plugins";
-export type { ShogunPlugin, PluginManager } from "./types/plugin";
-export { RelayVerifier } from "./relay";
-export type { RelayConfig } from "./relay";
-export { DIDVerifier } from "./relay";
-export type { DIDVerifierConfig } from "./relay";
-export { RelayRegistry } from "./relay";
-export type { RelayRegistryConfig } from "./relay";
+export type * from "./types/plugin";
+export * from "./contracts/entryPoint";
+export * from "./contracts/utils";
+export * from "./contracts/registry";
+export * from "./contracts/relay";
+export type * from "./contracts/entryPoint";
+export type * from "./contracts/relay";
+export type * from "./contracts/registry";
+export type * from "./contracts/base";
+export type * from "./contracts/utils";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -207,24 +208,6 @@ export declare class ShogunCore implements IShogunCore {
      * Validates password requirements and emits signup event on success.
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
-    /**
-     * Ensure the current user has a DID associated asynchronously
-     * @param signUpResult The result of the signup process
-     * @private
-     */
-    private ensureUserHasDIDAsync;
-    /**
-     * Ensure the current user has a DID associated, creating one if needed
-     * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
-     *   - network: The network to use (default: 'main')
-     *   - controller: The controller of the DID (default: user's public key)
-     *   - services: Array of service definitions to add to the DID document
-     * @returns {Promise<string|null>} The DID identifier string or null if operation fails
-     * @description Checks if the authenticated user already has a DID. If not, creates a new one.
-     * If the user already has a DID and options are provided, updates the DID document accordingly.
-     * @private
-     */
-    private ensureUserHasDID;
     /**
      * Create a new user with GunDB
      * @param username - Username

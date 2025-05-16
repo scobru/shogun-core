@@ -43,7 +43,6 @@ Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function (
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
 const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
-const loadDIDModule = () => Promise.resolve().then(() => __importStar(require("./plugins/did/DID")));
 const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/wallet/walletPlugin")));
 const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/metamask/metamaskPlugin")));
 let shogunCoreInstance = null;
@@ -78,7 +77,6 @@ function initShogunBrowser(config) {
 exports.modules = {
     loadWebAuthn: loadWebAuthnModule,
     loadStealth: loadStealthModule,
-    loadDID: loadDIDModule,
     loadWallet: loadWalletModule,
     loadMetaMask: loadMetaMaskModule,
 };

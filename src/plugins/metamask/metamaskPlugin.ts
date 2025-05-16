@@ -211,46 +211,17 @@ export class MetaMaskPlugin
 
       log(`Login/Creation successful: ${result.userPub}`);
 
-      let did: string | null = null;
-      try {
-        log("Ensuring user has a DID...");
-        // Utilizziamo il metodo privato del core per la gestione del DID
-        const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-        did = await ensureUserHasDID({
-          services: [
-            {
-              type: "EcdsaSecp256k1VerificationKey2019",
-              endpoint: `ethereum:${address}`,
-            },
-          ],
-        });
-        if (did) {
-          log(`DID assigned/verified: ${did}`);
-        } else {
-          logWarn("Could not ensure DID for user after MetaMask login.");
-        }
-      } catch (didError) {
-        ErrorHandler.handle(
-          ErrorType.DID,
-          "DID_ENSURE_FAILED",
-          "Error ensuring DID for MetaMask user",
-          didError,
-        );
-      }
-
       // Emettiamo l'evento di login tramite il core
       core.emit("auth:login", {
         userPub: result.userPub,
         username: credentials.username,
         method: "metamask",
-        did: did || undefined,
       });
 
       return {
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        did: did || undefined,
       };
     } catch (error: any) {
       // Cattura sia errori conformi a ShogunError che generici
@@ -359,46 +330,17 @@ export class MetaMaskPlugin
 
       log(`User creation/login successful: ${result.userPub}`);
 
-      let did: string | null = null;
-      try {
-        log("Creating/Ensuring DID with MetaMask verification service...");
-        // Utilizziamo il metodo privato del core per la gestione del DID
-        const ensureUserHasDID = core["ensureUserHasDID"].bind(core);
-        did = await ensureUserHasDID({
-          services: [
-            {
-              type: "EcdsaSecp256k1VerificationKey2019",
-              endpoint: `ethereum:${address}`,
-            },
-          ],
-        });
-        if (did) {
-          log(`DID created/verified: ${did}`);
-        } else {
-          logWarn("Could not ensure DID for user after MetaMask signup.");
-        }
-      } catch (didError) {
-        ErrorHandler.handle(
-          ErrorType.DID,
-          "DID_ENSURE_FAILED",
-          "Error ensuring DID for MetaMask user during signup",
-          didError,
-        );
-      }
-
       // Emettiamo l'evento di registrazione tramite il core
       core.emit("auth:signup", {
         userPub: result.userPub,
         username: credentials.username,
         method: "metamask",
-        did: did ?? undefined,
       });
 
       return {
         success: true,
         userPub: result.userPub,
         username: credentials.username,
-        did: did ?? undefined,
       };
     } catch (error: any) {
       // Cattura sia errori conformi a ShogunError che generici

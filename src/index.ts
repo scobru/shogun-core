@@ -10,48 +10,37 @@ import {
   PluginCategory,
   CorePlugins,
 } from "./types/shogun";
-import { IGunInstance, IGunUserInstance } from "gun";
-import Gun from "gun";
+import { IGunUserInstance } from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-import { DIDCreateOptions } from "./plugins/did";
 import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
-import { DIDPluginInterface } from "./plugins/did/types";
-
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
-import { DIDPlugin } from "./plugins/did/didPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 import { WalletManager } from "./plugins";
 import { GunInstance } from "./gun/types";
 
-// Import relay verification
+export * from "./utils/errorHandler";
+export type * from "./utils/errorHandler";
 
-export { ShogunDID } from "./plugins/did/DID";
-export type {
-  DIDDocument,
-  DIDResolutionResult,
-  DIDCreateOptions,
-} from "./plugins/did/DID";
-
-export { ErrorHandler, ErrorType } from "./utils/errorHandler";
-export type { ShogunError } from "./utils/errorHandler";
-
-export { GunRxJS } from "./gun/rxjs-integration";
+export * from "./gun/rxjs-integration";
 export * from "./plugins";
-export type { ShogunPlugin, PluginManager } from "./types/plugin";
+export type * from "./types/plugin";
 
 // Export relay verification
-export { RelayVerifier } from "./relay";
-export type { RelayConfig } from "./relay";
-export { DIDVerifier } from "./relay";
-export type { DIDVerifierConfig } from "./relay";
-export { RelayRegistry } from "./relay";
-export type { RelayRegistryConfig } from "./relay";
+export * from "./contracts/entryPoint";
+export * from "./contracts/utils";
+export * from "./contracts/registry";
+export * from "./contracts/relay";
+export type * from "./contracts/entryPoint";
+export type * from "./contracts/relay";
+export type * from "./contracts/registry";
+export type * from "./contracts/base";
+export type * from "./contracts/utils";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -193,14 +182,6 @@ export class ShogunCore implements IShogunCore {
         stealthPlugin._category = PluginCategory.Privacy;
         this.register(stealthPlugin);
         log("Stealth plugin registered");
-      }
-
-      // Identity plugins group
-      if (config.did?.enabled) {
-        const didPlugin = new DIDPlugin();
-        didPlugin._category = PluginCategory.Identity;
-        this.register(didPlugin);
-        log("DID plugin registered");
       }
 
       // Wallet plugins group
@@ -560,15 +541,6 @@ export class ShogunCore implements IShogunCore {
         this.eventEmitter.emit("auth:login", {
           userPub: result.userPub ?? "",
         });
-
-        try {
-          const did = await this.ensureUserHasDID();
-          if (did) {
-            result.did = did;
-          }
-        } catch (didError) {
-          logError("Error ensuring DID after login:", didError);
-        }
       }
 
       return result;
@@ -700,9 +672,6 @@ export class ShogunCore implements IShogunCore {
         // la creazione del DID durante il signup finché il problema non è risolto completamente
         // Invece, creeremo il DID al primo accesso successivo dell'utente
 
-        // Commentiamo la creazione asincrona del DID durante il signup
-        this.ensureUserHasDIDAsync(result);
-
         // Emettiamo un evento di debug per monitorare il flusso
         this.eventEmitter.emit("debug", {
           action: "signup_complete",
@@ -741,59 +710,7 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  /**
-   * Ensure the current user has a DID associated asynchronously
-   * @param signUpResult The result of the signup process
-   * @private
-   */
-  private ensureUserHasDIDAsync(signUpResult: SignUpResult): void {
-    if (!signUpResult.success) return;
-
-    // Eseguiamo l'operazione in un nuovo contesto asincrono
-    setTimeout(async () => {
-      try {
-        const did = await this.ensureUserHasDID();
-        if (did) {
-          log(`Created DID for new user: ${did}`);
-          // Aggiorniamo solo internamente il risultato
-          signUpResult.did = did;
-        }
-      } catch (didError) {
-        logError("Error creating DID for new user (async):", didError);
-      }
-    }, 100); // Ritarda leggermente l'esecuzione per dare priorità al completamento della registrazione
-  }
-
   // 🤫 PRIVATE HELPER METHODS 🤫
-
-  /**
-   * Ensure the current user has a DID associated, creating one if needed
-   * @param {DIDCreateOptions} [options] - Optional configuration for DID creation including:
-   *   - network: The network to use (default: 'main')
-   *   - controller: The controller of the DID (default: user's public key)
-   *   - services: Array of service definitions to add to the DID document
-   * @returns {Promise<string|null>} The DID identifier string or null if operation fails
-   * @description Checks if the authenticated user already has a DID. If not, creates a new one.
-   * If the user already has a DID and options are provided, updates the DID document accordingly.
-   * @private
-   */
-  private async ensureUserHasDID(
-    options?: DIDCreateOptions,
-  ): Promise<string | null> {
-    try {
-      const didPlugin = this.getPlugin<DIDPluginInterface>("did");
-
-      if (!didPlugin) {
-        log("DID plugin not available, cannot ensure DID");
-        return null;
-      }
-
-      return await didPlugin.ensureUserHasDID(options);
-    } catch (error) {
-      logError("Error ensuring user has DID:", error);
-      return null;
-    }
-  }
 
   /**
    * Create a new user with GunDB

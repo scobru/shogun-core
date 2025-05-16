@@ -32,23 +32,8 @@ export declare enum CorePlugins {
     MetaMask = "metamask",
     /** Plugin Stealth */
     Stealth = "stealth",
-    /** Plugin DID */
-    DID = "did",
     /** Plugin Wallet Manager */
     WalletManager = "wallet"
-}
-export interface DID {
-    getCurrentUserDID(): Promise<string | null>;
-    resolveDID(did: string): Promise<any>;
-    authenticateWithDID(did: string, challenge?: string): Promise<AuthResult>;
-    createDID(options?: any): Promise<string>;
-    updateDIDDocument(did: string, documentUpdates: any): Promise<boolean>;
-    deactivateDID(did: string): Promise<boolean>;
-    registerDIDOnChain(did: string, signer?: ethers.Signer): Promise<{
-        success: boolean;
-        txHash?: string;
-        error?: string;
-    }>;
 }
 export type AuthMethod = "password" | "webauthn" | "metamask";
 export interface AuthResult {
@@ -58,7 +43,6 @@ export interface AuthResult {
     username?: string;
     password?: string;
     credentialId?: string;
-    did?: string;
     wallet?: any;
     authMethod?: AuthMethod;
 }
@@ -73,7 +57,6 @@ export interface SignUpResult {
     error?: string;
     message?: string;
     wallet?: any;
-    did?: string;
 }
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
@@ -132,17 +115,6 @@ export interface WebauthnConfig {
     rpId?: string;
 }
 /**
- * DID configuration
- */
-export interface DIDConfig {
-    /** DID registry address on blockchain */
-    registryAddress?: string;
-    /** Default network for DIDs */
-    network?: string;
-    /** Enable DID functionalities */
-    enabled?: boolean;
-}
-/**
  * Logging configuration
  */
 export interface LoggingConfig {
@@ -166,8 +138,6 @@ export interface ShogunSDKConfig {
         /** Enable MetaMask */
         enabled?: boolean;
     };
-    /** DID configuration */
-    did?: DIDConfig;
     /** Wallet configuration */
     walletManager?: {
         /** Enable wallet functionalities */

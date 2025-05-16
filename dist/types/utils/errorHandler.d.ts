@@ -9,7 +9,6 @@ export declare enum ErrorType {
     NETWORK = "NetworkError",
     DATABASE = "DatabaseError",
     WALLET = "WalletError",
-    DID = "DIDError",
     STORAGE = "StorageError",
     ENCRYPTION = "EncryptionError",
     SIGNATURE = "SignatureError",

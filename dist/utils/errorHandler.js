@@ -15,7 +15,6 @@ var ErrorType;
     ErrorType["NETWORK"] = "NetworkError";
     ErrorType["DATABASE"] = "DatabaseError";
     ErrorType["WALLET"] = "WalletError";
-    ErrorType["DID"] = "DIDError";
     ErrorType["STORAGE"] = "StorageError";
     ErrorType["ENCRYPTION"] = "EncryptionError";
     ErrorType["SIGNATURE"] = "SignatureError";
