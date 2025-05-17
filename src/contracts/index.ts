@@ -49,3 +49,6 @@ export type {
   ChartData,
   RelayEvent,
 } from "./utils";
+
+// Export contract relationships to handle the protocol integration
+export { RelayVerifier } from "./utils";

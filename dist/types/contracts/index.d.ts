@@ -14,3 +14,4 @@ export type { SimpleRelayConfig, SubscriptionInfo } from "./relay";
 export type { RelayInfo, RelayPage, RelayConfig, BaseContract, ContractConfig, SubscriptionDetails, } from "./base";
 export { getRelayUrls, getRegisteredPubKeys, getSubscriptionHistory, getRelayPerformance, getNetworkSummary, subscribeToRelayEvents, getUsageDataForChart, RelayEventType, } from "./utils";
 export type { RegisteredPubKey, GroupedPubKeys, RelayPerformance, NetworkSummary, ChartDataPoint, ChartData, RelayEvent, } from "./utils";
+export { RelayVerifier } from "./utils";

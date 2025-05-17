@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = void 0;
+exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.RelayVerifier = void 0;
 const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
@@ -26,6 +26,8 @@ const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
+var utils_1 = require("./contracts/utils");
+Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./gun/rxjs-integration"), exports);
 __exportStar(require("./plugins"), exports);

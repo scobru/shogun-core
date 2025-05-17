@@ -24,6 +24,8 @@ import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 import { WalletManager } from "./plugins";
 import { GunInstance } from "./gun/types";
 
+export { RelayVerifier } from "./contracts/utils";
+
 export * from "./utils/errorHandler";
 export type * from "./utils/errorHandler";
 

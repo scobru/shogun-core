@@ -8,6 +8,7 @@ import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
 import { GunInstance } from "./gun/types";
+export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
 export type * from "./utils/errorHandler";
 export * from "./gun/rxjs-integration";

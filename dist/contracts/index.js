@@ -17,7 +17,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RelayEventType = exports.getUsageDataForChart = exports.subscribeToRelayEvents = exports.getNetworkSummary = exports.getRelayPerformance = exports.getSubscriptionHistory = exports.getRegisteredPubKeys = exports.getRelayUrls = exports.SimpleRelay = exports.Registry = exports.EntryPoint = void 0;
+exports.RelayVerifier = exports.RelayEventType = exports.getUsageDataForChart = exports.subscribeToRelayEvents = exports.getNetworkSummary = exports.getRelayPerformance = exports.getSubscriptionHistory = exports.getRegisteredPubKeys = exports.getRelayUrls = exports.SimpleRelay = exports.Registry = exports.EntryPoint = void 0;
 // Export all relay SDK components
 // Contract interfaces and ABIs
 __exportStar(require("./base"), exports);
@@ -42,3 +42,6 @@ Object.defineProperty(exports, "getNetworkSummary", { enumerable: true, get: fun
 Object.defineProperty(exports, "subscribeToRelayEvents", { enumerable: true, get: function () { return utils_1.subscribeToRelayEvents; } });
 Object.defineProperty(exports, "getUsageDataForChart", { enumerable: true, get: function () { return utils_1.getUsageDataForChart; } });
 Object.defineProperty(exports, "RelayEventType", { enumerable: true, get: function () { return utils_1.RelayEventType; } });
+// Export contract relationships to handle the protocol integration
+var utils_2 = require("./utils");
+Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_2.RelayVerifier; } });

@@ -2,6 +2,7 @@
  * Utility functions for working with the relay system
  */
 import { Registry } from "./registry";
+import { SimpleRelay } from "./relay";
 import { EntryPoint } from "./entryPoint";
 export interface RegisteredPubKey {
     relayAddress: string;
@@ -118,3 +119,55 @@ export declare function subscribeToRelayEvents(registry: Registry, callback: (ev
  * @returns Dati formattati per grafici
  */
 export declare function getUsageDataForChart(entryPoint: EntryPoint, metric: "subscriptions" | "revenue" | "users", period: "daily" | "weekly" | "monthly"): Promise<ChartData>;
+/**
+ * Create a combined relay verifier that can check public key authorization across all contract types
+ */
+export declare class RelayVerifier {
+    private registry;
+    private entryPoint;
+    private simpleRelay;
+    /**
+     * Create a new RelayVerifier
+     * @param registry - Optional Registry instance
+     * @param entryPoint - Optional EntryPoint instance
+     * @param simpleRelay - Optional SimpleRelay instance
+     */
+    constructor(registry?: Registry, entryPoint?: EntryPoint, simpleRelay?: SimpleRelay);
+    /**
+     * Check if a public key is authorized (subscribed) to any relay
+     * @param registryAddress - The address of the registry (or any value if checking directly)
+     * @param pubKey - The public key to check (hex string or Uint8Array)
+     * @returns True if the public key is authorized, false otherwise
+     */
+    isPublicKeyAuthorized(registryAddress: string, pubKey: string | Uint8Array): Promise<boolean>;
+    /**
+     * Check if a user is subscribed to a specific relay
+     * @param relayAddress - The address of the relay
+     * @param pubKey - The public key to check (hex string or Uint8Array)
+     * @returns True if the user is subscribed, false otherwise
+     */
+    isUserSubscribedToRelay(relayAddress: string, pubKey: string | Uint8Array): Promise<boolean>;
+    /**
+     * Get all relays from registry
+     * @param onlyActive - If true, only return active relays
+     * @param offset - Starting index for pagination
+     * @param limit - Maximum number of items to return
+     * @returns Array of relay addresses
+     */
+    getAllRelays(onlyActive?: boolean, offset?: number, limit?: number): Promise<string[]>;
+    /**
+     * Set registry instance
+     * @param registry - The Registry instance
+     */
+    setRegistry(registry: Registry): void;
+    /**
+     * Set entryPoint instance
+     * @param entryPoint - The EntryPoint instance
+     */
+    setEntryPoint(entryPoint: EntryPoint): void;
+    /**
+     * Set simpleRelay instance
+     * @param simpleRelay - The SimpleRelay instance
+     */
+    setSimpleRelay(simpleRelay: SimpleRelay): void;
+}

@@ -3,7 +3,7 @@
  * Utility functions for working with the relay system
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RelayEventType = void 0;
+exports.RelayVerifier = exports.RelayEventType = void 0;
 exports.getRelayUrls = getRelayUrls;
 exports.getRegisteredPubKeys = getRegisteredPubKeys;
 exports.getSubscriptionHistory = getSubscriptionHistory;
@@ -14,6 +14,8 @@ exports.getUsageDataForChart = getUsageDataForChart;
 const ethers_1 = require("ethers");
 const relay_1 = require("./relay");
 const events_1 = require("events");
+const errorHandler_1 = require("../utils/errorHandler");
+const logger_1 = require("../utils/logger");
 var RelayEventType;
 (function (RelayEventType) {
     RelayEventType["NEW_SUBSCRIPTION"] = "newSubscription";
@@ -450,3 +452,131 @@ async function getUsageDataForChart(entryPoint, metric, period) {
         };
     }
 }
+/**
+ * Create a combined relay verifier that can check public key authorization across all contract types
+ */
+class RelayVerifier {
+    registry = null;
+    entryPoint = null;
+    simpleRelay = null;
+    /**
+     * Create a new RelayVerifier
+     * @param registry - Optional Registry instance
+     * @param entryPoint - Optional EntryPoint instance
+     * @param simpleRelay - Optional SimpleRelay instance
+     */
+    constructor(registry, entryPoint, simpleRelay) {
+        this.registry = registry ?? null;
+        this.entryPoint = entryPoint ?? null;
+        this.simpleRelay = simpleRelay ?? null;
+    }
+    /**
+     * Check if a public key is authorized (subscribed) to any relay
+     * @param registryAddress - The address of the registry (or any value if checking directly)
+     * @param pubKey - The public key to check (hex string or Uint8Array)
+     * @returns True if the public key is authorized, false otherwise
+     */
+    async isPublicKeyAuthorized(registryAddress, pubKey) {
+        try {
+            // First try simpleRelay if available (most direct)
+            if (this.simpleRelay) {
+                try {
+                    const isSubscribed = await this.simpleRelay.isSubscribed(pubKey);
+                    if (isSubscribed)
+                        return true;
+                }
+                catch (error) {
+                    (0, logger_1.logError)("Error checking SimpleRelay subscription:", error);
+                }
+            }
+            // Then try entryPoint for protocol-mode relays
+            if (this.entryPoint && this.registry) {
+                try {
+                    // Get all relays from registry
+                    const relaysPage = await this.registry.getAllRelays(true, 0, 100);
+                    if (relaysPage && relaysPage.relays && relaysPage.relays.length > 0) {
+                        // Check each relay via entryPoint
+                        for (const relayAddress of relaysPage.relays) {
+                            const isPubKeySubscribed = await this.entryPoint.isPubKeySubscribed(relayAddress, pubKey);
+                            if (isPubKeySubscribed)
+                                return true;
+                        }
+                    }
+                }
+                catch (error) {
+                    (0, logger_1.logError)("Error checking EntryPoint subscriptions:", error);
+                }
+            }
+            return false;
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_VERIFIER_ERROR", "Error in isPublicKeyAuthorized check", error);
+            return false;
+        }
+    }
+    /**
+     * Check if a user is subscribed to a specific relay
+     * @param relayAddress - The address of the relay
+     * @param pubKey - The public key to check (hex string or Uint8Array)
+     * @returns True if the user is subscribed, false otherwise
+     */
+    async isUserSubscribedToRelay(relayAddress, pubKey) {
+        try {
+            // If we have the individual relay, check directly
+            if (this.simpleRelay && this.simpleRelay.getAddress() === relayAddress) {
+                return await this.simpleRelay.isSubscribed(pubKey);
+            }
+            // Otherwise try via EntryPoint
+            if (this.entryPoint) {
+                return await this.entryPoint.isPubKeySubscribed(relayAddress, pubKey);
+            }
+            return false;
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_VERIFIER_ERROR", `Error checking subscription to relay ${relayAddress}`, error);
+            return false;
+        }
+    }
+    /**
+     * Get all relays from registry
+     * @param onlyActive - If true, only return active relays
+     * @param offset - Starting index for pagination
+     * @param limit - Maximum number of items to return
+     * @returns Array of relay addresses
+     */
+    async getAllRelays(onlyActive = true, offset = 0, limit = 100) {
+        try {
+            if (!this.registry) {
+                return [];
+            }
+            const relaysPage = await this.registry.getAllRelays(onlyActive, offset, limit);
+            return relaysPage?.relays || [];
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.CONTRACT, "RELAY_VERIFIER_ERROR", "Error getting all relays", error);
+            return [];
+        }
+    }
+    /**
+     * Set registry instance
+     * @param registry - The Registry instance
+     */
+    setRegistry(registry) {
+        this.registry = registry;
+    }
+    /**
+     * Set entryPoint instance
+     * @param entryPoint - The EntryPoint instance
+     */
+    setEntryPoint(entryPoint) {
+        this.entryPoint = entryPoint;
+    }
+    /**
+     * Set simpleRelay instance
+     * @param simpleRelay - The SimpleRelay instance
+     */
+    setSimpleRelay(simpleRelay) {
+        this.simpleRelay = simpleRelay;
+    }
+}
+exports.RelayVerifier = RelayVerifier;
