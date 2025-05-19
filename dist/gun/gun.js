@@ -49,9 +49,13 @@ const logger_1 = require("../utils/logger");
 const errorHandler_1 = require("../utils/errorHandler");
 const GunErrors = __importStar(require("./errors"));
 const rxjs_integration_1 = require("./rxjs-integration");
+const crypto = __importStar(require("./crypto"));
+const utils = __importStar(require("./utils"));
 class GunDB {
     gun;
     user = null;
+    crypto;
+    utils;
     onAuthCallbacks = [];
     _authenticating = false;
     authToken;
@@ -65,6 +69,9 @@ class GunDB {
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.restrictPut(this.gun, authToken || "");
         this.subscribeToAuthEvents();
+        // bind crypto and utils
+        this.crypto = crypto;
+        this.utils = utils;
     }
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {

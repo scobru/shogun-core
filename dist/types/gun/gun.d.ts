@@ -9,9 +9,13 @@ import { IGunUserInstance } from "gun";
 import { GunInstance } from "./types";
 import * as GunErrors from "./errors";
 import { GunRxJS } from "./rxjs-integration";
+import * as crypto from "./crypto";
+import * as utils from "./utils";
 declare class GunDB {
     gun: GunInstance<any>;
     user: IGunUserInstance<any> | null;
+    crypto: typeof crypto;
+    utils: typeof utils;
     private readonly onAuthCallbacks;
     private _authenticating;
     private readonly authToken?;

@@ -13,14 +13,14 @@ import { GunInstance } from "./types";
 import * as GunErrors from "./errors";
 import { GunRxJS } from "./rxjs-integration";
 
-interface RetryConfig {
-  attempts: number;
-  delay: number;
-}
+import * as crypto from "./crypto";
+import * as utils from "./utils";
 
 class GunDB {
   public gun: GunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
+  public crypto: typeof crypto;
+  public utils: typeof utils;
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private _authenticating: boolean = false;
   private readonly authToken?: string | null;
@@ -36,6 +36,10 @@ class GunDB {
     this.user = this.gun.user().recall({ sessionStorage: true });
     this.restrictPut(this.gun, authToken || "");
     this.subscribeToAuthEvents();
+
+    // bind crypto and utils
+    this.crypto = crypto;
+    this.utils = utils;
   }
 
   private subscribeToAuthEvents() {
