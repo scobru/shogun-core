@@ -127,7 +127,7 @@ export class ShogunCore implements IShogunCore {
         authToken: config.authToken,
       });
 
-      this.gundb = new GunDB(gun, config.authToken);
+      this.gundb = new GunDB("", { gun }, config.authToken);
       this.gun = gun;
     } else {
       logError("Missing Gun instance");
