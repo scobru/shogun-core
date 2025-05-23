@@ -15,35 +15,38 @@ import GunPlus from "../../gun_plus";
  
  * @returns The certificate.
  */
-    export async function make_certificate(grantees: {pub: string}[], policies: IPolicy[], issuer?: ISEAPair){
-	const SEA = GunPlus?.instance?.SEA;
-	if(!SEA) throw {err: "SEA is not available. Failed to make certificate."};
-	const pair = issuer ? issuer : GunPlus.instance.user.pair();
-    if(!pair.pub) {
-        throw new Error("Failed to make certificate. No issuer available.");
-    }
-	const certificate = await SEA.certify(
-		grantees,
-		policies,
-		pair,
-	); 
-	
-	return certificate;
+export async function make_certificate(
+  grantees: { pub: string }[],
+  policies: IPolicy[],
+  issuer?: ISEAPair,
+) {
+  const SEA = GunPlus?.instance?.SEA;
+  if (!SEA) throw { err: "SEA is not available. Failed to make certificate." };
+  const pair = issuer
+    ? issuer
+    : GunPlus.instance.user.pair() || { pub: "", priv: "" };
+  if (!pair.pub) {
+    throw new Error("Failed to make certificate. No issuer available.");
+  }
+  const certificate = await SEA.certify(grantees, policies, pair);
+
+  return certificate;
 }
 
 /** Some premade policies */
 export const policies = {
+  /** Path must be prefixed with the string: "public" */
+  prefix_path_public: { "#": { "*": "public" } },
+  /** Key must be prefixed with the string: "public" */
+  prefix_key_public: { ".": { "*": "public" } },
 
-    /** Path must be prefixed with the string: "public" */
-    prefix_path_public: {"#": {"*": "public"}}, 
-    /** Key must be prefixed with the string: "public" */
-    prefix_key_public: {".": {"*": "public"}},
+  /** Path or key must contain the public key of the user using the certificate */
+  contains_pub: { "+": "*" as const },
 
-    /** Path or key must contain the public key of the user using the certificate */
-    contains_pub: {"+": "*" as const},
-
-
-    prefix_path_x: (path: string) => {return  {"#": {"*": path}} },
-    prefix_key_x: (key: string) => {return  {".": {"*": key}} }
-
-}
+  prefix_path_x: (path: string) => {
+    return { "#": { "*": path } };
+  },
+  prefix_key_x: (key: string) => {
+    return { ".": { "*": key } };
+  },
+};

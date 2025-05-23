@@ -51,30 +51,48 @@ const GunErrors = __importStar(require("./errors"));
 const rxjs_integration_1 = require("./rxjs-integration");
 const crypto = __importStar(require("./crypto"));
 const utils = __importStar(require("./utils"));
+const gun_plus_instance_1 = __importDefault(require("./gun_plus_instance"));
 class GunDB {
-    gun;
-    user = null;
+    gunPlus;
     crypto;
     utils;
     onAuthCallbacks = [];
     _authenticating = false;
     authToken;
+    // For backward compatibility
+    get gun() {
+        return this.gunPlus.gun;
+    }
     // Integrated modules
     _rxjs;
-    _sea;
-    constructor(gun, authToken) {
+    constructor(appScopeOrGun, optionsOrAuthToken, authTokenParam) {
         (0, logger_1.log)("Initializing GunDB");
+        // Handle different constructor signature formats for backward compatibility
+        let app_scope = "";
+        let options = {};
+        let authToken;
+        if (typeof appScopeOrGun === "string") {
+            // New signature: (app_scope: string, options: GunOptions, authToken?: string)
+            app_scope = appScopeOrGun;
+            options = optionsOrAuthToken || {};
+            authToken = authTokenParam;
+        }
+        else {
+            // Old signature: (gun: GunInstance<any>, authToken?: string)
+            // In this case, we're reusing an existing Gun instance
+            options = { gun: appScopeOrGun };
+            authToken = optionsOrAuthToken;
+        }
         this.authToken = authToken;
-        this.gun = gun;
-        this.user = this.gun.user().recall({ sessionStorage: true });
-        this.restrictPut(this.gun, authToken || "");
+        this.gunPlus = new gun_plus_instance_1.default({ Gun: gun_1.default, SEA: gun_1.default.SEA }, app_scope, options);
+        this.restrictPut(this.gunPlus.gun, authToken || "");
         this.subscribeToAuthEvents();
         // bind crypto and utils
         this.crypto = crypto;
         this.utils = utils;
     }
     subscribeToAuthEvents() {
-        this.gun.on("auth", (ack) => {
+        this.gunPlus.gun.on("auth", (ack) => {
             (0, logger_1.log)("Auth event received:", ack);
             if (ack.err) {
                 errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
@@ -85,7 +103,7 @@ class GunDB {
         });
     }
     notifyAuthListeners(pub) {
-        const user = this.gun.user();
+        const user = this.gunPlus.user;
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
     restrictPut(gun, authToken) {
@@ -110,7 +128,7 @@ class GunDB {
      * @param peer URL of the peer to add
      */
     addPeer(peer) {
-        this.gun.opt({ peers: [peer] });
+        this.gunPlus.gun.opt({ peers: [peer] });
         (0, logger_1.log)(`Added new peer: ${peer}`);
     }
     /**
@@ -120,7 +138,7 @@ class GunDB {
      */
     onAuth(callback) {
         this.onAuthCallbacks.push(callback);
-        const user = this.gun.user();
+        const user = this.gunPlus.gun.user();
         if (user && user.is)
             callback(user);
         return () => {
@@ -134,14 +152,14 @@ class GunDB {
      * @returns Gun instance
      */
     getGun() {
-        return this.gun;
+        return this.gunPlus.gun;
     }
     /**
      * Gets the current user instance
      * @returns User instance
      */
     getUser() {
-        return this.gun.user();
+        return this.gunPlus.user;
     }
     /**
      * Gets a node at the specified path
@@ -149,7 +167,7 @@ class GunDB {
      * @returns Gun node
      */
     get(path) {
-        return this.gun.get(path);
+        return this.gunPlus.gun.get(path);
     }
     /**
      * Puts data at the specified path
@@ -159,7 +177,7 @@ class GunDB {
      */
     async put(path, data) {
         return new Promise((resolve) => {
-            this.gun.get(path).put(data, (ack) => {
+            this.gunPlus.gun.get(path).put(data, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
@@ -172,7 +190,7 @@ class GunDB {
      */
     async set(path, data) {
         return new Promise((resolve) => {
-            this.gun.get(path).set(data, (ack) => {
+            this.gunPlus.gun.get(path).set(data, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
@@ -184,91 +202,64 @@ class GunDB {
      */
     async remove(path) {
         return new Promise((resolve) => {
-            this.gun.get(path).put(null, (ack) => {
+            this.gunPlus.gun.get(path).put(null, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
     }
     /**
-     * Signs up a new user
+     * Signs up a new user using AuthManager
      * @param username Username
      * @param password Password
      * @returns Promise resolving to signup result
      */
     async signUp(username, password) {
         (0, logger_1.log)("Attempting user registration:", username);
-        // Implementiamo una versione semplificata con passaggi sequenziali invece di callback nidificati
-        return new Promise((resolve) => {
-            // Aggiungiamo un timeout di sicurezza per evitare chiamate bloccate
-            const timeout = setTimeout(() => {
-                (0, logger_1.logError)(`Timeout durante la registrazione per l'utente: ${username}`);
-                resolve({ success: false, error: "Registration timeout in GunDB" });
-            }, 10000); // Timeout di 10 secondi
-            // Funzione per eseguire i passaggi in sequenza
-            const executeSignUp = async () => {
-                try {
-                    // STEP 1: Creiamo l'utente
-                    const createResult = await new Promise((resolveCreate) => {
-                        (0, logger_1.log)(`Creating user: ${username}`);
-                        this.gun.user().create(username, password, (ack) => {
-                            if (ack.err) {
-                                (0, logger_1.logError)(`User creation error: ${ack.err}`);
-                                resolveCreate({ err: ack.err });
-                            }
-                            else {
-                                (0, logger_1.log)(`User created successfully: ${username}`);
-                                resolveCreate({ pub: ack.pub });
-                            }
-                        });
-                    });
-                    // Se la creazione fallisce, usciamo
-                    if (createResult.err) {
-                        clearTimeout(timeout);
-                        return resolve({ success: false, error: createResult.err });
-                    }
-                    const user = this.gun.get(createResult.pub).put({
-                        username: username,
-                    });
-                    this.gun.get("users").set(user);
-                    // STEP 2: Effettuiamo il login
-                    (0, logger_1.log)(`Attempting login after registration for: ${username}`);
-                    try {
-                        const loginResult = await this.login(username, password);
-                        clearTimeout(timeout);
-                        if (!loginResult.success) {
-                            (0, logger_1.logError)(`Login after registration failed: ${loginResult.error}`);
-                            return resolve({
-                                success: false,
-                                error: `Registration completed but login failed: ${loginResult.error}`,
-                            });
-                        }
-                        (0, logger_1.log)(`Login after registration successful for: ${username}`);
-                        return resolve(loginResult);
-                    }
-                    catch (loginError) {
-                        clearTimeout(timeout);
-                        (0, logger_1.logError)(`Exception during post-registration login: ${loginError}`);
-                        return resolve({
-                            success: false,
-                            error: "Exception during post-registration login",
-                        });
-                    }
-                }
-                catch (error) {
-                    clearTimeout(timeout);
-                    (0, logger_1.logError)(`Unexpected error during registration flow: ${error}`);
-                    return resolve({
-                        success: false,
-                        error: `Unexpected error during registration: ${error}`,
-                    });
-                }
+        if (this.isAuthenticating()) {
+            const err = "Authentication already in progress";
+            (0, logger_1.log)(err);
+            return { success: false, error: err };
+        }
+        this._setAuthenticating(true);
+        try {
+            // Validate and scope the credentials
+            const validated = await this.gunPlus.user.validate(username, password);
+            // Use AuthManager's create method directly
+            const createResult = await this.gunPlus.user.create(validated);
+            if ("err" in createResult) {
+                this._setAuthenticating(false);
+                return { success: false, error: createResult.err };
+            }
+            // Add user to users list
+            this.gunPlus.gun.get(createResult.pub).put({
+                username: username,
+            });
+            this.gunPlus.gun.get("users").set(this.gunPlus.gun.get(createResult.pub));
+            // Log in after registration
+            (0, logger_1.log)(`Attempting login after registration for: ${username}`);
+            const loginResult = await this.login(username, password);
+            this._setAuthenticating(false);
+            if (!loginResult.success) {
+                (0, logger_1.logError)(`Login after registration failed: ${loginResult.error}`);
+                return {
+                    success: false,
+                    error: `Registration completed but login failed: ${loginResult.error}`,
+                };
+            }
+            (0, logger_1.log)(`Login after registration successful for: ${username}`);
+            return loginResult;
+        }
+        catch (error) {
+            this._setAuthenticating(false);
+            (0, logger_1.logError)(`Unexpected error during registration flow: ${error}`);
+            return {
+                success: false,
+                error: `Unexpected error during registration: ${error}`,
             };
-            // Avvia il processo di registrazione
-            executeSignUp();
-        });
+        }
     }
     /**
-     * Logs in a user
+     * Logs in a user using AuthManager
      * @param username Username
      * @param password Password
      * @param callback Optional callback for login result
@@ -282,63 +273,55 @@ class GunDB {
         }
         this._setAuthenticating(true);
         (0, logger_1.log)(`Attempting login for user: ${username}`);
-        return new Promise((resolve) => {
-            if (this.gun.user()) {
-                // Tentativo di logout pulito per evitare conflitti di autenticazione
-                this.gun.user().leave();
+        try {
+            // Clean up previous session
+            if (this.gunPlus.user) {
+                this.gunPlus.user.leave();
                 (0, logger_1.log)(`Previous session cleaned for: ${username}`);
             }
-            // Aumentiamo il timeout a 8 secondi per dare più tempo all'operazione
-            const timeout = setTimeout(() => {
-                this._setAuthenticating(false);
-                (0, logger_1.logError)(`Login timeout for user: ${username}`);
-                resolve({ success: false, error: "Login timeout" });
-            }, 8000);
-            (0, logger_1.log)(`Starting authentication for: ${username}`);
-            this.gun.user().auth(username, password, (ack) => {
-                clearTimeout(timeout);
-                this._setAuthenticating(false);
-                if (ack.err) {
-                    (0, logger_1.logError)(`Login error for ${username}: ${ack.err}`);
-                    resolve({ success: false, error: ack.err });
-                }
-                else {
-                    const userPub = this.gun.user().is?.pub;
-                    const user = this.gun.get("users").map((user) => {
-                        if (user.pub === userPub) {
-                            return user;
-                        }
-                    });
-                    // se non è dentro users, aggiungilo
-                    if (!user) {
-                        const user = this.gun.get(userPub).put({
-                            username: username,
-                        });
-                        this.gun.get("users").set(user);
-                    }
-                    if (!user) {
-                        (0, logger_1.logError)(`Authentication succeeded but no user.pub available for: ${username}`);
-                        resolve({
-                            success: false,
-                            error: "Authentication inconsistency: user.pub not available",
-                        });
-                    }
-                    else {
-                        (0, logger_1.log)(`Login successful for: ${username} (${userPub})`);
-                        this._savePair();
-                        resolve({
-                            success: true,
-                            userPub,
-                            username,
-                        });
-                    }
+            // Validate and scope the credentials
+            const validated = await this.gunPlus.user.validate(username, password);
+            // Use AuthManager's auth method directly
+            const authResult = await this.gunPlus.user.auth(validated);
+            this._setAuthenticating(false);
+            if ("err" in authResult) {
+                (0, logger_1.logError)(`Login error for ${username}: ${authResult.err}`);
+                return { success: false, error: authResult.err };
+            }
+            // Get user from public key
+            const userPub = this.gunPlus.user.pair({ strict: true }).pub;
+            // Check if user exists in users list, add if not
+            const user = this.gunPlus.gun.get("users").map((user) => {
+                if (user.pub === userPub) {
+                    return user;
                 }
             });
-        });
+            if (!user) {
+                const newUser = this.gunPlus.gun.get(userPub).put({
+                    username: username,
+                });
+                this.gunPlus.gun.get("users").set(newUser);
+            }
+            (0, logger_1.log)(`Login successful for: ${username} (${userPub})`);
+            this._savePair();
+            if (callback) {
+                callback({ success: true, userPub, username });
+            }
+            return {
+                success: true,
+                userPub,
+                username,
+            };
+        }
+        catch (error) {
+            this._setAuthenticating(false);
+            (0, logger_1.logError)(`Error during login: ${error}`);
+            return { success: false, error: String(error) };
+        }
     }
     _savePair() {
         try {
-            const pair = this.gun.user()?._?.sea;
+            const pair = this.gunPlus.user.pair();
             if (pair && typeof localStorage !== "undefined") {
                 localStorage.setItem("pair", JSON.stringify(pair));
             }
@@ -354,11 +337,11 @@ class GunDB {
         this._authenticating = value;
     }
     /**
-     * Logs out the current user
+     * Logs out the current user using AuthManager
      */
     logout() {
         try {
-            this.gun.user().leave();
+            this.gunPlus.user.leave();
             (0, logger_1.log)("Logout completed");
         }
         catch (error) {
@@ -370,15 +353,15 @@ class GunDB {
      * @returns True if logged in
      */
     isLoggedIn() {
-        return !!this.gun.user()?.is?.pub;
+        return !!this.gunPlus.user.pair();
     }
     /**
      * Gets the current user
      * @returns Current user object or null
      */
     getCurrentUser() {
-        const pub = this.gun.user()?.is?.pub;
-        return pub ? { pub, user: this.gun.user() } : null;
+        const pair = this.gunPlus.user.pair();
+        return pair ? { pub: pair.pub, user: this.gunPlus.user } : null;
     }
     /**
      * Accesses the RxJS module for reactive programming
@@ -386,9 +369,54 @@ class GunDB {
      */
     rx() {
         if (!this._rxjs) {
-            this._rxjs = new rxjs_integration_1.GunRxJS(this.gun);
+            this._rxjs = new rxjs_integration_1.GunRxJS(this.gunPlus.gun);
         }
         return this._rxjs;
+    }
+    /**
+     * Creates a readable stream from a Gun path or chain
+     * @param path Path to stream data from, or a Gun chain
+     * @returns ReadableStream that emits changes from the specified path
+     */
+    stream(path) {
+        const { on_stream } = require("./models/streams");
+        // If a string path is provided, convert it to a Gun chain
+        const chain = typeof path === "string" ? this.gunPlus.gun.get(path) : path;
+        return on_stream(chain);
+    }
+    /**
+     * Creates a GunNode for the specified path
+     * @param path Path to create a node for
+     * @returns GunNode instance for the specified path
+     */
+    node(path) {
+        const GunNode = require("./models/gun-node").default;
+        return new GunNode(this.gunPlus.gun.get(path));
+    }
+    /**
+     * Creates a certificate that allows other users to write to specific parts of the user's graph
+     * @param grantees Array of public keys to grant access to
+     * @param policies Array of policies that define what paths/keys can be written to
+     * @returns Promise resolving to the certificate string
+     * @example
+     * // Allow anyone to write to paths containing their public key
+     * const cert = await gundb.certify([{pub: "*"}], [gundb.policies.contains_pub]);
+     */
+    async certify(grantees = [{ pub: "*" }], policies = []) {
+        // Get the policies and make_certificate function from the cert module
+        const { policies: policyPresets, make_certificate, } = require("./models/auth/cert");
+        // Default to the contains_pub policy if none provided
+        const policiesToUse = policies.length > 0 ? policies : [policyPresets.contains_pub];
+        // Get the current user's key pair
+        const pair = this.gunPlus.user.pair({ strict: true });
+        // Create and return the certificate
+        return make_certificate(grantees, policiesToUse, pair);
+    }
+    /**
+     * Access to predefined certificate policies
+     */
+    get policies() {
+        return require("./models/auth/cert").policies;
     }
     /**
      * Imposta le domande di sicurezza e il suggerimento per la password
@@ -434,7 +462,7 @@ class GunDB {
         (0, logger_1.log)("Tentativo di recupero password per:", username);
         try {
             // Verifica che l'utente esista
-            const user = this.gun.user().recall({ sessionStorage: true });
+            const user = this.gunPlus.gun.user().recall({ sessionStorage: true });
             if (!user || !user.is) {
                 return { success: false, error: "Utente non trovato" };
             }
@@ -462,41 +490,6 @@ class GunDB {
         }
     }
     /**
-     * Hashes text with Gun.SEA
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    async hashText(text) {
-        if (!this._sea) {
-            this._sea = gun_1.default.SEA;
-        }
-        return this._sea.work(text, undefined, undefined, { name: "SHA-256" });
-    }
-    /**
-     * Encrypts data with Gun.SEA
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    async encrypt(data, key) {
-        if (!this._sea) {
-            this._sea = gun_1.default.SEA;
-        }
-        return this._sea.encrypt(data, key);
-    }
-    /**
-     * Decrypts data with Gun.SEA
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    async decrypt(encryptedData, key) {
-        if (!this._sea) {
-            this._sea = gun_1.default.SEA;
-        }
-        return this._sea.decrypt(encryptedData, key);
-    }
-    /**
      * Saves user data at the specified path
      * @param path Path to save the data
      * @param data Data to save
@@ -504,7 +497,7 @@ class GunDB {
      */
     async saveUserData(path, data) {
         return new Promise((resolve, reject) => {
-            const user = this.gun.user();
+            const user = this.gunPlus.gun.user();
             if (!user.is) {
                 reject(new Error("User not authenticated"));
                 return;
@@ -526,7 +519,7 @@ class GunDB {
      */
     async getUserData(path) {
         return new Promise((resolve) => {
-            const user = this.gun.user();
+            const user = this.gunPlus.gun.user();
             if (!user.is) {
                 resolve(null);
                 return;
@@ -535,6 +528,32 @@ class GunDB {
                 resolve(data);
             });
         });
+    }
+    /**
+     * Hashes text with crypto module
+     * @param text Text to hash
+     * @returns Promise that resolves with the hashed text
+     */
+    async hashText(text) {
+        return this.crypto.hashText(text);
+    }
+    /**
+     * Encrypts data using SEA
+     * @param data Data to encrypt
+     * @param key Encryption key
+     * @returns Promise that resolves with the encrypted data
+     */
+    async encrypt(data, key) {
+        return this.crypto.encrypt(data, key);
+    }
+    /**
+     * Decrypts data using SEA
+     * @param encryptedData Encrypted data
+     * @param key Decryption key
+     * @returns Promise that resolves with the decrypted data
+     */
+    async decrypt(encryptedData, key) {
+        return this.crypto.decrypt(encryptedData, key);
     }
     // Errors
     static Errors = GunErrors;

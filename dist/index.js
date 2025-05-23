@@ -101,7 +101,7 @@ class ShogunCore {
                 radisk: false,
                 authToken: config.authToken,
             });
-            this.gundb = new gun_1.GunDB(gun, config.authToken);
+            this.gundb = new gun_1.GunDB("", { gun }, config.authToken);
             this.gun = gun;
         }
         else {
@@ -421,11 +421,6 @@ class ShogunCore {
                     // Utilizziamo il metodo login di GunDB
                     const gunLoginResult = (await this.gundb.login(username, password));
                     clearTimeout(timeoutId);
-                    const walletPlugin = this.getPlugin(shogun_1.CorePlugins.WalletManager);
-                    if (gunLoginResult && walletPlugin) {
-                        const mainWallet = walletPlugin.getMainWalletCredentials();
-                        this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
-                    }
                     if (!gunLoginResult.success) {
                         resolve({
                             success: false,
@@ -433,11 +428,24 @@ class ShogunCore {
                         });
                     }
                     else {
+                        // First resolve the success result
                         resolve({
                             success: true,
                             userPub: gunLoginResult.userPub || "",
                             username: gunLoginResult.username || username,
                         });
+                        // Then try to access wallet credentials after auth state is updated
+                        try {
+                            const walletPlugin = this.getPlugin(shogun_1.CorePlugins.WalletManager);
+                            if (walletPlugin) {
+                                const mainWallet = walletPlugin.getMainWalletCredentials();
+                                this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
+                            }
+                        }
+                        catch (walletError) {
+                            // Just log the error but don't fail the login
+                            (0, logger_1.logError)("Error accessing wallet credentials after login:", walletError);
+                        }
                     }
                 }
                 catch (error) {

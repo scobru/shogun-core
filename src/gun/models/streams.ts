@@ -3,62 +3,62 @@ import GunNode from "./gun-node";
 import type { GunNodeClassSimple } from "../gun_plus";
 
 export type ValidGunChunk = {
-    key: string,
-    value: any,
-    chain: IGunChain<any>
-}
+  key: string;
+  value: any;
+  chain: IGunChain<any>;
+};
 
 export type NullGunChunk = {
-    key: string,
-    value: null,
-    chain: null
-}
+  key: string;
+  value: null;
+  chain: null;
+};
 
 export type ValidGunNodeChunk<T extends GunNode> = {
-    key: string,
-    value: any,
-    node: T
-}
+  key: string;
+  value: any;
+  node: T;
+};
 
 export type NullGunNodeChunk = {
-    key: string,
-    value: any,
-    node: null
-}
+  key: string;
+  value: any;
+  node: null;
+};
 
 declare global {
-    interface ReadableStream<R> {
-        [Symbol.asyncIterator](): AsyncIterableIterator<R>;
-    }
+  interface ReadableStream<R> {
+    [Symbol.asyncIterator](): AsyncIterableIterator<R>;
+  }
 }
 
 /**
- * 
+ *
  * Only Firefox implements async iterable on ReadableStream. This will add polyfill.
- * 
+ *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream#browser_compatibility
  */
 (function enable_async_iterator_polyfill() {
-    ReadableStream.prototype[Symbol.asyncIterator] = async function* (this: ReadableStream) {
-        const reader = this.getReader()
-        try {
-          while (true) {
-            const {done, value} = await reader.read()
-            if (done) return
-            yield value
-          }
-        }
-        finally {
-          reader.releaseLock()
-        }
+  ReadableStream.prototype[Symbol.asyncIterator] = async function* (
+    this: ReadableStream,
+  ) {
+    const reader = this.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) return;
+        yield value;
       }
+    } finally {
+      reader.releaseLock();
+    }
+  };
 })();
 
-
 /**
- * 
+ *
  * Wraps .on call in a stream. Cancelling the stream will unsubscribe from updates from gun.
- * 
+ *
  * **Usage:**
  * ```
  * const stream = on_stream(node)
@@ -68,28 +68,27 @@ declare global {
  * ```
  */
 export function on_stream(chain: IGunChain<any>) {
-    
-    let ev: IGunOnEvent;
-    const stream = new ReadableStream<ValidGunChunk | NullGunChunk>({
-        start(controller) {
-            console.log("stream started");
-            chain.on(function(this: IGunChain<any>, value, key, _, event) {
-                ev = event;
-                console.log(`from stream, ${key}`);
-                controller.enqueue({value, key, chain: this});
-            })
-        },
-        cancel() {
-            console.log("stream cancelled");
-            if(!ev) {
-                // TODO log
-                return;
-            }
-            ev.off();
-        }
-    });
+  let ev: IGunOnEvent;
+  const stream = new ReadableStream<ValidGunChunk | NullGunChunk>({
+    start(controller) {
+      console.log("stream started");
+      chain.on(function (this: IGunChain<any>, value, key, _, event) {
+        ev = event;
+        console.log(`from stream, ${key}`);
+        controller.enqueue({ value, key, chain: this });
+      });
+    },
+    cancel() {
+      console.log("stream cancelled");
+      if (!ev) {
+        // TODO log
+        return;
+      }
+      ev.off();
+    },
+  });
 
-    return stream;
+  return stream;
 }
 
 /**
@@ -109,51 +108,59 @@ export function on_stream(chain: IGunChain<any>) {
  * ```
  */
 export function to_unique() {
-    const map = new Map<string, IGunChain<any> | null>();
+  const map = new Map<string, IGunChain<any> | null>();
 
-    const transformer = new TransformStream<ValidGunChunk | NullGunChunk, ValidGunChunk | NullGunChunk>({
-        transform(chuck, controller) {
+  const transformer = new TransformStream<
+    ValidGunChunk | NullGunChunk,
+    ValidGunChunk | NullGunChunk
+  >({
+    transform(chuck, controller) {
+      if (!map.has(chuck.key)) {
+        pass(controller, chuck);
+        return;
+      }
 
-            if(!map.has(chuck.key)){
-                pass(controller, chuck);
-                return;
-            }
+      const old_value = map.get(chuck.key);
 
-            const old_value = map.get(chuck.key);
+      if (chuck.value === null && old_value !== null) {
+        pass(controller, chuck);
+        return;
+      }
 
-            if(chuck.value === null && old_value !== null) {
-                pass(controller, chuck);
-                return;
-            }
+      if (chuck.value !== null && old_value === null) {
+        pass(controller, chuck);
+        return;
+      }
 
-            if(chuck.value !== null && old_value === null) {
-                pass(controller, chuck);
-                return;
-            }
-            
-            function pass(controller: TransformStreamDefaultController<any>, chuck: ValidGunChunk | NullGunChunk){
-                map.set(chuck.key, chuck.chain);
-                controller.enqueue(chuck);
-            }
-            
-        }
-    })
+      function pass(
+        controller: TransformStreamDefaultController<any>,
+        chuck: ValidGunChunk | NullGunChunk,
+      ) {
+        map.set(chuck.key, chuck.chain);
+        controller.enqueue(chuck);
+      }
+    },
+  });
 
-    return transformer;
+  return transformer;
 }
-
 
 /**
  * Transoforms a stream of gun chains into a stream of gun nodes.
  */
-export function to_node<T extends GunNode = GunNode>(target: GunNodeClassSimple<T>) {
-    const transformer = new TransformStream<ValidGunChunk | NullGunChunk, ValidGunNodeChunk<T> | NullGunNodeChunk>({
-        transform(chunk, controller) {
-            const new_chunk = chunk.chain ? 
-                    {value: chunk.value, key: chunk.key, node: new target(chunk.chain)} : 
-                    {value: chunk.value, key: chunk.key, node: chunk.chain}
-            controller.enqueue(new_chunk);
-        }
-    })
-    return transformer;
+export function to_node<T extends GunNode = GunNode>(
+  target: GunNodeClassSimple<T>,
+) {
+  const transformer = new TransformStream<
+    ValidGunChunk | NullGunChunk,
+    ValidGunNodeChunk<T> | NullGunNodeChunk
+  >({
+    transform(chunk, controller) {
+      const new_chunk = chunk.chain
+        ? { value: chunk.value, key: chunk.key, node: new target(chunk.chain) }
+        : { value: chunk.value, key: chunk.key, node: chunk.chain };
+      controller.enqueue(new_chunk);
+    },
+  });
+  return transformer;
 }

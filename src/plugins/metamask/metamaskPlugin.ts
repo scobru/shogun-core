@@ -193,7 +193,7 @@ export class MetaMaskPlugin
       log("MetaMask signature verified successfully.");
 
       log("Attempting login or user creation with verified credentials...");
-      // Utilizziamo il metodo privato del core per la creazione dell'utente in GunDB
+      // Use the core's createUserWithGunDB method which now has safer authentication handling
       const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
       const result = await createUserWithGunDB(
         credentials.username,
@@ -211,7 +211,7 @@ export class MetaMaskPlugin
 
       log(`Login/Creation successful: ${result.userPub}`);
 
-      // Emettiamo l'evento di login tramite il core
+      // Emit the login event through the core
       core.emit("auth:login", {
         userPub: result.userPub,
         username: credentials.username,
@@ -224,7 +224,7 @@ export class MetaMaskPlugin
         username: credentials.username,
       };
     } catch (error: any) {
-      // Cattura sia errori conformi a ShogunError che generici
+      // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;
       const errorCode = error?.code || "METAMASK_LOGIN_ERROR";
       const errorMessage =
@@ -309,10 +309,8 @@ export class MetaMaskPlugin
       }
       log("MetaMask signature verified successfully.");
 
-      log(
-        "Attempting user creation (or login if exists) with verified credentials...",
-      );
-      // Utilizziamo il metodo privato del core per la creazione dell'utente in GunDB
+      log("Attempting user creation (or login if exists) with verified credentials...");
+      // Use the core's createUserWithGunDB method which now has safer authentication handling
       const createUserWithGunDB = core["createUserWithGunDB"].bind(core);
       const result = await createUserWithGunDB(
         credentials.username,
@@ -324,13 +322,13 @@ export class MetaMaskPlugin
           ErrorType.AUTHENTICATION,
           "USER_CREATE_LOGIN_FAILED",
           result.error ??
-            "User creation or login failed after signature verification",
+            "User creation failed after signature verification",
         );
       }
 
-      log(`User creation/login successful: ${result.userPub}`);
+      log(`Registration successful: ${result.userPub}`);
 
-      // Emettiamo l'evento di registrazione tramite il core
+      // Emit the signup event through the core
       core.emit("auth:signup", {
         userPub: result.userPub,
         username: credentials.username,
@@ -343,11 +341,11 @@ export class MetaMaskPlugin
         username: credentials.username,
       };
     } catch (error: any) {
-      // Cattura sia errori conformi a ShogunError che generici
-      const errorType = error?.type ?? ErrorType.AUTHENTICATION;
-      const errorCode = error?.code ?? "METAMASK_SIGNUP_ERROR";
+      // Handle both ShogunError and generic errors
+      const errorType = error?.type || ErrorType.AUTHENTICATION;
+      const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
       const errorMessage =
-        error?.message ?? "Unknown error during MetaMask registration";
+        error?.message || "Unknown error during MetaMask registration";
 
       const handledError = ErrorHandler.handle(
         errorType,

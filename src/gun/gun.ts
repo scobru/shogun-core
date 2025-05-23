@@ -33,7 +33,11 @@ class GunDB {
   // Integrated modules
   private _rxjs?: GunRxJS;
 
-  constructor(appScopeOrGun: string | GunInstance<any>, optionsOrAuthToken?: GunOptions | string, authTokenParam?: string) {
+  constructor(
+    appScopeOrGun: string | GunInstance<any>,
+    optionsOrAuthToken?: GunOptions | string,
+    authTokenParam?: string,
+  ) {
     log("Initializing GunDB");
 
     // Handle different constructor signature formats for backward compatibility
@@ -44,7 +48,7 @@ class GunDB {
     if (typeof appScopeOrGun === "string") {
       // New signature: (app_scope: string, options: GunOptions, authToken?: string)
       app_scope = appScopeOrGun;
-      options = optionsOrAuthToken as GunOptions || {};
+      options = (optionsOrAuthToken as GunOptions) || {};
       authToken = authTokenParam;
     } else {
       // Old signature: (gun: GunInstance<any>, authToken?: string)
@@ -226,7 +230,7 @@ class GunDB {
       // Use AuthManager's create method directly
       const createResult = await this.gunPlus.user.create(validated);
 
-      if ('err' in createResult) {
+      if ("err" in createResult) {
         this._setAuthenticating(false);
         return { success: false, error: createResult.err };
       }
@@ -297,7 +301,7 @@ class GunDB {
       const authResult = await this.gunPlus.user.auth(validated);
       this._setAuthenticating(false);
 
-      if ('err' in authResult) {
+      if ("err" in authResult) {
         logError(`Login error for ${username}: ${authResult.err}`);
         return { success: false, error: authResult.err };
       }
@@ -404,12 +408,10 @@ class GunDB {
    */
   stream(path: string | any): ReadableStream<any> {
     const { on_stream } = require("./models/streams");
-    
+
     // If a string path is provided, convert it to a Gun chain
-    const chain = typeof path === "string" 
-      ? this.gunPlus.gun.get(path) 
-      : path;
-      
+    const chain = typeof path === "string" ? this.gunPlus.gun.get(path) : path;
+
     return on_stream(chain);
   }
 
@@ -432,16 +434,23 @@ class GunDB {
    * // Allow anyone to write to paths containing their public key
    * const cert = await gundb.certify([{pub: "*"}], [gundb.policies.contains_pub]);
    */
-  async certify(grantees: {pub: string}[] = [{pub: "*"}], policies: any[] = []): Promise<string> {
+  async certify(
+    grantees: { pub: string }[] = [{ pub: "*" }],
+    policies: any[] = [],
+  ): Promise<string> {
     // Get the policies and make_certificate function from the cert module
-    const { policies: policyPresets, make_certificate } = require("./models/auth/cert");
-    
+    const {
+      policies: policyPresets,
+      make_certificate,
+    } = require("./models/auth/cert");
+
     // Default to the contains_pub policy if none provided
-    const policiesToUse = policies.length > 0 ? policies : [policyPresets.contains_pub];
-    
+    const policiesToUse =
+      policies.length > 0 ? policies : [policyPresets.contains_pub];
+
     // Get the current user's key pair
     const pair = this.gunPlus.user.pair({ strict: true });
-    
+
     // Create and return the certificate
     return make_certificate(grantees, policiesToUse, pair);
   }
@@ -619,7 +628,6 @@ class GunDB {
    * @returns Promise that resolves with the decrypted data
    */
   async decrypt(encryptedData: string, key: string): Promise<string | any> {
-
     return this.crypto.decrypt(encryptedData, key);
   }
 
