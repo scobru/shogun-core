@@ -11,6 +11,20 @@ import { ISEAPair } from "gun";
  */
 export declare function isHash(str: string): boolean;
 /**
+ * Encrypts data with Gun.SEA
+ * @param data Data to encrypt
+ * @param key Encryption key
+ * @returns Promise that resolves with the encrypted data
+ */
+export declare function encrypt(data: any, key: string): Promise<string>;
+/**
+ * Decrypts data with Gun.SEA
+ * @param encryptedData Encrypted data
+ * @param key Decryption key
+ * @returns Promise that resolves with the decrypted data
+ */
+export declare function decrypt(encryptedData: string, key: string): Promise<string | any>;
+/**
  * Encrypts data from a sender to a receiver using their public keys
  * @param data - Data to encrypt
  * @param sender - Sender's key pair

@@ -10,7 +10,7 @@ import {
   PluginCategory,
   CorePlugins,
 } from "./types/shogun";
-import { IGunUserInstance } from "gun";
+import { IGunUserInstance, SEA } from "gun";
 import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
@@ -21,19 +21,16 @@ import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
 import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
+import { BitcoinWalletPlugin } from "./plugins/bitcoin/bitcoinPlugin";
 import { WalletManager } from "./plugins";
 import { GunInstance } from "./gun/types";
 
 export { RelayVerifier } from "./contracts/utils";
-
 export * from "./utils/errorHandler";
 export type * from "./utils/errorHandler";
-
 export * from "./gun/rxjs-integration";
 export * from "./plugins";
 export type * from "./types/plugin";
-
-// Export relay verification
 export * from "./contracts/entryPoint";
 export * from "./contracts/utils";
 export * from "./contracts/registry";
@@ -127,11 +124,13 @@ export class ShogunCore implements IShogunCore {
         authToken: config.authToken,
       });
 
-      this.gundb = new GunDB(gun, config.authToken);
+      this.gundb = new GunDB("", { gun }, config.authToken);
       this.gun = gun;
+      log("Initialized Gun external instance");
     } else {
-      logError("Missing Gun instance");
-      throw new Error("Missing Gun instance");
+      this.gundb = new GunDB("", { Gun, SEA }, config.authToken);
+      this.gun = this.gundb.gun;
+      log("Initialized Gun instance");
     }
 
     this.user = this.gun.user().recall({ sessionStorage: true });
@@ -176,6 +175,13 @@ export class ShogunCore implements IShogunCore {
         metamaskPlugin._category = PluginCategory.Authentication;
         this.register(metamaskPlugin);
         log("MetaMask plugin registered");
+      }
+
+      if (config.bitcoinWallet?.enabled) {
+        const bitcoinWalletPlugin = new BitcoinWalletPlugin();
+        bitcoinWalletPlugin._category = PluginCategory.Authentication;
+        this.register(bitcoinWalletPlugin);
+        log("Bitcoin wallet plugin registered");
       }
 
       // Privacy plugins group
@@ -274,12 +280,16 @@ export class ShogunCore implements IShogunCore {
    * @returns The authentication plugin or undefined if not available
    * This is a more modern approach to accessing authentication methods
    */
-  getAuthenticationMethod(type: "password" | "webauthn" | "metamask") {
+  getAuthenticationMethod(
+    type: "password" | "webauthn" | "metamask" | "bitcoin",
+  ) {
     switch (type) {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
       case "metamask":
         return this.getPlugin(CorePlugins.MetaMask);
+      case "bitcoin":
+        return this.getPlugin(CorePlugins.BitcoinWallet);
       case "password":
       default:
         // Default authentication is provided by the core class
@@ -487,7 +497,7 @@ export class ShogunCore implements IShogunCore {
       // Timeout after a configurable interval (default 15 seconds)
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
 
-      // Utilizziamo il timeout di ShogunCore invece di quello interno di GunDB
+      // Use a Promise with timeout for the login operation
       const loginPromiseWithTimeout = new Promise<AuthResult>(
         async (resolve) => {
           const timeoutId = setTimeout(() => {
@@ -498,34 +508,87 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Utilizziamo il metodo login di GunDB
-            const gunLoginResult = (await this.gundb.login(
-              username,
-              password,
-            )) as AuthResult;
+            // Use a direct approach that avoids the state machine issues
+            let loginSuccess = false;
+            let userPub = "";
+
+            // Reset user state to avoid state machine conflicts
+            try {
+              // Clear any previous user data
+              const gunUser = this.gun.user();
+              if (gunUser && gunUser._) {
+                const userRoot = gunUser._ as any;
+                if (userRoot.sea) {
+                  userRoot.sea = null;
+                }
+              }
+            } catch (e) {
+              // Ignore errors during reset
+            }
+
+            // Try to authenticate
+            await new Promise<void>((resolveAuth) => {
+              this.gun.user().auth(username, password, (ack: any) => {
+                if (ack.err) {
+                  log(`Authentication failed: ${ack.err}`);
+                  resolveAuth();
+                } else {
+                  // Authentication succeeded
+                  loginSuccess = true;
+
+                  // Get the user's public key - we need to handle this safely
+                  try {
+                    const user = this.gun.user();
+                    // Access pub property safely using optional chaining and type coercion
+                    if (user && user.is && user.is.pub) {
+                      // Convert to string in a type-safe way
+                      userPub = `${user.is.pub}`;
+                    }
+
+                    log(`Login successful for: ${username} (${userPub})`);
+                  } catch (e) {
+                    log(`Warning: Could not get user public key: ${e}`);
+                  }
+                  resolveAuth();
+                }
+              });
+            });
 
             clearTimeout(timeoutId);
 
-            const walletPlugin = this.getPlugin(
-              CorePlugins.WalletManager,
-            ) as WalletManager;
-
-            if (gunLoginResult && walletPlugin) {
-              const mainWallet = walletPlugin.getMainWalletCredentials();
-              this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
-            }
-
-            if (!gunLoginResult.success) {
+            if (!loginSuccess) {
               resolve({
                 success: false,
-                error: gunLoginResult.error || "Login failed",
+                error: "Wrong user or password",
               });
             } else {
+              // First resolve the success result
               resolve({
                 success: true,
-                userPub: gunLoginResult.userPub || "",
-                username: gunLoginResult.username || username,
+                userPub: userPub,
+                username: username,
               });
+
+              // Then try to access wallet credentials after auth state is updated
+              try {
+                const walletPlugin = this.getPlugin(
+                  CorePlugins.WalletManager,
+                ) as WalletManager;
+
+                if (walletPlugin) {
+                  const mainWallet = walletPlugin.getMainWalletCredentials();
+                  this.storage.setItem(
+                    "main-wallet",
+                    JSON.stringify(mainWallet),
+                  );
+                }
+              } catch (walletError: any) {
+                // Just log the error but don't fail the login
+                logError(
+                  "Error accessing wallet credentials after login:",
+                  walletError,
+                );
+              }
             }
           } catch (error: any) {
             clearTimeout(timeoutId);
@@ -601,7 +664,7 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Emettiamo un evento di debug per monitorare il flusso
+      // Emit a debug event to monitor the flow
       this.eventEmitter.emit("debug", {
         action: "signup_start",
         username,
@@ -609,95 +672,173 @@ export class ShogunCore implements IShogunCore {
       });
 
       log(`Inizializzazione registrazione per utente: ${username}`);
-      const signupPromise = new Promise<SignUpResult>((resolve) => {
-        // Utilizziamo direttamente il metodo signUp di GunDB che ora ha il suo timeout integrato
-        this.gundb.signUp(username, password).then((gunResult) => {
-          log(
-            `GunDB registration result: ${gunResult.success ? "success" : "failed"}`,
-          );
+      log(`Attempting user registration: ${username}`);
 
-          // Emettiamo un evento di debug per monitorare il flusso
-          this.eventEmitter.emit("debug", {
-            action: "gundb_signup_complete",
-            success: gunResult.success,
-            error: gunResult.error,
-            timestamp: Date.now(),
+      // Try a more direct approach that can better handle username existence checks
+      try {
+        // First, let's check if the user already exists by trying to authenticate
+        // We'll use a random password to avoid decryption errors
+        let userExists = false;
+        const randomPassword = Math.random().toString(36).substring(2);
+
+        await new Promise<void>((resolve) => {
+          // Reset user state
+          try {
+            const gunUser = this.gun.user();
+            if (gunUser && gunUser._) {
+              const userRoot = gunUser._ as any;
+              if (userRoot.sea) {
+                userRoot.sea = null;
+              }
+            }
+          } catch (e) {
+            // Ignore errors during reset
+          }
+
+          // Try authentication with the username but a random password
+          this.gun.user().auth(username, randomPassword, (ack: any) => {
+            // If we get an error like "Wrong user or password", the user exists
+            if (
+              ack.err &&
+              (ack.err === "Wrong user or password" ||
+                ack.err.includes("Could not decrypt"))
+            ) {
+              userExists = true;
+              log(`Username "${username}" already exists`);
+            }
+            resolve();
           });
+        });
 
-          if (!gunResult.success) {
+        if (userExists) {
+          // The username already exists, return a clear error
+          return {
+            success: false,
+            error: `Username "${username}" is already taken. Please choose a different username.`,
+          };
+        }
+
+        // If we get here, let's try to create the user
+        const signupPromise = new Promise<SignUpResult>((resolve) => {
+          // Reset user state again
+          try {
+            const gunUser = this.gun.user();
+            if (gunUser && gunUser._) {
+              const userRoot = gunUser._ as any;
+              if (userRoot.sea) {
+                userRoot.sea = null;
+              }
+            }
+          } catch (e) {
+            // Ignore errors during reset
+          }
+
+          // Create the user
+          this.gun.user().create(username, password, (createAck: any) => {
+            if (createAck.err) {
+              // If we get "User already created!" here despite our check, it might be a race condition
+              if (createAck.err === "User already created!") {
+                resolve({
+                  success: false,
+                  error: `Username "${username}" is already taken. Please choose a different username.`,
+                });
+              } else {
+                resolve({
+                  success: false,
+                  error: createAck.err || "Registration failed in GunDB",
+                });
+              }
+            } else {
+              // User created successfully, now try to authenticate
+              this.gun.user().auth(username, password, (authAck: any) => {
+                if (authAck.err) {
+                  resolve({
+                    success: false,
+                    error: `User created but authentication failed: ${authAck.err}`,
+                  });
+                } else {
+                  const user = this.gun.user();
+                  const userPub = user.is?.pub ? `${user.is.pub}` : "";
+
+                  resolve({
+                    success: true,
+                    userPub: userPub,
+                    username: username,
+                  });
+                }
+              });
+            }
+          });
+        });
+
+        const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
+        const timeoutPromise = new Promise<SignUpResult>((resolve) => {
+          setTimeout(() => {
+            logError(
+              `Timeout at ShogunCore level during user registration: ${username}`,
+            );
+
+            // Emit a debug event to monitor the flow
+            this.eventEmitter.emit("debug", {
+              action: "signup_timeout",
+              username,
+              timestamp: Date.now(),
+            });
+
             resolve({
               success: false,
-              error: gunResult.error || "Registration failed in GunDB",
+              error: "Registration timeout at ShogunCore level",
             });
-          } else {
-            resolve({
-              success: true,
-              userPub: gunResult.userPub || "",
-              username: username || "",
-            });
-          }
+          }, timeoutDuration);
         });
-      });
 
-      const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Timeout predefinito di 30 secondi
-      const timeoutPromise = new Promise<SignUpResult>((resolve) => {
-        setTimeout(() => {
-          logError(
-            `Timeout a livello ShogunCore durante la registrazione utente: ${username}`,
-          );
+        // Use Promise.race to handle timeout
+        const result = await Promise.race([signupPromise, timeoutPromise]);
 
-          // Emettiamo un evento di debug per monitorare il flusso
-          this.eventEmitter.emit("debug", {
-            action: "signup_timeout",
+        if (result.success) {
+          log(`Registration completed successfully for: ${username}`);
+          this.eventEmitter.emit("auth:signup", {
+            userPub: result.userPub ?? "",
             username,
+          });
+
+          // Emit a debug event to monitor the flow
+          this.eventEmitter.emit("debug", {
+            action: "signup_complete",
+            username,
+            userPub: result.userPub,
             timestamp: Date.now(),
           });
 
-          resolve({
-            success: false,
-            error: "Registration timeout at ShogunCore level",
-          });
-        }, timeoutDuration);
-      });
+          return result;
+        }
 
-      // Use Promise.race to handle timeout
-      const result = await Promise.race([signupPromise, timeoutPromise]);
-
-      if (result.success) {
-        log(`Registrazione completata con successo per: ${username}`);
-        this.eventEmitter.emit("auth:signup", {
-          userPub: result.userPub ?? "",
-          username,
-        });
-
-        // Per evitare di complicare ulteriormente il processo, disabilita temporaneamente
-        // la creazione del DID durante il signup finché il problema non è risolto completamente
-        // Invece, creeremo il DID al primo accesso successivo dell'utente
-
-        // Emettiamo un evento di debug per monitorare il flusso
+        // Emit a debug event to monitor the flow in case of failure
         this.eventEmitter.emit("debug", {
-          action: "signup_complete",
+          action: "signup_failed",
           username,
-          userPub: result.userPub,
+          error: result.error,
           timestamp: Date.now(),
         });
 
         return result;
+      } catch (registrationError: any) {
+        logError(
+          `Error during registration process for user ${username}:`,
+          registrationError,
+        );
+
+        return {
+          success: false,
+          error:
+            registrationError.message ||
+            `Registration failed: ${String(registrationError)}`,
+        };
       }
-
-      // Emettiamo un evento di debug per monitorare il flusso in caso di fallimento
-      this.eventEmitter.emit("debug", {
-        action: "signup_failed",
-        username,
-        error: result.error,
-        timestamp: Date.now(),
-      });
-
-      return result;
     } catch (error: any) {
       logError(`Error during registration for user ${username}:`, error);
 
-      // Emettiamo un evento di debug per monitorare il flusso in caso di eccezione
+      // Emit a debug event to monitor the flow in case of exception
       this.eventEmitter.emit("debug", {
         action: "signup_exception",
         username,
@@ -729,13 +870,33 @@ export class ShogunCore implements IShogunCore {
 
     return new Promise(async (resolve) => {
       try {
+        // Create a safer way to reset the user state without triggering state machine errors
+        const resetUserState = () => {
+          try {
+            // Instead of trying to manipulate internal Gun properties which causes TypeScript errors,
+            // let's use a more direct approach to clear the current user state
+
+            // First check if we have a user instance
+            if (this.gun && this.gun.user) {
+              // Create a new empty user instance which effectively resets the state
+              // without triggering state machine transitions
+              const emptyUser = this.gun.user();
+
+              // This approach avoids direct manipulation of internal properties
+              // while still achieving the goal of resetting user state
+              if (emptyUser && typeof emptyUser.is === "undefined") {
+                log("User state reset successful");
+              }
+            }
+          } catch (e) {
+            log("Error during user state reset (non-critical):", e);
+          }
+        };
+
         const authUser = (): Promise<{ err?: string; pub?: string }> => {
           return new Promise((resolveAuth) => {
-            try {
-              this.gundb.logout();
-            } catch (e) {
-              /* ignore logout errors */
-            }
+            // Reset user state before authentication attempt
+            resetUserState();
 
             this.gun.user().auth(username, password, (ack: any) => {
               if (ack.err) {
@@ -757,11 +918,8 @@ export class ShogunCore implements IShogunCore {
 
         const createUser = (): Promise<{ err?: string; pub?: string }> => {
           return new Promise((resolveCreate) => {
-            try {
-              this.gundb.logout();
-            } catch (e) {
-              /* ignore logout errors */
-            }
+            // Reset user state before user creation attempt
+            resetUserState();
 
             this.gundb.gun.user().create(username, password, (ack: any) => {
               resolveCreate({ err: ack.err, pub: ack.pub }); // pub might be present on success

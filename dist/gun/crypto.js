@@ -6,6 +6,8 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isHash = isHash;
+exports.encrypt = encrypt;
+exports.decrypt = decrypt;
 exports.encFor = encFor;
 exports.decFrom = decFrom;
 exports.hashText = hashText;
@@ -23,6 +25,30 @@ const sea_1 = require("gun/sea");
  */
 function isHash(str) {
     return typeof str === "string" && str.length === 44 && str.charAt(43) === "=";
+}
+/**
+ * Encrypts data with Gun.SEA
+ * @param data Data to encrypt
+ * @param key Encryption key
+ * @returns Promise that resolves with the encrypted data
+ */
+async function encrypt(data, key) {
+    if (!Gun.SEA) {
+        throw new Error("SEA is not available");
+    }
+    return Gun.SEA.encrypt(data, key);
+}
+/**
+ * Decrypts data with Gun.SEA
+ * @param encryptedData Encrypted data
+ * @param key Decryption key
+ * @returns Promise that resolves with the decrypted data
+ */
+async function decrypt(encryptedData, key) {
+    if (!Gun.SEA) {
+        throw new Error("SEA is not available");
+    }
+    return Gun.SEA.decrypt(encryptedData, key);
 }
 /**
  * Encrypts data from a sender to a receiver using their public keys

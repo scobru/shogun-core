@@ -36,9 +36,11 @@ export enum CorePlugins {
   Stealth = "stealth",
   /** Plugin Wallet Manager */
   WalletManager = "wallet",
+  /** Plugin Bitcoin Wallet */
+  BitcoinWallet = "bitcoin-wallet",
 }
 
-export type AuthMethod = "password" | "webauthn" | "metamask";
+export type AuthMethod = "password" | "webauthn" | "metamask" | "bitcoin";
 
 // Authentication result interfaces
 export interface AuthResult {
@@ -177,6 +179,17 @@ export interface ShogunSDKConfig {
   metamask?: {
     /** Enable MetaMask */
     enabled?: boolean;
+  };
+  /** Bitcoin wallet configuration */
+  bitcoinWallet?: {
+    /** Enable Bitcoin wallet */
+    enabled?: boolean;
+    /** Bitcoin network to use (default: mainnet) */
+    network?: "mainnet" | "testnet";
+    /** Use API for verification (default: false) */
+    useApi?: boolean;
+    /** API URL for verification */
+    apiUrl?: string;
   };
   /** Wallet configuration */
   walletManager?: {

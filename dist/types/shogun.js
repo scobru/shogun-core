@@ -30,4 +30,6 @@ var CorePlugins;
     CorePlugins["Stealth"] = "stealth";
     /** Plugin Wallet Manager */
     CorePlugins["WalletManager"] = "wallet";
+    /** Plugin Bitcoin Wallet */
+    CorePlugins["BitcoinWallet"] = "bitcoin-wallet";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

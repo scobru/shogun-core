@@ -5,23 +5,23 @@
  * - Dynamic peer linking
  * - Support for remove/unset operations
  */
-import { IGunUserInstance } from "gun";
+import { GunOptions } from "gun";
 import { GunInstance } from "./types";
 import * as GunErrors from "./errors";
 import { GunRxJS } from "./rxjs-integration";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
+import GunPlus from "./gun_plus_instance";
 declare class GunDB {
-    gun: GunInstance<any>;
-    user: IGunUserInstance<any> | null;
+    gunPlus: GunPlus;
     crypto: typeof crypto;
     utils: typeof utils;
     private readonly onAuthCallbacks;
     private _authenticating;
     private readonly authToken?;
+    get gun(): GunInstance<any>;
     private _rxjs?;
-    private _sea?;
-    constructor(gun: GunInstance<any>, authToken?: string);
+    constructor(appScopeOrGun: string | GunInstance<any>, optionsOrAuthToken?: GunOptions | string, authTokenParam?: string);
     private subscribeToAuthEvents;
     private notifyAuthListeners;
     restrictPut(gun: GunInstance<any>, authToken: string): void;
@@ -73,14 +73,14 @@ declare class GunDB {
      */
     remove(path: string): Promise<any>;
     /**
-     * Signs up a new user
+     * Signs up a new user using AuthManager
      * @param username Username
      * @param password Password
      * @returns Promise resolving to signup result
      */
     signUp(username: string, password: string): Promise<any>;
     /**
-     * Logs in a user
+     * Logs in a user using AuthManager
      * @param username Username
      * @param password Password
      * @param callback Optional callback for login result
@@ -91,7 +91,7 @@ declare class GunDB {
     private isAuthenticating;
     private _setAuthenticating;
     /**
-     * Logs out the current user
+     * Logs out the current user using AuthManager
      */
     logout(): void;
     /**
@@ -109,6 +109,34 @@ declare class GunDB {
      * @returns GunRxJS instance
      */
     rx(): GunRxJS;
+    /**
+     * Creates a readable stream from a Gun path or chain
+     * @param path Path to stream data from, or a Gun chain
+     * @returns ReadableStream that emits changes from the specified path
+     */
+    stream(path: string | any): ReadableStream<any>;
+    /**
+     * Creates a GunNode for the specified path
+     * @param path Path to create a node for
+     * @returns GunNode instance for the specified path
+     */
+    node(path: string): any;
+    /**
+     * Creates a certificate that allows other users to write to specific parts of the user's graph
+     * @param grantees Array of public keys to grant access to
+     * @param policies Array of policies that define what paths/keys can be written to
+     * @returns Promise resolving to the certificate string
+     * @example
+     * // Allow anyone to write to paths containing their public key
+     * const cert = await gundb.certify([{pub: "*"}], [gundb.policies.contains_pub]);
+     */
+    certify(grantees?: {
+        pub: string;
+    }[], policies?: any[]): Promise<string>;
+    /**
+     * Access to predefined certificate policies
+     */
+    get policies(): any;
     /**
      * Imposta le domande di sicurezza e il suggerimento per la password
      * @param username Nome utente
@@ -134,26 +162,6 @@ declare class GunDB {
         error?: string;
     }>;
     /**
-     * Hashes text with Gun.SEA
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    hashText(text: string): Promise<string | any>;
-    /**
-     * Encrypts data with Gun.SEA
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    encrypt(data: any, key: string): Promise<string>;
-    /**
-     * Decrypts data with Gun.SEA
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    decrypt(encryptedData: string, key: string): Promise<string | any>;
-    /**
      * Saves user data at the specified path
      * @param path Path to save the data
      * @param data Data to save
@@ -166,6 +174,26 @@ declare class GunDB {
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
+    /**
+     * Hashes text with crypto module
+     * @param text Text to hash
+     * @returns Promise that resolves with the hashed text
+     */
+    hashText(text: string): Promise<string | any>;
+    /**
+     * Encrypts data using SEA
+     * @param data Data to encrypt
+     * @param key Encryption key
+     * @returns Promise that resolves with the encrypted data
+     */
+    encrypt(data: any, key: string): Promise<string>;
+    /**
+     * Decrypts data using SEA
+     * @param encryptedData Encrypted data
+     * @param key Decryption key
+     * @returns Promise that resolves with the decrypted data
+     */
+    decrypt(encryptedData: string, key: string): Promise<string | any>;
     static Errors: typeof GunErrors;
 }
 export { GunDB };
