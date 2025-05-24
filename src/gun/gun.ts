@@ -239,7 +239,7 @@ class GunDB {
       this.gunPlus.gun.get(createResult.pub).put({
         username: username,
       });
-      this.gunPlus.gun.get("users").set(this.gunPlus.gun.get(createResult.pub));
+      this.gunPlus.gun.get("users").put(this.gunPlus.gun.get(createResult.pub));
 
       // Log in after registration
       log(`Attempting login after registration for: ${username}`);
