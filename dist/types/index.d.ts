@@ -105,7 +105,7 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): unknown;
+    getAuthenticationMethod(type: "password" | "webauthn" | "metamask" | "bitcoin"): unknown;
     /**
      * Observe a Gun node for changes
      * @param path - Path to observe (can be a string or a Gun chain)

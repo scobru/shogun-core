@@ -17,6 +17,35 @@ export function isHash(str: string) {
 }
 
 /**
+ * Encrypts data with Gun.SEA
+ * @param data Data to encrypt
+ * @param key Encryption key
+ * @returns Promise that resolves with the encrypted data
+ */
+export async function encrypt(data: any, key: string): Promise<string> {
+  if (!Gun.SEA) {
+    throw new Error("SEA is not available");
+  }
+  return Gun.SEA.encrypt(data, key);
+}
+
+/**
+ * Decrypts data with Gun.SEA
+ * @param encryptedData Encrypted data
+ * @param key Decryption key
+ * @returns Promise that resolves with the decrypted data
+ */
+export async function decrypt(
+  encryptedData: string,
+  key: string,
+): Promise<string | any> {
+  if (!Gun.SEA) {
+    throw new Error("SEA is not available");
+  }
+  return Gun.SEA.decrypt(encryptedData, key);
+}
+
+/**
  * Encrypts data from a sender to a receiver using their public keys
  * @param data - Data to encrypt
  * @param sender - Sender's key pair
