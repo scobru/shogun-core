@@ -272,6 +272,11 @@ export declare class ShogunCore implements IShogunCore {
      * If not provided, all listeners for all events are removed.
      */
     removeAllListeners(eventName?: string | symbol): this;
+    /**
+     * Gets the current auth token used for requests
+     * @returns The current auth token or empty string if not set
+     */
+    getAuthToken(): string;
 }
 export * from "./types/shogun";
 export { GunDB } from "./gun/gun";

@@ -19,7 +19,6 @@ const gun_1 = require("./gun/gun");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
-const gun_2 = require("gun");
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./utils/errorHandler");
 const rxjs_integration_1 = require("./gun/rxjs-integration");
@@ -93,24 +92,15 @@ class ShogunCore {
                 type: error.type,
             });
         });
-        // If an external Gun instance is provided, use it
-        if (config.gun) {
-            (0, logger_1.log)("Using externally provided Gun instance");
-            const gun = config.gun;
-            gun.opt({
-                localStorage: false,
-                radisk: false,
-                authToken: config.authToken,
-            });
-            this.gundb = new gun_1.GunDB("", { gun }, config.authToken);
-            this.gun = gun;
-            (0, logger_1.log)("Initialized Gun external instance");
-        }
-        else {
-            this.gundb = new gun_1.GunDB("", { Gun, SEA: gun_2.SEA }, config.authToken);
-            this.gun = this.gundb.gun;
-            (0, logger_1.log)("Initialized Gun instance");
-        }
+        // Sempre istanziare GunDB internamente con le opzioni fornite
+        const options = config.options || {
+            localStorage: false,
+            radisk: false,
+        };
+        (0, logger_1.log)("Options:", options);
+        this.gundb = new gun_1.GunDB(config.scope || "", options, config.authToken);
+        this.gun = this.gundb.gun;
+        (0, logger_1.log)("Initialized Gun instance");
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.rx = new rxjs_integration_1.GunRxJS(this.gun);
         this.registerBuiltinPlugins(config);
@@ -953,13 +943,20 @@ class ShogunCore {
         this.eventEmitter.removeAllListeners(eventName);
         return this;
     }
+    /**
+     * Gets the current auth token used for requests
+     * @returns The current auth token or empty string if not set
+     */
+    getAuthToken() {
+        return this.gundb.getAuthToken();
+    }
 }
 exports.ShogunCore = ShogunCore;
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_3 = require("./gun/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
+var gun_2 = require("./gun/gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
 var metamask_1 = require("./plugins/metamask/metamask");
 Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_1.MetaMask; } });
 var stealth_1 = require("./plugins/stealth/stealth");

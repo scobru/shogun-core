@@ -93,7 +93,6 @@ export class ShogunCore implements IShogunCore {
    */
   constructor(config: ShogunSDKConfig) {
     log("Initializing ShogunSDK");
-
     this.config = config;
 
     if (config.logging) {
@@ -112,31 +111,17 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    // If an external Gun instance is provided, use it
-    if (config.gun) {
-      log("Using externally provided Gun instance");
-
-      const gun = config.gun;
-
-      gun.opt({
-        localStorage: false,
-        radisk: false,
-        authToken: config.authToken,
-      });
-
-      this.gundb = new GunDB("", { gun }, config.authToken);
-      this.gun = gun;
-      log("Initialized Gun external instance");
-    } else {
-      this.gundb = new GunDB("", { Gun, SEA }, config.authToken);
-      this.gun = this.gundb.gun;
-      log("Initialized Gun instance");
-    }
-
+    // Sempre istanziare GunDB internamente con le opzioni fornite
+    const options = config.options || {
+      localStorage: false,
+      radisk: false,
+    };
+    log("Options:", options);
+    this.gundb = new GunDB(config.scope || "", options, config.authToken);
+    this.gun = this.gundb.gun;
+    log("Initialized Gun instance");
     this.user = this.gun.user().recall({ sessionStorage: true });
-
     this.rx = new GunRxJS(this.gun);
-
     this.registerBuiltinPlugins(config);
 
     if (
@@ -152,7 +137,6 @@ export class ShogunCore implements IShogunCore {
         }
       }
     }
-
     log("ShogunSDK initialized!");
   }
 
@@ -1108,6 +1092,14 @@ export class ShogunCore implements IShogunCore {
   removeAllListeners(eventName?: string | symbol): this {
     this.eventEmitter.removeAllListeners(eventName);
     return this;
+  }
+
+  /**
+   * Gets the current auth token used for requests
+   * @returns The current auth token or empty string if not set
+   */
+  getAuthToken(): string {
+    return this.gundb.getAuthToken();
   }
 }
 

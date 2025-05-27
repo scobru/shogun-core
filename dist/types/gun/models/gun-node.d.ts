@@ -27,6 +27,17 @@ export default class GunNode<T extends GunNode<any> = GunNode<any>> {
     set certificate(certificate: string | undefined);
     private get iterates();
     /**
+     * Private helper method to get the authentication token
+     * @returns The authentication token
+     */
+    private getAuthToken;
+    /**
+     * Private helper method to create options with auth
+     * @param withCert Whether to include certificate
+     * @returns Options object with auth
+     */
+    private createOptionsWithAuth;
+    /**
      * Put a value at this node. Will use certificate if available.
      */
     put(value: GunValueSimple | IGunChain<any>): IGunChain<any, any, any, any>;

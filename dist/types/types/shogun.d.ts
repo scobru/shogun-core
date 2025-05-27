@@ -1,4 +1,4 @@
-import { IGunInstance } from "gun/types";
+import { GunOptions, IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { GunDB } from "../gun/gun";
@@ -6,7 +6,6 @@ import { Observable } from "rxjs";
 import { GunRxJS } from "../gun/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
-import { IGunInstance as GunInstance } from "gun";
 /**
  * Categorie di plugin standard in ShogunCore
  */
@@ -75,6 +74,7 @@ export interface IShogunCore extends PluginManager {
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
+    getAuthToken(): string;
     /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
     getMainWallet?(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
@@ -131,7 +131,8 @@ export interface LoggingConfig {
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
-    gun: GunInstance<any>;
+    scope?: string;
+    options?: GunOptions;
     authToken?: string;
     /** WebAuthn configuration */
     webauthn?: WebauthnConfig;

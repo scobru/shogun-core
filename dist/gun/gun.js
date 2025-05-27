@@ -71,21 +71,22 @@ class GunDB {
         let app_scope = "";
         let options = {};
         let authToken;
-        if (typeof appScopeOrGun === "string") {
-            // New signature: (app_scope: string, options: GunOptions, authToken?: string)
-            app_scope = appScopeOrGun;
-            options = optionsOrAuthToken || {};
-            authToken = authTokenParam;
+        app_scope = appScopeOrGun;
+        options = optionsOrAuthToken || {};
+        authToken = authTokenParam;
+        this.authToken = authToken || "";
+        // Add auth token directly to Gun options for transport
+        if (this.authToken) {
+            // Ensure options.headers exists
+            if (!options.headers) {
+                options.headers = {};
+            }
+            // Add token to Gun options headers
+            options.headers.token = this.authToken;
+            options.headers.Authorization = `Bearer ${this.authToken}`;
+            (0, logger_1.log)(`Added auth token to Gun options: ${this.authToken.substring(0, 3)}...`);
         }
-        else {
-            // Old signature: (gun: GunInstance<any>, authToken?: string)
-            // In this case, we're reusing an existing Gun instance
-            options = { gun: appScopeOrGun };
-            authToken = optionsOrAuthToken;
-        }
-        this.authToken = authToken;
         this.gunPlus = new gun_plus_instance_1.default({ Gun: gun_1.default, SEA: gun_1.default.SEA }, app_scope, options);
-        this.restrictPut(this.gunPlus.gun, authToken || "");
         this.subscribeToAuthEvents();
         // bind crypto and utils
         this.crypto = crypto;
@@ -106,22 +107,12 @@ class GunDB {
         const user = this.gunPlus.user;
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
-    restrictPut(gun, authToken) {
-        if (!authToken) {
-            (0, logger_1.logError)("No auth token provided");
-            return;
-        }
-        gun.on("out", function (ctx) {
-            var to = this.to;
-            // Adds headers for put
-            ctx.headers = {
-                token: authToken,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${authToken}`,
-            };
-            to.next(ctx); // pass to next middleware
-        });
+    /**
+     * Gets the current auth token
+     * @returns The current auth token
+     */
+    getAuthToken() {
+        return this.authToken || "";
     }
     /**
      * Adds a new peer to the network
@@ -234,7 +225,7 @@ class GunDB {
             this.gunPlus.gun.get(createResult.pub).put({
                 username: username,
             });
-            this.gunPlus.gun.get("users").set(this.gunPlus.gun.get(createResult.pub));
+            this.gunPlus.gun.get("users").put(this.gunPlus.gun.get(createResult.pub));
             // Log in after registration
             (0, logger_1.log)(`Attempting login after registration for: ${username}`);
             const loginResult = await this.login(username, password);

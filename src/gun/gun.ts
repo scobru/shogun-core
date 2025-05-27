@@ -34,7 +34,7 @@ class GunDB {
   private _rxjs?: GunRxJS;
 
   constructor(
-    appScopeOrGun: string | GunInstance<any>,
+    appScopeOrGun: string,
     optionsOrAuthToken?: GunOptions | string,
     authTokenParam?: string,
   ) {
@@ -45,22 +45,30 @@ class GunDB {
     let options: GunOptions = {};
     let authToken: string | undefined;
 
-    if (typeof appScopeOrGun === "string") {
-      // New signature: (app_scope: string, options: GunOptions, authToken?: string)
-      app_scope = appScopeOrGun;
-      options = (optionsOrAuthToken as GunOptions) || {};
-      authToken = authTokenParam;
-    } else {
-      // Old signature: (gun: GunInstance<any>, authToken?: string)
-      // In this case, we're reusing an existing Gun instance
-      options = { gun: appScopeOrGun };
-      authToken = optionsOrAuthToken as string;
+    app_scope = appScopeOrGun;
+    options = (optionsOrAuthToken as GunOptions) || {};
+    authToken = authTokenParam;
+
+    this.authToken = authToken || "";
+
+    // Add auth token directly to Gun options for transport
+    if (this.authToken) {
+      // Ensure options.headers exists
+      if (!(options as any).headers) {
+        (options as any).headers = {};
+      }
+
+      // Add token to Gun options headers
+      (options as any).headers.token = this.authToken;
+      (options as any).headers.Authorization = `Bearer ${this.authToken}`;
+
+      log(
+        `Added auth token to Gun options: ${this.authToken.substring(0, 3)}...`,
+      );
     }
 
-    this.authToken = authToken;
     this.gunPlus = new GunPlus({ Gun, SEA: Gun.SEA }, app_scope, options);
 
-    this.restrictPut(this.gunPlus.gun, authToken || "");
     this.subscribeToAuthEvents();
 
     // bind crypto and utils
@@ -90,23 +98,12 @@ class GunDB {
     this.onAuthCallbacks.forEach((cb) => cb(user));
   }
 
-  public restrictPut(gun: GunInstance<any>, authToken: string) {
-    if (!authToken) {
-      logError("No auth token provided");
-      return;
-    }
-
-    gun.on("out", function (ctx) {
-      var to = this.to;
-      // Adds headers for put
-      ctx.headers = {
-        token: authToken,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${authToken}`,
-      };
-      to.next(ctx); // pass to next middleware
-    });
+  /**
+   * Gets the current auth token
+   * @returns The current auth token
+   */
+  getAuthToken(): string {
+    return this.authToken || "";
   }
 
   /**

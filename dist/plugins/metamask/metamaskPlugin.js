@@ -133,122 +133,19 @@ class MetaMaskPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "MetaMask signature verification failed. Address mismatch.");
             }
             (0, logger_1.log)("MetaMask signature verified successfully.");
-            // For MetaMask authentication, we'll use a direct approach rather than using createUserWithGunDB
-            (0, logger_1.log)("Attempting direct auth with GunDB for MetaMask account...");
-            // Try to authenticate directly first
-            try {
-                const gun = core.gun;
-                let authSuccess = false;
-                await new Promise((resolve) => {
-                    // Clear any previous auth state
-                    try {
-                        if (gun.user && gun.user()._ && gun.user()._.sea) {
-                            gun.user()._.sea = null;
-                        }
-                    }
-                    catch (e) {
-                        // Ignore reset errors
-                    }
-                    // Try direct authentication
-                    gun
-                        .user()
-                        .auth(credentials.username, credentials.password, (ack) => {
-                        if (ack.err) {
-                            (0, logger_1.log)(`Direct auth failed: ${ack.err}, will try creating user first`);
-                            resolve();
-                        }
-                        else {
-                            authSuccess = true;
-                            (0, logger_1.log)("Direct auth successful");
-                            resolve();
-                        }
-                    });
-                });
-                // If direct auth succeeded, we're done
-                if (authSuccess) {
-                    const userPub = core.gun.user().is?.pub || "";
-                    // Emit login event
-                    core.emit("auth:login", {
-                        userPub: userPub,
-                        username: credentials.username,
-                        method: "metamask",
-                    });
-                    return {
-                        success: true,
-                        userPub: userPub,
-                        username: credentials.username,
-                    };
-                }
-                // If direct auth failed, try to create the user first
-                (0, logger_1.log)("Creating MetaMask user account...");
-                let createSuccess = false;
-                await new Promise((resolve) => {
-                    gun
-                        .user()
-                        .create(credentials.username, credentials.password, (ack) => {
-                        if (ack.err && ack.err !== "User already created!") {
-                            (0, logger_1.log)(`User creation failed: ${ack.err}`);
-                            resolve();
-                        }
-                        else {
-                            // Even if we get "User already created!" consider it a success
-                            createSuccess = true;
-                            (0, logger_1.log)("User creation successful or already exists");
-                            resolve();
-                        }
-                    });
-                });
-                if (!createSuccess) {
-                    throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_USER_CREATION_FAILED", "Failed to create MetaMask user account");
-                }
-                // Now try to authenticate again
-                (0, logger_1.log)("Authenticating after create/verify...");
-                let loginSuccess = false;
-                let userPub = "";
-                await new Promise((resolve) => {
-                    // Clear any previous auth state
-                    try {
-                        if (gun.user && gun.user()._ && gun.user()._.sea) {
-                            gun.user()._.sea = null;
-                        }
-                    }
-                    catch (e) {
-                        // Ignore reset errors
-                    }
-                    gun
-                        .user()
-                        .auth(credentials.username, credentials.password, (ack) => {
-                        if (ack.err) {
-                            (0, logger_1.log)(`Post-creation auth failed: ${ack.err}`);
-                            resolve();
-                        }
-                        else {
-                            loginSuccess = true;
-                            userPub = gun.user().is?.pub || "";
-                            (0, logger_1.log)(`Post-creation auth successful: ${userPub}`);
-                            resolve();
-                        }
-                    });
-                });
-                if (!loginSuccess) {
-                    throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_LOGIN_FAILED", "Failed to log in after creating or verifying MetaMask user account");
-                }
-                // Emit login event
-                core.emit("auth:login", {
-                    userPub: userPub,
-                    username: credentials.username,
-                    method: "metamask",
-                });
-                return {
-                    success: true,
-                    userPub: userPub,
-                    username: credentials.username,
-                };
+            // Use core's login method directly instead of core.gun.login
+            (0, logger_1.log)("Logging in using core login method...");
+            const loginResult = await core.login(credentials.username, credentials.password);
+            if (!loginResult.success) {
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_LOGIN_FAILED", loginResult.error || "Failed to log in with MetaMask credentials");
             }
-            catch (authError) {
-                // Pass the specific authentication error up the chain
-                throw authError;
-            }
+            // Emit login event
+            core.emit("auth:login", {
+                userPub: loginResult.userPub,
+                username: credentials.username,
+                method: "metamask",
+            });
+            return loginResult;
         }
         catch (error) {
             // Handle both ShogunError and generic errors
@@ -295,126 +192,19 @@ class MetaMaskPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "MetaMask signature verification failed. Address mismatch.");
             }
             (0, logger_1.log)("MetaMask signature verified successfully.");
-            // For MetaMask registration, we'll use a direct approach
-            (0, logger_1.log)("Creating MetaMask user account directly...");
-            try {
-                const gun = core.gun;
-                // First, check if the user already exists by trying to authenticate
-                let userExists = false;
-                await new Promise((resolve) => {
-                    // Reset user state
-                    try {
-                        if (gun.user && gun.user()._ && gun.user()._.sea) {
-                            gun.user()._.sea = null;
-                        }
-                    }
-                    catch (e) {
-                        // Ignore reset errors
-                    }
-                    // Try authentication to see if user exists
-                    gun
-                        .user()
-                        .auth(credentials.username, credentials.password, (ack) => {
-                        if (!ack.err) {
-                            userExists = true;
-                            (0, logger_1.log)("User already exists and credentials are valid");
-                        }
-                        resolve();
-                    });
-                });
-                // If user already exists, return success
-                if (userExists) {
-                    const userPub = core.gun.user().is?.pub || "";
-                    // Emit signup event (even though it's more of a login)
-                    core.emit("auth:signup", {
-                        userPub: userPub,
-                        username: credentials.username,
-                        method: "metamask",
-                    });
-                    return {
-                        success: true,
-                        userPub: userPub,
-                        username: credentials.username,
-                    };
-                }
-                // Otherwise create the user
-                (0, logger_1.log)("Creating new MetaMask user account...");
-                let createSuccess = false;
-                await new Promise((resolve) => {
-                    // Reset user state
-                    try {
-                        if (gun.user && gun.user()._ && gun.user()._.sea) {
-                            gun.user()._.sea = null;
-                        }
-                    }
-                    catch (e) {
-                        // Ignore reset errors
-                    }
-                    gun
-                        .user()
-                        .create(credentials.username, credentials.password, (ack) => {
-                        if (ack.err && ack.err !== "User already created!") {
-                            (0, logger_1.log)(`User creation failed: ${ack.err}`);
-                            resolve();
-                        }
-                        else {
-                            createSuccess = true;
-                            (0, logger_1.log)("User creation successful or already exists");
-                            resolve();
-                        }
-                    });
-                });
-                if (!createSuccess) {
-                    throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_USER_CREATION_FAILED", "Failed to create MetaMask user account");
-                }
-                // Now authenticate with the new account
-                (0, logger_1.log)("Authenticating with new account...");
-                let loginSuccess = false;
-                let userPub = "";
-                await new Promise((resolve) => {
-                    // Reset user state
-                    try {
-                        if (gun.user && gun.user()._ && gun.user()._.sea) {
-                            gun.user()._.sea = null;
-                        }
-                    }
-                    catch (e) {
-                        // Ignore reset errors
-                    }
-                    gun
-                        .user()
-                        .auth(credentials.username, credentials.password, (ack) => {
-                        if (ack.err) {
-                            (0, logger_1.log)(`Post-creation auth failed: ${ack.err}`);
-                            resolve();
-                        }
-                        else {
-                            loginSuccess = true;
-                            userPub = gun.user().is?.pub || "";
-                            (0, logger_1.log)(`Post-creation auth successful: ${userPub}`);
-                            resolve();
-                        }
-                    });
-                });
-                if (!loginSuccess) {
-                    throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_SIGNUP_AUTH_FAILED", "Failed to log in after creating MetaMask user account");
-                }
-                // Emit signup event
-                core.emit("auth:signup", {
-                    userPub: userPub,
-                    username: credentials.username,
-                    method: "metamask",
-                });
-                return {
-                    success: true,
-                    userPub: userPub,
-                    username: credentials.username,
-                };
+            // Use core's signUp method directly instead of core.gun.signUp
+            (0, logger_1.log)("Signing up using core signUp method...");
+            const signUpResult = await core.signUp(credentials.username, credentials.password);
+            if (!signUpResult.success) {
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "METAMASK_SIGNUP_FAILED", signUpResult.error || "Failed to sign up with MetaMask credentials");
             }
-            catch (authError) {
-                // Pass the specific authentication error up the chain
-                throw authError;
-            }
+            // Emit signup event
+            core.emit("auth:signup", {
+                userPub: signUpResult.userPub,
+                username: credentials.username,
+                method: "metamask",
+            });
+            return signUpResult;
         }
         catch (error) {
             // Handle both ShogunError and generic errors

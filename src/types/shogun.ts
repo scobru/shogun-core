@@ -1,4 +1,4 @@
-import { IGunInstance } from "gun/types";
+import { GunOptions, IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { GunDB } from "../gun/gun";
@@ -88,6 +88,9 @@ export interface IShogunCore extends PluginManager {
   // Logging configuration
   configureLogging(config: LoggingConfig): void;
 
+  // Authentication token methods
+  getAuthToken(): string;
+
   // Wallet management methods
   /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
   getMainWallet?(): ethers.Wallet | null;
@@ -171,7 +174,8 @@ export interface LoggingConfig {
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
-  gun: GunInstance<any>;
+  scope?: string;
+  options?: GunOptions;
   authToken?: string;
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;

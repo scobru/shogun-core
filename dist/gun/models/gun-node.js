@@ -36,20 +36,86 @@ class GunNode {
     get iterates() {
         return this.options.iterates ?? (GunNode);
     }
+    /**
+     * Private helper method to get the authentication token
+     * @returns The authentication token
+     */
+    getAuthToken() {
+        // Default fallback token
+        const defaultToken = "automa25";
+        try {
+            // Try to get the authentication token from GunPlus instance
+            if (gun_plus_1.default.instance && gun_plus_1.default.instance.gun && gun_plus_1.default.instance.gun._) {
+                // Try to get from gun instance's internal state
+                const gunInternalState = gun_plus_1.default.instance.gun._;
+                if (gunInternalState.opt && gunInternalState.opt.headers) {
+                    const headerToken = gunInternalState.opt.headers.token;
+                    if (headerToken)
+                        return headerToken;
+                }
+            }
+        }
+        catch (e) {
+            console.warn("Error getting auth token:", e);
+        }
+        return defaultToken;
+    }
+    /**
+     * Private helper method to create options with auth
+     * @param withCert Whether to include certificate
+     * @returns Options object with auth
+     */
+    createOptionsWithAuth(withCert = true) {
+        // Create options object with certificate if available
+        const options = withCert && this.certificate
+            ? { opt: { cert: this.certificate } }
+            : { opt: {} };
+        // Add authentication token
+        try {
+            const authToken = this.getAuthToken();
+            // Add to headers
+            if (!options.opt.headers) {
+                options.opt.headers = {};
+            }
+            options.opt.headers.token = authToken;
+            options.opt.headers.Authorization = `Bearer ${authToken}`;
+            // Also add token at top level for different Gun versions
+            options.token = authToken;
+        }
+        catch (e) {
+            console.warn("Failed to add auth token to Gun options:", e);
+        }
+        return options;
+    }
     // READING AND PUTTING SIMPLE VALUES
     /**
      * Put a value at this node. Will use certificate if available.
      */
     put(value) {
-        const options = this.certificate
-            ? { opt: { cert: this.certificate } }
-            : undefined;
+        const options = this.createOptionsWithAuth();
         return this.chain.put(value, undefined, options);
     }
     /**
      * Wrapper around gun.get. If iterates is specified, this will be used here. Carries options.
      */
     get(key) {
+        // Add authentication token to internal chain if possible
+        try {
+            const authToken = this.getAuthToken();
+            // Try to set options if possible using internal Gun methods
+            if (this.chain && this.chain._) {
+                const chainInternal = this.chain._;
+                if (!chainInternal.opt)
+                    chainInternal.opt = {};
+                if (!chainInternal.opt.headers)
+                    chainInternal.opt.headers = {};
+                chainInternal.opt.headers.token = authToken;
+                chainInternal.opt.headers.Authorization = `Bearer ${authToken}`;
+            }
+        }
+        catch (e) {
+            console.warn("Failed to add auth token to Gun get options:", e);
+        }
         return new this.iterates(this.chain.get(key), this.options);
     }
     /**
@@ -59,7 +125,8 @@ class GunNode {
      */
     add(value, key) {
         const id = key || gun_plus_1.default.instance.id_generator();
-        this.chain.get(id).put(value);
+        const options = this.createOptionsWithAuth();
+        this.chain.get(id).put(value, undefined, options);
     }
     /**
      * **Example:**

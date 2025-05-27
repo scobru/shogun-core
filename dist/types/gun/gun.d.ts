@@ -21,10 +21,14 @@ declare class GunDB {
     private readonly authToken?;
     get gun(): GunInstance<any>;
     private _rxjs?;
-    constructor(appScopeOrGun: string | GunInstance<any>, optionsOrAuthToken?: GunOptions | string, authTokenParam?: string);
+    constructor(appScopeOrGun: string, optionsOrAuthToken?: GunOptions | string, authTokenParam?: string);
     private subscribeToAuthEvents;
     private notifyAuthListeners;
-    restrictPut(gun: GunInstance<any>, authToken: string): void;
+    /**
+     * Gets the current auth token
+     * @returns The current auth token
+     */
+    getAuthToken(): string;
     /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add

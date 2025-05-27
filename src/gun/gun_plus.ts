@@ -30,7 +30,6 @@ export default class GunPlus {
   static async imports() {
     const Gun = (await import("gun/gun")).default;
     const SEA = (await import("gun/sea")).default;
-
     return { Gun, SEA } as GunImports;
   }
 
