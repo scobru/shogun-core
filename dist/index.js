@@ -13,24 +13,28 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Stealth = exports.MetaMask = exports.GunDB = exports.ShogunCore = exports.RelayVerifier = void 0;
-const gun_1 = require("./gun/gun");
+const gun_1 = require("./gundb/gun");
+const rxjs_integration_1 = require("./gundb/rxjs-integration");
 const eventEmitter_1 = require("./utils/eventEmitter");
-const storage_1 = require("./storage/storage");
-const shogun_1 = require("./types/shogun");
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./utils/errorHandler");
-const rxjs_integration_1 = require("./gun/rxjs-integration");
+const storage_1 = require("./storage/storage");
+const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const metamaskPlugin_1 = require("./plugins/metamask/metamaskPlugin");
 const stealthPlugin_1 = require("./plugins/stealth/stealthPlugin");
 const walletPlugin_1 = require("./plugins/wallet/walletPlugin");
 const bitcoinPlugin_1 = require("./plugins/bitcoin/bitcoinPlugin");
+const gun_2 = __importDefault(require("gun"));
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
-__exportStar(require("./gun/rxjs-integration"), exports);
+__exportStar(require("./gundb/rxjs-integration"), exports);
 __exportStar(require("./plugins"), exports);
 __exportStar(require("./contracts/entryPoint"), exports);
 __exportStar(require("./contracts/utils"), exports);
@@ -51,11 +55,11 @@ __exportStar(require("./contracts/relay"), exports);
 class ShogunCore {
     /** Current API version - used for deprecation warnings and migration guidance */
     static API_VERSION = "2.0.0";
-    /** Gun database instance */
-    gun;
+    /** Gun database instance - access through gundb.gun for consistency */
+    _gun;
     /** Gun user instance */
-    user = null;
-    /** GunDB wrapper */
+    _user = null;
+    /** GunDB wrapper - the primary interface for Gun operations */
     gundb;
     /** Storage implementation */
     storage;
@@ -92,16 +96,19 @@ class ShogunCore {
                 type: error.type,
             });
         });
-        // Sempre istanziare GunDB internamente con le opzioni fornite
+        // Initialize GunDB with the provided options
         const options = config.options || {
             localStorage: false,
             radisk: false,
+            wire: true,
+            axe: true,
         };
         (0, logger_1.log)("Options:", options);
-        this.gundb = new gun_1.GunDB(config.scope || "", options, config.authToken);
-        this.gun = this.gundb.gun;
+        // Then initialize GunDB with the Gun instance
+        this.gundb = new gun_1.GunDB(new gun_2.default(options), config.authToken, config.scope || "");
+        this._gun = this.gundb.gun;
         (0, logger_1.log)("Initialized Gun instance");
-        this.user = this.gun.user().recall({ sessionStorage: true });
+        this._user = this.gun.user().recall({ sessionStorage: true });
         this.rx = new rxjs_integration_1.GunRxJS(this.gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
@@ -117,6 +124,20 @@ class ShogunCore {
             }
         }
         (0, logger_1.log)("ShogunSDK initialized!");
+    }
+    /**
+     * Access to the Gun instance
+     * @returns The Gun instance
+     */
+    get gun() {
+        return this._gun;
+    }
+    /**
+     * Access to the current user
+     * @returns The current Gun user instance
+     */
+    get user() {
+        return this._user;
     }
     /**
      * Register built-in plugins based on configuration
@@ -955,8 +976,8 @@ exports.ShogunCore = ShogunCore;
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_2 = require("./gun/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
+var gun_3 = require("./gundb/gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
 var metamask_1 = require("./plugins/metamask/metamask");
 Object.defineProperty(exports, "MetaMask", { enumerable: true, get: function () { return metamask_1.MetaMask; } });
 var stealth_1 = require("./plugins/stealth/stealth");

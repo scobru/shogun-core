@@ -527,11 +527,14 @@
             Authorization: "Bearer automa25"
           }
         };
+        
+        const gunInstance = new Gun(options);
+        
 
         try {
           // Configurazione per l'ambiente browser
           const config = {
-            options: options,
+            gun: gunInstance,
             authToken: "automa25",
             webauthn: {
               enabled: true,
@@ -563,130 +566,10 @@
           // Utilizziamo la funzione di inizializzazione specifica per browser
           shogun = window.initShogunBrowser(config);
           
-          // Debug delle richieste Gun
-          console.log("Setting up Gun debug intercept");
-          const gunInstance = shogun.gun;
-          console.log("Gun inizializzato:", gunInstance);
-
-          // Inject authentication token deeply into Gun's internals
-          // This attempts to place the token in ALL possible locations Gun might look for it
-          try {
-            // 1. Directly modify Gun's internal structures to inject authentication
-            if (gunInstance && gunInstance._) {
-              // Set auth token in Gun's internal _ structure
-              if (!gunInstance._.opt) gunInstance._.opt = {};
-              if (!gunInstance._.opt.headers) gunInstance._.opt.headers = {};
-              gunInstance._.opt.headers.token = "automa25";
-              gunInstance._.opt.headers.Authorization = "Bearer automa25";
-              
-              // Also add to Gun's websocket options if available
-              if (gunInstance._.opt.ws) {
-                gunInstance._.opt.ws.headers = {
-                  token: "automa25",
-                  Authorization: "Bearer automa25"
-                };
-              }
-              
-              // Also add to direct properties
-              gunInstance._.token = "automa25";
-              
-              // If Gun has a websocket property, set headers on it too
-              if (gunInstance._.ws) {
-                gunInstance._.ws.headers = {
-                  token: "automa25",
-                  Authorization: "Bearer automa25"
-                };
-              }
-              
-              console.log("Injected auth token into Gun's internal structures");
-            }
-            
-            // 2. Directly assign to the Gun instance as well
-            gunInstance.token = "automa25";
-            
-            // 3. Try to access peers if available
-            if (gunInstance._.opt && gunInstance._.opt.peers) {
-              Object.values(gunInstance._.opt.peers).forEach(peer => {
-                if (peer && peer.wire) {
-                  // Inject into peer wire options
-                  if (!peer.wire.headers) peer.wire.headers = {};
-                  peer.wire.headers.token = "automa25";
-                  peer.wire.headers.Authorization = "Bearer automa25";
-                }
-              });
-            }
-          } catch (err) {
-            console.error("Error configuring Gun's internal authentication:", err);
-          }
-
-          // Add comprehensive message interceptor
-          gunInstance.on("opt", function (ctx) {
-            if (ctx.once) {
-              return;
-            }
-            
-            // Intercept outgoing messages to add authentication
-            ctx.on("out", function (msg) {
-              // Add token at all possible levels
-              if (!msg.headers) msg.headers = {};
-              msg.headers.token = "automa25";
-              msg.headers.Authorization = "Bearer automa25";
-              msg.token = "automa25";
-              
-              // Add to internal property
-              if (!msg._) msg._ = {};
-              if (typeof msg._ === 'object') {
-                msg._.token = "automa25";
-              }
-              
-              // Log the augmented message
-              console.log("Outgoing message with auth:", {
-                type: msg.get ? "GET" : msg.put ? "PUT" : "OTHER",
-                keys: msg.get ? Object.keys(msg.get) : (msg.put ? Object.keys(msg.put) : []),
-                has_headers: !!msg.headers,
-                has_token: !!msg.token,
-                has_internal: !!(msg._ && msg._.token)
-              });
-              
-              // Continue to next middleware
-              this.to.next(msg);
-            });
-          });
-
-          // Verifica che il token sia effettivamente impostato
-          const token = shogun.getAuthToken
-            ? shogun.getAuthToken()
-            : "Metodo getAuthToken non disponibile";
-          console.log("Token attualmente in uso:", token);
-
-          // Hack: Directly patch Gun's wire adapter to add auth to all outgoing messages
-          // This is a more aggressive approach that directly modifies Gun's internal network transport
-          try {
-            if (window.Gun && window.Gun.on) {
-              const originalWire = window.Gun.on('wire');
-              if (originalWire) {
-                window.Gun.on('wire', function(msg, peer) {
-                  // Add authentication to the raw wire message
-                  if (msg && typeof msg === 'object') {
-                    if (!msg.headers) msg.headers = {};
-                    msg.headers.token = "automa25";
-                    msg.headers.Authorization = "Bearer automa25";
-                    msg.token = "automa25";
-                  }
-                  
-                  // Log that we're patching the raw wire message
-                  console.log("🔌 Patched wire message with auth");
-                  
-                  // Call the original wire handler
-                  return originalWire(msg, peer);
-                });
-                console.log("Successfully patched Gun wire adapter");
-              }
-            }
-          } catch (err) {
-            console.error("Error patching Gun wire adapter:", err);
-          }
-
+          // Make the shogun instance available globally with a clean structure
+          window.shogun = shogun;
+          console.log("Shogun initialized and exposed globally");
+          
           // Otteniamo i riferimenti ai plugin
           walletPlugin = shogun.getPlugin("wallet");
           webauthnPlugin = shogun.getPlugin("webauthn");

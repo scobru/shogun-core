@@ -1,5 +1,8 @@
-import { GunDB } from "./gun/gun";
+import { GunDB } from "./gundb/gun";
+import { GunRxJS } from "./gundb/rxjs-integration";
 import { EventEmitter } from "./utils/eventEmitter";
+import { log, logError, configureLogging } from "./utils/logger";
+import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import {
   IShogunCore,
@@ -10,11 +13,7 @@ import {
   PluginCategory,
   CorePlugins,
 } from "./types/shogun";
-import { IGunUserInstance, SEA } from "gun";
-import { log, logError, configureLogging } from "./utils/logger";
 import { ethers } from "ethers";
-import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
-import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
@@ -23,14 +22,15 @@ import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
 import { WalletPlugin } from "./plugins/wallet/walletPlugin";
 import { BitcoinWalletPlugin } from "./plugins/bitcoin/bitcoinPlugin";
 import { WalletManager } from "./plugins";
-import { GunInstance } from "./gun/types";
+
+import Gun from "gun";
+import { IGunUserInstance, IGunInstance } from "gun";
 
 export { RelayVerifier } from "./contracts/utils";
+
 export * from "./utils/errorHandler";
-export type * from "./utils/errorHandler";
-export * from "./gun/rxjs-integration";
+export * from "./gundb/rxjs-integration";
 export * from "./plugins";
-export type * from "./types/plugin";
 export * from "./contracts/entryPoint";
 export * from "./contracts/utils";
 export * from "./contracts/registry";
@@ -40,6 +40,8 @@ export type * from "./contracts/relay";
 export type * from "./contracts/registry";
 export type * from "./contracts/base";
 export type * from "./contracts/utils";
+export type * from "./types/plugin";
+export type * from "./utils/errorHandler";
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -57,13 +59,13 @@ export class ShogunCore implements IShogunCore {
   /** Current API version - used for deprecation warnings and migration guidance */
   public static readonly API_VERSION = "2.0.0";
 
-  /** Gun database instance */
-  public gun!: GunInstance<any>;
+  /** Gun database instance - access through gundb.gun for consistency */
+  private _gun!: IGunInstance<any>;
 
   /** Gun user instance */
-  public user: IGunUserInstance<any> | null = null;
+  private _user: IGunUserInstance<any> | null = null;
 
-  /** GunDB wrapper */
+  /** GunDB wrapper - the primary interface for Gun operations */
   public gundb: GunDB;
 
   /** Storage implementation */
@@ -111,16 +113,27 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    // Sempre istanziare GunDB internamente con le opzioni fornite
+    // Initialize GunDB with the provided options
     const options = config.options || {
       localStorage: false,
       radisk: false,
+      wire: true,
+      axe: true,
     };
+
     log("Options:", options);
-    this.gundb = new GunDB(config.scope || "", options, config.authToken);
-    this.gun = this.gundb.gun;
+
+    // Then initialize GunDB with the Gun instance
+    this.gundb = new GunDB(
+      new Gun(options),
+      config.authToken,
+      config.scope || "",
+    );
+
+    this._gun = this.gundb.gun;
     log("Initialized Gun instance");
-    this.user = this.gun.user().recall({ sessionStorage: true });
+
+    this._user = this.gun.user().recall({ sessionStorage: true });
     this.rx = new GunRxJS(this.gun);
     this.registerBuiltinPlugins(config);
 
@@ -138,6 +151,22 @@ export class ShogunCore implements IShogunCore {
       }
     }
     log("ShogunSDK initialized!");
+  }
+
+  /**
+   * Access to the Gun instance
+   * @returns The Gun instance
+   */
+  get gun(): IGunInstance<any> {
+    return this._gun;
+  }
+
+  /**
+   * Access to the current user
+   * @returns The current Gun user instance
+   */
+  get user(): IGunUserInstance<any> | null {
+    return this._user;
   }
 
   /**
@@ -1107,7 +1136,7 @@ export class ShogunCore implements IShogunCore {
 export * from "./types/shogun";
 
 // Export classes
-export { GunDB } from "./gun/gun";
+export { GunDB } from "./gundb/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export type {

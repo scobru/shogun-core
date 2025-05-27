@@ -1,9 +1,9 @@
 import { GunOptions, IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { GunDB } from "../gun/gun";
+import { GunDB } from "../gundb/gun";
 import { Observable } from "rxjs";
-import { GunRxJS } from "../gun/rxjs-integration";
+import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
 import { IGunInstance as GunInstance } from "gun";

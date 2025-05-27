@@ -1,19 +1,16 @@
-import { GunDB } from "./gun/gun";
+import { GunDB } from "./gundb/gun";
+import { GunRxJS } from "./gundb/rxjs-integration";
+import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
-import { IGunUserInstance } from "gun";
 import { ethers } from "ethers";
-import { ShogunError } from "./utils/errorHandler";
-import { GunRxJS } from "./gun/rxjs-integration";
 import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
-import { GunInstance } from "./gun/types";
+import { IGunUserInstance, IGunInstance } from "gun";
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
-export type * from "./utils/errorHandler";
-export * from "./gun/rxjs-integration";
+export * from "./gundb/rxjs-integration";
 export * from "./plugins";
-export type * from "./types/plugin";
 export * from "./contracts/entryPoint";
 export * from "./contracts/utils";
 export * from "./contracts/registry";
@@ -23,6 +20,8 @@ export type * from "./contracts/relay";
 export type * from "./contracts/registry";
 export type * from "./contracts/base";
 export type * from "./contracts/utils";
+export type * from "./types/plugin";
+export type * from "./utils/errorHandler";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -38,11 +37,11 @@ export type * from "./contracts/utils";
 export declare class ShogunCore implements IShogunCore {
     /** Current API version - used for deprecation warnings and migration guidance */
     static readonly API_VERSION = "2.0.0";
-    /** Gun database instance */
-    gun: GunInstance<any>;
+    /** Gun database instance - access through gundb.gun for consistency */
+    private _gun;
     /** Gun user instance */
-    user: IGunUserInstance<any> | null;
-    /** GunDB wrapper */
+    private _user;
+    /** GunDB wrapper - the primary interface for Gun operations */
     gundb: GunDB;
     /** Storage implementation */
     storage: ShogunStorage;
@@ -64,6 +63,16 @@ export declare class ShogunCore implements IShogunCore {
      * and plugin system.
      */
     constructor(config: ShogunSDKConfig);
+    /**
+     * Access to the Gun instance
+     * @returns The Gun instance
+     */
+    get gun(): IGunInstance<any>;
+    /**
+     * Access to the current user
+     * @returns The current Gun user instance
+     */
+    get user(): IGunUserInstance<any> | null;
     /**
      * Register built-in plugins based on configuration
      * @private
@@ -279,7 +288,7 @@ export declare class ShogunCore implements IShogunCore {
     getAuthToken(): string;
 }
 export * from "./types/shogun";
-export { GunDB } from "./gun/gun";
+export { GunDB } from "./gundb/gun";
 export { MetaMask } from "./plugins/metamask/metamask";
 export { Stealth } from "./plugins/stealth/stealth";
 export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth/types";
