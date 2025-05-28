@@ -102,6 +102,12 @@ class ShogunCore {
             radisk: false,
             wire: true,
             axe: true,
+            headers: {
+                token: config.authToken,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${config.authToken}`,
+            },
         };
         (0, logger_1.log)("Options:", options);
         // Then initialize GunDB with the Gun instance

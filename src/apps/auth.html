@@ -517,7 +517,7 @@
         e.preventDefault(); // Previene il comportamento di default
 
         const options = {
-          peers: ["http://localhost:8765/gun?token=automa25"],
+          peers: ["http://localhost:8765/gun"],
           localStorage: false,
           radisk: false,
           headers: {
@@ -530,11 +530,10 @@
         
         const gunInstance = new Gun(options);
         
-
         try {
           // Configurazione per l'ambiente browser
           const config = {
-            gun: gunInstance,
+            options: options,
             authToken: "automa25",
             webauthn: {
               enabled: true,

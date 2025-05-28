@@ -119,6 +119,12 @@ export class ShogunCore implements IShogunCore {
       radisk: false,
       wire: true,
       axe: true,
+      headers: {
+        token: config.authToken,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${config.authToken}`,
+      },
     };
 
     log("Options:", options);
