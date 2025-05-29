@@ -20,6 +20,8 @@ export declare function use_machine(machine: Machine, initial: AUTH_STATE): {
     subscribe: (cb: (state: AUTH_STATE) => any) => () => void;
     /** attempt to update the state machine */
     set: (event: StateMachineEvent) => void;
+    /** Get the current state */
+    getCurrentState: () => AUTH_STATE;
 };
 /** Possible states that the auth-manager can be in. */
 export declare const states: {

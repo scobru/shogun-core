@@ -15,6 +15,7 @@ export default class AuthManager {
     static state: {
         subscribe: (cb: (state: import("./state-machine").AUTH_STATE) => any) => () => void;
         set: (event: StateMachineEvent) => void;
+        getCurrentState: () => import("./state-machine").AUTH_STATE;
     };
     static instance: AuthManager;
     gundb: GunDB;

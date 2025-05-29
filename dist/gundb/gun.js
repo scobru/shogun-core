@@ -59,15 +59,12 @@ class GunDB {
     auth;
     onAuthCallbacks = [];
     _authenticating = false;
-    authToken;
     // Integrated modules
     _rxjs;
-    constructor(gun, authToken, appScope = "shogun") {
+    constructor(gun, appScope = "shogun") {
         (0, logger_1.log)("Initializing GunDB");
-        this.authToken = authToken;
         this.gun = gun;
         this.user = this.gun.user().recall({ sessionStorage: true });
-        this.restrictPut(this.gun, authToken || "");
         this.subscribeToAuthEvents();
         // bind crypto and utils
         this.crypto = crypto;
@@ -89,23 +86,6 @@ class GunDB {
     notifyAuthListeners(pub) {
         const user = this.gun.user();
         this.onAuthCallbacks.forEach((cb) => cb(user));
-    }
-    restrictPut(gun, authToken) {
-        if (!authToken) {
-            (0, logger_1.logError)("No auth token provided");
-            return;
-        }
-        gun.on("out", function (ctx) {
-            var to = this.to;
-            // Adds headers for put
-            ctx.headers = {
-                token: authToken,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${authToken}`,
-            };
-            to.next(ctx); // pass to next middleware
-        });
     }
     /**
      * Adds a new peer to the network
@@ -332,6 +312,20 @@ class GunDB {
      */
     logout() {
         try {
+            // Check if the user is actually logged in before attempting to logout
+            if (!this.isLoggedIn()) {
+                (0, logger_1.log)("No user logged in, skipping logout");
+                return;
+            }
+            // Check if auth state machine is in the correct state for logout
+            const currentState = auth_1.default.state.getCurrentState();
+            if (currentState !== "authorized") {
+                (0, logger_1.log)(`User in invalid state for logout: ${currentState}, using direct logout instead of AuthManager`);
+                // Still perform Gun's direct logout for cleanup
+                this.gun.user().leave();
+                return;
+            }
+            // Use AuthManager for logout if state is correct
             this.auth
                 .leave()
                 .then(() => {
@@ -339,10 +333,20 @@ class GunDB {
             })
                 .catch((err) => {
                 (0, logger_1.logError)("Error during logout via AuthManager:", err);
+                // Fallback to direct logout if AuthManager fails
+                (0, logger_1.log)("Falling back to direct logout method");
+                this.gun.user().leave();
             });
         }
         catch (error) {
             (0, logger_1.logError)("Error during logout:", error);
+            // Last resort fallback
+            try {
+                this.gun.user().leave();
+            }
+            catch (fallbackError) {
+                (0, logger_1.logError)("Fallback logout also failed:", fallbackError);
+            }
         }
     }
     /**
@@ -506,13 +510,6 @@ class GunDB {
                 resolve(data);
             });
         });
-    }
-    /**
-     * Gets the current auth token
-     * @returns The current auth token or empty string if not set
-     */
-    getAuthToken() {
-        return this.authToken || "";
     }
     // Errors
     static Errors = GunErrors;

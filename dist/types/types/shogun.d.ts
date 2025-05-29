@@ -74,7 +74,6 @@ export interface IShogunCore extends PluginManager {
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     configureLogging(config: LoggingConfig): void;
-    getAuthToken(): string;
     /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
     getMainWallet?(): ethers.Wallet | null;
     login(username: string, password: string): Promise<AuthResult>;
@@ -133,7 +132,7 @@ export interface LoggingConfig {
 export interface ShogunSDKConfig {
     scope?: string;
     options?: GunOptions;
-    authToken?: string;
+    peers?: string[];
     /** WebAuthn configuration */
     webauthn?: WebauthnConfig;
     /** MetaMask configuration */

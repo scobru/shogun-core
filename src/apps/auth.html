@@ -18,6 +18,9 @@
         <button id="initBtn" type="button" class="primary-button">
           Inizializza Shogun
         </button>
+        <button id="testGunBtn" type="button" class="primary-button">
+          Test Gun Connection
+        </button>
         <div id="supportStatus"></div>
       </div>
 
@@ -520,21 +523,15 @@
           peers: ["http://localhost:8765/gun"],
           localStorage: false,
           radisk: false,
-          headers: {
-            token: "automa25",
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: "Bearer automa25"
-          }
+          wire: true,
         };
-        
-        const gunInstance = new Gun(options);
-        
+
         try {
           // Configurazione per l'ambiente browser
           const config = {
             options: options,
             authToken: "automa25",
+            peers: ["http://localhost:8765/gun"],
             webauthn: {
               enabled: true,
               rpName: "Shogun Demo",
@@ -564,11 +561,42 @@
 
           // Utilizziamo la funzione di inizializzazione specifica per browser
           shogun = window.initShogunBrowser(config);
-          
+
+          const gunInstance = shogun.gun;
+
+          // gunInstance.on("out", function (msg) {
+          //   var to = this.to;
+          //   // Adds headers for put
+          //   msg.headers = {
+          //     token: config.authToken,
+          //     Authorization: "Bearer " + config.authToken,
+          //     "Content-Type": "application/json",
+          //   };
+          //   to.next(msg); // pass to next middleware
+          // });
+
+          Gun.on("opt", function (ctx) {
+            if (ctx.once) {
+              return;
+            }
+            // Check all incoming traffic
+            ctx.on("out", function (msg) {
+              console.log("msg", msg);
+              let to = this.to;
+              // Adds headers for put
+              msg.headers = {
+                token: config.authToken,
+                Authorization: "Bearer " + config.authToken,
+                "Content-Type": "application/json",
+              };
+              to.next(msg); // pass to next middleware
+            });
+          });
+
           // Make the shogun instance available globally with a clean structure
           window.shogun = shogun;
           console.log("Shogun initialized and exposed globally");
-          
+
           // Otteniamo i riferimenti ai plugin
           walletPlugin = shogun.getPlugin("wallet");
           webauthnPlugin = shogun.getPlugin("webauthn");
@@ -929,7 +957,19 @@
         }
 
         try {
+          // First check if user is logged in
+          if (!shogun.isLoggedIn()) {
+            showResult("Logout", {
+              success: true,
+              message: "Nessun utente connesso, logout non necessario",
+            });
+            return;
+          }
+
+          // Attempt logout
           shogun.logout();
+
+          // Show success immediately (the operation is async but we've added fallbacks)
           showResult("Logout", {
             success: true,
             message: "Utente disconnesso con successo",
@@ -1076,6 +1116,50 @@
         checkMetaMaskSupport();
         checkBitcoinSupport();
       });
+
+      // Test Gun Connection
+      document
+        .getElementById("testGunBtn")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+
+          if (!shogun || !shogun.gun) {
+            showError("Test Gun", "Shogun or Gun not initialized");
+            return;
+          }
+
+          const testKey = `test_key_${Date.now()}`;
+          const testData = { message: "Test data", timestamp: Date.now() };
+
+          console.log(`Testing Gun connection with key: ${testKey}`);
+          showResult("Gun Test", { status: "Testing...", key: testKey });
+
+          // Put some test data
+          shogun.gun.get(testKey).put(testData, (ack) => {
+            if (ack.err) {
+              showError("Gun Test", `Put failed: ${ack.err}`);
+              console.error("Gun put error:", ack.err);
+            } else {
+              console.log("Gun put successful:", ack);
+
+              // Try to read back the data
+              shogun.gun.get(testKey).once((data) => {
+                if (data) {
+                  showResult("Gun Test", {
+                    status: "Success",
+                    sentData: testData,
+                    receivedData: data,
+                    match: data.message === testData.message,
+                  });
+                  console.log("Gun read successful:", data);
+                } else {
+                  showError("Gun Test", "Read failed: No data received");
+                  console.error("Gun read error: No data");
+                }
+              });
+            }
+          });
+        });
     </script>
   </body>
 </html>

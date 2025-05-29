@@ -35,6 +35,9 @@ function use_machine(machine, initial) {
             sub(state);
         }
     }
+    function getCurrentState() {
+        return state;
+    }
     return {
         /**
          * Subscribe to state updates.
@@ -42,6 +45,8 @@ function use_machine(machine, initial) {
         subscribe,
         /** attempt to update the state machine */
         set,
+        /** Get the current state */
+        getCurrentState,
     };
 }
 /** Possible states that the auth-manager can be in. */

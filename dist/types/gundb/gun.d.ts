@@ -19,12 +19,10 @@ declare class GunDB {
     auth: AuthManager;
     private readonly onAuthCallbacks;
     private _authenticating;
-    private readonly authToken?;
     private _rxjs?;
-    constructor(gun: IGunInstance<any>, authToken?: string, appScope?: string);
+    constructor(gun: IGunInstance<any>, appScope?: string);
     private subscribeToAuthEvents;
     private notifyAuthListeners;
-    restrictPut(gun: IGunInstance<any>, authToken: string): void;
     /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add
@@ -166,11 +164,6 @@ declare class GunDB {
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
-    /**
-     * Gets the current auth token
-     * @returns The current auth token or empty string if not set
-     */
-    getAuthToken(): string;
     static Errors: typeof GunErrors;
 }
 export { GunDB };

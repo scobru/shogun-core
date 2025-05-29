@@ -88,9 +88,6 @@ export interface IShogunCore extends PluginManager {
   // Logging configuration
   configureLogging(config: LoggingConfig): void;
 
-  // Authentication token methods
-  getAuthToken(): string;
-
   // Wallet management methods
   /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
   getMainWallet?(): ethers.Wallet | null;
@@ -174,9 +171,9 @@ export interface LoggingConfig {
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
+  gunInstance?: IGunInstance<any>;
   scope?: string;
-  options?: GunOptions;
-  authToken?: string;
+  peers?: string[];
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;
   /** MetaMask configuration */

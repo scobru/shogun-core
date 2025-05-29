@@ -40,6 +40,10 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
     }
   }
 
+  function getCurrentState(): AUTH_STATE {
+    return state;
+  }
+
   return {
     /**
      * Subscribe to state updates.
@@ -47,6 +51,8 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
     subscribe,
     /** attempt to update the state machine */
     set,
+    /** Get the current state */
+    getCurrentState,
   };
 }
 

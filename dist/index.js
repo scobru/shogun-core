@@ -73,6 +73,7 @@ class ShogunCore {
     rx;
     /** Plugin registry */
     plugins = new Map();
+    Gun;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -89,6 +90,7 @@ class ShogunCore {
         }
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
+        this.Gun = gun_2.default;
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -98,20 +100,17 @@ class ShogunCore {
         });
         // Initialize GunDB with the provided options
         const options = config.options || {
+            peers: config.peers,
             localStorage: false,
             radisk: false,
             wire: true,
             axe: true,
-            headers: {
-                token: config.authToken,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${config.authToken}`,
-            },
+            ws: true,
         };
         (0, logger_1.log)("Options:", options);
+        const gunIstance = this.Gun(options);
         // Then initialize GunDB with the Gun instance
-        this.gundb = new gun_1.GunDB(new gun_2.default(options), config.authToken, config.scope || "");
+        this.gundb = new gun_1.GunDB(gunIstance, config.scope || "");
         this._gun = this.gundb.gun;
         (0, logger_1.log)("Initialized Gun instance");
         this._user = this.gun.user().recall({ sessionStorage: true });
@@ -969,13 +968,6 @@ class ShogunCore {
     removeAllListeners(eventName) {
         this.eventEmitter.removeAllListeners(eventName);
         return this;
-    }
-    /**
-     * Gets the current auth token used for requests
-     * @returns The current auth token or empty string if not set
-     */
-    getAuthToken() {
-        return this.gundb.getAuthToken();
     }
 }
 exports.ShogunCore = ShogunCore;
