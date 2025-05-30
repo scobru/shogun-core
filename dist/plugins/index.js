@@ -20,9 +20,9 @@ Object.defineProperty(exports, "NostrConnector", { enumerable: true, get: functi
 var nostrConnectorPlugin_1 = require("./bitcoin/nostrConnectorPlugin");
 Object.defineProperty(exports, "NostrConnectorPlugin", { enumerable: true, get: function () { return nostrConnectorPlugin_1.NostrConnectorPlugin; } });
 // BIP32 HD Wallet plugin exports
-var hdwallet_1 = require("./bip32/hdwallet");
+var hdwallet_1 = require("./bip44/hdwallet");
 Object.defineProperty(exports, "HDWallet", { enumerable: true, get: function () { return hdwallet_1.HDWallet; } });
-var hdwalletPlugin_1 = require("./bip32/hdwalletPlugin");
+var hdwalletPlugin_1 = require("./bip44/hdwalletPlugin");
 Object.defineProperty(exports, "HDWalletPlugin", { enumerable: true, get: function () { return hdwalletPlugin_1.HDWalletPlugin; } });
 // Stealth address plugin exports
 var stealth_1 = require("./stealth-address/stealth");

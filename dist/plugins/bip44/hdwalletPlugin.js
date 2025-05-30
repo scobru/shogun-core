@@ -25,7 +25,7 @@ class HDWalletPlugin extends base_1.BasePlugin {
         // Creiamo un nuovo WalletManager
         this.hdwallet = new hdwallet_1.HDWallet(core.gun, {
             // Recuperiamo configurazione dal core se disponibile
-            balanceCacheTTL: core.config?.bip32?.balanceCacheTTL,
+            balanceCacheTTL: core.config?.bip44?.balanceCacheTTL,
             rpcUrl: core.provider instanceof ethers_1.ethers.JsonRpcProvider
                 ? core.provider.connection?.url
                 : undefined,

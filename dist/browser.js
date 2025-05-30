@@ -48,7 +48,7 @@ const lazyModules = {
     },
     // Wallet and crypto modules
     bip32: {
-        hdwallet: () => Promise.resolve().then(() => __importStar(require("./plugins/bip32/hdwalletPlugin"))),
+        hdwallet: () => Promise.resolve().then(() => __importStar(require("./plugins/bip44/hdwalletPlugin"))),
     },
     stealth: {
         stealth: () => Promise.resolve().then(() => __importStar(require("./plugins/stealth-address/stealth"))),

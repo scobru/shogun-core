@@ -29,7 +29,7 @@ var CorePlugins;
     /** Stealth Address plugin */
     CorePlugins["StealthAddress"] = "stealth";
     /** HD Wallet plugin */
-    CorePlugins["Bip32"] = "bip32";
+    CorePlugins["Bip44"] = "bip44";
     /** Bitcoin wallet plugin */
     CorePlugins["Bitcoin"] = "bitcoin";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

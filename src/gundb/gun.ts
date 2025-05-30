@@ -22,7 +22,7 @@ class GunDB {
   public utils: typeof utils;
   public auth: AuthManager;
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
-  
+
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private _authenticating: boolean = false;
 

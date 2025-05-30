@@ -31,7 +31,7 @@ export declare enum CorePlugins {
     /** Stealth Address plugin */
     StealthAddress = "stealth",
     /** HD Wallet plugin */
-    Bip32 = "bip32",
+    Bip44 = "bip44",
     /** Bitcoin wallet plugin */
     Bitcoin = "bitcoin"
 }
@@ -75,7 +75,7 @@ export interface IShogunCore extends PluginManager {
     configureLogging(config: LoggingConfig): void;
     login(username: string, password: string): Promise<AuthResult>;
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
-    getAuthenticationMethod(type: "password" | "webauthn" | "metamask" | "bitcoin"): any;
+    getAuthenticationMethod(type: AuthMethod): any;
     logout(): void;
     isLoggedIn(): boolean;
 }
@@ -127,7 +127,7 @@ export interface ShogunSDKConfig {
         apiUrl?: string;
     };
     /** HDWallet configuration */
-    bip32?: {
+    bip44?: {
         /** Enable HDWallet functionalities */
         enabled?: boolean;
         /** Balance cache TTL in milliseconds (default: 30000) */

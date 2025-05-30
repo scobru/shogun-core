@@ -133,7 +133,7 @@ export class ShogunCore implements IShogunCore {
     if (config.gunInstance) {
       this._gun = config.gunInstance;
     } else {
-      this._gun = this.Gun({peers: config.peers});
+      this._gun = this.Gun({ peers: config.peers });
     }
 
     // Then initialize GunDB with the Gun instance
@@ -300,9 +300,7 @@ export class ShogunCore implements IShogunCore {
    * @returns The authentication plugin or undefined if not available
    * This is a more modern approach to accessing authentication methods
    */
-  getAuthenticationMethod(
-    type: AuthMethod,
-  ) {
+  getAuthenticationMethod(type: AuthMethod) {
     switch (type) {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
@@ -452,7 +450,7 @@ export class ShogunCore implements IShogunCore {
               // Then try to access wallet credentials after auth state is updated
               try {
                 const hdwalletPlugin = this.getPlugin(
-                  CorePlugins.Bip32,
+                  CorePlugins.Bip44,
                 ) as HDWallet;
 
                 if (hdwalletPlugin) {
@@ -680,5 +678,3 @@ export class ShogunCore implements IShogunCore {
     return this;
   }
 }
-
-

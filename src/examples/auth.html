@@ -224,14 +224,16 @@
         "bitcoinManualPrivateKey"
       );
 
-      // Variabile globale per l'istanza di Shogun
+      // Variabili globali
       let shogun;
       let metamaskAddress = "";
       let bitcoinAddress = "";
-      let walletPlugin;
+
+      // Plugin
       let webauthnPlugin;
       let metamaskPlugin;
-      let bitcoinWalletPlugin;
+      let bitcoinPlugin;
+      let bip32Plugin;
 
       // Funzione per mostrare i risultati
       function showResult(title, data) {
@@ -246,65 +248,116 @@
 
       // Funzione per verificare il supporto a WebAuthn
       function checkWebAuthnSupport() {
-        const isSupported = typeof window.PublicKeyCredential !== "undefined";
+        if (!webauthnPlugin) {
+          webauthnStatusSpan.textContent = "NON INIZIALIZZATO";
+          webauthnStatusSpan.className = "status-badge status-not-supported";
+          webauthnLoginBtn.disabled = true;
+          webauthnSignupBtn.disabled = true;
+          return false;
+        }
 
-        webauthnStatusSpan.textContent = isSupported
-          ? "SUPPORTATO"
-          : "NON SUPPORTATO";
-        webauthnStatusSpan.className = `status-badge ${isSupported ? "status-supported" : "status-not-supported"}`;
-
-        webauthnLoginBtn.disabled = !isSupported;
-        webauthnSignupBtn.disabled = !isSupported;
-
-        return isSupported;
+        try {
+          // Controlla se WebAuthn è supportato dal browser
+          const isSupported = typeof window.PublicKeyCredential !== "undefined";
+          webauthnStatusSpan.textContent = isSupported
+            ? "SUPPORTATO"
+            : "NON SUPPORTATO";
+          webauthnStatusSpan.className = `status-badge ${isSupported ? "status-supported" : "status-not-supported"}`;
+          webauthnLoginBtn.disabled = !isSupported;
+          webauthnSignupBtn.disabled = !isSupported;
+          return isSupported;
+        } catch (error) {
+          console.error(
+            "Errore durante il controllo del supporto WebAuthn:",
+            error
+          );
+          webauthnStatusSpan.textContent = "ERRORE";
+          webauthnStatusSpan.className = "status-badge status-not-supported";
+          webauthnLoginBtn.disabled = true;
+          webauthnSignupBtn.disabled = true;
+          return false;
+        }
       }
 
       // Funzione per verificare il supporto a MetaMask
-      function checkMetaMaskSupport() {
-        const isSupported = typeof window.ethereum !== "undefined";
+      function checkEthereumSupport() {
+        if (!metamaskPlugin) {
+          metamaskStatusSpan.textContent = "NON INIZIALIZZATO";
+          metamaskStatusSpan.className = "status-badge status-not-supported";
+          metamaskConnectBtn.disabled = true;
+          return false;
+        }
 
-        metamaskStatusSpan.textContent = isSupported
-          ? "RILEVATO"
-          : "NON RILEVATO";
-        metamaskStatusSpan.className = `status-badge ${isSupported ? "status-supported" : "status-not-supported"}`;
-
-        metamaskConnectBtn.disabled = !isSupported;
-
-        return isSupported;
+        try {
+          // Verifica direttamente se ethereum è disponibile nel browser
+          const isAvailable = typeof window.ethereum !== "undefined";
+          metamaskStatusSpan.textContent = isAvailable
+            ? "RILEVATO"
+            : "NON RILEVATO";
+          metamaskStatusSpan.className = `status-badge ${isAvailable ? "status-supported" : "status-not-supported"}`;
+          metamaskConnectBtn.disabled = !isAvailable;
+          return isAvailable;
+        } catch (error) {
+          console.error(
+            "Errore durante il controllo del supporto Ethereum:",
+            error
+          );
+          metamaskStatusSpan.textContent = "ERRORE";
+          metamaskStatusSpan.className = "status-badge status-not-supported";
+          metamaskConnectBtn.disabled = true;
+          return false;
+        }
       }
 
       // Funzione per verificare il supporto a Bitcoin Wallet
       function checkBitcoinSupport() {
-        let isSupported = false;
-
-        if (bitcoinWalletPlugin) {
-          isSupported = true;
-
-          // Controlla la disponibilità di Nostr
-          const nostrAvailable =
-            bitcoinWalletPlugin.isNostrExtensionAvailable();
-
-          const supportText = `${nostrAvailable ? "Nostr " : ""}${!nostrAvailable ? "Manuale" : ""}`;
-          bitcoinStatusSpan.textContent = isSupported
-            ? supportText || "DISPONIBILE"
-            : "NON DISPONIBILE";
-        } else {
+        if (!bitcoinPlugin) {
           bitcoinStatusSpan.textContent = "NON INIZIALIZZATO";
+          bitcoinStatusSpan.className = "status-badge status-not-supported";
+          bitcoinConnectBtn.disabled = true;
+          return false;
         }
 
-        bitcoinStatusSpan.className = `status-badge ${isSupported ? "status-supported" : "status-not-supported"}`;
+        try {
+          // Verifica se Nostr è disponibile nel browser
+          const nostrAvailable = typeof window.nostr !== "undefined";
 
-        bitcoinConnectBtn.disabled = !isSupported;
-        bitcoinLoginBtn.disabled = !isSupported || !bitcoinAddress;
-        bitcoinSignupBtn.disabled = !isSupported || !bitcoinAddress;
+          // Se il plugin bitcoin ha un metodo per verificare la disponibilità di Nostr, usiamolo
+          let pluginNostrAvailable = false;
+          if (typeof bitcoinPlugin.isNostrExtensionAvailable === "function") {
+            pluginNostrAvailable = bitcoinPlugin.isNostrExtensionAvailable();
+          }
 
-        return isSupported;
+          const isAvailable = nostrAvailable || pluginNostrAvailable || true; // Consideriamo sempre disponibile per la modalità manuale
+          const supportText = isAvailable
+            ? nostrAvailable || pluginNostrAvailable
+              ? "Nostr"
+              : "Manuale"
+            : "NON DISPONIBILE";
+
+          bitcoinStatusSpan.textContent = supportText;
+          bitcoinStatusSpan.className = `status-badge ${isAvailable ? "status-supported" : "status-not-supported"}`;
+
+          bitcoinConnectBtn.disabled = !isAvailable;
+          bitcoinLoginBtn.disabled = !isAvailable || !bitcoinAddress;
+          bitcoinSignupBtn.disabled = !isAvailable || !bitcoinAddress;
+
+          return isAvailable;
+        } catch (error) {
+          console.error(
+            "Errore durante il controllo del supporto Bitcoin:",
+            error
+          );
+          bitcoinStatusSpan.textContent = "ERRORE";
+          bitcoinStatusSpan.className = "status-badge status-not-supported";
+          bitcoinConnectBtn.disabled = true;
+          return false;
+        }
       }
 
       // Funzione per connettersi a MetaMask
       async function connectMetaMask() {
         try {
-          metamaskPlugin = shogun.getPlugin("metamask");
           if (!metamaskPlugin) {
             showError("MetaMask", "Plugin MetaMask non disponibile");
             return;
@@ -312,151 +365,34 @@
 
           const result = await metamaskPlugin.connectMetaMask();
 
-          showResult("MetaMask", result);
-
           if (result.success) {
             metamaskAddress = result.address;
             metamaskAddressDiv.textContent = `Indirizzo: ${metamaskAddress}`;
-          }
+            showResult("MetaMask Connesso", result);
 
-          if (result.error) {
-            showError("MetaMask", result.error);
+            // Abilita i pulsanti di login e registrazione
+            metamaskLoginBtn.disabled = false;
+            metamaskSignupBtn.disabled = false;
+          } else {
+            showError(
+              "MetaMask",
+              result.error || "Errore durante la connessione"
+            );
           }
         } catch (error) {
           showError("MetaMask", error);
         }
       }
 
-      // Funzione per gestire il login con Bitcoin wallet
-      async function loginWithBitcoin() {
-        try {
-          if (!shogun || !bitcoinWalletPlugin) {
-            showError(
-              "Login Bitcoin",
-              "Shogun o Bitcoin Wallet plugin non inizializzato"
-            );
-            return;
-          }
-
-          if (!bitcoinAddress) {
-            showError("Login Bitcoin", "Nessun indirizzo Bitcoin configurato");
-            return;
-          }
-
-          showResult("Bitcoin Wallet", {
-            message: "Login in corso...",
-            address: bitcoinAddress,
-          });
-
-          // Utilizziamo un timeout più lungo per il login
-          const loginWithTimeout = async () => {
-            try {
-              const result = await bitcoinWalletPlugin.login(bitcoinAddress);
-              return result;
-            } catch (error) {
-              console.error("Errore durante login Bitcoin:", error);
-              throw error;
-            }
-          };
-
-          // Promise.race con un timeout di 2 minuti
-          const loginPromise = loginWithTimeout();
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () => reject(new Error("Timeout durante il login (2 minuti)")),
-              120000
-            );
-          });
-
-          const result = await Promise.race([loginPromise, timeoutPromise]);
-
-          if (result.success) {
-            showResult("Login con Bitcoin completato", result);
-          } else {
-            showError(
-              "Login Bitcoin",
-              new Error(result.error || "Errore sconosciuto durante il login")
-            );
-          }
-        } catch (error) {
-          showError("Login Bitcoin", error);
-        }
-      }
-
-      // Funzione per gestire la registrazione con Bitcoin wallet
-      async function signupWithBitcoin() {
-        try {
-          if (!shogun || !bitcoinWalletPlugin) {
-            showError(
-              "Registrazione Bitcoin",
-              "Shogun o Bitcoin Wallet plugin non inizializzato"
-            );
-            return;
-          }
-
-          if (!bitcoinAddress) {
-            showError(
-              "Registrazione Bitcoin",
-              "Nessun indirizzo Bitcoin configurato"
-            );
-            return;
-          }
-
-          showResult("Bitcoin Wallet", {
-            message: "Registrazione in corso...",
-            address: bitcoinAddress,
-          });
-
-          // Utilizziamo un timeout più lungo per la registrazione
-          const signupWithTimeout = async () => {
-            try {
-              const result = await bitcoinWalletPlugin.signUp(bitcoinAddress);
-              return result;
-            } catch (error) {
-              console.error("Errore durante registrazione Bitcoin:", error);
-              throw error;
-            }
-          };
-
-          // Promise.race con un timeout di 2 minuti
-          const signupPromise = signupWithTimeout();
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () =>
-                reject(
-                  new Error("Timeout durante la registrazione (2 minuti)")
-                ),
-              120000
-            );
-          });
-
-          const result = await Promise.race([signupPromise, timeoutPromise]);
-
-          if (result.success) {
-            showResult("Registrazione con Bitcoin completata", result);
-          } else {
-            showError(
-              "Registrazione Bitcoin",
-              new Error(
-                result.error || "Errore sconosciuto durante la registrazione"
-              )
-            );
-          }
-        } catch (error) {
-          showError("Registrazione Bitcoin", error);
-        }
-      }
-
       // Funzione per connettersi a Bitcoin Wallet
       async function connectBitcoinWallet() {
         try {
-          if (!bitcoinWalletPlugin) {
-            showError(
-              "Bitcoin Wallet",
-              "Plugin Bitcoin Wallet non disponibile"
-            );
+          if (!bitcoinPlugin) {
+            showError("Bitcoin Wallet", "Plugin Bitcoin non disponibile");
             return;
           }
+
+          console.log(bitcoinPlugin);
 
           const walletType = bitcoinWalletTypeSelect.value;
 
@@ -467,18 +403,6 @@
             // Se l'indirizzo manuale è già stato inserito, procedi con la connessione
             if (bitcoinManualAddress.value) {
               const manualAddress = bitcoinManualAddress.value;
-              const privateKey = bitcoinManualPrivateKey.value;
-
-              if (privateKey) {
-                // Se è stata fornita una chiave privata, imposta il keyPair
-                bitcoinWalletPlugin.setKeyPair({
-                  address: manualAddress,
-                  privateKey: privateKey,
-                  publicKey: "derivata-dalla-chiave-privata", // Questo dovrebbe essere calcolato dal plugin
-                  type: "legacy",
-                });
-              }
-
               bitcoinAddress = manualAddress;
               bitcoinAddressDiv.textContent = `Indirizzo: ${bitcoinAddress}`;
               bitcoinLoginBtn.disabled = false;
@@ -490,25 +414,27 @@
                 address: bitcoinAddress,
               });
             }
-
             return;
           } else {
             bitcoinManualSection.style.display = "none";
           }
 
-          const result = await bitcoinWalletPlugin.connectWallet(walletType);
+          // Usa il metodo appropriato per la connessione (connectWallet o connect)
+          let result;
 
-          showResult("Bitcoin Wallet", result);
+          result = await bitcoinPlugin.connectBitcoinWallet(walletType);
 
           if (result.success) {
             bitcoinAddress = result.address;
             bitcoinAddressDiv.textContent = `Indirizzo: ${bitcoinAddress}`;
             bitcoinLoginBtn.disabled = false;
             bitcoinSignupBtn.disabled = false;
-          }
-
-          if (result.error) {
-            showError("Bitcoin Wallet", result.error);
+            showResult("Bitcoin Wallet Connesso", result);
+          } else {
+            showError(
+              "Bitcoin Wallet",
+              result.error || "Errore durante la connessione"
+            );
           }
         } catch (error) {
           showError("Bitcoin Wallet", error);
@@ -516,104 +442,84 @@
       }
 
       // Inizializzazione di Shogun
-      initBtn.addEventListener("click", function (e) {
-        e.preventDefault(); // Previene il comportamento di default
-
-        const authToken = "automa25";
-
-        const options = {
-          peers: ["http://localhost:8765/gun"],
-          localStorage: false,
-          radisk: false,
-          wire: true,
-        };
+      initBtn.addEventListener("click", async function (e) {
+        e.preventDefault();
 
         try {
+          // Configurazione Gun
+          const options = {
+            peers: ["http://localhost:8765/gun"],
+            localStorage: false,
+            radisk: false,
+            wire: true,
+          };
+
           // Configurazione per l'ambiente browser
           const config = {
             gunInstance: new Gun(options),
+            appScope: "shogun",
             peers: ["http://localhost:8765/gun"],
             webauthn: {
               enabled: true,
               rpName: "Shogun Demo",
               rpId: window.location.hostname,
             },
-            metamask: {
+            ethereum: {
               enabled: true,
             },
-            bitcoinWallet: {
+            bitcoin: {
               enabled: true,
               network: "mainnet",
-              defaultWalletType: "nostr", // Specifica Nostr come wallet di default
+              defaultWalletType: "nostr",
+            },
+            bip44: {
+              enabled: true,
             },
             logging: {
               enabled: true,
               level: "debug",
               prefix: "[Shogun Demo]",
             },
-            walletManager: {
-              enabled: true,
-            },
-            did: {
-              enabled: true,
-            },
           };
 
           // Utilizziamo la funzione di inizializzazione specifica per browser
           shogun = window.initShogunBrowser(config);
 
-          const gunInstance = shogun.gun;
-
-          // Check all outgoing traffic
-          gunInstance.on("out", function (msg) {
-            // Initialize headers if they don't exist
-            if (!msg.headers) {
-              msg.headers = {};
-            }
-            // Add auth token to all outgoing messages
-            msg.headers.token = authToken;
-            
-            // For debugging - log authentication operations
-            if (msg.put && Object.keys(msg.put).some(key => key.startsWith('~'))) {
-              console.log("Auth operation sent with token", msg);
-            }
-            
-            // Continue the middleware chain
-            this.to.next(msg);
+          shogun.gun.on("out", function (msg) {
+            var to = this.to;
+            // Adds headers for put
+            msg.headers = {
+              token: "automa25",
+            };
+            to.next(msg); // pass to next middleware
           });
 
-          // Make the shogun instance available globally with a clean structure
-          window.shogun = shogun;
-          console.log("Shogun initialized and exposed globally");
-
-          // Otteniamo i riferimenti ai plugin
-          walletPlugin = shogun.getPlugin("wallet");
+          // Otteniamo i riferimenti ai plugin direttamente
           webauthnPlugin = shogun.getPlugin("webauthn");
-          metamaskPlugin = shogun.getPlugin("metamask");
-          bitcoinWalletPlugin = shogun.getPlugin("bitcoin-wallet");
+          metamaskPlugin = shogun.getPlugin("ethereum");
+          bitcoinPlugin = shogun.getPlugin("bitcoin"); // Nota: il nome potrebbe essere "bitcoin-wallet" invece di "bitcoin"
+          bip32Plugin = shogun.getPlugin("hdwallet"); // Fix: use correct plugin name
 
-          // Verifica il supporto di WebAuthnthis., MetaMask e Bitcoin Wallet
+          // Verifica il supporto delle tecnologie
           const webauthnSupported = checkWebAuthnSupport();
-          const metamaskSupported = checkMetaMaskSupport();
+          const ethereumSupported = checkEthereumSupport();
           const bitcoinSupported = checkBitcoinSupport();
 
-          // Aggiorna lo stato del supporto
-          let supportText = "";
-          supportText += `WebAuthn: ${webauthnSupported ? "Supportato" : "Non supportato"}\n`;
-          supportText += `MetaMask: ${metamaskSupported ? "Rilevato" : "Non rilevato"}\n`;
-          supportText += `Bitcoin Wallet: ${bitcoinSupported ? "Disponibile" : "Non disponibile"}`;
+          // Make the shogun instance available globally
+          window.shogun = shogun;
+          console.log("Shogun initialized and exposed globally");
 
           showResult("Shogun Inizializzato", {
             stato: "Successo",
             connesso: true,
             webauthn: webauthnSupported,
-            metamask: metamaskSupported,
+            ethereum: ethereumSupported,
             bitcoin: bitcoinSupported,
             plugins: {
-              wallet: !!walletPlugin,
               webauthn: !!webauthnPlugin,
-              metamask: !!metamaskPlugin,
-              bitcoin: !!bitcoinWalletPlugin,
+              ethereum: !!metamaskPlugin,
+              bitcoin: !!bitcoinPlugin,
+              bip44: !!bip32Plugin,
             },
           });
         } catch (error) {
@@ -623,7 +529,7 @@
 
       // Login con username e password
       loginBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError("Login", new Error("Shogun non è stato inizializzato!"));
@@ -642,80 +548,13 @@
             return;
           }
 
-          // Try using the standard login first
-          try {
-            const result = await shogun.login(username, password);
-            if (result.success) {
-              showResult("Login completato", result);
-              return;
-            }
-            
-            // If we get here with a state machine error, we'll use the fallback
-            if (result.error && result.error.includes("state transition")) {
-              console.log("State machine error detected, using fallback login method");
-            } else {
-              // For other errors, show the error and return
-              showError("Login", new Error(result.error || "Login fallito"));
-              return;
-            }
-          } catch (loginError) {
-            // If we get a state machine error, continue to fallback
-            if (loginError.message && loginError.message.includes("state transition")) {
-              console.log("State machine error caught, using fallback login method");
-            } else {
-              // For other errors, show the error and return
-              showError("Login", loginError);
-              return;
-            }
-          }
-          
-          // Fallback: Use direct Gun authentication
-          console.log("Using direct Gun authentication as fallback");
-          
-          // Clear any previous user state
-          try {
-            const gunUser = shogun.gun.user();
-            if (gunUser && gunUser._) {
-              const userRoot = gunUser._ || {};
-              if (userRoot.sea) {
-                userRoot.sea = null;
-              }
-            }
-          } catch (e) {
-            console.error("Error resetting user state:", e);
-          }
-          
-          // Direct authentication with Gun
-          const authPromise = new Promise((resolve) => {
-            shogun.gun.user().auth(username, password, (ack) => {
-              if (ack.err) {
-                resolve({ success: false, error: ack.err });
-              } else {
-                const user = shogun.gun.user();
-                const userPub = user.is?.pub ? `${user.is.pub}` : "";
-                resolve({ 
-                  success: true, 
-                  userPub,
-                  username,
-                  fallback: true 
-                });
-              }
-            });
-          });
-          
-          // Add timeout handling
-          const timeoutPromise = new Promise((resolve) => {
-            setTimeout(() => {
-              resolve({ success: false, error: "Login timeout (fallback method)" });
-            }, 15000); // 15 seconds timeout
-          });
-          
-          const fallbackResult = await Promise.race([authPromise, timeoutPromise]);
-          
-          if (fallbackResult.success) {
-            showResult("Login completato (metodo fallback)", fallbackResult);
+          showResult("Login", { message: "Login in corso...", username });
+          const result = await shogun.login(username, password);
+
+          if (result.success) {
+            showResult("Login completato", result);
           } else {
-            showError("Login (metodo fallback)", new Error(fallbackResult.error || "Login fallito"));
+            showError("Login", new Error(result.error || "Login fallito"));
           }
         } catch (error) {
           showError("Login", error);
@@ -724,7 +563,7 @@
 
       // Registrazione con username e password
       signupBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -746,23 +585,64 @@
             return;
           }
 
-          console.log("Sign up in corso...");
-          const result = await shogun.signUp(username, password, password);
-          showResult("Registrazione completata", result);
+          showResult("Registrazione", {
+            message: "Registrazione in corso...",
+            username,
+          });
+          const result = await shogun.signUp(username, password);
+
+          if (result.success) {
+            showResult("Registrazione completata", result);
+          } else {
+            showError(
+              "Registrazione",
+              new Error(result.error || "Registrazione fallita")
+            );
+          }
         } catch (error) {
           showError("Registrazione", error);
         }
       });
 
+      // Logout
+      logoutBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        if (!shogun) {
+          showError("Logout", new Error("Shogun non è stato inizializzato!"));
+          return;
+        }
+
+        try {
+          // Check if user is logged in
+          if (!shogun.isLoggedIn()) {
+            showResult("Logout", {
+              success: true,
+              message: "Nessun utente connesso, logout non necessario",
+            });
+            return;
+          }
+
+          // Logout
+          shogun.logout();
+          showResult("Logout", {
+            success: true,
+            message: "Utente disconnesso con successo",
+          });
+        } catch (error) {
+          showError("Logout", error);
+        }
+      });
+
       // Collegamento a MetaMask
       metamaskConnectBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
         await connectMetaMask();
       });
 
       // Login con MetaMask
       metamaskLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -772,17 +652,15 @@
           return;
         }
 
+        if (!metamaskPlugin) {
+          showError(
+            "Login MetaMask",
+            new Error("Plugin MetaMask non disponibile")
+          );
+          return;
+        }
+
         try {
-          if (!metamaskPlugin) {
-            showError(
-              "Login MetaMask",
-              new Error("Plugin MetaMask non disponibile")
-            );
-            return;
-          }
-
-          console.log("Login with MetaMask");
-
           // Prima connettiti a MetaMask se non lo siamo già
           if (!metamaskAddress) {
             showResult("MetaMask", {
@@ -810,35 +688,22 @@
             address: metamaskAddress,
           });
 
-          // Aggiungiamo un timeout più lungo per il login
-          const loginWithTimeout = async () => {
-            try {
-              const result =
-                await metamaskPlugin.loginWithMetaMask(metamaskAddress);
-              return result;
-            } catch (error) {
-              console.error("Error durante login MetaMask:", error);
-              throw error;
-            }
-          };
-
-          // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
-          const loginPromise = loginWithTimeout();
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () => reject(new Error("Timeout durante il login (2 minuti)")),
-              120000
-            );
-          });
-
-          const result = await Promise.race([loginPromise, timeoutPromise]);
+          // Usa il metodo appropriato per il login
+          let result;
+          if (typeof metamaskPlugin.loginWithMetaMask === "function") {
+            result = await metamaskPlugin.loginWithMetaMask(metamaskAddress);
+          } else if (typeof metamaskPlugin.login === "function") {
+            result = await metamaskPlugin.login(metamaskAddress);
+          } else {
+            throw new Error("Metodo di login non disponibile");
+          }
 
           if (result.success) {
             showResult("Login con MetaMask completato", result);
           } else {
             showError(
               "Login MetaMask",
-              new Error(result.error || "Errore sconosciuto durante il login")
+              new Error(result.error || "Errore durante il login")
             );
           }
         } catch (error) {
@@ -848,7 +713,7 @@
 
       // Registrazione con MetaMask
       metamaskSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -858,15 +723,15 @@
           return;
         }
 
-        try {
-          if (!metamaskPlugin) {
-            showError(
-              "Registrazione MetaMask",
-              new Error("Plugin MetaMask non disponibile")
-            );
-            return;
-          }
+        if (!metamaskPlugin) {
+          showError(
+            "Registrazione MetaMask",
+            new Error("Plugin MetaMask non disponibile")
+          );
+          return;
+        }
 
+        try {
           // Prima connettiti a MetaMask se non lo siamo già
           if (!metamaskAddress) {
             showResult("MetaMask", {
@@ -894,40 +759,22 @@
             address: metamaskAddress,
           });
 
-          // Aggiungiamo un timeout più lungo per la registrazione
-          const signupWithTimeout = async () => {
-            try {
-              const result =
-                await metamaskPlugin.signUpWithMetaMask(metamaskAddress);
-              return result;
-            } catch (error) {
-              console.error("Error durante registrazione MetaMask:", error);
-              throw error;
-            }
-          };
-
-          // Utilizziamo un Promise.race con un timeout più lungo (2 minuti)
-          const signupPromise = signupWithTimeout();
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () =>
-                reject(
-                  new Error("Timeout durante la registrazione (2 minuti)")
-                ),
-              120000
-            );
-          });
-
-          const result = await Promise.race([signupPromise, timeoutPromise]);
+          // Usa il metodo appropriato per la registrazione
+          let result;
+          if (typeof metamaskPlugin.signUpWithMetaMask === "function") {
+            result = await metamaskPlugin.signUpWithMetaMask(metamaskAddress);
+          } else if (typeof metamaskPlugin.signUp === "function") {
+            result = await metamaskPlugin.signUp(metamaskAddress);
+          } else {
+            throw new Error("Metodo di registrazione non disponibile");
+          }
 
           if (result.success) {
             showResult("Registrazione con MetaMask completata", result);
           } else {
             showError(
               "Registrazione MetaMask",
-              new Error(
-                result.error || "Errore sconosciuto durante la registrazione"
-              )
+              new Error(result.error || "Errore durante la registrazione")
             );
           }
         } catch (error) {
@@ -937,7 +784,7 @@
 
       // Login con WebAuthn
       webauthnLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -965,8 +812,26 @@
         }
 
         try {
-          const result = await webauthnPlugin.loginWithWebAuthn(username);
-          showResult("Login con WebAuthn completato", result);
+          showResult("WebAuthn", { message: "Login in corso...", username });
+
+          // Usa il metodo appropriato per il login
+          let result;
+          if (typeof webauthnPlugin.loginWithWebAuthn === "function") {
+            result = await webauthnPlugin.loginWithWebAuthn(username);
+          } else if (typeof webauthnPlugin.login === "function") {
+            result = await webauthnPlugin.login(username);
+          } else {
+            throw new Error("Metodo di login non disponibile");
+          }
+
+          if (result.success) {
+            showResult("Login con WebAuthn completato", result);
+          } else {
+            showError(
+              "Login WebAuthn",
+              new Error(result.error || "Login fallito")
+            );
+          }
         } catch (error) {
           showError("Login WebAuthn", error);
         }
@@ -974,7 +839,7 @@
 
       // Registrazione con WebAuthn
       webauthnSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -1002,48 +867,244 @@
         }
 
         try {
-          const result = await webauthnPlugin.signUpWithWebAuthn(username);
-          showResult("Registrazione con WebAuthn completata", result);
+          showResult("WebAuthn", {
+            message: "Registrazione in corso...",
+            username,
+          });
+
+          // Usa il metodo appropriato per la registrazione
+          let result;
+          if (typeof webauthnPlugin.signUpWithWebAuthn === "function") {
+            result = await webauthnPlugin.signUpWithWebAuthn(username);
+          } else if (typeof webauthnPlugin.signUp === "function") {
+            result = await webauthnPlugin.signUp(username);
+          } else {
+            throw new Error("Metodo di registrazione non disponibile");
+          }
+
+          if (result.success) {
+            showResult("Registrazione con WebAuthn completata", result);
+          } else {
+            showError(
+              "Registrazione WebAuthn",
+              new Error(result.error || "Registrazione fallita")
+            );
+          }
         } catch (error) {
           showError("Registrazione WebAuthn", error);
         }
       });
 
-      // Logout
-      logoutBtn.addEventListener("click", function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+      // Collegamento a Bitcoin Wallet
+      bitcoinConnectBtn.addEventListener("click", async function (e) {
+        e.preventDefault();
+        await connectBitcoinWallet();
+      });
+
+      // Login con Bitcoin
+      bitcoinLoginBtn.addEventListener("click", async function (e) {
+        e.preventDefault();
 
         if (!shogun) {
-          showError("Logout", new Error("Shogun non è stato inizializzato!"));
+          showError(
+            "Login Bitcoin",
+            new Error("Shogun non è stato inizializzato!")
+          );
+          return;
+        }
+
+        if (!bitcoinPlugin) {
+          showError(
+            "Login Bitcoin",
+            new Error("Plugin Bitcoin non disponibile")
+          );
+          return;
+        }
+
+        if (!bitcoinAddress) {
+          showError(
+            "Login Bitcoin",
+            new Error("Nessun indirizzo Bitcoin configurato")
+          );
           return;
         }
 
         try {
-          // First check if user is logged in
-          if (!shogun.isLoggedIn()) {
-            showResult("Logout", {
-              success: true,
-              message: "Nessun utente connesso, logout non necessario",
-            });
-            return;
+          showResult("Bitcoin Wallet", {
+            message: "Login in corso...",
+            address: bitcoinAddress,
+          });
+
+          // Ottieni l'alias salvato dalla registrazione, se disponibile
+          let alias = localStorage.getItem("bitcoin_user_alias");
+
+          // Se l'alias non è disponibile, creiamo un alias di fallback basato sull'indirizzo
+          if (!alias) {
+            // Crea un alias basato sull'indirizzo - questo è un tentativo di fallback
+            alias = `btc_user_fallback_${bitcoinAddress.substring(0, 6)}`;
+            console.log(
+              "Nessun alias trovato in localStorage, usando fallback:",
+              alias
+            );
+          } else {
+            console.log("Alias trovato in localStorage:", alias);
           }
 
-          // Attempt logout
-          shogun.logout();
+          // Ottieni l'opzione del wallet type
+          const walletType = bitcoinWalletTypeSelect.value;
 
-          // Show success immediately (the operation is async but we've added fallbacks)
-          showResult("Logout", {
-            success: true,
-            message: "Utente disconnesso con successo",
-          });
+          // Prepara opzioni aggiuntive
+          const options = {
+            walletType,
+            alias,
+            forceConnect: true, // Forza la riconnessione
+            debug: true, // Abilita log aggiuntivi
+          };
+
+          console.log("Login Bitcoin con opzioni:", options);
+
+          // Usa il metodo appropriato per il login
+          let result;
+          if (typeof bitcoinPlugin.login === "function") {
+            result = await bitcoinPlugin.login(bitcoinAddress, options);
+          } else {
+            throw new Error("Metodo di login non disponibile");
+          }
+
+          if (result.success) {
+            showResult("Login con Bitcoin completato", result);
+          } else {
+            // Se il login fallisce, potrebbe essere necessario provare con un alias diverso
+            if (
+              result.error &&
+              result.error.includes("Wrong user or password")
+            ) {
+              // Prova ad elencare alcuni alias possibili per l'utente
+              const alternativeAlias = `btc_user_alternative_${bitcoinAddress.substring(0, 6)}`;
+
+              // Mostra un messaggio più dettagliato con suggerimenti
+              const detailedError = new Error(
+                `${result.error || "Login fallito"} (con opzioni: ${JSON.stringify(options)})\n\n` +
+                  `Suggerimenti:\n` +
+                  `1. Prova a registrarti nuovamente\n` +
+                  `2. Pulisci localStorage con 'localStorage.clear()' e riprova\n` +
+                  `3. Prova ad usare un alias alternativo: ${alternativeAlias}`
+              );
+              showError("Login Bitcoin", detailedError);
+            } else {
+              // Mostra un errore più dettagliato con le opzioni tentate
+              const detailedError = new Error(
+                `${result.error || "Login fallito"} (con opzioni: ${JSON.stringify(options)})`
+              );
+              showError("Login Bitcoin", detailedError);
+            }
+          }
         } catch (error) {
-          showError("Logout", error);
+          // Se c'è un errore specifico sullo scope, suggerisci di pulire localStorage
+          if (error.message && error.message.includes("decrypt")) {
+            const enhancedError = new Error(
+              `${error.message}\n\nConsiglio: Prova a pulire localStorage con 'localStorage.clear()' e riavvia l'applicazione.`
+            );
+            showError("Login Bitcoin", enhancedError);
+          } else {
+            showError("Login Bitcoin", error);
+          }
+        }
+      });
+
+      // Registrazione con Bitcoin
+      bitcoinSignupBtn.addEventListener("click", async function (e) {
+        e.preventDefault();
+
+        if (!shogun) {
+          showError(
+            "Registrazione Bitcoin",
+            new Error("Shogun non è stato inizializzato!")
+          );
+          return;
+        }
+
+        if (!bitcoinPlugin) {
+          showError(
+            "Registrazione Bitcoin",
+            new Error("Plugin Bitcoin non disponibile")
+          );
+          return;
+        }
+
+        if (!bitcoinAddress) {
+          showError(
+            "Registrazione Bitcoin",
+            new Error("Nessun indirizzo Bitcoin configurato")
+          );
+          return;
+        }
+
+        try {
+          showResult("Bitcoin Wallet", {
+            message: "Registrazione in corso...",
+            address: bitcoinAddress,
+          });
+
+          // Ottieni l'opzione del wallet type
+          const walletType = bitcoinWalletTypeSelect.value;
+
+          // Genera un alias dal timestamp e indirizzo per assicurarsi che sia univoco
+          const alias = `btc_user_${Date.now().toString(36)}_${bitcoinAddress.substring(0, 6)}`;
+
+          // Prepara opzioni aggiuntive
+          const options = {
+            walletType,
+            alias,
+            forceCreate: true, // Forza la creazione anche se l'utente potrebbe esistere
+          };
+
+          console.log("Registrazione Bitcoin con opzioni:", options);
+
+          // Usa il metodo appropriato per la registrazione
+          let result;
+          if (typeof bitcoinPlugin.signUp === "function") {
+            result = await bitcoinPlugin.signUp(bitcoinAddress, options);
+          } else {
+            throw new Error("Metodo di registrazione non disponibile");
+          }
+
+          if (result.success) {
+            // Salva l'alias generato in localStorage per il login successivo
+            localStorage.setItem("bitcoin_user_alias", alias);
+            showResult("Registrazione con Bitcoin completata", result);
+          } else {
+            // Se l'errore è "User already created" (utente già creato), salviamo comunque l'alias e suggeriamo di provare il login
+            if (
+              result.error &&
+              (result.error.includes("already created") ||
+                result.error.includes("già creato") ||
+                result.error.includes("already exists") ||
+                result.error.includes("[object Object]"))
+            ) {
+              // Salva comunque l'alias, potrebbe essere utile per il login
+              localStorage.setItem("bitcoin_user_alias", alias);
+              showResult("Account già esistente", {
+                success: true,
+                message: "L'utente esiste già. Prova a effettuare il login.",
+                alias: alias,
+                suggestion: "Clicca sul pulsante 'Login con Bitcoin' per accedere."
+              });
+            } else {
+              showError(
+                "Registrazione Bitcoin",
+                new Error(result.error || "Registrazione fallita")
+              );
+            }
+          }
+        } catch (error) {
+          showError("Registrazione Bitcoin", error);
         }
       });
 
       // Creazione di un nuovo wallet
       createWalletBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -1062,15 +1123,15 @@
         }
 
         try {
-          if (!walletPlugin) {
+          if (!bip32Plugin) {
             showError(
               "Creazione Wallet",
-              new Error("Plugin Wallet non disponibile")
+              new Error("Plugin BIP32 non disponibile")
             );
             return;
           }
 
-          const wallet = await walletPlugin.createWallet();
+          const wallet = await bip32Plugin.createWallet();
           showResult("Wallet Creato", wallet);
         } catch (error) {
           showError("Creazione Wallet", error);
@@ -1079,7 +1140,7 @@
 
       // Ottenimento dei wallet esistenti
       getWalletsBtn.addEventListener("click", async function (e) {
-        e.preventDefault(); // Previene il comportamento di default
+        e.preventDefault();
 
         if (!shogun) {
           showError(
@@ -1098,34 +1159,19 @@
         }
 
         try {
-          if (!walletPlugin) {
+          if (!bip32Plugin) {
             showError(
               "Ottenimento Wallets",
-              new Error("Plugin Wallet non disponibile")
+              new Error("Plugin BIP32 non disponibile")
             );
             return;
           }
 
-          const wallets = await walletPlugin.loadWallets();
+          const wallets = await bip32Plugin.loadWallets();
           showResult("Wallets Disponibili", wallets);
         } catch (error) {
           showError("Ottenimento Wallets", error);
         }
-      });
-
-      // Collegamento al tipo di wallet Bitcoin
-      bitcoinWalletTypeSelect.addEventListener("change", function (e) {
-        if (e.target.value === "manual") {
-          bitcoinManualSection.style.display = "block";
-        } else {
-          bitcoinManualSection.style.display = "none";
-        }
-      });
-
-      // Collegamento a Bitcoin Wallet
-      bitcoinConnectBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-        await connectBitcoinWallet();
       });
 
       // Gestione dell'inserimento dell'indirizzo Bitcoin manuale
@@ -1143,40 +1189,13 @@
         }
       });
 
-      // Login con Bitcoin
-      bitcoinLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-        await loginWithBitcoin();
-      });
-
-      // Registrazione con Bitcoin
-      bitcoinSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-        await signupWithBitcoin();
-      });
-
-      // Previeni il submit del form su tutti gli input
-      document.addEventListener("keypress", function (e) {
-        if (
-          e.key === "Enter" &&
-          (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
-        ) {
-          e.preventDefault(); // Previene il refresh della pagina
+      // Collegamento al tipo di wallet Bitcoin
+      bitcoinWalletTypeSelect.addEventListener("change", function (e) {
+        if (e.target.value === "manual") {
+          bitcoinManualSection.style.display = "block";
+        } else {
+          bitcoinManualSection.style.display = "none";
         }
-      });
-
-      // Previeni il comportamento predefinito per tutti i pulsanti nei form
-      document.addEventListener("click", function (e) {
-        if (e.target.tagName === "BUTTON" && e.target.type !== "button") {
-          e.preventDefault(); // Previene il refresh della pagina per i pulsanti senza type="button"
-        }
-      });
-
-      // Controlla il supporto delle tecnologie all'avvio della pagina
-      document.addEventListener("DOMContentLoaded", () => {
-        checkWebAuthnSupport();
-        checkMetaMaskSupport();
-        checkBitcoinSupport();
       });
 
       // Test Gun Connection
@@ -1186,7 +1205,7 @@
           e.preventDefault();
 
           if (!shogun || !shogun.gun) {
-            showError("Test Gun", "Shogun or Gun not initialized");
+            showError("Test Gun", "Shogun o Gun non inizializzato");
             return;
           }
 
@@ -1222,6 +1241,30 @@
             }
           });
         });
+
+      // Controlla il supporto delle tecnologie all'avvio della pagina
+      document.addEventListener("DOMContentLoaded", () => {
+        checkWebAuthnSupport();
+        checkEthereumSupport();
+        checkBitcoinSupport();
+      });
+
+      // Previeni il submit del form su tutti gli input
+      document.addEventListener("keypress", function (e) {
+        if (
+          e.key === "Enter" &&
+          (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+        ) {
+          e.preventDefault(); // Previene il refresh della pagina
+        }
+      });
+
+      // Previeni il comportamento predefinito per tutti i pulsanti nei form
+      document.addEventListener("click", function (e) {
+        if (e.target.tagName === "BUTTON" && e.target.type !== "button") {
+          e.preventDefault(); // Previene il refresh della pagina per i pulsanti senza type="button"
+        }
+      });
     </script>
   </body>
 </html>

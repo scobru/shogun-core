@@ -82,7 +82,7 @@ export interface NostrConnectorPluginInterface {
      * @param type Type of wallet to connect to
      * @returns Promise with the connection result
      */
-    connectWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+    connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
     /**
      * Generate credentials using a Bitcoin wallet
      * @param address Bitcoin address

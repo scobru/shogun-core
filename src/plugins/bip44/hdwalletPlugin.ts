@@ -32,7 +32,7 @@ export class HDWalletPlugin
     // Creiamo un nuovo WalletManager
     this.hdwallet = new HDWallet(core.gun, {
       // Recuperiamo configurazione dal core se disponibile
-      balanceCacheTTL: core.config?.bip32?.balanceCacheTTL,
+      balanceCacheTTL: core.config?.bip44?.balanceCacheTTL,
       rpcUrl:
         core.provider instanceof ethers.JsonRpcProvider
           ? (core.provider as any).connection?.url

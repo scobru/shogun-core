@@ -2,7 +2,6 @@ import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { GunDB } from "../gundb/gun";
-import { Observable } from "rxjs";
 import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
@@ -34,7 +33,7 @@ export enum CorePlugins {
   /** Stealth Address plugin */
   StealthAddress = "stealth",
   /** HD Wallet plugin */
-  Bip32 = "bip32",
+  Bip44 = "bip44",
   /** Bitcoin wallet plugin */
   Bitcoin = "bitcoin",
 }
@@ -97,9 +96,7 @@ export interface IShogunCore extends PluginManager {
   ): Promise<SignUpResult>;
 
   // Authentication method retrieval
-  getAuthenticationMethod(
-    type: AuthMethod,
-  ): any;
+  getAuthenticationMethod(type: AuthMethod): any;
 
   // Utility methods
   logout(): void;
