@@ -1,11 +1,4 @@
 /**
- * Checks if the application is running in a web environment
- */
-export const isPlatformWeb = (): boolean => {
-  return typeof window !== "undefined";
-};
-
-/**
  * Delays execution for the specified time
  * @param ms - Milliseconds to delay
  * @param passthrough - Optional value to pass through the promise

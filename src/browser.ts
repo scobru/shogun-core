@@ -5,11 +5,29 @@ import { IGunInstance } from "gun";
 import { ShogunCore } from "./index";
 import { ShogunSDKConfig } from "./types/shogun";
 
-// Lazy loading dei moduli pesanti
-const loadWebAuthnModule = () => import("./plugins/webauthn/webauthn");
-const loadStealthModule = () => import("./plugins/stealth/stealth");
-const loadWalletModule = () => import("./plugins/wallet/walletPlugin");
-const loadMetaMaskModule = () => import("./plugins/metamask/metamaskPlugin");
+// Lazy loading modules - organized by functionality
+const lazyModules = {
+  // Authentication modules
+  webauthn: {
+    webauthn: () => import("./plugins/webauthn/webauthn"),
+  },
+  // Wallet and crypto modules
+  bip32: {
+    hdwallet: () => import("./plugins/bip32/hdwalletPlugin"),
+  },
+  stealth: {
+    stealth: () => import("./plugins/stealth-address/stealth"),
+  },
+  // Web3 connection modules
+  ethereum: {
+    web3Connector: () => import("./plugins/ethereum/web3ConnectorPlugin"),
+  },
+  bitcoin: {
+    nostrConnector: () => import("./plugins/bitcoin/nostrConnectorPlugin"),
+  },
+};
+
+// Instance tracking
 let shogunCoreInstance: ShogunCore | null = null;
 let shogunG: IGunInstance | null = null;
 
@@ -43,20 +61,32 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   return shogunCoreInstance;
 }
 
-// Esportazione lazy loading helpers
+// Export lazy loading modules in a more organized structure
 export const modules = {
-  loadWebAuthn: loadWebAuthnModule,
-  loadStealth: loadStealthModule,
-  loadWallet: loadWalletModule,
-  loadMetaMask: loadMetaMaskModule,
+  webauthn: {
+    loadWebAuthn: lazyModules.webauthn.webauthn,
+  },
+  bip32: {
+    loadHDWallet: lazyModules.bip32.hdwallet,
+  },
+  stealth: {
+    loadStealth: lazyModules.stealth.stealth,
+  },
+  ethereum: {
+    loadMetaMask: lazyModules.ethereum.web3Connector,
+  },
+  bitcoin: {
+    loadNostrConnector: lazyModules.bitcoin.nostrConnector,
+  },
 };
 
-// Export main class for those who prefer to use it directly
+// Export main class for direct usage
 export { ShogunCore };
 
-// Export main types as well
+// Export types and interfaces
 export * from "./types/shogun";
 
+// Make initialization function available globally when in browser
 if (typeof window !== "undefined") {
   (window as any).initShogunBrowser = initShogunBrowser;
 }

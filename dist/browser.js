@@ -42,9 +42,9 @@ const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
 // Lazy loading dei moduli pesanti
 const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
-const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth/stealth")));
-const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/wallet/walletPlugin")));
-const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/metamask/metamaskPlugin")));
+const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth-address/stealth")));
+const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/bip32/hdwalletPlugin")));
+const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/ethereum/web3ConnectorPlugin")));
 let shogunCoreInstance = null;
 let shogunG = null;
 /**

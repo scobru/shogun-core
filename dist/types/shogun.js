@@ -24,12 +24,12 @@ var CorePlugins;
 (function (CorePlugins) {
     /** Plugin WebAuthn */
     CorePlugins["WebAuthn"] = "webauthn";
-    /** Plugin MetaMask */
-    CorePlugins["MetaMask"] = "metamask";
+    /** Plugin Ethereum */
+    CorePlugins["Ethereum"] = "ethereum";
     /** Plugin Stealth */
-    CorePlugins["Stealth"] = "stealth";
-    /** Plugin Wallet Manager */
-    CorePlugins["WalletManager"] = "wallet";
+    CorePlugins["StealthAddress"] = "stealth-address";
+    /** Plugin HDWallet */
+    CorePlugins["Bip32"] = "bip32";
     /** Plugin Bitcoin Wallet */
-    CorePlugins["BitcoinWallet"] = "bitcoin-wallet";
+    CorePlugins["Bitcoin"] = "bitcoin";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

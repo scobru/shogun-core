@@ -1,3 +1,3 @@
-export * from "./bitcoinPlugin";
-export * from "./bitcoinWallet";
+export * from "./nostrConnectorPlugin";
+export * from "./nostrConnector";
 export * from "./types";

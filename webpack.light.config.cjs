@@ -44,26 +44,7 @@ module.exports = {
     new webpack.IgnorePlugin({
       resourceRegExp: /gun\/(sea|lib)$/,
       contextRegExp: /node_modules/,
-    }),
-    // Escludi moduli pesanti dal bundle principale
-    new webpack.NormalModuleReplacementPlugin(
-      /(.*)\/webauthn\/webauthn(\.*)/,
-      function(resource) {
-        resource.request = resource.request.replace(/(.*)\/webauthn\/webauthn(.*)/, '$1/utils/stubs/webauthnStub.js');
-      }
-    ),
-    new webpack.NormalModuleReplacementPlugin(
-      /(.*)\/did\/DID(\.*)/,
-      function(resource) {
-        resource.request = resource.request.replace(/(.*)\/did\/DID(.*)/, '$1/utils/stubs/didStub.js');
-      }
-    ),
-    new webpack.NormalModuleReplacementPlugin(
-      /(.*)\/stealth\/stealth(\.*)/,
-      function(resource) {
-        resource.request = resource.request.replace(/(.*)\/stealth\/stealth(.*)/, '$1/utils/stubs/stealthStub.js');
-      }
-    ),
+    })
   ],
   optimization: {
     minimize: true,

@@ -14,6 +14,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-__exportStar(require("./bitcoinPlugin"), exports);
-__exportStar(require("./bitcoinWallet"), exports);
+__exportStar(require("./nostrConnectorPlugin"), exports);
+__exportStar(require("./nostrConnector"), exports);
 __exportStar(require("./types"), exports);

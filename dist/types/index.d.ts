@@ -1,19 +1,15 @@
-import { GunDB } from "./gun/gun";
+import { GunDB } from "./gundb/gun";
+import { GunRxJS } from "./gundb/rxjs-integration";
+import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory } from "./types/shogun";
-import { IGunUserInstance } from "gun";
 import { ethers } from "ethers";
-import { ShogunError } from "./utils/errorHandler";
-import { GunRxJS } from "./gun/rxjs-integration";
-import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
-import { GunInstance } from "./gun/types";
+import { IGunUserInstance, IGunInstance } from "gun";
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
-export type * from "./utils/errorHandler";
-export * from "./gun/rxjs-integration";
+export * from "./gundb/rxjs-integration";
 export * from "./plugins";
-export type * from "./types/plugin";
 export * from "./contracts/entryPoint";
 export * from "./contracts/utils";
 export * from "./contracts/registry";
@@ -23,6 +19,8 @@ export type * from "./contracts/relay";
 export type * from "./contracts/registry";
 export type * from "./contracts/base";
 export type * from "./contracts/utils";
+export type * from "./types/plugin";
+export type * from "./utils/errorHandler";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -38,11 +36,11 @@ export type * from "./contracts/utils";
 export declare class ShogunCore implements IShogunCore {
     /** Current API version - used for deprecation warnings and migration guidance */
     static readonly API_VERSION = "2.0.0";
-    /** Gun database instance */
-    gun: GunInstance<any>;
+    /** Gun database instance - access through gundb.gun for consistency */
+    private _gun;
     /** Gun user instance */
-    user: IGunUserInstance<any> | null;
-    /** GunDB wrapper */
+    private _user;
+    /** GunDB wrapper - the primary interface for Gun operations */
     gundb: GunDB;
     /** Storage implementation */
     storage: ShogunStorage;
@@ -56,6 +54,7 @@ export declare class ShogunCore implements IShogunCore {
     rx: GunRxJS;
     /** Plugin registry */
     private readonly plugins;
+    private Gun;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -64,6 +63,16 @@ export declare class ShogunCore implements IShogunCore {
      * and plugin system.
      */
     constructor(config: ShogunSDKConfig);
+    /**
+     * Access to the Gun instance
+     * @returns The Gun instance
+     */
+    get gun(): IGunInstance<any>;
+    /**
+     * Access to the current user
+     * @returns The current Gun user instance
+     */
+    get user(): IGunUserInstance<any> | null;
     /**
      * Register built-in plugins based on configuration
      * @private
@@ -106,59 +115,6 @@ export declare class ShogunCore implements IShogunCore {
      * This is a more modern approach to accessing authentication methods
      */
     getAuthenticationMethod(type: "password" | "webauthn" | "metamask" | "bitcoin"): unknown;
-    /**
-     * Observe a Gun node for changes
-     * @param path - Path to observe (can be a string or a Gun chain)
-     * @returns Observable that emits whenever the node changes
-     */
-    rxGet<T>(path: string): Observable<T>;
-    /**
-     * Match data based on Gun's '.map()' and convert to Observable
-     * @param path - Path to the collection
-     * @param matchFn - Optional function to filter results
-     * @returns Observable array of matched items
-     */
-    match<T>(path: string | any, matchFn?: (data: any) => boolean): Observable<T[]>;
-    /**
-     * Put data and return an Observable
-     * @param path - Path where to put the data
-     * @param oata - Data to put
-     * @returns Observable that completes when the put is acknowledged
-     */
-    rxPut<T>(path: string | any, data: T): Observable<T>;
-    /**
-     * Set data on a node and return an Observable
-     * @param path - Path to the collection
-     * @param data - Data to set
-     * @returns Observable that completes when the set is acknowledged
-     */
-    rxSet<T>(path: string | any, data: T): Observable<T>;
-    /**
-     * Get data once and return as Observable
-     * @param path - Path to get data from
-     * @returns Observable that emits the data once
-     */
-    rxOnce<T>(path: string | any): Observable<T>;
-    /**
-     * Compute derived values from gun data
-     * @param sources - Array of paths or observables to compute from
-     * @param computeFn - Function that computes a new value from the sources
-     * @returns Observable of computed values
-     */
-    compute<T, R>(sources: Array<string | Observable<any>>, computeFn: (...values: T[]) => R): Observable<R>;
-    /**
-     * User put data and return an Observable (for authenticated users)
-     * @param path - Path where to put the data
-     * @param data - Data to put
-     * @returns Observable that completes when the put is acknowledged
-     */
-    rxUserPut<T>(path: string, data: T): Observable<T>;
-    /**
-     * Observe user data
-     * @param path - Path to observe in user space
-     * @returns Observable that emits whenever the user data changes
-     */
-    observeUser<T>(path: string): Observable<T>;
     /**
      * Retrieve recent errors logged by the system
      * @param count - Number of errors to retrieve (default: 10)
@@ -210,38 +166,6 @@ export declare class ShogunCore implements IShogunCore {
      */
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     /**
-     * Create a new user with GunDB
-     * @param username - Username
-     * @param password - Password
-     * @returns {Promise<{success: boolean, userPub?: string, error?: string}>} Promise with success status and user public key
-     * @description Creates a new user in GunDB with error handling
-     */
-    private createUserWithGunDB;
-    /**
-     * Retrieves data from a Gun node at the specified path
-     * @param path - The path to the Gun node
-     * @returns Promise that resolves with the node data or rejects with an error
-     */
-    get(path: string): Promise<any>;
-    /**
-     * Stores data in Gun at the root level
-     * @param data - The data to store
-     * @returns Promise that resolves when data is stored or rejects with an error
-     */
-    put(data: Record<string, any>): Promise<any>;
-    /**
-     * Stores data in the authenticated user's space
-     * @param data - The data to store in user space
-     * @returns Promise that resolves when data is stored or rejects with an error
-     */
-    userPut(data: Record<string, any>): Promise<any>;
-    /**
-     * Retrieves data from the authenticated user's space at the specified path
-     * @param path - The path to the user data
-     * @returns Promise that resolves with the user data or rejects with an error
-     */
-    userGet(path: string): Promise<any>;
-    /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
      * @param eventName The name of the event to emit.
@@ -274,10 +198,10 @@ export declare class ShogunCore implements IShogunCore {
     removeAllListeners(eventName?: string | symbol): this;
 }
 export * from "./types/shogun";
-export { GunDB } from "./gun/gun";
-export { MetaMask } from "./plugins/metamask/metamask";
-export { Stealth } from "./plugins/stealth/stealth";
-export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth/types";
+export { GunDB } from "./gundb/gun";
+export { Web3Connector } from "./plugins/ethereum/web3Connector";
+export { Stealth } from "./plugins/stealth-address/stealth";
+export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth-address/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";

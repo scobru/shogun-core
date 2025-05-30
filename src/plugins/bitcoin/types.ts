@@ -19,7 +19,7 @@ export interface ConnectionResult extends BaseResult {
 /**
  * Structure for credentials generated via Bitcoin wallet
  */
-export interface BitcoinCredentials {
+export interface NostrConnectorCredentials {
   /** Generated username based on the address */
   username: string;
   /** Generated password based on the signature */
@@ -64,7 +64,7 @@ export interface SignatureCache extends BaseCacheEntry<string> {
 /**
  * Bitcoin wallet configuration options
  */
-export interface BitcoinWalletConfig extends BaseConfig {
+export interface NostrConnectorConfig extends BaseConfig {
   cacheDuration?: number; // Duration in milliseconds for signature cache
   network?: "mainnet" | "testnet"; // Bitcoin network to use
   useApi?: boolean; // Whether to use a Bitcoin API for verification
@@ -74,7 +74,7 @@ export interface BitcoinWalletConfig extends BaseConfig {
 /**
  * Bitcoin Key pair interface
  */
-export interface BitcoinKeyPair {
+export interface NostrConnectorKeyPair {
   privateKey: string;
   publicKey: string;
   address: string;
@@ -84,7 +84,7 @@ export interface BitcoinKeyPair {
 /**
  * Interface for the Bitcoin wallet plugin
  */
-export interface BitcoinPluginInterface {
+export interface NostrConnectorPluginInterface {
   /**
    * Check if any Bitcoin wallet is available in the browser
    * @returns true if a wallet is available, false otherwise
@@ -103,7 +103,7 @@ export interface BitcoinPluginInterface {
    * @param address Bitcoin address
    * @returns Promise with the generated credentials
    */
-  generateCredentials(address: string): Promise<BitcoinCredentials>;
+  generateCredentials(address: string): Promise<NostrConnectorCredentials>;
 
   /**
    * Release resources and clean up event listeners
