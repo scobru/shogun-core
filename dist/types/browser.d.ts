@@ -13,10 +13,21 @@ import { ShogunSDKConfig } from "./types/shogun";
  */
 export declare function initShogunBrowser(config: ShogunSDKConfig): ShogunCore;
 export declare const modules: {
-    loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
-    loadStealth: () => Promise<typeof import("./plugins/stealth-address/stealth")>;
-    loadWallet: () => Promise<typeof import("./plugins/bip32/hdwalletPlugin")>;
-    loadMetaMask: () => Promise<typeof import("./plugins/ethereum/web3ConnectorPlugin")>;
+    webauthn: {
+        loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
+    };
+    bip32: {
+        loadHDWallet: () => Promise<typeof import("./plugins/bip32/hdwalletPlugin")>;
+    };
+    stealth: {
+        loadStealth: () => Promise<typeof import("./plugins/stealth-address/stealth")>;
+    };
+    ethereum: {
+        loadMetaMask: () => Promise<typeof import("./plugins/ethereum/web3ConnectorPlugin")>;
+    };
+    bitcoin: {
+        loadNostrConnector: () => Promise<typeof import("./plugins/bitcoin/nostrConnectorPlugin")>;
+    };
 };
 export { ShogunCore };
 export * from "./types/shogun";

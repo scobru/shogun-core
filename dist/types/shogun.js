@@ -2,34 +2,34 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CorePlugins = exports.PluginCategory = void 0;
 /**
- * Categorie di plugin standard in ShogunCore
+ * Standard plugin categories in ShogunCore
  */
 var PluginCategory;
 (function (PluginCategory) {
-    /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
+    /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
     PluginCategory["Authentication"] = "authentication";
-    /** Plugin per la gestione di wallet */
+    /** Wallet management plugins */
     PluginCategory["Wallet"] = "wallet";
-    /** Plugin per la privacy e l'anonimato */
+    /** Privacy and anonymity plugins */
     PluginCategory["Privacy"] = "privacy";
-    /** Plugin per l'identità decentralizzata */
+    /** Decentralized identity plugins */
     PluginCategory["Identity"] = "identity";
-    /** Plugin per altre funzionalità */
+    /** Other utility plugins */
     PluginCategory["Utility"] = "utility";
 })(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
- * Nomi standard dei plugin integrati
+ * Standard names for built-in plugins
  */
 var CorePlugins;
 (function (CorePlugins) {
-    /** Plugin WebAuthn */
+    /** WebAuthn plugin */
     CorePlugins["WebAuthn"] = "webauthn";
-    /** Plugin Ethereum */
+    /** Ethereum plugin */
     CorePlugins["Ethereum"] = "ethereum";
-    /** Plugin Stealth */
-    CorePlugins["StealthAddress"] = "stealth-address";
-    /** Plugin HDWallet */
+    /** Stealth Address plugin */
+    CorePlugins["StealthAddress"] = "stealth";
+    /** HD Wallet plugin */
     CorePlugins["Bip32"] = "bip32";
-    /** Plugin Bitcoin Wallet */
+    /** Bitcoin wallet plugin */
     CorePlugins["Bitcoin"] = "bitcoin";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

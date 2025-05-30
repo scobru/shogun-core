@@ -12,6 +12,7 @@ import {
   LoggingConfig,
   PluginCategory,
   CorePlugins,
+  AuthMethod,
 } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
@@ -115,7 +116,7 @@ export class ShogunCore implements IShogunCore {
     if (config.gunInstance) {
       this._gun = config.gunInstance;
     } else {
-      this._gun = this.Gun();
+      this._gun = this.Gun({peers: config.peers});
     }
 
     // Then initialize GunDB with the Gun instance
@@ -283,12 +284,12 @@ export class ShogunCore implements IShogunCore {
    * This is a more modern approach to accessing authentication methods
    */
   getAuthenticationMethod(
-    type: "password" | "webauthn" | "metamask" | "bitcoin",
+    type: AuthMethod,
   ) {
     switch (type) {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
-      case "metamask":
+      case "ethereum":
         return this.getPlugin(CorePlugins.Ethereum);
       case "bitcoin":
         return this.getPlugin(CorePlugins.Bitcoin);
@@ -605,7 +606,6 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
- 
   // 📢 EVENT EMITTER 📢
 
   /**

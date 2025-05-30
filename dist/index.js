@@ -453,7 +453,6 @@ class ShogunCore {
                 username,
                 timestamp: Date.now(),
             });
-            (0, logger_1.log)(`Inizializzazione registrazione per utente: ${username}`);
             (0, logger_1.log)(`Attempting user registration: ${username}`);
             const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
             const signupPromiseWithTimeout = new Promise(async (resolve) => {
@@ -523,6 +522,7 @@ class ShogunCore {
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
      * @param eventName The name of the event to emit.
      * @param data The data to pass with the event.
+     * @returns {boolean} Indicates if the event had listeners.
      */
     emit(eventName, data) {
         return this.eventEmitter.emit(eventName, data);
@@ -531,6 +531,7 @@ class ShogunCore {
      * Add an event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
+     * @returns {this} Returns this instance for method chaining
      */
     on(eventName, listener) {
         this.eventEmitter.on(eventName, listener);
@@ -540,6 +541,7 @@ class ShogunCore {
      * Add a one-time event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
+     * @returns {this} Returns this instance for method chaining
      */
     once(eventName, listener) {
         this.eventEmitter.once(eventName, listener);
@@ -549,6 +551,7 @@ class ShogunCore {
      * Remove an event listener
      * @param eventName The name of the event to stop listening for
      * @param listener The callback function to remove
+     * @returns {this} Returns this instance for method chaining
      */
     off(eventName, listener) {
         this.eventEmitter.off(eventName, listener);
@@ -558,6 +561,7 @@ class ShogunCore {
      * Remove all listeners for a specific event or all events
      * @param eventName Optional. The name of the event to remove listeners for.
      * If not provided, all listeners for all events are removed.
+     * @returns {this} Returns this instance for method chaining
      */
     removeAllListeners(eventName) {
         this.eventEmitter.removeAllListeners(eventName);

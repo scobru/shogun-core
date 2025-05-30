@@ -5,7 +5,7 @@ exports.createError = createError;
 exports.handleError = handleError;
 const logger_1 = require("./logger");
 /**
- * Tipi di errore che possono verificarsi nell'applicazione
+ * Types of errors that can occur in the application
  */
 var ErrorType;
 (function (ErrorType) {
@@ -28,14 +28,17 @@ var ErrorType;
     ErrorType["CONNECTOR"] = "CONNECTOR";
     ErrorType["GENERAL"] = "GENERAL";
     ErrorType["CONTRACT"] = "CONTRACT";
+    ErrorType["BIP32"] = "BIP32Error";
+    ErrorType["ETHEREUM"] = "EthereumError";
+    ErrorType["BITCOIN"] = "BitcoinError";
 })(ErrorType || (exports.ErrorType = ErrorType = {}));
 /**
- * Wrapper per standardizzare gli errori
- * @param type - Tipo di errore
- * @param code - Codice errore
- * @param message - Messaggio errore
- * @param originalError - Errore originale
- * @returns Un oggetto di errore strutturato
+ * Wrapper to standardize errors
+ * @param type - Error type
+ * @param code - Error code
+ * @param message - Error message
+ * @param originalError - Original error
+ * @returns A structured error object
  */
 function createError(type, code, message, originalError) {
     return {
@@ -47,23 +50,23 @@ function createError(type, code, message, originalError) {
     };
 }
 /**
- * Funzione di utilità per gestire gli errori in modo consistente
- * @param error - L'errore da gestire
- * @param options - Opzioni di configurazione
- * @returns Risultato dell'operazione o il risultato della callback
+ * Utility function to handle errors consistently
+ * @param error - The error to handle
+ * @param options - Configuration options
+ * @returns Operation result or callback result
  */
 function handleError(error, options = {}) {
-    // Impostazioni di default
+    // Default settings
     const { message = error instanceof Error ? error.message : String(error), throwError = false, logError = true, callback, } = options;
-    // Log dell'errore se richiesto
+    // Log the error if requested
     if (logError) {
         console.error(`[ERROR] ${message}`, error);
     }
-    // Se è stata fornita una callback, la eseguiamo e restituiamo il suo risultato
+    // If a callback was provided, execute it and return its result
     if (typeof callback === "function") {
         return callback(error);
     }
-    // Se è richiesto di lanciare l'errore, lo lanciamo
+    // If requested to throw the error, throw it
     if (throwError) {
         if (error instanceof Error) {
             throw error;
@@ -72,7 +75,7 @@ function handleError(error, options = {}) {
             throw new Error(message);
         }
     }
-    // Altrimenti restituiamo un oggetto di risultato standard
+    // Otherwise return a standard result object
     return {
         success: false,
         message,
@@ -80,34 +83,34 @@ function handleError(error, options = {}) {
     };
 }
 /**
- * Gestore centralizzato per errori
+ * Centralized error handler
  */
 class ErrorHandler {
     static errors = [];
     static maxErrors = 100;
     static listeners = [];
     /**
-     * Gestisce un errore registrandolo e notificando gli ascoltatori
-     * @param error - L'errore da gestire
+     * Handles an error by logging it and notifying listeners
+     * @param error - The error to handle
      */
     static handleError(error) {
-        // Log l'errore
+        // Log the error
         (0, logger_1.logError)(`[${error.type}] ${error.code}: ${error.message}`);
-        // Conserva l'errore nella memoria
+        // Store the error in memory
         this.errors.push(error);
-        // Mantiene solo gli ultimi maxErrors
+        // Keep only the last maxErrors
         if (this.errors.length > this.maxErrors) {
             this.errors = this.errors.slice(-this.maxErrors);
         }
-        // Notifica gli ascoltatori
+        // Notify listeners
         this.notifyListeners(error);
     }
     /**
-     * Gestisce un errore grezzo convertendolo in ShogunError
-     * @param type - Tipo errore
-     * @param code - Codice errore
-     * @param message - Messaggio errore
-     * @param originalError - Errore originale
+     * Handles a raw error by converting it to ShogunError
+     * @param type - Error type
+     * @param code - Error code
+     * @param message - Error message
+     * @param originalError - Original error
      */
     static handle(type, code, message, originalError, logLevel = "error") {
         // Create a formatted error message
@@ -138,23 +141,23 @@ class ErrorHandler {
         return error;
     }
     /**
-     * Recupera gli ultimi N errori
-     * @param count - Numero di errori da recuperare
-     * @returns Lista degli errori più recenti
+     * Retrieves the last N errors
+     * @param count - Number of errors to retrieve
+     * @returns List of most recent errors
      */
     static getRecentErrors(count = 10) {
         return this.errors.slice(-Math.min(count, this.errors.length));
     }
     /**
-     * Aggiunge un ascoltatore per gli errori
-     * @param listener - Funzione che verrà chiamata quando si verifica un errore
+     * Adds a listener for errors
+     * @param listener - Function that will be called when an error occurs
      */
     static addListener(listener) {
         this.listeners.push(listener);
     }
     /**
-     * Rimuove un ascoltatore per gli errori
-     * @param listener - Funzione da rimuovere
+     * Removes an error listener
+     * @param listener - Function to remove
      */
     static removeListener(listener) {
         const index = this.listeners.indexOf(listener);
@@ -163,8 +166,8 @@ class ErrorHandler {
         }
     }
     /**
-     * Notifica tutti gli ascoltatori di un errore
-     * @param error - Errore da notificare
+     * Notifies all listeners of an error
+     * @param error - Error to notify
      */
     static notifyListeners(error) {
         for (const listener of this.listeners) {
@@ -177,9 +180,9 @@ class ErrorHandler {
         }
     }
     /**
-     * Funzione helper per formattare messaggi di errore dagli errori nativi
-     * @param error - Errore da formattare
-     * @returns Messaggio di errore formattato
+     * Helper function to format error messages from native errors
+     * @param error - Error to format
+     * @returns Formatted error message
      */
     static formatError(error) {
         if (!error) {

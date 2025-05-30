@@ -144,42 +144,85 @@ import {
   initShogunBrowser,
 } from "shogun-core";
 
-// Inizializzazione per ambiente Node.js
+// Initialization for Node.js environment
 const shogun = new ShogunCore({
-  gundb: {
-    peers: ["https://your-gun-peer.com/gun"],
-    localStorage: true,
+  // GunDB configuration
+  peers: ["https://your-gun-peer.com/gun"],
+  scope: "app-namespace",
+  
+  // Plugin configurations
+  webauthn: { 
+    enabled: true 
   },
-  providerUrl: "https://ethereum-rpc-url.com",
-  // Abilitazione plugin integrati
-  webauthn: { enabled: true },
-  metamask: { enabled: true },
-  stealth: { enabled: true },
-  walletManager: { enabled: true },
+  ethereum: { 
+    enabled: true 
+  },
+  stealthAddress: { 
+    enabled: true 
+  },
+  bip32: { 
+    enabled: true,
+    balanceCacheTTL: 30000 // Optional: cache balance for 30 seconds
+  },
+  bitcoin: { 
+    enabled: true,
+    network: "mainnet" // Optional: specify network
+  },
+  
+  // Logging configuration (optional)
+  logging: {
+    enabled: true,
+    level: "info"
+  },
+  
+  // Timeouts (optional)
+  timeouts: {
+    login: 15000,
+    signup: 30000
+  },
+  
+  // Auto-register additional custom plugins (optional)
+  plugins: {
+    autoRegister: []
+  }
 });
 
-// Oppure per browser (consigliato per applicazioni web)
+// Or for browser (recommended for web applications)
 const shogunBrowser = initShogunBrowser({
-  gundb: {
-    peers: ["https://your-gun-peer.com/gun"],
-    websocket: true,
-  },
-  providerUrl: "https://ethereum-rpc-url.com",
+  // GunDB configuration
+  peers: ["https://your-gun-peer.com/gun"],
+  scope: "app-namespace",
+  
+  // Plugin configurations
   webauthn: {
     enabled: true,
     rpName: "Your App",
-    rpId: "yourdomain.com",
+    rpId: "yourdomain.com"
   },
+  ethereum: { 
+    enabled: true 
+  },
+  stealthAddress: { 
+    enabled: true 
+  },
+  bip32: { 
+    enabled: true 
+  },
+  bitcoin: {
+    enabled: true
+  }
 });
 
 // Authentication examples
-// Autenticazione standard
+// Standard authentication
 const passwordLogin = await shogun.login("username", "password");
 
-// Accesso ai plugin
+// Accessing plugins
 const webauthnPlugin = shogun.getPlugin(CorePlugins.WebAuthn);
-const metamaskPlugin = shogun.getPlugin(CorePlugins.MetaMask);
-const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
+const ethereumPlugin = shogun.getPlugin(CorePlugins.Ethereum);
+const bip32Plugin = shogun.getPlugin(CorePlugins.Bip32);
+const stealthPlugin = shogun.getPlugin(CorePlugins.StealthAddress);
+const bitcoinPlugin = shogun.getPlugin(CorePlugins.Bitcoin);
 
 if (webauthnPlugin) {
   const credentials = await webauthnPlugin.generateCredentials(
@@ -188,19 +231,19 @@ if (webauthnPlugin) {
     true
   ); // true = login
   if (credentials.success) {
-    // Usa le credenziali per autenticare...
+    // Use credentials for authentication...
   }
 }
 
-if (metamaskPlugin) {
-  // Login con MetaMask
+if (ethereumPlugin) {
+  // Login with MetaMask
   try {
-    // Connessione e autenticazione con MetaMask
-    const connectResult = await metamaskPlugin.connectMetaMask();
+    // Connect and authenticate with MetaMask
+    const connectResult = await ethereumPlugin.connectMetaMask();
     if (connectResult.success) {
       const address = connectResult.address;
-      // Login usando l'indirizzo
-      const loginResult = await metamaskPlugin.loginWithMetaMask(address);
+      // Login using the address
+      const loginResult = await ethereumPlugin.loginWithMetaMask(address);
       console.log("MetaMask login result:", loginResult);
     }
   } catch (error) {
@@ -208,35 +251,35 @@ if (metamaskPlugin) {
   }
 }
 
-// Wallet operations
-if (walletPlugin) {
-  const wallet = await walletPlugin.createWallet();
-  const mainWallet = walletPlugin.getMainWallet();
+// BIP32 Wallet operations
+if (bip32Plugin) {
+  const wallet = await bip32Plugin.createWallet();
+  const mainWallet = bip32Plugin.getMainWallet();
 }
 
-// Utilizzo dello Stealth Plugin
-if (shogun.hasPlugin(CorePlugins.Stealth)) {
-  const stealthPlugin = shogun.getPlugin(CorePlugins.Stealth);
+// Using the Stealth Plugin
+if (shogun.hasPlugin(CorePlugins.StealthAddress)) {
+  const stealthPlugin = shogun.getPlugin(CorePlugins.StealthAddress);
 
-  // Genera un indirizzo stealth per ricevere pagamenti in modo privato
+  // Generate a stealth address to receive payments privately
   const stealthAddress = await stealthPlugin.generateStealthAddress();
-  console.log("Indirizzo stealth generato:", stealthAddress);
+  console.log("Generated stealth address:", stealthAddress);
 
-  // Crea una transazione privata verso un indirizzo stealth
-  const receiverStealthAddress = "0xEccetera..."; // Indirizzo stealth del destinatario
-  const amount = "0.01"; // Quantità in ETH
+  // Create a private transaction to a stealth address
+  const receiverStealthAddress = "0xEccetera..."; // Receiver's stealth address
+  const amount = "0.01"; // Amount in ETH
   const txResult = await stealthPlugin.createStealthTransaction(
     receiverStealthAddress,
     amount
   );
-  console.log("Transazione stealth inviata:", txResult);
+  console.log("Stealth transaction sent:", txResult);
 
-  // Scansiona la blockchain per trovare pagamenti stealth indirizzati a te
+  // Scan the blockchain to find stealth payments addressed to you
   const payments = await stealthPlugin.scanStealthPayments();
-  console.log("Pagamenti stealth trovati:", payments);
+  console.log("Stealth payments found:", payments);
 }
 
-// Ottenere i plugin per categoria
+// Get plugins by category
 const walletPlugins = shogun.getPluginsByCategory(PluginCategory.Wallet);
 const authPlugins = shogun.getPluginsByCategory(PluginCategory.Authentication);
 console.log(
@@ -284,9 +327,23 @@ if (metamaskAuth) {
   }
 }
 
+// Approach 4: Get the Bitcoin authentication (if enabled)
+const bitcoinAuth = shogun.getAuthenticationMethod("bitcoin");
+if (bitcoinAuth) {
+  // Bitcoin auth is available
+  const isAvailable = await bitcoinAuth.isAvailable();
+  if (isAvailable) {
+    const connectResult = await bitcoinAuth.connect();
+    if (connectResult.success) {
+      const loginResult = await bitcoinAuth.login(connectResult.address);
+      console.log("Logged in with Bitcoin:", loginResult);
+    }
+  }
+}
+
 // Example: Dynamic authentication based on user choice
 function authenticateUser(
-  method: "password" | "webauthn" | "metamask",
+  method: "password" | "webauthn" | "ethereum" | "bitcoin",
   username: string,
   password?: string
 ) {
@@ -313,6 +370,13 @@ function authenticateUser(
           return auth.login(result.address);
         }
         return { success: false, error: "MetaMask connection failed" };
+      });
+    case "bitcoin":
+      return auth.connect().then((result) => {
+        if (result.success) {
+          return auth.login(result.address);
+        }
+        return { success: false, error: "Bitcoin connection failed" };
       });
   }
 }
@@ -375,13 +439,9 @@ if (shogun.isLoggedIn()) {
 }
 ```
 
-### Advanced GunDB Features
+### Repository Pattern
 
-Shogun Core includes advanced GunDB features that allow you to build complex and robust decentralized applications.
-
-#### Repository Pattern
-
-The Repository Pattern provides an elegant abstraction for data access, with support for typing, transformation, and encryption.
+The Repository Pattern provides an abstraction for data access, with support for typing, transformation, and encryption.
 
 ```typescript
 import { ShogunCore, GunRepository } from "shogun-core";
@@ -454,63 +514,9 @@ await userRepo.update(userId, { role: "superadmin" });
 await userRepo.remove(userId);
 ```
 
-#### Distributed Consensus
+### Certificate Management
 
-The Consensus module allows you to implement decentralized decision-making mechanisms based on voting.
-
-```typescript
-import { ShogunCore } from "shogun-core";
-
-const shogun = new ShogunCore({
-  /* config */
-});
-
-// Consensus configuration (optional)
-const consensusConfig = {
-  threshold: 0.66, // Require 66% of votes in favor
-  timeWindow: 3600000, // 1 hour voting window
-  minVotes: 5, // Require at least 5 votes
-};
-
-// Access the consensus system
-const consensus = shogun.gun.consensus(consensusConfig);
-
-// 1. Propose a change
-async function proposeChange() {
-  const proposalId = await consensus.proposeChange(
-    "config-update",
-    { maxUsers: 1000, featureFlag: true },
-    { importance: "high" }
-  );
-  console.log(`Proposal created: ${proposalId}`);
-  return proposalId;
-}
-
-// 2. Vote on a proposal
-async function vote(proposalId, approve) {
-  await consensus.vote(proposalId, approve, "Reason for vote");
-  console.log(`Vote recorded: ${approve ? "Approved" : "Rejected"}`);
-}
-
-// 3. Check proposal status
-async function checkProposal(proposalId) {
-  const proposal = await consensus.getProposal(proposalId);
-  console.log(`Proposal status: ${proposal.status}`);
-
-  // Count votes
-  const voteCount = await consensus.countVotes(proposalId);
-  console.log(
-    `Votes: ${voteCount.approvalCount} approvals, ${voteCount.rejectionCount} rejections`
-  );
-  console.log(
-    `The proposal is ${voteCount.approved ? "approved" : "rejected or pending"}`
-  );
-}
-```
-
-#### Immutable Data Space (Frozen Space)
-
-The Frozen Space provides a mechanism for immutable data, ideal for logs, audit trails, and content archiving.
+Shogun supports certificate management for authorized data access between users.
 
 ```typescript
 import { ShogunCore } from "shogun-core";
@@ -519,146 +525,76 @@ const shogun = new ShogunCore({
   /* config */
 });
 
-// Save immutable data
-async function savePermanentData() {
-  const data = {
-    content: "This content cannot be modified",
-    timestamp: Date.now(),
-    author: "John Smith",
-  };
-
-  // Add to Frozen Space
-  await shogun.gun.addToFrozenSpace("documents", "doc1", data);
-  console.log("Document saved immutably");
-
-  // Alternative: use content hash as key
-  const contentHash = await shogun.gun.addHashedToFrozenSpace(
-    "documents",
-    data
-  );
-  console.log(`Document saved with hash: ${contentHash}`);
-
-  return contentHash;
-}
-
-// Retrieve immutable data
-async function getPermanentData(hash) {
-  // Retrieve data using hash, with integrity verification
-  const data = await shogun.gun.getHashedFrozenData("documents", hash, true);
-  console.log("Document retrieved:", data);
-  return data;
-}
-```
-
-#### Authorization Certificates
-
-The certificate system enables decentralized and delegated authorizations.
-
-```typescript
-import { ShogunCore } from "shogun-core";
-
-const shogun = new ShogunCore({
-  /* config */
-});
-
-// Generate authorization certificates
-async function generateCertificates() {
-  // Get the key pair from the current user
-  const pair = shogun.gun.getCurrentUser()?.user._?.sea;
-
-  // Generate a single certificate
-  const cert = await shogun.gun.issueCert({
-    pair,
-    tag: "write", // Authorization type
-    dot: "tasks", // Authorized path
-    users: "*", // For all users ('*') or specific ('~pubKey')
-  });
-
-  // Generate multiple certificates at once
-  const certs = await shogun.gun.generateCerts({
-    pair,
-    list: [
-      { tag: "read", dot: "profiles", users: "*" },
-      { tag: "write", dot: "profiles", users: "~ABCDEF" }, // Specific user
-      { tag: "admin", dot: "settings", personal: true }, // For personal use only
-    ],
-  });
-
-  return { cert, certs };
+// Generate certificate for a specific permission
+async function generateCertificate(publicKey, path, action) {
+  try {
+    // Get current user's key pair
+    const pair = shogun.gun.getCurrentUser()?.user._?.sea;
+    
+    if (!pair) {
+      console.error("User must be logged in to generate certificates");
+      return null;
+    }
+    
+    // Create a certificate for the specified path and action
+    const certificate = await SEA.certify(
+      [publicKey], // who the certificate is for
+      [{ "*": path }], // what path they can access
+      pair, // signed by current user
+      null
+    );
+    
+    // Store the certificate
+    await shogun.gun.user().get("certificates")
+      .get(publicKey)
+      .get(action)
+      .put(certificate);
+      
+    console.log(`Certificate for ${action} on ${path} generated`);
+    return certificate;
+  } catch (error) {
+    console.error("Error generating certificate:", error);
+    return null;
+  }
 }
 
 // Verify a certificate
-async function verifyCertificate(cert, pubKey) {
-  const isValid = await shogun.gun.verifyCert(cert, pubKey);
-  console.log(`Certificate is ${isValid ? "valid" : "invalid"}`);
+async function verifyCertificate(certificate, publicKey) {
+  try {
+    // Verify the certificate's authenticity
+    const isValid = await SEA.verify(certificate, publicKey);
+    console.log(`Certificate is ${isValid ? "valid" : "invalid"}`);
+    return isValid;
+  } catch (error) {
+    console.error("Error verifying certificate:", error);
+    return false;
+  }
+}
 
-  // Extract policy from certificate
-  const policy = await shogun.gun.extractCertPolicy(cert);
-  console.log("Certificate policy:", policy);
+// Example: Grant read access to a user's profile
+async function grantProfileAccess(friendPublicKey) {
+  const cert = await generateCertificate(
+    friendPublicKey,
+    "profile",
+    "read"
+  );
+  return cert;
+}
 
-  return isValid;
+// Example: Grant write access to chat messages
+async function grantChatAccess(friendPublicKey) {
+  const cert = await generateCertificate(
+    friendPublicKey,
+    "messages",
+    "write"
+  );
+  return cert;
 }
 ```
 
-#### Managed Collections
+### Advanced Cryptographic Utilities
 
-The Collections API simplifies managing collections of data with common operations.
-
-```typescript
-import { ShogunCore } from "shogun-core";
-
-const shogun = new ShogunCore({
-  /* config */
-});
-
-// Access the Collections module
-const collections = shogun.gun.collections();
-
-// Add an item to a collection
-async function addToCollection() {
-  const itemId = await collections.add("products", {
-    name: "Smartphone XYZ",
-    price: 499.99,
-    category: "electronics",
-    inStock: true,
-  });
-  console.log(`Product added with ID: ${itemId}`);
-  return itemId;
-}
-
-// Update an item
-async function updateCollectionItem(id) {
-  await collections.update("products", id, {
-    price: 449.99,
-    inStock: false,
-  });
-  console.log("Product updated");
-}
-
-// Retrieve all items
-async function getAllItems() {
-  const items = await collections.findAll("products");
-  console.log(`Found ${items.length} products`);
-  return items;
-}
-
-// Retrieve a specific item
-async function getItem(id) {
-  const item = await collections.findById("products", id);
-  console.log("Product found:", item);
-  return item;
-}
-
-// Remove an item
-async function removeItem(id) {
-  await collections.remove("products", id);
-  console.log("Product removed");
-}
-```
-
-#### Advanced Cryptographic Utilities
-
-Shogun Core provides advanced cryptographic utilities for encryption, signing, and hash management.
+Shogun Core provides advanced cryptographic utilities for encryption, signing, and key management.
 
 ```typescript
 import { ShogunCore } from "shogun-core";
@@ -669,69 +605,72 @@ const shogun = new ShogunCore({
 
 // Cryptographic operations examples
 async function cryptoExamples() {
-  // Generate key pair
-  const keyPair = await shogun.gun.generateKeyPair();
+  // Get the user's key pair
+  const pair = shogun.gun.getCurrentUser()?.user._?.sea;
+  
+  if (!pair) {
+    console.error("User must be logged in to use crypto functions");
+    return;
+  }
 
-  // Encryption
-  const encrypted = await shogun.gun.encrypt("Secret message", keyPair.epriv);
-  const decrypted = await shogun.gun.decrypt(encrypted, keyPair.epriv);
+  // Encryption and decryption
+  const message = "Secret information";
+  const encrypted = await SEA.encrypt(message, pair);
+  const decrypted = await SEA.decrypt(encrypted, pair);
+  console.log("Decrypted:", decrypted);
 
   // Signing and verification
-  const signed = await shogun.gun.sign({ data: "Authenticated data" }, keyPair);
-  const verified = await shogun.gun.verify(signed, keyPair.pub);
+  const data = { timestamp: Date.now(), action: "important_operation" };
+  const signed = await SEA.sign(data, pair);
+  const verified = await SEA.verify(signed, pair.pub);
+  console.log("Verification result:", verified);
 
-  // Hashing
-  const textHash = await shogun.gun.hashText("Text to hash");
-  const objHash = await shogun.gun.hashObj({
-    complex: "object",
-    with: ["arrays"],
-  });
-
-  // Short hashes (useful for identifiers)
-  const shortHash = await shogun.gun.getShortHash(
-    "user@example.com",
-    "salt123"
-  );
-
-  // URL-safe hashes
-  const safeHash = shogun.gun.safeHash(textHash);
-  const originalHash = shogun.gun.unsafeHash(safeHash);
-
+  // Hash generation
+  const hash = await SEA.work("Text to hash", null, null, { name: "SHA-256" });
+  console.log("Generated hash:", hash);
+  
   return {
     encrypted,
     decrypted,
+    signed,
     verified,
-    textHash,
-    objHash,
-    shortHash,
-    safeHash,
+    hash
   };
 }
 
 // End-to-end encryption between users
-async function encryptForUser(receiverPub) {
+async function encryptForUser(receiverPub, message) {
   const senderPair = shogun.gun.getCurrentUser()?.user._?.sea;
-  const receiverKey = { epub: receiverPub };
-
-  // Encrypt data for a specific recipient
-  const message = "This message is only readable by the recipient";
-  const encrypted = await shogun.gun.encFor(message, senderPair, receiverKey);
-
+  
+  if (!senderPair) {
+    console.error("Sender must be logged in to encrypt messages");
+    return null;
+  }
+  
+  // Create a shared secret with the recipient's public key
+  const sharedSecret = await SEA.secret(receiverPub, senderPair);
+  
+  // Encrypt the message with the shared secret
+  const encrypted = await SEA.encrypt(message, sharedSecret);
+  
   return encrypted;
 }
 
 // Decrypt data from a specific sender
 async function decryptFromUser(senderPub, encryptedData) {
   const receiverPair = shogun.gun.getCurrentUser()?.user._?.sea;
-  const senderKey = { epub: senderPub };
-
-  // Decrypt data coming from a specific sender
-  const decrypted = await shogun.gun.decFrom(
-    encryptedData,
-    senderKey,
-    receiverPair
-  );
-
+  
+  if (!receiverPair) {
+    console.error("Receiver must be logged in to decrypt messages");
+    return null;
+  }
+  
+  // Recreate the shared secret with the sender's public key
+  const sharedSecret = await SEA.secret(senderPub, receiverPair);
+  
+  // Decrypt the message with the shared secret
+  const decrypted = await SEA.decrypt(encryptedData, sharedSecret);
+  
   return decrypted;
 }
 ```
@@ -766,9 +705,9 @@ Shogun SDK supports extending its functionality through custom plugins. This all
 1. Create a new class that extends `BasePlugin` or directly implements the `ShogunPlugin` interface:
 
 ```typescript
-import { BasePlugin } from "shogun-core/src/plugins/base";
+import { BasePlugin } from "shogun-core/plugins/base";
 import { ShogunCore } from "shogun-core";
-import { PluginCategory } from "shogun-core/src/types/shogun";
+import { PluginCategory } from "shogun-core/types/shogun";
 
 // Define an interface for the plugin's public functionality
 export interface MyPluginInterface {
@@ -866,13 +805,34 @@ utilityPlugins.forEach((plugin) => {
 });
 ```
 
-Available categories include:
+### Error Handling for Plugins
 
-- `PluginCategory.Authentication`: plugins for authentication
-- `PluginCategory.Wallet`: plugins for wallet management
-- `PluginCategory.Privacy`: plugins for privacy and anonymization
-- `PluginCategory.Identity`: plugins for decentralized identity
-- `PluginCategory.Utility`: plugins for other functionalities
+Shogun provides consistent error handling for plugins through the centralized ErrorHandler:
+
+```typescript
+import { ErrorHandler, ErrorType } from "shogun-core/utils/errorHandler";
+
+// In your plugin implementation
+try {
+  // Plugin operation
+} catch (error) {
+  // Use the appropriate error type for your plugin
+  ErrorHandler.handle(
+    ErrorType.PLUGIN, // Or a specific type like BIP32, ETHEREUM, BITCOIN, etc.
+    "OPERATION_FAILED",
+    "Failed to perform operation due to: " + error.message,
+    error
+  );
+}
+```
+
+Available plugin-specific error types include:
+- `ErrorType.WEBAUTHN` - For WebAuthn authentication errors
+- `ErrorType.ETHEREUM` - For Ethereum connectivity errors
+- `ErrorType.BITCOIN` - For Bitcoin wallet errors
+- `ErrorType.BIP32` - For HD wallet errors
+- `ErrorType.STEALTH` - For stealth address errors
+- `ErrorType.PLUGIN` - For general plugin errors
 
 ## Stealth Transactions
 
@@ -888,7 +848,7 @@ const shogun = new ShogunCore({
 });
 
 // Access the Stealth plugin
-const stealthPlugin = shogun.getPlugin(CorePlugins.Stealth);
+const stealthPlugin = shogun.getPlugin(CorePlugins.StealthAddress);
 
 // 1. Generate ephemeral keys
 async function generateEphemeralKeys() {
@@ -951,8 +911,8 @@ async function openReceivedStealthAddress(stealthAddress, encryptedRandomNumber,
 async function sendFundsToStealthAddress(stealthAddress, amountInEth) {
   try {
     // Get a wallet to send the transaction
-    const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
-    const senderWallet = walletPlugin.getMainWallet();
+    const bip32Plugin = shogun.getPlugin(CorePlugins.Bip32);
+    const senderWallet = bip32Plugin.getMainWallet();
     
     // Prepare the transaction using ethers.js
     const tx = {
@@ -1183,7 +1143,7 @@ This architecture allows developers to easily integrate relay-based verification
 
 ## Browser Integration
 
-Shogun Core can be used directly in modern web browsers. This makes it possible to create decentralized applications that run entirely from the client's browser.
+Shogun Core can be used directly in modern web browsers through the specialized browser entry point. This makes it possible to create decentralized applications that run entirely from the client's browser.
 
 ### Setup
 
@@ -1239,13 +1199,17 @@ const shogun = initShogunBrowser({
     rpName: "Your App",
     rpId: window.location.hostname,
   },
-  // Optional: attiva stealth e wallet manager
+  // Optional: enable stealth and bip32 wallet manager
   stealth: {
     enabled: true,
   },
-  walletManager: {
+  bip32: {
     enabled: true,
   },
+  // Enable Bitcoin support
+  bitcoin: {
+    enabled: true,
+  }
 });
 
 // Registration
@@ -1281,7 +1245,7 @@ async function webAuthnLogin() {
         true
       );
       if (credentials.success) {
-        // Utilizza le credenziali per autenticare l'utente
+        // Use credentials to authenticate the user
         const loginResult = await authMethod.login(username);
         console.log("WebAuthn login result:", loginResult);
       }
@@ -1314,6 +1278,27 @@ async function metamaskLogin() {
   }
 }
 
+// Bitcoin Login
+async function bitcoinLogin() {
+  try {
+    const authMethod = shogun.getAuthenticationMethod("bitcoin");
+
+    if (authMethod && (await authMethod.isAvailable())) {
+      // Get connection
+      const connectResult = await authMethod.connect();
+      if (connectResult.success) {
+        // Login with the address
+        const loginResult = await authMethod.login(connectResult.address);
+        console.log("Bitcoin login result:", loginResult);
+      }
+    } else {
+      console.error("Bitcoin wallet not available");
+    }
+  } catch (error) {
+    console.error("Error during Bitcoin login:", error);
+  }
+}
+
 // Creating a wallet
 async function createWallet() {
   if (!shogun.isLoggedIn()) {
@@ -1322,15 +1307,38 @@ async function createWallet() {
   }
 
   try {
-    const walletPlugin = shogun.getPlugin(CorePlugins.Wallet);
-    if (walletPlugin) {
-      const wallet = await walletPlugin.createWallet();
+    const bip32Plugin = shogun.getPlugin(CorePlugins.Bip32);
+    if (bip32Plugin) {
+      const wallet = await bip32Plugin.createWallet();
       console.log("Wallet created:", wallet);
     } else {
-      console.error("Wallet plugin not available");
+      console.error("BIP32 wallet plugin not available");
     }
   } catch (error) {
     console.error("Error while creating wallet:", error);
+  }
+}
+
+// Using lazy-loaded modules
+async function loadPluginsOnDemand() {
+  try {
+    // Import WebAuthn module
+    const webauthnModule = await shogun.modules.webauthn.loadWebAuthn();
+    const webauthn = new webauthnModule.Webauthn();
+    
+    // Import stealth module
+    const stealthModule = await shogun.modules.stealth.loadStealth();
+    const stealth = new stealthModule.Stealth();
+    
+    // Import wallet module
+    const walletModule = await shogun.modules.bip32.loadHDWallet();
+    
+    // Import Ethereum module
+    const metamaskModule = await shogun.modules.ethereum.loadMetaMask();
+    
+    console.log("All modules loaded successfully");
+  } catch (error) {
+    console.error("Error loading modules:", error);
   }
 }
 

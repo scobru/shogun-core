@@ -1,16 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isPlatformWeb = void 0;
 exports.delay = delay;
 exports.errorAfter = errorAfter;
 exports.randomString = randomString;
-/**
- * Checks if the application is running in a web environment
- */
-const isPlatformWeb = () => {
-    return typeof window !== "undefined";
-};
-exports.isPlatformWeb = isPlatformWeb;
 /**
  * Delays execution for the specified time
  * @param ms - Milliseconds to delay

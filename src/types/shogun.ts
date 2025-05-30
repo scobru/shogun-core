@@ -8,38 +8,38 @@ import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
 
 /**
- * Categorie di plugin standard in ShogunCore
+ * Standard plugin categories in ShogunCore
  */
 export enum PluginCategory {
-  /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
+  /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
   Authentication = "authentication",
-  /** Plugin per la gestione di wallet */
+  /** Wallet management plugins */
   Wallet = "wallet",
-  /** Plugin per la privacy e l'anonimato */
+  /** Privacy and anonymity plugins */
   Privacy = "privacy",
-  /** Plugin per l'identità decentralizzata */
+  /** Decentralized identity plugins */
   Identity = "identity",
-  /** Plugin per altre funzionalità */
+  /** Other utility plugins */
   Utility = "utility",
 }
 
 /**
- * Nomi standard dei plugin integrati
+ * Standard names for built-in plugins
  */
 export enum CorePlugins {
-  /** Plugin WebAuthn */
+  /** WebAuthn plugin */
   WebAuthn = "webauthn",
-  /** Plugin Ethereum */
+  /** Ethereum plugin */
   Ethereum = "ethereum",
-  /** Plugin Stealth */
-  StealthAddress = "stealth-address",
-  /** Plugin HDWallet */
+  /** Stealth Address plugin */
+  StealthAddress = "stealth",
+  /** HD Wallet plugin */
   Bip32 = "bip32",
-  /** Plugin Bitcoin Wallet */
+  /** Bitcoin wallet plugin */
   Bitcoin = "bitcoin",
 }
 
-export type AuthMethod = "password" | "webauthn" | "metamask" | "bitcoin";
+export type AuthMethod = "password" | "webauthn" | "ethereum" | "bitcoin";
 
 // Authentication result interfaces
 export interface AuthResult {
@@ -97,7 +97,9 @@ export interface IShogunCore extends PluginManager {
   ): Promise<SignUpResult>;
 
   // Authentication method retrieval
-  getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
+  getAuthenticationMethod(
+    type: AuthMethod,
+  ): any;
 
   // Utility methods
   logout(): void;

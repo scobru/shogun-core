@@ -5,7 +5,7 @@
  * - Dynamic peer linking
  * - Support for remove/unset operations
  */
-import { IGunUserInstance, IGunInstance } from "gun";
+import { IGunUserInstance, IGunInstance, IGunChain } from "gun";
 import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
@@ -17,6 +17,7 @@ declare class GunDB {
     crypto: typeof crypto;
     utils: typeof utils;
     auth: AuthManager;
+    node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
     private readonly onAuthCallbacks;
     private _authenticating;
     private _rxjs?;
