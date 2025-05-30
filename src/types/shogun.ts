@@ -156,7 +156,7 @@ export interface ShogunSDKConfig {
     apiUrl?: string;
   };
   /** HDWallet configuration */
-  bip32?: {
+  bip44?: {
     /** Enable HDWallet functionalities */
     enabled?: boolean;
     /** Balance cache TTL in milliseconds (default: 30000) */

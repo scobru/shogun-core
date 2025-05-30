@@ -1,4 +1,4 @@
-# ShogunCore API Documentation
+# Shogun Core Documentation
 
 ## Overview
 

@@ -19,9 +19,9 @@ import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/ethereum/web3ConnectorPlugin";
 import { StealthPlugin } from "./plugins/stealth-address/stealthPlugin";
-import { HDWalletPlugin } from "./plugins/bip32/hdwalletPlugin";
+import { HDWalletPlugin } from "./plugins/bip44/hdwalletPlugin";
 import { NostrConnectorPlugin } from "./plugins/bitcoin/nostrConnectorPlugin";
-import { HDWallet } from "./plugins/bip32/hdwallet";
+import { HDWallet } from "./plugins/bip44/hdwallet";
 import Gun from "gun";
 import { IGunUserInstance, IGunInstance } from "gun";
 
@@ -213,7 +213,7 @@ export class ShogunCore implements IShogunCore {
       }
 
       // Wallet plugins group
-      if (config.bip32?.enabled) {
+      if (config.bip44?.enabled) {
         const hdwalletPlugin = new HDWalletPlugin();
         hdwalletPlugin._category = PluginCategory.Wallet;
         this.register(hdwalletPlugin);
