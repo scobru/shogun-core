@@ -1,4 +1,4 @@
-import { GunOptions, IGunInstance } from "gun/types";
+import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { GunDB } from "../gundb/gun";
@@ -6,7 +6,6 @@ import { Observable } from "rxjs";
 import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
-import { IGunInstance as GunInstance } from "gun";
 
 /**
  * Categorie di plugin standard in ShogunCore
@@ -30,14 +29,14 @@ export enum PluginCategory {
 export enum CorePlugins {
   /** Plugin WebAuthn */
   WebAuthn = "webauthn",
-  /** Plugin MetaMask */
-  MetaMask = "metamask",
+  /** Plugin Ethereum */
+  Ethereum = "ethereum",
   /** Plugin Stealth */
-  Stealth = "stealth",
-  /** Plugin Wallet Manager */
-  WalletManager = "wallet",
+  StealthAddress = "stealth-address",
+  /** Plugin HDWallet */
+  Bip32 = "bip32",
   /** Plugin Bitcoin Wallet */
-  BitcoinWallet = "bitcoin-wallet",
+  Bitcoin = "bitcoin",
 }
 
 export type AuthMethod = "password" | "webauthn" | "metamask" | "bitcoin";
@@ -88,30 +87,14 @@ export interface IShogunCore extends PluginManager {
   // Logging configuration
   configureLogging(config: LoggingConfig): void;
 
-  // Wallet management methods
-  /** @deprecated Use getPlugin(CorePlugins.WalletManager).getMainWallet() instead */
-  getMainWallet?(): ethers.Wallet | null;
-
   // Direct authentication methods
   login(username: string, password: string): Promise<AuthResult>;
-  /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() instead */
-  loginWithWebAuthn?(username: string): Promise<AuthResult>;
-  /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() instead */
-  loginWithMetaMask?(address: string): Promise<AuthResult>;
 
   signUp(
     username: string,
     password: string,
     passwordConfirmation?: string,
   ): Promise<SignUpResult>;
-  /** @deprecated Use getPlugin(CorePlugins.MetaMask).generateCredentials() and signUp() instead */
-  signUpWithMetaMask?(address: string): Promise<AuthResult>;
-  /** @deprecated Use getPlugin(CorePlugins.WebAuthn).generateCredentials() and signUp() instead */
-  signUpWithWebAuthn?(username: string): Promise<AuthResult>;
-
-  // Support methods
-  /** @deprecated Use getPlugin(CorePlugins.WebAuthn).isSupported() instead */
-  isWebAuthnSupported?(): boolean;
 
   // Authentication method retrieval
   getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
@@ -119,28 +102,6 @@ export interface IShogunCore extends PluginManager {
   // Utility methods
   logout(): void;
   isLoggedIn(): boolean;
-
-  // RxJS methods
-  rxGet<T>(path: string | any): Observable<T>;
-  match<T>(
-    path: string | any,
-    matchFn?: (data: any) => boolean,
-  ): Observable<T[]>;
-  rxPut<T>(path: string | any, data: T): Observable<T>;
-  rxSet<T>(path: string | any, data: T): Observable<T>;
-  rxOnce<T>(path: string | any): Observable<T>;
-  compute<T, R>(
-    sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
-  ): Observable<R>;
-  rxUserPut<T>(path: string, data: T): Observable<T>;
-  observeUser<T>(path: string): Observable<T>;
-
-  // Promise-based Gun methods
-  get(path: string): Promise<any>;
-  put(data: Record<string, any>): Promise<any>;
-  userPut(data: Record<string, any>): Promise<any>;
-  userGet(path: string): Promise<any>;
 }
 
 /**
@@ -177,12 +138,12 @@ export interface ShogunSDKConfig {
   /** WebAuthn configuration */
   webauthn?: WebauthnConfig;
   /** MetaMask configuration */
-  metamask?: {
+  ethereum?: {
     /** Enable MetaMask */
     enabled?: boolean;
   };
   /** Bitcoin wallet configuration */
-  bitcoinWallet?: {
+  bitcoin?: {
     /** Enable Bitcoin wallet */
     enabled?: boolean;
     /** Bitcoin network to use (default: mainnet) */
@@ -192,15 +153,15 @@ export interface ShogunSDKConfig {
     /** API URL for verification */
     apiUrl?: string;
   };
-  /** Wallet configuration */
-  walletManager?: {
-    /** Enable wallet functionalities */
+  /** HDWallet configuration */
+  bip32?: {
+    /** Enable HDWallet functionalities */
     enabled?: boolean;
     /** Balance cache TTL in milliseconds (default: 30000) */
     balanceCacheTTL?: number;
   };
   /** Enable stealth functionalities */
-  stealth?: {
+  stealthAddress?: {
     /** Enable stealth functionalities */
     enabled?: boolean;
   };

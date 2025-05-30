@@ -14,20 +14,17 @@ import {
   CorePlugins,
 } from "./types/shogun";
 import { ethers } from "ethers";
-import { Observable } from "rxjs";
 import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
-import { MetaMaskPlugin } from "./plugins/metamask/metamaskPlugin";
-import { StealthPlugin } from "./plugins/stealth/stealthPlugin";
-import { WalletPlugin } from "./plugins/wallet/walletPlugin";
-import { BitcoinWalletPlugin } from "./plugins/bitcoin/bitcoinPlugin";
-import { WalletManager } from "./plugins";
-
+import { Web3ConnectorPlugin } from "./plugins/ethereum/web3ConnectorPlugin";
+import { StealthPlugin } from "./plugins/stealth-address/stealthPlugin";
+import { HDWalletPlugin } from "./plugins/bip32/hdwalletPlugin";
+import { NostrConnectorPlugin } from "./plugins/bitcoin/nostrConnectorPlugin";
+import { HDWallet } from "./plugins/bip32/hdwallet";
 import Gun from "gun";
 import { IGunUserInstance, IGunInstance } from "gun";
 
 export { RelayVerifier } from "./contracts/utils";
-
 export * from "./utils/errorHandler";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
@@ -123,10 +120,8 @@ export class ShogunCore implements IShogunCore {
 
     // Then initialize GunDB with the Gun instance
     this.gundb = new GunDB(this._gun, config.scope || "");
-
     this._gun = this.gundb.gun;
     log("Initialized Gun instance");
-
     this._user = this.gun.user().recall({ sessionStorage: true });
     this.rx = new GunRxJS(this.gun);
     this.registerBuiltinPlugins(config);
@@ -177,22 +172,22 @@ export class ShogunCore implements IShogunCore {
         log("Webauthn plugin registered");
       }
 
-      if (config.metamask?.enabled) {
-        const metamaskPlugin = new MetaMaskPlugin();
-        metamaskPlugin._category = PluginCategory.Authentication;
-        this.register(metamaskPlugin);
-        log("MetaMask plugin registered");
+      if (config.ethereum?.enabled) {
+        const web3ConnectorPlugin = new Web3ConnectorPlugin();
+        web3ConnectorPlugin._category = PluginCategory.Authentication;
+        this.register(web3ConnectorPlugin);
+        log("Web3Connector plugin registered");
       }
 
-      if (config.bitcoinWallet?.enabled) {
-        const bitcoinWalletPlugin = new BitcoinWalletPlugin();
-        bitcoinWalletPlugin._category = PluginCategory.Authentication;
-        this.register(bitcoinWalletPlugin);
-        log("Bitcoin wallet plugin registered");
+      if (config.bitcoin?.enabled) {
+        const nostrConnectorPlugin = new NostrConnectorPlugin();
+        nostrConnectorPlugin._category = PluginCategory.Authentication;
+        this.register(nostrConnectorPlugin);
+        log("NostrConnector plugin registered");
       }
 
       // Privacy plugins group
-      if (config.stealth?.enabled) {
+      if (config.stealthAddress?.enabled) {
         const stealthPlugin = new StealthPlugin();
         stealthPlugin._category = PluginCategory.Privacy;
         this.register(stealthPlugin);
@@ -200,11 +195,11 @@ export class ShogunCore implements IShogunCore {
       }
 
       // Wallet plugins group
-      if (config.walletManager?.enabled) {
-        const walletPlugin = new WalletPlugin();
-        walletPlugin._category = PluginCategory.Wallet;
-        this.register(walletPlugin);
-        log("Wallet plugin registered");
+      if (config.bip32?.enabled) {
+        const hdwalletPlugin = new HDWalletPlugin();
+        hdwalletPlugin._category = PluginCategory.Wallet;
+        this.register(hdwalletPlugin);
+        log("HDWallet plugin registered");
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
@@ -294,9 +289,9 @@ export class ShogunCore implements IShogunCore {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
       case "metamask":
-        return this.getPlugin(CorePlugins.MetaMask);
+        return this.getPlugin(CorePlugins.Ethereum);
       case "bitcoin":
-        return this.getPlugin(CorePlugins.BitcoinWallet);
+        return this.getPlugin(CorePlugins.Bitcoin);
       case "password":
       default:
         // Default authentication is provided by the core class
@@ -309,91 +304,6 @@ export class ShogunCore implements IShogunCore {
           },
         };
     }
-  }
-
-  // 🔄 RXJS INTEGRATION 🔄
-
-  /**
-   * Observe a Gun node for changes
-   * @param path - Path to observe (can be a string or a Gun chain)
-   * @returns Observable that emits whenever the node changes
-   */
-  rxGet<T>(path: string): Observable<T> {
-    return this.rx.observe<T>(path);
-  }
-
-  /**
-   * Match data based on Gun's '.map()' and convert to Observable
-   * @param path - Path to the collection
-   * @param matchFn - Optional function to filter results
-   * @returns Observable array of matched items
-   */
-  match<T>(
-    path: string | any,
-    matchFn?: (data: any) => boolean,
-  ): Observable<T[]> {
-    return this.rx.match<T>(path, matchFn);
-  }
-
-  /**
-   * Put data and return an Observable
-   * @param path - Path where to put the data
-   * @param oata - Data to put
-   * @returns Observable that completes when the put is acknowledged
-   */
-  rxPut<T>(path: string | any, data: T): Observable<T> {
-    return this.rx.put<T>(path, data);
-  }
-
-  /**
-   * Set data on a node and return an Observable
-   * @param path - Path to the collection
-   * @param data - Data to set
-   * @returns Observable that completes when the set is acknowledged
-   */
-  rxSet<T>(path: string | any, data: T): Observable<T> {
-    return this.rx.set<T>(path, data);
-  }
-
-  /**
-   * Get data once and return as Observable
-   * @param path - Path to get data from
-   * @returns Observable that emits the data once
-   */
-  rxOnce<T>(path: string | any): Observable<T> {
-    return this.rx.once<T>(path);
-  }
-
-  /**
-   * Compute derived values from gun data
-   * @param sources - Array of paths or observables to compute from
-   * @param computeFn - Function that computes a new value from the sources
-   * @returns Observable of computed values
-   */
-  compute<T, R>(
-    sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
-  ): Observable<R> {
-    return this.rx.compute<T, R>(sources, computeFn);
-  }
-
-  /**
-   * User put data and return an Observable (for authenticated users)
-   * @param path - Path where to put the data
-   * @param data - Data to put
-   * @returns Observable that completes when the put is acknowledged
-   */
-  rxUserPut<T>(path: string, data: T): Observable<T> {
-    return this.rx.userPut<T>(path, data);
-  }
-
-  /**
-   * Observe user data
-   * @param path - Path to observe in user space
-   * @returns Observable that emits whenever the user data changes
-   */
-  observeUser<T>(path: string): Observable<T> {
-    return this.rx.observeUser<T>(path);
   }
 
   // *********************************************************************************************************
@@ -440,18 +350,7 @@ export class ShogunCore implements IShogunCore {
    * and presence of authentication credentials in storage
    */
   isLoggedIn(): boolean {
-    const gunLoggedIn = this.gundb.isLoggedIn();
-    const gunUser = this.gun.user();
-
-    if (gunLoggedIn) {
-      return true;
-    }
-
-    // @ts-ignore - Accessing internal Gun property that is not fully typed
-    const hasPair = gunUser && gunUser._ && gunUser._.sea;
-    const hasLocalPair = this.storage.getItem("pair");
-
-    return !!hasPair || !!hasLocalPair;
+    return this.gundb.isLoggedIn();
   }
 
   /**
@@ -515,75 +414,31 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Use a direct approach that avoids the state machine issues
-            let loginSuccess = false;
-            let userPub = "";
-
-            // Reset user state to avoid state machine conflicts
-            try {
-              // Clear any previous user data
-              const gunUser = this.gun.user();
-              if (gunUser && gunUser._) {
-                const userRoot = gunUser._ as any;
-                if (userRoot.sea) {
-                  userRoot.sea = null;
-                }
-              }
-            } catch (e) {
-              // Ignore errors during reset
-            }
-
-            // Try to authenticate
-            await new Promise<void>((resolveAuth) => {
-              this.gun.user().auth(username, password, (ack: any) => {
-                if (ack.err) {
-                  log(`Authentication failed: ${ack.err}`);
-                  resolveAuth();
-                } else {
-                  // Authentication succeeded
-                  loginSuccess = true;
-
-                  // Get the user's public key - we need to handle this safely
-                  try {
-                    const user = this.gun.user();
-                    // Access pub property safely using optional chaining and type coercion
-                    if (user && user.is && user.is.pub) {
-                      // Convert to string in a type-safe way
-                      userPub = `${user.is.pub}`;
-                    }
-
-                    log(`Login successful for: ${username} (${userPub})`);
-                  } catch (e) {
-                    log(`Warning: Could not get user public key: ${e}`);
-                  }
-                  resolveAuth();
-                }
-              });
-            });
-
+            // Use the GunDB login method instead of reimplementing it here
+            const loginResult = await this.gundb.login(username, password);
             clearTimeout(timeoutId);
 
-            if (!loginSuccess) {
+            if (!loginResult.success) {
               resolve({
                 success: false,
-                error: "Wrong user or password",
+                error: loginResult.error || "Wrong user or password",
               });
             } else {
               // First resolve the success result
               resolve({
                 success: true,
-                userPub: userPub,
-                username: username,
+                userPub: loginResult.userPub,
+                username: loginResult.username,
               });
 
               // Then try to access wallet credentials after auth state is updated
               try {
-                const walletPlugin = this.getPlugin(
-                  CorePlugins.WalletManager,
-                ) as WalletManager;
+                const hdwalletPlugin = this.getPlugin(
+                  CorePlugins.Bip32,
+                ) as HDWallet;
 
-                if (walletPlugin) {
-                  const mainWallet = walletPlugin.getMainWalletCredentials();
+                if (hdwalletPlugin) {
+                  const mainWallet = hdwalletPlugin.getMainWalletCredentials();
                   this.storage.setItem(
                     "main-wallet",
                     JSON.stringify(mainWallet),
@@ -678,170 +533,60 @@ export class ShogunCore implements IShogunCore {
         timestamp: Date.now(),
       });
 
-      log(`Inizializzazione registrazione per utente: ${username}`);
       log(`Attempting user registration: ${username}`);
 
-      // Try a more direct approach that can better handle username existence checks
-      try {
-        // First, let's check if the user already exists by trying to authenticate
-        // We'll use a random password to avoid decryption errors
-        let userExists = false;
-        const randomPassword = Math.random().toString(36).substring(2);
+      const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
 
-        await new Promise<void>((resolve) => {
-          // Reset user state
-          try {
-            const gunUser = this.gun.user();
-            if (gunUser && gunUser._) {
-              const userRoot = gunUser._ as any;
-              if (userRoot.sea) {
-                userRoot.sea = null;
-              }
-            }
-          } catch (e) {
-            // Ignore errors during reset
-          }
-
-          // Try authentication with the username but a random password
-          this.gun.user().auth(username, randomPassword, (ack: any) => {
-            // If we get an error like "Wrong user or password", the user exists
-            if (
-              ack.err &&
-              (ack.err === "Wrong user or password" ||
-                ack.err.includes("Could not decrypt"))
-            ) {
-              userExists = true;
-              log(`Username "${username}" already exists`);
-            }
-            resolve();
-          });
-        });
-
-        if (userExists) {
-          // The username already exists, return a clear error
-          return {
-            success: false,
-            error: `Username "${username}" is already taken. Please choose a different username.`,
-          };
-        }
-
-        // If we get here, let's try to create the user
-        const signupPromise = new Promise<SignUpResult>((resolve) => {
-          // Reset user state again
-          try {
-            const gunUser = this.gun.user();
-            if (gunUser && gunUser._) {
-              const userRoot = gunUser._ as any;
-              if (userRoot.sea) {
-                userRoot.sea = null;
-              }
-            }
-          } catch (e) {
-            // Ignore errors during reset
-          }
-
-          // Create the user
-          this.gun.user().create(username, password, (createAck: any) => {
-            if (createAck.err) {
-              // If we get "User already created!" here despite our check, it might be a race condition
-              if (createAck.err === "User already created!") {
-                resolve({
-                  success: false,
-                  error: `Username "${username}" is already taken. Please choose a different username.`,
-                });
-              } else {
-                resolve({
-                  success: false,
-                  error: createAck.err || "Registration failed in GunDB",
-                });
-              }
-            } else {
-              // User created successfully, now try to authenticate
-              this.gun.user().auth(username, password, (authAck: any) => {
-                if (authAck.err) {
-                  resolve({
-                    success: false,
-                    error: `User created but authentication failed: ${authAck.err}`,
-                  });
-                } else {
-                  const user = this.gun.user();
-                  const userPub = user.is?.pub ? `${user.is.pub}` : "";
-
-                  resolve({
-                    success: true,
-                    userPub: userPub,
-                    username: username,
-                  });
-                }
-              });
-            }
-          });
-        });
-
-        const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
-        const timeoutPromise = new Promise<SignUpResult>((resolve) => {
-          setTimeout(() => {
-            logError(
-              `Timeout at ShogunCore level during user registration: ${username}`,
-            );
-
-            // Emit a debug event to monitor the flow
-            this.eventEmitter.emit("debug", {
-              action: "signup_timeout",
-              username,
-              timestamp: Date.now(),
-            });
-
+      const signupPromiseWithTimeout = new Promise<SignUpResult>(
+        async (resolve) => {
+          const timeoutId = setTimeout(() => {
             resolve({
               success: false,
-              error: "Registration timeout at ShogunCore level",
+              error: "Registration timeout",
             });
           }, timeoutDuration);
-        });
 
-        // Use Promise.race to handle timeout
-        const result = await Promise.race([signupPromise, timeoutPromise]);
+          try {
+            // Use the GunDB signUp method instead of reimplementing it here
+            const result = await this.gundb.signUp(username, password);
+            clearTimeout(timeoutId);
 
-        if (result.success) {
-          log(`Registration completed successfully for: ${username}`);
-          this.eventEmitter.emit("auth:signup", {
-            userPub: result.userPub ?? "",
-            username,
-          });
+            if (result.success) {
+              // Emit a debug event to monitor the flow
+              this.eventEmitter.emit("debug", {
+                action: "signup_complete",
+                username,
+                userPub: result.userPub,
+                timestamp: Date.now(),
+              });
 
-          // Emit a debug event to monitor the flow
-          this.eventEmitter.emit("debug", {
-            action: "signup_complete",
-            username,
-            userPub: result.userPub,
-            timestamp: Date.now(),
-          });
+              // Emit the signup event
+              this.eventEmitter.emit("auth:signup", {
+                userPub: result.userPub ?? "",
+                username,
+              });
+            } else {
+              // Emit a debug event to monitor the flow in case of failure
+              this.eventEmitter.emit("debug", {
+                action: "signup_failed",
+                username,
+                error: result.error,
+                timestamp: Date.now(),
+              });
+            }
 
-          return result;
-        }
+            resolve(result);
+          } catch (error: any) {
+            clearTimeout(timeoutId);
+            resolve({
+              success: false,
+              error: error.message || "Registration error",
+            });
+          }
+        },
+      );
 
-        // Emit a debug event to monitor the flow in case of failure
-        this.eventEmitter.emit("debug", {
-          action: "signup_failed",
-          username,
-          error: result.error,
-          timestamp: Date.now(),
-        });
-
-        return result;
-      } catch (registrationError: any) {
-        logError(
-          `Error during registration process for user ${username}:`,
-          registrationError,
-        );
-
-        return {
-          success: false,
-          error:
-            registrationError.message ||
-            `Registration failed: ${String(registrationError)}`,
-        };
-      }
+      return await signupPromiseWithTimeout;
     } catch (error: any) {
       logError(`Error during registration for user ${username}:`, error);
 
@@ -860,211 +605,7 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
-  // 🤫 PRIVATE HELPER METHODS 🤫
-
-  /**
-   * Create a new user with GunDB
-   * @param username - Username
-   * @param password - Password
-   * @returns {Promise<{success: boolean, userPub?: string, error?: string}>} Promise with success status and user public key
-   * @description Creates a new user in GunDB with error handling
-   */
-  private createUserWithGunDB(
-    username: string,
-    password: string,
-  ): Promise<{ success: boolean; userPub?: string; error?: string }> {
-    log(`Ensuring user exists with GunDB: ${username}`);
-
-    return new Promise(async (resolve) => {
-      try {
-        // Create a safer way to reset the user state without triggering state machine errors
-        const resetUserState = () => {
-          try {
-            // Instead of trying to manipulate internal Gun properties which causes TypeScript errors,
-            // let's use a more direct approach to clear the current user state
-
-            // First check if we have a user instance
-            if (this.gun && this.gun.user) {
-              // Create a new empty user instance which effectively resets the state
-              // without triggering state machine transitions
-              const emptyUser = this.gun.user();
-
-              // This approach avoids direct manipulation of internal properties
-              // while still achieving the goal of resetting user state
-              if (emptyUser && typeof emptyUser.is === "undefined") {
-                log("User state reset successful");
-              }
-            }
-          } catch (e) {
-            log("Error during user state reset (non-critical):", e);
-          }
-        };
-
-        const authUser = (): Promise<{ err?: string; pub?: string }> => {
-          return new Promise((resolveAuth) => {
-            // Reset user state before authentication attempt
-            resetUserState();
-
-            this.gun.user().auth(username, password, (ack: any) => {
-              if (ack.err) {
-                resolveAuth({ err: ack.err });
-              } else {
-                const user = this.gundb.gun.user();
-                const userPub = user.is?.pub || "";
-                if (!user.is || !userPub) {
-                  resolveAuth({
-                    err: "Authentication failed after apparent success.",
-                  });
-                } else {
-                  resolveAuth({ pub: userPub });
-                }
-              }
-            });
-          });
-        };
-
-        const createUser = (): Promise<{ err?: string; pub?: string }> => {
-          return new Promise((resolveCreate) => {
-            // Reset user state before user creation attempt
-            resetUserState();
-
-            this.gundb.gun.user().create(username, password, (ack: any) => {
-              resolveCreate({ err: ack.err, pub: ack.pub }); // pub might be present on success
-            });
-          });
-        };
-
-        log(`Attempting login first for ${username}...`);
-        let loginResult = await authUser();
-
-        if (loginResult.pub) {
-          log(`Login successful for existing user. Pub: ${loginResult.pub}`);
-          resolve({
-            success: true,
-            userPub: loginResult.pub,
-          });
-          return;
-        }
-
-        log(
-          `Login failed (${loginResult.err ?? "unknown reason"}), attempting user creation...`,
-        );
-        const createResult = await createUser();
-
-        if (createResult.err) {
-          log(`User creation error: ${createResult.err}`);
-          resolve({
-            success: false,
-            error: `User creation failed: ${createResult.err}`,
-          });
-          return;
-        }
-
-        log(
-          `User created successfully, attempting login again for confirmation...`,
-        );
-        loginResult = await authUser();
-
-        if (loginResult.pub) {
-          log(`Post-creation login successful! User pub: ${loginResult.pub}`);
-          resolve({
-            success: true,
-            userPub: loginResult.pub,
-          });
-        } else {
-          logError(
-            `Post-creation login failed unexpectedly: ${loginResult.err}`,
-          );
-          resolve({
-            success: false,
-            error: `User created, but subsequent login failed: ${loginResult.err}`,
-          });
-        }
-      } catch (error: any) {
-        const errorMsg =
-          error.message ?? "Unknown error during user existence check";
-        logError(`Error in createUserWithGunDB: ${errorMsg}`, error);
-        resolve({
-          success: false,
-          error: errorMsg,
-        });
-      }
-    });
-  }
-
-  // 🔫 GUN ACTIONS 🔫
-
-  /**
-   * Retrieves data from a Gun node at the specified path
-   * @param path - The path to the Gun node
-   * @returns Promise that resolves with the node data or rejects with an error
-   */
-  get(path: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.gundb.gun.get(path).once((data) => {
-        if (data.err) {
-          reject(data.err as Error);
-        } else {
-          resolve(data);
-        }
-      });
-    });
-  }
-
-  /**
-   * Stores data in Gun at the root level
-   * @param data - The data to store
-   * @returns Promise that resolves when data is stored or rejects with an error
-   */
-  put(data: Record<string, any>): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.gundb.gun.put(data, (ack: any) => {
-        if (ack.err) {
-          reject(ack.err as Error);
-        } else {
-          resolve(ack);
-        }
-      });
-    });
-  }
-
-  /**
-   * Stores data in the authenticated user's space
-   * @param data - The data to store in user space
-   * @returns Promise that resolves when data is stored or rejects with an error
-   */
-  userPut(data: Record<string, any>): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.gundb.gun.user().put(data, (ack: any) => {
-        if (ack.err) {
-          reject(ack.err as Error);
-        } else {
-          resolve(ack);
-        }
-      });
-    });
-  }
-
-  /**
-   * Retrieves data from the authenticated user's space at the specified path
-   * @param path - The path to the user data
-   * @returns Promise that resolves with the user data or rejects with an error
-   */
-  userGet(path: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.gundb.gun
-        .user()
-        .get(path)
-        .once((data) => {
-          if (data.err) {
-            reject(data.err as Error);
-          } else {
-            resolve(data);
-          }
-        });
-    });
-  }
-
+ 
   // 📢 EVENT EMITTER 📢
 
   /**
@@ -1072,6 +613,7 @@ export class ShogunCore implements IShogunCore {
    * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
    * @param eventName The name of the event to emit.
    * @param data The data to pass with the event.
+   * @returns {boolean} Indicates if the event had listeners.
    */
   emit(eventName: string | symbol, data?: any): boolean {
     return this.eventEmitter.emit(eventName, data);
@@ -1081,6 +623,7 @@ export class ShogunCore implements IShogunCore {
    * Add an event listener
    * @param eventName The name of the event to listen for
    * @param listener The callback function to execute when the event is emitted
+   * @returns {this} Returns this instance for method chaining
    */
   on(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.on(eventName, listener);
@@ -1091,6 +634,7 @@ export class ShogunCore implements IShogunCore {
    * Add a one-time event listener
    * @param eventName The name of the event to listen for
    * @param listener The callback function to execute when the event is emitted
+   * @returns {this} Returns this instance for method chaining
    */
   once(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.once(eventName, listener);
@@ -1101,6 +645,7 @@ export class ShogunCore implements IShogunCore {
    * Remove an event listener
    * @param eventName The name of the event to stop listening for
    * @param listener The callback function to remove
+   * @returns {this} Returns this instance for method chaining
    */
   off(eventName: string | symbol, listener: (data: unknown) => void): this {
     this.eventEmitter.off(eventName, listener);
@@ -1111,6 +656,7 @@ export class ShogunCore implements IShogunCore {
    * Remove all listeners for a specific event or all events
    * @param eventName Optional. The name of the event to remove listeners for.
    * If not provided, all listeners for all events are removed.
+   * @returns {this} Returns this instance for method chaining
    */
   removeAllListeners(eventName?: string | symbol): this {
     this.eventEmitter.removeAllListeners(eventName);
@@ -1123,15 +669,15 @@ export * from "./types/shogun";
 
 // Export classes
 export { GunDB } from "./gundb/gun";
-export { MetaMask } from "./plugins/metamask/metamask";
-export { Stealth } from "./plugins/stealth/stealth";
+export { Web3Connector } from "./plugins/ethereum/web3Connector";
+export { Stealth } from "./plugins/stealth-address/stealth";
 export type {
   EphemeralKeyPair,
   StealthData,
   StealthAddressResult,
   LogLevel,
   LogMessage,
-} from "./plugins/stealth/types";
+} from "./plugins/stealth-address/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
