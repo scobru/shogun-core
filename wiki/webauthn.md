@@ -93,7 +93,7 @@ const authResult = await webauthn.authenticate("user123");
 
 ```typescript
 // Via plugin
-const plugin = shogun.getPlugin("WebAuthn");
+const plugin = shogun.getPlugin("webauthn");
 const registrationResult = await plugin.register({
   username: "user123",
   displayName: "John Doe"
@@ -111,7 +111,7 @@ const registrationResult = await webauthn.registerCredential({
 
 ```typescript
 // Via plugin
-const plugin = shogun.getPlugin("WebAuthn");
+const plugin = shogun.getPlugin("webauthn");
 const authResult = await plugin.login("user123");
 
 // Direct usage

@@ -30,10 +30,6 @@ export enum CorePlugins {
   WebAuthn = "webauthn",
   /** Ethereum plugin */
   Ethereum = "ethereum",
-  /** Stealth Address plugin */
-  StealthAddress = "stealth",
-  /** HD Wallet plugin */
-  Bip44 = "bip44",
   /** Bitcoin wallet plugin */
   Bitcoin = "bitcoin",
 }
@@ -151,18 +147,6 @@ export interface ShogunSDKConfig {
     useApi?: boolean;
     /** API URL for verification */
     apiUrl?: string;
-  };
-  /** HDWallet configuration */
-  bip44?: {
-    /** Enable HDWallet functionalities */
-    enabled?: boolean;
-    /** Balance cache TTL in milliseconds (default: 30000) */
-    balanceCacheTTL?: number;
-  };
-  /** Enable stealth functionalities */
-  stealthAddress?: {
-    /** Enable stealth functionalities */
-    enabled?: boolean;
   };
   /** Logging configuration */
   logging?: LoggingConfig;

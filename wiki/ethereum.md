@@ -84,10 +84,10 @@ The authentication process works as follows:
 
 ```typescript
 // Get the authentication method
-const metamask = shogun.getAuthenticationMethod("ethereum");
+const ethereum = shogun.getAuthenticationMethod("ethereum");
 
 // Login with MetaMask
-const result = await metamask.login(address);
+const result = await ethereum.login(address);
 if (result.success) {
   console.log("Authenticated with MetaMask!");
 }
@@ -115,7 +115,7 @@ if (connection.success && connection.address) {
 
 ```typescript
 // Via plugin
-const plugin = shogun.getPlugin("metamask");
+const plugin = shogun.getPlugin("ethereum");
 const connectionResult = await plugin.connectMetaMask();
 
 // Direct usage

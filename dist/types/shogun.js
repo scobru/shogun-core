@@ -26,10 +26,6 @@ var CorePlugins;
     CorePlugins["WebAuthn"] = "webauthn";
     /** Ethereum plugin */
     CorePlugins["Ethereum"] = "ethereum";
-    /** Stealth Address plugin */
-    CorePlugins["StealthAddress"] = "stealth";
-    /** HD Wallet plugin */
-    CorePlugins["Bip44"] = "bip44";
     /** Bitcoin wallet plugin */
     CorePlugins["Bitcoin"] = "bitcoin";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

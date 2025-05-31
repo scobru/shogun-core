@@ -745,11 +745,12 @@
       const [getPeersList, setPeersList] = setSignal('No peers configured', { key: 'relay.peersList' });
       const [getNewPeerUrl, setNewPeerUrl] = setSignal('', { key: 'relay.newPeerUrl' });
 
-      // Plugin references
+      // Plugin
       let webauthnPlugin;
       let ethereumPlugin;
       let bitcoinPlugin;
-      let bip44Plugin;
+      // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+      // let bip44Plugin;
 
       // Utility functions
       function showResult(title, data) {
@@ -949,9 +950,6 @@
               network: "mainnet",
               defaultWalletType: "nostr",
             },
-            bip44: {
-              enabled: true,
-            },
             logging: {
               enabled: true,
               level: "debug",
@@ -1004,7 +1002,8 @@
           try {
           webauthnPlugin = shogun.getPlugin("webauthn");
           bitcoinPlugin = shogun.getPlugin("bitcoin");
-          bip44Plugin = shogun.getPlugin("bip44");
+          // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+          // bip44Plugin = shogun.getPlugin("bip44");
           ethereumPlugin = shogun.getPlugin("ethereum");
             console.log('✅ Plugin references obtained');
           } catch (pluginError) {
@@ -1043,7 +1042,8 @@
               webauthn: !!webauthnPlugin,
               ethereum: !!ethereumPlugin,
               bitcoin: !!bitcoinPlugin,
-              bip44: !!bip44Plugin,
+              // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+              // bip44: !!bip44Plugin,
             },
             timestamp: new Date().toISOString()
           });
@@ -1703,7 +1703,26 @@
       function AppHeader() {
         return h('div', { class: 'app-header' },
           h('h1', { class: 'app-title' }, '🥷 Shogun Auth - NoDom Edition'),
-          h('p', { class: 'app-subtitle' }, 'Secure authentication with reactive signals')
+          h('p', { class: 'app-subtitle' }, 'Secure authentication with reactive signals'),
+          
+          // Migration Notice
+          h('div', { 
+            style: 'background: var(--warning-color); color: white; padding: var(--spacing-md); border-radius: var(--radius-medium); margin-top: var(--spacing-lg); font-size: 0.9rem;' 
+          }, [
+            h('strong', {}, '📦 Plugin Migration Notice:'),
+            h('br', {}),
+            'BIP44 wallet and stealth-address plugins have been moved to separate packages:',
+            h('br', {}),
+            '• ',
+            h('code', {}, '@shogun/bip44'),
+            ' - HD wallet functionality',
+            h('br', {}),
+            '• ',
+            h('code', {}, '@shogun/stealth-address'),
+            ' - Privacy features',
+            h('br', {}),
+            'Install these packages separately if you need wallet or privacy features.'
+          ])
         );
       }
 

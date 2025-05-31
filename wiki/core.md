@@ -4,7 +4,7 @@
 
 The `ShogunCore` class is the main entry point for the Shogun SDK, providing access to:
 - Decentralized database (GunDB)
-- Authentication methods (traditional, WebAuthn, MetaMask)
+- Authentication methods (traditional, WebAuthn, Ethereum)
 - Plugin system for extensibility
 - RxJS integration for reactive programming
 
@@ -46,7 +46,7 @@ interface ShogunSDKConfig {
   stealthAddress?: { enabled: boolean }; // Stealth addresses
   
   // Wallet features
-  bip32?: { enabled: boolean };    // HD wallet support
+  bip44?: { enabled: boolean };    // HD wallet support
 }
 ```
 
@@ -73,7 +73,7 @@ core.logout();
 ```typescript
 // Get specific authentication method
 const webauthn = core.getAuthenticationMethod("webauthn");
-const metamask = core.getAuthenticationMethod("metamask");
+const ethereum = core.getAuthenticationMethod("ethereum");
 const bitcoin = core.getAuthenticationMethod("bitcoin");
 ```
 
@@ -160,9 +160,9 @@ const errors = core.getRecentErrors(10);
 ```typescript
 // Configure logging
 core.configureLogging({
+  enabled: true,
   level: "debug",
-  logToConsole: true,
-  logTimestamps: true
+  prefix: "ShogunSDK"
 });
 ```
 

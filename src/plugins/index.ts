@@ -23,13 +23,3 @@ export type {
   AlbyProvider,
   NostrProvider,
 } from "./bitcoin/types";
-
-// BIP32 HD Wallet plugin exports
-export { HDWallet } from "./bip44/hdwallet";
-export { HDWalletPlugin } from "./bip44/hdwalletPlugin";
-export type { HDWalletPluginInterface } from "./bip44/types";
-
-// Stealth address plugin exports
-export { Stealth } from "./stealth-address/stealth";
-export { StealthPlugin } from "./stealth-address/stealthPlugin";
-export type { StealthPluginInterface } from "./stealth-address/types";

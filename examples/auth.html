@@ -1126,6 +1126,15 @@
       <div class="app-header">
         <h1 class="app-title">🥷 Shogun Auth</h1>
         <p class="app-subtitle">Secure authentication with multiple methods</p>
+        
+        <!-- Migration Notice -->
+        <div style="background: var(--warning-color); color: white; padding: var(--spacing-md); border-radius: var(--radius-medium); margin-top: var(--spacing-lg); font-size: 0.9rem;">
+          <strong>📦 Plugin Migration Notice:</strong><br>
+          BIP44 wallet and stealth-address plugins have been moved to separate packages:<br>
+          • <code>@shogun/bip44</code> - HD wallet functionality<br>
+          • <code>@shogun/stealth-address</code> - Privacy features<br>
+          Install these packages separately if you need wallet or privacy features.
+        </div>
       </div>
 
       <div class="main-grid">
@@ -1472,7 +1481,8 @@
       let webauthnPlugin;
       let ethereumPlugin;
       let bitcoinPlugin;
-      let bip44Plugin;
+      // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+      // let bip44Plugin;
 
       // Funzione per mostrare i risultati
       function showResult(title, data) {
@@ -1908,9 +1918,6 @@
               network: "mainnet",
               defaultWalletType: "nostr",
             },
-            bip44: {
-              enabled: true,
-            },
             logging: {
               enabled: true,
               level: "debug",
@@ -1944,7 +1951,8 @@
           // Otteniamo i riferimenti ai plugin direttamente
           webauthnPlugin = shogun.getPlugin("webauthn");
           bitcoinPlugin = shogun.getPlugin("bitcoin"); // Nota: il nome potrebbe essere "bitcoin-wallet" invece di "bitcoin"
-          bip44Plugin = shogun.getPlugin("bip44"); // Fix: use correct plugin name
+          // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+          // bip44Plugin = shogun.getPlugin("bip44"); // Fix: use correct plugin name
           ethereumPlugin = shogun.getPlugin("ethereum");
 
           // Verifica il supporto delle tecnologie con animazioni
@@ -1977,7 +1985,8 @@
               webauthn: !!webauthnPlugin,
               ethereum: !!ethereumPlugin,
               bitcoin: !!bitcoinPlugin,
-              bip44: !!bip44Plugin,
+              // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+              // bip44: !!bip44Plugin,
             },
             timestamp: new Date().toISOString()
           });
@@ -2049,15 +2058,13 @@
                 // Check if wallet is ready
                 const checkWallet = () => {
                   try {
-                    const walletPlugin = shogun.getPlugin('bip44');
-                    if (walletPlugin) {
-                      clearTimeout(walletTimeout);
-                      showWalletProgress("💰 Wallet initialized successfully!");
-                      setTimeout(() => hideWalletProgress(), 2000);
-                      resolve();
-                    } else {
-                      setTimeout(checkWallet, 500);
-                    }
+                    // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+                    // const walletPlugin = shogun.getPlugin('bip44');
+                    // For now, we'll just resolve after a short delay since wallet functionality is external
+                    clearTimeout(walletTimeout);
+                    showWalletProgress("💰 Core authentication completed (wallet plugins are external)!");
+                    setTimeout(() => hideWalletProgress(), 2000);
+                    resolve();
                   } catch (error) {
                     console.log("Wallet check error:", error);
                     setTimeout(checkWallet, 500);

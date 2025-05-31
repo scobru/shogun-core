@@ -108,7 +108,7 @@ export default class AuthManager {
     /**
      * Get current authentication state
      */
-    getCurrentState(): "wallet_initializing" | "wallet_ready" | "pending" | "disconnected" | "creating" | "authorized" | "leaving";
+    getCurrentState(): "wallet_initializing" | "wallet_ready" | "disconnected" | "creating" | "pending" | "authorized" | "leaving";
 }
 export type GunAuthAck = {
     ack: 2;
