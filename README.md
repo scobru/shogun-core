@@ -20,8 +20,8 @@ Shogun SDK is a comprehensive toolkit for Web3 developers that simplifies decent
 - **[Core SDK](wiki/core.md)**: Main SDK entry point and configuration
 - **[GunDB Integration](wiki/gundb.md)**: Enhanced wrapper around GunDB with additional features
 - **[WebAuthn](wiki/webauthn.md)**: Passwordless authentication with biometrics and security keys
-- **[Ethereum](wiki/ethereum.md)**: Ethereum wallet integration and authentication
-- **[Bitcoin](wiki/bitcoin.md)**: Bitcoin and Nostr protocol integration
+- **[Web3](wiki/web3.md)**: Ethereum wallet integration and authentication
+- **[Nostr](wiki/nostr.md)**: Bitcoin and Nostr protocol integration
 - **[Contracts SDK](wiki/contracts.md)**: Tools for interacting with Shogun Protocol smart contracts
 
 ## Additional Plugins
@@ -63,8 +63,8 @@ const loginResult = await shogun.login("username", "password");
 
 // Access core plugins
 const webauthnPlugin = shogun.getPlugin("webauthn");
-const ethereumPlugin = shogun.getPlugin("ethereum");
-const bitcoinPlugin = shogun.getPlugin("bitcoin");
+const web3Plugin = shogun.getPlugin("web3");
+const nostrPlugin = shogun.getPlugin("nostr");
 
 // Optional: Use external plugins
 import { HDWalletPlugin } from "@shogun/bip44";
@@ -84,8 +84,8 @@ For detailed documentation on each component, please refer to the wiki pages:
 - **[Core SDK Documentation](wiki/core.md)**
 - **[GunDB Integration](wiki/gundb.md)**
 - **[WebAuthn Plugin](wiki/webauthn.md)**
-- **[Ethereum Plugin](wiki/ethereum.md)**
-- **[Bitcoin Plugin](wiki/bitcoin.md)**
+- **[Web3 Plugin](wiki/web3.md)**
+- **[Nostr Plugin](wiki/nostr.md)**
 - **[Contracts SDK](wiki/contracts.md)**
 
 External plugin documentation:

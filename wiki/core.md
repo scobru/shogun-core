@@ -39,14 +39,8 @@ interface ShogunSDKConfig {
   
   // Authentication methods
   webauthn?: { enabled: boolean }; // WebAuthn support
-  ethereum?: { enabled: boolean }; // Web3/Ethereum support
-  bitcoin?: { enabled: boolean };  // Bitcoin/Nostr support
-  
-  // Privacy features
-  stealthAddress?: { enabled: boolean }; // Stealth addresses
-  
-  // Wallet features
-  bip44?: { enabled: boolean };    // HD wallet support
+  web3?: { enabled: boolean }; // Web3/Ethereum support
+  nostr?: { enabled: boolean };  // Bitcoin/Nostr support
 }
 ```
 
@@ -73,8 +67,8 @@ core.logout();
 ```typescript
 // Get specific authentication method
 const webauthn = core.getAuthenticationMethod("webauthn");
-const ethereum = core.getAuthenticationMethod("ethereum");
-const bitcoin = core.getAuthenticationMethod("bitcoin");
+const web3 = core.getAuthenticationMethod("web3");
+const nostr = core.getAuthenticationMethod("nostr");
 ```
 
 ## Plugin System
@@ -188,8 +182,6 @@ ShogunCore comes with several built-in plugins:
 - **WebAuthn**: Passwordless authentication
 - **Web3Connector**: Ethereum wallet integration
 - **NostrConnector**: Bitcoin/Nostr integration
-- **StealthPlugin**: Stealth address functionality
-- **HDWalletPlugin**: HD wallet implementation
 
 ## Exports
 
@@ -199,6 +191,5 @@ The SDK exports numerous utilities and types:
 - Contract interfaces
 - Plugin types
 - GunDB wrappers
-- Stealth address utilities
 - WebAuthn functionality
 - Storage implementation

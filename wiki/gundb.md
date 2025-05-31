@@ -2,29 +2,28 @@
 
 ## Overview
 
-The GunDB module in Shogun SDK provides a robust wrapper around the GunDB decentralized database. It enhances GunDB with additional features like improved authentication, reactive data handling through RxJS, encrypted storage, and reliable concurrency management.
+The GunDB module in Shogun SDK provides a robust wrapper around the GunDB decentralized database. It enhances GunDB with additional features like direct authentication, reactive data handling through RxJS, encrypted storage, and simplified data operations.
 
 ## Architecture
 
 The GunDB implementation consists of these key components:
 
-- **GunDB**: Core wrapper around GunDB with enhanced features
+- **GunDB**: Core wrapper around GunDB with enhanced features and direct authentication
 - **GunRxJS**: RxJS integration for reactive programming
 - **Crypto**: Cryptographic utilities for secure data handling
 - **Utils**: Helper functions for GunDB operations
-- **Models**: Data models for GunDB entities
+- **Errors**: Error definitions and handling
 
 ### File Structure
 
 ```
 shogun-core/src/gundb/
 ├── index.ts           - Exports all GunDB components
-├── gun.ts             - Main GunDB wrapper implementation
+├── gun.ts             - Main GunDB wrapper implementation with direct auth
 ├── rxjs-integration.ts - RxJS integration for reactive data
 ├── crypto.ts          - Cryptographic utilities
 ├── utils.ts           - Helper functions
-├── errors.ts          - Error definitions and handling
-└── models/            - Data models for GunDB entities
+└── errors.ts          - Error definitions and handling
 ```
 
 ## Usage
@@ -73,22 +72,25 @@ const user = await gundb.get("users/john");
 
 ## Core Features
 
-### Authentication
+### Direct Authentication
 
-The GunDB wrapper provides enhanced authentication with proper error handling:
+The GunDB wrapper provides direct authentication through Gun's native auth system with enhanced error handling:
 
 ```typescript
-// User registration
+// User registration - direct Gun.user().create()
 const signupResult = await gundb.signUp("username", "password");
 
-// User login
+// User login - direct Gun.user().auth()
 const loginResult = await gundb.login("username", "password");
 
 // Check if user is logged in
 const isLoggedIn = gundb.isLoggedIn();
 
-// Logout
+// Logout - direct Gun.user().leave()
 gundb.logout();
+
+// Get current user
+const currentUser = gundb.getCurrentUser();
 ```
 
 ### Data Operations

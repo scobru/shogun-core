@@ -47,10 +47,10 @@ const lazyModules = {
         webauthn: () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn"))),
     },
     // Web3 connection modules
-    ethereum: {
+    web3: {
         web3Connector: () => Promise.resolve().then(() => __importStar(require("./plugins/web3/web3ConnectorPlugin"))),
     },
-    bitcoin: {
+    nostr: {
         nostrConnector: () => Promise.resolve().then(() => __importStar(require("./plugins/nostr/nostrConnectorPlugin"))),
     },
 };
@@ -88,11 +88,11 @@ exports.modules = {
     webauthn: {
         loadWebAuthn: lazyModules.webauthn.webauthn,
     },
-    ethereum: {
-        loadMetaMask: lazyModules.ethereum.web3Connector,
+    web3: {
+        loadMetaMask: lazyModules.web3.web3Connector,
     },
-    bitcoin: {
-        loadNostrConnector: lazyModules.bitcoin.nostrConnector,
+    nostr: {
+        loadNostrConnector: lazyModules.nostr.nostrConnector,
     },
 };
 // Export types and interfaces

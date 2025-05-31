@@ -1,22 +1,19 @@
 /**
  * GunDB class with enhanced features:
- * - Dynamic auth token usage
- * - Concurrency-safe authentication
  * - Dynamic peer linking
  * - Support for remove/unset operations
+ * - Direct authentication through Gun.user()
  */
 import { IGunUserInstance, IGunInstance, IGunChain } from "gun";
 import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
-import AuthManager from "./models/auth/auth";
 declare class GunDB {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
     crypto: typeof crypto;
     utils: typeof utils;
-    auth: AuthManager;
     node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
     private readonly onAuthCallbacks;
     private _rxjs?;
@@ -106,14 +103,14 @@ declare class GunDB {
      */
     remove(path: string): Promise<any>;
     /**
-     * Signs up a new user using AuthManager
+     * Signs up a new user using direct Gun authentication
      * @param username Username
      * @param password Password
      * @returns Promise resolving to signup result
      */
     signUp(username: string, password: string): Promise<any>;
     /**
-     * Logs in a user using AuthManager
+     * Logs in a user using direct Gun authentication
      * @param username Username
      * @param password Password
      * @param callback Optional callback for login result
@@ -122,7 +119,7 @@ declare class GunDB {
     login(username: string, password: string, callback?: (result: any) => void): Promise<any>;
     private _savePair;
     /**
-     * Logs out the current user using AuthManager
+     * Logs out the current user using direct Gun authentication
      */
     logout(): void;
     /**
@@ -130,36 +127,6 @@ declare class GunDB {
      * @returns True if logged in
      */
     isLoggedIn(): boolean;
-    /**
-     * Checks if authentication is currently in progress
-     * @returns True if authenticating
-     */
-    isAuthenticating(): boolean;
-    /**
-     * Gets the current authentication state
-     * @returns Current authentication state
-     */
-    getAuthState(): string;
-    /**
-     * Gets a human-readable description of the current authentication state
-     * @returns State description
-     */
-    getAuthStateDescription(): string;
-    /**
-     * Checks if user is authenticated (logged in and not in a transitional state)
-     * @returns True if authenticated
-     */
-    isAuthenticated(): boolean;
-    /**
-     * Checks if wallet is ready
-     * @returns True if wallet is ready
-     */
-    isWalletReady(): boolean;
-    /**
-     * Checks if authentication can be started (user is disconnected)
-     * @returns True if auth can be started
-     */
-    canStartAuth(): boolean;
     /**
      * Gets the current user
      * @returns Current user object or null

@@ -1,9 +1,8 @@
 /**
  * GunDB class with enhanced features:
- * - Dynamic auth token usage
- * - Concurrency-safe authentication
  * - Dynamic peer linking
  * - Support for remove/unset operations
+ * - Direct authentication through Gun.user()
  */
 
 import { IGunUserInstance, IGunInstance, IGunChain } from "gun";
@@ -13,14 +12,12 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
-import AuthManager from "./models/auth/auth";
 
 class GunDB {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   public crypto: typeof crypto;
   public utils: typeof utils;
-  public auth: AuthManager;
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
 
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
@@ -30,16 +27,50 @@ class GunDB {
 
   constructor(gun: IGunInstance<any>, appScope: string = "shogun") {
     log("Initializing GunDB");
+
+    // Validate Gun instance
+    if (!gun) {
+      throw new Error("Gun instance is required but was not provided");
+    }
+
+    if (typeof gun !== "object") {
+      throw new Error(
+        `Gun instance must be an object, received: ${typeof gun}`,
+      );
+    }
+
+    if (typeof gun.user !== "function") {
+      throw new Error(
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
+      );
+    }
+
+    if (typeof gun.get !== "function") {
+      throw new Error(
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
+      );
+    }
+
+    if (typeof gun.on !== "function") {
+      throw new Error(
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
+      );
+    }
+
     this.gun = gun;
-    this.user = this.gun.user().recall({ sessionStorage: true });
+
+    try {
+      this.user = this.gun.user().recall({ sessionStorage: true });
+    } catch (error) {
+      logError("Error initializing Gun user:", error);
+      throw new Error(`Failed to initialize Gun user: ${error}`);
+    }
+
     this.subscribeToAuthEvents();
 
     // bind crypto and utils
     this.crypto = crypto;
     this.utils = utils;
-
-    // initialize auth manager
-    this.auth = new AuthManager(this, appScope);
 
     this.node = this.gun.get(appScope);
   }
@@ -312,47 +343,61 @@ class GunDB {
   }
 
   /**
-   * Signs up a new user using AuthManager
+   * Signs up a new user using direct Gun authentication
    * @param username Username
    * @param password Password
    * @returns Promise resolving to signup result
    */
   async signUp(username: string, password: string): Promise<any> {
-    log("Attempting user registration using AuthManager:", username);
-
-    // Check if already in a busy state using state machine
-    if (AuthManager.state.isBusy()) {
-      const err = `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`;
-      log(err);
-      return { success: false, error: err };
-    }
+    log("Attempting user registration:", username);
 
     try {
-      // Validate credentials with AuthManager
-      const validatedCreds = await this.auth.validate(username, password);
-
-      // Create user with AuthManager
-      const createResult = await this.auth.create({
-        alias: validatedCreds.alias,
-        password: validatedCreds.password,
-      });
-
-      if ("err" in createResult) {
-        logError(`User creation error: ${createResult.err}`);
-        return { success: false, error: createResult.err };
+      // Validate credentials
+      if (password.length < 8) {
+        const err = "Passwords must be more than 8 characters long!";
+        log(err);
+        return { success: false, error: err };
       }
 
-      // Store user metadata
-      const user = this.gun.get(createResult.pub).put({
-        username: username,
+      if (username.length < 1) {
+        const err = "Username must be more than 0 characters long!";
+        log(err);
+        return { success: false, error: err };
+      }
+
+      // Create user directly with Gun
+      const createResult = await new Promise<any>((resolve) => {
+        this.gun.user().create(username, password, (ack: any) => {
+          if (ack.err) {
+            logError(`User creation error: ${ack.err}`);
+            resolve({ success: false, error: ack.err });
+          } else {
+            log(`User created successfully: ${username}`);
+            resolve({ success: true, pub: ack.pub });
+          }
+        });
       });
 
-      this.gun.get("users").set(user);
+      if (!createResult.success) {
+        return createResult;
+      }
+
+      // Store user metadata with improved safety
+      try {
+        const user = this.gun.get(createResult.pub).put({
+          username: username,
+          pub: createResult.pub,
+        });
+
+        this.gun.get("users").set(user);
+      } catch (metadataError) {
+        logError(`Warning: Could not store user metadata: ${metadataError}`);
+        // Continue with login attempt even if metadata storage fails
+      }
 
       // Login after creation
       log(`Attempting login after registration for: ${username}`);
       try {
-        // Login with the same credentials using AuthManager
         const loginResult = await this.login(username, password);
 
         if (!loginResult.success) {
@@ -382,7 +427,7 @@ class GunDB {
   }
 
   /**
-   * Logs in a user using AuthManager
+   * Logs in a user using direct Gun authentication
    * @param username Username
    * @param password Password
    * @param callback Optional callback for login result
@@ -393,48 +438,62 @@ class GunDB {
     password: string,
     callback?: (result: any) => void,
   ): Promise<any> {
-    // Check if already in a busy state using state machine
-    if (AuthManager.state.isBusy()) {
-      const err = `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`;
-      log(err);
-      const result = { success: false, error: err };
-      if (callback) callback(result);
-      return result;
-    }
-
-    log(`Attempting login with AuthManager for user: ${username}`);
+    log(`Attempting login for user: ${username}`);
 
     try {
-      // Validate credentials
-      const validatedCreds = await this.auth.validate(username, password);
-
-      // Authenticate with AuthManager
-      const authResult = await this.auth.auth({
-        alias: validatedCreds.alias,
-        password: validatedCreds.password,
+      // Authenticate with Gun directly
+      const authResult = await new Promise<any>((resolve) => {
+        this.gun.user().auth(username, password, (ack: any) => {
+          if (ack.err) {
+            logError(`Login error for ${username}: ${ack.err}`);
+            resolve({ success: false, error: ack.err });
+          } else {
+            log(`Login successful for: ${username}`);
+            resolve({ success: true, ack });
+          }
+        });
       });
 
-      if ("err" in authResult) {
-        logError(`Login error for ${username}: ${authResult.err}`);
-        const result = { success: false, error: authResult.err };
+      if (!authResult.success) {
+        const result = { success: false, error: authResult.error };
         if (callback) callback(result);
         return result;
       }
 
       const userPub = this.gun.user().is?.pub;
 
-      // Update users collection if needed
-      const user = this.gun.get("users").map((user) => {
-        if (user.pub === userPub) {
-          return user;
-        }
-      });
+      // Update users collection if needed - improved null safety
+      try {
+        let userExists = false;
 
-      if (!user) {
-        const user = this.gun.get(userPub!).put({
-          username: username,
+        // Check if user already exists in the collection
+        await new Promise<void>((resolve) => {
+          this.gun
+            .get("users")
+            .map()
+            .once((userData, key) => {
+              if (userData && userData.pub === userPub) {
+                userExists = true;
+              }
+            });
+
+          // Give it a moment to check all users
+          setTimeout(() => resolve(), 100);
         });
-        this.gun.get("users").set(user);
+
+        // Only add user if not already in collection
+        if (!userExists && userPub) {
+          const newUser = this.gun.get(userPub).put({
+            username: username,
+            pub: userPub,
+          });
+          this.gun.get("users").set(newUser);
+        }
+      } catch (collectionError) {
+        // Log but don't fail the login for collection errors
+        logError(
+          `Warning: Could not update user collection: ${collectionError}`,
+        );
       }
 
       log(`Login successful for: ${username} (${userPub})`);
@@ -468,7 +527,7 @@ class GunDB {
   }
 
   /**
-   * Logs out the current user using AuthManager
+   * Logs out the current user using direct Gun authentication
    */
   logout(): void {
     try {
@@ -478,37 +537,11 @@ class GunDB {
         return;
       }
 
-      // Check if auth state machine allows logout
-      if (!AuthManager.state.canLogout()) {
-        const currentState = AuthManager.state.getCurrentState();
-        log(
-          `User in invalid state for logout: ${currentState} (${AuthManager.state.getStateDescription()}), using direct logout instead of AuthManager`,
-        );
-        // Still perform Gun's direct logout for cleanup
-        this.gun.user().leave();
-        return;
-      }
-
-      // Use AuthManager for logout if state is correct
-      this.auth
-        .leave()
-        .then(() => {
-          log("Logout completed via AuthManager");
-        })
-        .catch((err) => {
-          logError("Error during logout via AuthManager:", err);
-          // Fallback to direct logout if AuthManager fails
-          log("Falling back to direct logout method");
-          this.gun.user().leave();
-        });
+      // Direct logout using Gun
+      this.gun.user().leave();
+      log("Logout completed");
     } catch (error) {
       logError("Error during logout:", error);
-      // Last resort fallback
-      try {
-        this.gun.user().leave();
-      } catch (fallbackError) {
-        logError("Fallback logout also failed:", fallbackError);
-      }
     }
   }
 
@@ -518,54 +551,6 @@ class GunDB {
    */
   isLoggedIn(): boolean {
     return !!this.gun.user()?.is?.pub;
-  }
-
-  /**
-   * Checks if authentication is currently in progress
-   * @returns True if authenticating
-   */
-  isAuthenticating(): boolean {
-    return AuthManager.state.isBusy();
-  }
-
-  /**
-   * Gets the current authentication state
-   * @returns Current authentication state
-   */
-  getAuthState(): string {
-    return AuthManager.state.getCurrentState();
-  }
-
-  /**
-   * Gets a human-readable description of the current authentication state
-   * @returns State description
-   */
-  getAuthStateDescription(): string {
-    return AuthManager.state.getStateDescription();
-  }
-
-  /**
-   * Checks if user is authenticated (logged in and not in a transitional state)
-   * @returns True if authenticated
-   */
-  isAuthenticated(): boolean {
-    return AuthManager.state.isAuthenticated();
-  }
-
-  /**
-   * Checks if wallet is ready
-   * @returns True if wallet is ready
-   */
-  isWalletReady(): boolean {
-    return AuthManager.state.isWalletReady();
-  }
-
-  /**
-   * Checks if authentication can be started (user is disconnected)
-   * @returns True if auth can be started
-   */
-  canStartAuth(): boolean {
-    return AuthManager.state.canStartAuth();
   }
 
   /**

@@ -1,20 +1,16 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NostrConnectorPlugin = void 0;
 const base_1 = require("../base");
 const nostrConnector_1 = require("./nostrConnector");
 const logger_1 = require("../../utils/logger");
 const errorHandler_1 = require("../../utils/errorHandler");
-const auth_1 = __importDefault(require("../../gundb/models/auth/auth"));
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
  * Supports Alby, Nostr extensions, or direct key management
  */
 class NostrConnectorPlugin extends base_1.BasePlugin {
-    name = "bitcoin";
+    name = "nostr";
     version = "1.0.0";
     description = "Provides Bitcoin wallet connection and authentication for ShogunCore";
     bitcoinConnector = null;
@@ -130,10 +126,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
             }
-            // Check if authentication is already in progress using state machine
-            if (auth_1.default.state.isBusy()) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_IN_PROGRESS", `Authentication operation already in progress. ${auth_1.default.state.getStateDescription()}`);
-            }
             (0, logger_1.log)("Generating credentials for Bitcoin wallet login...");
             const credentials = await this.generateCredentials(address);
             if (!credentials?.username ||
@@ -152,7 +144,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             (0, logger_1.log)("Bitcoin wallet signature verified successfully.");
             // Set authentication method to nostr before login
             core.setAuthMethod("nostr");
-            // Use core's login method which now properly uses AuthManager and state machine
+            // Use core's login method with direct GunDB authentication
             (0, logger_1.log)("Logging in using core login method...");
             const loginResult = await core.login(credentials.username, credentials.password);
             if (!loginResult.success) {
@@ -195,11 +187,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
             }
-            // Check if authentication is already in progress using state machine
-            if (auth_1.default.state.isBusy()) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_IN_PROGRESS", `Authentication operation already in progress. ${auth_1.default.state.getStateDescription()}`);
-            }
-            // Generate credentials similar to login
             (0, logger_1.log)("Generating credentials for Bitcoin wallet signup...");
             const credentials = await this.generateCredentials(address);
             if (!credentials?.username ||
@@ -219,7 +206,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             (0, logger_1.log)("Bitcoin wallet signature verified successfully.");
             // Set authentication method to nostr before signup
             core.setAuthMethod("nostr");
-            // Use core's signUp method which now properly uses AuthManager and state machine
+            // Use core's signUp method with direct GunDB authentication
             (0, logger_1.log)("Signing up using core signUp method...");
             const signUpResult = await core.signUp(credentials.username, credentials.password);
             if (!signUpResult.success) {

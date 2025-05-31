@@ -9,7 +9,6 @@ import {
 import { log, logError, logWarn } from "../../utils/logger";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import AuthManager from "../../gundb/models/auth/auth";
 
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
@@ -19,7 +18,7 @@ export class NostrConnectorPlugin
   extends BasePlugin
   implements NostrConnectorPluginInterface
 {
-  name = "bitcoin";
+  name = "nostr";
   version = "1.0.0";
   description =
     "Provides Bitcoin wallet connection and authentication for ShogunCore";
@@ -176,15 +175,6 @@ export class NostrConnectorPlugin
         );
       }
 
-      // Check if authentication is already in progress using state machine
-      if (AuthManager.state.isBusy()) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "AUTH_IN_PROGRESS",
-          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
-        );
-      }
-
       log("Generating credentials for Bitcoin wallet login...");
       const credentials = await this.generateCredentials(address);
       if (
@@ -224,7 +214,7 @@ export class NostrConnectorPlugin
       // Set authentication method to nostr before login
       core.setAuthMethod("nostr");
 
-      // Use core's login method which now properly uses AuthManager and state machine
+      // Use core's login method with direct GunDB authentication
       log("Logging in using core login method...");
       const loginResult = await core.login(
         credentials.username,
@@ -297,16 +287,6 @@ export class NostrConnectorPlugin
         );
       }
 
-      // Check if authentication is already in progress using state machine
-      if (AuthManager.state.isBusy()) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "AUTH_IN_PROGRESS",
-          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
-        );
-      }
-
-      // Generate credentials similar to login
       log("Generating credentials for Bitcoin wallet signup...");
       const credentials = await this.generateCredentials(address);
       if (
@@ -347,7 +327,7 @@ export class NostrConnectorPlugin
       // Set authentication method to nostr before signup
       core.setAuthMethod("nostr");
 
-      // Use core's signUp method which now properly uses AuthManager and state machine
+      // Use core's signUp method with direct GunDB authentication
       log("Signing up using core signUp method...");
       const signUpResult = await core.signUp(
         credentials.username,

@@ -59,7 +59,6 @@ export declare class ShogunCore implements IShogunCore {
     rx: GunRxJS;
     /** Plugin registry */
     private readonly plugins;
-    private Gun;
     /** Current authentication method */
     private currentAuthMethod?;
     /**

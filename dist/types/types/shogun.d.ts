@@ -104,38 +104,20 @@ export interface ShogunSDKConfig {
     gunInstance?: IGunInstance<any>;
     scope?: string;
     peers?: string[];
-    /** WebAuthn configuration */
     webauthn?: WebauthnConfig;
-    /** MetaMask configuration */
-    ethereum?: {
-        /** Enable MetaMask */
+    web3?: {
         enabled?: boolean;
     };
-    /** Bitcoin wallet configuration */
-    bitcoin?: {
-        /** Enable Bitcoin wallet */
+    nostr?: {
         enabled?: boolean;
-        /** Bitcoin network to use (default: mainnet) */
-        network?: "mainnet" | "testnet";
-        /** Use API for verification (default: false) */
-        useApi?: boolean;
-        /** API URL for verification */
-        apiUrl?: string;
     };
-    /** Logging configuration */
     logging?: LoggingConfig;
-    /** Timeout configuration in milliseconds */
     timeouts?: {
-        /** Login timeout in milliseconds (default: 15000) */
         login?: number;
-        /** Signup timeout in milliseconds (default: 20000) */
         signup?: number;
-        /** General operation timeout in milliseconds (default: 30000) */
         operation?: number;
     };
-    /** Plugin configuration */
     plugins?: {
-        /** List of plugins to automatically register on initialization */
         autoRegister?: ShogunPlugin[];
     };
 }

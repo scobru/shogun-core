@@ -16,10 +16,10 @@ export declare const modules: {
     webauthn: {
         loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
     };
-    ethereum: {
+    web3: {
         loadMetaMask: () => Promise<typeof import("./plugins/web3/web3ConnectorPlugin")>;
     };
-    bitcoin: {
+    nostr: {
         loadNostrConnector: () => Promise<typeof import("./plugins/nostr/nostrConnectorPlugin")>;
     };
 };
