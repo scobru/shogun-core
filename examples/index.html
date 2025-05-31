@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shogun Core Examples</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --primary-hover: #0056CC;
+            --secondary-color: #5856D6;
+            --success-color: #34C759;
+            --warning-color: #FF9500;
+            --error-color: #FF3B30;
+            --background: #F2F2F7;
+            --surface: #FFFFFF;
+            --surface-secondary: #F9F9FB;
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --text-tertiary: #C7C7CC;
+            --border-color: #E5E5EA;
+            --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --radius-small: 8px;
+            --radius-medium: 12px;
+            --radius-large: 16px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-xl) 0;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .server-status {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+            border-radius: var(--radius-small);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .example-card {
+            background: var(--surface);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-medium);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .example-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .example-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .example-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .example-icon {
+            font-size: 2rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-medium);
+            border: 1px solid var(--border-color);
+        }
+
+        .example-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .example-type {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .example-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+            line-height: 1.5;
+        }
+
+        .features-list {
+            list-style: none;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .features-list li {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .feature-icon {
+            font-size: 1rem;
+        }
+
+        .example-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-small);
+            font-size: 0.9rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            min-height: 40px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--surface-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface);
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .status-section {
+            background: var(--surface);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-medium);
+            border: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .status-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-small);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+        }
+
+        .status-indicator.warning {
+            background: var(--warning-color);
+        }
+
+        .status-indicator.error {
+            background: var(--error-color);
+        }
+
+        .footer {
+            text-align: center;
+            padding: var(--spacing-xl) 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .example-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🥷 Shogun Core Examples</h1>
+            <p class="subtitle">Practical examples to test and demonstrate Shogun Core functionality with NoDom</p>
+            <div class="server-status">
+                <span>🟢</span>
+                <span>Local server running on http://localhost:8080</span>
+            </div>
+        </div>
+
+        <div class="status-section">
+            <h2 class="status-title">📊 System Status</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-indicator" id="server-status"></div>
+                    <span>HTTP Server</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="gun-status"></div>
+                    <span>Gun.js CDN</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="shogun-status"></div>
+                    <span>Shogun Core</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="nodom-status"></div>
+                    <span>NoDom Library</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="examples-grid">
+            <!-- Auth NoDom Example -->
+            <div class="example-card">
+                <div class="example-header">
+                    <div class="example-icon">🔐</div>
+                    <div>
+                        <h3 class="example-title">Shogun Auth</h3>
+                        <div class="example-type">Main Interface</div>
+                    </div>
+                </div>
+                <p class="example-description">
+                    Complete authentication interface with Shogun Core and NoDom. 
+                    Includes all supported authentication methods with reactive and modern UI.
+                </p>
+                <ul class="features-list">
+                    <li><span class="feature-icon">🔐</span> Traditional authentication</li>
+                    <li><span class="feature-icon">🔑</span> WebAuthn biometric</li>
+                    <li><span class="feature-icon">🦊</span> Ethereum Wallet (MetaMask)</li>
+                    <li><span class="feature-icon">₿</span> Bitcoin Wallet (Nostr)</li>
+                    <li><span class="feature-icon">🌐</span> Relay peers management</li>
+                    <li><span class="feature-icon">⚡</span> Reactive UI with NoDom</li>
+                </ul>
+                <div class="example-actions">
+                    <a href="auth-nodom.html" class="btn btn-primary">
+                        🚀 Open Interface
+                    </a>
+                    <a href="https://github.com/scobru/shogun-core" class="btn btn-secondary">
+                        📖 Documentation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Legacy Auth -->
+            <div class="example-card">
+                <div class="example-header">
+                    <div class="example-icon">🏛️</div>
+                    <div>
+                        <h3 class="example-title">Shogun Auth Legacy</h3>
+                        <div class="example-type">Previous Version</div>
+                    </div>
+                </div>
+                <p class="example-description">
+                    Previous version of the authentication interface without NoDom. 
+                    Useful for performance comparisons and as a reference for migration.
+                </p>
+                <ul class="features-list">
+                    <li><span class="feature-icon">🔐</span> Complete authentication</li>
+                    <li><span class="feature-icon">🏗️</span> Traditional architecture</li>
+                    <li><span class="feature-icon">📊</span> Non-reactive UI</li>
+                    <li><span class="feature-icon">🔄</span> Manual updates</li>
+                    <li><span class="feature-icon">📚</span> Legacy reference</li>
+                    <li><span class="feature-icon">⚖️</span> Performance comparison</li>
+                </ul>
+                <div class="example-actions">
+                    <a href="auth.html" class="btn btn-primary">
+                        🏛️ Open Legacy
+                    </a>
+                    <a href="#" onclick="compareVersions()" class="btn btn-secondary">
+                        ⚖️ Compare Versions
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🥷 Shogun Core Examples - Built with ❤️ for the community</p>
+            <p>For issues or suggestions, open an issue on GitHub</p>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/gun/dist/gun.js" defer></script>
+
+    <script>
+        // Check system status
+        async function checkSystemStatus() {
+            const indicators = {
+                server: document.getElementById('server-status'),
+                gun: document.getElementById('gun-status'),
+                shogun: document.getElementById('shogun-status'),
+                nodom: document.getElementById('nodom-status')
+            };
+
+            // Check server (always OK if we're here)
+            indicators.server.className = 'status-indicator';
+
+            // Check Gun.js CDN
+            try {
+                const gunResponse = await fetch('https://cdn.jsdelivr.net/npm/gun/gun.js', { method: 'HEAD' });
+                indicators.gun.className = gunResponse.ok ? 'status-indicator' : 'status-indicator error';
+            } catch {
+                indicators.gun.className = 'status-indicator error';
+            }
+
+            // Check Shogun Core
+            try {
+                const shogunResponse = await fetch('./shogun-core.js', { method: 'HEAD' });
+                indicators.shogun.className = shogunResponse.ok ? 'status-indicator' : 'status-indicator error';
+            } catch {
+                indicators.shogun.className = 'status-indicator error';
+            }
+
+            // Check NoDom
+            try {
+                const nodomResponse = await fetch('./nodom.js', { method: 'HEAD' });
+                indicators.nodom.className = nodomResponse.ok ? 'status-indicator' : 'status-indicator error';
+            } catch {
+                indicators.nodom.className = 'status-indicator error';
+            }
+        }
+
+        function openDevTools() {
+            alert('Open the developer tools (F12) to see detailed logs during testing.');
+        }
+
+        function compareVersions() {
+            window.open('auth.html', '_blank');
+            setTimeout(() => {
+                window.open('auth-nodom.html', '_blank');
+            }, 1000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSystemStatus();
+            console.log('🥷 Shogun Core Examples - System initialized');
+            console.log('📊 Check component status on the page');
+        });
+    </script>
+</body>
+</html> 

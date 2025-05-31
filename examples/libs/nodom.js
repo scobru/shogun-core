@@ -170,7 +170,7 @@ function insertChildren(parent, children) {
       setEffect(() => {
         const value = child();
         if (lastNode) {
-          if (typeof last === "object" && lastNode.nodeType) {
+          if (typeof lastNode === "object" && lastNode.nodeType) {
             lastNode.remove();
           } else {
             const next = marker.nextSibling;
@@ -244,8 +244,91 @@ export function jsx(type, props = {}) {
     } else if (key === "style" && typeof props[key] === "object") {
       Object.assign(el.style, props[key]);
     } else if (key === "className" || key === "class") {
-      el.setAttribute("class", props[key]);
-    } else if (typeof props[key] !== "function") {
+      if (typeof props[key] === "function") {
+        // Handle reactive class - defer to avoid interference with event handling
+        requestAnimationFrame(() => {
+          setEffect(() => {
+            el.setAttribute("class", props[key]());
+          });
+        });
+        // Set initial value immediately
+        try {
+          el.setAttribute("class", props[key]());
+        } catch (e) {
+          console.warn("Error setting initial class:", e);
+        }
+      } else {
+        el.setAttribute("class", props[key]);
+      }
+    } else if (key === "value" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+      if (typeof props[key] === "function") {
+        // Handle reactive value for inputs - defer to avoid interference
+        requestAnimationFrame(() => {
+          setEffect(() => {
+            const newValue = props[key]();
+            if (el.value !== newValue) {
+              el.value = newValue;
+            }
+          });
+        });
+        // Set initial value immediately
+        try {
+          el.value = props[key]();
+        } catch (e) {
+          console.warn("Error setting initial value:", e);
+        }
+      } else {
+        el.value = props[key];
+      }
+    } else if (key === "disabled") {
+      if (typeof props[key] === "function") {
+        // Handle reactive disabled - defer to avoid interference
+        requestAnimationFrame(() => {
+          setEffect(() => {
+            const value = props[key]();
+            if (value) {
+              el.setAttribute("disabled", "");
+            } else {
+              el.removeAttribute("disabled");
+            }
+          });
+        });
+        // Set initial value immediately
+        try {
+          const initialValue = props[key]();
+          if (initialValue) {
+            el.setAttribute("disabled", "");
+          }
+        } catch (e) {
+          console.warn("Error setting initial disabled:", e);
+        }
+      } else {
+        if (props[key]) {
+          el.setAttribute("disabled", "");
+        }
+      }
+    } else if (typeof props[key] === "function") {
+      // Handle other reactive properties - defer to avoid interference
+      requestAnimationFrame(() => {
+        setEffect(() => {
+          const value = props[key]();
+          if (value != null) {
+            el.setAttribute(key, value);
+          } else {
+            el.removeAttribute(key);
+          }
+        });
+      });
+      // Set initial value immediately
+      try {
+        const initialValue = props[key]();
+        if (initialValue != null) {
+          el.setAttribute(key, initialValue);
+        }
+      } catch (e) {
+        console.warn(`Error setting initial ${key}:`, e);
+      }
+    } else if (props[key] != null) {
       el.setAttribute(key, props[key]);
     }
   }
