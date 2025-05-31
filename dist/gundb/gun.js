@@ -98,6 +98,143 @@ class GunDB {
         (0, logger_1.log)(`Added new peer: ${peer}`);
     }
     /**
+     * Removes a peer from the network
+     * @param peer URL of the peer to remove
+     */
+    removePeer(peer) {
+        try {
+            // Get current peers from Gun instance
+            const gunOpts = this.gun._.opt;
+            if (gunOpts && gunOpts.peers) {
+                // Remove the peer from the peers object
+                delete gunOpts.peers[peer];
+                // Also try to close the connection if it exists
+                const peerConnection = gunOpts.peers[peer];
+                if (peerConnection && typeof peerConnection.close === "function") {
+                    peerConnection.close();
+                }
+                (0, logger_1.log)(`Removed peer: ${peer}`);
+            }
+            else {
+                (0, logger_1.log)(`Peer not found in current connections: ${peer}`);
+            }
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error removing peer ${peer}:`, error);
+        }
+    }
+    /**
+     * Gets the list of currently connected peers
+     * @returns Array of peer URLs
+     */
+    getCurrentPeers() {
+        try {
+            const gunOpts = this.gun._.opt;
+            if (gunOpts && gunOpts.peers) {
+                return Object.keys(gunOpts.peers).filter((peer) => {
+                    const peerObj = gunOpts.peers[peer];
+                    // Check if peer is actually connected (not just configured)
+                    return peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
+                });
+            }
+            return [];
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error getting current peers:", error);
+            return [];
+        }
+    }
+    /**
+     * Gets the list of all configured peers (connected and disconnected)
+     * @returns Array of peer URLs
+     */
+    getAllConfiguredPeers() {
+        try {
+            const gunOpts = this.gun._.opt;
+            if (gunOpts && gunOpts.peers) {
+                return Object.keys(gunOpts.peers);
+            }
+            return [];
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error getting configured peers:", error);
+            return [];
+        }
+    }
+    /**
+     * Gets detailed information about all peers
+     * @returns Object with peer information
+     */
+    getPeerInfo() {
+        try {
+            const gunOpts = this.gun._.opt;
+            const peerInfo = {};
+            if (gunOpts && gunOpts.peers) {
+                Object.keys(gunOpts.peers).forEach((peer) => {
+                    const peerObj = gunOpts.peers[peer];
+                    const isConnected = peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
+                    const status = isConnected
+                        ? "connected"
+                        : peerObj && peerObj.wire
+                            ? "disconnected"
+                            : "not_initialized";
+                    peerInfo[peer] = {
+                        connected: isConnected,
+                        status: status,
+                    };
+                });
+            }
+            return peerInfo;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error getting peer info:", error);
+            return {};
+        }
+    }
+    /**
+     * Reconnects to a specific peer
+     * @param peer URL of the peer to reconnect
+     */
+    reconnectToPeer(peer) {
+        try {
+            // First remove the peer
+            this.removePeer(peer);
+            // Wait a moment then add it back
+            setTimeout(() => {
+                this.addPeer(peer);
+                (0, logger_1.log)(`Reconnected to peer: ${peer}`);
+            }, 1000);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error reconnecting to peer ${peer}:`, error);
+        }
+    }
+    /**
+     * Clears all peers and optionally adds new ones
+     * @param newPeers Optional array of new peers to add
+     */
+    resetPeers(newPeers) {
+        try {
+            const gunOpts = this.gun._.opt;
+            if (gunOpts && gunOpts.peers) {
+                // Clear all existing peers
+                Object.keys(gunOpts.peers).forEach((peer) => {
+                    this.removePeer(peer);
+                });
+                // Add new peers if provided
+                if (newPeers && newPeers.length > 0) {
+                    newPeers.forEach((peer) => {
+                        this.addPeer(peer);
+                    });
+                }
+                (0, logger_1.log)(`Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`);
+            }
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error resetting peers:", error);
+        }
+    }
+    /**
      * Registers an authentication callback
      * @param callback Function to call on auth events
      * @returns Function to unsubscribe the callback

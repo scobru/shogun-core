@@ -30,6 +30,41 @@ declare class GunDB {
      */
     addPeer(peer: string): void;
     /**
+     * Removes a peer from the network
+     * @param peer URL of the peer to remove
+     */
+    removePeer(peer: string): void;
+    /**
+     * Gets the list of currently connected peers
+     * @returns Array of peer URLs
+     */
+    getCurrentPeers(): string[];
+    /**
+     * Gets the list of all configured peers (connected and disconnected)
+     * @returns Array of peer URLs
+     */
+    getAllConfiguredPeers(): string[];
+    /**
+     * Gets detailed information about all peers
+     * @returns Object with peer information
+     */
+    getPeerInfo(): {
+        [peer: string]: {
+            connected: boolean;
+            status: string;
+        };
+    };
+    /**
+     * Reconnects to a specific peer
+     * @param peer URL of the peer to reconnect
+     */
+    reconnectToPeer(peer: string): void;
+    /**
+     * Clears all peers and optionally adds new ones
+     * @param newPeers Optional array of new peers to add
+     */
+    resetPeers(newPeers?: string[]): void;
+    /**
      * Registers an authentication callback
      * @param callback Function to call on auth events
      * @returns Function to unsubscribe the callback

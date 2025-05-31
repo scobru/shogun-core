@@ -6,7 +6,7 @@
     "excludeExternals": false,
     "includeVersion": true,
     "disableSources": true,
-    "name": "Shogun SDK Documentation v1.0.0",
+    "name": "Shogun SDK Documentation v1.1.4",
     "validation": {
         "invalidLink": true,
         "notExported": false

@@ -11,13 +11,6 @@ const lazyModules = {
   webauthn: {
     webauthn: () => import("./plugins/webauthn/webauthn"),
   },
-  // Wallet and crypto modules
-  bip32: {
-    hdwallet: () => import("./plugins/bip44/hdwalletPlugin"),
-  },
-  stealth: {
-    stealth: () => import("./plugins/stealth-address/stealth"),
-  },
   // Web3 connection modules
   ethereum: {
     web3Connector: () => import("./plugins/ethereum/web3ConnectorPlugin"),
@@ -65,12 +58,6 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
 export const modules = {
   webauthn: {
     loadWebAuthn: lazyModules.webauthn.webauthn,
-  },
-  bip32: {
-    loadHDWallet: lazyModules.bip32.hdwallet,
-  },
-  stealth: {
-    loadStealth: lazyModules.stealth.stealth,
   },
   ethereum: {
     loadMetaMask: lazyModules.ethereum.web3Connector,

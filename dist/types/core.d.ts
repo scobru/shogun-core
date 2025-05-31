@@ -24,8 +24,6 @@ export type * from "./utils/errorHandler";
 export * from "./types/shogun";
 export { GunDB } from "./gundb/gun";
 export { Web3Connector } from "./plugins/ethereum/web3Connector";
-export { Stealth } from "./plugins/stealth-address/stealth";
-export type { EphemeralKeyPair, StealthData, StealthAddressResult, LogLevel, LogMessage, } from "./plugins/stealth-address/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
@@ -62,6 +60,8 @@ export declare class ShogunCore implements IShogunCore {
     /** Plugin registry */
     private readonly plugins;
     private Gun;
+    /** Current authentication method */
+    private currentAuthMethod?;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -209,8 +209,14 @@ export declare class ShogunCore implements IShogunCore {
      */
     removeAllListeners(eventName?: string | symbol): this;
     /**
-     * Ensures the current user has a wallet, creating one if necessary
-     * @private
+     * Set the current authentication method
+     * This is used by plugins to indicate which authentication method was used
+     * @param method The authentication method used
      */
-    private ensureUserHasWallet;
+    setAuthMethod(method: AuthMethod): void;
+    /**
+     * Get the current authentication method
+     * @returns The current authentication method or undefined if not set
+     */
+    getAuthMethod(): AuthMethod | undefined;
 }

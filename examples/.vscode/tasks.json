@@ -1,0 +1,148 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start HTTP Server",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "http.server", "8080"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^.*$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Serving HTTP.*",
+                    "endsPattern": "^.*Serving HTTP.*"
+                }
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/shogun-core/src/examples"
+            }
+        },
+        {
+            "label": "Stop HTTP Server",
+            "type": "shell",
+            "command": "taskkill",
+            "args": ["/F", "/IM", "python.exe"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "windows": {
+                "command": "taskkill",
+                "args": ["/F", "/IM", "python.exe"]
+            },
+            "linux": {
+                "command": "pkill",
+                "args": ["-f", "http.server"]
+            },
+            "osx": {
+                "command": "pkill",
+                "args": ["-f", "http.server"]
+            }
+        },
+        {
+            "label": "Open Examples in Browser",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:8080"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "windows": {
+                "command": "start",
+                "args": ["http://localhost:8080"]
+            },
+            "linux": {
+                "command": "xdg-open",
+                "args": ["http://localhost:8080"]
+            },
+            "osx": {
+                "command": "open",
+                "args": ["http://localhost:8080"]
+            },
+            "dependsOn": "Start HTTP Server"
+        },
+        {
+            "label": "Test Simple Button",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:8080/test-button-simple.html"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "windows": {
+                "command": "start",
+                "args": ["http://localhost:8080/test-button-simple.html"]
+            },
+            "linux": {
+                "command": "xdg-open",
+                "args": ["http://localhost:8080/test-button-simple.html"]
+            },
+            "osx": {
+                "command": "open",
+                "args": ["http://localhost:8080/test-button-simple.html"]
+            },
+            "dependsOn": "Start HTTP Server"
+        },
+        {
+            "label": "Test Auth NoDom",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:8080/auth-nodom.html"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "windows": {
+                "command": "start",
+                "args": ["http://localhost:8080/auth-nodom.html"]
+            },
+            "linux": {
+                "command": "xdg-open",
+                "args": ["http://localhost:8080/auth-nodom.html"]
+            },
+            "osx": {
+                "command": "open",
+                "args": ["http://localhost:8080/auth-nodom.html"]
+            },
+            "dependsOn": "Start HTTP Server"
+        }
+    ]
+} 

@@ -1,0 +1,55 @@
+{
+  "name": "shogun-core-examples",
+  "version": "1.0.0",
+  "description": "Practical examples for Shogun Core with NoDom",
+  "type": "module",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 8080",
+    "start": "vite --port 8080",
+    "auth": "echo \"Open http://localhost:8080/auth-nodom.html for authentication\"",
+    "legacy": "echo \"Open http://localhost:8080/auth.html for legacy version\"",
+    "help": "echo \"Available scripts: dev, build, preview, serve, start, auth, legacy\""
+  },
+  "keywords": [
+    "shogun",
+    "authentication",
+    "nodom",
+    "reactive",
+    "gun",
+    "webauthn",
+    "ethereum",
+    "bitcoin",
+    "vite",
+    "frontend"
+  ],
+  "author": "Shogun Team",
+  "license": "MIT",
+  "dependencies": {
+    "gun": "^0.2020.1240"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-legacy": "^5.0.0",
+    "terser": "^5.24.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scobru/shogun-core"
+  },
+  "bugs": {
+    "url": "https://github.com/scobru/shogun-core/issues"
+  },
+  "homepage": "http://localhost:8080",
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

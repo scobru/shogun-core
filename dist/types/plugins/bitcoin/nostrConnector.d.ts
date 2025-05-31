@@ -36,6 +36,10 @@ export declare class NostrConnector extends EventEmitter {
      */
     private cacheSignature;
     /**
+     * Clear signature cache for a specific address or all addresses
+     */
+    clearSignatureCache(address?: string): void;
+    /**
      * Validates that the address is valid
      */
     private validateAddress;

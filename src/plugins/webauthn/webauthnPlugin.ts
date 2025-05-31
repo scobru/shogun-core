@@ -161,6 +161,9 @@ export class WebauthnPlugin
         ethers.toUtf8Bytes(assertionResult.credentialId || ""),
       );
 
+      // Set authentication method to webauthn before login
+      core.setAuthMethod("webauthn");
+
       const loginResult = await core.login(username, hashedCredentialId);
 
       if (loginResult.success) {
@@ -229,6 +232,9 @@ export class WebauthnPlugin
       const hashedCredentialId = ethers.keccak256(
         ethers.toUtf8Bytes(attestationResult.credentialId || ""),
       );
+
+      // Set authentication method to webauthn before signup
+      core.setAuthMethod("webauthn");
 
       const signupResult = await core.signUp(username, hashedCredentialId);
 

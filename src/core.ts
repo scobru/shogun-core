@@ -18,10 +18,7 @@ import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/ethereum/web3ConnectorPlugin";
-import { StealthPlugin } from "./plugins/stealth-address/stealthPlugin";
-import { HDWalletPlugin } from "./plugins/bip44/hdwalletPlugin";
 import { NostrConnectorPlugin } from "./plugins/bitcoin/nostrConnectorPlugin";
-import { HDWallet } from "./plugins/bip44/hdwallet";
 import Gun from "gun";
 import { IGunUserInstance, IGunInstance } from "gun";
 import AuthManager from "./gundb/models/auth/auth";
@@ -48,14 +45,6 @@ export * from "./types/shogun";
 // Export classes
 export { GunDB } from "./gundb/gun";
 export { Web3Connector } from "./plugins/ethereum/web3Connector";
-export { Stealth } from "./plugins/stealth-address/stealth";
-export type {
-  EphemeralKeyPair,
-  StealthData,
-  StealthAddressResult,
-  LogLevel,
-  LogMessage,
-} from "./plugins/stealth-address/types";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
@@ -103,6 +92,9 @@ export class ShogunCore implements IShogunCore {
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
 
   private Gun: any;
+
+  /** Current authentication method */
+  private currentAuthMethod?: AuthMethod;
 
   /**
    * Initialize the Shogun SDK
@@ -203,22 +195,6 @@ export class ShogunCore implements IShogunCore {
         nostrConnectorPlugin._category = PluginCategory.Authentication;
         this.register(nostrConnectorPlugin);
         log("NostrConnector plugin registered");
-      }
-
-      // Privacy plugins group
-      if (config.stealthAddress?.enabled) {
-        const stealthPlugin = new StealthPlugin();
-        stealthPlugin._category = PluginCategory.Privacy;
-        this.register(stealthPlugin);
-        log("Stealth plugin registered");
-      }
-
-      // Wallet plugins group
-      if (config.bip44?.enabled) {
-        const hdwalletPlugin = new HDWalletPlugin();
-        hdwalletPlugin._category = PluginCategory.Wallet;
-        this.register(hdwalletPlugin);
-        log("HDWallet plugin registered");
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
@@ -417,6 +393,12 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
+      // Set authentication method to password only if not already set by a plugin
+      if (!this.currentAuthMethod) {
+        this.currentAuthMethod = "password";
+        log("Authentication method set to default: password");
+      }
+
       // Timeout after a configurable interval (default 15 seconds)
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
 
@@ -450,14 +432,18 @@ export class ShogunCore implements IShogunCore {
 
               // Then try to access wallet credentials after auth state is updated
               try {
-                const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
-                if (walletPlugin) {
-                  const mainWallet = walletPlugin.getMainWalletCredentials();
-                  this.storage.setItem(
-                    "main-wallet",
-                    JSON.stringify(mainWallet),
-                  );
-                }
+                // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
+                // const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
+                // if (walletPlugin) {
+                //   const mainWallet = walletPlugin.getMainWalletCredentials();
+                //   this.storage.setItem(
+                //     "main-wallet",
+                //     JSON.stringify(mainWallet),
+                //   );
+                // }
+                log(
+                  "Wallet credentials access skipped - use external @shogun/bip44 plugin if needed",
+                );
               } catch (walletError: any) {
                 // Just log the error but don't fail the login
                 logError(
@@ -484,12 +470,15 @@ export class ShogunCore implements IShogunCore {
         });
 
         // Automatically initialize wallet after successful login
-        try {
-          await this.ensureUserHasWallet();
-        } catch (walletError) {
-          log("Warning: Could not initialize wallet after login:", walletError);
-          // Don't fail the login if wallet creation fails
-        }
+        // Only for traditional password authentication
+        log(
+          `Current auth method before wallet check: ${this.currentAuthMethod}`,
+        );
+        // Note: Wallet initialization is now handled by external plugins
+        // Users should register the @shogun/bip44 plugin if wallet functionality is needed
+        log(
+          "Wallet initialization skipped - use external @shogun/bip44 plugin if needed",
+        );
       }
 
       return result;
@@ -685,63 +674,23 @@ export class ShogunCore implements IShogunCore {
   }
 
   /**
-   * Ensures the current user has a wallet, creating one if necessary
-   * @private
+   * Set the current authentication method
+   * This is used by plugins to indicate which authentication method was used
+   * @param method The authentication method used
    */
-  private async ensureUserHasWallet(): Promise<void> {
-    try {
-      // Check if user is authenticated
-      if (!this.isLoggedIn()) {
-        throw new Error("User not authenticated");
-      }
+  setAuthMethod(method: AuthMethod): void {
+    log(
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
+    );
+    this.currentAuthMethod = method;
+    log(`Authentication method successfully set to: ${method}`);
+  }
 
-      // Get the wallet plugin
-      const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
-      if (!walletPlugin) {
-        log("Wallet plugin not available, skipping wallet initialization");
-        return;
-      }
-
-      // Get AuthManager instance
-      const authManager = new AuthManager(this.gundb);
-
-      // Wait for authentication state to be stable using state machine
-      log("Waiting for authentication state to stabilize...");
-      const authReady = await authManager.waitForAuthentication(10000);
-      if (!authReady) {
-        throw new Error("Authentication state not stable - timeout reached");
-      }
-
-      log("Authentication state confirmed, starting wallet initialization");
-
-      // Start wallet initialization state
-      authManager.startWalletInit();
-
-      try {
-        // Try to load existing wallets first
-        const existingWallets = await walletPlugin.loadWallets();
-        if (existingWallets && existingWallets.length > 0) {
-          log("User already has wallets, marking wallet as ready");
-          authManager.walletInitSuccess();
-          return;
-        }
-
-        // Create a new wallet if none exist
-        log("Creating initial wallet for user");
-        await walletPlugin.createWallet();
-        log("Initial wallet created successfully");
-
-        // Mark wallet initialization as successful
-        authManager.walletInitSuccess();
-      } catch (walletError) {
-        log("Wallet initialization failed:", walletError);
-        authManager.walletInitFail(walletError);
-        throw walletError;
-      }
-    } catch (error) {
-      throw new Error(
-        `Failed to ensure user has wallet: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  /**
+   * Get the current authentication method
+   * @returns The current authentication method or undefined if not set
+   */
+  getAuthMethod(): AuthMethod | undefined {
+    return this.currentAuthMethod;
   }
 }

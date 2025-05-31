@@ -50,6 +50,11 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      */
     cleanup(): void;
     /**
+     * Clear signature cache for better user recovery
+     * @param address - Optional specific address to clear, or clear all if not provided
+     */
+    clearSignatureCache(address?: string): void;
+    /**
      * @inheritdoc
      */
     verifySignature(message: string, signature: string, address: string): Promise<boolean>;

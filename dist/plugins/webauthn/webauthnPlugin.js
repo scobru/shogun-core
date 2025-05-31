@@ -102,6 +102,8 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 throw new Error(assertionResult?.error || "WebAuthn verification failed");
             }
             const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(assertionResult.credentialId || ""));
+            // Set authentication method to webauthn before login
+            core.setAuthMethod("webauthn");
             const loginResult = await core.login(username, hashedCredentialId);
             if (loginResult.success) {
                 (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
@@ -148,6 +150,8 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 throw new Error(attestationResult?.error || "Unable to generate WebAuthn credentials");
             }
             const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(attestationResult.credentialId || ""));
+            // Set authentication method to webauthn before signup
+            core.setAuthMethod("webauthn");
             const signupResult = await core.signUp(username, hashedCredentialId);
             if (signupResult.success) {
                 (0, logger_1.log)(`WebAuthn registration completed successfully for user: ${username}`);

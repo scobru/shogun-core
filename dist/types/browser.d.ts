@@ -16,12 +16,6 @@ export declare const modules: {
     webauthn: {
         loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
     };
-    bip32: {
-        loadHDWallet: () => Promise<typeof import("./plugins/bip44/hdwalletPlugin")>;
-    };
-    stealth: {
-        loadStealth: () => Promise<typeof import("./plugins/stealth-address/stealth")>;
-    };
     ethereum: {
         loadMetaMask: () => Promise<typeof import("./plugins/ethereum/web3ConnectorPlugin")>;
     };

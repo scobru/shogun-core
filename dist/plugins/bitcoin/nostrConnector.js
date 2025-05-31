@@ -101,9 +101,46 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         try {
             const localStorageKey = `shogun_bitcoin_sig_${address}`;
             localStorage.setItem(localStorageKey, JSON.stringify(cacheEntry));
+            (0, logger_1.log)(`Cached signature for address: ${address.substring(0, 10)}...`);
         }
         catch (error) {
             (0, logger_1.logError)("Error saving signature cache to localStorage:", error);
+        }
+    }
+    /**
+     * Clear signature cache for a specific address or all addresses
+     */
+    clearSignatureCache(address) {
+        if (address) {
+            // Clear cache for specific address
+            this.signatureCache.delete(address);
+            try {
+                const localStorageKey = `shogun_bitcoin_sig_${address}`;
+                localStorage.removeItem(localStorageKey);
+                (0, logger_1.log)(`Cleared signature cache for address: ${address.substring(0, 10)}...`);
+            }
+            catch (error) {
+                (0, logger_1.logError)("Error clearing signature cache from localStorage:", error);
+            }
+        }
+        else {
+            // Clear all signature caches
+            this.signatureCache.clear();
+            try {
+                // Find and remove all shogun_bitcoin_sig_ keys
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith("shogun_bitcoin_sig_")) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach((key) => localStorage.removeItem(key));
+                (0, logger_1.log)(`Cleared all signature caches (${keysToRemove.length} entries)`);
+            }
+            catch (error) {
+                (0, logger_1.logError)("Error clearing all signature caches from localStorage:", error);
+            }
         }
     }
     /**
@@ -284,19 +321,33 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
             // that doesn't require a fresh signature each time
             const message = this.MESSAGE_TO_SIGN;
             let signature;
+            // NEW STRATEGY: Always try deterministic signature first for consistency
+            // This ensures that existing users get the same credentials even after localStorage.clear()
             try {
-                // Try to get a signature, but if it fails, use a deterministic fallback
-                signature = await this.requestSignatureWithTimeout(validAddress, message, this.config.timeout);
-                // Cache the signature for future use
-                this.cacheSignature(validAddress, signature);
-            }
-            catch (signError) {
-                (0, logger_1.logError)("Error requesting signature, using deterministic fallback:", signError);
-                // Use a deterministic signature based on the address
+                // First, try to use a deterministic signature based on the address
                 // This ensures consistent credentials across sessions
                 signature = await this.generateDeterministicSignature(validAddress);
-                // Cache this deterministic signature
+                (0, logger_1.log)("Using deterministic signature for consistency");
+                // Cache this deterministic signature for future use
                 this.cacheSignature(validAddress, signature);
+                return await this.generateCredentialsFromSignature(validAddress, signature);
+            }
+            catch (deterministicError) {
+                (0, logger_1.logError)("Error generating deterministic signature:", deterministicError);
+                // Fallback to requesting a real signature only if deterministic fails
+                try {
+                    signature = await this.requestSignatureWithTimeout(validAddress, message, this.config.timeout);
+                    // Cache the signature for future use
+                    this.cacheSignature(validAddress, signature);
+                    (0, logger_1.log)("Using real Nostr signature as fallback");
+                }
+                catch (signError) {
+                    (0, logger_1.logError)("Error requesting signature:", signError);
+                    // Final fallback: use deterministic signature anyway
+                    signature = await this.generateDeterministicSignature(validAddress);
+                    this.cacheSignature(validAddress, signature);
+                    (0, logger_1.log)("Using deterministic signature as final fallback");
+                }
             }
             return await this.generateCredentialsFromSignature(validAddress, signature);
         }
@@ -327,7 +378,21 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
             runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
             hash += runningValue.toString(16).padStart(8, "0");
         }
-        return hash.substring(0, 128);
+        // Ensure the result is exactly 128 characters and contains only valid hex characters
+        let deterministicSignature = hash.substring(0, 128);
+        // Double-check that it's a valid hex string
+        deterministicSignature = deterministicSignature
+            .toLowerCase()
+            .replace(/[^0-9a-f]/g, "0");
+        // Ensure it's exactly 128 characters
+        if (deterministicSignature.length < 128) {
+            deterministicSignature = deterministicSignature.padEnd(128, "0");
+        }
+        else if (deterministicSignature.length > 128) {
+            deterministicSignature = deterministicSignature.substring(0, 128);
+        }
+        (0, logger_1.log)(`Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`);
+        return deterministicSignature;
     }
     /**
      * Generate credentials from an existing signature
@@ -396,6 +461,9 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                 (0, logger_1.logError)("Invalid message or signature for verification");
                 return false;
             }
+            // Log signature details for debugging
+            (0, logger_1.log)(`Signature to verify: ${signature.substring(0, 20)}... (length: ${signature.length})`);
+            (0, logger_1.log)(`Message to verify: ${message}`);
             // For Nostr wallet type, we need to use a proper verification approach
             if (this.connectedType === "nostr" || this.connectedType === "alby") {
                 (0, logger_1.log)("Using Nostr-specific verification");
@@ -420,12 +488,20 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                     // This ensures at least some level of verification
                     if (address.toLowerCase() !== this.connectedAddress?.toLowerCase()) {
                         (0, logger_1.logError)("Address mismatch in signature verification");
+                        (0, logger_1.logError)(`Expected: ${this.connectedAddress}, Got: ${address}`);
                         return false;
                     }
                     // Basic verification that signature exists and is a hex string
-                    const isValidSignature = /^[0-9a-f]+$/i.test(signature) && signature.length >= 64;
-                    if (!isValidSignature) {
-                        (0, logger_1.logError)("Invalid signature format");
+                    const isValidHexFormat = /^[0-9a-f]+$/i.test(signature);
+                    const hasValidLength = signature.length >= 64;
+                    (0, logger_1.log)(`Signature format check: hex=${isValidHexFormat}, length=${hasValidLength} (${signature.length} chars)`);
+                    if (!isValidHexFormat) {
+                        (0, logger_1.logError)("Invalid signature format - not a valid hex string");
+                        (0, logger_1.logError)(`Signature contains invalid characters: ${signature}`);
+                        return false;
+                    }
+                    if (!hasValidLength) {
+                        (0, logger_1.logError)(`Invalid signature length: ${signature.length} (minimum 64 required)`);
                         return false;
                     }
                     (0, logger_1.log)("Nostr signature appears valid");
@@ -441,7 +517,9 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                 // For manual keypairs, implement proper signature verification
                 // For now, we're just checking that the address matches our keypair
                 try {
-                    return (address.toLowerCase() === this.manualKeyPair.address.toLowerCase());
+                    const addressMatch = address.toLowerCase() === this.manualKeyPair.address.toLowerCase();
+                    (0, logger_1.log)(`Manual verification - address match: ${addressMatch}`);
+                    return addressMatch;
                 }
                 catch (manualVerifyError) {
                     (0, logger_1.logError)("Error in manual signature verification:", manualVerifyError);
