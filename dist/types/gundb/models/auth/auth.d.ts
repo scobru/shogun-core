@@ -16,6 +16,9 @@ export default class AuthManager {
         subscribe: (cb: (state: import("./state-machine").AUTH_STATE) => any) => () => void;
         set: (event: StateMachineEvent) => void;
         getCurrentState: () => import("./state-machine").AUTH_STATE;
+        waitForState: (targetState: import("./state-machine").AUTH_STATE, timeoutMs?: number) => Promise<boolean>;
+        isAuthenticated: () => boolean;
+        isWalletReady: () => boolean;
     };
     static instance: AuthManager;
     gundb: GunDB;
@@ -74,6 +77,38 @@ export default class AuthManager {
      * A simple default certificate that will allow everybody to write to the users graph, as long as the key or path contains their public key.
      */
     certify(): null;
+    /**
+     * Start wallet initialization process
+     */
+    startWalletInit(): void;
+    /**
+     * Mark wallet initialization as successful
+     */
+    walletInitSuccess(): void;
+    /**
+     * Mark wallet initialization as failed
+     */
+    walletInitFail(error?: any): void;
+    /**
+     * Wait for authentication to complete
+     */
+    waitForAuthentication(timeoutMs?: number): Promise<boolean>;
+    /**
+     * Wait for wallet to be ready
+     */
+    waitForWalletReady(timeoutMs?: number): Promise<boolean>;
+    /**
+     * Check if user is authenticated
+     */
+    isAuthenticated(): boolean;
+    /**
+     * Check if wallet is ready
+     */
+    isWalletReady(): boolean;
+    /**
+     * Get current authentication state
+     */
+    getCurrentState(): "wallet_initializing" | "wallet_ready" | "pending" | "disconnected" | "creating" | "authorized" | "leaving";
 }
 export type GunAuthAck = {
     ack: 2;

@@ -8,6 +8,7 @@ const logger_1 = require("../../utils/logger");
 const sea_1 = __importDefault(require("gun/sea"));
 const ethers_1 = require("ethers");
 const eventEmitter_1 = require("../../utils/eventEmitter");
+const auth_1 = __importDefault(require("../../gundb/models/auth/auth"));
 const types_1 = require("./types");
 /**
  * Class that manages Ethereum wallet functionality including:
@@ -620,11 +621,28 @@ class HDWallet extends eventEmitter_1.EventEmitter {
     }
     async createWallet() {
         try {
-            // Verify user is authenticated
+            // Use AuthManager to check authentication state
+            const authManager = new auth_1.default({ gun: this.gun });
+            // Wait for authentication using state machine
+            const isAuthenticated = await authManager.waitForAuthentication(10000);
+            if (!isAuthenticated) {
+                throw new Error("User is not authenticated - timeout waiting for auth state");
+            }
             const user = this.gun.user();
-            if (!user.is) {
+            if (!user || !user.is) {
                 throw new Error("User is not authenticated");
             }
+            // Additional verification that all required authentication data is present
+            if (!user._ || !user._.sea || !user._.sea.priv || !user._.sea.pub) {
+                (0, logger_1.log)("Authentication data incomplete:", {
+                    hasUserData: !!user._,
+                    hasSea: !!(user._ && user._.sea),
+                    hasPriv: !!(user._ && user._.sea && user._.sea.priv),
+                    hasPub: !!(user._ && user._.sea && user._.sea.pub),
+                });
+                throw new Error("Authentication data incomplete - please try logging in again");
+            }
+            (0, logger_1.log)("User authentication verified successfully");
             // Determine next available index
             const existingWallets = Object.values(this.walletPaths).length;
             const nextIndex = existingWallets;
@@ -681,6 +699,32 @@ class HDWallet extends eventEmitter_1.EventEmitter {
             (0, logger_1.logError)("Error creating wallet:", error);
             throw new Error(`Failed to create wallet: ${error instanceof Error ? error.message : String(error)}`);
         }
+    }
+    /**
+     * Wait for user authentication with retry logic
+     * @private
+     */
+    async waitForAuthentication(maxRetries = 10, delayMs = 500) {
+        for (let i = 0; i < maxRetries; i++) {
+            const user = this.gun.user();
+            // Check multiple authentication indicators
+            const isAuthenticated = user &&
+                user.is &&
+                user.is.pub &&
+                user._ &&
+                user._.sea &&
+                user._.sea.priv &&
+                user._.sea.pub;
+            if (isAuthenticated) {
+                (0, logger_1.log)(`Authentication confirmed after ${i + 1} attempts`);
+                return user;
+            }
+            if (i < maxRetries - 1) {
+                (0, logger_1.log)(`Waiting for authentication state to stabilize... attempt ${i + 1}/${maxRetries}`);
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+        throw new Error("Authentication state not stable after retries");
     }
     async loadWallets() {
         try {
@@ -1380,6 +1424,7 @@ class HDWallet extends eventEmitter_1.EventEmitter {
                 }
                 // La creazione e l'autenticazione con il pair importato deve essere gestita a livello di applicazione
                 // perché richiede un nuovo logout e login
+                // (richiede logout e login che deve essere gestito dall'app)
                 (0, logger_1.log)("Pair di Gun validato con successo, pronto per l'autenticazione");
                 return true;
             }

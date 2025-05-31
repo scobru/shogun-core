@@ -24,6 +24,7 @@ import { NostrConnectorPlugin } from "./plugins/bitcoin/nostrConnectorPlugin";
 import { HDWallet } from "./plugins/bip44/hdwallet";
 import Gun from "gun";
 import { IGunUserInstance, IGunInstance } from "gun";
+import AuthManager from "./gundb/models/auth/auth";
 
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
@@ -449,12 +450,9 @@ export class ShogunCore implements IShogunCore {
 
               // Then try to access wallet credentials after auth state is updated
               try {
-                const hdwalletPlugin = this.getPlugin(
-                  CorePlugins.Bip44,
-                ) as HDWallet;
-
-                if (hdwalletPlugin) {
-                  const mainWallet = hdwalletPlugin.getMainWalletCredentials();
+                const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
+                if (walletPlugin) {
+                  const mainWallet = walletPlugin.getMainWalletCredentials();
                   this.storage.setItem(
                     "main-wallet",
                     JSON.stringify(mainWallet),
@@ -484,6 +482,14 @@ export class ShogunCore implements IShogunCore {
         this.eventEmitter.emit("auth:login", {
           userPub: result.userPub ?? "",
         });
+
+        // Automatically initialize wallet after successful login
+        try {
+          await this.ensureUserHasWallet();
+        } catch (walletError) {
+          log("Warning: Could not initialize wallet after login:", walletError);
+          // Don't fail the login if wallet creation fails
+        }
       }
 
       return result;
@@ -676,5 +682,66 @@ export class ShogunCore implements IShogunCore {
   removeAllListeners(eventName?: string | symbol): this {
     this.eventEmitter.removeAllListeners(eventName);
     return this;
+  }
+
+  /**
+   * Ensures the current user has a wallet, creating one if necessary
+   * @private
+   */
+  private async ensureUserHasWallet(): Promise<void> {
+    try {
+      // Check if user is authenticated
+      if (!this.isLoggedIn()) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get the wallet plugin
+      const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
+      if (!walletPlugin) {
+        log("Wallet plugin not available, skipping wallet initialization");
+        return;
+      }
+
+      // Get AuthManager instance
+      const authManager = new AuthManager(this.gundb);
+
+      // Wait for authentication state to be stable using state machine
+      log("Waiting for authentication state to stabilize...");
+      const authReady = await authManager.waitForAuthentication(10000);
+      if (!authReady) {
+        throw new Error("Authentication state not stable - timeout reached");
+      }
+
+      log("Authentication state confirmed, starting wallet initialization");
+
+      // Start wallet initialization state
+      authManager.startWalletInit();
+
+      try {
+        // Try to load existing wallets first
+        const existingWallets = await walletPlugin.loadWallets();
+        if (existingWallets && existingWallets.length > 0) {
+          log("User already has wallets, marking wallet as ready");
+          authManager.walletInitSuccess();
+          return;
+        }
+
+        // Create a new wallet if none exist
+        log("Creating initial wallet for user");
+        await walletPlugin.createWallet();
+        log("Initial wallet created successfully");
+
+        // Mark wallet initialization as successful
+        authManager.walletInitSuccess();
+      } catch (walletError) {
+        log("Wallet initialization failed:", walletError);
+        authManager.walletInitFail(walletError);
+        throw walletError;
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to ensure user has wallet: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 }

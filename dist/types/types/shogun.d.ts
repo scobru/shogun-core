@@ -170,3 +170,49 @@ export interface ShogunEvents {
     }) => void;
     "auth:logout": (data: Record<string, never>) => void;
 }
+/**
+ * Authentication states for the state machine
+ */
+export declare enum AuthState {
+    UNAUTHENTICATED = "unauthenticated",
+    AUTHENTICATING = "authenticating",
+    AUTHENTICATED = "authenticated",
+    AUTHENTICATION_FAILED = "authentication_failed",
+    WALLET_INITIALIZING = "wallet_initializing",
+    WALLET_READY = "wallet_ready",
+    ERROR = "error"
+}
+/**
+ * Authentication events that trigger state transitions
+ */
+export declare enum AuthEvent {
+    LOGIN_START = "login_start",
+    LOGIN_SUCCESS = "login_success",
+    LOGIN_FAILED = "login_failed",
+    LOGOUT = "logout",
+    WALLET_INIT_START = "wallet_init_start",
+    WALLET_INIT_SUCCESS = "wallet_init_success",
+    WALLET_INIT_FAILED = "wallet_init_failed",
+    ERROR = "error"
+}
+/**
+ * Authentication state machine context
+ */
+export interface AuthContext {
+    userPub?: string;
+    username?: string;
+    error?: string;
+    walletCount?: number;
+}
+/**
+ * Authentication state machine interface
+ */
+export interface AuthStateMachine {
+    currentState: AuthState;
+    context: AuthContext;
+    transition(event: AuthEvent, data?: Partial<AuthContext>): void;
+    canTransition(event: AuthEvent): boolean;
+    isAuthenticated(): boolean;
+    isWalletReady(): boolean;
+    waitForState(targetState: AuthState, timeoutMs?: number): Promise<boolean>;
+}

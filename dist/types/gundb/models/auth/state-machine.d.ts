@@ -22,6 +22,12 @@ export declare function use_machine(machine: Machine, initial: AUTH_STATE): {
     set: (event: StateMachineEvent) => void;
     /** Get the current state */
     getCurrentState: () => AUTH_STATE;
+    /** Wait for a specific state */
+    waitForState: (targetState: AUTH_STATE, timeoutMs?: number) => Promise<boolean>;
+    /** Check if user is authenticated */
+    isAuthenticated: () => boolean;
+    /** Check if wallet is ready */
+    isWalletReady: () => boolean;
 };
 /** Possible states that the auth-manager can be in. */
 export declare const states: {
@@ -35,6 +41,10 @@ export declare const states: {
     authorized: "authorized";
     /** The user is currently logging out. */
     leaving: "leaving";
+    /** Wallet initialization is in progress. */
+    wallet_initializing: "wallet_initializing";
+    /** Wallet is ready and available. */
+    wallet_ready: "wallet_ready";
 };
 /** Possible events that the auth-manager can take. */
 export declare const events: {
@@ -43,6 +53,9 @@ export declare const events: {
     disconnect: "disconnect";
     fail: "fail";
     success: "success";
+    wallet_init_start: "wallet_init_start";
+    wallet_init_success: "wallet_init_success";
+    wallet_init_fail: "wallet_init_fail";
 };
 export type AUTH_EVENT = keyof typeof events;
 export type AUTH_STATE = keyof typeof states;

@@ -31,6 +31,7 @@ const stealthPlugin_1 = require("./plugins/stealth-address/stealthPlugin");
 const hdwalletPlugin_1 = require("./plugins/bip44/hdwalletPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/bitcoin/nostrConnectorPlugin");
 const gun_2 = __importDefault(require("gun"));
+const auth_1 = __importDefault(require("./gundb/models/auth/auth"));
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -394,9 +395,9 @@ class ShogunCore {
                         });
                         // Then try to access wallet credentials after auth state is updated
                         try {
-                            const hdwalletPlugin = this.getPlugin(shogun_1.CorePlugins.Bip44);
-                            if (hdwalletPlugin) {
-                                const mainWallet = hdwalletPlugin.getMainWalletCredentials();
+                            const walletPlugin = this.getPlugin(shogun_1.CorePlugins.Bip44);
+                            if (walletPlugin) {
+                                const mainWallet = walletPlugin.getMainWalletCredentials();
                                 this.storage.setItem("main-wallet", JSON.stringify(mainWallet));
                             }
                         }
@@ -419,6 +420,14 @@ class ShogunCore {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
                 });
+                // Automatically initialize wallet after successful login
+                try {
+                    await this.ensureUserHasWallet();
+                }
+                catch (walletError) {
+                    (0, logger_1.log)("Warning: Could not initialize wallet after login:", walletError);
+                    // Don't fail the login if wallet creation fails
+                }
             }
             return result;
         }
@@ -580,6 +589,58 @@ class ShogunCore {
     removeAllListeners(eventName) {
         this.eventEmitter.removeAllListeners(eventName);
         return this;
+    }
+    /**
+     * Ensures the current user has a wallet, creating one if necessary
+     * @private
+     */
+    async ensureUserHasWallet() {
+        try {
+            // Check if user is authenticated
+            if (!this.isLoggedIn()) {
+                throw new Error("User not authenticated");
+            }
+            // Get the wallet plugin
+            const walletPlugin = this.getPlugin(shogun_1.CorePlugins.Bip44);
+            if (!walletPlugin) {
+                (0, logger_1.log)("Wallet plugin not available, skipping wallet initialization");
+                return;
+            }
+            // Get AuthManager instance
+            const authManager = new auth_1.default(this.gundb);
+            // Wait for authentication state to be stable using state machine
+            (0, logger_1.log)("Waiting for authentication state to stabilize...");
+            const authReady = await authManager.waitForAuthentication(10000);
+            if (!authReady) {
+                throw new Error("Authentication state not stable - timeout reached");
+            }
+            (0, logger_1.log)("Authentication state confirmed, starting wallet initialization");
+            // Start wallet initialization state
+            authManager.startWalletInit();
+            try {
+                // Try to load existing wallets first
+                const existingWallets = await walletPlugin.loadWallets();
+                if (existingWallets && existingWallets.length > 0) {
+                    (0, logger_1.log)("User already has wallets, marking wallet as ready");
+                    authManager.walletInitSuccess();
+                    return;
+                }
+                // Create a new wallet if none exist
+                (0, logger_1.log)("Creating initial wallet for user");
+                await walletPlugin.createWallet();
+                (0, logger_1.log)("Initial wallet created successfully");
+                // Mark wallet initialization as successful
+                authManager.walletInitSuccess();
+            }
+            catch (walletError) {
+                (0, logger_1.log)("Wallet initialization failed:", walletError);
+                authManager.walletInitFail(walletError);
+                throw walletError;
+            }
+        }
+        catch (error) {
+            throw new Error(`Failed to ensure user has wallet: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
 }
 exports.ShogunCore = ShogunCore;

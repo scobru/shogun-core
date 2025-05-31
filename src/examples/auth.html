@@ -233,7 +233,7 @@
       let webauthnPlugin;
       let metamaskPlugin;
       let bitcoinPlugin;
-      let bip32Plugin;
+      let bip44Plugin;
 
       // Funzione per mostrare i risultati
       function showResult(title, data) {
@@ -448,7 +448,7 @@
         try {
           // Configurazione Gun
           const options = {
-            peers: ["http://localhost:8765/gun"],
+            peers: ["http://localhost:8000/gun"],
             localStorage: false,
             radisk: false,
             wire: true,
@@ -458,7 +458,7 @@
           const config = {
             gunInstance: new Gun(options),
             appScope: "shogun",
-            peers: ["http://localhost:8765/gun"],
+            peers: ["http://localhost:8000/gun"],
             webauthn: {
               enabled: true,
               rpName: "Shogun Demo",
@@ -498,7 +498,7 @@
           webauthnPlugin = shogun.getPlugin("webauthn");
           metamaskPlugin = shogun.getPlugin("ethereum");
           bitcoinPlugin = shogun.getPlugin("bitcoin"); // Nota: il nome potrebbe essere "bitcoin-wallet" invece di "bitcoin"
-          bip32Plugin = shogun.getPlugin("hdwallet"); // Fix: use correct plugin name
+          bip44Plugin = shogun.getPlugin("bip44"); // Fix: use correct plugin name
 
           // Verifica il supporto delle tecnologie
           const webauthnSupported = checkWebAuthnSupport();
@@ -519,7 +519,7 @@
               webauthn: !!webauthnPlugin,
               ethereum: !!metamaskPlugin,
               bitcoin: !!bitcoinPlugin,
-              bip44: !!bip32Plugin,
+              bip44: !!bip44Plugin,
             },
           });
         } catch (error) {
@@ -1123,15 +1123,15 @@
         }
 
         try {
-          if (!bip32Plugin) {
+          if (!bip44Plugin) {
             showError(
               "Creazione Wallet",
-              new Error("Plugin BIP32 non disponibile")
+              new Error("Plugin bip44 non disponibile")
             );
             return;
           }
 
-          const wallet = await bip32Plugin.createWallet();
+          const wallet = await bip44Plugin.createWallet();
           showResult("Wallet Creato", wallet);
         } catch (error) {
           showError("Creazione Wallet", error);
@@ -1159,15 +1159,15 @@
         }
 
         try {
-          if (!bip32Plugin) {
+          if (!bip44Plugin) {
             showError(
               "Ottenimento Wallets",
-              new Error("Plugin BIP32 non disponibile")
+              new Error("Plugin bip44 non disponibile")
             );
             return;
           }
 
-          const wallets = await bip32Plugin.loadWallets();
+          const wallets = await bip44Plugin.loadWallets();
           showResult("Wallets Disponibili", wallets);
         } catch (error) {
           showError("Ottenimento Wallets", error);

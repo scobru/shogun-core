@@ -155,5 +155,53 @@ class AuthManager {
         // Currently not implemented - needs to be added to the crypto module
         return null;
     }
+    /**
+     * Start wallet initialization process
+     */
+    startWalletInit() {
+        AuthManager.state.set(new state_machine_1.StateMachineEvent(state_machine_1.events.wallet_init_start));
+    }
+    /**
+     * Mark wallet initialization as successful
+     */
+    walletInitSuccess() {
+        AuthManager.state.set(new state_machine_1.StateMachineEvent(state_machine_1.events.wallet_init_success));
+    }
+    /**
+     * Mark wallet initialization as failed
+     */
+    walletInitFail(error) {
+        AuthManager.state.set(new state_machine_1.StateMachineEvent(state_machine_1.events.wallet_init_fail, error));
+    }
+    /**
+     * Wait for authentication to complete
+     */
+    async waitForAuthentication(timeoutMs = 10000) {
+        return AuthManager.state.waitForState(state_machine_1.states.authorized, timeoutMs);
+    }
+    /**
+     * Wait for wallet to be ready
+     */
+    async waitForWalletReady(timeoutMs = 15000) {
+        return AuthManager.state.waitForState(state_machine_1.states.wallet_ready, timeoutMs);
+    }
+    /**
+     * Check if user is authenticated
+     */
+    isAuthenticated() {
+        return AuthManager.state.isAuthenticated();
+    }
+    /**
+     * Check if wallet is ready
+     */
+    isWalletReady() {
+        return AuthManager.state.isWalletReady();
+    }
+    /**
+     * Get current authentication state
+     */
+    getCurrentState() {
+        return AuthManager.state.getCurrentState();
+    }
 }
 exports.default = AuthManager;

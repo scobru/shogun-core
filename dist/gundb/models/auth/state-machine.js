@@ -21,6 +21,7 @@ exports.StateMachineEvent = StateMachineEvent;
 function use_machine(machine, initial) {
     let state = initial;
     let subs = new Map();
+    let stateWaiters = new Map();
     function subscribe(cb) {
         const id = crypto.randomUUID();
         subs.set(id, cb);
@@ -30,13 +31,57 @@ function use_machine(machine, initial) {
         };
     }
     function set(event) {
+        const previousState = state;
         state = machine(state, event);
+        // Notify subscribers
         for (const sub of subs.values()) {
             sub(state);
+        }
+        // Notify state waiters
+        const waiters = stateWaiters.get(state);
+        if (waiters) {
+            waiters.forEach((resolve) => resolve(true));
+            stateWaiters.delete(state);
         }
     }
     function getCurrentState() {
         return state;
+    }
+    function waitForState(targetState, timeoutMs = 10000) {
+        return new Promise((resolve) => {
+            // If already in target state, resolve immediately
+            if (state === targetState) {
+                resolve(true);
+                return;
+            }
+            // Add to waiters
+            if (!stateWaiters.has(targetState)) {
+                stateWaiters.set(targetState, []);
+            }
+            stateWaiters.get(targetState).push(resolve);
+            // Set timeout
+            setTimeout(() => {
+                const waiters = stateWaiters.get(targetState);
+                if (waiters) {
+                    const index = waiters.indexOf(resolve);
+                    if (index > -1) {
+                        waiters.splice(index, 1);
+                        if (waiters.length === 0) {
+                            stateWaiters.delete(targetState);
+                        }
+                    }
+                }
+                resolve(false);
+            }, timeoutMs);
+        });
+    }
+    function isAuthenticated() {
+        return (state === exports.states.authorized ||
+            state === exports.states.wallet_initializing ||
+            state === exports.states.wallet_ready);
+    }
+    function isWalletReady() {
+        return state === exports.states.wallet_ready;
     }
     return {
         /**
@@ -47,6 +92,12 @@ function use_machine(machine, initial) {
         set,
         /** Get the current state */
         getCurrentState,
+        /** Wait for a specific state */
+        waitForState,
+        /** Check if user is authenticated */
+        isAuthenticated,
+        /** Check if wallet is ready */
+        isWalletReady,
     };
 }
 /** Possible states that the auth-manager can be in. */
@@ -61,6 +112,10 @@ exports.states = {
     authorized: "authorized",
     /** The user is currently logging out. */
     leaving: "leaving",
+    /** Wallet initialization is in progress. */
+    wallet_initializing: "wallet_initializing",
+    /** Wallet is ready and available. */
+    wallet_ready: "wallet_ready",
 };
 /** Possible events that the auth-manager can take. */
 exports.events = {
@@ -69,6 +124,9 @@ exports.events = {
     disconnect: "disconnect",
     fail: "fail",
     success: "success",
+    wallet_init_start: "wallet_init_start",
+    wallet_init_success: "wallet_init_success",
+    wallet_init_fail: "wallet_init_fail",
 };
 class StateTransitionError extends Error {
     state;
@@ -121,6 +179,9 @@ function auth_state_machine(state, event) {
             if (event.type === exports.events.disconnect) {
                 return exports.states.leaving;
             }
+            if (event.type === exports.events.wallet_init_start) {
+                return exports.states.wallet_initializing;
+            }
             throw transition_error;
         // User is leaving and busy
         case exports.states.leaving:
@@ -129,6 +190,24 @@ function auth_state_machine(state, event) {
             }
             if (event.type === exports.events.success) {
                 return exports.states.disconnected;
+            }
+            throw transition_error;
+        // Wallet is being initialized
+        case exports.states.wallet_initializing:
+            if (event.type === exports.events.wallet_init_success) {
+                return exports.states.wallet_ready;
+            }
+            if (event.type === exports.events.wallet_init_fail) {
+                return exports.states.authorized;
+            }
+            if (event.type === exports.events.disconnect) {
+                return exports.states.leaving;
+            }
+            throw transition_error;
+        // Wallet is ready
+        case exports.states.wallet_ready:
+            if (event.type === exports.events.disconnect) {
+                return exports.states.leaving;
             }
             throw transition_error;
         default:

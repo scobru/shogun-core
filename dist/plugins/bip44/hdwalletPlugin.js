@@ -10,7 +10,7 @@ const errorHandler_1 = require("../../utils/errorHandler");
  * Plugin per la gestione dei wallet in ShogunCore
  */
 class HDWalletPlugin extends base_1.BasePlugin {
-    name = "hdwallet";
+    name = "bip44";
     version = "1.0.0";
     description = "Provides wallet management functionality for Shogun Core";
     hdwallet = null;

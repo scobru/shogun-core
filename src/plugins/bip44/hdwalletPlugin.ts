@@ -13,7 +13,7 @@ export class HDWalletPlugin
   extends BasePlugin
   implements HDWalletPluginInterface
 {
-  name = "hdwallet";
+  name = "bip44";
   version = "1.0.0";
   description = "Provides wallet management functionality for Shogun Core";
 

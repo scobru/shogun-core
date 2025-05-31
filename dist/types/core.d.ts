@@ -208,4 +208,9 @@ export declare class ShogunCore implements IShogunCore {
      * @returns {this} Returns this instance for method chaining
      */
     removeAllListeners(eventName?: string | symbol): this;
+    /**
+     * Ensures the current user has a wallet, creating one if necessary
+     * @private
+     */
+    private ensureUserHasWallet;
 }
