@@ -91,6 +91,13 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         this.assertBitcoinConnector().cleanup();
     }
     /**
+     * Clear signature cache for better user recovery
+     * @param address - Optional specific address to clear, or clear all if not provided
+     */
+    clearSignatureCache(address) {
+        this.assertBitcoinConnector().clearSignatureCache(address);
+    }
+    /**
      * @inheritdoc
      */
     async verifySignature(message, signature, address) {
@@ -135,6 +142,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
             (0, logger_1.log)("Bitcoin wallet signature verified successfully.");
+            // Set authentication method to bitcoin before login
+            core.setAuthMethod("bitcoin");
             // Use core's login method directly - simplified approach similar to MetaMask
             (0, logger_1.log)("Logging in using core login method...");
             const loginResult = await core.login(credentials.username, credentials.password);
@@ -196,6 +205,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
             (0, logger_1.log)("Bitcoin wallet signature verified successfully.");
+            // Set authentication method to bitcoin before signup
+            core.setAuthMethod("bitcoin");
             // Use core's signUp method directly - simplified approach similar to MetaMask
             (0, logger_1.log)("Signing up using core signUp method...");
             const signUpResult = await core.signUp(credentials.username, credentials.password);
@@ -208,7 +219,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                     // User already exists, suggest login instead
                     return {
                         success: false,
-                        error: "User already exists. Please try logging in instead.",
+                        error: "User already exists. Please try logging in instead. If login fails, try clearing the signature cache and registering again.",
                     };
                 }
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "BITCOIN_SIGNUP_FAILED", signUpResult.error || "Failed to sign up with Bitcoin credentials");

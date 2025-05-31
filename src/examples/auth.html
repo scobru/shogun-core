@@ -4,172 +4,1398 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shogun Auth</title>
-    <link rel="stylesheet" href="shogun.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary-color: #007AFF;
+        --primary-hover: #0056CC;
+        --secondary-color: #5856D6;
+        --success-color: #34C759;
+        --warning-color: #FF9500;
+        --warning-hover: #E6850E;
+        --error-color: #FF3B30;
+        --background: #F2F2F7;
+        --surface: #FFFFFF;
+        --surface-secondary: #F9F9FB;
+        --text-primary: #1D1D1F;
+        --text-secondary: #86868B;
+        --text-tertiary: #C7C7CC;
+        --border-color: #E5E5EA;
+        --border-focus: #007AFF;
+        --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+        --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+        --shadow-heavy: 0 8px 25px rgba(0, 0, 0, 0.15);
+        --radius-small: 8px;
+        --radius-medium: 12px;
+        --radius-large: 16px;
+        --spacing-xs: 4px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 32px;
+        --spacing-2xl: 48px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--background);
+        color: var(--text-primary);
+        line-height: 1.6;
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-lg);
+        min-height: 100vh;
+      }
+
+      .app-header {
+        text-align: center;
+        margin-bottom: var(--spacing-2xl);
+        padding: var(--spacing-xl) 0;
+      }
+
+      .app-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .app-subtitle {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        font-weight: 400;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: var(--spacing-xl);
+        margin-bottom: var(--spacing-2xl);
+      }
+
+      .action-group {
+        background: var(--surface);
+        border-radius: var(--radius-large);
+        padding: var(--spacing-xl);
+        box-shadow: var(--shadow-medium);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+      }
+
+      .action-group:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-heavy);
+      }
+
+      .action-group h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      .action-group h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .auth-methods {
+        display: grid;
+        gap: var(--spacing-lg);
+      }
+
+      .auth-method {
+        background: var(--surface-secondary);
+        border-radius: var(--radius-medium);
+        padding: var(--spacing-lg);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+      }
+
+      .auth-method:hover {
+        border-color: var(--border-focus);
+        background: var(--surface);
+      }
+
+      .status-badge {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-supported {
+        background: rgba(52, 199, 89, 0.1);
+        color: var(--success-color);
+      }
+
+      .status-not-supported {
+        background: rgba(255, 59, 48, 0.1);
+        color: var(--error-color);
+      }
+
+      .form-group {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: var(--spacing-md);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-small);
+        font-size: 1rem;
+        font-family: inherit;
+        background: var(--surface);
+        color: var(--text-primary);
+        transition: all 0.2s ease;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      }
+
+      .form-group input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .primary-button,
+      .action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border: none;
+        border-radius: var(--radius-small);
+        font-size: 0.95rem;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        min-height: 44px;
+        margin: var(--spacing-xs);
+      }
+
+      .primary-button {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .primary-button:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      .action-button {
+        background: var(--surface);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      .action-button:hover:not(:disabled) {
+        background: var(--surface-secondary);
+        border-color: var(--border-focus);
+        transform: translateY(-1px);
+      }
+
+      .primary-button:disabled,
+      .action-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
+        margin-top: var(--spacing-md);
+      }
+
+      .form-actions button {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .user-id {
+        background: var(--surface-secondary);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-small);
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        word-break: break-all;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .mb-2 {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .mt-2 {
+        margin-top: var(--spacing-md);
+      }
+
+      #results {
+        background: var(--surface);
+        border-radius: var(--radius-large);
+        padding: var(--spacing-xl);
+        box-shadow: var(--shadow-medium);
+        border: 1px solid var(--border-color);
+        min-height: 200px;
+        margin-top: var(--spacing-xl);
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 400px;
+        overflow-y: auto;
+        background: var(--surface-secondary);
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .container {
+          padding: var(--spacing-md);
+        }
+
+        .app-title {
+          font-size: 2rem;
+        }
+
+        .action-group {
+          padding: var(--spacing-lg);
+        }
+
+        .form-actions {
+          flex-direction: column;
+        }
+
+        .form-actions button {
+          flex: none;
+        }
+
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #000000;
+          --surface: #1C1C1E;
+          --surface-secondary: #2C2C2E;
+          --text-primary: #FFFFFF;
+          --text-secondary: #8E8E93;
+          --text-tertiary: #48484A;
+          --border-color: #38383A;
+        }
+      }
+
+      /* Advanced Loading Animations */
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .loading-dots {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+
+      .loading-dots::after {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: loadingDots 1.4s infinite ease-in-out;
+      }
+
+      .loading-dots::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: loadingDots 1.4s infinite ease-in-out;
+        animation-delay: -0.32s;
+        margin-right: 4px;
+      }
+
+      .pulse-ring {
+        position: relative;
+        display: inline-block;
+      }
+
+      .pulse-ring::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 100%;
+        border: 2px solid var(--primary-color);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulseRing 2s infinite;
+        opacity: 0;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @keyframes loadingDots {
+        0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes pulseRing {
+        0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+      }
+
+      /* Success/Error Animations */
+      .success-checkmark {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--success-color);
+        position: relative;
+        animation: successPop 0.6s ease-out;
+      }
+
+      .success-checkmark::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+      }
+
+      .error-cross {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--error-color);
+        position: relative;
+        animation: errorShake 0.6s ease-out;
+      }
+
+      .error-cross::after {
+        content: '✕';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+      }
+
+      @keyframes successPop {
+        0% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes errorShake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+      }
+
+      /* Enhanced Button States */
+      .primary-button, .action-button {
+        position: relative;
+        overflow: hidden;
+        background-clip: padding-box;
+      }
+
+      .primary-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+      }
+
+      .primary-button:hover::before {
+        left: 100%;
+      }
+
+      .action-button.processing {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        background-size: 200% 200%;
+        animation: gradientShift 2s ease infinite;
+        color: white;
+      }
+
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      /* Enhanced Status Badges */
+      .status-badge {
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .status-supported {
+        background: linear-gradient(135deg, rgba(52, 199, 89, 0.2), rgba(52, 199, 89, 0.1));
+        box-shadow: 0 0 20px rgba(52, 199, 89, 0.3);
+        animation: successGlow 2s ease-in-out infinite alternate;
+      }
+
+      .status-not-supported {
+        background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.1));
+        box-shadow: 0 0 20px rgba(255, 59, 48, 0.2);
+      }
+
+      @keyframes successGlow {
+        0% { box-shadow: 0 0 20px rgba(52, 199, 89, 0.3); }
+        100% { box-shadow: 0 0 30px rgba(52, 199, 89, 0.5); }
+      }
+
+      /* Enhanced Cards with Glassmorphism */
+      .action-group {
+        backdrop-filter: blur(20px);
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .action-group::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .action-group:hover::before {
+        opacity: 1;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .action-group {
+          background: rgba(28, 28, 30, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      /* Enhanced Form Inputs */
+      .form-group input:focus,
+      .form-group select:focus {
+        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), 0 8px 25px rgba(0, 122, 255, 0.15);
+      }
+
+      .form-group {
+        position: relative;
+      }
+
+      .form-group input:focus + .input-highlight,
+      .form-group select:focus + .input-highlight {
+        transform: scaleX(1);
+      }
+
+      .input-highlight {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        width: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        border-radius: 1px;
+      }
+
+      /* Enhanced Results Area */
+      #results {
+        position: relative;
+        background: linear-gradient(135deg, var(--surface-secondary), var(--surface));
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(10px);
+      }
+
+      #results::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(0, 122, 255, 0.05) 50%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+      }
+
+      #results:hover::before {
+        opacity: 1;
+      }
+
+      /* Floating Action Effects */
+      .floating-effect {
+        animation: float 3s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+      }
+
+      /* Enhanced App Header */
+      .app-title {
+        position: relative;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), #FF6B6B);
+        background-size: 200% 200%;
+        animation: gradientFlow 4s ease infinite;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 30px rgba(0, 122, 255, 0.3);
+      }
+
+      @keyframes gradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      /* Micro-interactions */
+      .user-id {
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .user-id::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.1), transparent);
+        transition: left 0.6s ease;
+      }
+
+      .user-id:hover::before {
+        left: 100%;
+      }
+
+      .user-id:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-medium);
+      }
+
+      /* Enhanced Fade In Animation */
+      .fade-in {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      @keyframes fadeInUp {
+        from { 
+          opacity: 0; 
+          transform: translateY(20px) scale(0.95);
+        }
+        to { 
+          opacity: 1; 
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* Staggered Animation for Grid Items */
+      .main-grid .action-group:nth-child(1) { animation-delay: 0.1s; }
+      .main-grid .action-group:nth-child(2) { animation-delay: 0.2s; }
+      .main-grid .action-group:nth-child(3) { animation-delay: 0.3s; }
+      .main-grid .action-group:nth-child(4) { animation-delay: 0.4s; }
+      .main-grid .action-group:nth-child(5) { animation-delay: 0.5s; }
+      .main-grid .action-group:nth-child(6) { animation-delay: 0.6s; }
+
+      /* Enhanced Scrollbar */
+      #results::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #results::-webkit-scrollbar-track {
+        background: var(--surface-secondary);
+        border-radius: 4px;
+      }
+
+      #results::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-radius: 4px;
+        transition: all 0.3s ease;
+      }
+
+      #results::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+        transform: scaleY(1.1);
+      }
+
+      /* Connection Status Indicators */
+      .connection-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+      }
+
+      .connection-indicator.connected {
+        background: var(--success-color);
+        box-shadow: 0 0 10px var(--success-color);
+      }
+
+      .connection-indicator.disconnected {
+        background: var(--error-color);
+        box-shadow: 0 0 10px var(--error-color);
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      /* Enhanced Mobile Responsiveness */
+      @media (max-width: 768px) {
+        .app-title {
+          font-size: 2rem;
+          animation: none; /* Reduce animations on mobile for performance */
+        }
+        
+        .action-group {
+          backdrop-filter: none; /* Disable blur on mobile for performance */
+        }
+        
+        .main-grid .action-group {
+          animation-delay: 0s; /* Remove staggered animations on mobile */
+        }
+      }
+
+      /* Accessibility Enhancements */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Focus Indicators for Accessibility */
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+      }
+
+      /* Custom Styles for Relay Management */
+      .relay-status-card {
+        background: var(--surface-secondary);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .relay-status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .peer-count-badge {
+        background: var(--success-color);
+        color: white;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .current-peers-display {
+        overflow-y: auto;
+        max-height: 150px;
+      }
+
+      .peers-list {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .no-peers-message {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: var(--spacing-md);
+        color: var(--text-secondary);
+      }
+
+      .no-peers-icon {
+        margin-right: var(--spacing-sm);
+      }
+
+      .add-peer-section {
+        margin-top: var(--spacing-lg);
+      }
+
+      .add-peer-section h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .relay-examples {
+        margin-top: var(--spacing-sm);
+      }
+
+      .relay-examples-details {
+        cursor: pointer;
+        background: var(--surface);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .relay-examples-content {
+        padding-left: var(--spacing-md);
+      }
+
+      .relay-example {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-xs) 0;
+        cursor: pointer;
+      }
+
+      .example-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .peer-management-section {
+        margin-top: var(--spacing-lg);
+      }
+
+      .peer-actions-grid {
+        display: grid;
+        gap: var(--spacing-lg);
+      }
+
+      .peer-action-card {
+        background: var(--surface);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-md);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+      }
+
+      .peer-action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+      }
+
+      .peer-action-card h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .peer-action-card p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .warning-button {
+        background: var(--warning-color);
+        color: white;
+      }
+
+      .warning-button:hover:not(:disabled) {
+        background: var(--warning-hover);
+        transform: translateY(-1px);
+      }
+
+      /* Peer List Items */
+      .peer-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
+        border-radius: var(--radius-small);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+      }
+
+      .peer-item:hover {
+        background: var(--surface);
+        transform: translateX(4px);
+      }
+
+      .peer-connected {
+        border-left: 4px solid var(--success-color);
+        background: rgba(52, 199, 89, 0.05);
+      }
+
+      .peer-disconnected {
+        border-left: 4px solid var(--error-color);
+        background: rgba(255, 59, 48, 0.05);
+      }
+
+      .peer-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+      }
+
+      .peer-status-icon {
+        font-size: 0.8rem;
+      }
+
+      .peer-status-text {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .peer-url {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+      }
+
+      /* Peer Action Cards */
+      .peer-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-sm);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .peer-card-header h5 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        word-break: break-all;
+      }
+
+      .peer-card-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+      }
+
+      .peer-reconnect-btn {
+        flex: 1;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.8rem;
+      }
+
+      .peer-reconnect-btn:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+
+      .peer-remove-btn {
+        flex: 1;
+        background: var(--error-color);
+        color: white;
+        border: none;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.8rem;
+      }
+
+      .peer-remove-btn:hover:not(:disabled) {
+        background: #E6342A;
+      }
+
+      /* Relay Examples Styling */
+      .relay-example:hover {
+        background: var(--surface-secondary);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-xs);
+      }
+
+      .relay-example code {
+        background: var(--surface-secondary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+      }
+
+      /* Responsive improvements */
+      @media (max-width: 768px) {
+        .peer-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: var(--spacing-xs);
+        }
+
+        .peer-card-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: var(--spacing-xs);
+        }
+
+        .peer-card-actions {
+          width: 100%;
+        }
+
+        .relay-examples-content {
+          padding-left: 0;
+        }
+      }
+
+      /* Wallet Progress Indicator */
+      .wallet-progress {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-radius: var(--radius-medium);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        box-shadow: var(--shadow-medium);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        animation: slideIn 0.3s ease-out;
+      }
+
+      .progress-content {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        color: white;
+      }
+
+      .progress-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .progress-message {
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* User Status Display */
+      .user-status-display {
+        background: var(--surface-secondary);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-md);
+        border: 1px solid var(--border-color);
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      .status-indicator {
+        font-weight: 500;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-small);
+        font-size: 0.9rem;
+      }
+
+      .status-indicator.status-success {
+        background: rgba(52, 199, 89, 0.1);
+        color: var(--success-color);
+        border: 1px solid var(--success-color);
+      }
+
+      .status-indicator.status-warning {
+        background: rgba(255, 149, 0, 0.1);
+        color: var(--warning-color);
+        border: 1px solid var(--warning-color);
+      }
+
+      .status-indicator.status-error {
+        background: rgba(255, 59, 48, 0.1);
+        color: var(--error-color);
+        border: 1px solid var(--error-color);
+      }
+
+      .user-info {
+        background: var(--surface);
+        border-radius: var(--radius-small);
+        padding: var(--spacing-sm);
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+    </style>
   </head>
 
   <body>
     <div class="container">
       <div class="app-header">
-        <div class="app-title">Shogun Auth</div>
+        <h1 class="app-title">🥷 Shogun Auth</h1>
+        <p class="app-subtitle">Secure authentication with multiple methods</p>
       </div>
 
-      <div class="action-group">
-        <h2>Inizializzazione</h2>
-        <button id="initBtn" type="button" class="primary-button">
-          Inizializza Shogun
-        </button>
-        <button id="testGunBtn" type="button" class="primary-button">
-          Test Gun Connection
-        </button>
-        <div id="supportStatus"></div>
-      </div>
-
-      <div class="action-group">
-        <h2>Autenticazione</h2>
-
-        <div class="auth-methods">
-          <!-- Username e Password -->
-          <div class="auth-method">
-            <h3>Username e Password</h3>
-            <form id="loginForm" onsubmit="return false;">
-              <div class="form-group">
-                <input
-                  type="text"
-                  id="username"
-                  placeholder="Username"
-                  autocomplete="username"
-                />
-              </div>
-              <div class="form-group">
-                <input
-                  type="password"
-                  id="password"
-                  placeholder="Password"
-                  autocomplete="current-password"
-                />
-              </div>
-              <div class="form-actions">
-                <button
-                  type="button"
-                  id="loginBtn"
-                  type="button"
-                  class="action-button"
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  id="signupBtn"
-                  type="button"
-                  class="action-button"
-                >
-                  Registrati
-                </button>
-              </div>
-            </form>
+      <div class="main-grid">
+        <!-- Initialization Section -->
+        <div class="action-group fade-in">
+          <h2 class="floating-effect">⚡ Inizializzazione</h2>
+          <p>Initialize the Shogun SDK and test connections</p>
+          
+          <div class="form-actions">
+            <button id="initBtn" class="primary-button pulse-ring" type="button">
+              Initialize Shogun
+            </button>
+            <button id="testGunBtn" class="action-button" type="button">
+              Test Connection
+            </button>
+            <button id="clearStorageBtn" class="action-button" style="background: var(--warning-color); color: white;" type="button">
+              🗑️ Clear Storage
+            </button>
           </div>
-
-          <!-- WebAuthn -->
-          <div class="auth-method">
-            <h3>
-              WebAuthn <span id="webauthnStatus" class="status-badge"></span>
-            </h3>
-            <form id="webauthnForm" onsubmit="return false;">
-              <div class="form-group">
-                <input
-                  type="text"
-                  id="webauthnUsername"
-                  placeholder="Username per WebAuthn"
-                  autocomplete="username"
-                />
-              </div>
-              <div class="form-actions">
-                <button type="button" id="webauthnLoginBtn" disabled>
-                  Login con WebAuthn
-                </button>
-                <button type="button" id="webauthnSignupBtn" disabled>
-                  Registra con WebAuthn
-                </button>
-              </div>
-            </form>
+          
+          <div id="supportStatus" class="user-id" style="margin-top: 16px; display: none;">
+            Status will appear here...
           </div>
+          
+          <!-- User Status Display -->
+          <div class="user-status-display" style="margin-top: 16px;">
+            <div class="status-row">
+              <strong>Status:</strong> <span id="status" class="status-indicator">❌ Not authenticated</span>
+            </div>
+            <div id="userId" class="user-info" style="margin-top: 8px; display: none;">
+              <!-- User information will be displayed here -->
+            </div>
+          </div>
+        </div>
 
-          <!-- MetaMask -->
-          <div class="auth-method">
-            <h3>
-              MetaMask <span id="metamaskStatus" class="status-badge"></span>
-            </h3>
-            <div id="metamaskAddress" class="user-id mb-2">
-              Indirizzo non rilevato
+        <!-- Traditional Auth Section -->
+        <div class="action-group fade-in">
+          <h2>🔐 Username & Password</h2>
+          <p>Traditional authentication method</p>
+
+          <form id="loginForm" onsubmit="return false;">
+            <div class="form-group">
+              <input
+                type="text"
+                id="username"
+                class="form-input"
+                placeholder="Enter your username"
+                autocomplete="username"
+              />
+              <div class="input-highlight"></div>
+            </div>
+            <div class="form-group">
+              <input
+                type="password"
+                id="password"
+                class="form-input"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <div class="input-highlight"></div>
             </div>
             <div class="form-actions">
-              <button id="metamaskConnectBtn">Connetti MetaMask</button>
-              <button id="metamaskLoginBtn">Login con MetaMask</button>
-              <button id="metamaskSignupBtn">Registra con MetaMask</button>
+              <button id="loginBtn" class="primary-button" type="button">
+                Sign In
+                </button>
+              <button id="signupBtn" class="action-button" type="button">
+                Sign Up
+              </button>
+              <button id="logoutBtn" class="action-button" type="button">
+                Sign Out
+                </button>
             </div>
-          </div>
+          </form>
+        </div>
 
-          <!-- Bitcoin Wallet -->
-          <div class="auth-method">
-            <h3>
-              Bitcoin Wallet
-              <span id="bitcoinStatus" class="status-badge"></span>
-            </h3>
-            <div id="bitcoinAddress" class="user-id mb-2">
-              Indirizzo non rilevato
+        <!-- WebAuthn Section -->
+        <div class="action-group fade-in">
+          <h3>
+            🔑 WebAuthn
+            <span id="webauthnStatus" class="status-badge status-not-supported">Not Initialized</span>
+          </h3>
+          <p>Biometric and hardware key authentication</p>
+
+          <form id="webauthnForm" onsubmit="return false;">
+            <div class="form-group">
+              <input
+                type="text"
+                id="webauthnUsername"
+                class="form-input"
+                placeholder="Username for WebAuthn"
+                autocomplete="username"
+              />
+              <div class="input-highlight"></div>
             </div>
             <div class="form-actions">
-              <select id="bitcoinWalletType">
-                <option value="nostr">Nostr</option>
-                <option value="manual">Manuale</option>
-              </select>
-              <button id="bitcoinConnectBtn">Connetti Wallet</button>
-              <button id="bitcoinLoginBtn">Login con Bitcoin</button>
-              <button id="bitcoinSignupBtn">Registra con Bitcoin</button>
+              <button id="webauthnLoginBtn" class="primary-button" disabled type="button">
+                Sign In
+                </button>
+              <button id="webauthnSignupBtn" class="action-button" disabled type="button">
+                Register
+                </button>
             </div>
-            <!-- Sezione per la connessione manuale -->
-            <div
-              id="bitcoinManualSection"
-              style="display: none; margin-top: 10px"
-            >
-              <div class="form-group">
-                <input
-                  type="text"
-                  id="bitcoinManualAddress"
-                  placeholder="Indirizzo Bitcoin"
-                />
-              </div>
-              <div class="form-group">
-                <input
-                  type="password"
-                  id="bitcoinManualPrivateKey"
-                  placeholder="Chiave privata (opzionale)"
-                />
-              </div>
+          </form>
+        </div>
+
+        <!-- Ethereum Section -->
+        <div class="action-group fade-in">
+          <h3>
+            🦊 Wallet Ethereum
+            <span id="metamaskStatus" class="status-badge status-not-supported">Not Initialized</span>
+          </h3>
+          <p>Connect with MetaMask or other Ethereum wallets</p>
+
+          <div id="metamaskAddress" class="user-id">
+            No wallet connected
+          </div>
+          
+          <div class="form-actions">
+            <button id="metamaskConnectBtn" class="action-button" type="button">
+              Connect Wallet
+            </button>
+            <button id="metamaskLoginBtn" class="primary-button" type="button">
+              Sign In
+            </button>
+            <button id="metamaskSignupBtn" class="action-button" type="button">
+              Register
+            </button>
+          </div>
+        </div>
+
+        <!-- Bitcoin Section -->
+        <div class="action-group fade-in">
+          <h3>
+            ₿ Bitcoin Wallet
+            <span id="bitcoinStatus" class="status-badge status-not-supported">Not Initialized</span>
+          </h3>
+          <p>Connect with Nostr or manual Bitcoin wallet</p>
+
+          <div id="bitcoinAddress" class="user-id">
+            No wallet connected
+          </div>
+
+          <div class="form-group">
+            <select id="bitcoinWalletType">
+              <option value="nostr">Nostr Extension</option>
+            </select>
+            <div class="input-highlight"></div>
+          </div>
+
+          <div class="form-actions">
+            <button id="bitcoinConnectBtn" class="action-button" type="button">
+              Connect Wallet
+            </button>
+            <button id="bitcoinLoginBtn" class="primary-button" type="button">
+              Sign In
+            </button>
+            <button id="bitcoinSignupBtn" class="action-button" type="button">
+              Register
+            </button>
+          </div>
+
+          <div id="bitcoinManualSection" class="form-group" style="display: none; margin-top: 16px; padding: 16px; background: var(--surface-secondary); border-radius: var(--radius-small); border: 1px solid var(--border-color);">
+            <div class="form-group">
+              <input
+                type="text"
+                id="bitcoinManualAddress"
+                class="form-input"
+                placeholder="Enter Bitcoin address"
+              />
+              <div class="input-highlight"></div>
+            </div>
+            <div class="form-group">
+              <input
+                type="password"
+                id="bitcoinManualPrivateKey"
+                class="form-input"
+                placeholder="Enter private key (optional)"
+              />
+              <div class="input-highlight"></div>
             </div>
           </div>
         </div>
 
-        <div class="mt-2">
-          <button id="logoutBtn" type="button" class="action-button">
-            Logout
-          </button>
+        <!-- Relay Management Section -->
+        <div class="action-group fade-in">
+          <h2>🌐 Relay Management</h2>
+          <p>Manage Gun.js relay peers for decentralized networking</p>
+
+          <!-- Current Peers Status Card -->
+          <div class="relay-status-card">
+            <div class="relay-status-header">
+              <h4>🔗 Current Peers Status</h4>
+              <span id="peerCount" class="peer-count-badge">0</span>
+            </div>
+            <div id="currentPeersDisplay" class="current-peers-display">
+              <div id="peersList" class="peers-list">
+                <div class="no-peers-message">
+                  <span class="no-peers-icon">🔌</span>
+                  <span>No peers configured</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add New Peer Section -->
+          <div class="add-peer-section">
+            <h4>➕ Add New Relay</h4>
+            <div class="form-group">
+              <input
+                type="url"
+                id="newPeerUrl"
+                class="form-input"
+                placeholder="Enter relay URL (e.g., http://localhost:8000/gun)"
+                value=""
+                aria-label="New relay URL"
+              />
+              <div class="input-highlight"></div>
+            </div>
+
+            <div class="relay-examples">
+              <details class="relay-examples-details">
+                <summary>📋 Common relay examples</summary>
+                <div class="relay-examples-content">
+                  <div class="relay-example" onclick="fillPeerUrl('http://localhost:8000/gun')">
+                    <code>http://localhost:8000/gun</code>
+                    <span class="example-label">Local test relay</span>
+                  </div>
+                  <div class="relay-example" onclick="fillPeerUrl('http://localhost:8765/gun')">
+                    <code>http://localhost:8765/gun</code>
+                    <span class="example-label">Alternative local relay</span>
+                  </div>
+                  <div class="relay-example" onclick="fillPeerUrl('https://gun-manhattan.herokuapp.com/gun')">
+                    <code>https://gun-manhattan.herokuapp.com/gun</code>
+                    <span class="example-label">Public relay</span>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="form-actions">
+            <button id="addPeerBtn" class="primary-button" type="button" aria-label="Add new peer">
+              ➕ Add Peer
+            </button>
+            <button id="refreshPeersBtn" class="action-button" type="button" aria-label="Refresh peers list">
+              🔄 Refresh
+            </button>
+            <button id="clearPeersBtn" class="action-button warning-button" type="button" aria-label="Clear all peers">
+              🗑️ Clear All
+            </button>
+          </div>
+
+          <!-- Individual Peer Management -->
+          <div id="peerManagement" class="peer-management-section" style="display: none;">
+            <h4>⚙️ Individual Peer Actions</h4>
+            <div id="peerActions" class="peer-actions-grid">
+              <!-- Peer action cards will be dynamically added here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="action-group fade-in" style="grid-column: 1 / -1;">
+          <h2>📊 Results</h2>
+          <div id="results">
+            Results will appear here...
+          </div>
         </div>
       </div>
-
-      <div class="action-group">
-        <h2>Wallet</h2>
-        <div class="form-actions">
-          <button id="createWalletBtn" type="button" class="action-button">
-            Crea Wallet
-          </button>
-          <button id="getWalletsBtn" type="button" class="action-button">
-            Ottieni Wallets
-          </button>
-        </div>
-      </div>
-
-      <div id="results">I risultati appariranno qui...</div>
     </div>
 
     <!-- Includi la libreria Shogun Core dalla directory dist/browser -->
@@ -186,8 +1412,7 @@
       const loginBtn = document.getElementById("loginBtn");
       const signupBtn = document.getElementById("signupBtn");
       const logoutBtn = document.getElementById("logoutBtn");
-      const createWalletBtn = document.getElementById("createWalletBtn");
-      const getWalletsBtn = document.getElementById("getWalletsBtn");
+      const clearStorageBtn = document.getElementById("clearStorageBtn");
       const usernameInput = document.getElementById("username");
       const passwordInput = document.getElementById("password");
       const resultsDiv = document.getElementById("results");
@@ -224,6 +1449,20 @@
         "bitcoinManualPrivateKey"
       );
 
+      // Elementi Relay Management
+      const newPeerUrlInput = document.getElementById("newPeerUrl");
+      const addPeerBtn = document.getElementById("addPeerBtn");
+      const refreshPeersBtn = document.getElementById("refreshPeersBtn");
+      const clearPeersBtn = document.getElementById("clearPeersBtn");
+      const peersListSpan = document.getElementById("peersList");
+      const peerManagementDiv = document.getElementById("peerManagement");
+      const peerActionsDiv = document.getElementById("peerActions");
+      const peerCountBadge = document.getElementById("peerCount");
+
+      // Elementi per lo status dell'utente
+      const userIdDiv = document.getElementById("userId") || document.createElement("div");
+      const statusSpan = document.getElementById("status") || document.createElement("span");
+
       // Variabili globali
       let shogun;
       let metamaskAddress = "";
@@ -231,19 +1470,241 @@
 
       // Plugin
       let webauthnPlugin;
-      let metamaskPlugin;
+      let ethereumPlugin;
       let bitcoinPlugin;
       let bip44Plugin;
 
       // Funzione per mostrare i risultati
       function showResult(title, data) {
         resultsDiv.innerHTML = `<strong>${title}</strong>\n\n${JSON.stringify(data, null, 2)}`;
+        resultsDiv.classList.add('fade-in');
+        
+        // Add success animation if it's a successful operation
+        if (data && (data.success === true || title.includes('completato') || title.includes('Connesso'))) {
+          addSuccessAnimation(title);
+        }
       }
 
       // Funzione per mostrare errori
       function showError(title, error) {
         resultsDiv.innerHTML = `<strong>${title} - ERRORE</strong>\n\n${error.message || error}`;
+        resultsDiv.classList.add('fade-in');
         console.error(error);
+        
+        // Add error animation
+        addErrorAnimation(title);
+      }
+
+      // Add success animation to results
+      function addSuccessAnimation(title) {
+        const successIcon = document.createElement('div');
+        successIcon.className = 'success-checkmark';
+        successIcon.style.position = 'absolute';
+        successIcon.style.top = '10px';
+        successIcon.style.right = '10px';
+        resultsDiv.style.position = 'relative';
+        resultsDiv.appendChild(successIcon);
+        
+        setTimeout(() => {
+          if (successIcon.parentNode) {
+            successIcon.parentNode.removeChild(successIcon);
+          }
+        }, 3000);
+      }
+
+      // Add error animation to results
+      function addErrorAnimation(title) {
+        const errorIcon = document.createElement('div');
+        errorIcon.className = 'error-cross';
+        errorIcon.style.position = 'absolute';
+        errorIcon.style.top = '10px';
+        errorIcon.style.right = '10px';
+        resultsDiv.style.position = 'relative';
+        resultsDiv.appendChild(errorIcon);
+        
+        setTimeout(() => {
+          if (errorIcon.parentNode) {
+            errorIcon.parentNode.removeChild(errorIcon);
+          }
+        }, 3000);
+      }
+
+      // Enhanced button loading state
+      function setButtonLoading(button, isLoading, originalText) {
+        if (isLoading) {
+          button.disabled = true;
+          button.classList.add('processing');
+          button.innerHTML = `<span class="loading-dots"></span> ${originalText}...`;
+        } else {
+          button.disabled = false;
+          button.classList.remove('processing');
+          button.innerHTML = originalText;
+        }
+      }
+
+      // Add connection indicator to status
+      function updateConnectionIndicator(element, isConnected) {
+        // Remove existing indicators
+        const existingIndicator = element.querySelector('.connection-indicator');
+        if (existingIndicator) {
+          existingIndicator.remove();
+        }
+        
+        // Add new indicator
+        const indicator = document.createElement('span');
+        indicator.className = `connection-indicator ${isConnected ? 'connected' : 'disconnected'}`;
+        element.insertBefore(indicator, element.firstChild);
+      }
+
+      // Check for existing session and key pairs
+      function checkExistingSession() {
+        try {
+          // Check sessionStorage for key pairs
+          const sessionKeys = [
+            'gun/',
+            'gun/user',
+            'gun/auth',
+            'shogun_session',
+            'user_keypair',
+            'auth_session'
+          ];
+          
+          let hasValidSession = false;
+          const sessionData = {};
+          
+          sessionKeys.forEach(key => {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              sessionData[key] = value;
+              hasValidSession = true;
+            }
+          });
+          
+          // Check localStorage for additional auth data
+          const localKeys = [
+            'bitcoin_user_alias',
+            'auth_attempt',
+            'current_user',
+            'is_authenticated'
+          ];
+          
+          const localData = {};
+          localKeys.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value) {
+              localData[key] = value;
+            }
+          });
+          
+          if (hasValidSession) {
+            showResult("Sessione Esistente Rilevata", {
+              message: "Trovata sessione attiva in sessionStorage",
+              sessionData: Object.keys(sessionData),
+              localData: Object.keys(localData),
+              suggestion: "Inizializza Shogun per ripristinare la sessione",
+              timestamp: new Date().toISOString()
+            });
+            
+            // Update UI to show potential logged in state
+            if (supportStatusDiv) {
+              supportStatusDiv.style.display = "block";
+              supportStatusDiv.innerHTML = `
+                <strong>🔍 Sessione Rilevata:</strong><br>
+                📦 SessionStorage: <strong>${Object.keys(sessionData).length} chiavi trovate</strong><br>
+                💾 LocalStorage: <strong>${Object.keys(localData).length} chiavi trovate</strong><br>
+                💡 <em>Inizializza Shogun per ripristinare la sessione</em><br>
+                ⏰ Controllato: <em>${new Date().toLocaleTimeString()}</em>
+              `;
+            }
+            
+            return true;
+          }
+          
+          return false;
+        } catch (error) {
+          console.warn("Errore durante il controllo della sessione:", error);
+          return false;
+        }
+      }
+
+      // Clear all storage function
+      function clearAllStorage() {
+        try {
+          const localStorageKeys = [];
+          const sessionStorageKeys = [];
+          
+          // Get all localStorage keys
+          for (let i = 0; i < localStorage.length; i++) {
+            localStorageKeys.push(localStorage.key(i));
+          }
+          
+          // Get all sessionStorage keys
+          for (let i = 0; i < sessionStorage.length; i++) {
+            sessionStorageKeys.push(sessionStorage.key(i));
+          }
+          
+          // Clear both storages
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Also clear Bitcoin signature cache if plugin is available
+          if (bitcoinPlugin) {
+            try {
+              bitcoinPlugin.clearSignatureCache();
+            } catch (bitcoinCacheError) {
+              console.warn("Could not clear Bitcoin signature cache:", bitcoinCacheError);
+            }
+          }
+          
+          // Reset UI state
+          metamaskAddress = "";
+          bitcoinAddress = "";
+          metamaskAddressDiv.textContent = "No wallet connected";
+          bitcoinAddressDiv.textContent = "No wallet connected";
+          
+          // Reset form inputs
+          usernameInput.value = "";
+          passwordInput.value = "";
+          webauthnUsernameInput.value = "";
+          bitcoinManualAddress.value = "";
+          bitcoinManualPrivateKey.value = "";
+          
+          // Reset plugin states
+          setTimeout(() => {
+            checkWebAuthnSupport();
+            checkEthereumSupport();
+            checkBitcoinSupport();
+            updateAuthenticationStatus();
+          }, 100);
+          
+          showResult("Storage Pulito", {
+            success: true,
+            message: "Tutti i dati di storage sono stati cancellati",
+            cleared: {
+              localStorage: localStorageKeys,
+              sessionStorage: sessionStorageKeys,
+              bitcoinCache: bitcoinPlugin ? "✓ Pulita" : "Non disponibile",
+              totalKeys: localStorageKeys.length + sessionStorageKeys.length
+            },
+            ui: "Interfaccia resettata",
+            timestamp: new Date().toISOString()
+          });
+          
+          // Update status display
+          if (supportStatusDiv) {
+            supportStatusDiv.innerHTML = `
+              <strong>🧹 Storage Pulito:</strong><br>
+              💾 LocalStorage: <strong>${localStorageKeys.length} chiavi rimosse</strong><br>
+              📦 SessionStorage: <strong>${sessionStorageKeys.length} chiavi rimosse</strong><br>
+              ₿ Bitcoin Cache: <strong>${bitcoinPlugin ? "Pulita" : "Non disponibile"}</strong><br>
+              ✅ <em>Tutti i dati cancellati con successo</em><br>
+              ⏰ Pulito: <em>${new Date().toLocaleTimeString()}</em>
+            `;
+          }
+          
+        } catch (error) {
+          showError("Pulizia Storage", error);
+        }
       }
 
       // Funzione per verificare il supporto a WebAuthn
@@ -281,7 +1742,7 @@
 
       // Funzione per verificare il supporto a MetaMask
       function checkEthereumSupport() {
-        if (!metamaskPlugin) {
+        if (!ethereumPlugin) {
           metamaskStatusSpan.textContent = "NON INIZIALIZZATO";
           metamaskStatusSpan.className = "status-badge status-not-supported";
           metamaskConnectBtn.disabled = true;
@@ -358,12 +1819,12 @@
       // Funzione per connettersi a MetaMask
       async function connectMetaMask() {
         try {
-          if (!metamaskPlugin) {
-            showError("MetaMask", "Plugin MetaMask non disponibile");
+          if (!ethereumPlugin) {
+            showError("MetaMask", "Plugin Ethereum non disponibile");
             return;
           }
 
-          const result = await metamaskPlugin.connectMetaMask();
+          const result = await ethereumPlugin.connectMetaMask();
 
           if (result.success) {
             metamaskAddress = result.address;
@@ -396,33 +1857,8 @@
 
           const walletType = bitcoinWalletTypeSelect.value;
 
-          // Se l'utente sceglie l'opzione manuale, mostra i campi di input
-          if (walletType === "manual") {
-            bitcoinManualSection.style.display = "block";
-
-            // Se l'indirizzo manuale è già stato inserito, procedi con la connessione
-            if (bitcoinManualAddress.value) {
-              const manualAddress = bitcoinManualAddress.value;
-              bitcoinAddress = manualAddress;
-              bitcoinAddressDiv.textContent = `Indirizzo: ${bitcoinAddress}`;
-              bitcoinLoginBtn.disabled = false;
-              bitcoinSignupBtn.disabled = false;
-
-              showResult("Bitcoin Wallet", {
-                success: true,
-                message: "Indirizzo Bitcoin manuale configurato",
-                address: bitcoinAddress,
-              });
-            }
-            return;
-          } else {
-            bitcoinManualSection.style.display = "none";
-          }
-
-          // Usa il metodo appropriato per la connessione (connectWallet o connect)
-          let result;
-
-          result = await bitcoinPlugin.connectBitcoinWallet(walletType);
+          // Usa il metodo appropriato per la connessione
+          let result = await bitcoinPlugin.connectBitcoinWallet(walletType);
 
           if (result.success) {
             bitcoinAddress = result.address;
@@ -443,9 +1879,9 @@
 
       // Inizializzazione di Shogun
       initBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         try {
+          setButtonLoading(initBtn, true, "Initialize Shogun");
+          
           // Configurazione Gun
           const options = {
             peers: ["http://localhost:8000/gun"],
@@ -457,7 +1893,7 @@
           // Configurazione per l'ambiente browser
           const config = {
             gunInstance: new Gun(options),
-            appScope: "shogun",
+            scope: "shogun",
             peers: ["http://localhost:8000/gun"],
             webauthn: {
               enabled: true,
@@ -482,6 +1918,8 @@
             },
           };
 
+          showResult("Inizializzazione", { message: "Inizializzazione in corso...", status: "processing" });
+
           // Utilizziamo la funzione di inizializzazione specifica per browser
           shogun = window.initShogunBrowser(config);
 
@@ -494,13 +1932,22 @@
             to.next(msg); // pass to next middleware
           });
 
+          shogun.gun.on("get", function (msg) {
+            var to = this.to;
+            // Adds headers for put
+            msg.headers = {
+              token: "automa25",
+            };
+            to.next(msg); // pass to next middleware
+          });
+
           // Otteniamo i riferimenti ai plugin direttamente
           webauthnPlugin = shogun.getPlugin("webauthn");
-          metamaskPlugin = shogun.getPlugin("ethereum");
           bitcoinPlugin = shogun.getPlugin("bitcoin"); // Nota: il nome potrebbe essere "bitcoin-wallet" invece di "bitcoin"
           bip44Plugin = shogun.getPlugin("bip44"); // Fix: use correct plugin name
+          ethereumPlugin = shogun.getPlugin("ethereum");
 
-          // Verifica il supporto delle tecnologie
+          // Verifica il supporto delle tecnologie con animazioni
           const webauthnSupported = checkWebAuthnSupport();
           const ethereumSupported = checkEthereumSupport();
           const bitcoinSupported = checkBitcoinSupport();
@@ -509,62 +1956,154 @@
           window.shogun = shogun;
           console.log("Shogun initialized and exposed globally");
 
+          // Check if there was an existing session that should be restored
+          const hadExistingSession = checkExistingSession();
+          
+          // Add success animation to all cards
+          document.querySelectorAll('.action-group').forEach((card, index) => {
+            setTimeout(() => {
+              card.classList.add('fade-in');
+            }, index * 100);
+          });
+
           showResult("Shogun Inizializzato", {
             stato: "Successo",
             connesso: true,
+            sessioneEsistente: hadExistingSession,
             webauthn: webauthnSupported,
             ethereum: ethereumSupported,
             bitcoin: bitcoinSupported,
             plugins: {
               webauthn: !!webauthnPlugin,
-              ethereum: !!metamaskPlugin,
+              ethereum: !!ethereumPlugin,
               bitcoin: !!bitcoinPlugin,
               bip44: !!bip44Plugin,
             },
+            timestamp: new Date().toISOString()
           });
+
+          // Update authentication status after initialization
+          updateAuthenticationStatus();
+          
+          // Update peers list after initialization
+          updatePeersList();
+          
         } catch (error) {
           showError("Inizializzazione", error);
+        } finally {
+          setButtonLoading(initBtn, false, "Initialize Shogun");
         }
       });
+
+      // Clear Storage Button
+      clearStorageBtn.addEventListener("click", function (e) {
+        // Show confirmation dialog
+        const confirmed = confirm(
+          "⚠️ Attenzione!\n\n" +
+          "Questa operazione cancellerà TUTTI i dati salvati:\n" +
+          "• LocalStorage (alias Bitcoin, preferenze, ecc.)\n" +
+          "• SessionStorage (chiavi di sessione, auth tokens)\n" +
+          "• Stato di autenticazione corrente\n\n" +
+          "Sei sicuro di voler continuare?"
+        );
+        
+        if (confirmed) {
+          setButtonLoading(clearStorageBtn, true, "🗑️ Clear Storage");
+          
+          setTimeout(() => {
+            clearAllStorage();
+            setButtonLoading(clearStorageBtn, false, "🗑️ Clear Storage");
+          }, 500);
+        }
+      });
+
+      // Function to handle login
+      async function handleLogin() {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!username || !password) {
+          alert("Please enter both username and password");
+          return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = "Logging in...";
+
+        try {
+          showWalletProgress("🔐 Authenticating user...");
+          
+          const result = await shogun.login(username, password);
+
+          if (result.success) {
+            showWalletProgress("✅ Authentication successful, initializing wallet...");
+            
+            // Wait a moment for wallet initialization with timeout
+            const walletTimeout = setTimeout(() => {
+              showWalletProgress("⚠️ Wallet initialization taking longer than expected...");
+            }, 8000);
+
+            // Wait for wallet initialization or timeout
+            await Promise.race([
+              new Promise(resolve => {
+                // Check if wallet is ready
+                const checkWallet = () => {
+                  try {
+                    const walletPlugin = shogun.getPlugin('bip44');
+                    if (walletPlugin) {
+                      clearTimeout(walletTimeout);
+                      showWalletProgress("💰 Wallet initialized successfully!");
+                      setTimeout(() => hideWalletProgress(), 2000);
+                      resolve();
+                    } else {
+                      setTimeout(checkWallet, 500);
+                    }
+                  } catch (error) {
+                    console.log("Wallet check error:", error);
+                    setTimeout(checkWallet, 500);
+                  }
+                };
+                checkWallet();
+              }),
+              new Promise(resolve => {
+                setTimeout(() => {
+                  clearTimeout(walletTimeout);
+                  showWalletProgress("✅ Login completed (wallet may still be initializing)");
+                  setTimeout(() => hideWalletProgress(), 3000);
+                  resolve();
+                }, 15000); // 15 second max wait
+              })
+            ]);
+
+            alert("Login successful!");
+            updateAuthenticationStatus();
+            updatePeersList();
+            
+            // Clear form
+            usernameInput.value = "";
+            passwordInput.value = "";
+          } else {
+            hideWalletProgress();
+            alert(`Login failed: ${result.error}`);
+          }
+        } catch (error) {
+          hideWalletProgress();
+          console.error("Login error:", error);
+          alert(`Login error: ${error.message}`);
+        } finally {
+          loginBtn.disabled = false;
+          loginBtn.textContent = "Sign In";
+        }
+      }
 
       // Login con username e password
       loginBtn.addEventListener("click", async function (e) {
         e.preventDefault();
-
-        if (!shogun) {
-          showError("Login", new Error("Shogun non è stato inizializzato!"));
-          return;
-        }
-
-        try {
-          const username = usernameInput.value;
-          const password = passwordInput.value;
-
-          if (!username || !password) {
-            showError(
-              "Login",
-              new Error("Username e password sono richiesti!")
-            );
-            return;
-          }
-
-          showResult("Login", { message: "Login in corso...", username });
-          const result = await shogun.login(username, password);
-
-          if (result.success) {
-            showResult("Login completato", result);
-          } else {
-            showError("Login", new Error(result.error || "Login fallito"));
-          }
-        } catch (error) {
-          showError("Login", error);
-        }
+        await handleLogin();
       });
 
       // Registrazione con username e password
       signupBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Registrazione",
@@ -585,14 +2124,17 @@
             return;
           }
 
+          setButtonLoading(signupBtn, true, "Sign Up");
           showResult("Registrazione", {
             message: "Registrazione in corso...",
             username,
           });
+          
           const result = await shogun.signUp(username, password);
 
           if (result.success) {
             showResult("Registrazione completata", result);
+            updateAuthenticationStatus(); // Update UI after successful signup
           } else {
             showError(
               "Registrazione",
@@ -601,13 +2143,13 @@
           }
         } catch (error) {
           showError("Registrazione", error);
+        } finally {
+          setButtonLoading(signupBtn, false, "Sign Up");
         }
       });
 
       // Logout
       logoutBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError("Logout", new Error("Shogun non è stato inizializzato!"));
           return;
@@ -623,27 +2165,482 @@
             return;
           }
 
-          // Logout
-          shogun.logout();
-          showResult("Logout", {
-            success: true,
-            message: "Utente disconnesso con successo",
-          });
+          // Perform comprehensive logout
+          performComprehensiveLogout();
+          
         } catch (error) {
           showError("Logout", error);
         }
       });
 
+      // Comprehensive logout function
+      function performComprehensiveLogout() {
+        try {
+          showResult("Logout", {
+            message: "Disconnessione in corso...",
+            status: "processing"
+          });
+
+          // 1. Logout from Shogun Core
+          shogun.logout();
+
+          // 2. Clear authentication method
+          if (typeof shogun.setAuthMethod === 'function') {
+            shogun.setAuthMethod(null);
+          }
+
+          // 3. Reset MetaMask state
+          metamaskAddress = "";
+          metamaskAddressDiv.textContent = "No wallet connected";
+          metamaskLoginBtn.disabled = false;
+          metamaskSignupBtn.disabled = false;
+
+          // 4. Reset Bitcoin state
+          bitcoinAddress = "";
+          bitcoinAddressDiv.textContent = "No wallet connected";
+          bitcoinLoginBtn.disabled = true;
+          bitcoinSignupBtn.disabled = true;
+          bitcoinManualSection.style.display = "none";
+          bitcoinManualAddress.value = "";
+          bitcoinManualPrivateKey.value = "";
+          bitcoinWalletTypeSelect.value = "nostr";
+
+          // 5. Reset WebAuthn state
+          webauthnUsernameInput.value = "";
+
+          // 6. Reset traditional auth form
+          usernameInput.value = "";
+          passwordInput.value = "";
+
+          // 7. Clear localStorage items related to authentication
+          try {
+            localStorage.removeItem("bitcoin_user_alias");
+            localStorage.removeItem("auth_attempt");
+            localStorage.removeItem("auth_reload");
+            localStorage.removeItem("is_authenticated");
+            localStorage.removeItem("current_user");
+          } catch (localStorageError) {
+            console.warn("Could not clear localStorage:", localStorageError);
+          }
+
+          // 8. Re-check plugin support status
+          setTimeout(() => {
+            checkWebAuthnSupport();
+            checkEthereumSupport();
+            checkBitcoinSupport();
+            updateAuthenticationStatus();
+          }, 100);
+
+          // 9. Show success message
+          showResult("Logout Completato", {
+            success: true,
+            message: "Disconnessione completata con successo",
+            details: {
+              shogunCore: "✓ Disconnesso",
+              metamask: "✓ Stato resettato",
+              bitcoin: "✓ Stato resettato", 
+              webauthn: "✓ Stato resettato",
+              localStorage: "✓ Dati puliti",
+              ui: "✓ Interfaccia resettata"
+            },
+            timestamp: new Date().toISOString()
+          });
+
+        } catch (error) {
+          showError("Logout", new Error(`Errore durante la disconnessione: ${error.message}`));
+        }
+      }
+
+      // Function to update authentication status and UI
+      function updateAuthenticationStatus() {
+        if (!shogun) {
+          logoutBtn.disabled = true;
+          logoutBtn.textContent = "Sign Out";
+          return;
+        }
+
+        const isLoggedIn = shogun.isLoggedIn();
+        const authMethod = typeof shogun.getAuthMethod === 'function' ? shogun.getAuthMethod() : null;
+        
+        // Check for session storage indicators even if shogun.isLoggedIn() returns false
+        const hasSessionData = sessionStorage.getItem('gun/') || 
+                              sessionStorage.getItem('gun/user') || 
+                              sessionStorage.getItem('gun/auth');
+        
+        // Update logout button
+        logoutBtn.disabled = !isLoggedIn && !hasSessionData;
+        logoutBtn.textContent = isLoggedIn || hasSessionData ? "Sign Out" : "Sign Out";
+
+        // Update status display
+        if (isLoggedIn) {
+          statusSpan.textContent = "✅ Authenticated";
+          statusSpan.className = "status-indicator status-success";
+          
+          // Show auth method if available
+          if (authMethod) {
+            statusSpan.textContent += ` (${authMethod})`;
+          }
+          
+          // Show user info if available
+          const user = shogun.gun.user();
+          if (user && user.is && user.is.alias) {
+            userIdDiv.innerHTML = `<strong>User:</strong> ${user.is.alias}<br><strong>Public Key:</strong> ${user.is.pub}`;
+            userIdDiv.style.display = 'block';
+          } else {
+            userIdDiv.style.display = 'none';
+          }
+        } else if (hasSessionData) {
+          statusSpan.textContent = "🔄 Session Active (checking...)";
+          statusSpan.className = "status-indicator status-warning";
+          userIdDiv.style.display = 'none';
+        } else {
+          statusSpan.textContent = "❌ Not authenticated";
+          statusSpan.className = "status-indicator status-error";
+          userIdDiv.innerHTML = "";
+          userIdDiv.style.display = 'none';
+        }
+      }
+
+      // Function to show wallet initialization progress
+      function showWalletProgress(message) {
+        const progressDiv = document.getElementById('walletProgress');
+        if (!progressDiv) {
+          // Create progress indicator if it doesn't exist
+          const newProgressDiv = document.createElement('div');
+          newProgressDiv.id = 'walletProgress';
+          newProgressDiv.className = 'wallet-progress';
+          newProgressDiv.innerHTML = `
+            <div class="progress-content">
+              <div class="progress-spinner"></div>
+              <span class="progress-message">${message}</span>
+            </div>
+          `;
+          
+          // Insert after the status section
+          const statusSection = document.querySelector('.action-group');
+          if (statusSection) {
+            statusSection.insertAdjacentElement('afterend', newProgressDiv);
+          }
+        } else {
+          progressDiv.querySelector('.progress-message').textContent = message;
+          progressDiv.style.display = 'block';
+        }
+      }
+
+      // Function to hide wallet progress
+      function hideWalletProgress() {
+        const progressDiv = document.getElementById('walletProgress');
+        if (progressDiv) {
+          progressDiv.style.display = 'none';
+        }
+      }
+
+      // 🌐 RELAY MANAGEMENT FUNCTIONS 🌐
+
+      /**
+       * Fills the peer URL input with a predefined URL
+       */
+      function fillPeerUrl(url) {
+        newPeerUrlInput.value = url;
+        newPeerUrlInput.focus();
+        
+        // Add visual feedback
+        newPeerUrlInput.style.background = 'var(--success-color)';
+        newPeerUrlInput.style.color = 'white';
+        setTimeout(() => {
+          newPeerUrlInput.style.background = '';
+          newPeerUrlInput.style.color = '';
+        }, 500);
+      }
+
+      /**
+       * Updates the peers list display with improved UI
+       */
+      function updatePeersList() {
+        if (!shogun || !shogun.gundb) {
+          peersListSpan.innerHTML = `
+            <div class="no-peers-message">
+              <span class="no-peers-icon">⚠️</span>
+              <span>Shogun not initialized</span>
+            </div>
+          `;
+          peerManagementDiv.style.display = "none";
+          peerCountBadge.textContent = "0";
+          peerCountBadge.style.background = "var(--error-color)";
+          return;
+        }
+
+        try {
+          const peerInfo = shogun.gundb.getPeerInfo();
+          const peerEntries = Object.entries(peerInfo);
+          const connectedCount = peerEntries.filter(([_, info]) => info.connected).length;
+          
+          // Update peer count badge
+          peerCountBadge.textContent = peerEntries.length.toString();
+          if (connectedCount === 0) {
+            peerCountBadge.style.background = "var(--error-color)";
+          } else if (connectedCount === peerEntries.length) {
+            peerCountBadge.style.background = "var(--success-color)";
+          } else {
+            peerCountBadge.style.background = "var(--warning-color)";
+          }
+          
+          if (peerEntries.length === 0) {
+            peersListSpan.innerHTML = `
+              <div class="no-peers-message">
+                <span class="no-peers-icon">🔌</span>
+                <span>No peers configured</span>
+              </div>
+            `;
+            peerManagementDiv.style.display = "none";
+            return;
+          }
+
+          // Create improved peer list display
+          const peerListHtml = peerEntries.map(([peer, info]) => {
+            const statusIcon = info.connected ? '🟢' : '🔴';
+            const statusText = info.connected ? 'Connected' : 'Disconnected';
+            const statusClass = info.connected ? 'peer-connected' : 'peer-disconnected';
+            
+            return `
+              <div class="peer-item ${statusClass}">
+                <div class="peer-status">
+                  <span class="peer-status-icon">${statusIcon}</span>
+                  <span class="peer-status-text">${statusText}</span>
+                </div>
+                <div class="peer-url">
+                  <code>${peer}</code>
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          peersListSpan.innerHTML = peerListHtml;
+
+          // Update individual peer actions with improved cards
+          peerActionsDiv.innerHTML = '';
+          peerEntries.forEach(([peer, info]) => {
+            const peerCard = document.createElement('div');
+            peerCard.className = 'peer-action-card';
+            
+            const statusIcon = info.connected ? '🟢' : '🔴';
+            const statusText = info.connected ? 'Connected' : 'Disconnected';
+            const statusClass = info.connected ? 'status-supported' : 'status-not-supported';
+            
+            peerCard.innerHTML = `
+              <div class="peer-card-header">
+                <h5>🌐 ${peer}</h5>
+                <span class="status-badge ${statusClass}">${statusIcon} ${statusText}</span>
+              </div>
+              <div class="peer-card-actions">
+                <button class="action-button peer-reconnect-btn" onclick="reconnectToPeer('${peer}')" title="Reconnect to this peer">
+                  🔄 Reconnect
+                </button>
+                <button class="action-button peer-remove-btn" onclick="removePeer('${peer}')" title="Remove this peer">
+                  🗑️ Remove
+                </button>
+              </div>
+            `;
+            
+            peerActionsDiv.appendChild(peerCard);
+          });
+
+          peerManagementDiv.style.display = "block";
+          
+        } catch (error) {
+          console.error("Error updating peers list:", error);
+          peersListSpan.innerHTML = `
+            <div class="no-peers-message">
+              <span class="no-peers-icon">❌</span>
+              <span>Error loading peers</span>
+            </div>
+          `;
+          peerManagementDiv.style.display = "none";
+          peerCountBadge.textContent = "!";
+          peerCountBadge.style.background = "var(--error-color)";
+        }
+      }
+
+      /**
+       * Adds a new peer
+       */
+      function addNewPeer() {
+        if (!shogun || !shogun.gundb) {
+          showError("Add Peer", new Error("Shogun not initialized"));
+          return;
+        }
+
+        const peerUrl = newPeerUrlInput.value.trim();
+        if (!peerUrl) {
+          showError("Add Peer", new Error("Please enter a peer URL"));
+          return;
+        }
+
+        // Basic URL validation
+        try {
+          new URL(peerUrl);
+        } catch (error) {
+          showError("Add Peer", new Error("Invalid URL format"));
+          return;
+        }
+
+        try {
+          setButtonLoading(addPeerBtn, true, "➕ Add Peer");
+          
+          // Check if peer already exists
+          const existingPeers = shogun.gundb.getAllConfiguredPeers();
+          if (existingPeers.includes(peerUrl)) {
+            showResult("Add Peer", {
+              success: false,
+              message: "Peer already configured",
+              peer: peerUrl,
+              suggestion: "Try reconnecting to the peer instead"
+            });
+            return;
+          }
+
+          shogun.gundb.addPeer(peerUrl);
+          newPeerUrlInput.value = '';
+          
+          // Wait a moment for connection to establish
+          setTimeout(() => {
+            updatePeersList();
+            showResult("Peer Added", {
+              success: true,
+              peer: peerUrl,
+              message: "Peer added successfully",
+              timestamp: new Date().toISOString()
+            });
+          }, 1000);
+          
+        } catch (error) {
+          showError("Add Peer", error);
+        } finally {
+          setButtonLoading(addPeerBtn, false, "➕ Add Peer");
+        }
+      }
+
+      /**
+       * Removes a specific peer
+       */
+      function removePeer(peerUrl) {
+        if (!shogun || !shogun.gundb) {
+          showError("Remove Peer", new Error("Shogun not initialized"));
+          return;
+        }
+
+        try {
+          shogun.gundb.removePeer(peerUrl);
+          updatePeersList();
+          
+          showResult("Peer Removed", {
+            success: true,
+            peer: peerUrl,
+            message: "Peer removed successfully",
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          showError("Remove Peer", error);
+        }
+      }
+
+      /**
+       * Reconnects to a specific peer
+       */
+      function reconnectToPeer(peerUrl) {
+        if (!shogun || !shogun.gundb) {
+          showError("Reconnect Peer", new Error("Shogun not initialized"));
+          return;
+        }
+
+        try {
+          shogun.gundb.reconnectToPeer(peerUrl);
+          
+          showResult("Peer Reconnection", {
+            success: true,
+            peer: peerUrl,
+            message: "Reconnection initiated",
+            note: "Connection status will update in a moment",
+            timestamp: new Date().toISOString()
+          });
+
+          // Update the list after a delay to show the reconnection
+          setTimeout(() => {
+            updatePeersList();
+          }, 2000);
+        } catch (error) {
+          showError("Reconnect Peer", error);
+        }
+      }
+
+      /**
+       * Refreshes the peers list
+       */
+      function refreshPeersList() {
+        try {
+          setButtonLoading(refreshPeersBtn, true, "🔄 Refresh");
+          updatePeersList();
+          
+          showResult("Peers Refreshed", {
+            success: true,
+            message: "Peer list updated",
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          showError("Refresh Peers", error);
+        } finally {
+          setButtonLoading(refreshPeersBtn, false, "🔄 Refresh");
+        }
+      }
+
+      /**
+       * Clears all peers
+       */
+      function clearAllPeers() {
+        if (!shogun || !shogun.gundb) {
+          showError("Clear Peers", new Error("Shogun not initialized"));
+          return;
+        }
+
+        const confirmed = confirm(
+          "⚠️ Attenzione!\n\n" +
+          "Questa operazione rimuoverà TUTTI i peer configurati.\n" +
+          "Potresti perdere la connessione alla rete Gun.js.\n\n" +
+          "Sei sicuro di voler continuare?"
+        );
+        
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          setButtonLoading(clearPeersBtn, true, "🗑️ Clear All");
+          
+          const existingPeers = shogun.gundb.getAllConfiguredPeers();
+          shogun.gundb.resetPeers();
+          updatePeersList();
+          
+          showResult("All Peers Cleared", {
+            success: true,
+            message: "All peers have been removed",
+            removedPeers: existingPeers,
+            warning: "You may need to add new peers to reconnect to the network",
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          showError("Clear Peers", error);
+        } finally {
+          setButtonLoading(clearPeersBtn, false, "🗑️ Clear All");
+        }
+      }
+
       // Collegamento a MetaMask
       metamaskConnectBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
         await connectMetaMask();
       });
 
       // Login con MetaMask
       metamaskLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Login MetaMask",
@@ -652,10 +2649,10 @@
           return;
         }
 
-        if (!metamaskPlugin) {
+        if (!ethereumPlugin) {
           showError(
             "Login MetaMask",
-            new Error("Plugin MetaMask non disponibile")
+            new Error("Plugin Ethereum non disponibile")
           );
           return;
         }
@@ -666,7 +2663,7 @@
             showResult("MetaMask", {
               message: "Connessione a MetaMask in corso...",
             });
-            const connectResult = await metamaskPlugin.connectMetaMask();
+            const connectResult = await ethereumPlugin.connectMetaMask();
 
             if (!connectResult.success) {
               showError(
@@ -690,16 +2687,17 @@
 
           // Usa il metodo appropriato per il login
           let result;
-          if (typeof metamaskPlugin.loginWithMetaMask === "function") {
-            result = await metamaskPlugin.loginWithMetaMask(metamaskAddress);
-          } else if (typeof metamaskPlugin.login === "function") {
-            result = await metamaskPlugin.login(metamaskAddress);
+          if (typeof ethereumPlugin.loginWithMetaMask === "function") {
+            result = await ethereumPlugin.loginWithMetaMask(metamaskAddress);
+          } else if (typeof ethereumPlugin.login === "function") {
+            result = await ethereumPlugin.login(metamaskAddress);
           } else {
             throw new Error("Metodo di login non disponibile");
           }
 
           if (result.success) {
             showResult("Login con MetaMask completato", result);
+            updateAuthenticationStatus(); // Update UI after successful MetaMask login
           } else {
             showError(
               "Login MetaMask",
@@ -713,8 +2711,6 @@
 
       // Registrazione con MetaMask
       metamaskSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Registrazione MetaMask",
@@ -723,10 +2719,10 @@
           return;
         }
 
-        if (!metamaskPlugin) {
+        if (!ethereumPlugin) {
           showError(
             "Registrazione MetaMask",
-            new Error("Plugin MetaMask non disponibile")
+            new Error("Plugin Ethereum non disponibile")
           );
           return;
         }
@@ -737,7 +2733,7 @@
             showResult("MetaMask", {
               message: "Connessione a MetaMask in corso...",
             });
-            const connectResult = await metamaskPlugin.connectMetaMask();
+            const connectResult = await ethereumPlugin.connectMetaMask();
 
             if (!connectResult.success) {
               showError(
@@ -761,16 +2757,17 @@
 
           // Usa il metodo appropriato per la registrazione
           let result;
-          if (typeof metamaskPlugin.signUpWithMetaMask === "function") {
-            result = await metamaskPlugin.signUpWithMetaMask(metamaskAddress);
-          } else if (typeof metamaskPlugin.signUp === "function") {
-            result = await metamaskPlugin.signUp(metamaskAddress);
+          if (typeof ethereumPlugin.signUpWithMetaMask === "function") {
+            result = await ethereumPlugin.signUpWithMetaMask(metamaskAddress);
+          } else if (typeof ethereumPlugin.signUp === "function") {
+            result = await ethereumPlugin.signUp(metamaskAddress);
           } else {
             throw new Error("Metodo di registrazione non disponibile");
           }
 
           if (result.success) {
             showResult("Registrazione con MetaMask completata", result);
+            updateAuthenticationStatus(); // Update UI after successful MetaMask signup
           } else {
             showError(
               "Registrazione MetaMask",
@@ -784,8 +2781,6 @@
 
       // Login con WebAuthn
       webauthnLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Login WebAuthn",
@@ -826,6 +2821,7 @@
 
           if (result.success) {
             showResult("Login con WebAuthn completato", result);
+            updateAuthenticationStatus(); // Update UI after successful WebAuthn login
           } else {
             showError(
               "Login WebAuthn",
@@ -839,8 +2835,6 @@
 
       // Registrazione con WebAuthn
       webauthnSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Registrazione WebAuthn",
@@ -884,6 +2878,7 @@
 
           if (result.success) {
             showResult("Registrazione con WebAuthn completata", result);
+            updateAuthenticationStatus(); // Update UI after successful WebAuthn signup
           } else {
             showError(
               "Registrazione WebAuthn",
@@ -897,14 +2892,11 @@
 
       // Collegamento a Bitcoin Wallet
       bitcoinConnectBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
         await connectBitcoinWallet();
       });
 
       // Login con Bitcoin
       bitcoinLoginBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Login Bitcoin",
@@ -973,6 +2965,7 @@
 
           if (result.success) {
             showResult("Login con Bitcoin completato", result);
+            updateAuthenticationStatus(); // Update UI after successful Bitcoin login
           } else {
             // Se il login fallisce, potrebbe essere necessario provare con un alias diverso
             if (
@@ -1014,8 +3007,6 @@
 
       // Registrazione con Bitcoin
       bitcoinSignupBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
         if (!shogun) {
           showError(
             "Registrazione Bitcoin",
@@ -1073,6 +3064,7 @@
             // Salva l'alias generato in localStorage per il login successivo
             localStorage.setItem("bitcoin_user_alias", alias);
             showResult("Registrazione con Bitcoin completata", result);
+            updateAuthenticationStatus(); // Update UI after successful Bitcoin signup
           } else {
             // Se l'errore è "User already created" (utente già creato), salviamo comunque l'alias e suggeriamo di provare il login
             if (
@@ -1090,6 +3082,7 @@
                 alias: alias,
                 suggestion: "Clicca sul pulsante 'Login con Bitcoin' per accedere."
               });
+              updateAuthenticationStatus(); // Update UI even for existing account
             } else {
               showError(
                 "Registrazione Bitcoin",
@@ -1102,78 +3095,6 @@
         }
       });
 
-      // Creazione di un nuovo wallet
-      createWalletBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
-        if (!shogun) {
-          showError(
-            "Creazione Wallet",
-            new Error("Shogun non è stato inizializzato!")
-          );
-          return;
-        }
-
-        if (!shogun.isLoggedIn()) {
-          showError(
-            "Creazione Wallet",
-            new Error("Devi effettuare il login prima!")
-          );
-          return;
-        }
-
-        try {
-          if (!bip44Plugin) {
-            showError(
-              "Creazione Wallet",
-              new Error("Plugin bip44 non disponibile")
-            );
-            return;
-          }
-
-          const wallet = await bip44Plugin.createWallet();
-          showResult("Wallet Creato", wallet);
-        } catch (error) {
-          showError("Creazione Wallet", error);
-        }
-      });
-
-      // Ottenimento dei wallet esistenti
-      getWalletsBtn.addEventListener("click", async function (e) {
-        e.preventDefault();
-
-        if (!shogun) {
-          showError(
-            "Ottenimento Wallets",
-            new Error("Shogun non è stato inizializzato!")
-          );
-          return;
-        }
-
-        if (!shogun.isLoggedIn()) {
-          showError(
-            "Ottenimento Wallets",
-            new Error("Devi effettuare il login prima!")
-          );
-          return;
-        }
-
-        try {
-          if (!bip44Plugin) {
-            showError(
-              "Ottenimento Wallets",
-              new Error("Plugin bip44 non disponibile")
-            );
-            return;
-          }
-
-          const wallets = await bip44Plugin.loadWallets();
-          showResult("Wallets Disponibili", wallets);
-        } catch (error) {
-          showError("Ottenimento Wallets", error);
-        }
-      });
-
       // Gestione dell'inserimento dell'indirizzo Bitcoin manuale
       bitcoinManualAddress.addEventListener("input", function () {
         if (this.value) {
@@ -1183,7 +3104,7 @@
           bitcoinSignupBtn.disabled = false;
         } else {
           bitcoinAddress = "";
-          bitcoinAddressDiv.textContent = "Indirizzo non rilevato";
+          bitcoinAddressDiv.textContent = "No wallet connected";
           bitcoinLoginBtn.disabled = true;
           bitcoinSignupBtn.disabled = true;
         }
@@ -1202,8 +3123,6 @@
       document
         .getElementById("testGunBtn")
         .addEventListener("click", function (e) {
-          e.preventDefault();
-
           if (!shogun || !shogun.gun) {
             showError("Test Gun", "Shogun o Gun non inizializzato");
             return;
@@ -1242,29 +3161,124 @@
           });
         });
 
+      // 🌐 RELAY MANAGEMENT EVENT LISTENERS 🌐
+
+      // Add Peer Button
+      addPeerBtn.addEventListener("click", function (e) {
+        addNewPeer();
+      });
+
+      // Refresh Peers Button
+      refreshPeersBtn.addEventListener("click", function (e) {
+        refreshPeersList();
+      });
+
+      // Clear All Peers Button
+      clearPeersBtn.addEventListener("click", function (e) {
+        clearAllPeers();
+      });
+
+      // Enter key support for peer URL input
+      newPeerUrlInput.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addNewPeer();
+        }
+      });
+
       // Controlla il supporto delle tecnologie all'avvio della pagina
       document.addEventListener("DOMContentLoaded", () => {
+        // Check for existing sessions first
+        checkExistingSession();
+        
+        // Add initial fade-in animation to all elements
+        setTimeout(() => {
+          document.querySelector('.app-header').classList.add('fade-in');
+        }, 100);
+        
+        setTimeout(() => {
+          document.querySelectorAll('.action-group').forEach((card, index) => {
+            setTimeout(() => {
+              card.classList.add('fade-in');
+            }, index * 150);
+          });
+        }, 300);
+
+        // Initialize support checks
         checkWebAuthnSupport();
         checkEthereumSupport();
         checkBitcoinSupport();
+        
+        // Show welcome message
+        setTimeout(() => {
+          showResult("Benvenuto", {
+            message: "🥷 Benvenuto in Shogun Auth!",
+            instructions: "Clicca su 'Initialize Shogun' per iniziare",
+            features: [
+              "🔐 Autenticazione tradizionale",
+              "🔑 WebAuthn biometrico", 
+              "🦊 Wallet Ethereum",
+              "₿ Wallet Bitcoin",
+              "⚡ Connessione Gun.js"
+            ],
+            timestamp: new Date().toISOString()
+          });
+        }, 800);
       });
 
-      // Previeni il submit del form su tutti gli input
+      // Enhanced form submission prevention
       document.addEventListener("keypress", function (e) {
         if (
           e.key === "Enter" &&
           (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
         ) {
           e.preventDefault(); // Previene il refresh della pagina
+          
+          // Add visual feedback for enter key press
+          e.target.style.transform = "scale(0.98)";
+          setTimeout(() => {
+            e.target.style.transform = "";
+          }, 100);
         }
       });
 
-      // Previeni il comportamento predefinito per tutti i pulsanti nei form
+      // Enhanced button click with visual feedback
       document.addEventListener("click", function (e) {
-        if (e.target.tagName === "BUTTON" && e.target.type !== "button") {
-          e.preventDefault(); // Previene il refresh della pagina per i pulsanti senza type="button"
+        if (e.target.tagName === "BUTTON") {
+          // Add ripple effect for all buttons
+          const ripple = document.createElement('span');
+          ripple.style.position = 'absolute';
+          ripple.style.borderRadius = '50%';
+          ripple.style.background = 'rgba(255, 255, 255, 0.6)';
+          ripple.style.transform = 'scale(0)';
+          ripple.style.animation = 'ripple 0.6s linear';
+          ripple.style.left = (e.offsetX - 10) + 'px';
+          ripple.style.top = (e.offsetY - 10) + 'px';
+          ripple.style.width = '20px';
+          ripple.style.height = '20px';
+          
+          e.target.style.position = 'relative';
+          e.target.appendChild(ripple);
+          
+          setTimeout(() => {
+            if (ripple.parentNode) {
+              ripple.parentNode.removeChild(ripple);
+            }
+          }, 600);
         }
       });
+
+      // Add ripple animation keyframes
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes ripple {
+          to {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
     </script>
   </body>
 </html>

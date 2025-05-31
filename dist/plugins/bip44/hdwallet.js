@@ -545,7 +545,7 @@ class HDWallet extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Get user's master mnemonic, first checking GunDB then localStorage
+     * Get user's master mnemonic from GunDB or localStorage
      */
     async getUserMasterMnemonic() {
         try {
@@ -553,15 +553,34 @@ class HDWallet extends eventEmitter_1.EventEmitter {
             const user = this.gun.user();
             if (user && user.is) {
                 const gunMnemonic = await new Promise((resolve) => {
+                    let resolved = false;
+                    // Set a timeout to prevent hanging
+                    const timeout = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            (0, logger_1.log)("Timeout waiting for mnemonic from GunDB, checking localStorage");
+                            resolve(null);
+                        }
+                    }, 5000); // 5 second timeout
                     user.get("master_mnemonic").once((data) => {
-                        resolve(data || null);
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            resolve(data || null);
+                        }
                     });
                 });
                 if (gunMnemonic) {
                     (0, logger_1.log)("Mnemonic retrieved from GunDB");
                     (0, logger_1.log)("gunMnemonic: ", gunMnemonic);
-                    const decrypted = await this.decryptSensitiveData(gunMnemonic);
-                    return decrypted;
+                    try {
+                        const decrypted = await this.decryptSensitiveData(gunMnemonic);
+                        return decrypted;
+                    }
+                    catch (decryptError) {
+                        (0, logger_1.logError)("Error decrypting mnemonic from GunDB:", decryptError);
+                        (0, logger_1.log)("Falling back to localStorage");
+                    }
                 }
             }
             // 2. If not found in GunDB, check localStorage
@@ -572,15 +591,27 @@ class HDWallet extends eventEmitter_1.EventEmitter {
                 return null;
             }
             // Decrypt mnemonic from localStorage
-            const decrypted = await this.decryptSensitiveData(encryptedMnemonic);
-            (0, logger_1.log)("Mnemonic retrieved from localStorage");
-            // If we find mnemonic in localStorage but not in GunDB, save it to GunDB
-            // for future syncing (but only if user is authenticated)
-            if (decrypted && user && user.is) {
-                await user.get("master_mnemonic").put(decrypted);
-                (0, logger_1.log)("Mnemonic from localStorage synced to GunDB");
+            try {
+                const decrypted = await this.decryptSensitiveData(encryptedMnemonic);
+                (0, logger_1.log)("Mnemonic retrieved from localStorage");
+                // If we find mnemonic in localStorage but not in GunDB, save it to GunDB
+                // for future syncing (but only if user is authenticated)
+                if (decrypted && user && user.is) {
+                    try {
+                        await user.get("master_mnemonic").put(decrypted);
+                        (0, logger_1.log)("Mnemonic from localStorage synced to GunDB");
+                    }
+                    catch (syncError) {
+                        (0, logger_1.logError)("Error syncing mnemonic to GunDB:", syncError);
+                        // Don't fail if sync fails, we still have the mnemonic
+                    }
+                }
+                return decrypted;
             }
-            return decrypted;
+            catch (decryptError) {
+                (0, logger_1.logError)("Error decrypting mnemonic from localStorage:", decryptError);
+                return null;
+            }
         }
         catch (error) {
             (0, logger_1.logError)("Error retrieving mnemonic:", error);
@@ -623,11 +654,16 @@ class HDWallet extends eventEmitter_1.EventEmitter {
         try {
             // Use AuthManager to check authentication state
             const authManager = new auth_1.default({ gun: this.gun });
-            // Wait for authentication using state machine
-            const isAuthenticated = await authManager.waitForAuthentication(10000);
-            if (!isAuthenticated) {
-                throw new Error("User is not authenticated - timeout waiting for auth state");
-            }
+            // Wait for authentication using state machine with timeout
+            const isAuthenticated = await Promise.race([
+                authManager.waitForAuthentication(10000),
+                new Promise((resolve) => {
+                    setTimeout(() => {
+                        (0, logger_1.log)("Authentication check timeout, proceeding with basic checks");
+                        resolve(false);
+                    }, 8000);
+                }),
+            ]);
             const user = this.gun.user();
             if (!user || !user.is) {
                 throw new Error("User is not authenticated");
@@ -648,17 +684,37 @@ class HDWallet extends eventEmitter_1.EventEmitter {
             const nextIndex = existingWallets;
             // Use standard Ethereum path format
             const path = `m/44'/60'/0'/0/${nextIndex}`;
-            // Get user's master mnemonic
-            let masterMnemonic = await this.getUserMasterMnemonic();
+            // Get user's master mnemonic with timeout
+            let masterMnemonic = await Promise.race([
+                this.getUserMasterMnemonic(),
+                new Promise((resolve) => {
+                    setTimeout(() => {
+                        (0, logger_1.log)("Mnemonic retrieval timeout, will generate new one");
+                        resolve(null);
+                    }, 10000);
+                }),
+            ]);
             if (!masterMnemonic) {
                 try {
                     // Generate new mnemonic
                     masterMnemonic = this.generateNewMnemonic();
-                    await this.saveUserMasterMnemonic(masterMnemonic);
+                    // Try to save with timeout
+                    await Promise.race([
+                        this.saveUserMasterMnemonic(masterMnemonic),
+                        new Promise((resolve, reject) => {
+                            setTimeout(() => {
+                                (0, logger_1.log)("Mnemonic save timeout, proceeding with wallet creation");
+                                resolve();
+                            }, 5000);
+                        }),
+                    ]);
                     (0, logger_1.log)(`Generated new mnemonic: ${masterMnemonic}`);
                 }
                 catch (mnemonicError) {
-                    throw new Error(`Failed to generate or save mnemonic: ${mnemonicError instanceof Error ? mnemonicError.message : String(mnemonicError)}`);
+                    (0, logger_1.logError)("Error generating/saving mnemonic:", mnemonicError);
+                    // Continue with a temporary mnemonic for this session
+                    masterMnemonic = this.generateNewMnemonic();
+                    (0, logger_1.log)("Using temporary mnemonic for this session");
                 }
             }
             (0, logger_1.log)("*** masterMnemonic: ", masterMnemonic);
@@ -675,19 +731,34 @@ class HDWallet extends eventEmitter_1.EventEmitter {
             const timestamp = Date.now();
             this.walletPaths[wallet.address] = { path, created: timestamp };
             try {
-                // Save in user context in Gun
+                // Save in user context in Gun with timeout
                 const walletPathRef = user.get("wallet_paths");
-                await walletPathRef.put({
-                    [wallet.address]: { path, created: timestamp },
-                });
+                await Promise.race([
+                    walletPathRef.put({
+                        [wallet.address]: { path, created: timestamp },
+                    }),
+                    new Promise((resolve) => {
+                        setTimeout(() => {
+                            (0, logger_1.log)("Wallet path save timeout, saved locally only");
+                            resolve();
+                        }, 3000);
+                    }),
+                ]);
                 // Also save to localStorage
                 this.saveWalletPathsToLocalStorage();
+                (0, logger_1.log)("Wallet path saved successfully");
             }
             catch (saveError) {
                 (0, logger_1.logError)("Error saving wallet path:", saveError);
                 (0, logger_1.log)("Wallet created but path might not be persisted properly");
                 // Non blocchiamo la creazione del wallet per errori di salvataggio del path
             }
+            // Emit wallet creation event
+            this.emit(types_1.WalletEventType.WALLET_CREATED, {
+                type: types_1.WalletEventType.WALLET_CREATED,
+                data: { address: wallet.address, path },
+                timestamp: Date.now(),
+            });
             return {
                 wallet,
                 path,

@@ -117,6 +117,14 @@ export class NostrConnectorPlugin
   }
 
   /**
+   * Clear signature cache for better user recovery
+   * @param address - Optional specific address to clear, or clear all if not provided
+   */
+  clearSignatureCache(address?: string): void {
+    this.assertBitcoinConnector().clearSignatureCache(address);
+  }
+
+  /**
    * @inheritdoc
    */
   async verifySignature(
@@ -202,6 +210,9 @@ export class NostrConnectorPlugin
         );
       }
       log("Bitcoin wallet signature verified successfully.");
+
+      // Set authentication method to bitcoin before login
+      core.setAuthMethod("bitcoin");
 
       // Use core's login method directly - simplified approach similar to MetaMask
       log("Logging in using core login method...");
@@ -314,6 +325,9 @@ export class NostrConnectorPlugin
       }
       log("Bitcoin wallet signature verified successfully.");
 
+      // Set authentication method to bitcoin before signup
+      core.setAuthMethod("bitcoin");
+
       // Use core's signUp method directly - simplified approach similar to MetaMask
       log("Signing up using core signUp method...");
       const signUpResult = await core.signUp(
@@ -332,7 +346,8 @@ export class NostrConnectorPlugin
           // User already exists, suggest login instead
           return {
             success: false,
-            error: "User already exists. Please try logging in instead.",
+            error:
+              "User already exists. Please try logging in instead. If login fails, try clearing the signature cache and registering again.",
           };
         }
 

@@ -31,7 +31,6 @@ const stealthPlugin_1 = require("./plugins/stealth-address/stealthPlugin");
 const hdwalletPlugin_1 = require("./plugins/bip44/hdwalletPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/bitcoin/nostrConnectorPlugin");
 const gun_2 = __importDefault(require("gun"));
-const auth_1 = __importDefault(require("./gundb/models/auth/auth"));
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -89,6 +88,8 @@ class ShogunCore {
     /** Plugin registry */
     plugins = new Map();
     Gun;
+    /** Current authentication method */
+    currentAuthMethod;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -366,6 +367,11 @@ class ShogunCore {
                     error: "Username and password are required",
                 };
             }
+            // Set authentication method to password only if not already set by a plugin
+            if (!this.currentAuthMethod) {
+                this.currentAuthMethod = "password";
+                (0, logger_1.log)("Authentication method set to default: password");
+            }
             // Timeout after a configurable interval (default 15 seconds)
             const timeoutDuration = this.config?.timeouts?.login ?? 15000;
             // Use a Promise with timeout for the login operation
@@ -421,12 +427,20 @@ class ShogunCore {
                     userPub: result.userPub ?? "",
                 });
                 // Automatically initialize wallet after successful login
-                try {
-                    await this.ensureUserHasWallet();
+                // Only for traditional password authentication
+                (0, logger_1.log)(`Current auth method before wallet check: ${this.currentAuthMethod}`);
+                if (this.currentAuthMethod === "password") {
+                    (0, logger_1.log)("Initializing wallet for password authentication");
+                    try {
+                        await this.ensureUserHasWallet();
+                    }
+                    catch (walletError) {
+                        (0, logger_1.log)("Warning: Could not initialize wallet after login:", walletError);
+                        // Don't fail the login if wallet creation fails
+                    }
                 }
-                catch (walletError) {
-                    (0, logger_1.log)("Warning: Could not initialize wallet after login:", walletError);
-                    // Don't fail the login if wallet creation fails
+                else {
+                    (0, logger_1.log)(`Skipping wallet initialization for auth method: ${this.currentAuthMethod}`);
                 }
             }
             return result;
@@ -591,6 +605,23 @@ class ShogunCore {
         return this;
     }
     /**
+     * Set the current authentication method
+     * This is used by plugins to indicate which authentication method was used
+     * @param method The authentication method used
+     */
+    setAuthMethod(method) {
+        (0, logger_1.log)(`Setting authentication method from '${this.currentAuthMethod}' to '${method}'`);
+        this.currentAuthMethod = method;
+        (0, logger_1.log)(`Authentication method successfully set to: ${method}`);
+    }
+    /**
+     * Get the current authentication method
+     * @returns The current authentication method or undefined if not set
+     */
+    getAuthMethod() {
+        return this.currentAuthMethod;
+    }
+    /**
      * Ensures the current user has a wallet, creating one if necessary
      * @private
      */
@@ -606,35 +637,50 @@ class ShogunCore {
                 (0, logger_1.log)("Wallet plugin not available, skipping wallet initialization");
                 return;
             }
-            // Get AuthManager instance
-            const authManager = new auth_1.default(this.gundb);
-            // Wait for authentication state to be stable using state machine
+            // Use a more direct approach to wait for authentication state
             (0, logger_1.log)("Waiting for authentication state to stabilize...");
-            const authReady = await authManager.waitForAuthentication(10000);
-            if (!authReady) {
-                throw new Error("Authentication state not stable - timeout reached");
+            // Wait for Gun user to be properly authenticated with shorter timeout and more checks
+            const maxRetries = 20; // Increased retries but shorter intervals
+            const delayMs = 250; // Shorter delay between checks
+            let authenticated = false;
+            for (let i = 0; i < maxRetries; i++) {
+                const user = this.gun.user();
+                // Check multiple authentication indicators
+                const hasUserObject = user && user.is;
+                const hasPublicKey = user && user.is && user.is.pub;
+                const hasSeaCredentials = user && user._ && user._.sea;
+                const isGunLoggedIn = this.isLoggedIn();
+                if (hasUserObject &&
+                    hasPublicKey &&
+                    hasSeaCredentials &&
+                    isGunLoggedIn) {
+                    (0, logger_1.log)(`Authentication state confirmed after ${i + 1} attempts`);
+                    authenticated = true;
+                    break;
+                }
+                if (i < maxRetries - 1) {
+                    (0, logger_1.log)(`Waiting for auth state... attempt ${i + 1}/${maxRetries}`);
+                    await new Promise((resolve) => setTimeout(resolve, delayMs));
+                }
+            }
+            if (!authenticated) {
+                throw new Error("User is not authenticated - timeout waiting for auth state");
             }
             (0, logger_1.log)("Authentication state confirmed, starting wallet initialization");
-            // Start wallet initialization state
-            authManager.startWalletInit();
             try {
                 // Try to load existing wallets first
                 const existingWallets = await walletPlugin.loadWallets();
                 if (existingWallets && existingWallets.length > 0) {
-                    (0, logger_1.log)("User already has wallets, marking wallet as ready");
-                    authManager.walletInitSuccess();
+                    (0, logger_1.log)("User already has wallets, wallet initialization complete");
                     return;
                 }
                 // Create a new wallet if none exist
                 (0, logger_1.log)("Creating initial wallet for user");
                 await walletPlugin.createWallet();
                 (0, logger_1.log)("Initial wallet created successfully");
-                // Mark wallet initialization as successful
-                authManager.walletInitSuccess();
             }
             catch (walletError) {
                 (0, logger_1.log)("Wallet initialization failed:", walletError);
-                authManager.walletInitFail(walletError);
                 throw walletError;
             }
         }

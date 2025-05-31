@@ -131,7 +131,7 @@ export declare class HDWallet extends EventEmitter {
      */
     private decryptSensitiveData;
     /**
-     * Get user's master mnemonic, first checking GunDB then localStorage
+     * Get user's master mnemonic from GunDB or localStorage
      */
     getUserMasterMnemonic(): Promise<string | null>;
     /**

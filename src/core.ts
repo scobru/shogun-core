@@ -104,6 +104,9 @@ export class ShogunCore implements IShogunCore {
 
   private Gun: any;
 
+  /** Current authentication method */
+  private currentAuthMethod?: AuthMethod;
+
   /**
    * Initialize the Shogun SDK
    * @param config - SDK Configuration object
@@ -417,6 +420,12 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
+      // Set authentication method to password only if not already set by a plugin
+      if (!this.currentAuthMethod) {
+        this.currentAuthMethod = "password";
+        log("Authentication method set to default: password");
+      }
+
       // Timeout after a configurable interval (default 15 seconds)
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
 
@@ -484,11 +493,25 @@ export class ShogunCore implements IShogunCore {
         });
 
         // Automatically initialize wallet after successful login
-        try {
-          await this.ensureUserHasWallet();
-        } catch (walletError) {
-          log("Warning: Could not initialize wallet after login:", walletError);
-          // Don't fail the login if wallet creation fails
+        // Only for traditional password authentication
+        log(
+          `Current auth method before wallet check: ${this.currentAuthMethod}`,
+        );
+        if (this.currentAuthMethod === "password") {
+          log("Initializing wallet for password authentication");
+          try {
+            await this.ensureUserHasWallet();
+          } catch (walletError) {
+            log(
+              "Warning: Could not initialize wallet after login:",
+              walletError,
+            );
+            // Don't fail the login if wallet creation fails
+          }
+        } else {
+          log(
+            `Skipping wallet initialization for auth method: ${this.currentAuthMethod}`,
+          );
         }
       }
 
@@ -685,6 +708,27 @@ export class ShogunCore implements IShogunCore {
   }
 
   /**
+   * Set the current authentication method
+   * This is used by plugins to indicate which authentication method was used
+   * @param method The authentication method used
+   */
+  setAuthMethod(method: AuthMethod): void {
+    log(
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
+    );
+    this.currentAuthMethod = method;
+    log(`Authentication method successfully set to: ${method}`);
+  }
+
+  /**
+   * Get the current authentication method
+   * @returns The current authentication method or undefined if not set
+   */
+  getAuthMethod(): AuthMethod | undefined {
+    return this.currentAuthMethod;
+  }
+
+  /**
    * Ensures the current user has a wallet, creating one if necessary
    * @private
    */
@@ -702,27 +746,53 @@ export class ShogunCore implements IShogunCore {
         return;
       }
 
-      // Get AuthManager instance
-      const authManager = new AuthManager(this.gundb);
-
-      // Wait for authentication state to be stable using state machine
+      // Use a more direct approach to wait for authentication state
       log("Waiting for authentication state to stabilize...");
-      const authReady = await authManager.waitForAuthentication(10000);
-      if (!authReady) {
-        throw new Error("Authentication state not stable - timeout reached");
+
+      // Wait for Gun user to be properly authenticated with shorter timeout and more checks
+      const maxRetries = 20; // Increased retries but shorter intervals
+      const delayMs = 250; // Shorter delay between checks
+      let authenticated = false;
+
+      for (let i = 0; i < maxRetries; i++) {
+        const user = this.gun.user();
+
+        // Check multiple authentication indicators
+        const hasUserObject = user && user.is;
+        const hasPublicKey = user && user.is && user.is.pub;
+        const hasSeaCredentials = user && user._ && (user._ as any).sea;
+        const isGunLoggedIn = this.isLoggedIn();
+
+        if (
+          hasUserObject &&
+          hasPublicKey &&
+          hasSeaCredentials &&
+          isGunLoggedIn
+        ) {
+          log(`Authentication state confirmed after ${i + 1} attempts`);
+          authenticated = true;
+          break;
+        }
+
+        if (i < maxRetries - 1) {
+          log(`Waiting for auth state... attempt ${i + 1}/${maxRetries}`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+
+      if (!authenticated) {
+        throw new Error(
+          "User is not authenticated - timeout waiting for auth state",
+        );
       }
 
       log("Authentication state confirmed, starting wallet initialization");
-
-      // Start wallet initialization state
-      authManager.startWalletInit();
 
       try {
         // Try to load existing wallets first
         const existingWallets = await walletPlugin.loadWallets();
         if (existingWallets && existingWallets.length > 0) {
-          log("User already has wallets, marking wallet as ready");
-          authManager.walletInitSuccess();
+          log("User already has wallets, wallet initialization complete");
           return;
         }
 
@@ -730,12 +800,8 @@ export class ShogunCore implements IShogunCore {
         log("Creating initial wallet for user");
         await walletPlugin.createWallet();
         log("Initial wallet created successfully");
-
-        // Mark wallet initialization as successful
-        authManager.walletInitSuccess();
       } catch (walletError) {
         log("Wallet initialization failed:", walletError);
-        authManager.walletInitFail(walletError);
         throw walletError;
       }
     } catch (error) {

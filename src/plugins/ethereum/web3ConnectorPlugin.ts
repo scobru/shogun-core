@@ -194,6 +194,9 @@ export class Web3ConnectorPlugin
       }
       log("MetaMask signature verified successfully.");
 
+      // Set authentication method to ethereum before login
+      core.setAuthMethod("ethereum");
+
       // Use core's login method directly instead of core.gun.login
       log("Logging in using core login method...");
       const loginResult = await core.login(
@@ -302,6 +305,9 @@ export class Web3ConnectorPlugin
         );
       }
       log("MetaMask signature verified successfully.");
+
+      // Set authentication method to ethereum before signup
+      core.setAuthMethod("ethereum");
 
       // Use core's signUp method directly instead of core.gun.signUp
       log("Signing up using core signUp method...");
