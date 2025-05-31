@@ -205,6 +205,64 @@ export default class AuthManager {
     // Currently not implemented - needs to be added to the crypto module
     return null;
   }
+
+  /**
+   * Start wallet initialization process
+   */
+  startWalletInit() {
+    AuthManager.state.set(new StateMachineEvent(events.wallet_init_start));
+  }
+
+  /**
+   * Mark wallet initialization as successful
+   */
+  walletInitSuccess() {
+    AuthManager.state.set(new StateMachineEvent(events.wallet_init_success));
+  }
+
+  /**
+   * Mark wallet initialization as failed
+   */
+  walletInitFail(error?: any) {
+    AuthManager.state.set(
+      new StateMachineEvent(events.wallet_init_fail, error),
+    );
+  }
+
+  /**
+   * Wait for authentication to complete
+   */
+  async waitForAuthentication(timeoutMs: number = 10000): Promise<boolean> {
+    return AuthManager.state.waitForState(states.authorized, timeoutMs);
+  }
+
+  /**
+   * Wait for wallet to be ready
+   */
+  async waitForWalletReady(timeoutMs: number = 15000): Promise<boolean> {
+    return AuthManager.state.waitForState(states.wallet_ready, timeoutMs);
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return AuthManager.state.isAuthenticated();
+  }
+
+  /**
+   * Check if wallet is ready
+   */
+  isWalletReady(): boolean {
+    return AuthManager.state.isWalletReady();
+  }
+
+  /**
+   * Get current authentication state
+   */
+  getCurrentState() {
+    return AuthManager.state.getCurrentState();
+  }
 }
 
 export type GunAuthAck =

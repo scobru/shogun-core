@@ -1,35 +1,62 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CorePlugins = exports.PluginCategory = void 0;
+exports.AuthEvent = exports.AuthState = exports.CorePlugins = exports.PluginCategory = void 0;
 /**
- * Categorie di plugin standard in ShogunCore
+ * Standard plugin categories in ShogunCore
  */
 var PluginCategory;
 (function (PluginCategory) {
-    /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
+    /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
     PluginCategory["Authentication"] = "authentication";
-    /** Plugin per la gestione di wallet */
+    /** Wallet management plugins */
     PluginCategory["Wallet"] = "wallet";
-    /** Plugin per la privacy e l'anonimato */
+    /** Privacy and anonymity plugins */
     PluginCategory["Privacy"] = "privacy";
-    /** Plugin per l'identità decentralizzata */
+    /** Decentralized identity plugins */
     PluginCategory["Identity"] = "identity";
-    /** Plugin per altre funzionalità */
+    /** Other utility plugins */
     PluginCategory["Utility"] = "utility";
 })(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
- * Nomi standard dei plugin integrati
+ * Standard names for built-in plugins
  */
 var CorePlugins;
 (function (CorePlugins) {
-    /** Plugin WebAuthn */
+    /** WebAuthn plugin */
     CorePlugins["WebAuthn"] = "webauthn";
-    /** Plugin Ethereum */
+    /** Ethereum plugin */
     CorePlugins["Ethereum"] = "ethereum";
-    /** Plugin Stealth */
-    CorePlugins["StealthAddress"] = "stealth-address";
-    /** Plugin HDWallet */
-    CorePlugins["Bip32"] = "bip32";
-    /** Plugin Bitcoin Wallet */
+    /** Stealth Address plugin */
+    CorePlugins["StealthAddress"] = "stealth";
+    /** HD Wallet plugin */
+    CorePlugins["Bip44"] = "bip44";
+    /** Bitcoin wallet plugin */
     CorePlugins["Bitcoin"] = "bitcoin";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));
+/**
+ * Authentication states for the state machine
+ */
+var AuthState;
+(function (AuthState) {
+    AuthState["UNAUTHENTICATED"] = "unauthenticated";
+    AuthState["AUTHENTICATING"] = "authenticating";
+    AuthState["AUTHENTICATED"] = "authenticated";
+    AuthState["AUTHENTICATION_FAILED"] = "authentication_failed";
+    AuthState["WALLET_INITIALIZING"] = "wallet_initializing";
+    AuthState["WALLET_READY"] = "wallet_ready";
+    AuthState["ERROR"] = "error";
+})(AuthState || (exports.AuthState = AuthState = {}));
+/**
+ * Authentication events that trigger state transitions
+ */
+var AuthEvent;
+(function (AuthEvent) {
+    AuthEvent["LOGIN_START"] = "login_start";
+    AuthEvent["LOGIN_SUCCESS"] = "login_success";
+    AuthEvent["LOGIN_FAILED"] = "login_failed";
+    AuthEvent["LOGOUT"] = "logout";
+    AuthEvent["WALLET_INIT_START"] = "wallet_init_start";
+    AuthEvent["WALLET_INIT_SUCCESS"] = "wallet_init_success";
+    AuthEvent["WALLET_INIT_FAILED"] = "wallet_init_failed";
+    AuthEvent["ERROR"] = "error";
+})(AuthEvent || (exports.AuthEvent = AuthEvent = {}));

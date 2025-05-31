@@ -18,12 +18,12 @@ export class NostrConnectorPlugin
   extends BasePlugin
   implements NostrConnectorPluginInterface
 {
-  name = "bitcoin-wallet";
+  name = "bitcoin";
   version = "1.0.0";
   description =
     "Provides Bitcoin wallet connection and authentication for ShogunCore";
 
-  private nostrConnector: NostrConnector | null = null;
+  private bitcoinConnector: NostrConnector | null = null;
 
   /**
    * @inheritdoc
@@ -32,7 +32,7 @@ export class NostrConnectorPlugin
     super.initialize(core);
 
     // Initialize the Bitcoin wallet module
-    this.nostrConnector = new NostrConnector();
+    this.bitcoinConnector = new NostrConnector();
 
     log("Bitcoin wallet plugin initialized");
   }
@@ -41,10 +41,10 @@ export class NostrConnectorPlugin
    * @inheritdoc
    */
   destroy(): void {
-    if (this.nostrConnector) {
-      this.nostrConnector.cleanup();
+    if (this.bitcoinConnector) {
+      this.bitcoinConnector.cleanup();
     }
-    this.nostrConnector = null;
+    this.bitcoinConnector = null;
     super.destroy();
     log("Bitcoin wallet plugin destroyed");
   }
@@ -53,19 +53,19 @@ export class NostrConnectorPlugin
    * Ensure that the Bitcoin wallet module is initialized
    * @private
    */
-  private assertNostrConnector(): NostrConnector {
+  private assertBitcoinConnector(): NostrConnector {
     this.assertInitialized();
-    if (!this.nostrConnector) {
+    if (!this.bitcoinConnector) {
       throw new Error("Bitcoin wallet module not initialized");
     }
-    return this.nostrConnector;
+    return this.bitcoinConnector;
   }
 
   /**
    * @inheritdoc
    */
   isAvailable(): boolean {
-    return this.assertNostrConnector().isAvailable();
+    return this.assertBitcoinConnector().isAvailable();
   }
 
   /**
@@ -81,13 +81,13 @@ export class NostrConnectorPlugin
    * Check if Nostr extension is available
    */
   isNostrExtensionAvailable(): boolean {
-    return this.assertNostrConnector().isNostrExtensionAvailable();
+    return this.assertBitcoinConnector().isNostrExtensionAvailable();
   }
 
   /**
    * @inheritdoc
    */
-  async connectWallet(
+  async connectBitcoinWallet(
     type: "alby" | "nostr" | "manual" = "nostr",
   ): Promise<ConnectionResult> {
     // Prioritize nostr over alby (since they are functionally identical)
@@ -96,7 +96,7 @@ export class NostrConnectorPlugin
       log("Alby is deprecated, using Nostr instead");
       type = "nostr";
     }
-    return this.assertNostrConnector().connectWallet(type);
+    return this.assertBitcoinConnector().connectWallet(type);
   }
 
   /**
@@ -106,14 +106,14 @@ export class NostrConnectorPlugin
     address: string,
   ): Promise<NostrConnectorCredentials> {
     log("Calling credential generation for Bitcoin wallet");
-    return this.assertNostrConnector().generateCredentials(address);
+    return this.assertBitcoinConnector().generateCredentials(address);
   }
 
   /**
    * @inheritdoc
    */
   cleanup(): void {
-    this.assertNostrConnector().cleanup();
+    this.assertBitcoinConnector().cleanup();
   }
 
   /**
@@ -124,7 +124,7 @@ export class NostrConnectorPlugin
     signature: string,
     address: string,
   ): Promise<boolean> {
-    return this.assertNostrConnector().verifySignature(
+    return this.assertBitcoinConnector().verifySignature(
       message,
       signature,
       address,
@@ -135,7 +135,7 @@ export class NostrConnectorPlugin
    * @inheritdoc
    */
   async generatePassword(signature: string): Promise<string> {
-    return this.assertNostrConnector().generatePassword(signature);
+    return this.assertBitcoinConnector().generatePassword(signature);
   }
 
   /**
@@ -322,6 +322,20 @@ export class NostrConnectorPlugin
       );
 
       if (!signUpResult.success) {
+        // Check if the error is "User already created"
+        if (
+          signUpResult.error &&
+          (signUpResult.error.includes("User already created") ||
+            signUpResult.error.includes("already created") ||
+            signUpResult.error.includes("già creato"))
+        ) {
+          // User already exists, suggest login instead
+          return {
+            success: false,
+            error: "User already exists. Please try logging in instead.",
+          };
+        }
+
         throw createError(
           ErrorType.AUTHENTICATION,
           "BITCOIN_SIGNUP_FAILED",

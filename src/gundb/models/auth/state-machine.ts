@@ -22,6 +22,7 @@ export class StateMachineEvent {
 export function use_machine(machine: Machine, initial: AUTH_STATE) {
   let state = initial;
   let subs = new Map<string, (state: AUTH_STATE) => any>();
+  let stateWaiters = new Map<AUTH_STATE, Array<(success: boolean) => void>>();
 
   function subscribe(cb: (state: AUTH_STATE) => any) {
     const id = crypto.randomUUID();
@@ -34,14 +35,70 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
   }
 
   function set(event: StateMachineEvent): void {
+    const previousState = state;
     state = machine(state, event);
+
+    // Notify subscribers
     for (const sub of subs.values()) {
       sub(state);
+    }
+
+    // Notify state waiters
+    const waiters = stateWaiters.get(state);
+    if (waiters) {
+      waiters.forEach((resolve) => resolve(true));
+      stateWaiters.delete(state);
     }
   }
 
   function getCurrentState(): AUTH_STATE {
     return state;
+  }
+
+  function waitForState(
+    targetState: AUTH_STATE,
+    timeoutMs: number = 10000,
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      // If already in target state, resolve immediately
+      if (state === targetState) {
+        resolve(true);
+        return;
+      }
+
+      // Add to waiters
+      if (!stateWaiters.has(targetState)) {
+        stateWaiters.set(targetState, []);
+      }
+      stateWaiters.get(targetState)!.push(resolve);
+
+      // Set timeout
+      setTimeout(() => {
+        const waiters = stateWaiters.get(targetState);
+        if (waiters) {
+          const index = waiters.indexOf(resolve);
+          if (index > -1) {
+            waiters.splice(index, 1);
+            if (waiters.length === 0) {
+              stateWaiters.delete(targetState);
+            }
+          }
+        }
+        resolve(false);
+      }, timeoutMs);
+    });
+  }
+
+  function isAuthenticated(): boolean {
+    return (
+      state === states.authorized ||
+      state === states.wallet_initializing ||
+      state === states.wallet_ready
+    );
+  }
+
+  function isWalletReady(): boolean {
+    return state === states.wallet_ready;
   }
 
   return {
@@ -53,6 +110,12 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
     set,
     /** Get the current state */
     getCurrentState,
+    /** Wait for a specific state */
+    waitForState,
+    /** Check if user is authenticated */
+    isAuthenticated,
+    /** Check if wallet is ready */
+    isWalletReady,
   };
 }
 
@@ -68,6 +131,10 @@ export const states = {
   authorized: "authorized" as const,
   /** The user is currently logging out. */
   leaving: "leaving" as const,
+  /** Wallet initialization is in progress. */
+  wallet_initializing: "wallet_initializing" as const,
+  /** Wallet is ready and available. */
+  wallet_ready: "wallet_ready" as const,
 };
 
 /** Possible events that the auth-manager can take. */
@@ -77,6 +144,9 @@ export const events = {
   disconnect: "disconnect" as const,
   fail: "fail" as const,
   success: "success" as const,
+  wallet_init_start: "wallet_init_start" as const,
+  wallet_init_success: "wallet_init_success" as const,
+  wallet_init_fail: "wallet_init_fail" as const,
 };
 
 export type AUTH_EVENT = keyof typeof events;
@@ -142,6 +212,9 @@ export function auth_state_machine(
       if (event.type === events.disconnect) {
         return states.leaving;
       }
+      if (event.type === events.wallet_init_start) {
+        return states.wallet_initializing;
+      }
       throw transition_error;
     // User is leaving and busy
     case states.leaving:
@@ -150,6 +223,24 @@ export function auth_state_machine(
       }
       if (event.type === events.success) {
         return states.disconnected;
+      }
+      throw transition_error;
+    // Wallet is being initialized
+    case states.wallet_initializing:
+      if (event.type === events.wallet_init_success) {
+        return states.wallet_ready;
+      }
+      if (event.type === events.wallet_init_fail) {
+        return states.authorized;
+      }
+      if (event.type === events.disconnect) {
+        return states.leaving;
+      }
+      throw transition_error;
+    // Wallet is ready
+    case states.wallet_ready:
+      if (event.type === events.disconnect) {
+        return states.leaving;
       }
       throw transition_error;
     default:

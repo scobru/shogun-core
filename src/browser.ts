@@ -13,7 +13,7 @@ const lazyModules = {
   },
   // Wallet and crypto modules
   bip32: {
-    hdwallet: () => import("./plugins/bip32/hdwalletPlugin"),
+    hdwallet: () => import("./plugins/bip44/hdwalletPlugin"),
   },
   stealth: {
     stealth: () => import("./plugins/stealth-address/stealth"),

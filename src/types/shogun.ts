@@ -2,44 +2,43 @@ import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { GunDB } from "../gundb/gun";
-import { Observable } from "rxjs";
 import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
 
 /**
- * Categorie di plugin standard in ShogunCore
+ * Standard plugin categories in ShogunCore
  */
 export enum PluginCategory {
-  /** Plugin per l'autenticazione (WebAuthn, MetaMask) */
+  /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
   Authentication = "authentication",
-  /** Plugin per la gestione di wallet */
+  /** Wallet management plugins */
   Wallet = "wallet",
-  /** Plugin per la privacy e l'anonimato */
+  /** Privacy and anonymity plugins */
   Privacy = "privacy",
-  /** Plugin per l'identità decentralizzata */
+  /** Decentralized identity plugins */
   Identity = "identity",
-  /** Plugin per altre funzionalità */
+  /** Other utility plugins */
   Utility = "utility",
 }
 
 /**
- * Nomi standard dei plugin integrati
+ * Standard names for built-in plugins
  */
 export enum CorePlugins {
-  /** Plugin WebAuthn */
+  /** WebAuthn plugin */
   WebAuthn = "webauthn",
-  /** Plugin Ethereum */
+  /** Ethereum plugin */
   Ethereum = "ethereum",
-  /** Plugin Stealth */
-  StealthAddress = "stealth-address",
-  /** Plugin HDWallet */
-  Bip32 = "bip32",
-  /** Plugin Bitcoin Wallet */
+  /** Stealth Address plugin */
+  StealthAddress = "stealth",
+  /** HD Wallet plugin */
+  Bip44 = "bip44",
+  /** Bitcoin wallet plugin */
   Bitcoin = "bitcoin",
 }
 
-export type AuthMethod = "password" | "webauthn" | "metamask" | "bitcoin";
+export type AuthMethod = "password" | "webauthn" | "ethereum" | "bitcoin";
 
 // Authentication result interfaces
 export interface AuthResult {
@@ -97,7 +96,7 @@ export interface IShogunCore extends PluginManager {
   ): Promise<SignUpResult>;
 
   // Authentication method retrieval
-  getAuthenticationMethod(type: "password" | "webauthn" | "metamask"): any;
+  getAuthenticationMethod(type: AuthMethod): any;
 
   // Utility methods
   logout(): void;
@@ -154,7 +153,7 @@ export interface ShogunSDKConfig {
     apiUrl?: string;
   };
   /** HDWallet configuration */
-  bip32?: {
+  bip44?: {
     /** Enable HDWallet functionalities */
     enabled?: boolean;
     /** Balance cache TTL in milliseconds (default: 30000) */
@@ -188,4 +187,54 @@ export interface ShogunEvents {
   "auth:signup": (data: { username: string; userPub: string }) => void;
   "auth:login": (data: { username: string; userPub: string }) => void;
   "auth:logout": (data: Record<string, never>) => void;
+}
+
+/**
+ * Authentication states for the state machine
+ */
+export enum AuthState {
+  UNAUTHENTICATED = "unauthenticated",
+  AUTHENTICATING = "authenticating",
+  AUTHENTICATED = "authenticated",
+  AUTHENTICATION_FAILED = "authentication_failed",
+  WALLET_INITIALIZING = "wallet_initializing",
+  WALLET_READY = "wallet_ready",
+  ERROR = "error",
+}
+
+/**
+ * Authentication events that trigger state transitions
+ */
+export enum AuthEvent {
+  LOGIN_START = "login_start",
+  LOGIN_SUCCESS = "login_success",
+  LOGIN_FAILED = "login_failed",
+  LOGOUT = "logout",
+  WALLET_INIT_START = "wallet_init_start",
+  WALLET_INIT_SUCCESS = "wallet_init_success",
+  WALLET_INIT_FAILED = "wallet_init_failed",
+  ERROR = "error",
+}
+
+/**
+ * Authentication state machine context
+ */
+export interface AuthContext {
+  userPub?: string;
+  username?: string;
+  error?: string;
+  walletCount?: number;
+}
+
+/**
+ * Authentication state machine interface
+ */
+export interface AuthStateMachine {
+  currentState: AuthState;
+  context: AuthContext;
+  transition(event: AuthEvent, data?: Partial<AuthContext>): void;
+  canTransition(event: AuthEvent): boolean;
+  isAuthenticated(): boolean;
+  isWalletReady(): boolean;
+  waitForState(targetState: AuthState, timeoutMs?: number): Promise<boolean>;
 }

@@ -13,7 +13,7 @@ export class HDWalletPlugin
   extends BasePlugin
   implements HDWalletPluginInterface
 {
-  name = "hdwallet";
+  name = "bip44";
   version = "1.0.0";
   description = "Provides wallet management functionality for Shogun Core";
 
@@ -32,7 +32,7 @@ export class HDWalletPlugin
     // Creiamo un nuovo WalletManager
     this.hdwallet = new HDWallet(core.gun, {
       // Recuperiamo configurazione dal core se disponibile
-      balanceCacheTTL: core.config?.bip32?.balanceCacheTTL,
+      balanceCacheTTL: core.config?.bip44?.balanceCacheTTL,
       rpcUrl:
         core.provider instanceof ethers.JsonRpcProvider
           ? (core.provider as any).connection?.url

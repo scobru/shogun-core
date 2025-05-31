@@ -2,7 +2,7 @@ import { log, logError } from "./logger";
 import { LogLevel } from "../types/common";
 
 /**
- * Tipi di errore che possono verificarsi nell'applicazione
+ * Types of errors that can occur in the application
  */
 export enum ErrorType {
   AUTHENTICATION = "AuthenticationError",
@@ -24,10 +24,13 @@ export enum ErrorType {
   CONNECTOR = "CONNECTOR",
   GENERAL = "GENERAL",
   CONTRACT = "CONTRACT",
+  BIP32 = "BIP32Error",
+  ETHEREUM = "EthereumError",
+  BITCOIN = "BitcoinError",
 }
 
 /**
- * Interfaccia standard per errori di Shogun
+ * Standard interface for Shogun errors
  */
 export interface ShogunError {
   type: ErrorType;
@@ -38,12 +41,12 @@ export interface ShogunError {
 }
 
 /**
- * Wrapper per standardizzare gli errori
- * @param type - Tipo di errore
- * @param code - Codice errore
- * @param message - Messaggio errore
- * @param originalError - Errore originale
- * @returns Un oggetto di errore strutturato
+ * Wrapper to standardize errors
+ * @param type - Error type
+ * @param code - Error code
+ * @param message - Error message
+ * @param originalError - Original error
+ * @returns A structured error object
  */
 export function createError(
   type: ErrorType,
@@ -61,7 +64,7 @@ export function createError(
 }
 
 /**
- * Opzioni di configurazione per il gestore di errori
+ * Configuration options for the error handler
  */
 export interface ErrorOptions {
   message?: string;
@@ -71,12 +74,12 @@ export interface ErrorOptions {
 }
 
 /**
- * Tipo della funzione di callback per errori
+ * Error callback function type
  */
 export type ErrorCallback = (error: any) => any;
 
 /**
- * Risultato standardizzato per gestione errori
+ * Standardized result for error handling
  */
 export interface ErrorResult {
   success: boolean;
@@ -85,16 +88,16 @@ export interface ErrorResult {
 }
 
 /**
- * Funzione di utilità per gestire gli errori in modo consistente
- * @param error - L'errore da gestire
- * @param options - Opzioni di configurazione
- * @returns Risultato dell'operazione o il risultato della callback
+ * Utility function to handle errors consistently
+ * @param error - The error to handle
+ * @param options - Configuration options
+ * @returns Operation result or callback result
  */
 export function handleError(
   error: any,
   options: ErrorOptions = {},
 ): ErrorResult | any {
-  // Impostazioni di default
+  // Default settings
   const {
     message = error instanceof Error ? error.message : String(error),
     throwError = false,
@@ -102,17 +105,17 @@ export function handleError(
     callback,
   } = options;
 
-  // Log dell'errore se richiesto
+  // Log the error if requested
   if (logError) {
     console.error(`[ERROR] ${message}`, error);
   }
 
-  // Se è stata fornita una callback, la eseguiamo e restituiamo il suo risultato
+  // If a callback was provided, execute it and return its result
   if (typeof callback === "function") {
     return callback(error);
   }
 
-  // Se è richiesto di lanciare l'errore, lo lanciamo
+  // If requested to throw the error, throw it
   if (throwError) {
     if (error instanceof Error) {
       throw error;
@@ -121,7 +124,7 @@ export function handleError(
     }
   }
 
-  // Altrimenti restituiamo un oggetto di risultato standard
+  // Otherwise return a standard result object
   return {
     success: false,
     message,
@@ -130,7 +133,7 @@ export function handleError(
 }
 
 /**
- * Gestore centralizzato per errori
+ * Centralized error handler
  */
 export class ErrorHandler {
   private static errors: ShogunError[] = [];
@@ -138,31 +141,31 @@ export class ErrorHandler {
   private static listeners: Array<(error: ShogunError) => void> = [];
 
   /**
-   * Gestisce un errore registrandolo e notificando gli ascoltatori
-   * @param error - L'errore da gestire
+   * Handles an error by logging it and notifying listeners
+   * @param error - The error to handle
    */
   static handleError(error: ShogunError): void {
-    // Log l'errore
+    // Log the error
     logError(`[${error.type}] ${error.code}: ${error.message}`);
 
-    // Conserva l'errore nella memoria
+    // Store the error in memory
     this.errors.push(error);
 
-    // Mantiene solo gli ultimi maxErrors
+    // Keep only the last maxErrors
     if (this.errors.length > this.maxErrors) {
       this.errors = this.errors.slice(-this.maxErrors);
     }
 
-    // Notifica gli ascoltatori
+    // Notify listeners
     this.notifyListeners(error);
   }
 
   /**
-   * Gestisce un errore grezzo convertendolo in ShogunError
-   * @param type - Tipo errore
-   * @param code - Codice errore
-   * @param message - Messaggio errore
-   * @param originalError - Errore originale
+   * Handles a raw error by converting it to ShogunError
+   * @param type - Error type
+   * @param code - Error code
+   * @param message - Error message
+   * @param originalError - Original error
    */
   static handle(
     type: ErrorType,
@@ -202,25 +205,25 @@ export class ErrorHandler {
   }
 
   /**
-   * Recupera gli ultimi N errori
-   * @param count - Numero di errori da recuperare
-   * @returns Lista degli errori più recenti
+   * Retrieves the last N errors
+   * @param count - Number of errors to retrieve
+   * @returns List of most recent errors
    */
   static getRecentErrors(count: number = 10): ShogunError[] {
     return this.errors.slice(-Math.min(count, this.errors.length));
   }
 
   /**
-   * Aggiunge un ascoltatore per gli errori
-   * @param listener - Funzione che verrà chiamata quando si verifica un errore
+   * Adds a listener for errors
+   * @param listener - Function that will be called when an error occurs
    */
   static addListener(listener: (error: ShogunError) => void): void {
     this.listeners.push(listener);
   }
 
   /**
-   * Rimuove un ascoltatore per gli errori
-   * @param listener - Funzione da rimuovere
+   * Removes an error listener
+   * @param listener - Function to remove
    */
   static removeListener(listener: (error: ShogunError) => void): void {
     const index = this.listeners.indexOf(listener);
@@ -230,8 +233,8 @@ export class ErrorHandler {
   }
 
   /**
-   * Notifica tutti gli ascoltatori di un errore
-   * @param error - Errore da notificare
+   * Notifies all listeners of an error
+   * @param error - Error to notify
    */
   private static notifyListeners(error: ShogunError): void {
     for (const listener of this.listeners) {
@@ -244,9 +247,9 @@ export class ErrorHandler {
   }
 
   /**
-   * Funzione helper per formattare messaggi di errore dagli errori nativi
-   * @param error - Errore da formattare
-   * @returns Messaggio di errore formattato
+   * Helper function to format error messages from native errors
+   * @param error - Error to format
+   * @returns Formatted error message
    */
   static formatError(error: Error | unknown): string {
     if (!error) {

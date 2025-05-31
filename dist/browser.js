@@ -40,11 +40,28 @@ exports.ShogunCore = exports.modules = void 0;
 exports.initShogunBrowser = initShogunBrowser;
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
-// Lazy loading dei moduli pesanti
-const loadWebAuthnModule = () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn")));
-const loadStealthModule = () => Promise.resolve().then(() => __importStar(require("./plugins/stealth-address/stealth")));
-const loadWalletModule = () => Promise.resolve().then(() => __importStar(require("./plugins/bip32/hdwalletPlugin")));
-const loadMetaMaskModule = () => Promise.resolve().then(() => __importStar(require("./plugins/ethereum/web3ConnectorPlugin")));
+// Lazy loading modules - organized by functionality
+const lazyModules = {
+    // Authentication modules
+    webauthn: {
+        webauthn: () => Promise.resolve().then(() => __importStar(require("./plugins/webauthn/webauthn"))),
+    },
+    // Wallet and crypto modules
+    bip32: {
+        hdwallet: () => Promise.resolve().then(() => __importStar(require("./plugins/bip44/hdwalletPlugin"))),
+    },
+    stealth: {
+        stealth: () => Promise.resolve().then(() => __importStar(require("./plugins/stealth-address/stealth"))),
+    },
+    // Web3 connection modules
+    ethereum: {
+        web3Connector: () => Promise.resolve().then(() => __importStar(require("./plugins/ethereum/web3ConnectorPlugin"))),
+    },
+    bitcoin: {
+        nostrConnector: () => Promise.resolve().then(() => __importStar(require("./plugins/bitcoin/nostrConnectorPlugin"))),
+    },
+};
+// Instance tracking
 let shogunCoreInstance = null;
 let shogunG = null;
 /**
@@ -73,15 +90,27 @@ function initShogunBrowser(config) {
     }
     return shogunCoreInstance;
 }
-// Esportazione lazy loading helpers
+// Export lazy loading modules in a more organized structure
 exports.modules = {
-    loadWebAuthn: loadWebAuthnModule,
-    loadStealth: loadStealthModule,
-    loadWallet: loadWalletModule,
-    loadMetaMask: loadMetaMaskModule,
+    webauthn: {
+        loadWebAuthn: lazyModules.webauthn.webauthn,
+    },
+    bip32: {
+        loadHDWallet: lazyModules.bip32.hdwallet,
+    },
+    stealth: {
+        loadStealth: lazyModules.stealth.stealth,
+    },
+    ethereum: {
+        loadMetaMask: lazyModules.ethereum.web3Connector,
+    },
+    bitcoin: {
+        loadNostrConnector: lazyModules.bitcoin.nostrConnector,
+    },
 };
-// Export main types as well
+// Export types and interfaces
 __exportStar(require("./types/shogun"), exports);
+// Make initialization function available globally when in browser
 if (typeof window !== "undefined") {
     window.initShogunBrowser = initShogunBrowser;
 }

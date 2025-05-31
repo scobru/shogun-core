@@ -57,6 +57,7 @@ class GunDB {
     crypto;
     utils;
     auth;
+    node;
     onAuthCallbacks = [];
     _authenticating = false;
     // Integrated modules
@@ -71,6 +72,7 @@ class GunDB {
         this.utils = utils;
         // initialize auth manager
         this.auth = new auth_1.default(this, appScope);
+        this.node = this.gun.get(appScope);
     }
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {

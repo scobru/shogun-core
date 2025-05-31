@@ -10,9 +10,9 @@ const errorHandler_1 = require("../../utils/errorHandler");
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
  */
 class Web3ConnectorPlugin extends base_1.BasePlugin {
-    name = "metamask";
+    name = "ethereum";
     version = "1.0.0";
-    description = "Provides MetaMask wallet connection and authentication for ShogunCore";
+    description = "Provides Ethereum wallet connection and authentication for ShogunCore";
     metamask = null;
     /**
      * @inheritdoc

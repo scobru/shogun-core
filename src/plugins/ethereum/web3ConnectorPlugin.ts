@@ -18,10 +18,10 @@ export class Web3ConnectorPlugin
   extends BasePlugin
   implements Web3ConectorPluginInterface
 {
-  name = "metamask";
+  name = "ethereum";
   version = "1.0.0";
   description =
-    "Provides MetaMask wallet connection and authentication for ShogunCore";
+    "Provides Ethereum wallet connection and authentication for ShogunCore";
 
   private metamask: Web3Connector | null = null;
 

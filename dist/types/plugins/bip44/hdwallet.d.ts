@@ -139,6 +139,11 @@ export declare class HDWallet extends EventEmitter {
      */
     saveUserMasterMnemonic(mnemonic: string): Promise<void>;
     createWallet(): Promise<WalletInfo>;
+    /**
+     * Wait for user authentication with retry logic
+     * @private
+     */
+    private waitForAuthentication;
     loadWallets(): Promise<WalletInfo[]>;
     /**
      * Get wallet balance with caching to reduce RPC calls

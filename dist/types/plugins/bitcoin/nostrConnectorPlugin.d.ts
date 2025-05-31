@@ -10,7 +10,7 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
     name: string;
     version: string;
     description: string;
-    private nostrConnector;
+    private bitcoinConnector;
     /**
      * @inheritdoc
      */
@@ -23,7 +23,7 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      * Ensure that the Bitcoin wallet module is initialized
      * @private
      */
-    private assertNostrConnector;
+    private assertBitcoinConnector;
     /**
      * @inheritdoc
      */
@@ -40,7 +40,7 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
     /**
      * @inheritdoc
      */
-    connectWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+    connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
     /**
      * @inheritdoc
      */

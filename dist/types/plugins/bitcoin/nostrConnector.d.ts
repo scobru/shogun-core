@@ -53,15 +53,9 @@ export declare class NostrConnector extends EventEmitter {
      */
     isAvailable(): boolean;
     /**
-     * Connect to a Bitcoin wallet
-     * @param type Type of wallet to connect to
+     * Connect to a wallet type
      */
     connectWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
-    /**
-     * Connect to Alby extension
-     * @deprecated Alby support is deprecated, use connectNostr instead
-     */
-    private connectAlby;
     /**
      * Connect to Nostr extension
      */
@@ -79,21 +73,13 @@ export declare class NostrConnector extends EventEmitter {
      */
     generateCredentials(address: string): Promise<NostrConnectorCredentials>;
     /**
+     * Generate a deterministic signature for consistent authentication
+     */
+    private generateDeterministicSignature;
+    /**
      * Generate credentials from an existing signature
      */
     private generateCredentialsFromSignature;
-    /**
-     * Generate fallback credentials when signature is not available
-     */
-    private generateFallbackCredentials;
-    /**
-     * Request signature with timeout
-     */
-    private requestSignatureWithTimeout;
-    /**
-     * Request a signature from the connected wallet
-     */
-    private requestSignature;
     /**
      * Generate a password from a signature
      */
@@ -110,4 +96,12 @@ export declare class NostrConnector extends EventEmitter {
      * Get the currently connected wallet type
      */
     getConnectedType(): "alby" | "nostr" | "manual" | null;
+    /**
+     * Request signature with timeout
+     */
+    private requestSignatureWithTimeout;
+    /**
+     * Request a signature from the connected wallet
+     */
+    private requestSignature;
 }

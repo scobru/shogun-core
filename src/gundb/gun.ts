@@ -6,7 +6,7 @@
  * - Support for remove/unset operations
  */
 
-import { IGunUserInstance, IGunInstance } from "gun";
+import { IGunUserInstance, IGunInstance, IGunChain } from "gun";
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { GunRxJS } from "./rxjs-integration";
@@ -21,6 +21,8 @@ class GunDB {
   public crypto: typeof crypto;
   public utils: typeof utils;
   public auth: AuthManager;
+  public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
+
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
   private _authenticating: boolean = false;
 
@@ -39,6 +41,8 @@ class GunDB {
 
     // initialize auth manager
     this.auth = new AuthManager(this, appScope);
+
+    this.node = this.gun.get(appScope);
   }
 
   private subscribeToAuthEvents() {
