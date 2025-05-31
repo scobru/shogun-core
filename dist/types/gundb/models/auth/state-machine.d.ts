@@ -28,6 +28,14 @@ export declare function use_machine(machine: Machine, initial: AUTH_STATE): {
     isAuthenticated: () => boolean;
     /** Check if wallet is ready */
     isWalletReady: () => boolean;
+    /** Check if state machine is in a busy state */
+    isBusy: () => boolean;
+    /** Check if authentication can be started */
+    canStartAuth: () => boolean;
+    /** Check if logout can be performed */
+    canLogout: () => boolean;
+    /** Get human-readable state description */
+    getStateDescription: () => string;
 };
 /** Possible states that the auth-manager can be in. */
 export declare const states: {

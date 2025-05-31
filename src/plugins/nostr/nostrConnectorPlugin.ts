@@ -9,6 +9,7 @@ import {
 import { log, logError, logWarn } from "../../utils/logger";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+import AuthManager from "../../gundb/models/auth/auth";
 
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
@@ -175,6 +176,15 @@ export class NostrConnectorPlugin
         );
       }
 
+      // Check if authentication is already in progress using state machine
+      if (AuthManager.state.isBusy()) {
+        throw createError(
+          ErrorType.AUTHENTICATION,
+          "AUTH_IN_PROGRESS",
+          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
+        );
+      }
+
       log("Generating credentials for Bitcoin wallet login...");
       const credentials = await this.generateCredentials(address);
       if (
@@ -211,10 +221,10 @@ export class NostrConnectorPlugin
       }
       log("Bitcoin wallet signature verified successfully.");
 
-      // Set authentication method to bitcoin before login
-      core.setAuthMethod("bitcoin");
+      // Set authentication method to nostr before login
+      core.setAuthMethod("nostr");
 
-      // Use core's login method directly - simplified approach similar to MetaMask
+      // Use core's login method which now properly uses AuthManager and state machine
       log("Logging in using core login method...");
       const loginResult = await core.login(
         credentials.username,
@@ -287,6 +297,15 @@ export class NostrConnectorPlugin
         );
       }
 
+      // Check if authentication is already in progress using state machine
+      if (AuthManager.state.isBusy()) {
+        throw createError(
+          ErrorType.AUTHENTICATION,
+          "AUTH_IN_PROGRESS",
+          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
+        );
+      }
+
       // Generate credentials similar to login
       log("Generating credentials for Bitcoin wallet signup...");
       const credentials = await this.generateCredentials(address);
@@ -325,10 +344,10 @@ export class NostrConnectorPlugin
       }
       log("Bitcoin wallet signature verified successfully.");
 
-      // Set authentication method to bitcoin before signup
-      core.setAuthMethod("bitcoin");
+      // Set authentication method to nostr before signup
+      core.setAuthMethod("nostr");
 
-      // Use core's signUp method directly - simplified approach similar to MetaMask
+      // Use core's signUp method which now properly uses AuthManager and state machine
       log("Signing up using core signUp method...");
       const signUpResult = await core.signUp(
         credentials.username,

@@ -19,7 +19,6 @@ declare class GunDB {
     auth: AuthManager;
     node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
     private readonly onAuthCallbacks;
-    private _authenticating;
     private _rxjs?;
     constructor(gun: IGunInstance<any>, appScope?: string);
     private subscribeToAuthEvents;
@@ -122,8 +121,6 @@ declare class GunDB {
      */
     login(username: string, password: string, callback?: (result: any) => void): Promise<any>;
     private _savePair;
-    private isAuthenticating;
-    private _setAuthenticating;
     /**
      * Logs out the current user using AuthManager
      */
@@ -133,6 +130,36 @@ declare class GunDB {
      * @returns True if logged in
      */
     isLoggedIn(): boolean;
+    /**
+     * Checks if authentication is currently in progress
+     * @returns True if authenticating
+     */
+    isAuthenticating(): boolean;
+    /**
+     * Gets the current authentication state
+     * @returns Current authentication state
+     */
+    getAuthState(): string;
+    /**
+     * Gets a human-readable description of the current authentication state
+     * @returns State description
+     */
+    getAuthStateDescription(): string;
+    /**
+     * Checks if user is authenticated (logged in and not in a transitional state)
+     * @returns True if authenticated
+     */
+    isAuthenticated(): boolean;
+    /**
+     * Checks if wallet is ready
+     * @returns True if wallet is ready
+     */
+    isWalletReady(): boolean;
+    /**
+     * Checks if authentication can be started (user is disconnected)
+     * @returns True if auth can be started
+     */
+    canStartAuth(): boolean;
     /**
      * Gets the current user
      * @returns Current user object or null

@@ -27,11 +27,11 @@ export declare enum CorePlugins {
     /** WebAuthn plugin */
     WebAuthn = "webauthn",
     /** Ethereum plugin */
-    Ethereum = "ethereum",
+    Web3 = "web3",
     /** Bitcoin wallet plugin */
-    Bitcoin = "bitcoin"
+    Nostr = "nostr"
 }
-export type AuthMethod = "password" | "webauthn" | "ethereum" | "bitcoin";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr";
 export interface AuthResult {
     success: boolean;
     error?: string;

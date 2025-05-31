@@ -1,21 +1,21 @@
-# Ethereum Plugin for Shogun SDK
+# Web3 Plugin for Shogun SDK
 
 ## Overview
 
-The Ethereum plugin for Shogun SDK provides authentication via MetaMask and other Ethereum wallets. It enables signature-based authentication, transaction signing, and direct integration with ethers.js v6.
+The Web3 plugin for Shogun SDK provides authentication via MetaMask and other Ethereum wallets. It enables signature-based authentication, transaction signing, and direct integration with ethers.js v6.
 
 ## Architecture
 
-The Ethereum implementation consists of these key components:
+The Web3 implementation consists of these key components:
 
 - **Web3Connector**: Core implementation that can be used independently
 - **Web3ConnectorPlugin**: Integration wrapper for the Shogun Core plugin system
-- **Types**: TypeScript definitions for Ethereum-specific interfaces
+- **Types**: TypeScript definitions for Web3-specific interfaces
 
 ### File Structure
 
 ```
-shogun-core/src/plugins/ethereum/
+shogun-core/src/plugins/web3/
 ├── index.ts               - Exports all plugin components
 ├── web3ConnectorPlugin.ts - Plugin registration and lifecycle
 ├── web3Connector.ts       - Core Web3 functionality implementation 
@@ -24,7 +24,7 @@ shogun-core/src/plugins/ethereum/
 
 ## Usage Options
 
-The Ethereum functionality can be used in two ways:
+The Web3 functionality can be used in two ways:
 
 ### 1. Through Shogun Core (Plugin System)
 
@@ -33,17 +33,17 @@ import { ShogunCore } from "shogun-core";
 
 // Enable the plugin through configuration
 const shogun = new ShogunCore({
-  ethereum: {
+  web3: {
     enabled: true
   },
   // Other config options...
 });
 
 // Get the plugin
-const ethereumAuth = shogun.getAuthenticationMethod("ethereum");
+const web3Auth = shogun.getAuthenticationMethod("web3");
 
 // Use the plugin
-const result = await ethereumAuth.login(address);
+const result = await web3Auth.login(address);
 ```
 
 ### 2. Directly Using Web3Connector
@@ -51,7 +51,7 @@ const result = await ethereumAuth.login(address);
 The `Web3Connector` class can be used independently without Shogun Core:
 
 ```typescript
-import { Web3Connector } from "shogun-core/plugins/ethereum";
+import { Web3Connector } from "shogun-core/plugins/web3";
 
 // Create an instance with optional configuration
 const web3 = new Web3Connector({
@@ -84,10 +84,10 @@ The authentication process works as follows:
 
 ```typescript
 // Get the authentication method
-const ethereum = shogun.getAuthenticationMethod("ethereum");
+const web3 = shogun.getAuthenticationMethod("web3");
 
 // Login with MetaMask
-const result = await ethereum.login(address);
+const result = await web3.login(address);
 if (result.success) {
   console.log("Authenticated with MetaMask!");
 }
@@ -115,7 +115,7 @@ if (connection.success && connection.address) {
 
 ```typescript
 // Via plugin
-const plugin = shogun.getPlugin("ethereum");
+const plugin = shogun.getPlugin("web3");
 const connectionResult = await plugin.connectMetaMask();
 
 // Direct usage

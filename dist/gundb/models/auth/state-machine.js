@@ -83,6 +83,40 @@ function use_machine(machine, initial) {
     function isWalletReady() {
         return state === exports.states.wallet_ready;
     }
+    function isBusy() {
+        return (state === exports.states.creating ||
+            state === exports.states.pending ||
+            state === exports.states.leaving ||
+            state === exports.states.wallet_initializing);
+    }
+    function canStartAuth() {
+        return state === exports.states.disconnected;
+    }
+    function canLogout() {
+        return (state === exports.states.authorized ||
+            state === exports.states.wallet_ready ||
+            state === exports.states.wallet_initializing);
+    }
+    function getStateDescription() {
+        switch (state) {
+            case exports.states.disconnected:
+                return "User is disconnected and ready for authentication";
+            case exports.states.creating:
+                return "User account creation in progress";
+            case exports.states.pending:
+                return "User authentication in progress";
+            case exports.states.authorized:
+                return "User is authenticated and ready";
+            case exports.states.leaving:
+                return "User logout in progress";
+            case exports.states.wallet_initializing:
+                return "Wallet initialization in progress";
+            case exports.states.wallet_ready:
+                return "Wallet is ready and available";
+            default:
+                return `Unknown state: ${state}`;
+        }
+    }
     return {
         /**
          * Subscribe to state updates.
@@ -98,6 +132,14 @@ function use_machine(machine, initial) {
         isAuthenticated,
         /** Check if wallet is ready */
         isWalletReady,
+        /** Check if state machine is in a busy state */
+        isBusy,
+        /** Check if authentication can be started */
+        canStartAuth,
+        /** Check if logout can be performed */
+        canLogout,
+        /** Get human-readable state description */
+        getStateDescription,
     };
 }
 /** Possible states that the auth-manager can be in. */

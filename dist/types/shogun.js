@@ -25,9 +25,9 @@ var CorePlugins;
     /** WebAuthn plugin */
     CorePlugins["WebAuthn"] = "webauthn";
     /** Ethereum plugin */
-    CorePlugins["Ethereum"] = "ethereum";
+    CorePlugins["Web3"] = "web3";
     /** Bitcoin wallet plugin */
-    CorePlugins["Bitcoin"] = "bitcoin";
+    CorePlugins["Nostr"] = "nostr";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));
 /**
  * Authentication states for the state machine

@@ -8,13 +8,13 @@ export { WebauthnPlugin } from "./webauthn/webauthnPlugin";
 export type { WebauthnPluginInterface } from "./webauthn/types";
 
 // Ethereum plugin exports
-export { Web3Connector } from "./ethereum/web3Connector";
-export { Web3ConnectorPlugin } from "./ethereum/web3ConnectorPlugin";
-export type { Web3ConectorPluginInterface } from "./ethereum/types";
+export { Web3Connector } from "./web3/web3Connector";
+export { Web3ConnectorPlugin } from "./web3/web3ConnectorPlugin";
+export type { Web3ConectorPluginInterface } from "./web3/types";
 
 // Bitcoin plugin exports
-export { NostrConnector } from "./bitcoin/nostrConnector";
-export { NostrConnectorPlugin } from "./bitcoin/nostrConnectorPlugin";
+export { NostrConnector } from "./nostr/nostrConnector";
+export { NostrConnectorPlugin } from "./nostr/nostrConnectorPlugin";
 export type {
   NostrConnectorPluginInterface,
   NostrConnectorCredentials,
@@ -22,4 +22,4 @@ export type {
   NostrConnectorConfig,
   AlbyProvider,
   NostrProvider,
-} from "./bitcoin/types";
+} from "./nostr/types";

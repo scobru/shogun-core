@@ -101,6 +101,48 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
     return state === states.wallet_ready;
   }
 
+  function isBusy(): boolean {
+    return (
+      state === states.creating ||
+      state === states.pending ||
+      state === states.leaving ||
+      state === states.wallet_initializing
+    );
+  }
+
+  function canStartAuth(): boolean {
+    return state === states.disconnected;
+  }
+
+  function canLogout(): boolean {
+    return (
+      state === states.authorized ||
+      state === states.wallet_ready ||
+      state === states.wallet_initializing
+    );
+  }
+
+  function getStateDescription(): string {
+    switch (state) {
+      case states.disconnected:
+        return "User is disconnected and ready for authentication";
+      case states.creating:
+        return "User account creation in progress";
+      case states.pending:
+        return "User authentication in progress";
+      case states.authorized:
+        return "User is authenticated and ready";
+      case states.leaving:
+        return "User logout in progress";
+      case states.wallet_initializing:
+        return "Wallet initialization in progress";
+      case states.wallet_ready:
+        return "Wallet is ready and available";
+      default:
+        return `Unknown state: ${state}`;
+    }
+  }
+
   return {
     /**
      * Subscribe to state updates.
@@ -116,6 +158,14 @@ export function use_machine(machine: Machine, initial: AUTH_STATE) {
     isAuthenticated,
     /** Check if wallet is ready */
     isWalletReady,
+    /** Check if state machine is in a busy state */
+    isBusy,
+    /** Check if authentication can be started */
+    canStartAuth,
+    /** Check if logout can be performed */
+    canLogout,
+    /** Get human-readable state description */
+    getStateDescription,
   };
 }
 

@@ -24,7 +24,6 @@ class GunDB {
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
 
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
-  private _authenticating: boolean = false;
 
   // Integrated modules
   private _rxjs?: GunRxJS;
@@ -321,6 +320,13 @@ class GunDB {
   async signUp(username: string, password: string): Promise<any> {
     log("Attempting user registration using AuthManager:", username);
 
+    // Check if already in a busy state using state machine
+    if (AuthManager.state.isBusy()) {
+      const err = `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`;
+      log(err);
+      return { success: false, error: err };
+    }
+
     try {
       // Validate credentials with AuthManager
       const validatedCreds = await this.auth.validate(username, password);
@@ -346,7 +352,7 @@ class GunDB {
       // Login after creation
       log(`Attempting login after registration for: ${username}`);
       try {
-        // Login with the same credentials
+        // Login with the same credentials using AuthManager
         const loginResult = await this.login(username, password);
 
         if (!loginResult.success) {
@@ -387,13 +393,15 @@ class GunDB {
     password: string,
     callback?: (result: any) => void,
   ): Promise<any> {
-    if (this.isAuthenticating()) {
-      const err = "Authentication already in progress";
+    // Check if already in a busy state using state machine
+    if (AuthManager.state.isBusy()) {
+      const err = `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`;
       log(err);
-      return { success: false, error: err };
+      const result = { success: false, error: err };
+      if (callback) callback(result);
+      return result;
     }
 
-    this._setAuthenticating(true);
     log(`Attempting login with AuthManager for user: ${username}`);
 
     try {
@@ -406,12 +414,11 @@ class GunDB {
         password: validatedCreds.password,
       });
 
-      this._setAuthenticating(false);
-
       if ("err" in authResult) {
         logError(`Login error for ${username}: ${authResult.err}`);
-        if (callback) callback({ success: false, error: authResult.err });
-        return { success: false, error: authResult.err };
+        const result = { success: false, error: authResult.err };
+        if (callback) callback(result);
+        return result;
       }
 
       const userPub = this.gun.user().is?.pub;
@@ -442,7 +449,6 @@ class GunDB {
       if (callback) callback(result);
       return result;
     } catch (error) {
-      this._setAuthenticating(false);
       logError(`Exception during login for ${username}: ${error}`);
       const result = { success: false, error: String(error) };
       if (callback) callback(result);
@@ -461,14 +467,6 @@ class GunDB {
     }
   }
 
-  private isAuthenticating(): boolean {
-    return this._authenticating;
-  }
-
-  private _setAuthenticating(value: boolean): void {
-    this._authenticating = value;
-  }
-
   /**
    * Logs out the current user using AuthManager
    */
@@ -480,11 +478,11 @@ class GunDB {
         return;
       }
 
-      // Check if auth state machine is in the correct state for logout
-      const currentState = AuthManager.state.getCurrentState();
-      if (currentState !== "authorized") {
+      // Check if auth state machine allows logout
+      if (!AuthManager.state.canLogout()) {
+        const currentState = AuthManager.state.getCurrentState();
         log(
-          `User in invalid state for logout: ${currentState}, using direct logout instead of AuthManager`,
+          `User in invalid state for logout: ${currentState} (${AuthManager.state.getStateDescription()}), using direct logout instead of AuthManager`,
         );
         // Still perform Gun's direct logout for cleanup
         this.gun.user().leave();
@@ -520,6 +518,54 @@ class GunDB {
    */
   isLoggedIn(): boolean {
     return !!this.gun.user()?.is?.pub;
+  }
+
+  /**
+   * Checks if authentication is currently in progress
+   * @returns True if authenticating
+   */
+  isAuthenticating(): boolean {
+    return AuthManager.state.isBusy();
+  }
+
+  /**
+   * Gets the current authentication state
+   * @returns Current authentication state
+   */
+  getAuthState(): string {
+    return AuthManager.state.getCurrentState();
+  }
+
+  /**
+   * Gets a human-readable description of the current authentication state
+   * @returns State description
+   */
+  getAuthStateDescription(): string {
+    return AuthManager.state.getStateDescription();
+  }
+
+  /**
+   * Checks if user is authenticated (logged in and not in a transitional state)
+   * @returns True if authenticated
+   */
+  isAuthenticated(): boolean {
+    return AuthManager.state.isAuthenticated();
+  }
+
+  /**
+   * Checks if wallet is ready
+   * @returns True if wallet is ready
+   */
+  isWalletReady(): boolean {
+    return AuthManager.state.isWalletReady();
+  }
+
+  /**
+   * Checks if authentication can be started (user is disconnected)
+   * @returns True if auth can be started
+   */
+  canStartAuth(): boolean {
+    return AuthManager.state.canStartAuth();
   }
 
   /**

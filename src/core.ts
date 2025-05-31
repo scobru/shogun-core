@@ -17,8 +17,8 @@ import {
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
-import { Web3ConnectorPlugin } from "./plugins/ethereum/web3ConnectorPlugin";
-import { NostrConnectorPlugin } from "./plugins/bitcoin/nostrConnectorPlugin";
+import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
+import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import Gun from "gun";
 import { IGunUserInstance, IGunInstance } from "gun";
 import AuthManager from "./gundb/models/auth/auth";
@@ -44,7 +44,7 @@ export * from "./types/shogun";
 
 // Export classes
 export { GunDB } from "./gundb/gun";
-export { Web3Connector } from "./plugins/ethereum/web3Connector";
+export { Web3Connector } from "./plugins/web3/web3Connector";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
@@ -281,10 +281,10 @@ export class ShogunCore implements IShogunCore {
     switch (type) {
       case "webauthn":
         return this.getPlugin(CorePlugins.WebAuthn);
-      case "ethereum":
-        return this.getPlugin(CorePlugins.Ethereum);
-      case "bitcoin":
-        return this.getPlugin(CorePlugins.Bitcoin);
+      case "web3":
+        return this.getPlugin(CorePlugins.Web3);
+      case "nostr":
+        return this.getPlugin(CorePlugins.Nostr);
       case "password":
       default:
         // Default authentication is provided by the core class

@@ -10,6 +10,7 @@ import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+import AuthManager from "../../gundb/models/auth/auth";
 
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
@@ -158,6 +159,15 @@ export class Web3ConnectorPlugin
         );
       }
 
+      // Check if authentication is already in progress using state machine
+      if (AuthManager.state.isBusy()) {
+        throw createError(
+          ErrorType.AUTHENTICATION,
+          "AUTH_IN_PROGRESS",
+          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
+        );
+      }
+
       log("Generating credentials for MetaMask login...");
       const credentials = await this.generateCredentials(address);
       if (
@@ -194,10 +204,10 @@ export class Web3ConnectorPlugin
       }
       log("MetaMask signature verified successfully.");
 
-      // Set authentication method to ethereum before login
-      core.setAuthMethod("ethereum");
+      // Set authentication method to web3 before login
+      core.setAuthMethod("web3");
 
-      // Use core's login method directly instead of core.gun.login
+      // Use core's login method which now properly uses AuthManager and state machine
       log("Logging in using core login method...");
       const loginResult = await core.login(
         credentials.username,
@@ -270,6 +280,15 @@ export class Web3ConnectorPlugin
         );
       }
 
+      // Check if authentication is already in progress using state machine
+      if (AuthManager.state.isBusy()) {
+        throw createError(
+          ErrorType.AUTHENTICATION,
+          "AUTH_IN_PROGRESS",
+          `Authentication operation already in progress. ${AuthManager.state.getStateDescription()}`,
+        );
+      }
+
       log("Generating credentials for MetaMask registration...");
       const credentials = await this.generateCredentials(address);
       if (
@@ -306,10 +325,10 @@ export class Web3ConnectorPlugin
       }
       log("MetaMask signature verified successfully.");
 
-      // Set authentication method to ethereum before signup
-      core.setAuthMethod("ethereum");
+      // Set authentication method to web3 before signup
+      core.setAuthMethod("web3");
 
-      // Use core's signUp method directly instead of core.gun.signUp
+      // Use core's signUp method which now properly uses AuthManager and state machine
       log("Signing up using core signUp method...");
       const signUpResult = await core.signUp(
         credentials.username,

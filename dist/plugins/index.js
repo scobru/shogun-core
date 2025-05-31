@@ -10,12 +10,12 @@ Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () 
 var webauthnPlugin_1 = require("./webauthn/webauthnPlugin");
 Object.defineProperty(exports, "WebauthnPlugin", { enumerable: true, get: function () { return webauthnPlugin_1.WebauthnPlugin; } });
 // Ethereum plugin exports
-var web3Connector_1 = require("./ethereum/web3Connector");
+var web3Connector_1 = require("./web3/web3Connector");
 Object.defineProperty(exports, "Web3Connector", { enumerable: true, get: function () { return web3Connector_1.Web3Connector; } });
-var web3ConnectorPlugin_1 = require("./ethereum/web3ConnectorPlugin");
+var web3ConnectorPlugin_1 = require("./web3/web3ConnectorPlugin");
 Object.defineProperty(exports, "Web3ConnectorPlugin", { enumerable: true, get: function () { return web3ConnectorPlugin_1.Web3ConnectorPlugin; } });
 // Bitcoin plugin exports
-var nostrConnector_1 = require("./bitcoin/nostrConnector");
+var nostrConnector_1 = require("./nostr/nostrConnector");
 Object.defineProperty(exports, "NostrConnector", { enumerable: true, get: function () { return nostrConnector_1.NostrConnector; } });
-var nostrConnectorPlugin_1 = require("./bitcoin/nostrConnectorPlugin");
+var nostrConnectorPlugin_1 = require("./nostr/nostrConnectorPlugin");
 Object.defineProperty(exports, "NostrConnectorPlugin", { enumerable: true, get: function () { return nostrConnectorPlugin_1.NostrConnectorPlugin; } });

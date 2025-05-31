@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Web3ConnectorPlugin = void 0;
 const base_1 = require("../base");
@@ -6,6 +9,7 @@ const web3Connector_1 = require("./web3Connector");
 const logger_1 = require("../../utils/logger");
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("../../utils/errorHandler");
+const auth_1 = __importDefault(require("../../gundb/models/auth/auth"));
 /**
  * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
  */
@@ -117,6 +121,10 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "METAMASK_UNAVAILABLE", "MetaMask is not available in the browser");
             }
+            // Check if authentication is already in progress using state machine
+            if (auth_1.default.state.isBusy()) {
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_IN_PROGRESS", `Authentication operation already in progress. ${auth_1.default.state.getStateDescription()}`);
+            }
             (0, logger_1.log)("Generating credentials for MetaMask login...");
             const credentials = await this.generateCredentials(address);
             if (!credentials?.username ||
@@ -133,9 +141,9 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "MetaMask signature verification failed. Address mismatch.");
             }
             (0, logger_1.log)("MetaMask signature verified successfully.");
-            // Set authentication method to ethereum before login
-            core.setAuthMethod("ethereum");
-            // Use core's login method directly instead of core.gun.login
+            // Set authentication method to web3 before login
+            core.setAuthMethod("web3");
+            // Use core's login method which now properly uses AuthManager and state machine
             (0, logger_1.log)("Logging in using core login method...");
             const loginResult = await core.login(credentials.username, credentials.password);
             if (!loginResult.success) {
@@ -178,6 +186,10 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "METAMASK_UNAVAILABLE", "MetaMask is not available in the browser");
             }
+            // Check if authentication is already in progress using state machine
+            if (auth_1.default.state.isBusy()) {
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "AUTH_IN_PROGRESS", `Authentication operation already in progress. ${auth_1.default.state.getStateDescription()}`);
+            }
             (0, logger_1.log)("Generating credentials for MetaMask registration...");
             const credentials = await this.generateCredentials(address);
             if (!credentials?.username ||
@@ -194,9 +206,9 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "MetaMask signature verification failed. Address mismatch.");
             }
             (0, logger_1.log)("MetaMask signature verified successfully.");
-            // Set authentication method to ethereum before signup
-            core.setAuthMethod("ethereum");
-            // Use core's signUp method directly instead of core.gun.signUp
+            // Set authentication method to web3 before signup
+            core.setAuthMethod("web3");
+            // Use core's signUp method which now properly uses AuthManager and state machine
             (0, logger_1.log)("Signing up using core signUp method...");
             const signUpResult = await core.signUp(credentials.username, credentials.password);
             if (!signUpResult.success) {

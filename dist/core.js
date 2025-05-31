@@ -26,8 +26,8 @@ const errorHandler_1 = require("./utils/errorHandler");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
-const web3ConnectorPlugin_1 = require("./plugins/ethereum/web3ConnectorPlugin");
-const nostrConnectorPlugin_1 = require("./plugins/bitcoin/nostrConnectorPlugin");
+const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
+const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
 const gun_2 = __importDefault(require("gun"));
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
@@ -43,7 +43,7 @@ __exportStar(require("./types/shogun"), exports);
 // Export classes
 var gun_3 = require("./gundb/gun");
 Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
-var web3Connector_1 = require("./plugins/ethereum/web3Connector");
+var web3Connector_1 = require("./plugins/web3/web3Connector");
 Object.defineProperty(exports, "Web3Connector", { enumerable: true, get: function () { return web3Connector_1.Web3Connector; } });
 var webauthn_1 = require("./plugins/webauthn/webauthn");
 Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_1.Webauthn; } });
@@ -252,10 +252,10 @@ class ShogunCore {
         switch (type) {
             case "webauthn":
                 return this.getPlugin(shogun_1.CorePlugins.WebAuthn);
-            case "ethereum":
-                return this.getPlugin(shogun_1.CorePlugins.Ethereum);
-            case "bitcoin":
-                return this.getPlugin(shogun_1.CorePlugins.Bitcoin);
+            case "web3":
+                return this.getPlugin(shogun_1.CorePlugins.Web3);
+            case "nostr":
+                return this.getPlugin(shogun_1.CorePlugins.Nostr);
             case "password":
             default:
                 // Default authentication is provided by the core class

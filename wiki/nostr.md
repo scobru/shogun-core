@@ -2,20 +2,20 @@
 
 ## Overview
 
-The Bitcoin plugin for Shogun SDK provides authentication and interactions via Nostr protocol and Bitcoin wallets. It enables signing messages with Bitcoin keys, authentication via Nostr, and integration with Lightning and Bitcoin infrastructure.
+The Nostr plugin for Shogun SDK provides authentication and interactions via Nostr protocol. It enables signing messages with Nostr keys, authentication via Nostr, and integration with Nostr infrastructure.
 
 ## Architecture
 
-The Bitcoin implementation consists of these key components:
+The Nostr implementation consists of these key components:
 
 - **NostrConnector**: Core implementation that can be used independently
 - **NostrConnectorPlugin**: Integration wrapper for the Shogun Core plugin system
-- **Types**: TypeScript definitions for Nostr and Bitcoin-specific interfaces
+- **Types**: TypeScript definitions for Nostr-specific interfaces
 
 ### File Structure
 
 ```
-shogun-core/src/plugins/bitcoin/
+shogun-core/src/plugins/nostr/
 ├── index.ts                - Exports all plugin components
 ├── nostrConnectorPlugin.ts - Plugin registration and lifecycle
 ├── nostrConnector.ts       - Core Nostr functionality implementation
@@ -24,7 +24,7 @@ shogun-core/src/plugins/bitcoin/
 
 ## Usage Options
 
-The Bitcoin functionality can be used in two ways:
+The Nostr functionality can be used in two ways:
 
 ### 1. Through Shogun Core (Plugin System)
 
@@ -33,17 +33,17 @@ import { ShogunCore } from "shogun-core";
 
 // Enable the plugin through configuration
 const shogun = new ShogunCore({
-  bitcoin: {
+  nostr: {
     enabled: true
   },
   // Other config options...
 });
 
 // Get the plugin
-const bitcoinAuth = shogun.getAuthenticationMethod("bitcoin");
+const nostrAuth = shogun.getAuthenticationMethod("nostr");
 
 // Use the plugin
-const result = await bitcoinAuth.login(publicKey);
+const result = await nostrAuth.login(publicKey);
 ```
 
 ### 2. Directly Using NostrConnector
@@ -51,7 +51,7 @@ const result = await bitcoinAuth.login(publicKey);
 The `NostrConnector` class can be used independently without Shogun Core:
 
 ```typescript
-import { NostrConnector } from "shogun-core/plugins/bitcoin";
+import { NostrConnector } from "shogun-core/plugins/nostr";
 
 // Create an instance with optional configuration
 const nostr = new NostrConnector({
@@ -82,10 +82,10 @@ The authentication process works as follows:
 
 ```typescript
 // Get the authentication method
-const bitcoin = shogun.getAuthenticationMethod("bitcoin");
+const nostr = shogun.getAuthenticationMethod("nostr");
 
-// Login with Bitcoin/Nostr
-const result = await bitcoin.login(publicKey);
+// Login with Nostr
+const result = await nostr.login(publicKey);
 if (result.success) {
   console.log("Authenticated with Nostr!");
 }
@@ -107,13 +107,13 @@ if (connection.success && connection.publicKey) {
 }
 ```
 
-## Core Features
+## Core Features    
 
 ### Connecting to Nostr
 
 ```typescript
 // Via plugin
-const plugin = shogun.getPlugin("bitcoin");
+const plugin = shogun.getPlugin("nostr");
 const connectionResult = await plugin.connect();
 
 // Direct usage
@@ -162,7 +162,7 @@ The NostrConnector emits events you can listen for:
 // Listen for connection events
 nostr.on("connected", (data) => {
   console.log("Connected with public key:", data.publicKey);
-});
+});     
 
 // Cleanup event listeners
 nostr.cleanup();

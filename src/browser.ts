@@ -13,10 +13,10 @@ const lazyModules = {
   },
   // Web3 connection modules
   ethereum: {
-    web3Connector: () => import("./plugins/ethereum/web3ConnectorPlugin"),
+    web3Connector: () => import("./plugins/web3/web3ConnectorPlugin"),
   },
   bitcoin: {
-    nostrConnector: () => import("./plugins/bitcoin/nostrConnectorPlugin"),
+    nostrConnector: () => import("./plugins/nostr/nostrConnectorPlugin"),
   },
 };
 

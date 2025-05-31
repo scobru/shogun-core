@@ -48,10 +48,10 @@ const lazyModules = {
     },
     // Web3 connection modules
     ethereum: {
-        web3Connector: () => Promise.resolve().then(() => __importStar(require("./plugins/ethereum/web3ConnectorPlugin"))),
+        web3Connector: () => Promise.resolve().then(() => __importStar(require("./plugins/web3/web3ConnectorPlugin"))),
     },
     bitcoin: {
-        nostrConnector: () => Promise.resolve().then(() => __importStar(require("./plugins/bitcoin/nostrConnectorPlugin"))),
+        nostrConnector: () => Promise.resolve().then(() => __importStar(require("./plugins/nostr/nostrConnectorPlugin"))),
     },
 };
 // Instance tracking

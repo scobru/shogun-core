@@ -23,7 +23,7 @@ export type * from "./types/plugin";
 export type * from "./utils/errorHandler";
 export * from "./types/shogun";
 export { GunDB } from "./gundb/gun";
-export { Web3Connector } from "./plugins/ethereum/web3Connector";
+export { Web3Connector } from "./plugins/web3/web3Connector";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";

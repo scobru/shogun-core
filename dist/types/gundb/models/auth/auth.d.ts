@@ -19,6 +19,10 @@ export default class AuthManager {
         waitForState: (targetState: import("./state-machine").AUTH_STATE, timeoutMs?: number) => Promise<boolean>;
         isAuthenticated: () => boolean;
         isWalletReady: () => boolean;
+        isBusy: () => boolean;
+        canStartAuth: () => boolean;
+        canLogout: () => boolean;
+        getStateDescription: () => string;
     };
     static instance: AuthManager;
     gundb: GunDB;
