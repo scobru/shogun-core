@@ -1,1 +1,0 @@
-export { GunDB } from "./gun";
