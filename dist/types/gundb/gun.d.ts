@@ -9,6 +9,7 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
+import "gun/sea";
 declare class GunDB {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;

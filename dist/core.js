@@ -13,6 +13,9 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunCore = exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Web3Connector = exports.GunDB = exports.RelayVerifier = void 0;
 const gun_1 = require("./gundb/gun");
@@ -25,6 +28,8 @@ const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
+const gun_2 = __importDefault(require("gun"));
+require("gun/sea");
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -37,8 +42,8 @@ __exportStar(require("./contracts/relay"), exports);
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_2 = require("./gundb/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_2.GunDB; } });
+var gun_3 = require("./gundb/gun");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
 var web3Connector_1 = require("./plugins/web3/web3Connector");
 Object.defineProperty(exports, "Web3Connector", { enumerable: true, get: function () { return web3Connector_1.Web3Connector; } });
 var webauthn_1 = require("./plugins/webauthn/webauthn");
@@ -114,7 +119,7 @@ class ShogunCore {
             else {
                 (0, logger_1.log)(`Creating new Gun instance with peers: ${JSON.stringify(config.peers)}`);
                 // Use the factory to create a properly configured Gun instance
-                this._gun = Gun(config.peers || []);
+                this._gun = (0, gun_2.default)(config.peers || []);
             }
             (0, logger_1.log)(`Gun instance created and validated successfully`);
         }

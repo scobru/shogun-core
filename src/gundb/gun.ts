@@ -13,6 +13,9 @@ import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
 
+import Gun from "gun";
+import "gun/sea";   
+
 class GunDB {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;

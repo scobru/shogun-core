@@ -46,6 +46,7 @@ const rxjs_integration_1 = require("./rxjs-integration");
 const GunErrors = __importStar(require("./errors"));
 const crypto = __importStar(require("./crypto"));
 const utils = __importStar(require("./utils"));
+require("gun/sea");
 class GunDB {
     gun;
     user = null;

@@ -6,6 +6,7 @@ import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, 
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { IGunUserInstance, IGunInstance } from "gun";
+import "gun/sea";
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
 export * from "./gundb/rxjs-integration";

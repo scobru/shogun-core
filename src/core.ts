@@ -21,6 +21,9 @@ import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import { IGunUserInstance, IGunInstance } from "gun";
 
+import Gun from "gun";
+import "gun/sea";
+
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
 export * from "./gundb/rxjs-integration";
