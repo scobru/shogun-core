@@ -135,14 +135,14 @@ class ShogunCore {
         }
         (0, logger_1.log)("Initialized Gun instance");
         try {
-            this._user = this.gun.user().recall({ sessionStorage: true });
+            this._user = this._gun.user().recall({ sessionStorage: true });
             (0, logger_1.log)("Gun user initialized successfully");
         }
         catch (error) {
             (0, logger_1.logError)("Error initializing Gun user:", error);
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
-        this.rx = new rxjs_integration_1.GunRxJS(this.gun);
+        this.rx = new rxjs_integration_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
             config.plugins.autoRegister.length > 0) {

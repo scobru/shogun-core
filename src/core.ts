@@ -153,14 +153,14 @@ export class ShogunCore implements IShogunCore {
     log("Initialized Gun instance");
 
     try {
-      this._user = this.gun.user().recall({ sessionStorage: true });
+      this._user = this._gun.user().recall({ sessionStorage: true });
       log("Gun user initialized successfully");
     } catch (error) {
       logError("Error initializing Gun user:", error);
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
-    this.rx = new GunRxJS(this.gun);
+    this.rx = new GunRxJS(this._gun);
     this.registerBuiltinPlugins(config);
 
     if (

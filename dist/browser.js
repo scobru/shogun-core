@@ -56,7 +56,7 @@ const lazyModules = {
 };
 // Instance tracking
 let shogunCoreInstance = null;
-let shogunG = null;
+let gun = null;
 /**
  * Function to initialize Shogun in a browser environment
  *
@@ -75,11 +75,11 @@ function initShogunBrowser(config) {
     };
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
-    shogunG = shogunCoreInstance?.gun;
+    gun = shogunCoreInstance?.gun;
     // Support use as a global variable when included via <script>
     if (typeof window !== "undefined") {
         window.shogun = shogunCoreInstance;
-        window.shogunGun = shogunG;
+        window.gun = gun;
     }
     return shogunCoreInstance;
 }
