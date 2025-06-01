@@ -19,11 +19,6 @@ import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
-import {
-  createGunInstance,
-  validateGunInstance,
-  getGunInfo,
-} from "./gundb/gunFactory";
 import { IGunUserInstance, IGunInstance } from "gun";
 
 export { RelayVerifier } from "./contracts/utils";
@@ -116,13 +111,6 @@ export class ShogunCore implements IShogunCore {
     this.storage = new ShogunStorage();
     this.eventEmitter = new EventEmitter();
 
-    // Log Gun information
-    const gunInfo = getGunInfo();
-    log(`Gun extensions available:`, gunInfo.extensions);
-    if (gunInfo.version) {
-      log(`Gun version: ${gunInfo.version}`);
-    }
-
     ErrorHandler.addListener((error: ShogunError) => {
       this.eventEmitter.emit("error", {
         action: error.code,
@@ -136,16 +124,13 @@ export class ShogunCore implements IShogunCore {
       if (config.gunInstance) {
         log("Using provided Gun instance");
         // Validate the provided instance
-        validateGunInstance(config.gunInstance);
         this._gun = config.gunInstance;
       } else {
         log(
           `Creating new Gun instance with peers: ${JSON.stringify(config.peers)}`,
         );
         // Use the factory to create a properly configured Gun instance
-        this._gun = createGunInstance({
-          peers: config.peers || [],
-        });
+        this._gun = Gun(config.peers || []);
       }
 
       log(`Gun instance created and validated successfully`);

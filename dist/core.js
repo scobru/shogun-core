@@ -25,7 +25,6 @@ const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
-const gunFactory_1 = require("./gundb/gunFactory");
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -98,12 +97,6 @@ class ShogunCore {
         }
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
-        // Log Gun information
-        const gunInfo = (0, gunFactory_1.getGunInfo)();
-        (0, logger_1.log)(`Gun extensions available:`, gunInfo.extensions);
-        if (gunInfo.version) {
-            (0, logger_1.log)(`Gun version: ${gunInfo.version}`);
-        }
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -116,15 +109,12 @@ class ShogunCore {
             if (config.gunInstance) {
                 (0, logger_1.log)("Using provided Gun instance");
                 // Validate the provided instance
-                (0, gunFactory_1.validateGunInstance)(config.gunInstance);
                 this._gun = config.gunInstance;
             }
             else {
                 (0, logger_1.log)(`Creating new Gun instance with peers: ${JSON.stringify(config.peers)}`);
                 // Use the factory to create a properly configured Gun instance
-                this._gun = (0, gunFactory_1.createGunInstance)({
-                    peers: config.peers || [],
-                });
+                this._gun = Gun(config.peers || []);
             }
             (0, logger_1.log)(`Gun instance created and validated successfully`);
         }
