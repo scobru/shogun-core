@@ -283,6 +283,24 @@ class GunDB {
         };
     }
     /**
+     * Helper method to navigate to a nested path by splitting and chaining .get() calls
+     * @param node Starting Gun node
+     * @param path Path string (e.g., "test/data/marco")
+     * @returns Gun node at the specified path
+     */
+    navigateToPath(node, path) {
+        if (!path)
+            return node;
+        // Split path by '/' and filter out empty segments
+        const pathSegments = path
+            .split("/")
+            .filter((segment) => segment.length > 0);
+        // Chain .get() calls for each path segment
+        return pathSegments.reduce((currentNode, segment) => {
+            return currentNode.get(segment);
+        }, node);
+    }
+    /**
      * Gets the Gun instance
      * @returns Gun instance
      */
@@ -302,7 +320,7 @@ class GunDB {
      * @returns Gun node
      */
     get(path) {
-        return this.gun.get(path);
+        return this.navigateToPath(this.gun, path);
     }
     /**
      * Puts data at the specified path
@@ -312,7 +330,7 @@ class GunDB {
      */
     async put(path, data) {
         return new Promise((resolve) => {
-            this.gun.get(path).put(data, (ack) => {
+            this.navigateToPath(this.gun, path).put(data, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
@@ -325,7 +343,7 @@ class GunDB {
      */
     async set(path, data) {
         return new Promise((resolve) => {
-            this.gun.get(path).set(data, (ack) => {
+            this.navigateToPath(this.gun, path).set(data, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
@@ -337,7 +355,7 @@ class GunDB {
      */
     async remove(path) {
         return new Promise((resolve) => {
-            this.gun.get(path).put(null, (ack) => {
+            this.navigateToPath(this.gun, path).put(null, (ack) => {
                 resolve(ack.err ? { success: false, error: ack.err } : { success: true });
             });
         });
@@ -906,7 +924,7 @@ class GunDB {
     }
     /**
      * Saves user data at the specified path
-     * @param path Path to save the data
+     * @param path Path to save the data (supports nested paths like "test/data/marco")
      * @param data Data to save
      * @returns Promise that resolves when the data is saved
      */
@@ -917,7 +935,7 @@ class GunDB {
                 reject(new Error("User not authenticated"));
                 return;
             }
-            user.get(path).put(data, (ack) => {
+            this.navigateToPath(user, path).put(data, (ack) => {
                 if (ack.err) {
                     reject(new Error(ack.err));
                 }
@@ -929,7 +947,7 @@ class GunDB {
     }
     /**
      * Gets user data from the specified path
-     * @param path Path to get the data from
+     * @param path Path to get the data from (supports nested paths like "test/data/marco")
      * @returns Promise that resolves with the data
      */
     async getUserData(path) {
@@ -939,7 +957,7 @@ class GunDB {
                 resolve(null);
                 return;
             }
-            user.get(path).once((data) => {
+            this.navigateToPath(user, path).once((data) => {
                 resolve(data);
             });
         });
