@@ -288,6 +288,26 @@ class GunDB {
   }
 
   /**
+   * Helper method to navigate to a nested path by splitting and chaining .get() calls
+   * @param node Starting Gun node
+   * @param path Path string (e.g., "test/data/marco")
+   * @returns Gun node at the specified path
+   */
+  private navigateToPath(node: any, path: string): any {
+    if (!path) return node;
+
+    // Split path by '/' and filter out empty segments
+    const pathSegments = path
+      .split("/")
+      .filter((segment) => segment.length > 0);
+
+    // Chain .get() calls for each path segment
+    return pathSegments.reduce((currentNode, segment) => {
+      return currentNode.get(segment);
+    }, node);
+  }
+
+  /**
    * Gets the Gun instance
    * @returns Gun instance
    */
@@ -309,7 +329,7 @@ class GunDB {
    * @returns Gun node
    */
   get(path: string): any {
-    return this.gun.get(path);
+    return this.navigateToPath(this.gun, path);
   }
 
   /**
@@ -320,7 +340,7 @@ class GunDB {
    */
   async put(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
-      this.gun.get(path).put(data, (ack: any) => {
+      this.navigateToPath(this.gun, path).put(data, (ack: any) => {
         resolve(
           ack.err ? { success: false, error: ack.err } : { success: true },
         );
@@ -336,7 +356,7 @@ class GunDB {
    */
   async set(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
-      this.gun.get(path).set(data, (ack: any) => {
+      this.navigateToPath(this.gun, path).set(data, (ack: any) => {
         resolve(
           ack.err ? { success: false, error: ack.err } : { success: true },
         );
@@ -351,7 +371,7 @@ class GunDB {
    */
   async remove(path: string): Promise<any> {
     return new Promise((resolve) => {
-      this.gun.get(path).put(null, (ack: any) => {
+      this.navigateToPath(this.gun, path).put(null, (ack: any) => {
         resolve(
           ack.err ? { success: false, error: ack.err } : { success: true },
         );
@@ -1016,7 +1036,7 @@ class GunDB {
 
   /**
    * Saves user data at the specified path
-   * @param path Path to save the data
+   * @param path Path to save the data (supports nested paths like "test/data/marco")
    * @param data Data to save
    * @returns Promise that resolves when the data is saved
    */
@@ -1028,7 +1048,7 @@ class GunDB {
         return;
       }
 
-      user.get(path).put(data, (ack: any) => {
+      this.navigateToPath(user, path).put(data, (ack: any) => {
         if (ack.err) {
           reject(new Error(ack.err));
         } else {
@@ -1040,7 +1060,7 @@ class GunDB {
 
   /**
    * Gets user data from the specified path
-   * @param path Path to get the data from
+   * @param path Path to get the data from (supports nested paths like "test/data/marco")
    * @returns Promise that resolves with the data
    */
   async getUserData(path: string): Promise<any> {
@@ -1051,7 +1071,7 @@ class GunDB {
         return;
       }
 
-      user.get(path).once((data: any) => {
+      this.navigateToPath(user, path).once((data: any) => {
         resolve(data);
       });
     });

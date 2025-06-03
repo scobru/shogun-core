@@ -68,6 +68,13 @@ declare class GunDB {
      */
     onAuth(callback: (user: any) => void): () => void;
     /**
+     * Helper method to navigate to a nested path by splitting and chaining .get() calls
+     * @param node Starting Gun node
+     * @param path Path string (e.g., "test/data/marco")
+     * @returns Gun node at the specified path
+     */
+    private navigateToPath;
+    /**
      * Gets the Gun instance
      * @returns Gun instance
      */
@@ -199,14 +206,14 @@ declare class GunDB {
     decrypt(encryptedData: string, key: string): Promise<string | any>;
     /**
      * Saves user data at the specified path
-     * @param path Path to save the data
+     * @param path Path to save the data (supports nested paths like "test/data/marco")
      * @param data Data to save
      * @returns Promise that resolves when the data is saved
      */
     saveUserData(path: string, data: any): Promise<void>;
     /**
      * Gets user data from the specified path
-     * @param path Path to get the data from
+     * @param path Path to get the data from (supports nested paths like "test/data/marco")
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
