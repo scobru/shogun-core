@@ -9,7 +9,7 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
-import "gun/sea";
+import { DeriveOptions } from "./derive";
 declare class GunDB {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
@@ -210,6 +210,43 @@ declare class GunDB {
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
+    /**
+     * Derive cryptographic keys from password and optional extras
+     * Supports multiple key derivation algorithms: P-256, secp256k1 (Bitcoin), secp256k1 (Ethereum)
+     * @param password - Password or seed for key derivation
+     * @param extra - Additional entropy (string or array of strings)
+     * @param options - Derivation options to specify which key types to generate
+     * @returns Promise resolving to derived keys object
+     */
+    derive(password: any, extra?: any, options?: DeriveOptions): Promise<any>;
+    /**
+     * Derive P-256 keys (default Gun.SEA behavior)
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to P-256 keys
+     */
+    deriveP256(password: any, extra?: any): Promise<any>;
+    /**
+     * Derive Bitcoin secp256k1 keys with P2PKH address
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to Bitcoin keys and address
+     */
+    deriveBitcoin(password: any, extra?: any): Promise<any>;
+    /**
+     * Derive Ethereum secp256k1 keys with Keccak256 address
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to Ethereum keys and address
+     */
+    deriveEthereum(password: any, extra?: any): Promise<any>;
+    /**
+     * Derive all supported key types
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to all key types
+     */
+    deriveAll(password: any, extra?: any): Promise<any>;
     static Errors: typeof GunErrors;
 }
 export { GunDB };

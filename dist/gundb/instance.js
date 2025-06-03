@@ -38,6 +38,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GunDB = void 0;
 const logger_1 = require("../utils/logger");
@@ -46,7 +49,7 @@ const rxjs_integration_1 = require("./rxjs-integration");
 const GunErrors = __importStar(require("./errors"));
 const crypto = __importStar(require("./crypto"));
 const utils = __importStar(require("./utils"));
-require("gun/sea");
+const derive_1 = __importDefault(require("./derive"));
 class GunDB {
     gun;
     user = null;
@@ -939,6 +942,71 @@ class GunDB {
             user.get(path).once((data) => {
                 resolve(data);
             });
+        });
+    }
+    /**
+     * Derive cryptographic keys from password and optional extras
+     * Supports multiple key derivation algorithms: P-256, secp256k1 (Bitcoin), secp256k1 (Ethereum)
+     * @param password - Password or seed for key derivation
+     * @param extra - Additional entropy (string or array of strings)
+     * @param options - Derivation options to specify which key types to generate
+     * @returns Promise resolving to derived keys object
+     */
+    async derive(password, extra, options) {
+        try {
+            (0, logger_1.log)("Deriving cryptographic keys with options:", options);
+            // Call the derive function with the provided parameters
+            const derivedKeys = await (0, derive_1.default)(password, extra, options);
+            (0, logger_1.log)("Key derivation completed successfully");
+            return derivedKeys;
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error during key derivation:", error);
+            // Use centralized error handler
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "KEY_DERIVATION_FAILED", error instanceof Error
+                ? error.message
+                : "Failed to derive cryptographic keys", error);
+            throw error;
+        }
+    }
+    /**
+     * Derive P-256 keys (default Gun.SEA behavior)
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to P-256 keys
+     */
+    async deriveP256(password, extra) {
+        return this.derive(password, extra, { includeP256: true });
+    }
+    /**
+     * Derive Bitcoin secp256k1 keys with P2PKH address
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to Bitcoin keys and address
+     */
+    async deriveBitcoin(password, extra) {
+        return this.derive(password, extra, { includeSecp256k1Bitcoin: true });
+    }
+    /**
+     * Derive Ethereum secp256k1 keys with Keccak256 address
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to Ethereum keys and address
+     */
+    async deriveEthereum(password, extra) {
+        return this.derive(password, extra, { includeSecp256k1Ethereum: true });
+    }
+    /**
+     * Derive all supported key types
+     * @param password - Password for key derivation
+     * @param extra - Additional entropy
+     * @returns Promise resolving to all key types
+     */
+    async deriveAll(password, extra) {
+        return this.derive(password, extra, {
+            includeP256: true,
+            includeSecp256k1Bitcoin: true,
+            includeSecp256k1Ethereum: true,
         });
     }
     // Errors

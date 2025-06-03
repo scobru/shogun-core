@@ -12,6 +12,7 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
+import derive, { DeriveOptions } from "./derive";
 
 class GunDB {
   public gun: IGunInstance<any>;
@@ -35,25 +36,25 @@ class GunDB {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`
+        `Gun instance must be an object, received: ${typeof gun}`,
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
       );
     }
 
@@ -80,7 +81,7 @@ class GunDB {
         const sessionResult = await this.restoreSession();
         if (sessionResult.success) {
           log(
-            `Session automatically restored for user: ${sessionResult.userPub}`
+            `Session automatically restored for user: ${sessionResult.userPub}`,
           );
         } else {
           log(`No previous session to restore: ${sessionResult.error}`);
@@ -100,7 +101,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -263,7 +264,7 @@ class GunDB {
         }
 
         log(
-          `Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`
+          `Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`,
         );
       }
     } catch (error) {
@@ -321,7 +322,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -337,7 +338,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -352,7 +353,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true }
+          ack.err ? { success: false, error: ack.err } : { success: true },
         );
       });
     });
@@ -386,7 +387,7 @@ class GunDB {
       const existingUser = await this.checkUsernameExists(username);
       if (existingUser) {
         log(
-          `Username ${username} already exists with pub: ${existingUser.pub}`
+          `Username ${username} already exists with pub: ${existingUser.pub}`,
         );
         return {
           success: false,
@@ -452,12 +453,12 @@ class GunDB {
             .put(createResult.pub, (ack: any) => {
               if (ack.err) {
                 logError(
-                  `Warning: Could not create username mapping: ${ack.err}`
+                  `Warning: Could not create username mapping: ${ack.err}`,
                 );
                 resolve(); // Don't fail registration for this
               } else {
                 log(
-                  `Username mapping created: ${username} -> ${createResult.pub}`
+                  `Username mapping created: ${username} -> ${createResult.pub}`,
                 );
                 resolve();
               }
@@ -489,11 +490,11 @@ class GunDB {
             if (loginAttempts < maxAttempts) {
               log(`Login attempt ${loginAttempts} failed, retrying...`);
               await new Promise((resolve) =>
-                setTimeout(resolve, 1000 * loginAttempts)
+                setTimeout(resolve, 1000 * loginAttempts),
               );
             } else {
               logError(
-                `Login after registration failed after ${maxAttempts} attempts: ${loginResult.error}`
+                `Login after registration failed after ${maxAttempts} attempts: ${loginResult.error}`,
               );
               return {
                 success: false,
@@ -511,7 +512,7 @@ class GunDB {
             };
           }
           await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * loginAttempts)
+            setTimeout(resolve, 1000 * loginAttempts),
           );
         }
       }
@@ -600,7 +601,7 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void
+    callback?: (result: any) => void,
   ): Promise<any> {
     log(`Attempting login for user: ${username}`);
 
@@ -642,7 +643,7 @@ class GunDB {
       // Verify that the logged-in user matches the expected user
       if (userPub !== existingUser.pub) {
         logError(
-          `Login pub mismatch: expected ${existingUser.pub}, got ${userPub}`
+          `Login pub mismatch: expected ${existingUser.pub}, got ${userPub}`,
         );
         const result = {
           success: false,
@@ -686,7 +687,7 @@ class GunDB {
       } catch (collectionError) {
         // Log but don't fail the login for collection errors
         logError(
-          `Warning: Could not update user collection: ${collectionError}`
+          `Warning: Could not update user collection: ${collectionError}`,
         );
       }
 
@@ -771,7 +772,7 @@ class GunDB {
       }
 
       log(
-        `Attempting to restore session for user: ${session.alias || session.pub}`
+        `Attempting to restore session for user: ${session.alias || session.pub}`,
       );
 
       // Try to restore the session with Gun
@@ -802,7 +803,7 @@ class GunDB {
 
       if (recallResult && user.is?.pub === session.pub) {
         log(
-          `Session restored successfully for: ${session.alias || session.pub}`
+          `Session restored successfully for: ${session.alias || session.pub}`,
         );
         return { success: true, userPub: session.pub };
       } else {
@@ -902,7 +903,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     log("Setting password hint for:", username);
 
@@ -915,7 +916,7 @@ class GunDB {
     try {
       // Generate a proof of work from security question answers
       const proofOfWork = (await this.crypto.hashText(
-        securityAnswers.join("|")
+        securityAnswers.join("|"),
       )) as string;
 
       // Encrypt the password hint with the proof of work
@@ -943,7 +944,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Attempting password recovery for:", username);
 
@@ -967,7 +968,7 @@ class GunDB {
       // Decrypt the password hint with the proof of work
       const hint = await this.crypto.decrypt(
         securityData.hint,
-        (await this.crypto.hashText(securityAnswers.join("|"))) as string
+        (await this.crypto.hashText(securityAnswers.join("|"))) as string,
       );
 
       if (hint === undefined) {
@@ -1053,6 +1054,88 @@ class GunDB {
       user.get(path).once((data: any) => {
         resolve(data);
       });
+    });
+  }
+
+  /**
+   * Derive cryptographic keys from password and optional extras
+   * Supports multiple key derivation algorithms: P-256, secp256k1 (Bitcoin), secp256k1 (Ethereum)
+   * @param password - Password or seed for key derivation
+   * @param extra - Additional entropy (string or array of strings)
+   * @param options - Derivation options to specify which key types to generate
+   * @returns Promise resolving to derived keys object
+   */
+  async derive(
+    password: any,
+    extra?: any,
+    options?: DeriveOptions,
+  ): Promise<any> {
+    try {
+      log("Deriving cryptographic keys with options:", options);
+
+      // Call the derive function with the provided parameters
+      const derivedKeys = await derive(password, extra, options);
+
+      log("Key derivation completed successfully");
+      return derivedKeys;
+    } catch (error) {
+      logError("Error during key derivation:", error);
+
+      // Use centralized error handler
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        "KEY_DERIVATION_FAILED",
+        error instanceof Error
+          ? error.message
+          : "Failed to derive cryptographic keys",
+        error,
+      );
+
+      throw error;
+    }
+  }
+
+  /**
+   * Derive P-256 keys (default Gun.SEA behavior)
+   * @param password - Password for key derivation
+   * @param extra - Additional entropy
+   * @returns Promise resolving to P-256 keys
+   */
+  async deriveP256(password: any, extra?: any): Promise<any> {
+    return this.derive(password, extra, { includeP256: true });
+  }
+
+  /**
+   * Derive Bitcoin secp256k1 keys with P2PKH address
+   * @param password - Password for key derivation
+   * @param extra - Additional entropy
+   * @returns Promise resolving to Bitcoin keys and address
+   */
+  async deriveBitcoin(password: any, extra?: any): Promise<any> {
+    return this.derive(password, extra, { includeSecp256k1Bitcoin: true });
+  }
+
+  /**
+   * Derive Ethereum secp256k1 keys with Keccak256 address
+   * @param password - Password for key derivation
+   * @param extra - Additional entropy
+   * @returns Promise resolving to Ethereum keys and address
+   */
+  async deriveEthereum(password: any, extra?: any): Promise<any> {
+    return this.derive(password, extra, { includeSecp256k1Ethereum: true });
+  }
+
+  /**
+   * Derive all supported key types
+   * @param password - Password for key derivation
+   * @param extra - Additional entropy
+   * @returns Promise resolving to all key types
+   */
+  async deriveAll(password: any, extra?: any): Promise<any> {
+    return this.derive(password, extra, {
+      includeP256: true,
+      includeSecp256k1Bitcoin: true,
+      includeSecp256k1Ethereum: true,
     });
   }
 

@@ -1,4 +1,4 @@
-import { GunDB } from "./gundb/gun";
+import { GunDB } from "./gundb";
 import { GunRxJS } from "./gundb/rxjs-integration";
 import { EventEmitter } from "./utils/eventEmitter";
 import { log, logError, configureLogging } from "./utils/logger";
@@ -44,7 +44,9 @@ export type * from "./utils/errorHandler";
 export * from "./types/shogun";
 
 // Export classes
-export { GunDB } from "./gundb/gun";
+export { GunDB } from "./gundb";
+export { derive } from "./gundb";
+export type { DeriveOptions } from "./gundb";
 export { Web3Connector } from "./plugins/web3/web3Connector";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";

@@ -1,7 +1,7 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { GunDB } from "../gundb/gun";
+import { GunDB } from "../gundb/instance";
 import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
@@ -42,9 +42,6 @@ export interface AuthResult {
   error?: string;
   userPub?: string;
   username?: string;
-  password?: string;
-  credentialId?: string;
-  wallet?: any;
   authMethod?: AuthMethod;
 }
 

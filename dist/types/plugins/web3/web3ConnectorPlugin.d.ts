@@ -4,13 +4,13 @@ import { Web3ConnectorCredentials, ConnectionResult, Web3ConectorPluginInterface
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 /**
- * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
+ * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
 export declare class Web3ConnectorPlugin extends BasePlugin implements Web3ConectorPluginInterface {
     name: string;
     version: string;
     description: string;
-    private metamask;
+    private Web3;
     /**
      * @inheritdoc
      */
@@ -20,7 +20,7 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conec
      */
     destroy(): void;
     /**
-     * Assicura che il modulo MetaMask sia inizializzato
+     * Assicura che il modulo Web3 sia inizializzato
      * @private
      */
     private assertMetaMask;
@@ -61,28 +61,18 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conec
      */
     verifySignature(message: string, signature: string): Promise<string>;
     /**
-     * Login con MetaMask
+     * Login con Web3
      * @param address - Indirizzo Ethereum
      * @returns {Promise<AuthResult>} Risultato dell'autenticazione
-     * @description Autentica l'utente usando le credenziali del wallet MetaMask dopo la verifica della firma
+     * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     login(address: string): Promise<AuthResult>;
     /**
-     * Registra un nuovo utente con MetaMask
+     * Registra un nuovo utente con Web3
      * @param address - Indirizzo Ethereum
      * @returns {Promise<AuthResult>} Risultato della registrazione
-     * @description Crea un nuovo account utente usando le credenziali del wallet MetaMask dopo la verifica della firma
+     * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     signUp(address: string): Promise<AuthResult>;
-    /**
-     * Legacy method for MetaMask login - use login() instead
-     * @deprecated Use login(address) instead
-     */
-    loginWithMetaMask(address: string): Promise<AuthResult>;
-    /**
-     * Legacy method for MetaMask signup - use signUp() instead
-     * @deprecated Use signUp(address) instead
-     */
-    signUpWithMetaMask(address: string): Promise<AuthResult>;
 }
 export type { Web3ConectorPluginInterface } from "./types";

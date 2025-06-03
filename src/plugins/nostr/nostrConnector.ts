@@ -208,16 +208,6 @@ export class NostrConnector extends EventEmitter {
   }
 
   /**
-   * Check if Alby extension is available
-   * @deprecated Alby support is deprecated, use Nostr instead
-   */
-  public isAlbyAvailable(): boolean {
-    logWarn("Alby support is deprecated, use Nostr instead");
-    // Return false to encourage using Nostr
-    return false;
-  }
-
-  /**
    * Check if Nostr extension is available
    */
   public isNostrExtensionAvailable(): boolean {

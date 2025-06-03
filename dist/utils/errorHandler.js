@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ErrorHandler = exports.ErrorType = void 0;
 exports.createError = createError;
-exports.handleError = handleError;
 const logger_1 = require("./logger");
 /**
  * Types of errors that can occur in the application
@@ -25,9 +24,9 @@ var ErrorType;
     ErrorType["WEBAUTHN"] = "WebAuthnError";
     ErrorType["PLUGIN"] = "PluginError";
     ErrorType["UNKNOWN"] = "UnknownError";
-    ErrorType["CONNECTOR"] = "CONNECTOR";
-    ErrorType["GENERAL"] = "GENERAL";
-    ErrorType["CONTRACT"] = "CONTRACT";
+    ErrorType["CONNECTOR"] = "ConnectorError";
+    ErrorType["GENERAL"] = "GeneralError";
+    ErrorType["CONTRACT"] = "ContractError";
     ErrorType["BIP32"] = "BIP32Error";
     ErrorType["ETHEREUM"] = "EthereumError";
     ErrorType["BITCOIN"] = "BitcoinError";
@@ -47,39 +46,6 @@ function createError(type, code, message, originalError) {
         message,
         originalError,
         timestamp: Date.now(),
-    };
-}
-/**
- * Utility function to handle errors consistently
- * @param error - The error to handle
- * @param options - Configuration options
- * @returns Operation result or callback result
- */
-function handleError(error, options = {}) {
-    // Default settings
-    const { message = error instanceof Error ? error.message : String(error), throwError = false, logError = true, callback, } = options;
-    // Log the error if requested
-    if (logError) {
-        console.error(`[ERROR] ${message}`, error);
-    }
-    // If a callback was provided, execute it and return its result
-    if (typeof callback === "function") {
-        return callback(error);
-    }
-    // If requested to throw the error, throw it
-    if (throwError) {
-        if (error instanceof Error) {
-            throw error;
-        }
-        else {
-            throw new Error(message);
-        }
-    }
-    // Otherwise return a standard result object
-    return {
-        success: false,
-        message,
-        error,
     };
 }
 /**
@@ -111,6 +77,7 @@ class ErrorHandler {
      * @param code - Error code
      * @param message - Error message
      * @param originalError - Original error
+     * @param logLevel - Log level for the error
      */
     static handle(type, code, message, originalError, logLevel = "error") {
         // Create a formatted error message
@@ -139,6 +106,18 @@ class ErrorHandler {
         const error = createError(type, code, finalMessage, originalError);
         this.handleError(error);
         return error;
+    }
+    /**
+     * Handles errors and throws them as standardized ShogunError objects
+     * @param type - Error type
+     * @param code - Error code
+     * @param message - Error message
+     * @param originalError - Original error
+     * @throws ShogunError
+     */
+    static handleAndThrow(type, code, message, originalError) {
+        const error = this.handle(type, code, message, originalError);
+        throw error;
     }
     /**
      * Retrieves the last N errors
@@ -224,6 +203,27 @@ class ErrorHandler {
         }
         // If we got here, all retries failed
         throw this.handle(errorType, errorCode, `Operation failed after ${maxRetries} attempts`, lastError);
+    }
+    /**
+     * Clear all stored errors
+     */
+    static clearErrors() {
+        this.errors = [];
+    }
+    /**
+     * Get error statistics
+     */
+    static getErrorStats() {
+        const stats = {
+            total: this.errors.length,
+            byType: {},
+            byCode: {},
+        };
+        for (const error of this.errors) {
+            stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
+            stats.byCode[error.code] = (stats.byCode[error.code] || 0) + 1;
+        }
+        return stats;
     }
 }
 exports.ErrorHandler = ErrorHandler;

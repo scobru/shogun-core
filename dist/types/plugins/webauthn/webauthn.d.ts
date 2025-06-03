@@ -92,10 +92,6 @@ export declare class Webauthn extends EventEmitter {
      */
     private verifyCredential;
     /**
-     * Saves credential to GunDB
-     */
-    private saveToGun;
-    /**
      * Removes device credentials
      */
     removeDevice(username: string, credentialId: string, credentials: WebAuthnCredentials): Promise<{

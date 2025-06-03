@@ -21,9 +21,9 @@ export enum ErrorType {
   WEBAUTHN = "WebAuthnError",
   PLUGIN = "PluginError",
   UNKNOWN = "UnknownError",
-  CONNECTOR = "CONNECTOR",
-  GENERAL = "GENERAL",
-  CONTRACT = "CONTRACT",
+  CONNECTOR = "ConnectorError",
+  GENERAL = "GeneralError",
+  CONTRACT = "ContractError",
   BIP32 = "BIP32Error",
   ETHEREUM = "EthereumError",
   BITCOIN = "BitcoinError",
@@ -64,75 +64,6 @@ export function createError(
 }
 
 /**
- * Configuration options for the error handler
- */
-export interface ErrorOptions {
-  message?: string;
-  throwError?: boolean;
-  logError?: boolean;
-  callback?: ErrorCallback;
-}
-
-/**
- * Error callback function type
- */
-export type ErrorCallback = (error: any) => any;
-
-/**
- * Standardized result for error handling
- */
-export interface ErrorResult {
-  success: boolean;
-  message: string;
-  error?: any;
-}
-
-/**
- * Utility function to handle errors consistently
- * @param error - The error to handle
- * @param options - Configuration options
- * @returns Operation result or callback result
- */
-export function handleError(
-  error: any,
-  options: ErrorOptions = {},
-): ErrorResult | any {
-  // Default settings
-  const {
-    message = error instanceof Error ? error.message : String(error),
-    throwError = false,
-    logError = true,
-    callback,
-  } = options;
-
-  // Log the error if requested
-  if (logError) {
-    console.error(`[ERROR] ${message}`, error);
-  }
-
-  // If a callback was provided, execute it and return its result
-  if (typeof callback === "function") {
-    return callback(error);
-  }
-
-  // If requested to throw the error, throw it
-  if (throwError) {
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error(message);
-    }
-  }
-
-  // Otherwise return a standard result object
-  return {
-    success: false,
-    message,
-    error,
-  };
-}
-
-/**
  * Centralized error handler
  */
 export class ErrorHandler {
@@ -166,6 +97,7 @@ export class ErrorHandler {
    * @param code - Error code
    * @param message - Error message
    * @param originalError - Original error
+   * @param logLevel - Log level for the error
    */
   static handle(
     type: ErrorType,
@@ -202,6 +134,24 @@ export class ErrorHandler {
     const error = createError(type, code, finalMessage, originalError);
     this.handleError(error);
     return error;
+  }
+
+  /**
+   * Handles errors and throws them as standardized ShogunError objects
+   * @param type - Error type
+   * @param code - Error code
+   * @param message - Error message
+   * @param originalError - Original error
+   * @throws ShogunError
+   */
+  static handleAndThrow(
+    type: ErrorType,
+    code: string,
+    message: string,
+    originalError?: Error | unknown,
+  ): never {
+    const error = this.handle(type, code, message, originalError);
+    throw error;
   }
 
   /**
@@ -310,5 +260,34 @@ export class ErrorHandler {
       `Operation failed after ${maxRetries} attempts`,
       lastError,
     );
+  }
+
+  /**
+   * Clear all stored errors
+   */
+  static clearErrors(): void {
+    this.errors = [];
+  }
+
+  /**
+   * Get error statistics
+   */
+  static getErrorStats(): {
+    total: number;
+    byType: Record<string, number>;
+    byCode: Record<string, number>;
+  } {
+    const stats = {
+      total: this.errors.length,
+      byType: {} as Record<string, number>,
+      byCode: {} as Record<string, number>,
+    };
+
+    for (const error of this.errors) {
+      stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
+      stats.byCode[error.code] = (stats.byCode[error.code] || 0) + 1;
+    }
+
+    return stats;
   }
 }

@@ -171,8 +171,6 @@ export class WebauthnPlugin
 
         return {
           ...loginResult,
-          username,
-          credentialId: assertionResult.credentialId,
         };
       } else {
         return loginResult;
@@ -258,8 +256,6 @@ export class WebauthnPlugin
 
         return {
           ...signupResult,
-          username,
-          credentialId: attestationResult.credentialId,
         };
       } else {
         return signupResult;
@@ -279,22 +275,6 @@ export class WebauthnPlugin
         error: error.message || "Error during WebAuthn registration",
       };
     }
-  }
-
-  /**
-   * Legacy method for WebAuthn login - use login() instead
-   * @deprecated Use login(username) instead
-   */
-  async loginWithWebAuthn(username: string): Promise<AuthResult> {
-    return this.login(username);
-  }
-
-  /**
-   * Legacy method for WebAuthn signup - use signUp() instead
-   * @deprecated Use signUp(username) instead
-   */
-  async signUpWithWebAuthn(username: string): Promise<AuthResult> {
-    return this.signUp(username);
   }
 }
 

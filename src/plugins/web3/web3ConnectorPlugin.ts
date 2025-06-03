@@ -12,7 +12,7 @@ import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 
 /**
- * Plugin per la gestione delle funzionalità MetaMask in ShogunCore
+ * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
 export class Web3ConnectorPlugin
   extends BasePlugin
@@ -23,7 +23,7 @@ export class Web3ConnectorPlugin
   description =
     "Provides Ethereum wallet connection and authentication for ShogunCore";
 
-  private metamask: Web3Connector | null = null;
+  private Web3: Web3Connector | null = null;
 
   /**
    * @inheritdoc
@@ -31,34 +31,34 @@ export class Web3ConnectorPlugin
   initialize(core: ShogunCore): void {
     super.initialize(core);
 
-    // Inizializziamo il modulo MetaMask
-    this.metamask = new Web3Connector();
+    // Inizializziamo il modulo Web3
+    this.Web3 = new Web3Connector();
 
-    log("MetaMask plugin initialized");
+    log("Web3 plugin initialized");
   }
 
   /**
    * @inheritdoc
    */
   destroy(): void {
-    if (this.metamask) {
-      this.metamask.cleanup();
+    if (this.Web3) {
+      this.Web3.cleanup();
     }
-    this.metamask = null;
+    this.Web3 = null;
     super.destroy();
-    log("MetaMask plugin destroyed");
+    log("Web3 plugin destroyed");
   }
 
   /**
-   * Assicura che il modulo MetaMask sia inizializzato
+   * Assicura che il modulo Web3 sia inizializzato
    * @private
    */
   private assertMetaMask(): Web3Connector {
     this.assertInitialized();
-    if (!this.metamask) {
-      throw new Error("MetaMask module not initialized");
+    if (!this.Web3) {
+      throw new Error("Web3 module not initialized");
     }
-    return this.metamask;
+    return this.Web3;
   }
 
   /**
@@ -130,35 +130,35 @@ export class Web3ConnectorPlugin
   }
 
   /**
-   * Login con MetaMask
+   * Login con Web3
    * @param address - Indirizzo Ethereum
    * @returns {Promise<AuthResult>} Risultato dell'autenticazione
-   * @description Autentica l'utente usando le credenziali del wallet MetaMask dopo la verifica della firma
+   * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
    */
   async login(address: string): Promise<AuthResult> {
-    log("Login with MetaMask");
+    log("Login with Web3");
 
     try {
       const core = this.assertInitialized();
-      log(`MetaMask login attempt for address: ${address}`);
+      log(`Web3 login attempt for address: ${address}`);
 
       if (!address) {
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask login",
+          "Ethereum address required for Web3 login",
         );
       }
 
       if (!this.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
-          "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser",
+          "WEB3_UNAVAILABLE",
+          "Web3 is not available in the browser",
         );
       }
 
-      log("Generating credentials for MetaMask login...");
+      log("Generating credentials for Web3 login...");
       const credentials = await this.generateCredentials(address);
       if (
         !credentials?.username ||
@@ -169,7 +169,7 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing",
+          "Web3 credentials not generated correctly or signature missing",
         );
       }
 
@@ -177,7 +177,7 @@ export class Web3ConnectorPlugin
         `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
-      log("Verifying MetaMask signature...");
+      log("Verifying Web3 signature...");
       const recoveredAddress = ethers.verifyMessage(
         credentials.message,
         credentials.signature,
@@ -189,10 +189,10 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.SECURITY,
           "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch.",
+          "Web3 signature verification failed. Address mismatch.",
         );
       }
-      log("MetaMask signature verified successfully.");
+      log("Web3 signature verified successfully.");
 
       // Set authentication method to web3 before login
       core.setAuthMethod("web3");
@@ -207,8 +207,8 @@ export class Web3ConnectorPlugin
       if (!loginResult.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
-          "METAMASK_LOGIN_FAILED",
-          loginResult.error || "Failed to log in with MetaMask credentials",
+          "WEB3_LOGIN_FAILED",
+          loginResult.error || "Failed to log in with Web3 credentials",
         );
       }
 
@@ -216,16 +216,15 @@ export class Web3ConnectorPlugin
       core.emit("auth:login", {
         userPub: loginResult.userPub,
         username: credentials.username,
-        method: "metamask",
+        method: "web3",
       });
 
       return loginResult;
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "METAMASK_LOGIN_ERROR";
-      const errorMessage =
-        error?.message || "Unknown error during MetaMask login";
+      const errorCode = error?.code || "WEB3_LOGIN_ERROR";
+      const errorMessage = error?.message || "Unknown error during Web3 login";
 
       const handledError = ErrorHandler.handle(
         errorType,
@@ -242,35 +241,35 @@ export class Web3ConnectorPlugin
   }
 
   /**
-   * Registra un nuovo utente con MetaMask
+   * Registra un nuovo utente con Web3
    * @param address - Indirizzo Ethereum
    * @returns {Promise<AuthResult>} Risultato della registrazione
-   * @description Crea un nuovo account utente usando le credenziali del wallet MetaMask dopo la verifica della firma
+   * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
    */
   async signUp(address: string): Promise<AuthResult> {
-    log("Sign up with MetaMask");
+    log("Sign up with Web3");
 
     try {
       const core = this.assertInitialized();
-      log(`MetaMask registration attempt for address: ${address}`);
+      log(`Web3 registration attempt for address: ${address}`);
 
       if (!address) {
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for MetaMask registration",
+          "Ethereum address required for Web3 registration",
         );
       }
 
       if (!this.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
-          "METAMASK_UNAVAILABLE",
-          "MetaMask is not available in the browser",
+          "WEB3_UNAVAILABLE",
+          "Web3 is not available in the browser",
         );
       }
 
-      log("Generating credentials for MetaMask registration...");
+      log("Generating credentials for Web3 registration...");
       const credentials = await this.generateCredentials(address);
       if (
         !credentials?.username ||
@@ -281,7 +280,7 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
-          "MetaMask credentials not generated correctly or signature missing",
+          "Web3 credentials not generated correctly or signature missing",
         );
       }
 
@@ -289,7 +288,7 @@ export class Web3ConnectorPlugin
         `Credentials generated successfully. Username: ${credentials.username}`,
       );
 
-      log("Verifying MetaMask signature...");
+      log("Verifying Web3 signature...");
       const recoveredAddress = ethers.verifyMessage(
         credentials.message,
         credentials.signature,
@@ -301,10 +300,10 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.SECURITY,
           "SIGNATURE_VERIFICATION_FAILED",
-          "MetaMask signature verification failed. Address mismatch.",
+          "Web3 signature verification failed. Address mismatch.",
         );
       }
-      log("MetaMask signature verified successfully.");
+      log("Web3 signature verified successfully.");
 
       // Set authentication method to web3 before signup
       core.setAuthMethod("web3");
@@ -319,8 +318,8 @@ export class Web3ConnectorPlugin
       if (!signUpResult.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
-          "METAMASK_SIGNUP_FAILED",
-          signUpResult.error || "Failed to sign up with MetaMask credentials",
+          "WEB3_SIGNUP_FAILED",
+          signUpResult.error || "Failed to sign up with Web3 credentials",
         );
       }
 
@@ -328,16 +327,16 @@ export class Web3ConnectorPlugin
       core.emit("auth:signup", {
         userPub: signUpResult.userPub,
         username: credentials.username,
-        method: "metamask",
+        method: "web3",
       });
 
       return signUpResult;
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "METAMASK_SIGNUP_ERROR";
+      const errorCode = error?.code || "WEB3_SIGNUP_ERROR";
       const errorMessage =
-        error?.message || "Unknown error during MetaMask registration";
+        error?.message || "Unknown error during Web3 registration";
 
       const handledError = ErrorHandler.handle(
         errorType,
@@ -351,22 +350,6 @@ export class Web3ConnectorPlugin
         error: handledError.message,
       };
     }
-  }
-
-  /**
-   * Legacy method for MetaMask login - use login() instead
-   * @deprecated Use login(address) instead
-   */
-  async loginWithMetaMask(address: string): Promise<AuthResult> {
-    return this.login(address);
-  }
-
-  /**
-   * Legacy method for MetaMask signup - use signUp() instead
-   * @deprecated Use signUp(address) instead
-   */
-  async signUpWithMetaMask(address: string): Promise<AuthResult> {
-    return this.signUp(address);
   }
 }
 

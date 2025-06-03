@@ -174,15 +174,6 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Check if Alby extension is available
-     * @deprecated Alby support is deprecated, use Nostr instead
-     */
-    isAlbyAvailable() {
-        (0, logger_1.logWarn)("Alby support is deprecated, use Nostr instead");
-        // Return false to encourage using Nostr
-        return false;
-    }
-    /**
      * Check if Nostr extension is available
      */
     isNostrExtensionAvailable() {

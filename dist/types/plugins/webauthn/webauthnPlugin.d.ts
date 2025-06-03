@@ -69,15 +69,5 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      * Requires browser support for WebAuthn.
      */
     signUp(username: string): Promise<AuthResult>;
-    /**
-     * Legacy method for WebAuthn login - use login() instead
-     * @deprecated Use login(username) instead
-     */
-    loginWithWebAuthn(username: string): Promise<AuthResult>;
-    /**
-     * Legacy method for WebAuthn signup - use signUp() instead
-     * @deprecated Use signUp(username) instead
-     */
-    signUpWithWebAuthn(username: string): Promise<AuthResult>;
 }
 export type { WebauthnPluginInterface } from "./types";

@@ -44,11 +44,6 @@ export declare class NostrConnector extends EventEmitter {
      */
     private validateAddress;
     /**
-     * Check if Alby extension is available
-     * @deprecated Alby support is deprecated, use Nostr instead
-     */
-    isAlbyAvailable(): boolean;
-    /**
      * Check if Nostr extension is available
      */
     isNostrExtensionAvailable(): boolean;
