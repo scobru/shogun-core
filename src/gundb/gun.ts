@@ -13,9 +13,6 @@ import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
 
-import Gun from "gun";
-import "gun/sea";   
-
 class GunDB {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
@@ -38,25 +35,25 @@ class GunDB {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`,
+        `Gun instance must be an object, received: ${typeof gun}`
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
       );
     }
 
@@ -76,6 +73,22 @@ class GunDB {
     this.utils = utils;
 
     this.node = this.gun.get(appScope);
+
+    // Attempt to restore session after initialization
+    setTimeout(async () => {
+      try {
+        const sessionResult = await this.restoreSession();
+        if (sessionResult.success) {
+          log(
+            `Session automatically restored for user: ${sessionResult.userPub}`
+          );
+        } else {
+          log(`No previous session to restore: ${sessionResult.error}`);
+        }
+      } catch (error) {
+        logError("Error during automatic session restoration:", error);
+      }
+    }, 500); // Give Gun time to initialize
   }
 
   private subscribeToAuthEvents() {
@@ -87,7 +100,7 @@ class GunDB {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -250,7 +263,7 @@ class GunDB {
         }
 
         log(
-          `Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`,
+          `Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`
         );
       }
     } catch (error) {
@@ -308,7 +321,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -324,7 +337,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).set(data, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -339,7 +352,7 @@ class GunDB {
     return new Promise((resolve) => {
       this.gun.get(path).put(null, (ack: any) => {
         resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
+          ack.err ? { success: false, error: ack.err } : { success: true }
         );
       });
     });
@@ -368,6 +381,19 @@ class GunDB {
         return { success: false, error: err };
       }
 
+      // Check if username already exists
+      log(`Checking if username ${username} already exists...`);
+      const existingUser = await this.checkUsernameExists(username);
+      if (existingUser) {
+        log(
+          `Username ${username} already exists with pub: ${existingUser.pub}`
+        );
+        return {
+          success: false,
+          error: `Username '${username}' already exists. Please try to login instead.`,
+        };
+      }
+
       // Create user directly with Gun
       const createResult = await new Promise<any>((resolve) => {
         this.gun.user().create(username, password, (ack: any) => {
@@ -385,47 +411,182 @@ class GunDB {
         return createResult;
       }
 
-      // Store user metadata with improved safety
+      // Store user metadata with improved safety and wait for confirmation
       try {
-        const user = this.gun.get(createResult.pub).put({
+        const userNode = this.gun.get(createResult.pub);
+        const userMetadata = {
           username: username,
           pub: createResult.pub,
+          createdAt: Date.now(),
+        };
+
+        // Save user metadata
+        await new Promise<void>((resolve, reject) => {
+          userNode.put(userMetadata, (ack: any) => {
+            if (ack.err) {
+              reject(new Error(`Failed to save user metadata: ${ack.err}`));
+            } else {
+              log(`User metadata saved for: ${username}`);
+              resolve();
+            }
+          });
         });
 
-        this.gun.get("users").set(user);
+        // Add to users collection and wait for confirmation
+        await new Promise<void>((resolve, reject) => {
+          this.gun.get("users").set(userNode, (ack: any) => {
+            if (ack.err) {
+              reject(new Error(`Failed to add user to collection: ${ack.err}`));
+            } else {
+              log(`User added to collection: ${username}`);
+              resolve();
+            }
+          });
+        });
+
+        // Create a username -> pub mapping for faster lookups
+        await new Promise<void>((resolve, reject) => {
+          this.gun
+            .get("usernames")
+            .get(username)
+            .put(createResult.pub, (ack: any) => {
+              if (ack.err) {
+                logError(
+                  `Warning: Could not create username mapping: ${ack.err}`
+                );
+                resolve(); // Don't fail registration for this
+              } else {
+                log(
+                  `Username mapping created: ${username} -> ${createResult.pub}`
+                );
+                resolve();
+              }
+            });
+        });
       } catch (metadataError) {
         logError(`Warning: Could not store user metadata: ${metadataError}`);
         // Continue with login attempt even if metadata storage fails
       }
 
-      // Login after creation
+      // Login after creation with retry mechanism
       log(`Attempting login after registration for: ${username}`);
-      try {
-        const loginResult = await this.login(username, password);
+      let loginAttempts = 0;
+      const maxAttempts = 3;
 
-        if (!loginResult.success) {
-          logError(`Login after registration failed: ${loginResult.error}`);
-          return {
-            success: false,
-            error: `Registration completed but login failed: ${loginResult.error}`,
-          };
+      while (loginAttempts < maxAttempts) {
+        try {
+          const loginResult = await this.login(username, password);
+
+          if (loginResult.success) {
+            log(`Login after registration successful for: ${username}`);
+            return {
+              success: true,
+              userPub: loginResult.userPub,
+              username: loginResult.username,
+            };
+          } else {
+            loginAttempts++;
+            if (loginAttempts < maxAttempts) {
+              log(`Login attempt ${loginAttempts} failed, retrying...`);
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * loginAttempts)
+              );
+            } else {
+              logError(
+                `Login after registration failed after ${maxAttempts} attempts: ${loginResult.error}`
+              );
+              return {
+                success: false,
+                error: `Registration completed but login failed: ${loginResult.error}`,
+              };
+            }
+          }
+        } catch (loginError) {
+          loginAttempts++;
+          if (loginAttempts >= maxAttempts) {
+            logError(`Exception during post-registration login: ${loginError}`);
+            return {
+              success: false,
+              error: "Exception during post-registration login",
+            };
+          }
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * loginAttempts)
+          );
         }
-
-        log(`Login after registration successful for: ${username}`);
-        return loginResult;
-      } catch (loginError) {
-        logError(`Exception during post-registration login: ${loginError}`);
-        return {
-          success: false,
-          error: "Exception during post-registration login",
-        };
       }
+
+      return {
+        success: false,
+        error: "Failed to login after registration",
+      };
     } catch (error) {
       logError(`Unexpected error during registration flow: ${error}`);
       return {
         success: false,
         error: `Unexpected error during registration: ${error}`,
       };
+    }
+  }
+
+  /**
+   * Check if a username already exists in the system
+   * @param username Username to check
+   * @returns Promise resolving to user data if exists, null otherwise
+   */
+  private async checkUsernameExists(username: string): Promise<any> {
+    try {
+      // First check the username mapping (faster)
+      const mappedPub = await new Promise<string | null>((resolve) => {
+        this.gun
+          .get("usernames")
+          .get(username)
+          .once((pub: any) => {
+            resolve(pub || null);
+          });
+      });
+
+      if (mappedPub) {
+        // Get user data from the pub
+        const userData = await new Promise<any>((resolve) => {
+          this.gun.get(mappedPub).once((data: any) => {
+            resolve(data);
+          });
+        });
+        return userData;
+      }
+
+      // Fallback: Search through all users collection (slower but more reliable)
+      const existingUser = await new Promise<any>((resolve) => {
+        let found = false;
+        let timeoutId: NodeJS.Timeout;
+
+        const checkComplete = () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          if (!found) {
+            resolve(null);
+          }
+        };
+
+        this.gun
+          .get("users")
+          .map()
+          .once((userData: any, key: string) => {
+            if (!found && userData && userData.username === username) {
+              found = true;
+              clearTimeout(timeoutId);
+              resolve(userData);
+            }
+          });
+
+        // Set a timeout to avoid hanging
+        timeoutId = setTimeout(checkComplete, 2000);
+      });
+
+      return existingUser;
+    } catch (error) {
+      logError(`Error checking username existence: ${error}`);
+      return null;
     }
   }
 
@@ -439,11 +600,24 @@ class GunDB {
   async login(
     username: string,
     password: string,
-    callback?: (result: any) => void,
+    callback?: (result: any) => void
   ): Promise<any> {
     log(`Attempting login for user: ${username}`);
 
     try {
+      // First check if user exists in the system
+      const existingUser = await this.checkUsernameExists(username);
+      if (!existingUser) {
+        const result = {
+          success: false,
+          error: `User '${username}' not found. Please check your username or register first.`,
+        };
+        if (callback) callback(result);
+        return result;
+      }
+
+      log(`User ${username} found in system, attempting authentication...`);
+
       // Authenticate with Gun directly
       const authResult = await new Promise<any>((resolve) => {
         this.gun.user().auth(username, password, (ack: any) => {
@@ -464,6 +638,19 @@ class GunDB {
       }
 
       const userPub = this.gun.user().is?.pub;
+
+      // Verify that the logged-in user matches the expected user
+      if (userPub !== existingUser.pub) {
+        logError(
+          `Login pub mismatch: expected ${existingUser.pub}, got ${userPub}`
+        );
+        const result = {
+          success: false,
+          error: "Authentication inconsistency detected. Please try again.",
+        };
+        if (callback) callback(result);
+        return result;
+      }
 
       // Update users collection if needed - improved null safety
       try {
@@ -489,13 +676,17 @@ class GunDB {
           const newUser = this.gun.get(userPub).put({
             username: username,
             pub: userPub,
+            lastLogin: Date.now(),
           });
           this.gun.get("users").set(newUser);
+        } else if (userExists && userPub) {
+          // Update last login time
+          this.gun.get(userPub).get("lastLogin").put(Date.now());
         }
       } catch (collectionError) {
         // Log but don't fail the login for collection errors
         logError(
-          `Warning: Could not update user collection: ${collectionError}`,
+          `Warning: Could not update user collection: ${collectionError}`
         );
       }
 
@@ -520,12 +711,109 @@ class GunDB {
 
   private _savePair(): void {
     try {
-      const pair = (this.gun.user() as any)?._?.sea;
-      if (pair && typeof localStorage !== "undefined") {
-        localStorage.setItem("pair", JSON.stringify(pair));
+      const user = this.gun.user();
+      const pair = (user as any)?._?.sea;
+      const userInfo = user?.is;
+
+      if (pair && userInfo && typeof localStorage !== "undefined") {
+        // Save the crypto pair
+        localStorage.setItem("gun/pair", JSON.stringify(pair));
+
+        // Save user session info
+        const sessionInfo = {
+          pub: userInfo.pub,
+          alias: userInfo.alias || "",
+          timestamp: Date.now(),
+        };
+        localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+
+        log(`Session saved for user: ${userInfo.alias || userInfo.pub}`);
       }
     } catch (error) {
-      console.error("Error saving auth pair:", error);
+      logError("Error saving auth pair and session:", error);
+    }
+  }
+
+  /**
+   * Attempts to restore user session from local storage
+   * @returns Promise resolving to session restoration result
+   */
+  async restoreSession(): Promise<{
+    success: boolean;
+    userPub?: string;
+    error?: string;
+  }> {
+    try {
+      if (typeof localStorage === "undefined") {
+        return { success: false, error: "localStorage not available" };
+      }
+
+      const sessionInfo = localStorage.getItem("gun/session");
+      const pairInfo = localStorage.getItem("gun/pair");
+
+      if (!sessionInfo || !pairInfo) {
+        log("No saved session found");
+        return { success: false, error: "No saved session" };
+      }
+
+      const session = JSON.parse(sessionInfo);
+      const pair = JSON.parse(pairInfo);
+
+      // Check if session is not too old (optional - you can adjust this)
+      const sessionAge = Date.now() - session.timestamp;
+      const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+      if (sessionAge > maxSessionAge) {
+        log("Session expired, clearing storage");
+        localStorage.removeItem("gun/session");
+        localStorage.removeItem("gun/pair");
+        return { success: false, error: "Session expired" };
+      }
+
+      log(
+        `Attempting to restore session for user: ${session.alias || session.pub}`
+      );
+
+      // Try to restore the session with Gun
+      const user = this.gun.user();
+
+      // Set the pair directly
+      (user as any)._ = { sea: pair };
+
+      // Try to recall the session
+      const recallResult = await new Promise<boolean>((resolve) => {
+        try {
+          user.recall({ sessionStorage: true }, (ack: any) => {
+            if (ack.err) {
+              logError(`Session recall error: ${ack.err}`);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+        } catch (error) {
+          logError(`Session recall exception: ${error}`);
+          resolve(false);
+        }
+
+        // Fallback timeout
+        setTimeout(() => resolve(false), 3000);
+      });
+
+      if (recallResult && user.is?.pub === session.pub) {
+        log(
+          `Session restored successfully for: ${session.alias || session.pub}`
+        );
+        return { success: true, userPub: session.pub };
+      } else {
+        log("Session restoration failed, clearing storage");
+        localStorage.removeItem("gun/session");
+        localStorage.removeItem("gun/pair");
+        return { success: false, error: "Session restoration failed" };
+      }
+    } catch (error) {
+      logError(`Error restoring session: ${error}`);
+      return { success: false, error: String(error) };
     }
   }
 
@@ -540,9 +828,33 @@ class GunDB {
         return;
       }
 
+      const currentUser = this.getCurrentUser();
+      log(`Logging out user: ${currentUser?.pub || "unknown"}`);
+
       // Direct logout using Gun
       this.gun.user().leave();
-      log("Logout completed");
+
+      // Clear local storage session data
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("gun/pair");
+        localStorage.removeItem("gun/session");
+
+        // Also clear old format for backward compatibility
+        localStorage.removeItem("pair");
+
+        log("Local session data cleared");
+      }
+
+      // Clear sessionStorage as well
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("gun/");
+        sessionStorage.removeItem("gun/user");
+        sessionStorage.removeItem("gun/auth");
+
+        log("Session storage cleared");
+      }
+
+      log("Logout completed successfully");
     } catch (error) {
       logError("Error during logout:", error);
     }
@@ -590,7 +902,7 @@ class GunDB {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; error?: string }> {
     log("Setting password hint for:", username);
 
@@ -603,7 +915,7 @@ class GunDB {
     try {
       // Generate a proof of work from security question answers
       const proofOfWork = (await this.crypto.hashText(
-        securityAnswers.join("|"),
+        securityAnswers.join("|")
       )) as string;
 
       // Encrypt the password hint with the proof of work
@@ -631,7 +943,7 @@ class GunDB {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     log("Attempting password recovery for:", username);
 
@@ -655,7 +967,7 @@ class GunDB {
       // Decrypt the password hint with the proof of work
       const hint = await this.crypto.decrypt(
         securityData.hint,
-        (await this.crypto.hashText(securityAnswers.join("|"))) as string,
+        (await this.crypto.hashText(securityAnswers.join("|"))) as string
       );
 
       if (hint === undefined) {

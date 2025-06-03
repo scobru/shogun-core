@@ -111,6 +111,12 @@ declare class GunDB {
      */
     signUp(username: string, password: string): Promise<any>;
     /**
+     * Check if a username already exists in the system
+     * @param username Username to check
+     * @returns Promise resolving to user data if exists, null otherwise
+     */
+    private checkUsernameExists;
+    /**
      * Logs in a user using direct Gun authentication
      * @param username Username
      * @param password Password
@@ -119,6 +125,15 @@ declare class GunDB {
      */
     login(username: string, password: string, callback?: (result: any) => void): Promise<any>;
     private _savePair;
+    /**
+     * Attempts to restore user session from local storage
+     * @returns Promise resolving to session restoration result
+     */
+    restoreSession(): Promise<{
+        success: boolean;
+        userPub?: string;
+        error?: string;
+    }>;
     /**
      * Logs out the current user using direct Gun authentication
      */
