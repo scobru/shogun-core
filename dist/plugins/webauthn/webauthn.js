@@ -409,24 +409,6 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Saves credential to GunDB
-     */
-    async saveToGun(username, credential) {
-        if (this.gunInstance) {
-            try {
-                await this.gunInstance.get(`webauthn_${username}`).put({
-                    credentialId: credential.id,
-                    type: credential.type,
-                    timestamp: Date.now(),
-                });
-            }
-            catch (error) {
-                (0, logger_1.logError)("Error saving credentials to Gun:", error);
-            }
-        }
-        // No action if gunInstance is not available
-    }
-    /**
      * Removes device credentials
      */
     async removeDevice(username, credentialId, credentials) {

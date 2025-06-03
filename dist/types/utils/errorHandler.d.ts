@@ -19,9 +19,9 @@ export declare enum ErrorType {
     WEBAUTHN = "WebAuthnError",
     PLUGIN = "PluginError",
     UNKNOWN = "UnknownError",
-    CONNECTOR = "CONNECTOR",
-    GENERAL = "GENERAL",
-    CONTRACT = "CONTRACT",
+    CONNECTOR = "ConnectorError",
+    GENERAL = "GeneralError",
+    CONTRACT = "ContractError",
     BIP32 = "BIP32Error",
     ETHEREUM = "EthereumError",
     BITCOIN = "BitcoinError"
@@ -46,34 +46,6 @@ export interface ShogunError {
  */
 export declare function createError(type: ErrorType, code: string, message: string, originalError?: Error | unknown): ShogunError;
 /**
- * Configuration options for the error handler
- */
-export interface ErrorOptions {
-    message?: string;
-    throwError?: boolean;
-    logError?: boolean;
-    callback?: ErrorCallback;
-}
-/**
- * Error callback function type
- */
-export type ErrorCallback = (error: any) => any;
-/**
- * Standardized result for error handling
- */
-export interface ErrorResult {
-    success: boolean;
-    message: string;
-    error?: any;
-}
-/**
- * Utility function to handle errors consistently
- * @param error - The error to handle
- * @param options - Configuration options
- * @returns Operation result or callback result
- */
-export declare function handleError(error: any, options?: ErrorOptions): ErrorResult | any;
-/**
  * Centralized error handler
  */
 export declare class ErrorHandler {
@@ -91,8 +63,18 @@ export declare class ErrorHandler {
      * @param code - Error code
      * @param message - Error message
      * @param originalError - Original error
+     * @param logLevel - Log level for the error
      */
     static handle(type: ErrorType, code: string, message: string, originalError?: Error | unknown, logLevel?: LogLevel): ShogunError;
+    /**
+     * Handles errors and throws them as standardized ShogunError objects
+     * @param type - Error type
+     * @param code - Error code
+     * @param message - Error message
+     * @param originalError - Original error
+     * @throws ShogunError
+     */
+    static handleAndThrow(type: ErrorType, code: string, message: string, originalError?: Error | unknown): never;
     /**
      * Retrieves the last N errors
      * @param count - Number of errors to retrieve
@@ -124,4 +106,16 @@ export declare class ErrorHandler {
      * Error handling with retry logic
      */
     static withRetry<T>(fn: () => Promise<T>, errorType: ErrorType, errorCode: string, maxRetries?: number, retryDelay?: number): Promise<T>;
+    /**
+     * Clear all stored errors
+     */
+    static clearErrors(): void;
+    /**
+     * Get error statistics
+     */
+    static getErrorStats(): {
+        total: number;
+        byType: Record<string, number>;
+        byCode: Record<string, number>;
+    };
 }

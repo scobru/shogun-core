@@ -16,11 +16,11 @@ export declare const modules: {
     webauthn: {
         loadWebAuthn: () => Promise<typeof import("./plugins/webauthn/webauthn")>;
     };
-    ethereum: {
-        loadMetaMask: () => Promise<typeof import("./plugins/ethereum/web3ConnectorPlugin")>;
+    web3: {
+        loadMetaMask: () => Promise<typeof import("./plugins/web3/web3ConnectorPlugin")>;
     };
-    bitcoin: {
-        loadNostrConnector: () => Promise<typeof import("./plugins/bitcoin/nostrConnectorPlugin")>;
+    nostr: {
+        loadNostrConnector: () => Promise<typeof import("./plugins/nostr/nostrConnectorPlugin")>;
     };
 };
 export { ShogunCore };

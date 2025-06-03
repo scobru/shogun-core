@@ -17,8 +17,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Web3Connector = exports.GunDB = exports.RelayVerifier = void 0;
-const gun_1 = require("./gundb/gun");
+exports.ShogunCore = exports.ShogunEventEmitter = exports.ShogunStorage = exports.Webauthn = exports.Web3Connector = exports.derive = exports.GunDB = exports.RelayVerifier = void 0;
+const gundb_1 = require("./gundb");
 const rxjs_integration_1 = require("./gundb/rxjs-integration");
 const eventEmitter_1 = require("./utils/eventEmitter");
 const logger_1 = require("./utils/logger");
@@ -26,9 +26,10 @@ const errorHandler_1 = require("./utils/errorHandler");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
-const web3ConnectorPlugin_1 = require("./plugins/ethereum/web3ConnectorPlugin");
-const nostrConnectorPlugin_1 = require("./plugins/bitcoin/nostrConnectorPlugin");
-const gun_2 = __importDefault(require("gun"));
+const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
+const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
+const gun_1 = __importDefault(require("gun"));
+require("gun/sea");
 var utils_1 = require("./contracts/utils");
 Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -41,9 +42,11 @@ __exportStar(require("./contracts/relay"), exports);
 // Export all types
 __exportStar(require("./types/shogun"), exports);
 // Export classes
-var gun_3 = require("./gundb/gun");
-Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gun_3.GunDB; } });
-var web3Connector_1 = require("./plugins/ethereum/web3Connector");
+var gundb_2 = require("./gundb");
+Object.defineProperty(exports, "GunDB", { enumerable: true, get: function () { return gundb_2.GunDB; } });
+var gundb_3 = require("./gundb");
+Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return gundb_3.derive; } });
+var web3Connector_1 = require("./plugins/web3/web3Connector");
 Object.defineProperty(exports, "Web3Connector", { enumerable: true, get: function () { return web3Connector_1.Web3Connector; } });
 var webauthn_1 = require("./plugins/webauthn/webauthn");
 Object.defineProperty(exports, "Webauthn", { enumerable: true, get: function () { return webauthn_1.Webauthn; } });
@@ -83,7 +86,6 @@ class ShogunCore {
     rx;
     /** Plugin registry */
     plugins = new Map();
-    Gun;
     /** Current authentication method */
     currentAuthMethod;
     /**
@@ -102,7 +104,6 @@ class ShogunCore {
         }
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
-        this.Gun = gun_2.default;
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -110,18 +111,45 @@ class ShogunCore {
                 type: error.type,
             });
         });
-        if (config.gunInstance) {
-            this._gun = config.gunInstance;
+        (0, logger_1.log)("Creating Gun instance...");
+        try {
+            if (config.gunInstance) {
+                (0, logger_1.log)("Using provided Gun instance");
+                // Validate the provided instance
+                this._gun = config.gunInstance;
+            }
+            else {
+                (0, logger_1.log)(`Creating new Gun instance with peers: ${JSON.stringify(config.peers)}`);
+                // Use the factory to create a properly configured Gun instance
+                this._gun = (0, gun_1.default)(config.peers || []);
+            }
+            (0, logger_1.log)(`Gun instance created and validated successfully`);
         }
-        else {
-            this._gun = this.Gun({ peers: config.peers });
+        catch (error) {
+            (0, logger_1.logError)("Error creating Gun instance:", error);
+            throw new Error(`Failed to create Gun instance: ${error}`);
         }
         // Then initialize GunDB with the Gun instance
-        this.gundb = new gun_1.GunDB(this._gun, config.scope || "");
-        this._gun = this.gundb.gun;
+        (0, logger_1.log)("Initializing GunDB...");
+        try {
+            this.gundb = new gundb_1.GunDB(this._gun, config.scope || "");
+            this._gun = this.gundb.gun;
+            (0, logger_1.log)("GunDB initialized successfully");
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error initializing GunDB:", error);
+            throw new Error(`Failed to initialize GunDB: ${error}`);
+        }
         (0, logger_1.log)("Initialized Gun instance");
-        this._user = this.gun.user().recall({ sessionStorage: true });
-        this.rx = new rxjs_integration_1.GunRxJS(this.gun);
+        try {
+            this._user = this._gun.user().recall({ sessionStorage: true });
+            (0, logger_1.log)("Gun user initialized successfully");
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error initializing Gun user:", error);
+            throw new Error(`Failed to initialize Gun user: ${error}`);
+        }
+        this.rx = new rxjs_integration_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
             config.plugins.autoRegister.length > 0) {
@@ -164,13 +192,13 @@ class ShogunCore {
                 this.register(webauthnPlugin);
                 (0, logger_1.log)("Webauthn plugin registered");
             }
-            if (config.ethereum?.enabled) {
+            if (config.web3?.enabled) {
                 const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(web3ConnectorPlugin);
                 (0, logger_1.log)("Web3Connector plugin registered");
             }
-            if (config.bitcoin?.enabled) {
+            if (config.nostr?.enabled) {
                 const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
@@ -252,10 +280,10 @@ class ShogunCore {
         switch (type) {
             case "webauthn":
                 return this.getPlugin(shogun_1.CorePlugins.WebAuthn);
-            case "ethereum":
-                return this.getPlugin(shogun_1.CorePlugins.Ethereum);
-            case "bitcoin":
-                return this.getPlugin(shogun_1.CorePlugins.Bitcoin);
+            case "web3":
+                return this.getPlugin(shogun_1.CorePlugins.Web3);
+            case "nostr":
+                return this.getPlugin(shogun_1.CorePlugins.Nostr);
             case "password":
             default:
                 // Default authentication is provided by the core class
@@ -381,23 +409,6 @@ class ShogunCore {
                             userPub: loginResult.userPub,
                             username: loginResult.username,
                         });
-                        // Then try to access wallet credentials after auth state is updated
-                        try {
-                            // Note: BIP44 plugin is now external - install @shogun/bip44 package separately
-                            // const walletPlugin = this.getPlugin<any>(CorePlugins.Bip44);
-                            // if (walletPlugin) {
-                            //   const mainWallet = walletPlugin.getMainWalletCredentials();
-                            //   this.storage.setItem(
-                            //     "main-wallet",
-                            //     JSON.stringify(mainWallet),
-                            //   );
-                            // }
-                            (0, logger_1.log)("Wallet credentials access skipped - use external @shogun/bip44 plugin if needed");
-                        }
-                        catch (walletError) {
-                            // Just log the error but don't fail the login
-                            (0, logger_1.logError)("Error accessing wallet credentials after login:", walletError);
-                        }
                     }
                 }
                 catch (error) {
@@ -416,9 +427,6 @@ class ShogunCore {
                 // Automatically initialize wallet after successful login
                 // Only for traditional password authentication
                 (0, logger_1.log)(`Current auth method before wallet check: ${this.currentAuthMethod}`);
-                // Note: Wallet initialization is now handled by external plugins
-                // Users should register the @shogun/bip44 plugin if wallet functionality is needed
-                (0, logger_1.log)("Wallet initialization skipped - use external @shogun/bip44 plugin if needed");
             }
             return result;
         }

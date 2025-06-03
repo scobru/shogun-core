@@ -12,17 +12,17 @@ const lazyModules = {
     webauthn: () => import("./plugins/webauthn/webauthn"),
   },
   // Web3 connection modules
-  ethereum: {
-    web3Connector: () => import("./plugins/ethereum/web3ConnectorPlugin"),
+  web3: {
+    web3Connector: () => import("./plugins/web3/web3ConnectorPlugin"),
   },
-  bitcoin: {
-    nostrConnector: () => import("./plugins/bitcoin/nostrConnectorPlugin"),
+  nostr: {
+    nostrConnector: () => import("./plugins/nostr/nostrConnectorPlugin"),
   },
 };
 
 // Instance tracking
 let shogunCoreInstance: ShogunCore | null = null;
-let shogunG: IGunInstance | null = null;
+let gun: IGunInstance | null = null;
 
 /**
  * Function to initialize Shogun in a browser environment
@@ -43,12 +43,12 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
 
   // Create a new ShogunCore instance with browser-optimized configuration
   shogunCoreInstance = new ShogunCore(browserConfig) as ShogunCore;
-  shogunG = shogunCoreInstance?.gun;
+  gun = shogunCoreInstance?.gun;
 
   // Support use as a global variable when included via <script>
   if (typeof window !== "undefined") {
     (window as any).shogun = shogunCoreInstance;
-    (window as any).shogunGun = shogunG;
+    (window as any).gun = gun;
   }
 
   return shogunCoreInstance;
@@ -59,11 +59,11 @@ export const modules = {
   webauthn: {
     loadWebAuthn: lazyModules.webauthn.webauthn,
   },
-  ethereum: {
-    loadMetaMask: lazyModules.ethereum.web3Connector,
+  web3: {
+    loadMetaMask: lazyModules.web3.web3Connector,
   },
-  bitcoin: {
-    loadNostrConnector: lazyModules.bitcoin.nostrConnector,
+  nostr: {
+    loadNostrConnector: lazyModules.nostr.nostrConnector,
   },
 };
 

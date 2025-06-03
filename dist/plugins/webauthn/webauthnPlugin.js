@@ -109,8 +109,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
                 return {
                     ...loginResult,
-                    username,
-                    credentialId: assertionResult.credentialId,
                 };
             }
             else {
@@ -168,8 +166,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 });
                 return {
                     ...signupResult,
-                    username,
-                    credentialId: attestationResult.credentialId,
                 };
             }
             else {
@@ -184,20 +180,6 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 error: error.message || "Error during WebAuthn registration",
             };
         }
-    }
-    /**
-     * Legacy method for WebAuthn login - use login() instead
-     * @deprecated Use login(username) instead
-     */
-    async loginWithWebAuthn(username) {
-        return this.login(username);
-    }
-    /**
-     * Legacy method for WebAuthn signup - use signUp() instead
-     * @deprecated Use signUp(username) instead
-     */
-    async signUpWithWebAuthn(username) {
-        return this.signUp(username);
     }
 }
 exports.WebauthnPlugin = WebauthnPlugin;

@@ -1,4 +1,4 @@
-import { GunDB } from "./gundb/gun";
+import { GunDB } from "./gundb";
 import { GunRxJS } from "./gundb/rxjs-integration";
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
@@ -6,6 +6,7 @@ import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, 
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { IGunUserInstance, IGunInstance } from "gun";
+import "gun/sea";
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
 export * from "./gundb/rxjs-integration";
@@ -22,8 +23,10 @@ export type * from "./contracts/utils";
 export type * from "./types/plugin";
 export type * from "./utils/errorHandler";
 export * from "./types/shogun";
-export { GunDB } from "./gundb/gun";
-export { Web3Connector } from "./plugins/ethereum/web3Connector";
+export { GunDB } from "./gundb";
+export { derive } from "./gundb";
+export type { DeriveOptions } from "./gundb";
+export { Web3Connector } from "./plugins/web3/web3Connector";
 export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
@@ -59,7 +62,6 @@ export declare class ShogunCore implements IShogunCore {
     rx: GunRxJS;
     /** Plugin registry */
     private readonly plugins;
-    private Gun;
     /** Current authentication method */
     private currentAuthMethod?;
     /**

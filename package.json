@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "1.2.0",
+  "version": "1.2.5",
   "description": "SHOGUN SDK - Core library for Shogun SDK",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -39,6 +39,7 @@
   "author": "Scobru",
   "license": "MIT",
   "dependencies": {
+    "@noble/curves": "^1.9.1",
     "ajv": "^8.17.1",
     "assert": "^2.1.0",
     "base64url": "^3.0.1",
