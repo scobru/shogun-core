@@ -40,6 +40,8 @@ exports.ShogunCore = exports.modules = void 0;
 exports.initShogunBrowser = initShogunBrowser;
 const index_1 = require("./index");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return index_1.ShogunCore; } });
+const webauthn_1 = require("./plugins/webauthn");
+const web3_1 = require("./plugins/web3");
 // Lazy loading modules - organized by functionality
 const lazyModules = {
     // Authentication modules
@@ -76,6 +78,8 @@ function initShogunBrowser(config) {
     // Create a new ShogunCore instance with browser-optimized configuration
     shogunCoreInstance = new index_1.ShogunCore(browserConfig);
     gun = shogunCoreInstance?.gun;
+    (0, webauthn_1.webauthnChain)();
+    (0, web3_1.web3Chain)();
     // Support use as a global variable when included via <script>
     if (typeof window !== "undefined") {
         window.shogun = shogunCoreInstance;

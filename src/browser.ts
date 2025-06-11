@@ -4,6 +4,9 @@
 import { IGunInstance } from "gun";
 import { ShogunCore } from "./index";
 import { ShogunSDKConfig } from "./types/shogun";
+import { webauthnChain } from "./plugins/webauthn";
+import { web3Chain } from "./plugins/web3";
+import { nostrChain } from "./plugins/nostr";
 
 // Lazy loading modules - organized by functionality
 const lazyModules = {
@@ -44,6 +47,9 @@ export function initShogunBrowser(config: ShogunSDKConfig): ShogunCore {
   // Create a new ShogunCore instance with browser-optimized configuration
   shogunCoreInstance = new ShogunCore(browserConfig) as ShogunCore;
   gun = shogunCoreInstance?.gun;
+
+  webauthnChain();
+  web3Chain();
 
   // Support use as a global variable when included via <script>
   if (typeof window !== "undefined") {
