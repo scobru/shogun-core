@@ -47,6 +47,7 @@ export interface AuthResult {
   error?: string;
   userPub?: string;
   username?: string;
+  sessionToken?: string;
   authMethod?: AuthMethod;
 }
 
@@ -205,4 +206,48 @@ export interface AuthStateMachine {
   isAuthenticated(): boolean;
   isWalletReady(): boolean;
   waitForState(targetState: AuthState, timeoutMs?: number): Promise<boolean>;
+}
+
+// Add new interfaces for cross-app authentication
+export interface ZKSessionToken {
+  token: string;
+  userPub: string;
+  issuedAt: number;
+  expiresAt: number;
+  appOrigin: string;
+  proof: string; // ZK proof of authentication
+}
+
+export interface ProofRequest {
+  id: string;
+  type: "authentication" | "identity" | "membership" | "custom";
+  requirements: {
+    authMethods?: AuthMethod[];
+    minAge?: number;
+    hasAddress?: boolean;
+    customClaims?: Record<string, any>;
+  };
+  requestingApp: {
+    origin: string;
+    name: string;
+    description?: string;
+  };
+  privacy: "full_disclosure" | "zero_knowledge" | "selective_disclosure";
+  callback?: string; // URL to redirect back to requesting app
+}
+
+export interface ProofResponse {
+  requestId: string;
+  success: boolean;
+  proof?: {
+    type: string;
+    data: string;
+    publicSignals?: string[];
+    verificationKey?: string;
+  };
+  error?: string;
+  metadata?: {
+    generatedAt: number;
+    expiresAt?: number;
+  };
 }
