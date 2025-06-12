@@ -27,3 +27,9 @@ export type {
 } from "./nostr/types";
 
 export { default as nostrChain } from "./nostr/nostrChain";
+
+// ZK-OAuth plugin exports
+export { ZKOAuthConnectorMinimal as ZKOAuthConnector } from "./zk-oauth/zkOAuthConnector";
+export { ZKOAuthPlugin } from "./zk-oauth/zkOAuthPlugin";
+export * from "./zk-oauth/types";
+export { default as zkOAuthChain } from "./zk-oauth/zkOAuthChain";

@@ -589,6 +589,11 @@ base64url@^3.0.1:
   resolved "https://registry.yarnpkg.com/base64url/-/base64url-3.0.1.tgz#6399d572e2bc3f90a9a8b22d5dbb0a32d33f788d"
   integrity sha512-ir1UPr3dkwexU7FdV8qBBbNDRUhMmIekYMFZfi+C/sLNnRESKPl23nB9b2pltqfOQNnGzsDdId90AEtG5tCx4A==
 
+bigint-crypto-utils@^3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/bigint-crypto-utils/-/bigint-crypto-utils-3.3.0.tgz#72ad00ae91062cf07f2b1def9594006c279c1d77"
+  integrity sha512-jOTSb+drvEDxEq6OuUybOAv/xxoh3cuYRUIPyu8sSHQNKM303UQ2R1DAo45o1AkcIXw6fzbaFI1+xGGdaXs2lg==
+
 bn.js@^4.0.0, bn.js@^4.1.0, bn.js@^4.11.9:
   version "4.12.2"
   resolved "https://registry.yarnpkg.com/bn.js/-/bn.js-4.12.2.tgz#3d8fed6796c24e177737f7cc5172ee04ef39ec99"
@@ -1743,6 +1748,13 @@ package-json-from-dist@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/package-json-from-dist/-/package-json-from-dist-1.0.1.tgz#4f1471a010827a86f94cfd9b0727e36d267de505"
   integrity sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==
+
+paillier-bigint@^3.4.3:
+  version "3.4.3"
+  resolved "https://registry.yarnpkg.com/paillier-bigint/-/paillier-bigint-3.4.3.tgz#6de37d6a334540298aeff633a9a5268b32ec7bb6"
+  integrity sha512-82otV7H/gBiQeYjsmc/Zo029GoJDnAFyoMWQMsUgfya50W8dYRVgvUR/lHO0yrS7MfMwgE8fCeEIBF0IucLYFw==
+  dependencies:
+    bigint-crypto-utils "^3.3.0"
 
 parse-asn1@^5.0.0, parse-asn1@^5.1.7:
   version "5.1.7"

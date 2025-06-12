@@ -34,7 +34,12 @@ export enum CorePlugins {
   Nostr = "nostr",
 }
 
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr";
+export type AuthMethod =
+  | "password"
+  | "webauthn"
+  | "web3"
+  | "nostr"
+  | "zk-oauth";
 
 // Authentication result interfaces
 export interface AuthResult {

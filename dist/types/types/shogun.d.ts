@@ -31,7 +31,7 @@ export declare enum CorePlugins {
     /** Bitcoin wallet plugin */
     Nostr = "nostr"
 }
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "zk-oauth";
 export interface AuthResult {
     success: boolean;
     error?: string;

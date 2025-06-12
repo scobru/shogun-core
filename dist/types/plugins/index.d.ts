@@ -12,3 +12,7 @@ export { NostrConnector } from "./nostr/nostrConnector";
 export { NostrConnectorPlugin } from "./nostr/nostrConnectorPlugin";
 export type { NostrConnectorPluginInterface, NostrConnectorCredentials, NostrConnectorKeyPair, NostrConnectorConfig, AlbyProvider, NostrProvider, } from "./nostr/types";
 export { default as nostrChain } from "./nostr/nostrChain";
+export { ZKOAuthConnectorMinimal as ZKOAuthConnector } from "./zk-oauth/zkOAuthConnector";
+export { ZKOAuthPlugin } from "./zk-oauth/zkOAuthPlugin";
+export * from "./zk-oauth/types";
+export { default as zkOAuthChain } from "./zk-oauth/zkOAuthChain";
