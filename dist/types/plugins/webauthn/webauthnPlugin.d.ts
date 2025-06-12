@@ -1,5 +1,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
+import { WebAuthnSigningCredential } from "./webauthnSigner";
 import { WebauthnPluginInterface } from "./types";
 import { WebAuthnCredentials, CredentialResult } from "./types";
 import { AuthResult } from "../../types/shogun";
@@ -11,6 +12,7 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
     version: string;
     description: string;
     private webauthn;
+    private signer;
     /**
      * @inheritdoc
      */
@@ -24,6 +26,11 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      * @private
      */
     private assertWebauthn;
+    /**
+     * Assicura che il signer sia inizializzato
+     * @private
+     */
+    private assertSigner;
     /**
      * @inheritdoc
      */
@@ -50,6 +57,80 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
     removeDevice(username: string, credentialId: string, credentials: WebAuthnCredentials): Promise<{
         success: boolean;
         updatedCredentials?: WebAuthnCredentials;
+    }>;
+    /**
+     * @inheritdoc
+     */
+    createSigningCredential(username: string): Promise<WebAuthnSigningCredential>;
+    /**
+     * @inheritdoc
+     */
+    createAuthenticator(credentialId: string): (data: any) => Promise<AuthenticatorAssertionResponse>;
+    /**
+     * @inheritdoc
+     */
+    createDerivedKeyPair(credentialId: string, username: string, extra?: string[]): Promise<{
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    }>;
+    /**
+     * @inheritdoc
+     */
+    signWithDerivedKeys(data: any, credentialId: string, username: string, extra?: string[]): Promise<string>;
+    /**
+     * @inheritdoc
+     */
+    getSigningCredential(credentialId: string): WebAuthnSigningCredential | undefined;
+    /**
+     * @inheritdoc
+     */
+    listSigningCredentials(): WebAuthnSigningCredential[];
+    /**
+     * @inheritdoc
+     */
+    removeSigningCredential(credentialId: string): boolean;
+    /**
+     * Creates a Gun user from WebAuthn signing credential
+     * This ensures the SAME user is created as with normal approach
+     */
+    createGunUserFromSigningCredential(credentialId: string, username: string): Promise<{
+        success: boolean;
+        userPub?: string;
+        error?: string;
+    }>;
+    /**
+     * Get the Gun user public key for a signing credential
+     */
+    getGunUserPubFromSigningCredential(credentialId: string): string | undefined;
+    /**
+     * Get the hashed credential ID (for consistency checking)
+     */
+    getHashedCredentialId(credentialId: string): string | undefined;
+    /**
+     * Verify consistency between oneshot and normal approaches
+     * This ensures both approaches create the same Gun user
+     */
+    verifyConsistency(credentialId: string, username: string, expectedUserPub?: string): Promise<{
+        consistent: boolean;
+        actualUserPub?: string;
+        expectedUserPub?: string;
+    }>;
+    /**
+     * Complete oneshot workflow that creates the SAME Gun user as normal approach
+     * This is the recommended method for oneshot signing with full consistency
+     */
+    setupConsistentOneshotSigning(username: string): Promise<{
+        credential: WebAuthnSigningCredential;
+        authenticator: (data: any) => Promise<AuthenticatorAssertionResponse>;
+        gunUser: {
+            success: boolean;
+            userPub?: string;
+            error?: string;
+        };
+        pub: string;
+        hashedCredentialId: string;
     }>;
     /**
      * Login with WebAuthn

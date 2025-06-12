@@ -1,6 +1,7 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { NostrConnector } from "./nostrConnector";
+import { NostrSigner, NostrSigningCredential } from "./nostrSigner";
 import {
   NostrConnectorCredentials,
   ConnectionResult,
@@ -24,6 +25,7 @@ export class NostrConnectorPlugin
     "Provides Bitcoin wallet connection and authentication for ShogunCore";
 
   private bitcoinConnector: NostrConnector | null = null;
+  private signer: NostrSigner | null = null;
 
   /**
    * @inheritdoc
@@ -33,8 +35,9 @@ export class NostrConnectorPlugin
 
     // Initialize the Bitcoin wallet module
     this.bitcoinConnector = new NostrConnector();
+    this.signer = new NostrSigner(this.bitcoinConnector);
 
-    log("Bitcoin wallet plugin initialized");
+    log("Bitcoin wallet plugin initialized with signer support");
   }
 
   /**
@@ -45,6 +48,7 @@ export class NostrConnectorPlugin
       this.bitcoinConnector.cleanup();
     }
     this.bitcoinConnector = null;
+    this.signer = null;
     super.destroy();
     log("Bitcoin wallet plugin destroyed");
   }
@@ -59,6 +63,18 @@ export class NostrConnectorPlugin
       throw new Error("Bitcoin wallet module not initialized");
     }
     return this.bitcoinConnector;
+  }
+
+  /**
+   * Assicura che il signer sia inizializzato
+   * @private
+   */
+  private assertSigner(): NostrSigner {
+    this.assertInitialized();
+    if (!this.signer) {
+      throw new Error("Nostr signer not initialized");
+    }
+    return this.signer;
   }
 
   /**
@@ -145,6 +161,194 @@ export class NostrConnectorPlugin
   async generatePassword(signature: string): Promise<string> {
     return this.assertBitcoinConnector().generatePassword(signature);
   }
+
+  // === NOSTR SIGNER METHODS ===
+
+  /**
+   * Creates a new Nostr signing credential
+   * CONSISTENT with normal Nostr approach
+   */
+  async createSigningCredential(
+    address: string,
+  ): Promise<NostrSigningCredential> {
+    try {
+      log(`Creating Nostr signing credential for address: ${address}`);
+      return await this.assertSigner().createSigningCredential(address);
+    } catch (error: any) {
+      logError(`Error creating Nostr signing credential: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates an authenticator function for Nostr signing
+   */
+  createAuthenticator(address: string): (data: any) => Promise<string> {
+    try {
+      log(`Creating Nostr authenticator for address: ${address}`);
+      return this.assertSigner().createAuthenticator(address);
+    } catch (error: any) {
+      logError(`Error creating Nostr authenticator: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a derived key pair from Nostr credential
+   */
+  async createDerivedKeyPair(
+    address: string,
+    extra?: string[],
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
+    try {
+      log(`Creating derived key pair for address: ${address}`);
+      return await this.assertSigner().createDerivedKeyPair(address, extra);
+    } catch (error: any) {
+      logError(`Error creating derived key pair: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Signs data with derived keys after Nostr verification
+   */
+  async signWithDerivedKeys(
+    data: any,
+    address: string,
+    extra?: string[],
+  ): Promise<string> {
+    try {
+      log(`Signing data with derived keys for address: ${address}`);
+      return await this.assertSigner().signWithDerivedKeys(
+        data,
+        address,
+        extra,
+      );
+    } catch (error: any) {
+      logError(`Error signing with derived keys: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get signing credential by address
+   */
+  getSigningCredential(address: string): NostrSigningCredential | undefined {
+    return this.assertSigner().getCredential(address);
+  }
+
+  /**
+   * List all signing credentials
+   */
+  listSigningCredentials(): NostrSigningCredential[] {
+    return this.assertSigner().listCredentials();
+  }
+
+  /**
+   * Remove a signing credential
+   */
+  removeSigningCredential(address: string): boolean {
+    return this.assertSigner().removeCredential(address);
+  }
+
+  // === CONSISTENCY METHODS ===
+
+  /**
+   * Creates a Gun user from Nostr signing credential
+   * This ensures the SAME user is created as with normal approach
+   */
+  async createGunUserFromSigningCredential(
+    address: string,
+  ): Promise<{ success: boolean; userPub?: string; error?: string }> {
+    try {
+      const core = this.assertInitialized();
+      log(`Creating Gun user from Nostr signing credential: ${address}`);
+      return await this.assertSigner().createGunUser(address, core.gun);
+    } catch (error: any) {
+      logError(
+        `Error creating Gun user from Nostr signing credential: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get the Gun user public key for a signing credential
+   */
+  getGunUserPubFromSigningCredential(address: string): string | undefined {
+    return this.assertSigner().getGunUserPub(address);
+  }
+
+  /**
+   * Get the password (for consistency checking)
+   */
+  getPassword(address: string): string | undefined {
+    return this.assertSigner().getPassword(address);
+  }
+
+  /**
+   * Verify consistency between oneshot and normal approaches
+   * This ensures both approaches create the same Gun user
+   */
+  async verifyConsistency(
+    address: string,
+    expectedUserPub?: string,
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }> {
+    try {
+      log(`Verifying Nostr consistency for address: ${address}`);
+      return await this.assertSigner().verifyConsistency(
+        address,
+        expectedUserPub,
+      );
+    } catch (error: any) {
+      logError(`Error verifying Nostr consistency: ${error.message}`);
+      return { consistent: false };
+    }
+  }
+
+  /**
+   * Complete oneshot workflow that creates the SAME Gun user as normal approach
+   * This is the recommended method for oneshot signing with full consistency
+   */
+  async setupConsistentOneshotSigning(address: string): Promise<{
+    credential: NostrSigningCredential;
+    authenticator: (data: any) => Promise<string>;
+    gunUser: { success: boolean; userPub?: string; error?: string };
+    username: string;
+    password: string;
+  }> {
+    try {
+      log(`Setting up consistent Nostr oneshot signing for: ${address}`);
+
+      // 1. Create signing credential (with consistent password generation)
+      const credential = await this.createSigningCredential(address);
+
+      // 2. Create authenticator
+      const authenticator = this.createAuthenticator(address);
+
+      // 3. Create Gun user (same as normal approach)
+      const gunUser = await this.createGunUserFromSigningCredential(address);
+
+      return {
+        credential,
+        authenticator,
+        gunUser,
+        username: credential.username,
+        password: credential.password,
+      };
+    } catch (error: any) {
+      logError(
+        `Error setting up consistent Nostr oneshot signing: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  // === EXISTING METHODS ===
 
   /**
    * Login with Bitcoin wallet

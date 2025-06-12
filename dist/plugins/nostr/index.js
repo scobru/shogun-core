@@ -20,6 +20,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.nostrChain = void 0;
 __exportStar(require("./nostrConnectorPlugin"), exports);
 __exportStar(require("./nostrConnector"), exports);
+__exportStar(require("./nostrSigner"), exports);
 __exportStar(require("./types"), exports);
 var nostrChain_1 = require("./nostrChain");
 Object.defineProperty(exports, "nostrChain", { enumerable: true, get: function () { return __importDefault(nostrChain_1).default; } });

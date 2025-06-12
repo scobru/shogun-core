@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Oneshot Signing Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .method-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .method {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .method.webauthn { border-color: #28a745; }
+        .method.web3 { border-color: #007bff; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            width: 100%;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        button.webauthn { background: #28a745; }
+        button.webauthn:hover { background: #1e7e34; }
+        button.web3 { background: #007bff; }
+        button.web3:hover { background: #0056b3; }
+        button.nostr { background: #f7931a; }
+        button.nostr:hover { background: #d4820a; }
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #666; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        h3 { color: #333; margin-top: 0; }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-indicator.ready { background: #28a745; }
+        .status-indicator.not-ready { background: #dc3545; }
+        .status-indicator.unknown { background: #6c757d; }
+        .demo-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Unified Oneshot Signing Example</h1>
+    <p style="text-align: center;">Demonstrates both WebAuthn and Web3 oneshot signing with full consistency</p>
+
+    <!-- Support Status -->
+    <div class="container">
+        <h2>🔍 Support Status</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+            <div>
+                <h4><span id="webauthn-indicator" class="status-indicator unknown"></span>WebAuthn Support</h4>
+                <div id="webauthn-support-status">Checking...</div>
+            </div>
+            <div>
+                <h4><span id="web3-indicator" class="status-indicator unknown"></span>Web3/MetaMask Support</h4>
+                <div id="web3-support-status">Checking...</div>
+            </div>
+            <div>
+                <h4><span id="nostr-indicator" class="status-indicator unknown"></span>Nostr/Bitcoin Support</h4>
+                <div id="nostr-support-status">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Method Selection -->
+    <div class="container">
+        <h2>🎯 Choose Your Method</h2>
+        <div class="method-container">
+            <!-- WebAuthn Method -->
+            <div class="method webauthn">
+                <h3>🔐 WebAuthn Oneshot Signing</h3>
+                <p>Uses biometric authentication or security keys for signing operations.</p>
+                <input type="text" id="webauthn-username" placeholder="Enter username" value="test-user">
+                <button class="webauthn" onclick="setupWebAuthnSigning()" id="webauthn-setup-btn" disabled>
+                    Setup WebAuthn Signing
+                </button>
+                <button class="webauthn" onclick="testWebAuthnSigning()" id="webauthn-test-btn" disabled>
+                    Test Signing
+                </button>
+                <button class="webauthn" onclick="verifyWebAuthnConsistency()" id="webauthn-verify-btn" disabled>
+                    Verify Consistency
+                </button>
+                <div id="webauthn-output" class="output"></div>
+            </div>
+
+            <!-- Web3 Method -->
+            <div class="method web3">
+                <h3>🦊 Web3 Oneshot Signing</h3>
+                <p>Uses MetaMask wallet for signing operations.</p>
+                <input type="text" id="web3-address" placeholder="Enter Ethereum address (0x...)" value="">
+                <button class="web3" onclick="connectWeb3()" id="web3-connect-btn" disabled>
+                    Connect MetaMask
+                </button>
+                <button class="web3" onclick="setupWeb3Signing()" id="web3-setup-btn" disabled>
+                    Setup Web3 Signing
+                </button>
+                <button class="web3" onclick="testWeb3Signing()" id="web3-test-btn" disabled>
+                    Test Signing
+                </button>
+                <button class="web3" onclick="verifyWeb3Consistency()" id="web3-verify-btn" disabled>
+                    Verify Consistency
+                </button>
+                <div id="web3-output" class="output"></div>
+            </div>
+
+            <!-- Nostr Method -->
+            <div class="method nostr">
+                <h3>₿ Nostr Oneshot Signing</h3>
+                <p>Uses Nostr/Bitcoin wallets for signing operations.</p>
+                <input type="text" id="nostr-address" placeholder="Enter Nostr pubkey or Bitcoin address" value="npub1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab">
+                <button class="nostr" onclick="connectNostr()" id="nostr-connect-btn" disabled>
+                    Connect Nostr
+                </button>
+                <button class="nostr" onclick="setupNostrSigning()" id="nostr-setup-btn" disabled>
+                    Setup Nostr Signing
+                </button>
+                <button class="nostr" onclick="testNostrSigning()" id="nostr-test-btn" disabled>
+                    Test Signing
+                </button>
+                <button class="nostr" onclick="verifyNostrConsistency()" id="nostr-verify-btn" disabled>
+                    Verify Consistency
+                </button>
+                <div id="nostr-output" class="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Section -->
+    <div class="container">
+        <h2>🧪 Interactive Demo</h2>
+        <div class="demo-section">
+            <h4>Sign Custom Data</h4>
+            <textarea id="custom-data" placeholder="Enter data to sign..." style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">{"message": "Hello Shogun!", "timestamp": "2024-01-01T00:00:00Z"}</textarea>
+            <div style="margin-top: 10px;">
+                <button onclick="signWithWebAuthn()" id="sign-webauthn-btn" disabled>Sign with WebAuthn</button>
+                <button onclick="signWithWeb3()" id="sign-web3-btn" disabled>Sign with Web3</button>
+                <button onclick="signWithNostr()" id="sign-nostr-btn" disabled>Sign with Nostr</button>
+            </div>
+            <div id="signing-results" class="output"></div>
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="container">
+        <h2>📋 Activity Logs</h2>
+        <button onclick="clearLogs()" style="width: auto; margin-bottom: 10px;">Clear Logs</button>
+        <div id="activity-logs" class="output" style="max-height: 300px;"></div>
+    </div>
+
+    <!-- Include required libraries -->
+    <script src="/gun/gun.js"></script>
+    <script src="/gun/sea.js"></script>
+    
+    <script>
+        // Initialize Gun
+        const gun = new Gun();
+        
+        // State management
+        let webauthnCredential = null;
+        let web3Credential = null;
+        let nostrCredential = null;
+        let webauthnAuthenticator = null;
+        let web3Authenticator = null;
+        let nostrAuthenticator = null;
+
+        // Utility functions
+        function log(message, type = 'info', targetId = 'activity-logs') {
+            const logDiv = document.getElementById(targetId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('activity-logs').innerHTML = '';
+            document.getElementById('webauthn-output').innerHTML = '';
+            document.getElementById('web3-output').innerHTML = '';
+            document.getElementById('signing-results').innerHTML = '';
+        }
+
+        function updateButton(buttonId, enabled, text) {
+            const button = document.getElementById(buttonId);
+            button.disabled = !enabled;
+            if (text) button.textContent = text;
+        }
+
+        function updateStatus(elementId, status, isReady) {
+            const element = document.getElementById(elementId);
+            const indicator = document.getElementById(elementId.replace('-status', '-indicator'));
+            
+            element.textContent = status;
+            if (indicator) {
+                indicator.className = `status-indicator ${isReady ? 'ready' : 'not-ready'}`;
+            }
+        }
+
+        // Check support for both methods
+        function checkSupport() {
+            // Check WebAuthn support
+            if (window.PublicKeyCredential) {
+                updateStatus('webauthn-support-status', '✅ WebAuthn is supported', true);
+                updateButton('webauthn-setup-btn', true);
+                log('✅ WebAuthn support detected', 'success');
+            } else {
+                updateStatus('webauthn-support-status', '❌ WebAuthn not supported', false);
+                log('❌ WebAuthn not supported in this browser', 'error');
+            }
+
+            // Check Web3/MetaMask support
+            if (typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask) {
+                updateStatus('web3-support-status', '✅ MetaMask is available', true);
+                updateButton('web3-connect-btn', true);
+                log('✅ MetaMask detected', 'success');
+            } else {
+                updateStatus('web3-support-status', '❌ MetaMask not found', false);
+                log('❌ MetaMask not found', 'error');
+            }
+
+            // Check Nostr support
+            if (typeof window.nostr !== 'undefined') {
+                updateStatus('nostr-support-status', '✅ Nostr extension is available', true);
+                updateButton('nostr-connect-btn', true);
+                log('✅ Nostr extension detected', 'success');
+            } else {
+                updateStatus('nostr-support-status', '❌ Nostr extension not found', false);
+                log('❌ Nostr extension not found (install Alby, nos2x, or similar)', 'error');
+            }
+        }
+
+        // WebAuthn Functions
+        async function setupWebAuthnSigning() {
+            const username = document.getElementById('webauthn-username').value;
+            if (!username) {
+                log('❌ Please enter a username', 'error', 'webauthn-output');
+                return;
+            }
+
+            try {
+                log('🔐 Setting up WebAuthn signing...', 'info', 'webauthn-output');
+                
+                // Mock WebAuthn credential creation (in real implementation, this would use the actual WebAuthn API)
+                webauthnCredential = {
+                    id: `webauthn-${username}-${Date.now()}`,
+                    username: username,
+                    hashedCredentialId: `hashed-${username}-${Date.now()}`,
+                    pub: `pub-${username}-${Math.random().toString(36).substring(7)}`
+                };
+
+                // Mock authenticator function
+                webauthnAuthenticator = async (data) => {
+                    log(`🔐 WebAuthn authenticating data: ${JSON.stringify(data).substring(0, 50)}...`, 'info', 'webauthn-output');
+                    // Simulate WebAuthn verification
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return `webauthn-signature-${Date.now()}`;
+                };
+
+                log(`✅ WebAuthn signing setup complete for ${username}`, 'success', 'webauthn-output');
+                log(`   Credential ID: ${webauthnCredential.id}`, 'info', 'webauthn-output');
+                log(`   Public Key: ${webauthnCredential.pub}`, 'info', 'webauthn-output');
+
+                updateButton('webauthn-test-btn', true);
+                updateButton('webauthn-verify-btn', true);
+                updateButton('sign-webauthn-btn', true);
+
+            } catch (error) {
+                log(`❌ WebAuthn setup failed: ${error.message}`, 'error', 'webauthn-output');
+            }
+        }
+
+        async function testWebAuthnSigning() {
+            if (!webauthnCredential || !webauthnAuthenticator) {
+                log('❌ WebAuthn not set up. Please setup first.', 'error', 'webauthn-output');
+                return;
+            }
+
+            try {
+                const testData = { test: 'WebAuthn signing test', timestamp: Date.now() };
+                log('🧪 Testing WebAuthn signing...', 'info', 'webauthn-output');
+                
+                const signature = await webauthnAuthenticator(testData);
+                log(`✅ WebAuthn signing successful!`, 'success', 'webauthn-output');
+                log(`   Signature: ${signature}`, 'info', 'webauthn-output');
+
+            } catch (error) {
+                log(`❌ WebAuthn signing failed: ${error.message}`, 'error', 'webauthn-output');
+            }
+        }
+
+        async function verifyWebAuthnConsistency() {
+            if (!webauthnCredential) {
+                log('❌ WebAuthn not set up. Please setup first.', 'error', 'webauthn-output');
+                return;
+            }
+
+            try {
+                log('🔍 Verifying WebAuthn consistency...', 'info', 'webauthn-output');
+                
+                // Mock consistency check
+                const consistent = true; // In real implementation, this would check against normal approach
+                
+                if (consistent) {
+                    log('✅ WebAuthn consistency verified! Same user would be created as normal approach.', 'success', 'webauthn-output');
+                } else {
+                    log('❌ WebAuthn consistency check failed!', 'error', 'webauthn-output');
+                }
+
+            } catch (error) {
+                log(`❌ WebAuthn consistency check failed: ${error.message}`, 'error', 'webauthn-output');
+            }
+        }
+
+        // Web3 Functions
+        async function connectWeb3() {
+            try {
+                log('🦊 Connecting to MetaMask...', 'info', 'web3-output');
+                
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (accounts.length > 0) {
+                    const address = accounts[0];
+                    document.getElementById('web3-address').value = address;
+                    log(`✅ Connected to MetaMask: ${address}`, 'success', 'web3-output');
+                    updateButton('web3-setup-btn', true);
+                } else {
+                    throw new Error('No accounts found');
+                }
+
+            } catch (error) {
+                log(`❌ MetaMask connection failed: ${error.message}`, 'error', 'web3-output');
+            }
+        }
+
+        async function setupWeb3Signing() {
+            const address = document.getElementById('web3-address').value;
+            if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                log('❌ Please enter a valid Ethereum address', 'error', 'web3-output');
+                return;
+            }
+
+            try {
+                log('🦊 Setting up Web3 signing...', 'info', 'web3-output');
+                
+                // Mock Web3 credential creation (in real implementation, this would request MetaMask signature)
+                const mockSignature = `0x${Array(130).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+                
+                web3Credential = {
+                    address: address,
+                    username: address.toLowerCase(),
+                    password: `password-${address.toLowerCase()}-${Date.now()}`,
+                    signature: mockSignature,
+                    message: "I Love Shogun!"
+                };
+
+                // Mock authenticator function
+                web3Authenticator = async (data) => {
+                    log(`🦊 Web3 authenticating data: ${JSON.stringify(data).substring(0, 50)}...`, 'info', 'web3-output');
+                    // Simulate MetaMask signature request
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    return `web3-signature-${Date.now()}`;
+                };
+
+                log(`✅ Web3 signing setup complete for ${address}`, 'success', 'web3-output');
+                log(`   Username: ${web3Credential.username}`, 'info', 'web3-output');
+                log(`   Password: ${web3Credential.password.substring(0, 20)}...`, 'info', 'web3-output');
+
+                updateButton('web3-test-btn', true);
+                updateButton('web3-verify-btn', true);
+                updateButton('sign-web3-btn', true);
+
+            } catch (error) {
+                log(`❌ Web3 setup failed: ${error.message}`, 'error', 'web3-output');
+            }
+        }
+
+        async function testWeb3Signing() {
+            if (!web3Credential || !web3Authenticator) {
+                log('❌ Web3 not set up. Please setup first.', 'error', 'web3-output');
+                return;
+            }
+
+            try {
+                const testData = { test: 'Web3 signing test', timestamp: Date.now() };
+                log('🧪 Testing Web3 signing...', 'info', 'web3-output');
+                
+                const signature = await web3Authenticator(testData);
+                log(`✅ Web3 signing successful!`, 'success', 'web3-output');
+                log(`   Signature: ${signature}`, 'info', 'web3-output');
+
+            } catch (error) {
+                log(`❌ Web3 signing failed: ${error.message}`, 'error', 'web3-output');
+            }
+        }
+
+        async function verifyWeb3Consistency() {
+            if (!web3Credential) {
+                log('❌ Web3 not set up. Please setup first.', 'error', 'web3-output');
+                return;
+            }
+
+            try {
+                log('🔍 Verifying Web3 consistency...', 'info', 'web3-output');
+                
+                // Mock consistency check
+                const consistent = true; // In real implementation, this would check against normal approach
+                
+                if (consistent) {
+                    log('✅ Web3 consistency verified! Same user would be created as normal approach.', 'success', 'web3-output');
+                } else {
+                    log('❌ Web3 consistency check failed!', 'error', 'web3-output');
+                }
+
+            } catch (error) {
+                log(`❌ Web3 consistency check failed: ${error.message}`, 'error', 'web3-output');
+            }
+        }
+
+        // Nostr Functions
+        async function connectNostr() {
+            try {
+                log('₿ Connecting to Nostr extension...', 'info', 'nostr-output');
+                
+                const pubkey = await window.nostr.getPublicKey();
+
+                if (pubkey) {
+                    document.getElementById('nostr-address').value = pubkey;
+                    log(`✅ Connected to Nostr: ${pubkey}`, 'success', 'nostr-output');
+                    updateButton('nostr-setup-btn', true);
+                } else {
+                    throw new Error('No public key received');
+                }
+
+            } catch (error) {
+                log(`❌ Nostr connection failed: ${error.message}`, 'error', 'nostr-output');
+            }
+        }
+
+        async function setupNostrSigning() {
+            const address = document.getElementById('nostr-address').value;
+            if (!address || address.length < 10) {
+                log('❌ Please enter a valid Nostr pubkey or Bitcoin address', 'error', 'nostr-output');
+                return;
+            }
+
+            try {
+                log('₿ Setting up Nostr signing...', 'info', 'nostr-output');
+                
+                // Mock Nostr credential creation (using same approach as normal Nostr)
+                const signature = await generateDeterministicSignature(address);
+                const password = await generatePasswordFromSignature(signature);
+                
+                nostrCredential = {
+                    address: address,
+                    username: address.toLowerCase(),
+                    password: password,
+                    signature: signature,
+                    message: "I Love Shogun!"
+                };
+
+                // Mock authenticator function
+                nostrAuthenticator = async (data) => {
+                    log(`₿ Nostr authenticating data: ${JSON.stringify(data).substring(0, 50)}...`, 'info', 'nostr-output');
+                    // Simulate Nostr signature request
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return `nostr-signature-${Date.now()}`;
+                };
+
+                log(`✅ Nostr signing setup complete for ${address}`, 'success', 'nostr-output');
+                log(`   Username: ${nostrCredential.username}`, 'info', 'nostr-output');
+                log(`   Password: ${nostrCredential.password.substring(0, 20)}...`, 'info', 'nostr-output');
+
+                updateButton('nostr-test-btn', true);
+                updateButton('nostr-verify-btn', true);
+                updateButton('sign-nostr-btn', true);
+
+            } catch (error) {
+                log(`❌ Nostr setup failed: ${error.message}`, 'error', 'nostr-output');
+            }
+        }
+
+        async function testNostrSigning() {
+            if (!nostrCredential || !nostrAuthenticator) {
+                log('❌ Nostr not set up. Please setup first.', 'error', 'nostr-output');
+                return;
+            }
+
+            try {
+                const testData = { test: 'Nostr signing test', timestamp: Date.now() };
+                log('🧪 Testing Nostr signing...', 'info', 'nostr-output');
+                
+                const signature = await nostrAuthenticator(testData);
+                log(`✅ Nostr signing successful!`, 'success', 'nostr-output');
+                log(`   Signature: ${signature}`, 'info', 'nostr-output');
+
+            } catch (error) {
+                log(`❌ Nostr signing failed: ${error.message}`, 'error', 'nostr-output');
+            }
+        }
+
+        async function verifyNostrConsistency() {
+            if (!nostrCredential) {
+                log('❌ Nostr not set up. Please setup first.', 'error', 'nostr-output');
+                return;
+            }
+
+            try {
+                log('🔍 Verifying Nostr consistency...', 'info', 'nostr-output');
+                
+                // Mock consistency check
+                const consistent = true; // In real implementation, this would check against normal approach
+                
+                if (consistent) {
+                    log('✅ Nostr consistency verified! Same user would be created as normal approach.', 'success', 'nostr-output');
+                } else {
+                    log('❌ Nostr consistency check failed!', 'error', 'nostr-output');
+                }
+
+            } catch (error) {
+                log(`❌ Nostr consistency check failed: ${error.message}`, 'error', 'nostr-output');
+            }
+        }
+
+        // Helper functions for Nostr (same as NostrConnector)
+        async function generateDeterministicSignature(address) {
+            const baseString = `${address}_I Love Shogun!_shogun_deterministic`;
+            let hash = "";
+            let runningValue = 0;
+
+            for (let i = 0; i < baseString.length; i++) {
+                const charCode = baseString.charCodeAt(i);
+                runningValue = (runningValue * 31 + charCode) & 0xffffffff;
+
+                if (i % 4 === 3) {
+                    hash += runningValue.toString(16).padStart(8, "0");
+                }
+            }
+
+            while (hash.length < 128) {
+                runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
+                hash += runningValue.toString(16).padStart(8, "0");
+            }
+
+            let deterministicSignature = hash.substring(0, 128);
+            deterministicSignature = deterministicSignature.toLowerCase().replace(/[^0-9a-f]/g, "0");
+
+            if (deterministicSignature.length < 128) {
+                deterministicSignature = deterministicSignature.padEnd(128, "0");
+            } else if (deterministicSignature.length > 128) {
+                deterministicSignature = deterministicSignature.substring(0, 128);
+            }
+
+            return deterministicSignature;
+        }
+
+        async function generatePasswordFromSignature(signature) {
+            const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
+            let hash = "";
+            let runningValue = 0;
+
+            for (let i = 0; i < normalizedSig.length; i++) {
+                const charCode = normalizedSig.charCodeAt(i);
+                runningValue = (runningValue * 31 + charCode) & 0xffffffff;
+
+                if (i % 8 === 7) {
+                    hash += runningValue.toString(16).padStart(8, "0");
+                }
+            }
+
+            while (hash.length < 64) {
+                runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
+                hash += runningValue.toString(16).padStart(8, "0");
+            }
+
+            return hash.substring(0, 64);
+        }
+
+        // Custom Data Signing
+        async function signWithWebAuthn() {
+            if (!webauthnAuthenticator) {
+                log('❌ WebAuthn not set up', 'error', 'signing-results');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(document.getElementById('custom-data').value);
+                log('🔐 Signing with WebAuthn...', 'info', 'signing-results');
+                
+                const signature = await webauthnAuthenticator(data);
+                log(`✅ WebAuthn signature: ${signature}`, 'success', 'signing-results');
+
+            } catch (error) {
+                log(`❌ WebAuthn signing error: ${error.message}`, 'error', 'signing-results');
+            }
+        }
+
+        async function signWithWeb3() {
+            if (!web3Authenticator) {
+                log('❌ Web3 not set up', 'error', 'signing-results');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(document.getElementById('custom-data').value);
+                log('🦊 Signing with Web3...', 'info', 'signing-results');
+                
+                const signature = await web3Authenticator(data);
+                log(`✅ Web3 signature: ${signature}`, 'success', 'signing-results');
+
+            } catch (error) {
+                log(`❌ Web3 signing error: ${error.message}`, 'error', 'signing-results');
+            }
+        }
+
+        async function signWithNostr() {
+            if (!nostrAuthenticator) {
+                log('❌ Nostr not set up', 'error', 'signing-results');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(document.getElementById('custom-data').value);
+                log('₿ Signing with Nostr...', 'info', 'signing-results');
+                
+                const signature = await nostrAuthenticator(data);
+                log(`✅ Nostr signature: ${signature}`, 'success', 'signing-results');
+
+            } catch (error) {
+                log(`❌ Nostr signing error: ${error.message}`, 'error', 'signing-results');
+            }
+        }
+
+        // Initialize
+        checkSupport();
+        log('🚀 Unified Oneshot Signing Example loaded', 'success');
+
+        // Listen for MetaMask events
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length > 0) {
+                    document.getElementById('web3-address').value = accounts[0];
+                    log(`🦊 Account changed: ${accounts[0]}`, 'info');
+                } else {
+                    document.getElementById('web3-address').value = '';
+                    log('🦊 MetaMask disconnected', 'warning');
+                }
+            });
+        }
+    </script>
+</body>
+</html> 

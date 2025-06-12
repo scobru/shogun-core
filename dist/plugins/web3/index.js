@@ -21,5 +21,6 @@ exports.web3Chain = void 0;
 __exportStar(require("./web3ConnectorPlugin"), exports);
 __exportStar(require("./types"), exports);
 __exportStar(require("./web3Connector"), exports);
+__exportStar(require("./web3Signer"), exports);
 var web3Chain_1 = require("./web3Chain");
 Object.defineProperty(exports, "web3Chain", { enumerable: true, get: function () { return __importDefault(web3Chain_1).default; } });

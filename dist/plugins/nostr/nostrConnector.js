@@ -645,3 +645,9 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
     }
 }
 exports.NostrConnector = NostrConnector;
+if (typeof window !== "undefined") {
+    window.NostrConnector = NostrConnector;
+}
+else if (typeof global !== "undefined") {
+    global.NostrConnector = NostrConnector;
+}

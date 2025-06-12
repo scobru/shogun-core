@@ -1,7 +1,7 @@
 import { IGunInstance } from "gun/types";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
-import { GunDB } from "../gundb/instance";
+import { GunInstance } from "../gundb/gunInstance";
 import { GunRxJS } from "../gundb/rxjs-integration";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
@@ -53,7 +53,7 @@ export interface SignUpResult {
 }
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
-    gundb: GunDB;
+    gundb: GunInstance;
     rx: GunRxJS;
     storage: ShogunStorage;
     config: ShogunSDKConfig;

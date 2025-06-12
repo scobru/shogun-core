@@ -1,14 +1,14 @@
-import { GunDB } from "./gundb";
+import { GunInstance } from "./gundb";
 import { GunRxJS } from "./gundb/rxjs-integration";
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, AuthMethod } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
-import { IGunUserInstance, IGunInstance } from "gun";
-import "gun/sea";
+import { Gun, SEA, IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
 export { RelayVerifier } from "./contracts/utils";
 export * from "./utils/errorHandler";
+export * from "./gundb";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
 export * from "./contracts/entryPoint";
@@ -22,19 +22,16 @@ export type * from "./contracts/base";
 export type * from "./contracts/utils";
 export type * from "./types/plugin";
 export type * from "./utils/errorHandler";
+export type { IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
+export { SEA, Gun };
 export * from "./types/shogun";
-export { GunDB } from "./gundb";
-export { derive } from "./gundb";
-export type { DeriveOptions } from "./gundb";
-export { Web3Connector } from "./plugins/web3/web3Connector";
-export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
  * This is the primary entry point for the Shogun SDK, providing access to:
- * - Decentralized database (GunDB)
+ * - Decentralized database (GunInstance)
  * - Authentication methods (traditional, WebAuthn, MetaMask)
  * - Plugin system for extensibility
  * - RxJS integration for reactive programming
@@ -42,33 +39,22 @@ export { ShogunEventEmitter } from "./types/events";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    /** Current API version - used for deprecation warnings and migration guidance */
     static readonly API_VERSION = "2.0.0";
-    /** Gun database instance - access through gundb.gun for consistency */
     private _gun;
-    /** Gun user instance */
     private _user;
-    /** GunDB wrapper - the primary interface for Gun operations */
-    gundb: GunDB;
-    /** Storage implementation */
+    gundb: GunInstance;
     storage: ShogunStorage;
-    /** Event emitter for SDK events */
     private readonly eventEmitter;
-    /** Ethereum provider */
     provider?: ethers.Provider;
-    /** SDK configuration */
     config: ShogunSDKConfig;
-    /** RxJS integration */
     rx: GunRxJS;
-    /** Plugin registry */
     private readonly plugins;
-    /** Current authentication method */
     private currentAuthMethod?;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
      * @description Creates a new instance of ShogunCore with the provided configuration.
-     * Initializes all required components including storage, event emitter, GunDB connection,
+     * Initializes all required components including storage, event emitter, GunInstance connection,
      * and plugin system.
      */
     constructor(config: ShogunSDKConfig);
@@ -145,13 +131,13 @@ export declare class ShogunCore implements IShogunCore {
     /**
      * Check if user is logged in
      * @returns {boolean} True if user is logged in, false otherwise
-     * @description Verifies authentication status by checking GunDB login state
+     * @description Verifies authentication status by checking GunInstance login state
      * and presence of authentication credentials in storage
      */
     isLoggedIn(): boolean;
     /**
      * Perform user logout
-     * @description Logs out the current user from GunDB and emits logout event.
+     * @description Logs out the current user from GunInstance and emits logout event.
      * If user is not authenticated, the logout operation is ignored.
      */
     logout(): void;

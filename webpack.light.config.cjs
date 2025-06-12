@@ -4,7 +4,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
-  entry: './src/browser.ts',
+  entry: './src/index.ts',
   output: {
     path: path.resolve(__dirname, 'dist/browser'),
     filename: 'shogun-core.light.js',

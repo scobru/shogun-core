@@ -27,7 +27,7 @@ declare global {
 /**
  * Class for Bitcoin wallet connections and operations
  */
-export class NostrConnector extends EventEmitter {
+class NostrConnector extends EventEmitter {
   private readonly MESSAGE_TO_SIGN = "I Love Shogun!";
   private readonly DEFAULT_CONFIG: NostrConnectorConfig = {
     cacheDuration: 24 * 60 * 60 * 1000, // 24 hours instead of 30 minutes for better UX
@@ -810,3 +810,11 @@ export class NostrConnector extends EventEmitter {
     }
   }
 }
+
+if (typeof window !== "undefined") {
+  window.NostrConnector = NostrConnector;
+} else if (typeof global !== "undefined") {
+  (global as any).NostrConnector = NostrConnector;
+}
+
+export { NostrConnector };

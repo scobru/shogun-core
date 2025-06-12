@@ -1,6 +1,7 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Webauthn } from "./webauthn";
+import { WebAuthnSigner, WebAuthnSigningCredential } from "./webauthnSigner";
 import { WebauthnPluginInterface } from "./types";
 import { WebAuthnCredentials, CredentialResult } from "./types";
 import { log, logError } from "../../utils/logger";
@@ -20,6 +21,8 @@ export class WebauthnPlugin
   description = "Provides WebAuthn authentication functionality for ShogunCore";
 
   private webauthn: Webauthn | null = null;
+  private signer: WebAuthnSigner | null = null;
+
   /**
    * @inheritdoc
    */
@@ -27,8 +30,9 @@ export class WebauthnPlugin
     super.initialize(core);
     // Inizializziamo il modulo WebAuthn
     this.webauthn = new Webauthn(core.gun);
+    this.signer = new WebAuthnSigner(this.webauthn);
 
-    log("WebAuthn plugin initialized");
+    log("WebAuthn plugin initialized with signer support");
   }
 
   /**
@@ -36,6 +40,7 @@ export class WebauthnPlugin
    */
   destroy(): void {
     this.webauthn = null;
+    this.signer = null;
     super.destroy();
     log("WebAuthn plugin destroyed");
   }
@@ -50,6 +55,18 @@ export class WebauthnPlugin
       throw new Error("WebAuthn module not initialized");
     }
     return this.webauthn;
+  }
+
+  /**
+   * Assicura che il signer sia inizializzato
+   * @private
+   */
+  private assertSigner(): WebAuthnSigner {
+    this.assertInitialized();
+    if (!this.signer) {
+      throw new Error("WebAuthn signer not initialized");
+    }
+    return this.signer;
   }
 
   /**
@@ -120,6 +137,208 @@ export class WebauthnPlugin
       credentialId,
       credentials,
     );
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async createSigningCredential(
+    username: string,
+  ): Promise<WebAuthnSigningCredential> {
+    try {
+      log(`Creating signing credential for user: ${username}`);
+      return await this.assertSigner().createSigningCredential(username);
+    } catch (error: any) {
+      logError(`Error creating signing credential: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  createAuthenticator(
+    credentialId: string,
+  ): (data: any) => Promise<AuthenticatorAssertionResponse> {
+    try {
+      log(`Creating authenticator for credential: ${credentialId}`);
+      return this.assertSigner().createAuthenticator(credentialId);
+    } catch (error: any) {
+      logError(`Error creating authenticator: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async createDerivedKeyPair(
+    credentialId: string,
+    username: string,
+    extra?: string[],
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
+    try {
+      log(`Creating derived key pair for credential: ${credentialId}`);
+      return await this.assertSigner().createDerivedKeyPair(
+        credentialId,
+        username,
+        extra,
+      );
+    } catch (error: any) {
+      logError(`Error creating derived key pair: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async signWithDerivedKeys(
+    data: any,
+    credentialId: string,
+    username: string,
+    extra?: string[],
+  ): Promise<string> {
+    try {
+      log(`Signing data with derived keys for credential: ${credentialId}`);
+      return await this.assertSigner().signWithDerivedKeys(
+        data,
+        credentialId,
+        username,
+        extra,
+      );
+    } catch (error: any) {
+      logError(`Error signing with derived keys: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getSigningCredential(
+    credentialId: string,
+  ): WebAuthnSigningCredential | undefined {
+    return this.assertSigner().getCredential(credentialId);
+  }
+
+  /**
+   * @inheritdoc
+   */
+  listSigningCredentials(): WebAuthnSigningCredential[] {
+    return this.assertSigner().listCredentials();
+  }
+
+  /**
+   * @inheritdoc
+   */
+  removeSigningCredential(credentialId: string): boolean {
+    return this.assertSigner().removeCredential(credentialId);
+  }
+
+  // === CONSISTENCY METHODS ===
+
+  /**
+   * Creates a Gun user from WebAuthn signing credential
+   * This ensures the SAME user is created as with normal approach
+   */
+  async createGunUserFromSigningCredential(
+    credentialId: string,
+    username: string,
+  ): Promise<{ success: boolean; userPub?: string; error?: string }> {
+    try {
+      const core = this.assertInitialized();
+      log(`Creating Gun user from signing credential: ${credentialId}`);
+      return await this.assertSigner().createGunUser(
+        credentialId,
+        username,
+        core.gun,
+      );
+    } catch (error: any) {
+      logError(
+        `Error creating Gun user from signing credential: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get the Gun user public key for a signing credential
+   */
+  getGunUserPubFromSigningCredential(credentialId: string): string | undefined {
+    return this.assertSigner().getGunUserPub(credentialId);
+  }
+
+  /**
+   * Get the hashed credential ID (for consistency checking)
+   */
+  getHashedCredentialId(credentialId: string): string | undefined {
+    return this.assertSigner().getHashedCredentialId(credentialId);
+  }
+
+  /**
+   * Verify consistency between oneshot and normal approaches
+   * This ensures both approaches create the same Gun user
+   */
+  async verifyConsistency(
+    credentialId: string,
+    username: string,
+    expectedUserPub?: string,
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }> {
+    try {
+      log(`Verifying consistency for credential: ${credentialId}`);
+      return await this.assertSigner().verifyConsistency(
+        credentialId,
+        username,
+        expectedUserPub,
+      );
+    } catch (error: any) {
+      logError(`Error verifying consistency: ${error.message}`);
+      return { consistent: false };
+    }
+  }
+
+  /**
+   * Complete oneshot workflow that creates the SAME Gun user as normal approach
+   * This is the recommended method for oneshot signing with full consistency
+   */
+  async setupConsistentOneshotSigning(username: string): Promise<{
+    credential: WebAuthnSigningCredential;
+    authenticator: (data: any) => Promise<AuthenticatorAssertionResponse>;
+    gunUser: { success: boolean; userPub?: string; error?: string };
+    pub: string;
+    hashedCredentialId: string;
+  }> {
+    try {
+      log(`Setting up consistent oneshot signing for: ${username}`);
+
+      // 1. Create signing credential (with consistent hashing)
+      const credential = await this.createSigningCredential(username);
+
+      // 2. Create authenticator
+      const authenticator = this.createAuthenticator(credential.id);
+
+      // 3. Create Gun user (same as normal approach)
+      const gunUser = await this.createGunUserFromSigningCredential(
+        credential.id,
+        username,
+      );
+
+      return {
+        credential,
+        authenticator,
+        gunUser,
+        pub: credential.pub,
+        hashedCredentialId: credential.hashedCredentialId,
+      };
+    } catch (error: any) {
+      logError(`Error setting up consistent oneshot signing: ${error.message}`);
+      throw error;
+    }
   }
 
   /**

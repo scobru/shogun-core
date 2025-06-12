@@ -1,4 +1,4 @@
-import { GunDB } from "./gundb";
+import { GunInstance } from "./gundb";
 import { GunRxJS } from "./gundb/rxjs-integration";
 import { EventEmitter } from "./utils/eventEmitter";
 import { log, logError, configureLogging } from "./utils/logger";
@@ -19,13 +19,18 @@ import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
-import { IGunUserInstance, IGunInstance } from "gun";
 
-import Gun from "gun";
-import "gun/sea";
+import {
+  Gun,
+  SEA,
+  IGunUserInstance,
+  IGunInstance,
+} from "./gundb/gun-es/gun-es";
 
 export { RelayVerifier } from "./contracts/utils";
+
 export * from "./utils/errorHandler";
+export * from "./gundb";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
 export * from "./contracts/entryPoint";
@@ -39,16 +44,11 @@ export type * from "./contracts/base";
 export type * from "./contracts/utils";
 export type * from "./types/plugin";
 export type * from "./utils/errorHandler";
+export type { IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
+export { SEA, Gun };
 
-// Export all types
 export * from "./types/shogun";
 
-// Export classes
-export { GunDB } from "./gundb";
-export { derive } from "./gundb";
-export type { DeriveOptions } from "./gundb";
-export { Web3Connector } from "./plugins/web3/web3Connector";
-export { Webauthn } from "./plugins/webauthn/webauthn";
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
 
@@ -56,7 +56,7 @@ export { ShogunEventEmitter } from "./types/events";
  * Main ShogunCore class - implements the IShogunCore interface
  *
  * This is the primary entry point for the Shogun SDK, providing access to:
- * - Decentralized database (GunDB)
+ * - Decentralized database (GunInstance)
  * - Authentication methods (traditional, WebAuthn, MetaMask)
  * - Plugin system for extensibility
  * - RxJS integration for reactive programming
@@ -64,44 +64,28 @@ export { ShogunEventEmitter } from "./types/events";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  /** Current API version - used for deprecation warnings and migration guidance */
   public static readonly API_VERSION = "2.0.0";
 
-  /** Gun database instance - access through gundb.gun for consistency */
   private _gun!: IGunInstance<any>;
-
-  /** Gun user instance */
   private _user: IGunUserInstance<any> | null = null;
 
-  /** GunDB wrapper - the primary interface for Gun operations */
-  public gundb: GunDB;
-
-  /** Storage implementation */
+  public gundb: GunInstance;
   public storage: ShogunStorage;
 
-  /** Event emitter for SDK events */
   private readonly eventEmitter: EventEmitter;
 
-  /** Ethereum provider */
   public provider?: ethers.Provider;
-
-  /** SDK configuration */
   public config: ShogunSDKConfig;
-
-  /** RxJS integration */
   public rx!: GunRxJS;
 
-  /** Plugin registry */
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
-
-  /** Current authentication method */
   private currentAuthMethod?: AuthMethod;
 
   /**
    * Initialize the Shogun SDK
    * @param config - SDK Configuration object
    * @description Creates a new instance of ShogunCore with the provided configuration.
-   * Initializes all required components including storage, event emitter, GunDB connection,
+   * Initializes all required components including storage, event emitter, GunInstance connection,
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
@@ -110,7 +94,6 @@ export class ShogunCore implements IShogunCore {
 
     if (config.logging) {
       configureLogging(config.logging);
-      log("Logging configured with custom settings");
     }
 
     this.storage = new ShogunStorage();
@@ -124,38 +107,27 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    log("Creating Gun instance...");
     try {
       if (config.gunInstance) {
-        log("Using provided Gun instance");
-        // Validate the provided instance
         this._gun = config.gunInstance;
       } else {
-        log(
-          `Creating new Gun instance with peers: ${JSON.stringify(config.peers)}`,
-        );
-        // Use the factory to create a properly configured Gun instance
         this._gun = Gun(config.peers || []);
       }
 
-      log(`Gun instance created and validated successfully`);
+      log("Gun instance created and validated successfully");
     } catch (error) {
       logError("Error creating Gun instance:", error);
       throw new Error(`Failed to create Gun instance: ${error}`);
     }
 
-    // Then initialize GunDB with the Gun instance
-    log("Initializing GunDB...");
     try {
-      this.gundb = new GunDB(this._gun, config.scope || "");
+      this.gundb = new GunInstance(this._gun, config.scope || "");
       this._gun = this.gundb.gun;
-      log("GunDB initialized successfully");
+      log("GunInstance initialized successfully");
     } catch (error) {
-      logError("Error initializing GunDB:", error);
-      throw new Error(`Failed to initialize GunDB: ${error}`);
+      logError("Error initializing GunInstance:", error);
+      throw new Error(`Failed to initialize GunInstance: ${error}`);
     }
-
-    log("Initialized Gun instance");
 
     try {
       this._user = this._gun.user().recall({ sessionStorage: true });
@@ -181,7 +153,7 @@ export class ShogunCore implements IShogunCore {
         }
       }
     }
-    log("ShogunSDK initialized!");
+    log("ShogunSDK initialized! 🚀");
   }
 
   /**
@@ -370,7 +342,7 @@ export class ShogunCore implements IShogunCore {
   /**
    * Check if user is logged in
    * @returns {boolean} True if user is logged in, false otherwise
-   * @description Verifies authentication status by checking GunDB login state
+   * @description Verifies authentication status by checking GunInstance login state
    * and presence of authentication credentials in storage
    */
   isLoggedIn(): boolean {
@@ -379,7 +351,7 @@ export class ShogunCore implements IShogunCore {
 
   /**
    * Perform user logout
-   * @description Logs out the current user from GunDB and emits logout event.
+   * @description Logs out the current user from GunInstance and emits logout event.
    * If user is not authenticated, the logout operation is ignored.
    */
   logout(): void {
@@ -444,7 +416,7 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Use the GunDB login method instead of reimplementing it here
+            // Use the GunInstance login method instead of reimplementing it here
             const loginResult = await this.gundb.login(username, password);
             clearTimeout(timeoutId);
 
@@ -562,7 +534,7 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Use the GunDB signUp method instead of reimplementing it here
+            // Use the GunInstance signUp method instead of reimplementing it here
             const result = await this.gundb.signUp(username, password);
             clearTimeout(timeoutId);
 

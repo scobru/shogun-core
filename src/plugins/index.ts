@@ -25,4 +25,5 @@ export type {
   AlbyProvider,
   NostrProvider,
 } from "./nostr/types";
+
 export { default as nostrChain } from "./nostr/nostrChain";

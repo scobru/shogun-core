@@ -10,7 +10,7 @@ declare global {
 /**
  * Class for Bitcoin wallet connections and operations
  */
-export declare class NostrConnector extends EventEmitter {
+declare class NostrConnector extends EventEmitter {
     private readonly MESSAGE_TO_SIGN;
     private readonly DEFAULT_CONFIG;
     private readonly config;
@@ -104,3 +104,4 @@ export declare class NostrConnector extends EventEmitter {
      */
     private requestSignature;
 }
+export { NostrConnector };

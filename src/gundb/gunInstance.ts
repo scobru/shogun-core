@@ -12,9 +12,10 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
+
 import derive, { DeriveOptions } from "./derive";
 
-class GunDB {
+class GunInstance {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   public crypto: typeof crypto;
@@ -59,6 +60,13 @@ class GunDB {
     }
 
     this.gun = gun;
+    if (typeof window !== "undefined") {
+      (window as any).ShogunDB = this;
+      (window as any).ShogunGun = gun;
+    } else if (typeof global !== "undefined") {
+      (global as any).ShogunDB = this;
+      (global as any).ShogunGun = gun;
+    }
 
     try {
       this.user = this.gun.user().recall({ sessionStorage: true });
@@ -69,8 +77,8 @@ class GunDB {
 
     this.subscribeToAuthEvents();
 
-    // bind crypto and utils
     this.crypto = crypto;
+
     this.utils = utils;
 
     this.node = this.gun.get(appScope);
@@ -402,22 +410,96 @@ class GunDB {
         return { success: false, error: err };
       }
 
-      // Check if username already exists in our tracking system
-      log(
-        `Checking if username ${username} already exists in tracking system...`,
-      );
-      const existingUser = await this.checkUsernameExists(username);
-      if (existingUser) {
+      // First, try to authenticate with Gun's native system to check if user exists
+      log(`Checking if user ${username} exists in Gun's native system...`);
+      const authTestResult = await new Promise<any>((resolve) => {
+        this.gun.user().auth(username, password, (ack: any) => {
+          if (ack.err) {
+            // User doesn't exist or password is wrong - this is expected for new users
+            resolve({ exists: false, error: ack.err });
+          } else {
+            // User exists and password is correct
+            resolve({ exists: true, userPub: this.gun.user().is?.pub });
+          }
+        });
+      });
+
+      if (authTestResult.exists) {
         log(
-          `Username ${username} already exists in tracking system with pub: ${existingUser.pub}`,
+          `User ${username} already exists and password is correct, syncing with tracking system...`,
         );
+
+        // User exists and can authenticate, sync with tracking system
+        const userPub = authTestResult.userPub;
+
+        // Check if user exists in our tracking system
+        const existingUser = await this.checkUsernameExists(username);
+
+        if (!existingUser) {
+          log(`User ${username} not in tracking system, adding them...`);
+
+          // Add user to our tracking system
+          const userMetadata = {
+            username: username,
+            pub: userPub,
+            createdAt: Date.now(),
+            lastLogin: Date.now(),
+          };
+
+          // Save user metadata
+          await new Promise<void>((resolve) => {
+            this.gun.get(userPub).put(userMetadata, (ack: any) => {
+              if (ack.err) {
+                logError(`Warning: Failed to save user metadata: ${ack.err}`);
+              } else {
+                log(`User metadata saved for: ${username}`);
+              }
+              resolve();
+            });
+          });
+
+          // Add to users collection
+          await new Promise<void>((resolve) => {
+            this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+              if (ack.err) {
+                logError(
+                  `Warning: Failed to add user to collection: ${ack.err}`,
+                );
+              } else {
+                log(`User added to collection: ${username}`);
+              }
+              resolve();
+            });
+          });
+
+          // Create username mapping
+          await new Promise<void>((resolve) => {
+            this.gun
+              .get("usernames")
+              .get(username)
+              .put(userPub, (ack: any) => {
+                if (ack.err) {
+                  logError(
+                    `Warning: Could not create username mapping: ${ack.err}`,
+                  );
+                } else {
+                  log(`Username mapping created: ${username} -> ${userPub}`);
+                }
+                resolve();
+              });
+          });
+        }
+
         return {
-          success: false,
-          error: `User already created!`,
+          success: true,
+          userPub: userPub,
+          username: username,
+          message: "User already exists and was synced with tracking system",
         };
       }
 
-      // Attempt to create user directly with Gun.js
+      // User doesn't exist, attempt to create new user
+      log(`Creating new user: ${username}`);
       const createResult = await new Promise<any>((resolve) => {
         this.gun.user().create(username, password, (ack: any) => {
           if (ack.err) {
@@ -431,160 +513,98 @@ class GunDB {
       });
 
       if (!createResult.success) {
-        // If Gun.js creation fails with "User already created", try login instead
-        if (
-          createResult.error &&
-          createResult.error.includes("User already created")
-        ) {
-          log(`User ${username} already exists in Gun.js, attempting login...`);
-
-          try {
-            const loginResult = await this.login(username, password);
-
-            if (loginResult.success) {
-              log(
-                `Login successful after failed registration for: ${username}`,
-              );
-              return {
-                success: true,
-                userPub: loginResult.userPub,
-                username: loginResult.username,
-              };
-            } else {
-              return {
-                success: false,
-                error: `User already created!`,
-              };
-            }
-          } catch (loginError) {
-            logError(`Login after failed registration error: ${loginError}`);
-            return {
-              success: false,
-              error: `User already created!`,
-            };
-          }
-        }
-
         return createResult;
       }
 
-      // Store user metadata with improved safety and wait for confirmation
-      try {
-        const userNode = this.gun.get(createResult.pub);
-        const userMetadata = {
-          username: username,
-          pub: createResult.pub,
-          createdAt: Date.now(),
-        };
+      // User created successfully, now authenticate to get the userPub
+      const authResult = await new Promise<any>((resolve) => {
+        this.gun.user().auth(username, password, (ack: any) => {
+          if (ack.err) {
+            logError(`Authentication after creation failed: ${ack.err}`);
+            resolve({ success: false, error: ack.err });
+          } else {
+            resolve({ success: true, userPub: this.gun.user().is?.pub });
+          }
+        });
+      });
 
-        // Save user metadata
-        await new Promise<void>((resolve, reject) => {
-          userNode.put(userMetadata, (ack: any) => {
+      if (!authResult.success) {
+        return {
+          success: false,
+          error: "User created but authentication failed",
+        };
+      }
+
+      const userPub = authResult.userPub;
+      log(
+        `User authentication successful after creation: ${username} (${userPub})`,
+      );
+
+      // Add to tracking system
+      const userMetadata = {
+        username: username,
+        pub: userPub,
+        createdAt: Date.now(),
+        lastLogin: Date.now(),
+      };
+
+      // Save user metadata (best effort)
+      try {
+        await new Promise<void>((resolve) => {
+          this.gun.get(userPub).put(userMetadata, (ack: any) => {
             if (ack.err) {
               logError(`Warning: Failed to save user metadata: ${ack.err}`);
-              resolve(); // Don't fail registration for this
             } else {
               log(`User metadata saved for: ${username}`);
-              resolve();
             }
+            resolve();
           });
         });
 
-        // Add to users collection and wait for confirmation
-        await new Promise<void>((resolve, reject) => {
-          this.gun.get("users").set(userNode, (ack: any) => {
+        // Add to users collection
+        await new Promise<void>((resolve) => {
+          this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
             if (ack.err) {
               logError(`Warning: Failed to add user to collection: ${ack.err}`);
-              resolve(); // Don't fail registration for this
             } else {
               log(`User added to collection: ${username}`);
-              resolve();
             }
+            resolve();
           });
         });
 
-        // Create a username -> pub mapping for faster lookups
-        await new Promise<void>((resolve, reject) => {
+        // Create username mapping
+        await new Promise<void>((resolve) => {
           this.gun
             .get("usernames")
             .get(username)
-            .put(createResult.pub, (ack: any) => {
+            .put(userPub, (ack: any) => {
               if (ack.err) {
                 logError(
                   `Warning: Could not create username mapping: ${ack.err}`,
                 );
-                resolve(); // Don't fail registration for this
               } else {
-                log(
-                  `Username mapping created: ${username} -> ${createResult.pub}`,
-                );
-                resolve();
+                log(`Username mapping created: ${username} -> ${userPub}`);
               }
+              resolve();
             });
         });
-      } catch (metadataError) {
-        logError(`Warning: Could not store user metadata: ${metadataError}`);
-        // Continue with login attempt even if metadata storage fails
+      } catch (trackingError) {
+        logError(`Warning: Could not update tracking system: ${trackingError}`);
+        // Don't fail signup for tracking errors
       }
 
-      // Login after creation with retry mechanism
-      log(`Attempting login after registration for: ${username}`);
-      let loginAttempts = 0;
-      const maxAttempts = 3;
-
-      while (loginAttempts < maxAttempts) {
-        try {
-          const loginResult = await this.login(username, password);
-
-          if (loginResult.success) {
-            log(`Login after registration successful for: ${username}`);
-            return {
-              success: true,
-              userPub: loginResult.userPub,
-              username: loginResult.username,
-            };
-          } else {
-            loginAttempts++;
-            if (loginAttempts < maxAttempts) {
-              log(`Login attempt ${loginAttempts} failed, retrying...`);
-              await new Promise((resolve) =>
-                setTimeout(resolve, 1000 * loginAttempts),
-              );
-            } else {
-              logError(
-                `Login after registration failed after ${maxAttempts} attempts: ${loginResult.error}`,
-              );
-              return {
-                success: false,
-                error: `Registration completed but login failed: ${loginResult.error}`,
-              };
-            }
-          }
-        } catch (loginError) {
-          loginAttempts++;
-          if (loginAttempts >= maxAttempts) {
-            logError(`Exception during post-registration login: ${loginError}`);
-            return {
-              success: false,
-              error: "Exception during post-registration login",
-            };
-          }
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * loginAttempts),
-          );
-        }
-      }
+      this._savePair();
 
       return {
-        success: false,
-        error: "Failed to login after registration",
+        success: true,
+        userPub,
+        username,
+        message: "User created successfully",
       };
     } catch (error) {
-      logError(`Unexpected error during registration flow: ${error}`);
-      return {
-        success: false,
-        error: `Unexpected error during registration: ${error}`,
-      };
+      logError(`Exception during signup for ${username}: ${error}`);
+      return { success: false, error: String(error) };
     }
   }
 
@@ -1229,4 +1249,4 @@ class GunDB {
   static Errors = GunErrors;
 }
 
-export { GunDB };
+export { GunInstance };
