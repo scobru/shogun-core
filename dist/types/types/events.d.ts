@@ -4,12 +4,12 @@ import { EventEmitter } from "../utils/eventEmitter";
  * @interface AuthEventData
  * @property {string} userPub - The user's public key
  * @property {string} [username] - Optional username
- * @property {"password" | "webauthn" | "metamask"} method - Authentication method used
+ * @property {"password" | "webauthn" | "web3" | "nostr" | "oauth" } method - Authentication method used
  */
 export interface AuthEventData {
     userPub: string;
     username?: string;
-    method: "password" | "webauthn" | "metamask";
+    method: "password" | "webauthn" | "web3" | "nostr" | "oauth";
 }
 /**
  * Interface representing wallet event data

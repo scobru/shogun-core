@@ -34,12 +34,7 @@ export enum CorePlugins {
   Nostr = "nostr",
 }
 
-export type AuthMethod =
-  | "password"
-  | "webauthn"
-  | "web3"
-  | "nostr"
-  | "zk-oauth";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth";
 
 // Authentication result interfaces
 export interface AuthResult {
@@ -49,6 +44,12 @@ export interface AuthResult {
   username?: string;
   sessionToken?: string;
   authMethod?: AuthMethod;
+  // Properties for OAuth flow
+  redirectUrl?: string;
+  pendingAuth?: boolean;
+  message?: string;
+  provider?: string;
+  isNewUser?: boolean;
 }
 
 /**
@@ -140,6 +141,10 @@ export interface ShogunSDKConfig {
   nostr?: {
     enabled?: boolean;
   };
+  oauth?: {
+    enabled?: boolean;
+    providers?: Record<string, any>;
+  };
   logging?: LoggingConfig;
   timeouts?: {
     login?: number;
@@ -156,98 +161,4 @@ export interface ShogunEvents {
   "auth:signup": (data: { username: string; userPub: string }) => void;
   "auth:login": (data: { username: string; userPub: string }) => void;
   "auth:logout": (data: Record<string, never>) => void;
-}
-
-/**
- * Authentication states for the state machine
- */
-export enum AuthState {
-  UNAUTHENTICATED = "unauthenticated",
-  AUTHENTICATING = "authenticating",
-  AUTHENTICATED = "authenticated",
-  AUTHENTICATION_FAILED = "authentication_failed",
-  WALLET_INITIALIZING = "wallet_initializing",
-  WALLET_READY = "wallet_ready",
-  ERROR = "error",
-}
-
-/**
- * Authentication events that trigger state transitions
- */
-export enum AuthEvent {
-  LOGIN_START = "login_start",
-  LOGIN_SUCCESS = "login_success",
-  LOGIN_FAILED = "login_failed",
-  LOGOUT = "logout",
-  WALLET_INIT_START = "wallet_init_start",
-  WALLET_INIT_SUCCESS = "wallet_init_success",
-  WALLET_INIT_FAILED = "wallet_init_failed",
-  ERROR = "error",
-}
-
-/**
- * Authentication state machine context
- */
-export interface AuthContext {
-  userPub?: string;
-  username?: string;
-  error?: string;
-  walletCount?: number;
-}
-
-/**
- * Authentication state machine interface
- */
-export interface AuthStateMachine {
-  currentState: AuthState;
-  context: AuthContext;
-  transition(event: AuthEvent, data?: Partial<AuthContext>): void;
-  canTransition(event: AuthEvent): boolean;
-  isAuthenticated(): boolean;
-  isWalletReady(): boolean;
-  waitForState(targetState: AuthState, timeoutMs?: number): Promise<boolean>;
-}
-
-// Add new interfaces for cross-app authentication
-export interface ZKSessionToken {
-  token: string;
-  userPub: string;
-  issuedAt: number;
-  expiresAt: number;
-  appOrigin: string;
-  proof: string; // ZK proof of authentication
-}
-
-export interface ProofRequest {
-  id: string;
-  type: "authentication" | "identity" | "membership" | "custom";
-  requirements: {
-    authMethods?: AuthMethod[];
-    minAge?: number;
-    hasAddress?: boolean;
-    customClaims?: Record<string, any>;
-  };
-  requestingApp: {
-    origin: string;
-    name: string;
-    description?: string;
-  };
-  privacy: "full_disclosure" | "zero_knowledge" | "selective_disclosure";
-  callback?: string; // URL to redirect back to requesting app
-}
-
-export interface ProofResponse {
-  requestId: string;
-  success: boolean;
-  proof?: {
-    type: string;
-    data: string;
-    publicSignals?: string[];
-    verificationKey?: string;
-  };
-  error?: string;
-  metadata?: {
-    generatedAt: number;
-    expiresAt?: number;
-  };
 }

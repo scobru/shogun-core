@@ -19,6 +19,7 @@ import { ShogunPlugin } from "./types/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
+import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
 
 import {
   Gun,
@@ -27,28 +28,15 @@ import {
   IGunInstance,
 } from "./gundb/gun-es/gun-es";
 
-export { RelayVerifier } from "./contracts/utils";
-
 export * from "./utils/errorHandler";
 export * from "./gundb";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
-export * from "./contracts/entryPoint";
-export * from "./contracts/utils";
-export * from "./contracts/registry";
-export * from "./contracts/relay";
-export type * from "./contracts/entryPoint";
-export type * from "./contracts/relay";
-export type * from "./contracts/registry";
-export type * from "./contracts/base";
-export type * from "./contracts/utils";
 export type * from "./types/plugin";
 export type * from "./utils/errorHandler";
 export type { IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
 export { SEA, Gun };
-
 export * from "./types/shogun";
-
 export { ShogunStorage } from "./storage/storage";
 export { ShogunEventEmitter } from "./types/events";
 
@@ -67,18 +55,23 @@ export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "2.0.0";
 
   private _gun!: IGunInstance<any>;
+
   private _user: IGunUserInstance<any> | null = null;
 
   public gundb: GunInstance;
+
   public storage: ShogunStorage;
 
   private readonly eventEmitter: EventEmitter;
 
   public provider?: ethers.Provider;
+
   public config: ShogunSDKConfig;
+
   public rx!: GunRxJS;
 
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
+
   private currentAuthMethod?: AuthMethod;
 
   /**
@@ -89,15 +82,17 @@ export class ShogunCore implements IShogunCore {
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
-    log("Initializing ShogunSDK");
+    log("Initializing Shogun");
+
     this.config = config;
+
+    this.storage = new ShogunStorage();
+
+    this.eventEmitter = new EventEmitter();
 
     if (config.logging) {
       configureLogging(config.logging);
     }
-
-    this.storage = new ShogunStorage();
-    this.eventEmitter = new EventEmitter();
 
     ErrorHandler.addListener((error: ShogunError) => {
       this.eventEmitter.emit("error", {
@@ -113,31 +108,36 @@ export class ShogunCore implements IShogunCore {
       } else {
         this._gun = Gun(config.peers || []);
       }
-
-      log("Gun instance created and validated successfully");
     } catch (error) {
       logError("Error creating Gun instance:", error);
+
       throw new Error(`Failed to create Gun instance: ${error}`);
     }
 
     try {
       this.gundb = new GunInstance(this._gun, config.scope || "");
       this._gun = this.gundb.gun;
-      log("GunInstance initialized successfully");
     } catch (error) {
       logError("Error initializing GunInstance:", error);
+
       throw new Error(`Failed to initialize GunInstance: ${error}`);
     }
 
-    try {
-      this._user = this._gun.user().recall({ sessionStorage: true });
-      log("Gun user initialized successfully");
-    } catch (error) {
-      logError("Error initializing Gun user:", error);
-      throw new Error(`Failed to initialize Gun user: ${error}`);
-    }
+    // Defer user recall to ensure Gun is ready
+    setTimeout(() => {
+      try {
+        this._user = this._gun.user().recall({ sessionStorage: true });
+        if (this._user?.is) {
+          log("Session restored successfully for user:", this._user.is.alias);
+          this.eventEmitter.emit("auth", this._user);
+        }
+      } catch (error) {
+        logError("Error during deferred user recall:", error);
+      }
+    }, 100);
 
     this.rx = new GunRxJS(this._gun);
+
     this.registerBuiltinPlugins(config);
 
     if (
@@ -147,12 +147,12 @@ export class ShogunCore implements IShogunCore {
       for (const plugin of config.plugins.autoRegister) {
         try {
           this.register(plugin);
-          log(`Auto-registered plugin: ${plugin.name}`);
         } catch (error) {
           logError(`Failed to auto-register plugin ${plugin.name}:`, error);
         }
       }
     }
+
     log("ShogunSDK initialized! 🚀");
   }
 
@@ -198,6 +198,22 @@ export class ShogunCore implements IShogunCore {
         nostrConnectorPlugin._category = PluginCategory.Authentication;
         this.register(nostrConnectorPlugin);
         log("NostrConnector plugin registered");
+      }
+
+      // Register OAuth plugin if enabled
+      if (config.oauth?.enabled) {
+        const oauthPlugin = new OAuthPlugin();
+        oauthPlugin._category = PluginCategory.Authentication;
+
+        // Configure the plugin with provider settings from config
+        if (config.oauth.providers) {
+          oauthPlugin.configure({
+            providers: config.oauth.providers,
+          });
+        }
+
+        this.register(oauthPlugin);
+        log("OAuth plugin registered with providers:", config.oauth.providers);
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
@@ -288,9 +304,9 @@ export class ShogunCore implements IShogunCore {
         return this.getPlugin(CorePlugins.Web3);
       case "nostr":
         return this.getPlugin(CorePlugins.Nostr);
+
       case "password":
       default:
-        // Default authentication is provided by the core class
         return {
           login: (username: string, password: string) => {
             this.login(username, password);
@@ -365,7 +381,6 @@ export class ShogunCore implements IShogunCore {
       this.eventEmitter.emit("auth:logout", {});
       log("Logout completed successfully");
     } catch (error) {
-      // Use centralized error handler
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
@@ -396,16 +411,13 @@ export class ShogunCore implements IShogunCore {
         };
       }
 
-      // Set authentication method to password only if not already set by a plugin
       if (!this.currentAuthMethod) {
         this.currentAuthMethod = "password";
         log("Authentication method set to default: password");
       }
 
-      // Timeout after a configurable interval (default 15 seconds)
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
 
-      // Use a Promise with timeout for the login operation
       const loginPromiseWithTimeout = new Promise<AuthResult>(
         async (resolve) => {
           const timeoutId = setTimeout(() => {
@@ -416,7 +428,6 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Use the GunInstance login method instead of reimplementing it here
             const loginResult = await this.gundb.login(username, password);
             clearTimeout(timeoutId);
 
@@ -426,7 +437,6 @@ export class ShogunCore implements IShogunCore {
                 error: loginResult.error || "Wrong user or password",
               });
             } else {
-              // First resolve the success result
               resolve({
                 success: true,
                 userPub: loginResult.userPub,
@@ -450,8 +460,6 @@ export class ShogunCore implements IShogunCore {
           userPub: result.userPub ?? "",
         });
 
-        // Automatically initialize wallet after successful login
-        // Only for traditional password authentication
         log(
           `Current auth method before wallet check: ${this.currentAuthMethod}`,
         );
@@ -534,12 +542,10 @@ export class ShogunCore implements IShogunCore {
           }, timeoutDuration);
 
           try {
-            // Use the GunInstance signUp method instead of reimplementing it here
             const result = await this.gundb.signUp(username, password);
             clearTimeout(timeoutId);
 
             if (result.success) {
-              // Emit a debug event to monitor the flow
               this.eventEmitter.emit("debug", {
                 action: "signup_complete",
                 username,
@@ -547,13 +553,11 @@ export class ShogunCore implements IShogunCore {
                 timestamp: Date.now(),
               });
 
-              // Emit the signup event
               this.eventEmitter.emit("auth:signup", {
                 userPub: result.userPub ?? "",
                 username,
               });
             } else {
-              // Emit a debug event to monitor the flow in case of failure
               this.eventEmitter.emit("debug", {
                 action: "signup_failed",
                 username,

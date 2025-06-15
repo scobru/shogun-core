@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = exports.ShogunEventEmitter = exports.ShogunStorage = exports.Gun = exports.SEA = exports.RelayVerifier = void 0;
+exports.ShogunCore = exports.ShogunEventEmitter = exports.ShogunStorage = exports.Gun = exports.SEA = void 0;
 const gundb_1 = require("./gundb");
 const rxjs_integration_1 = require("./gundb/rxjs-integration");
 const eventEmitter_1 = require("./utils/eventEmitter");
@@ -25,19 +25,14 @@ const shogun_1 = require("./types/shogun");
 const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
+const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
 const gun_es_1 = require("./gundb/gun-es/gun-es");
 Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return gun_es_1.Gun; } });
 Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return gun_es_1.SEA; } });
-var utils_1 = require("./contracts/utils");
-Object.defineProperty(exports, "RelayVerifier", { enumerable: true, get: function () { return utils_1.RelayVerifier; } });
 __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./gundb"), exports);
 __exportStar(require("./gundb/rxjs-integration"), exports);
 __exportStar(require("./plugins"), exports);
-__exportStar(require("./contracts/entryPoint"), exports);
-__exportStar(require("./contracts/utils"), exports);
-__exportStar(require("./contracts/registry"), exports);
-__exportStar(require("./contracts/relay"), exports);
 __exportStar(require("./types/shogun"), exports);
 var storage_2 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_2.ShogunStorage; } });
@@ -74,13 +69,13 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
-        (0, logger_1.log)("Initializing ShogunSDK");
+        (0, logger_1.log)("Initializing Shogun");
         this.config = config;
+        this.storage = new storage_1.ShogunStorage();
+        this.eventEmitter = new eventEmitter_1.EventEmitter();
         if (config.logging) {
             (0, logger_1.configureLogging)(config.logging);
         }
-        this.storage = new storage_1.ShogunStorage();
-        this.eventEmitter = new eventEmitter_1.EventEmitter();
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -95,7 +90,6 @@ class ShogunCore {
             else {
                 this._gun = (0, gun_es_1.Gun)(config.peers || []);
             }
-            (0, logger_1.log)("Gun instance created and validated successfully");
         }
         catch (error) {
             (0, logger_1.logError)("Error creating Gun instance:", error);
@@ -104,20 +98,24 @@ class ShogunCore {
         try {
             this.gundb = new gundb_1.GunInstance(this._gun, config.scope || "");
             this._gun = this.gundb.gun;
-            (0, logger_1.log)("GunInstance initialized successfully");
         }
         catch (error) {
             (0, logger_1.logError)("Error initializing GunInstance:", error);
             throw new Error(`Failed to initialize GunInstance: ${error}`);
         }
-        try {
-            this._user = this._gun.user().recall({ sessionStorage: true });
-            (0, logger_1.log)("Gun user initialized successfully");
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error initializing Gun user:", error);
-            throw new Error(`Failed to initialize Gun user: ${error}`);
-        }
+        // Defer user recall to ensure Gun is ready
+        setTimeout(() => {
+            try {
+                this._user = this._gun.user().recall({ sessionStorage: true });
+                if (this._user?.is) {
+                    (0, logger_1.log)("Session restored successfully for user:", this._user.is.alias);
+                    this.eventEmitter.emit("auth", this._user);
+                }
+            }
+            catch (error) {
+                (0, logger_1.logError)("Error during deferred user recall:", error);
+            }
+        }, 100);
         this.rx = new rxjs_integration_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
@@ -125,7 +123,6 @@ class ShogunCore {
             for (const plugin of config.plugins.autoRegister) {
                 try {
                     this.register(plugin);
-                    (0, logger_1.log)(`Auto-registered plugin: ${plugin.name}`);
                 }
                 catch (error) {
                     (0, logger_1.logError)(`Failed to auto-register plugin ${plugin.name}:`, error);
@@ -172,6 +169,19 @@ class ShogunCore {
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
                 (0, logger_1.log)("NostrConnector plugin registered");
+            }
+            // Register OAuth plugin if enabled
+            if (config.oauth?.enabled) {
+                const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
+                oauthPlugin._category = shogun_1.PluginCategory.Authentication;
+                // Configure the plugin with provider settings from config
+                if (config.oauth.providers) {
+                    oauthPlugin.configure({
+                        providers: config.oauth.providers,
+                    });
+                }
+                this.register(oauthPlugin);
+                (0, logger_1.log)("OAuth plugin registered with providers:", config.oauth.providers);
             }
         }
         catch (error) {
@@ -255,7 +265,6 @@ class ShogunCore {
                 return this.getPlugin(shogun_1.CorePlugins.Nostr);
             case "password":
             default:
-                // Default authentication is provided by the core class
                 return {
                     login: (username, password) => {
                         this.login(username, password);
@@ -323,7 +332,6 @@ class ShogunCore {
             (0, logger_1.log)("Logout completed successfully");
         }
         catch (error) {
-            // Use centralized error handler
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
         }
     }
@@ -346,14 +354,11 @@ class ShogunCore {
                     error: "Username and password are required",
                 };
             }
-            // Set authentication method to password only if not already set by a plugin
             if (!this.currentAuthMethod) {
                 this.currentAuthMethod = "password";
                 (0, logger_1.log)("Authentication method set to default: password");
             }
-            // Timeout after a configurable interval (default 15 seconds)
             const timeoutDuration = this.config?.timeouts?.login ?? 15000;
-            // Use a Promise with timeout for the login operation
             const loginPromiseWithTimeout = new Promise(async (resolve) => {
                 const timeoutId = setTimeout(() => {
                     resolve({
@@ -362,7 +367,6 @@ class ShogunCore {
                     });
                 }, timeoutDuration);
                 try {
-                    // Use the GunInstance login method instead of reimplementing it here
                     const loginResult = await this.gundb.login(username, password);
                     clearTimeout(timeoutId);
                     if (!loginResult.success) {
@@ -372,7 +376,6 @@ class ShogunCore {
                         });
                     }
                     else {
-                        // First resolve the success result
                         resolve({
                             success: true,
                             userPub: loginResult.userPub,
@@ -393,8 +396,6 @@ class ShogunCore {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
                 });
-                // Automatically initialize wallet after successful login
-                // Only for traditional password authentication
                 (0, logger_1.log)(`Current auth method before wallet check: ${this.currentAuthMethod}`);
             }
             return result;
@@ -454,25 +455,21 @@ class ShogunCore {
                     });
                 }, timeoutDuration);
                 try {
-                    // Use the GunInstance signUp method instead of reimplementing it here
                     const result = await this.gundb.signUp(username, password);
                     clearTimeout(timeoutId);
                     if (result.success) {
-                        // Emit a debug event to monitor the flow
                         this.eventEmitter.emit("debug", {
                             action: "signup_complete",
                             username,
                             userPub: result.userPub,
                             timestamp: Date.now(),
                         });
-                        // Emit the signup event
                         this.eventEmitter.emit("auth:signup", {
                             userPub: result.userPub ?? "",
                             username,
                         });
                     }
                     else {
-                        // Emit a debug event to monitor the flow in case of failure
                         this.eventEmitter.emit("debug", {
                             action: "signup_failed",
                             username,

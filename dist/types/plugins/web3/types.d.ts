@@ -7,6 +7,7 @@ export interface ConnectionResult extends BaseResult {
     address?: string;
     username?: string;
     randomPassword?: string;
+    message?: string;
 }
 /**
  * Structure for credentials generated via MetaMask

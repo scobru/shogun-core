@@ -8,6 +8,7 @@ declare global {
     interface Window {
         ethereum?: EthereumProvider;
         Web3Connector?: typeof Web3Connector;
+        _ethereumProviders?: EthereumProvider[];
     }
 }
 declare global {
@@ -30,9 +31,14 @@ declare class Web3Connector extends EventEmitter {
     private customWallet;
     constructor(config?: Partial<Web3Config>);
     /**
-     * Initialize the provider synchronously
+     * Initialize the provider synchronously with fallback mechanisms
+     * to handle conflicts between multiple wallet providers
      */
     private initProvider;
+    /**
+     * Get available Ethereum provider from multiple possible sources
+     */
+    private getAvailableEthereumProvider;
     /**
      * Initialize the BrowserProvider (async method for explicit calls)
      */
@@ -84,7 +90,7 @@ declare class Web3Connector extends EventEmitter {
      */
     private requestSignatureWithTimeout;
     /**
-     * Checks if MetaMask is available
+     * Checks if any Ethereum provider is available
      */
     isAvailable(): boolean;
     /**

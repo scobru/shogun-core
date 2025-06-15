@@ -28,8 +28,8 @@ export type {
 
 export { default as nostrChain } from "./nostr/nostrChain";
 
-// ZK-OAuth plugin exports
-export { ZKOAuthConnectorMinimal as ZKOAuthConnector } from "./zk-oauth/zkOAuthConnector";
-export { ZKOAuthPlugin } from "./zk-oauth/zkOAuthPlugin";
-export * from "./zk-oauth/types";
-export { default as zkOAuthChain } from "./zk-oauth/zkOAuthChain";
+// OAuth plugin exports
+export { OAuthConnector } from "./oauth/oauthConnector";
+export { OAuthPlugin } from "./oauth/oauthPlugin";
+export * from "./oauth/types";
+export { default as oauthChain } from "./oauth/oauthChain";

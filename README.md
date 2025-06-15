@@ -133,7 +133,6 @@ For detailed documentation on each component:
 - **[WebAuthn Plugin](wiki/webauthn.md)** - Biometric and security key authentication
 - **[Web3 Plugin](wiki/web3.md)** - Ethereum wallet integration
 - **[Nostr Plugin](wiki/nostr.md)** - Bitcoin and Nostr protocol support
-- **[Smart Contracts](wiki/contracts.md)** - Shogun Protocol contract interactions
 
 ### External Plugins
 - **[BIP44 HD Wallet Plugin](https://github.com/scobru/shogun-BIP44)** - Hierarchical deterministic wallet management

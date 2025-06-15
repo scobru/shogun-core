@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zkOAuthChain = exports.ZKOAuthPlugin = exports.ZKOAuthConnector = exports.nostrChain = exports.NostrConnectorPlugin = exports.NostrConnector = exports.web3Chain = exports.Web3ConnectorPlugin = exports.Web3Connector = exports.webauthnChain = exports.WebauthnPlugin = exports.Webauthn = exports.BasePlugin = void 0;
+exports.oauthChain = exports.OAuthPlugin = exports.OAuthConnector = exports.nostrChain = exports.NostrConnectorPlugin = exports.NostrConnector = exports.web3Chain = exports.Web3ConnectorPlugin = exports.Web3Connector = exports.webauthnChain = exports.WebauthnPlugin = exports.Webauthn = exports.BasePlugin = void 0;
 // Base plugin interface and types
 var base_1 = require("./base");
 Object.defineProperty(exports, "BasePlugin", { enumerable: true, get: function () { return base_1.BasePlugin; } });
@@ -42,11 +42,11 @@ var nostrConnectorPlugin_1 = require("./nostr/nostrConnectorPlugin");
 Object.defineProperty(exports, "NostrConnectorPlugin", { enumerable: true, get: function () { return nostrConnectorPlugin_1.NostrConnectorPlugin; } });
 var nostrChain_1 = require("./nostr/nostrChain");
 Object.defineProperty(exports, "nostrChain", { enumerable: true, get: function () { return __importDefault(nostrChain_1).default; } });
-// ZK-OAuth plugin exports
-var zkOAuthConnector_1 = require("./zk-oauth/zkOAuthConnector");
-Object.defineProperty(exports, "ZKOAuthConnector", { enumerable: true, get: function () { return zkOAuthConnector_1.ZKOAuthConnectorMinimal; } });
-var zkOAuthPlugin_1 = require("./zk-oauth/zkOAuthPlugin");
-Object.defineProperty(exports, "ZKOAuthPlugin", { enumerable: true, get: function () { return zkOAuthPlugin_1.ZKOAuthPlugin; } });
-__exportStar(require("./zk-oauth/types"), exports);
-var zkOAuthChain_1 = require("./zk-oauth/zkOAuthChain");
-Object.defineProperty(exports, "zkOAuthChain", { enumerable: true, get: function () { return __importDefault(zkOAuthChain_1).default; } });
+// OAuth plugin exports
+var oauthConnector_1 = require("./oauth/oauthConnector");
+Object.defineProperty(exports, "OAuthConnector", { enumerable: true, get: function () { return oauthConnector_1.OAuthConnector; } });
+var oauthPlugin_1 = require("./oauth/oauthPlugin");
+Object.defineProperty(exports, "OAuthPlugin", { enumerable: true, get: function () { return oauthPlugin_1.OAuthPlugin; } });
+__exportStar(require("./oauth/types"), exports);
+var oauthChain_1 = require("./oauth/oauthChain");
+Object.defineProperty(exports, "oauthChain", { enumerable: true, get: function () { return __importDefault(oauthChain_1).default; } });

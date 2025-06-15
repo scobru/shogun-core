@@ -86,7 +86,7 @@ declare class NostrConnector extends EventEmitter {
     /**
      * Verify a signature
      */
-    verifySignature(message: string, signature: string, address: string): Promise<boolean>;
+    verifySignature(message: string, signature: string, address: any): Promise<boolean>;
     /**
      * Get the currently connected address
      */
