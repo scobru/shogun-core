@@ -123,18 +123,13 @@ export class ShogunCore implements IShogunCore {
       throw new Error(`Failed to initialize GunInstance: ${error}`);
     }
 
-    // Defer user recall to ensure Gun is ready
-    setTimeout(() => {
-      try {
-        this._user = this._gun.user().recall({ sessionStorage: true });
-        if (this._user?.is) {
-          log("Session restored successfully for user:", this._user.is.alias);
-          this.eventEmitter.emit("auth", this._user);
-        }
-      } catch (error) {
-        logError("Error during deferred user recall:", error);
-      }
-    }, 100);
+    try {
+      this._user = this._gun.user().recall({ sessionStorage: true });
+    } catch (error) {
+      logError("Error initializing Gun user:", error);
+
+      throw new Error(`Failed to initialize Gun user: ${error}`);
+    }
 
     this.rx = new GunRxJS(this._gun);
 

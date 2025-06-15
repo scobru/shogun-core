@@ -103,19 +103,13 @@ class ShogunCore {
             (0, logger_1.logError)("Error initializing GunInstance:", error);
             throw new Error(`Failed to initialize GunInstance: ${error}`);
         }
-        // Defer user recall to ensure Gun is ready
-        setTimeout(() => {
-            try {
-                this._user = this._gun.user().recall({ sessionStorage: true });
-                if (this._user?.is) {
-                    (0, logger_1.log)("Session restored successfully for user:", this._user.is.alias);
-                    this.eventEmitter.emit("auth", this._user);
-                }
-            }
-            catch (error) {
-                (0, logger_1.logError)("Error during deferred user recall:", error);
-            }
-        }, 100);
+        try {
+            this._user = this._gun.user().recall({ sessionStorage: true });
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error initializing Gun user:", error);
+            throw new Error(`Failed to initialize Gun user: ${error}`);
+        }
         this.rx = new rxjs_integration_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
