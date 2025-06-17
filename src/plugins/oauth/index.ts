@@ -1,0 +1,12 @@
+// OAuth plugin exports
+export { OAuthConnector } from "./oauthConnector";
+export { OAuthPlugin } from "./oauthPlugin";
+export type {
+  OAuthPluginInterface,
+  OAuthConfig,
+  OAuthProvider,
+  OAuthCredentials,
+  OAuthConnectionResult,
+  OAuthUserInfo,
+} from "./types";
+export { default as oauthChain } from "./oauthChain";
