@@ -29,7 +29,7 @@ export { ShogunEventEmitter } from "./types/events";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    static readonly API_VERSION = "2.0.0";
+    static readonly API_VERSION = "v1.2.9c";
     private _gun;
     private _user;
     gundb: GunInstance;

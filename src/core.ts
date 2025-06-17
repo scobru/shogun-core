@@ -27,6 +27,7 @@ import {
   IGunUserInstance,
   IGunInstance,
 } from "./gundb/gun-es/gun-es";
+import { randomInt } from "crypto";
 
 export * from "./utils/errorHandler";
 export * from "./gundb";
@@ -52,7 +53,7 @@ export { ShogunEventEmitter } from "./types/events";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "2.0.0";
+  public static readonly API_VERSION = "v1.2.9c";
 
   private _gun!: IGunInstance<any>;
 
@@ -82,7 +83,7 @@ export class ShogunCore implements IShogunCore {
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
-    log("Initializing Shogun");
+    log("Initializing Shogun " + ShogunCore.API_VERSION);
 
     this.config = config;
 
@@ -414,37 +415,52 @@ export class ShogunCore implements IShogunCore {
       const timeoutDuration = this.config?.timeouts?.login ?? 15000;
 
       const loginPromiseWithTimeout = new Promise<AuthResult>(
-        async (resolve) => {
+        (resolve, reject) => {
+          let isResolved = false;
+
           const timeoutId = setTimeout(() => {
-            resolve({
-              success: false,
-              error: "Login timeout",
-            });
-          }, timeoutDuration);
-
-          try {
-            const loginResult = await this.gundb.login(username, password);
-            clearTimeout(timeoutId);
-
-            if (!loginResult.success) {
+            if (!isResolved) {
+              isResolved = true;
               resolve({
                 success: false,
-                error: loginResult.error || "Wrong user or password",
-              });
-            } else {
-              resolve({
-                success: true,
-                userPub: loginResult.userPub,
-                username: loginResult.username,
+                error: "Login timeout",
               });
             }
-          } catch (error: any) {
-            clearTimeout(timeoutId);
-            resolve({
-              success: false,
-              error: error.message || "Login error",
-            });
-          }
+          }, timeoutDuration);
+
+          const safeResolve = (result: AuthResult) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeoutId);
+              resolve(result);
+            }
+          };
+
+          const executeLogin = async () => {
+            try {
+              const loginResult = await this.gundb.login(username, password);
+
+              if (!loginResult.success) {
+                safeResolve({
+                  success: false,
+                  error: loginResult.error || "Wrong user or password",
+                });
+              } else {
+                safeResolve({
+                  success: true,
+                  userPub: loginResult.userPub,
+                  username: loginResult.username,
+                });
+              }
+            } catch (error: any) {
+              safeResolve({
+                success: false,
+                error: error.message || "Login error",
+              });
+            }
+          };
+
+          executeLogin();
         },
       );
 
@@ -528,47 +544,62 @@ export class ShogunCore implements IShogunCore {
       const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
 
       const signupPromiseWithTimeout = new Promise<SignUpResult>(
-        async (resolve) => {
+        (resolve, reject) => {
+          let isResolved = false;
+
           const timeoutId = setTimeout(() => {
-            resolve({
-              success: false,
-              error: "Registration timeout",
-            });
-          }, timeoutDuration);
-
-          try {
-            const result = await this.gundb.signUp(username, password);
-            clearTimeout(timeoutId);
-
-            if (result.success) {
-              this.eventEmitter.emit("debug", {
-                action: "signup_complete",
-                username,
-                userPub: result.userPub,
-                timestamp: Date.now(),
-              });
-
-              this.eventEmitter.emit("auth:signup", {
-                userPub: result.userPub ?? "",
-                username,
-              });
-            } else {
-              this.eventEmitter.emit("debug", {
-                action: "signup_failed",
-                username,
-                error: result.error,
-                timestamp: Date.now(),
+            if (!isResolved) {
+              isResolved = true;
+              resolve({
+                success: false,
+                error: "Registration timeout",
               });
             }
+          }, timeoutDuration);
 
-            resolve(result);
-          } catch (error: any) {
-            clearTimeout(timeoutId);
-            resolve({
-              success: false,
-              error: error.message || "Registration error",
-            });
-          }
+          const safeResolve = (result: SignUpResult) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeoutId);
+              resolve(result);
+            }
+          };
+
+          const executeSignup = async () => {
+            try {
+              const result = await this.gundb.signUp(username, password);
+
+              if (result.success) {
+                this.eventEmitter.emit("debug", {
+                  action: "signup_complete",
+                  username,
+                  userPub: result.userPub,
+                  timestamp: Date.now(),
+                });
+
+                this.eventEmitter.emit("auth:signup", {
+                  userPub: result.userPub ?? "",
+                  username,
+                });
+              } else {
+                this.eventEmitter.emit("debug", {
+                  action: "signup_failed",
+                  username,
+                  error: result.error,
+                  timestamp: Date.now(),
+                });
+              }
+
+              safeResolve(result);
+            } catch (error: any) {
+              safeResolve({
+                success: false,
+                error: error.message || "Registration error",
+              });
+            }
+          };
+
+          executeSignup();
         },
       );
 
