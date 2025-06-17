@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NostrConnectorPlugin = void 0;
 const base_1 = require("../base");
 const nostrConnector_1 = require("./nostrConnector");
+const nostrSigner_1 = require("./nostrSigner");
 const logger_1 = require("../../utils/logger");
 const errorHandler_1 = require("../../utils/errorHandler");
 /**
@@ -14,6 +15,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
     version = "1.0.0";
     description = "Provides Bitcoin wallet connection and authentication for ShogunCore";
     bitcoinConnector = null;
+    signer = null;
     /**
      * @inheritdoc
      */
@@ -21,7 +23,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         super.initialize(core);
         // Initialize the Bitcoin wallet module
         this.bitcoinConnector = new nostrConnector_1.NostrConnector();
-        (0, logger_1.log)("Bitcoin wallet plugin initialized");
+        this.signer = new nostrSigner_1.NostrSigner(this.bitcoinConnector);
+        (0, logger_1.log)("Bitcoin wallet plugin initialized with signer support");
     }
     /**
      * @inheritdoc
@@ -31,6 +34,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             this.bitcoinConnector.cleanup();
         }
         this.bitcoinConnector = null;
+        this.signer = null;
         super.destroy();
         (0, logger_1.log)("Bitcoin wallet plugin destroyed");
     }
@@ -44,6 +48,17 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             throw new Error("Bitcoin wallet module not initialized");
         }
         return this.bitcoinConnector;
+    }
+    /**
+     * Assicura che il signer sia inizializzato
+     * @private
+     */
+    assertSigner() {
+        this.assertInitialized();
+        if (!this.signer) {
+            throw new Error("Nostr signer not initialized");
+        }
+        return this.signer;
     }
     /**
      * @inheritdoc
@@ -109,6 +124,147 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
     async generatePassword(signature) {
         return this.assertBitcoinConnector().generatePassword(signature);
     }
+    // === NOSTR SIGNER METHODS ===
+    /**
+     * Creates a new Nostr signing credential
+     * CONSISTENT with normal Nostr approach
+     */
+    async createSigningCredential(address) {
+        try {
+            (0, logger_1.log)(`Creating Nostr signing credential for address: ${address}`);
+            return await this.assertSigner().createSigningCredential(address);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error creating Nostr signing credential: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Creates an authenticator function for Nostr signing
+     */
+    createAuthenticator(address) {
+        try {
+            (0, logger_1.log)(`Creating Nostr authenticator for address: ${address}`);
+            return this.assertSigner().createAuthenticator(address);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error creating Nostr authenticator: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Creates a derived key pair from Nostr credential
+     */
+    async createDerivedKeyPair(address, extra) {
+        try {
+            (0, logger_1.log)(`Creating derived key pair for address: ${address}`);
+            return await this.assertSigner().createDerivedKeyPair(address, extra);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error creating derived key pair: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Signs data with derived keys after Nostr verification
+     */
+    async signWithDerivedKeys(data, address, extra) {
+        try {
+            (0, logger_1.log)(`Signing data with derived keys for address: ${address}`);
+            return await this.assertSigner().signWithDerivedKeys(data, address, extra);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error signing with derived keys: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get signing credential by address
+     */
+    getSigningCredential(address) {
+        return this.assertSigner().getCredential(address);
+    }
+    /**
+     * List all signing credentials
+     */
+    listSigningCredentials() {
+        return this.assertSigner().listCredentials();
+    }
+    /**
+     * Remove a signing credential
+     */
+    removeSigningCredential(address) {
+        return this.assertSigner().removeCredential(address);
+    }
+    // === CONSISTENCY METHODS ===
+    /**
+     * Creates a Gun user from Nostr signing credential
+     * This ensures the SAME user is created as with normal approach
+     */
+    async createGunUserFromSigningCredential(address) {
+        try {
+            const core = this.assertInitialized();
+            (0, logger_1.log)(`Creating Gun user from Nostr signing credential: ${address}`);
+            return await this.assertSigner().createGunUser(address, core.gun);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error creating Gun user from Nostr signing credential: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get the Gun user public key for a signing credential
+     */
+    getGunUserPubFromSigningCredential(address) {
+        return this.assertSigner().getGunUserPub(address);
+    }
+    /**
+     * Get the password (for consistency checking)
+     */
+    getPassword(address) {
+        return this.assertSigner().getPassword(address);
+    }
+    /**
+     * Verify consistency between oneshot and normal approaches
+     * This ensures both approaches create the same Gun user
+     */
+    async verifyConsistency(address, expectedUserPub) {
+        try {
+            (0, logger_1.log)(`Verifying Nostr consistency for address: ${address}`);
+            return await this.assertSigner().verifyConsistency(address, expectedUserPub);
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error verifying Nostr consistency: ${error.message}`);
+            return { consistent: false };
+        }
+    }
+    /**
+     * Complete oneshot workflow that creates the SAME Gun user as normal approach
+     * This is the recommended method for oneshot signing with full consistency
+     */
+    async setupConsistentOneshotSigning(address) {
+        try {
+            (0, logger_1.log)(`Setting up consistent Nostr oneshot signing for: ${address}`);
+            // 1. Create signing credential (with consistent password generation)
+            const credential = await this.createSigningCredential(address);
+            // 2. Create authenticator
+            const authenticator = this.createAuthenticator(address);
+            // 3. Create Gun user (same as normal approach)
+            const gunUser = await this.createGunUserFromSigningCredential(address);
+            return {
+                credential,
+                authenticator,
+                gunUser,
+                username: credential.username,
+                password: credential.password,
+            };
+        }
+        catch (error) {
+            (0, logger_1.logError)(`Error setting up consistent Nostr oneshot signing: ${error.message}`);
+            throw error;
+        }
+    }
+    // === EXISTING METHODS ===
     /**
      * Login with Bitcoin wallet
      * @param address - Bitcoin address

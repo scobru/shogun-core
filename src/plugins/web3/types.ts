@@ -13,6 +13,7 @@ export interface ConnectionResult extends BaseResult {
   address?: string;
   username?: string;
   randomPassword?: string;
+  message?: string;
 }
 
 /**

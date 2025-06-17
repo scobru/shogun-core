@@ -31,33 +31,112 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
         this.setupEventListeners();
     }
     /**
-     * Initialize the provider synchronously
+     * Initialize the provider synchronously with fallback mechanisms
+     * to handle conflicts between multiple wallet providers
      */
     initProvider() {
-        if (typeof window !== "undefined" && window.ethereum) {
+        if (typeof window !== "undefined") {
             try {
-                this.provider = new ethers_1.ethers.BrowserProvider(window.ethereum);
-                (0, logger_1.logDebug)("BrowserProvider initialized successfully");
+                // Check if ethereum is available from any provider
+                const ethereumProvider = this.getAvailableEthereumProvider();
+                if (ethereumProvider) {
+                    this.provider = new ethers_1.ethers.BrowserProvider(ethereumProvider);
+                    (0, logger_1.logDebug)("BrowserProvider initialized successfully");
+                }
+                else {
+                    (0, logger_1.logWarn)("No compatible Ethereum provider found");
+                }
             }
             catch (error) {
                 (0, logger_1.logError)("Failed to initialize BrowserProvider", error);
             }
         }
         else {
-            (0, logger_1.logWarn)("Window.ethereum is not available");
+            (0, logger_1.logWarn)("Window object not available (non-browser environment)");
         }
+    }
+    /**
+     * Get available Ethereum provider from multiple possible sources
+     */
+    getAvailableEthereumProvider() {
+        if (typeof window === "undefined")
+            return undefined;
+        // Define provider sources with priority order
+        const providerSources = [
+            // Check if we have providers in the _ethereumProviders registry (from index.html)
+            {
+                source: () => window._ethereumProviders && window._ethereumProviders[0],
+                name: "Registry Primary",
+            },
+            { source: () => window.ethereum, name: "Standard ethereum" },
+            {
+                source: () => window.web3?.currentProvider,
+                name: "Legacy web3",
+            },
+            { source: () => window.metamask, name: "MetaMask specific" },
+            {
+                source: () => window.ethereum?.providers?.find((p) => p.isMetaMask),
+                name: "MetaMask from providers array",
+            },
+            {
+                source: () => window.ethereum?.providers?.[0],
+                name: "First provider in array",
+            },
+            // Try known provider names
+            {
+                source: () => window.enkrypt?.providers?.ethereum,
+                name: "Enkrypt",
+            },
+            {
+                source: () => window.coinbaseWalletExtension,
+                name: "Coinbase",
+            },
+            { source: () => window.trustWallet, name: "Trust Wallet" },
+            // Use special registry if available
+            {
+                source: () => Array.isArray(window._ethereumProviders)
+                    ? window._ethereumProviders.find((p) => !p._isProxy)
+                    : undefined,
+                name: "Registry non-proxy",
+            },
+        ];
+        // Try each provider source
+        for (const { source, name } of providerSources) {
+            try {
+                const provider = source();
+                if (provider && typeof provider.request === "function") {
+                    (0, logger_1.logDebug)(`Found compatible Ethereum provider: ${name}`);
+                    return provider;
+                }
+            }
+            catch (error) {
+                // Continue to next provider source
+                (0, logger_1.logWarn)(`Error checking provider ${name}:`, error);
+                continue;
+            }
+        }
+        // No provider found
+        (0, logger_1.logWarn)("No compatible Ethereum provider found");
+        return undefined;
     }
     /**
      * Initialize the BrowserProvider (async method for explicit calls)
      */
     async setupProvider() {
         try {
-            if (typeof window !== "undefined" && window.ethereum) {
-                this.provider = new ethers_1.ethers.BrowserProvider(window.ethereum);
-                (0, logger_1.logDebug)("BrowserProvider initialized successfully");
+            if (typeof window !== "undefined") {
+                // Check if ethereum is available from any provider
+                const ethereumProvider = this.getAvailableEthereumProvider();
+                if (ethereumProvider) {
+                    this.provider = new ethers_1.ethers.BrowserProvider(ethereumProvider);
+                    (0, logger_1.logDebug)("BrowserProvider initialized successfully");
+                }
+                else {
+                    (0, logger_1.logWarn)("No compatible Ethereum provider found");
+                }
             }
             else {
-                (0, logger_1.logWarn)("Window.ethereum is not available");
+                (0, logger_1.logWarn)("Window object not available (non-browser environment)");
             }
         }
         catch (error) {
@@ -69,14 +148,25 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     setupEventListeners() {
         if (this.provider) {
+            // Listen for network changes through ethers provider
             this.provider.on("network", (newNetwork, oldNetwork) => {
                 this.emit("chainChanged", newNetwork);
             });
-            // Listen for account changes
-            if (window.ethereum?.on) {
-                window.ethereum.on("accountsChanged", (accounts) => {
-                    this.emit("accountsChanged", accounts);
-                });
+            // Listen for account changes through the detected provider
+            try {
+                const ethereumProvider = this.getAvailableEthereumProvider();
+                if (ethereumProvider?.on) {
+                    ethereumProvider.on("accountsChanged", (accounts) => {
+                        this.emit("accountsChanged", accounts);
+                    });
+                    // Also listen for chainChanged events directly
+                    ethereumProvider.on("chainChanged", (chainId) => {
+                        this.emit("chainChanged", { chainId });
+                    });
+                }
+            }
+            catch (error) {
+                (0, logger_1.logWarn)("Failed to setup account change listeners", error);
             }
         }
     }
@@ -145,21 +235,40 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     throw new Error("MetaMask is not available. Please install MetaMask extension.");
                 }
             }
+            // First check if we can get the provider
+            const ethereumProvider = this.getAvailableEthereumProvider();
+            if (!ethereumProvider) {
+                throw new Error("No compatible Ethereum provider found");
+            }
             // Richiedi esplicitamente l'accesso all'account MetaMask
             (0, logger_1.logDebug)("Requesting account access...");
             let accounts = [];
-            if (window.ethereum) {
-                try {
-                    accounts = await window.ethereum.request({
-                        method: "eth_requestAccounts",
-                    });
-                    (0, logger_1.logDebug)(`Accounts requested successfully: ${accounts.length} accounts returned`);
+            // Try multiple methods of requesting accounts for compatibility
+            try {
+                // Try the provider we found first
+                accounts = await ethereumProvider.request({
+                    method: "eth_requestAccounts",
+                });
+            }
+            catch (requestError) {
+                (0, logger_1.logWarn)("First account request failed, trying window.ethereum:", requestError);
+                // Fallback to window.ethereum if available and different
+                if (window.ethereum && window.ethereum !== ethereumProvider) {
+                    try {
+                        accounts = await window.ethereum.request({
+                            method: "eth_requestAccounts",
+                        });
+                    }
+                    catch (fallbackError) {
+                        (0, logger_1.logError)("All account request methods failed", fallbackError);
+                        throw new Error("User denied account access");
+                    }
                 }
-                catch (requestError) {
-                    (0, logger_1.logError)("Error requesting MetaMask accounts:", requestError);
+                else {
                     throw new Error("User denied account access");
                 }
             }
+            (0, logger_1.logDebug)(`Accounts requested successfully: ${accounts.length} accounts returned`);
             if (!accounts || accounts.length === 0) {
                 (0, logger_1.logDebug)("No accounts found, trying to get signer...");
             }
@@ -170,20 +279,22 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     const address = await signer.getAddress();
                     if (!address) {
                         (0, logger_1.logError)("No address returned from signer");
-                        throw new Error("No accounts found in MetaMask");
+                        continue;
                     }
-                    (0, logger_1.logDebug)(`Signer address obtained: ${address}`);
-                    const metamaskUsername = `${address.toLowerCase()}`;
-                    // Emetti evento connesso
+                    (0, logger_1.logDebug)(`Successfully connected to MetaMask with address: ${address}`);
                     this.emit("connected", { address });
-                    (0, logger_1.logDebug)(`MetaMask connected successfully with address: ${address}`);
-                    return { success: true, address, username: metamaskUsername };
+                    return {
+                        success: true,
+                        address,
+                        message: "Successfully connected to MetaMask",
+                    };
                 }
                 catch (error) {
-                    (0, logger_1.logError)(`Error in connection attempt ${attempt}:`, error);
-                    if (attempt === this.config.maxRetries)
+                    (0, logger_1.logError)(`Attempt ${attempt} failed:`, error);
+                    if (attempt === this.config.maxRetries) {
                         throw error;
-                    (0, logger_1.logDebug)(`Retrying in ${this.config.retryDelay}ms...`);
+                    }
+                    // Wait before retrying
                     await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
                 }
             }
@@ -262,10 +373,21 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * @returns true if MetaMask is available
      */
     static isMetaMaskAvailable() {
-        const ethereum = window.ethereum;
-        return (typeof window !== "undefined" &&
-            typeof ethereum !== "undefined" &&
-            ethereum?.isMetaMask === true);
+        if (typeof window === "undefined")
+            return false;
+        // Check standard location
+        if (window.ethereum?.isMetaMask === true)
+            return true;
+        // Check alternate locations (for compatibility with multiple wallet extensions)
+        const alternateProviders = [
+            window.web3?.currentProvider,
+            window.metamask,
+        ];
+        for (const provider of alternateProviders) {
+            if (provider?.isMetaMask === true)
+                return true;
+        }
+        return false;
     }
     /**
      * Request signature using BrowserProvider
@@ -326,10 +448,10 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
         });
     }
     /**
-     * Checks if MetaMask is available
+     * Checks if any Ethereum provider is available
      */
     isAvailable() {
-        return typeof window !== "undefined" && !!window.ethereum;
+        return (typeof window !== "undefined" && !!this.getAvailableEthereumProvider());
     }
     /**
      * Configure custom JSON-RPC provider

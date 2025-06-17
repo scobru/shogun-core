@@ -7,3 +7,4 @@ import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 
 export { Gun, SEA };
+export type { IGunUserInstance, IGunInstance } from "gun/types";

@@ -13,7 +13,14 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.web3Chain = void 0;
 __exportStar(require("./web3ConnectorPlugin"), exports);
 __exportStar(require("./types"), exports);
 __exportStar(require("./web3Connector"), exports);
+__exportStar(require("./web3Signer"), exports);
+var web3Chain_1 = require("./web3Chain");
+Object.defineProperty(exports, "web3Chain", { enumerable: true, get: function () { return __importDefault(web3Chain_1).default; } });

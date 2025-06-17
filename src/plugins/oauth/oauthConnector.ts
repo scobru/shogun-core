@@ -1,0 +1,658 @@
+/**
+ * OAuth Connector - Simple version for GunDB user creation
+ */
+import { ethers } from "ethers";
+import { log, logDebug, logError, logWarn } from "../../utils/logger";
+import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+import { EventEmitter } from "../../utils/eventEmitter";
+import {
+  OAuthConfig,
+  OAuthProvider,
+  OAuthTokenResponse,
+  OAuthUserInfo,
+  OAuthCredentials,
+  OAuthConnectionResult,
+  OAuthCache,
+  OAuthProviderConfig,
+} from "./types";
+
+/**
+ * OAuth Connector
+ */
+export class OAuthConnector extends EventEmitter {
+  private readonly DEFAULT_CONFIG: Partial<OAuthConfig> = {
+    providers: {
+      google: {
+        clientId: "",
+        clientSecret: "",
+        redirectUri: `${this.getOrigin()}/auth/callback`,
+        scope: ["openid", "email", "profile"],
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+      },
+      github: {
+        clientId: "",
+        clientSecret: "",
+        redirectUri: `${this.getOrigin()}/auth/callback`,
+        scope: ["user:email"],
+        authUrl: "https://github.com/login/oauth/authorize",
+        tokenUrl: "https://github.com/login/oauth/access_token",
+        userInfoUrl: "https://api.github.com/user",
+      },
+      discord: {
+        clientId: "",
+        clientSecret: "",
+        redirectUri: `${this.getOrigin()}/auth/callback`,
+        scope: ["identify", "email"],
+        authUrl: "https://discord.com/api/oauth2/authorize",
+        tokenUrl: "https://discord.com/api/oauth2/token",
+        userInfoUrl: "https://discord.com/api/users/@me",
+      },
+      twitter: {
+        clientId: "",
+        clientSecret: "",
+        redirectUri: `${this.getOrigin()}/auth/callback`,
+        scope: ["tweet.read", "users.read"],
+        authUrl: "https://twitter.com/i/oauth2/authorize",
+        tokenUrl: "https://api.twitter.com/2/oauth2/token",
+        userInfoUrl: "https://api.twitter.com/2/users/me",
+      },
+      custom: {
+        clientId: "",
+        clientSecret: "",
+        redirectUri: "",
+        scope: [],
+        authUrl: "",
+        tokenUrl: "",
+        userInfoUrl: "",
+      },
+    },
+    usePKCE: true,
+    cacheDuration: 24 * 60 * 60 * 1000, // 24 hours
+    timeout: 60000,
+    maxRetries: 3,
+    retryDelay: 1000,
+  };
+
+  private config: Partial<OAuthConfig>;
+  private readonly userCache: Map<string, OAuthCache> = new Map();
+  // Fallback storage for Node.js environment
+  private readonly memoryStorage: Map<string, string> = new Map();
+
+  constructor(config: Partial<OAuthConfig> = {}) {
+    super();
+    this.config = {
+      ...this.DEFAULT_CONFIG,
+      ...config,
+      providers: {
+        ...(this.DEFAULT_CONFIG.providers || {}),
+        ...(config.providers || {}),
+      },
+    };
+  }
+
+  /**
+   * Update the connector configuration
+   * @param config - New configuration options
+   */
+  updateConfig(config: Partial<OAuthConfig>): void {
+    this.config = {
+      ...this.config,
+      ...config,
+      providers: {
+        ...(this.config.providers || {}),
+        ...(config.providers || {}),
+      },
+    };
+    logDebug("OAuthConnector configuration updated", this.config);
+  }
+
+  /**
+   * Get origin URL (browser or Node.js compatible)
+   */
+  private getOrigin(): string {
+    if (typeof window !== "undefined" && window.location) {
+      return window.location.origin;
+    }
+    // Fallback for Node.js environment
+    return "http://localhost:3000";
+  }
+
+  /**
+   * Storage abstraction (browser sessionStorage or Node.js Map)
+   */
+  private setItem(key: string, value: string): void {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(key, value);
+    } else {
+      this.memoryStorage.set(key, value);
+    }
+  }
+
+  private getItem(key: string): string | null {
+    if (typeof sessionStorage !== "undefined") {
+      return sessionStorage.getItem(key);
+    } else {
+      return this.memoryStorage.get(key) || null;
+    }
+  }
+
+  private removeItem(key: string): void {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem(key);
+    } else {
+      this.memoryStorage.delete(key);
+    }
+  }
+
+  /**
+   * Check if OAuth is supported
+   */
+  isSupported(): boolean {
+    // In Node.js, we can still demonstrate the functionality
+    return typeof URLSearchParams !== "undefined";
+  }
+
+  /**
+   * Get available OAuth providers
+   */
+  getAvailableProviders(): OAuthProvider[] {
+    return Object.keys(this.config.providers || {}).filter(
+      (provider) => this.config.providers![provider as OAuthProvider]?.clientId,
+    ) as OAuthProvider[];
+  }
+
+  /**
+   * Generate PKCE challenge for secure OAuth flow
+   */
+  private async generatePKCEChallenge(): Promise<{
+    codeVerifier: string;
+    codeChallenge: string;
+  }> {
+    const codeVerifier = this.generateRandomString(128);
+    const codeChallenge = await this.calculatePKCECodeChallenge(codeVerifier);
+    return { codeVerifier, codeChallenge };
+  }
+
+  /**
+   * Calculate the PKCE code challenge from a code verifier.
+   * Hashes the verifier using SHA-256 and then base64url encodes it.
+   * @param verifier The code verifier string.
+   * @returns The base64url-encoded SHA-256 hash of the verifier.
+   */
+  private async calculatePKCECodeChallenge(verifier: string): Promise<string> {
+    if (
+      typeof window !== "undefined" &&
+      window.crypto &&
+      window.crypto.subtle
+    ) {
+      // Browser environment
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+      return this.base64urlEncode(hashBuffer);
+    } else {
+      // Node.js environment
+      const crypto = require("crypto");
+      const hash = crypto.createHash("sha256").update(verifier).digest();
+      return this.base64urlEncode(hash);
+    }
+  }
+
+  /**
+   * Encodes a buffer into a Base64URL-encoded string.
+   * @param buffer The buffer to encode.
+   * @returns The Base64URL-encoded string.
+   */
+  private base64urlEncode(buffer: ArrayBuffer | Buffer): string {
+    let base64string: string;
+
+    // In Node.js, we can use the Buffer object. In the browser, we need a different approach.
+    if (typeof Buffer !== "undefined" && Buffer.isBuffer(buffer)) {
+      // Node.js path
+      base64string = buffer.toString("base64");
+    } else {
+      // Browser path (assuming ArrayBuffer)
+      const bytes = new Uint8Array(buffer as ArrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      base64string = window.btoa(binary);
+    }
+
+    return base64string
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+  }
+
+  /**
+   * Generate cryptographically secure random string
+   */
+  private generateRandomString(length: number): string {
+    const charset =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+
+    let randomValues: Uint8Array;
+
+    if (typeof window !== "undefined" && window.crypto) {
+      // Browser environment
+      randomValues = new Uint8Array(length);
+      window.crypto.getRandomValues(randomValues);
+    } else {
+      // Node.js environment
+      const crypto = require("crypto");
+      randomValues = new Uint8Array(crypto.randomBytes(length));
+    }
+
+    return Array.from(randomValues)
+      .map((value) => charset[value % charset.length])
+      .join("");
+  }
+
+  /**
+   * Initiate OAuth flow with a provider
+   */
+  async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
+    try {
+      logDebug(`Initiating OAuth flow with ${provider}`);
+
+      const providerConfig = this.config.providers![provider];
+      if (!providerConfig || !providerConfig.clientId) {
+        throw new Error(`Provider ${provider} not configured`);
+      }
+
+      // Generate state for CSRF protection
+      const state = this.generateRandomString(32);
+      this.setItem(`oauth_state_${provider}`, state);
+
+      // Generate PKCE challenge if enabled
+      let pkceParams = {};
+      if (this.config.usePKCE) {
+        const { codeVerifier, codeChallenge } =
+          await this.generatePKCEChallenge();
+        this.setItem(`oauth_verifier_${provider}`, codeVerifier);
+        pkceParams = {
+          code_challenge: codeChallenge,
+          code_challenge_method: "S256",
+        };
+      }
+
+      // Build authorization URL
+      const authParams = new URLSearchParams({
+        client_id: providerConfig.clientId,
+        redirect_uri: providerConfig.redirectUri,
+        scope: providerConfig.scope.join(" "),
+        response_type: "code",
+        state,
+        ...pkceParams,
+      });
+
+      // Handle the authorization URL that might already contain query parameters
+      let authUrl = providerConfig.authUrl || "";
+      if (!authUrl) {
+        throw new Error(`Auth URL not configured for provider ${provider}`);
+      }
+
+      // If the authorization URL already contains query parameters, add the new parameters
+      if (authUrl.includes("?")) {
+        authUrl = `${authUrl}&${authParams.toString()}`;
+      } else {
+        authUrl = `${authUrl}?${authParams.toString()}`;
+      }
+
+      this.emit("oauth_initiated", { provider, authUrl });
+
+      return {
+        success: true,
+        provider,
+        authUrl,
+      };
+    } catch (error: any) {
+      logError(`Error initiating OAuth with ${provider}:`, error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Complete OAuth flow
+   */
+  async completeOAuth(
+    provider: OAuthProvider,
+    authCode: string,
+    state?: string,
+  ): Promise<OAuthConnectionResult> {
+    const providerConfig = this.config.providers?.[provider];
+    if (!providerConfig) {
+      const errorMsg = `Provider '${provider}' is not configured.`;
+      logError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    try {
+      const tokenData = await this.exchangeCodeForToken(
+        provider,
+        providerConfig,
+        authCode,
+        state,
+      );
+
+      if (!tokenData.access_token) {
+        const errorMsg = "No access token received from provider";
+        logError(errorMsg, tokenData);
+        return { success: false, error: errorMsg };
+      }
+
+      const userInfo = await this.fetchUserInfo(
+        provider,
+        providerConfig,
+        tokenData.access_token,
+      );
+
+      // Cache user info
+      this.cacheUserInfo(userInfo.id, provider, userInfo);
+
+      // Generate credentials
+      const credentials = await this.generateCredentials(userInfo, provider);
+
+      this.emit("oauth_completed", { provider, userInfo, credentials });
+
+      return {
+        success: true,
+        provider,
+        userInfo,
+      };
+    } catch (error: any) {
+      logError(`Error completing OAuth with ${provider}:`, error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Generate credentials from OAuth user info
+   */
+  async generateCredentials(
+    userInfo: OAuthUserInfo,
+    provider: OAuthProvider,
+  ): Promise<OAuthCredentials> {
+    const providerConfig = this.config.providers?.[provider];
+    if (!providerConfig) {
+      throw new Error(`Provider ${provider} is not configured.`);
+    }
+
+    const salt = `${provider}@${userInfo.id}`;
+    const username = userInfo.email || `${userInfo.id}@${provider}.shogun`;
+
+    try {
+      logDebug(`Generating credentials for ${provider} user: ${userInfo.id}`);
+
+      // Generate deterministic password
+      const password = await this.generateDeterministicPassword(
+        userInfo,
+        provider,
+      );
+
+      const credentials: OAuthCredentials = {
+        username,
+        password,
+        provider,
+      };
+
+      // Cache the user info
+      this.cacheUserInfo(userInfo.id, provider, userInfo);
+
+      logDebug("OAuth credentials generated successfully");
+      return credentials;
+    } catch (error: any) {
+      logError("Error generating OAuth credentials:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate deterministic password
+   */
+  private async generateDeterministicPassword(
+    userInfo: OAuthUserInfo,
+    provider: OAuthProvider,
+  ): Promise<string> {
+    const passwordBase = `${userInfo.id}_${provider}_${userInfo.email || ""}_shogun_oauth`;
+    const passwordHash = ethers.keccak256(ethers.toUtf8Bytes(passwordBase));
+    return passwordHash.slice(2, 34); // 32 character hex string
+  }
+
+  /**
+   * Exchange authorization code for access token
+   */
+  private async exchangeCodeForToken(
+    provider: OAuthProvider,
+    providerConfig: OAuthProviderConfig,
+    code: string,
+    state?: string,
+  ): Promise<any> {
+    const storedState = await this.getItem(`oauth_state_${provider}`);
+
+    if (state && storedState !== state) {
+      throw new Error("Invalid state parameter");
+    }
+
+    const tokenParams: Record<string, string> = {
+      client_id: providerConfig.clientId,
+      code: code,
+      redirect_uri: providerConfig.redirectUri,
+      grant_type: "authorization_code",
+    };
+
+    // Add client secret if available
+    if (providerConfig.clientSecret) {
+      tokenParams.client_secret = providerConfig.clientSecret;
+    }
+
+    if (this.config.usePKCE) {
+      const verifier = await this.getItem(`oauth_verifier_${provider}`);
+      if (verifier) {
+        tokenParams.code_verifier = verifier;
+        this.removeItem(`oauth_verifier_${provider}`);
+      } else {
+        logWarn(
+          `PKCE is enabled, but no code verifier was found for ${provider}.`,
+        );
+      }
+    }
+
+    const response = await fetch(providerConfig.tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: new URLSearchParams(tokenParams),
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(
+        `Token exchange failed: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get user info from OAuth provider
+   */
+  private async fetchUserInfo(
+    provider: OAuthProvider,
+    providerConfig: OAuthProviderConfig,
+    accessToken: string,
+  ): Promise<OAuthUserInfo> {
+    const response = await fetch(providerConfig.userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get user info: ${response.statusText}`);
+    }
+
+    const userData = await response.json();
+    return this.normalizeUserInfo(userData, provider);
+  }
+
+  /**
+   * Normalize user info across different providers
+   */
+  private normalizeUserInfo(
+    userData: any,
+    provider: OAuthProvider,
+  ): OAuthUserInfo {
+    switch (provider) {
+      case "google":
+        return {
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          verified_email: userData.verified_email,
+          provider,
+        };
+      case "github":
+        return {
+          id: userData.id.toString(),
+          email: userData.email,
+          name: userData.name || userData.login,
+          picture: userData.avatar_url,
+          provider,
+        };
+      default:
+        return {
+          id: userData.id?.toString() || userData.sub,
+          email: userData.email,
+          name: userData.name || userData.username,
+          picture: userData.picture || userData.avatar_url,
+          provider,
+        };
+    }
+  }
+
+  /**
+   * Cache user info
+   */
+  private cacheUserInfo(
+    userId: string,
+    provider: OAuthProvider,
+    userInfo: OAuthUserInfo,
+  ): void {
+    const cacheKey = `${provider}_${userId}`;
+    const cacheEntry: OAuthCache = {
+      data: userInfo,
+      timestamp: Date.now(),
+      provider,
+      userId,
+    };
+
+    this.userCache.set(cacheKey, cacheEntry);
+
+    // Also store in localStorage for persistence
+    try {
+      localStorage.setItem(
+        `shogun_oauth_user_${cacheKey}`,
+        JSON.stringify(cacheEntry),
+      );
+    } catch (error) {
+      logError("Error caching user info:", error);
+    }
+  }
+
+  /**
+   * Get cached user info
+   */
+  getCachedUserInfo(
+    userId: string,
+    provider: OAuthProvider,
+  ): OAuthUserInfo | null {
+    const cacheKey = `${provider}_${userId}`;
+
+    // Check memory cache first
+    const cached = this.userCache.get(cacheKey);
+    if (
+      cached &&
+      cached.data &&
+      Date.now() - cached.timestamp <= this.config.cacheDuration!
+    ) {
+      return cached.data;
+    }
+
+    // Check localStorage
+    try {
+      const localCached = localStorage.getItem(`shogun_oauth_user_${cacheKey}`);
+      if (localCached) {
+        const parsedCache = JSON.parse(localCached);
+        if (
+          parsedCache.data &&
+          Date.now() - parsedCache.timestamp <= this.config.cacheDuration!
+        ) {
+          this.userCache.set(cacheKey, parsedCache);
+          return parsedCache.data;
+        } else {
+          localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
+        }
+      }
+    } catch (error) {
+      logError("Error reading cached user info:", error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Clear user info cache
+   */
+  clearUserCache(userId?: string, provider?: OAuthProvider): void {
+    if (userId && provider) {
+      const cacheKey = `${provider}_${userId}`;
+      this.userCache.delete(cacheKey);
+      try {
+        localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
+      } catch (error) {
+        logError("Error clearing user cache:", error);
+      }
+    } else {
+      // Clear all caches
+      this.userCache.clear();
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("shogun_oauth_user_")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+      } catch (error) {
+        logError("Error clearing all user caches:", error);
+      }
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  cleanup(): void {
+    this.removeAllListeners();
+    this.userCache.clear();
+  }
+}

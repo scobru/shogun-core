@@ -1,5 +1,6 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
+import { NostrSigningCredential } from "./nostrSigner";
 import { NostrConnectorCredentials, ConnectionResult, NostrConnectorPluginInterface } from "./types";
 import { AuthResult } from "../../types/shogun";
 /**
@@ -11,6 +12,7 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
     version: string;
     description: string;
     private bitcoinConnector;
+    private signer;
     /**
      * @inheritdoc
      */
@@ -24,6 +26,11 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      * @private
      */
     private assertBitcoinConnector;
+    /**
+     * Assicura che il signer sia inizializzato
+     * @private
+     */
+    private assertSigner;
     /**
      * @inheritdoc
      */
@@ -62,6 +69,81 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      * @inheritdoc
      */
     generatePassword(signature: string): Promise<string>;
+    /**
+     * Creates a new Nostr signing credential
+     * CONSISTENT with normal Nostr approach
+     */
+    createSigningCredential(address: string): Promise<NostrSigningCredential>;
+    /**
+     * Creates an authenticator function for Nostr signing
+     */
+    createAuthenticator(address: string): (data: any) => Promise<string>;
+    /**
+     * Creates a derived key pair from Nostr credential
+     */
+    createDerivedKeyPair(address: string, extra?: string[]): Promise<{
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    }>;
+    /**
+     * Signs data with derived keys after Nostr verification
+     */
+    signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
+    /**
+     * Get signing credential by address
+     */
+    getSigningCredential(address: string): NostrSigningCredential | undefined;
+    /**
+     * List all signing credentials
+     */
+    listSigningCredentials(): NostrSigningCredential[];
+    /**
+     * Remove a signing credential
+     */
+    removeSigningCredential(address: string): boolean;
+    /**
+     * Creates a Gun user from Nostr signing credential
+     * This ensures the SAME user is created as with normal approach
+     */
+    createGunUserFromSigningCredential(address: string): Promise<{
+        success: boolean;
+        userPub?: string;
+        error?: string;
+    }>;
+    /**
+     * Get the Gun user public key for a signing credential
+     */
+    getGunUserPubFromSigningCredential(address: string): string | undefined;
+    /**
+     * Get the password (for consistency checking)
+     */
+    getPassword(address: string): string | undefined;
+    /**
+     * Verify consistency between oneshot and normal approaches
+     * This ensures both approaches create the same Gun user
+     */
+    verifyConsistency(address: string, expectedUserPub?: string): Promise<{
+        consistent: boolean;
+        actualUserPub?: string;
+        expectedUserPub?: string;
+    }>;
+    /**
+     * Complete oneshot workflow that creates the SAME Gun user as normal approach
+     * This is the recommended method for oneshot signing with full consistency
+     */
+    setupConsistentOneshotSigning(address: string): Promise<{
+        credential: NostrSigningCredential;
+        authenticator: (data: any) => Promise<string>;
+        gunUser: {
+            success: boolean;
+            userPub?: string;
+            error?: string;
+        };
+        username: string;
+        password: string;
+    }>;
     /**
      * Login with Bitcoin wallet
      * @param address - Bitcoin address

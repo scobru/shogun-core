@@ -27,7 +27,7 @@ declare global {
 /**
  * Class for Bitcoin wallet connections and operations
  */
-export class NostrConnector extends EventEmitter {
+class NostrConnector extends EventEmitter {
   private readonly MESSAGE_TO_SIGN = "I Love Shogun!";
   private readonly DEFAULT_CONFIG: NostrConnectorConfig = {
     cacheDuration: 24 * 60 * 60 * 1000, // 24 hours instead of 30 minutes for better UX
@@ -183,9 +183,15 @@ export class NostrConnector extends EventEmitter {
 
       // Basic validation for Bitcoin addresses and Nostr pubkeys
       if (this.connectedType === "nostr") {
-        // Nostr pubkeys are typically hex strings starting with 'npub' when encoded
-        if (!/^(npub1|[0-9a-f]{64})/.test(normalizedAddress)) {
-          throw new Error("Invalid Nostr public key format");
+        // Nostr pubkeys are hex strings (64 chars) or npub-prefixed keys
+        // Just check if it's a non-empty string, as we're getting it directly from the extension
+        if (!normalizedAddress) {
+          throw new Error("Empty Nostr public key");
+        }
+      } else if (this.connectedType === "manual") {
+        // For manual keys, just ensure we have something
+        if (!normalizedAddress) {
+          throw new Error("Empty manual key");
         }
       } else {
         // Simple format check for Bitcoin addresses
@@ -358,6 +364,16 @@ export class NostrConnector extends EventEmitter {
     logDebug(`Generating credentials for address: ${address}`);
 
     try {
+      // Set the connectedType to nostr if it's not already set
+      // This ensures validateAddress will use the correct validation logic
+      if (!this.connectedType && address) {
+        // If the address looks like a Nostr pubkey (hex string or npub prefix)
+        if (/^[0-9a-f]{64}$/.test(address) || address.startsWith("npub")) {
+          this.connectedType = "nostr";
+          this.connectedAddress = address;
+        }
+      }
+
       // Validate the address
       const validAddress = this.validateAddress(address);
 
@@ -560,10 +576,16 @@ export class NostrConnector extends EventEmitter {
   public async verifySignature(
     message: string,
     signature: string,
-    address: string,
+    address: any,
   ): Promise<boolean> {
     try {
-      log(`Verifying signature for address: ${address}`);
+      // Ensure address is a string
+      const addressStr =
+        typeof address === "object"
+          ? address.address || JSON.stringify(address)
+          : String(address);
+
+      log(`Verifying signature for address: ${addressStr}`);
 
       if (!signature || !message) {
         logError("Invalid message or signature for verification");
@@ -600,9 +622,18 @@ export class NostrConnector extends EventEmitter {
 
           // Instead for now, we're checking if the address matches what we have connected
           // This ensures at least some level of verification
-          if (address.toLowerCase() !== this.connectedAddress?.toLowerCase()) {
+          if (!this.connectedAddress) {
+            logError("No connected address to verify against");
+            return false;
+          }
+
+          // Convert both addresses to strings for comparison
+          const connectedAddrStr = String(this.connectedAddress).toLowerCase();
+          const verifyAddrStr = addressStr.toLowerCase();
+
+          if (verifyAddrStr !== connectedAddrStr) {
             logError("Address mismatch in signature verification");
-            logError(`Expected: ${this.connectedAddress}, Got: ${address}`);
+            logError(`Expected: ${connectedAddrStr}, Got: ${verifyAddrStr}`);
             return false;
           }
 
@@ -638,8 +669,12 @@ export class NostrConnector extends EventEmitter {
         // For manual keypairs, implement proper signature verification
         // For now, we're just checking that the address matches our keypair
         try {
-          const addressMatch =
-            address.toLowerCase() === this.manualKeyPair.address.toLowerCase();
+          const manualAddrStr = String(
+            this.manualKeyPair.address,
+          ).toLowerCase();
+          const verifyAddrStr = addressStr.toLowerCase();
+
+          const addressMatch = verifyAddrStr === manualAddrStr;
           log(`Manual verification - address match: ${addressMatch}`);
           return addressMatch;
         } catch (manualVerifyError) {
@@ -810,3 +845,11 @@ export class NostrConnector extends EventEmitter {
     }
   }
 }
+
+if (typeof window !== "undefined") {
+  window.NostrConnector = NostrConnector;
+} else if (typeof global !== "undefined") {
+  (global as any).NostrConnector = NostrConnector;
+}
+
+export { NostrConnector };

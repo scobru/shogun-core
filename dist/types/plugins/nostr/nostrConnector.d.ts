@@ -10,7 +10,7 @@ declare global {
 /**
  * Class for Bitcoin wallet connections and operations
  */
-export declare class NostrConnector extends EventEmitter {
+declare class NostrConnector extends EventEmitter {
     private readonly MESSAGE_TO_SIGN;
     private readonly DEFAULT_CONFIG;
     private readonly config;
@@ -86,7 +86,7 @@ export declare class NostrConnector extends EventEmitter {
     /**
      * Verify a signature
      */
-    verifySignature(message: string, signature: string, address: string): Promise<boolean>;
+    verifySignature(message: string, signature: string, address: any): Promise<boolean>;
     /**
      * Get the currently connected address
      */
@@ -104,3 +104,4 @@ export declare class NostrConnector extends EventEmitter {
      */
     private requestSignature;
 }
+export { NostrConnector };

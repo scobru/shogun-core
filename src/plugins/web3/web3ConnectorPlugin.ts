@@ -1,6 +1,7 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Web3Connector } from "./web3Connector";
+import { Web3Signer, Web3SigningCredential } from "./web3Signer";
 import {
   Web3ConnectorCredentials,
   ConnectionResult,
@@ -24,6 +25,7 @@ export class Web3ConnectorPlugin
     "Provides Ethereum wallet connection and authentication for ShogunCore";
 
   private Web3: Web3Connector | null = null;
+  private signer: Web3Signer | null = null;
 
   /**
    * @inheritdoc
@@ -33,8 +35,9 @@ export class Web3ConnectorPlugin
 
     // Inizializziamo il modulo Web3
     this.Web3 = new Web3Connector();
+    this.signer = new Web3Signer(this.Web3);
 
-    log("Web3 plugin initialized");
+    log("Web3 plugin initialized with signer support");
   }
 
   /**
@@ -45,6 +48,7 @@ export class Web3ConnectorPlugin
       this.Web3.cleanup();
     }
     this.Web3 = null;
+    this.signer = null;
     super.destroy();
     log("Web3 plugin destroyed");
   }
@@ -59,6 +63,18 @@ export class Web3ConnectorPlugin
       throw new Error("Web3 module not initialized");
     }
     return this.Web3;
+  }
+
+  /**
+   * Assicura che il signer sia inizializzato
+   * @private
+   */
+  private assertSigner(): Web3Signer {
+    this.assertInitialized();
+    if (!this.signer) {
+      throw new Error("Web3 signer not initialized");
+    }
+    return this.signer;
   }
 
   /**
@@ -128,6 +144,194 @@ export class Web3ConnectorPlugin
   async verifySignature(message: string, signature: string): Promise<string> {
     return this.assertMetaMask().verifySignature(message, signature);
   }
+
+  // === WEB3 SIGNER METHODS ===
+
+  /**
+   * Creates a new Web3 signing credential
+   * CONSISTENT with normal Web3 approach
+   */
+  async createSigningCredential(
+    address: string,
+  ): Promise<Web3SigningCredential> {
+    try {
+      log(`Creating Web3 signing credential for address: ${address}`);
+      return await this.assertSigner().createSigningCredential(address);
+    } catch (error: any) {
+      logError(`Error creating Web3 signing credential: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates an authenticator function for Web3 signing
+   */
+  createAuthenticator(address: string): (data: any) => Promise<string> {
+    try {
+      log(`Creating Web3 authenticator for address: ${address}`);
+      return this.assertSigner().createAuthenticator(address);
+    } catch (error: any) {
+      logError(`Error creating Web3 authenticator: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a derived key pair from Web3 credential
+   */
+  async createDerivedKeyPair(
+    address: string,
+    extra?: string[],
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
+    try {
+      log(`Creating derived key pair for address: ${address}`);
+      return await this.assertSigner().createDerivedKeyPair(address, extra);
+    } catch (error: any) {
+      logError(`Error creating derived key pair: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Signs data with derived keys after Web3 verification
+   */
+  async signWithDerivedKeys(
+    data: any,
+    address: string,
+    extra?: string[],
+  ): Promise<string> {
+    try {
+      log(`Signing data with derived keys for address: ${address}`);
+      return await this.assertSigner().signWithDerivedKeys(
+        data,
+        address,
+        extra,
+      );
+    } catch (error: any) {
+      logError(`Error signing with derived keys: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get signing credential by address
+   */
+  getSigningCredential(address: string): Web3SigningCredential | undefined {
+    return this.assertSigner().getCredential(address);
+  }
+
+  /**
+   * List all signing credentials
+   */
+  listSigningCredentials(): Web3SigningCredential[] {
+    return this.assertSigner().listCredentials();
+  }
+
+  /**
+   * Remove a signing credential
+   */
+  removeSigningCredential(address: string): boolean {
+    return this.assertSigner().removeCredential(address);
+  }
+
+  // === CONSISTENCY METHODS ===
+
+  /**
+   * Creates a Gun user from Web3 signing credential
+   * This ensures the SAME user is created as with normal approach
+   */
+  async createGunUserFromSigningCredential(
+    address: string,
+  ): Promise<{ success: boolean; userPub?: string; error?: string }> {
+    try {
+      const core = this.assertInitialized();
+      log(`Creating Gun user from Web3 signing credential: ${address}`);
+      return await this.assertSigner().createGunUser(address, core.gun);
+    } catch (error: any) {
+      logError(
+        `Error creating Gun user from Web3 signing credential: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get the Gun user public key for a signing credential
+   */
+  getGunUserPubFromSigningCredential(address: string): string | undefined {
+    return this.assertSigner().getGunUserPub(address);
+  }
+
+  /**
+   * Get the password (for consistency checking)
+   */
+  getPassword(address: string): string | undefined {
+    return this.assertSigner().getPassword(address);
+  }
+
+  /**
+   * Verify consistency between oneshot and normal approaches
+   * This ensures both approaches create the same Gun user
+   */
+  async verifyConsistency(
+    address: string,
+    expectedUserPub?: string,
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }> {
+    try {
+      log(`Verifying Web3 consistency for address: ${address}`);
+      return await this.assertSigner().verifyConsistency(
+        address,
+        expectedUserPub,
+      );
+    } catch (error: any) {
+      logError(`Error verifying Web3 consistency: ${error.message}`);
+      return { consistent: false };
+    }
+  }
+
+  /**
+   * Complete oneshot workflow that creates the SAME Gun user as normal approach
+   * This is the recommended method for oneshot signing with full consistency
+   */
+  async setupConsistentOneshotSigning(address: string): Promise<{
+    credential: Web3SigningCredential;
+    authenticator: (data: any) => Promise<string>;
+    gunUser: { success: boolean; userPub?: string; error?: string };
+    username: string;
+    password: string;
+  }> {
+    try {
+      log(`Setting up consistent Web3 oneshot signing for: ${address}`);
+
+      // 1. Create signing credential (with consistent password generation)
+      const credential = await this.createSigningCredential(address);
+
+      // 2. Create authenticator
+      const authenticator = this.createAuthenticator(address);
+
+      // 3. Create Gun user (same as normal approach)
+      const gunUser = await this.createGunUserFromSigningCredential(address);
+
+      return {
+        credential,
+        authenticator,
+        gunUser,
+        username: credential.username,
+        password: credential.password,
+      };
+    } catch (error: any) {
+      logError(
+        `Error setting up consistent Web3 oneshot signing: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  // === EXISTING METHODS ===
 
   /**
    * Login con Web3
