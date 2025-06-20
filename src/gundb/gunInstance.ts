@@ -12,6 +12,7 @@ import { GunRxJS } from "./rxjs-integration";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
+import { SEA } from "gun";
 
 import derive, { DeriveOptions } from "./derive";
 
@@ -83,21 +84,23 @@ class GunInstance {
 
     this.node = this.gun.get(appScope);
 
-    // Attempt to restore session after initialization
-    setTimeout(async () => {
-      try {
-        const sessionResult = await this.restoreSession();
-        if (sessionResult.success) {
-          log(
-            `Session automatically restored for user: ${sessionResult.userPub}`,
-          );
-        } else {
-          log(`No previous session to restore: ${sessionResult.error}`);
-        }
-      } catch (error) {
-        logError("Error during automatic session restoration:", error);
+    // Attempt to restore session immediately instead of with timeout
+    this.restoreSessionOnInit();
+  }
+
+  private async restoreSessionOnInit() {
+    try {
+      const sessionResult = await this.restoreSession();
+      if (sessionResult.success) {
+        log(
+          `Session automatically restored for user: ${sessionResult.userPub}`,
+        );
+      } else {
+        log(`No previous session to restore: ${sessionResult.error}`);
       }
-    }, 500); // Give Gun time to initialize
+    } catch (error) {
+      logError("Error during automatic session restoration:", error);
+    }
   }
 
   private subscribeToAuthEvents() {
@@ -241,11 +244,9 @@ class GunInstance {
       // First remove the peer
       this.removePeer(peer);
 
-      // Wait a moment then add it back
-      setTimeout(() => {
-        this.addPeer(peer);
-        log(`Reconnected to peer: ${peer}`);
-      }, 1000);
+      // Add it back immediately instead of with timeout
+      this.addPeer(peer);
+      log(`Reconnected to peer: ${peer}`);
     } catch (error) {
       logError(`Error reconnecting to peer ${peer}:`, error);
     }
@@ -446,48 +447,84 @@ class GunInstance {
             lastLogin: Date.now(),
           };
 
-          // Save user metadata
-          await new Promise<void>((resolve) => {
-            this.gun.get(userPub).put(userMetadata, (ack: any) => {
-              if (ack.err) {
-                logError(`Warning: Failed to save user metadata: ${ack.err}`);
-              } else {
-                log(`User metadata saved for: ${username}`);
-              }
-              resolve();
-            });
-          });
+          // Save user metadata with timeout
+          try {
+            await new Promise<void>((resolve) => {
+              const timeoutId = setTimeout(() => {
+                logError(`Warning: User metadata save timeout for ${username}`);
+                resolve();
+              }, 2000);
 
-          // Add to users collection
-          await new Promise<void>((resolve) => {
-            this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
-              if (ack.err) {
-                logError(
-                  `Warning: Failed to add user to collection: ${ack.err}`,
-                );
-              } else {
-                log(`User added to collection: ${username}`);
-              }
-              resolve();
-            });
-          });
-
-          // Create username mapping
-          await new Promise<void>((resolve) => {
-            this.gun
-              .get("usernames")
-              .get(username)
-              .put(userPub, (ack: any) => {
+              this.gun.get(userPub).put(userMetadata, (ack: any) => {
+                clearTimeout(timeoutId);
                 if (ack.err) {
-                  logError(
-                    `Warning: Could not create username mapping: ${ack.err}`,
-                  );
+                  logError(`Warning: Failed to save user metadata: ${ack.err}`);
                 } else {
-                  log(`Username mapping created: ${username} -> ${userPub}`);
+                  log(`User metadata saved for: ${username}`);
                 }
                 resolve();
               });
-          });
+            });
+
+            // Add to users collection with timeout
+            await new Promise<void>((resolve) => {
+              const timeoutId = setTimeout(() => {
+                logError(
+                  `Warning: User collection add timeout for ${username}`,
+                );
+                resolve();
+              }, 2000);
+
+              this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+                clearTimeout(timeoutId);
+                if (ack.err) {
+                  logError(
+                    `Warning: Failed to add user to collection: ${ack.err}`,
+                  );
+                } else {
+                  log(`User added to collection: ${username}`);
+                }
+                resolve();
+              });
+            });
+
+            // Create username mapping with timeout
+            await new Promise<void>((resolve) => {
+              const timeoutId = setTimeout(() => {
+                logError(`Warning: Username mapping timeout for ${username}`);
+                resolve();
+              }, 2000);
+
+              this.gun
+                .get("usernames")
+                .get(username)
+                .put(userPub, (ack: any) => {
+                  clearTimeout(timeoutId);
+                  if (ack.err) {
+                    logError(
+                      `Warning: Could not create username mapping: ${ack.err}`,
+                    );
+                  } else {
+                    log(`Username mapping created: ${username} -> ${userPub}`);
+                  }
+                  resolve();
+                });
+            });
+          } catch (trackingError) {
+            logError(
+              `Warning: Could not update tracking system: ${trackingError}`,
+            );
+            // Don't fail signup for tracking errors
+          }
+
+          this._savePair();
+
+          return {
+            success: true,
+            userPub: userPub,
+            username: username,
+            message: "User already exists and was synced with tracking system",
+          };
         }
 
         return {
@@ -548,10 +585,16 @@ class GunInstance {
         lastLogin: Date.now(),
       };
 
-      // Save user metadata (best effort)
+      // Save user metadata with timeout
       try {
         await new Promise<void>((resolve) => {
+          const timeoutId = setTimeout(() => {
+            logError(`Warning: User metadata save timeout for ${username}`);
+            resolve();
+          }, 2000);
+
           this.gun.get(userPub).put(userMetadata, (ack: any) => {
+            clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to save user metadata: ${ack.err}`);
             } else {
@@ -561,9 +604,15 @@ class GunInstance {
           });
         });
 
-        // Add to users collection
+        // Add to users collection with timeout
         await new Promise<void>((resolve) => {
+          const timeoutId = setTimeout(() => {
+            logError(`Warning: User collection add timeout for ${username}`);
+            resolve();
+          }, 2000);
+
           this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+            clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to add user to collection: ${ack.err}`);
             } else {
@@ -573,12 +622,18 @@ class GunInstance {
           });
         });
 
-        // Create username mapping
+        // Create username mapping with timeout
         await new Promise<void>((resolve) => {
+          const timeoutId = setTimeout(() => {
+            logError(`Warning: Username mapping timeout for ${username}`);
+            resolve();
+          }, 2000);
+
           this.gun
             .get("usernames")
             .get(username)
             .put(userPub, (ack: any) => {
+              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(
                   `Warning: Could not create username mapping: ${ack.err}`,
@@ -638,14 +693,6 @@ class GunInstance {
       // Fallback: Search through all users collection (slower but more reliable)
       const existingUser = await new Promise<any>((resolve) => {
         let found = false;
-        let timeoutId: NodeJS.Timeout;
-
-        const checkComplete = () => {
-          if (timeoutId) clearTimeout(timeoutId);
-          if (!found) {
-            resolve(null);
-          }
-        };
 
         this.gun
           .get("users")
@@ -653,13 +700,18 @@ class GunInstance {
           .once((userData: any, key: string) => {
             if (!found && userData && userData.username === username) {
               found = true;
-              clearTimeout(timeoutId);
               resolve(userData);
             }
           });
 
-        // Set a timeout to avoid hanging
-        timeoutId = setTimeout(checkComplete, 2000);
+        // Resolve with null after a brief delay if nothing found
+        // We need some mechanism to resolve when no match is found
+        // Using a minimal delay instead of a long timeout
+        setTimeout(() => {
+          if (!found) {
+            resolve(null);
+          }
+        }, 100);
       });
 
       return existingUser;
@@ -738,56 +790,71 @@ class GunInstance {
             lastLogin: Date.now(),
           };
 
-          // Save user metadata
-          await new Promise<void>((resolve, reject) => {
+          // Save user metadata with timeout
+          await new Promise<void>((resolve) => {
+            const timeoutId = setTimeout(() => {
+              logError(`Warning: User metadata save timeout for ${username}`);
+              resolve();
+            }, 2000);
+
             this.gun.get(userPub).put(userMetadata, (ack: any) => {
+              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(`Warning: Failed to save user metadata: ${ack.err}`);
-                resolve(); // Don't fail login for this
               } else {
                 log(`User metadata saved for: ${username}`);
-                resolve();
               }
+              resolve();
             });
           });
 
-          // Add to users collection
-          await new Promise<void>((resolve, reject) => {
+          // Add to users collection with timeout
+          await new Promise<void>((resolve) => {
+            const timeoutId = setTimeout(() => {
+              logError(`Warning: User collection add timeout for ${username}`);
+              resolve();
+            }, 2000);
+
             this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(
                   `Warning: Failed to add user to collection: ${ack.err}`,
                 );
-                resolve(); // Don't fail login for this
               } else {
                 log(`User added to collection: ${username}`);
-                resolve();
               }
+              resolve();
             });
           });
 
-          // Create username mapping
-          await new Promise<void>((resolve, reject) => {
+          // Create username mapping with timeout
+          await new Promise<void>((resolve) => {
+            const timeoutId = setTimeout(() => {
+              logError(`Warning: Username mapping timeout for ${username}`);
+              resolve();
+            }, 2000);
+
             this.gun
               .get("usernames")
               .get(username)
               .put(userPub, (ack: any) => {
+                clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(
                     `Warning: Could not create username mapping: ${ack.err}`,
                   );
-                  resolve(); // Don't fail login for this
                 } else {
                   log(`Username mapping created: ${username} -> ${userPub}`);
-                  resolve();
                 }
+                resolve();
               });
           });
         } else {
           log(
             `User ${username} found in tracking system, updating last login...`,
           );
-          // Update last login time
+          // Update last login time (non-blocking)
           this.gun.get(userPub).get("lastLogin").put(Date.now());
         }
       } catch (trackingError) {
@@ -822,17 +889,25 @@ class GunInstance {
       const pair = (user as any)?._?.sea;
       const userInfo = user?.is;
 
-      if (pair && userInfo && typeof localStorage !== "undefined") {
-        // Save the crypto pair
-        localStorage.setItem("gun/pair", JSON.stringify(pair));
-
-        // Save user session info
+      if (pair && userInfo) {
+        // Save the crypto pair and session info
         const sessionInfo = {
           pub: userInfo.pub,
           alias: userInfo.alias || "",
           timestamp: Date.now(),
         };
-        localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+
+        // Save to localStorage if available
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem("gun/pair", JSON.stringify(pair));
+          localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+        }
+
+        // Also save to sessionStorage for cross-app sharing
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("gun/pair", JSON.stringify(pair));
+          sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+        }
 
         log(`Session saved for user: ${userInfo.alias || userInfo.pub}`);
       }
@@ -887,7 +962,7 @@ class GunInstance {
       // Set the pair directly
       (user as any)._ = { sea: pair };
 
-      // Try to recall the session
+      // Try to recall the session without timeout
       const recallResult = await new Promise<boolean>((resolve) => {
         try {
           user.recall({ sessionStorage: true }, (ack: any) => {
@@ -902,9 +977,6 @@ class GunInstance {
           logError(`Session recall exception: ${error}`);
           resolve(false);
         }
-
-        // Fallback timeout
-        setTimeout(() => resolve(false), 3000);
       });
 
       if (recallResult && user.is?.pub === session.pub) {
@@ -1013,21 +1085,61 @@ class GunInstance {
   ): Promise<{ success: boolean; error?: string }> {
     log("Setting password hint for:", username);
 
-    // Verify that the user is authenticated
+    // Verify that the user is authenticated with password
     const loginResult = await this.login(username, password);
     if (!loginResult.success) {
       return { success: false, error: "Authentication failed" };
     }
 
+    // Check if user was authenticated with password (not with other methods)
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || !currentUser.pub) {
+      return { success: false, error: "User not authenticated" };
+    }
+
     try {
       // Generate a proof of work from security question answers
-      const proofOfWork = (await this.crypto.hashText(
-        securityAnswers.join("|"),
-      )) as string;
+      const answersText = securityAnswers.join("|");
+      let proofOfWork;
+
+      try {
+        // Use SEA directly if available
+        if (SEA && SEA.work) {
+          proofOfWork = await SEA.work(answersText, null, null, {
+            name: "SHA-256",
+          });
+        } else if (this.crypto && this.crypto.hashText) {
+          proofOfWork = await this.crypto.hashText(answersText);
+        } else {
+          throw new Error("Cryptographic functions not available");
+        }
+
+        if (!proofOfWork) {
+          throw new Error("Failed to generate hash");
+        }
+      } catch (hashError) {
+        logError("Error generating hash:", hashError);
+        return { success: false, error: "Failed to generate security hash" };
+      }
 
       // Encrypt the password hint with the proof of work
-      // The PoW (a string) is used as the encryption key
-      const encryptedHint = await this.crypto.encrypt(hint, proofOfWork);
+      let encryptedHint;
+      try {
+        if (SEA && SEA.encrypt) {
+          encryptedHint = await SEA.encrypt(hint, proofOfWork);
+        } else if (this.crypto && this.crypto.encrypt) {
+          encryptedHint = await this.crypto.encrypt(hint, proofOfWork);
+        } else {
+          throw new Error("Encryption functions not available");
+        }
+
+        if (!encryptedHint) {
+          throw new Error("Failed to encrypt hint");
+        }
+      } catch (encryptError) {
+        logError("Error encrypting hint:", encryptError);
+        return { success: false, error: "Failed to encrypt password hint" };
+      }
 
       // Save security questions and encrypted hint
       await this.saveUserData("security", {
@@ -1055,14 +1167,22 @@ class GunInstance {
     log("Attempting password recovery for:", username);
 
     try {
-      // Verify the user exists
-      const user = this.gun.user().recall({ sessionStorage: true });
-      if (!user || !user.is) {
+      // Find the user's public key
+      const userPub = await this.checkUsernameExists(username);
+
+      if (!userPub) {
         return { success: false, error: "User not found" };
       }
 
-      // Retrieve security questions and encrypted hint
-      const securityData = await this.getUserData("security");
+      // Access the user's data using their public key
+      const user = this.gun.user(userPub);
+
+      // Retrieve security questions and encrypted hint from the user's graph
+      const securityData = await new Promise<any>((resolve) => {
+        user.get("security").once((data: any) => {
+          resolve(data);
+        });
+      });
 
       if (!securityData || !securityData.hint) {
         return {
@@ -1071,11 +1191,46 @@ class GunInstance {
         };
       }
 
+      // Generate hash from security answers
+      const answersText = securityAnswers.join("|");
+      let proofOfWork;
+
+      try {
+        // Use SEA directly if available
+        if (SEA && SEA.work) {
+          proofOfWork = await SEA.work(answersText, null, null, {
+            name: "SHA-256",
+          });
+        } else if (this.crypto && this.crypto.hashText) {
+          proofOfWork = await this.crypto.hashText(answersText);
+        } else {
+          throw new Error("Cryptographic functions not available");
+        }
+
+        if (!proofOfWork) {
+          throw new Error("Failed to generate hash");
+        }
+      } catch (hashError) {
+        logError("Error generating hash:", hashError);
+        return { success: false, error: "Failed to generate security hash" };
+      }
+
       // Decrypt the password hint with the proof of work
-      const hint = await this.crypto.decrypt(
-        securityData.hint,
-        (await this.crypto.hashText(securityAnswers.join("|"))) as string,
-      );
+      let hint;
+      try {
+        if (SEA && SEA.decrypt) {
+          hint = await SEA.decrypt(securityData.hint, proofOfWork);
+        } else if (this.crypto && this.crypto.decrypt) {
+          hint = await this.crypto.decrypt(securityData.hint, proofOfWork);
+        } else {
+          throw new Error("Decryption functions not available");
+        }
+      } catch (decryptError) {
+        return {
+          success: false,
+          error: "Incorrect answers to security questions",
+        };
+      }
 
       if (hint === undefined) {
         return {

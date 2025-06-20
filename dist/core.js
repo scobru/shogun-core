@@ -50,7 +50,7 @@ Object.defineProperty(exports, "ShogunEventEmitter", { enumerable: true, get: fu
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "2.0.0";
+    static API_VERSION = "v1.2.9c";
     _gun;
     _user = null;
     gundb;
@@ -69,7 +69,7 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
-        (0, logger_1.log)("Initializing Shogun");
+        (0, logger_1.log)("Initializing Shogun " + ShogunCore.API_VERSION);
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
@@ -353,37 +353,49 @@ class ShogunCore {
                 (0, logger_1.log)("Authentication method set to default: password");
             }
             const timeoutDuration = this.config?.timeouts?.login ?? 15000;
-            const loginPromiseWithTimeout = new Promise(async (resolve) => {
+            const loginPromiseWithTimeout = new Promise((resolve, reject) => {
+                let isResolved = false;
                 const timeoutId = setTimeout(() => {
-                    resolve({
-                        success: false,
-                        error: "Login timeout",
-                    });
-                }, timeoutDuration);
-                try {
-                    const loginResult = await this.gundb.login(username, password);
-                    clearTimeout(timeoutId);
-                    if (!loginResult.success) {
+                    if (!isResolved) {
+                        isResolved = true;
                         resolve({
                             success: false,
-                            error: loginResult.error || "Wrong user or password",
+                            error: "Login timeout",
                         });
                     }
-                    else {
-                        resolve({
-                            success: true,
-                            userPub: loginResult.userPub,
-                            username: loginResult.username,
+                }, timeoutDuration);
+                const safeResolve = (result) => {
+                    if (!isResolved) {
+                        isResolved = true;
+                        clearTimeout(timeoutId);
+                        resolve(result);
+                    }
+                };
+                const executeLogin = async () => {
+                    try {
+                        const loginResult = await this.gundb.login(username, password);
+                        if (!loginResult.success) {
+                            safeResolve({
+                                success: false,
+                                error: loginResult.error || "Wrong user or password",
+                            });
+                        }
+                        else {
+                            safeResolve({
+                                success: true,
+                                userPub: loginResult.userPub,
+                                username: loginResult.username,
+                            });
+                        }
+                    }
+                    catch (error) {
+                        safeResolve({
+                            success: false,
+                            error: error.message || "Login error",
                         });
                     }
-                }
-                catch (error) {
-                    clearTimeout(timeoutId);
-                    resolve({
-                        success: false,
-                        error: error.message || "Login error",
-                    });
-                }
+                };
+                executeLogin();
             });
             const result = await loginPromiseWithTimeout;
             if (result.success) {
@@ -441,45 +453,57 @@ class ShogunCore {
             });
             (0, logger_1.log)(`Attempting user registration: ${username}`);
             const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
-            const signupPromiseWithTimeout = new Promise(async (resolve) => {
+            const signupPromiseWithTimeout = new Promise((resolve, reject) => {
+                let isResolved = false;
                 const timeoutId = setTimeout(() => {
-                    resolve({
-                        success: false,
-                        error: "Registration timeout",
-                    });
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve({
+                            success: false,
+                            error: "Registration timeout",
+                        });
+                    }
                 }, timeoutDuration);
-                try {
-                    const result = await this.gundb.signUp(username, password);
-                    clearTimeout(timeoutId);
-                    if (result.success) {
-                        this.eventEmitter.emit("debug", {
-                            action: "signup_complete",
-                            username,
-                            userPub: result.userPub,
-                            timestamp: Date.now(),
-                        });
-                        this.eventEmitter.emit("auth:signup", {
-                            userPub: result.userPub ?? "",
-                            username,
+                const safeResolve = (result) => {
+                    if (!isResolved) {
+                        isResolved = true;
+                        clearTimeout(timeoutId);
+                        resolve(result);
+                    }
+                };
+                const executeSignup = async () => {
+                    try {
+                        const result = await this.gundb.signUp(username, password);
+                        if (result.success) {
+                            this.eventEmitter.emit("debug", {
+                                action: "signup_complete",
+                                username,
+                                userPub: result.userPub,
+                                timestamp: Date.now(),
+                            });
+                            this.eventEmitter.emit("auth:signup", {
+                                userPub: result.userPub ?? "",
+                                username,
+                            });
+                        }
+                        else {
+                            this.eventEmitter.emit("debug", {
+                                action: "signup_failed",
+                                username,
+                                error: result.error,
+                                timestamp: Date.now(),
+                            });
+                        }
+                        safeResolve(result);
+                    }
+                    catch (error) {
+                        safeResolve({
+                            success: false,
+                            error: error.message || "Registration error",
                         });
                     }
-                    else {
-                        this.eventEmitter.emit("debug", {
-                            action: "signup_failed",
-                            username,
-                            error: result.error,
-                            timestamp: Date.now(),
-                        });
-                    }
-                    resolve(result);
-                }
-                catch (error) {
-                    clearTimeout(timeoutId);
-                    resolve({
-                        success: false,
-                        error: error.message || "Registration error",
-                    });
-                }
+                };
+                executeSignup();
             });
             return await signupPromiseWithTimeout;
         }
