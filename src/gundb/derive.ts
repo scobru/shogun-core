@@ -114,7 +114,7 @@ export default async function (
   return result;
 }
 
-function arrayBufToBase64UrlEncode(buf: Uint8Array<ArrayBuffer>) {
+function arrayBufToBase64UrlEncode(buf: Uint8Array) {
   return btoa(String.fromCharCode(...buf))
     .replace(/\//g, "_")
     .replace(/=/g, "")
@@ -136,7 +136,7 @@ function normalizeString(str: string) {
 
 async function stretchKey(
   input: BufferSource,
-  salt: Uint8Array<ArrayBufferLike>,
+  salt: Uint8Array,
   iterations = 300_000,
 ) {
   const baseKey = await crypto.subtle.importKey(

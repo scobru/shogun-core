@@ -32,6 +32,8 @@ export enum CorePlugins {
   Web3 = "web3",
   /** Bitcoin wallet plugin */
   Nostr = "nostr",
+  /** OAuth plugin */
+  OAuth = "oauth",
 }
 
 export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth";

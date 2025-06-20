@@ -29,7 +29,9 @@ export declare enum CorePlugins {
     /** Ethereum plugin */
     Web3 = "web3",
     /** Bitcoin wallet plugin */
-    Nostr = "nostr"
+    Nostr = "nostr",
+    /** OAuth plugin */
+    OAuth = "oauth"
 }
 export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth";
 export interface AuthResult {

@@ -28,4 +28,6 @@ var CorePlugins;
     CorePlugins["Web3"] = "web3";
     /** Bitcoin wallet plugin */
     CorePlugins["Nostr"] = "nostr";
+    /** OAuth plugin */
+    CorePlugins["OAuth"] = "oauth";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

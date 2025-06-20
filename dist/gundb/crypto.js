@@ -34,10 +34,10 @@ function isHash(str) {
  * @returns Promise that resolves with the encrypted data
  */
 async function encrypt(data, key) {
-    if (!Gun.SEA) {
+    if (!gun_1.SEA || !gun_1.SEA.encrypt) {
         throw new Error("SEA is not available");
     }
-    return Gun.SEA.encrypt(data, key);
+    return gun_1.SEA.encrypt(data, key);
 }
 /**
  * Decrypts data with Gun.SEA
@@ -46,10 +46,10 @@ async function encrypt(data, key) {
  * @returns Promise that resolves with the decrypted data
  */
 async function decrypt(encryptedData, key) {
-    if (!Gun.SEA) {
+    if (!gun_1.SEA || !gun_1.SEA.decrypt) {
         throw new Error("SEA is not available");
     }
-    return Gun.SEA.decrypt(encryptedData, key);
+    return gun_1.SEA.decrypt(encryptedData, key);
 }
 /**
  * Encrypts data from a sender to a receiver using their public keys
@@ -81,6 +81,9 @@ async function decFrom(data, sender, receiver) {
  * @returns Promise resolving to hash string
  */
 async function hashText(text) {
+    if (!gun_1.SEA || !gun_1.SEA.work) {
+        throw new Error("SEA is not available");
+    }
     let hash = await gun_1.SEA.work(text, null, null, { name: "SHA-256" });
     return hash;
 }

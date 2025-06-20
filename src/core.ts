@@ -300,7 +300,8 @@ export class ShogunCore implements IShogunCore {
         return this.getPlugin(CorePlugins.Web3);
       case "nostr":
         return this.getPlugin(CorePlugins.Nostr);
-
+      case "oauth":
+        return this.getPlugin(CorePlugins.OAuth);
       case "password":
       default:
         return {
@@ -698,5 +699,38 @@ export class ShogunCore implements IShogunCore {
    */
   getAuthMethod(): AuthMethod | undefined {
     return this.currentAuthMethod;
+  }
+
+  // *********************************************************************************************************
+  // 🔐 CRYPTO CONVENIENCE METHODS 🔐
+  // *********************************************************************************************************
+
+  /**
+   * Encrypts data using Gun.SEA (convenience method)
+   * @param data Data to encrypt
+   * @param key Encryption key
+   * @returns Promise that resolves with the encrypted data
+   */
+  async encrypt(data: any, key: string): Promise<string> {
+    return this.gundb.encrypt(data, key);
+  }
+
+  /**
+   * Decrypts data using Gun.SEA (convenience method)
+   * @param encryptedData Encrypted data
+   * @param key Decryption key
+   * @returns Promise that resolves with the decrypted data
+   */
+  async decrypt(encryptedData: string, key: string): Promise<string | any> {
+    return this.gundb.decrypt(encryptedData, key);
+  }
+
+  /**
+   * Hashes text using Gun.SEA (convenience method)
+   * @param text Text to hash
+   * @returns Promise that resolves with the hashed text
+   */
+  async hashText(text: string): Promise<string | any> {
+    return this.gundb.hashText(text);
   }
 }

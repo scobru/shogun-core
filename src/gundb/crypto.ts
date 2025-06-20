@@ -23,10 +23,10 @@ export function isHash(str: string) {
  * @returns Promise that resolves with the encrypted data
  */
 export async function encrypt(data: any, key: string): Promise<string> {
-  if (!Gun.SEA) {
+  if (!SEA || !SEA.encrypt) {
     throw new Error("SEA is not available");
   }
-  return Gun.SEA.encrypt(data, key);
+  return SEA.encrypt(data, key);
 }
 
 /**
@@ -39,10 +39,10 @@ export async function decrypt(
   encryptedData: string,
   key: string,
 ): Promise<string | any> {
-  if (!Gun.SEA) {
+  if (!SEA || !SEA.decrypt) {
     throw new Error("SEA is not available");
   }
-  return Gun.SEA.decrypt(encryptedData, key);
+  return SEA.decrypt(encryptedData, key);
 }
 
 /**
@@ -85,6 +85,9 @@ export async function decFrom(
  * @returns Promise resolving to hash string
  */
 export async function hashText(text: string) {
+  if (!SEA || !SEA.work) {
+    throw new Error("SEA is not available");
+  }
   let hash = await SEA.work(text, null, null, { name: "SHA-256" });
   return hash;
 }
