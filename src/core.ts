@@ -27,14 +27,12 @@ import {
   IGunUserInstance,
   IGunInstance,
 } from "./gundb/gun-es/gun-es";
-import { randomInt } from "crypto";
 
 export * from "./utils/errorHandler";
 export * from "./gundb";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
 export type * from "./types/plugin";
-export type * from "./utils/errorHandler";
 export type { IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
 export { SEA, Gun };
 export * from "./types/shogun";
@@ -709,38 +707,5 @@ export class ShogunCore implements IShogunCore {
    */
   getAuthMethod(): AuthMethod | undefined {
     return this.currentAuthMethod;
-  }
-
-  // *********************************************************************************************************
-  // 🔐 CRYPTO CONVENIENCE METHODS 🔐
-  // *********************************************************************************************************
-
-  /**
-   * Encrypts data using Gun.SEA (convenience method)
-   * @param data Data to encrypt
-   * @param key Encryption key
-   * @returns Promise that resolves with the encrypted data
-   */
-  async encrypt(data: any, key: string): Promise<string> {
-    return this.gundb.encrypt(data, key);
-  }
-
-  /**
-   * Decrypts data using Gun.SEA (convenience method)
-   * @param encryptedData Encrypted data
-   * @param key Decryption key
-   * @returns Promise that resolves with the decrypted data
-   */
-  async decrypt(encryptedData: string, key: string): Promise<string | any> {
-    return this.gundb.decrypt(encryptedData, key);
-  }
-
-  /**
-   * Hashes text using Gun.SEA (convenience method)
-   * @param text Text to hash
-   * @returns Promise that resolves with the hashed text
-   */
-  async hashText(text: string): Promise<string | any> {
-    return this.gundb.hashText(text);
   }
 }

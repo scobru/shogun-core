@@ -5,3 +5,4 @@ export * from "./errors";
 export * from "./utils";
 export * from "./crypto";
 export { default as derive } from "./derive";
+export type { DeriveOptions } from "./derive";

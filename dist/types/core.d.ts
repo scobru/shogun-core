@@ -11,7 +11,6 @@ export * from "./gundb";
 export * from "./gundb/rxjs-integration";
 export * from "./plugins";
 export type * from "./types/plugin";
-export type * from "./utils/errorHandler";
 export type { IGunUserInstance, IGunInstance } from "./gundb/gun-es/gun-es";
 export { SEA, Gun };
 export * from "./types/shogun";
@@ -197,24 +196,4 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The current authentication method or undefined if not set
      */
     getAuthMethod(): AuthMethod | undefined;
-    /**
-     * Encrypts data using Gun.SEA (convenience method)
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    encrypt(data: any, key: string): Promise<string>;
-    /**
-     * Decrypts data using Gun.SEA (convenience method)
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    decrypt(encryptedData: string, key: string): Promise<string | any>;
-    /**
-     * Hashes text using Gun.SEA (convenience method)
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    hashText(text: string): Promise<string | any>;
 }
