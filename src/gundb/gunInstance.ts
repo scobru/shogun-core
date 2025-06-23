@@ -1143,7 +1143,7 @@ class GunInstance {
 
       // Save security questions and encrypted hint
       await this.saveUserData("security", {
-        questions: securityQuestions,
+        questions: JSON.stringify(securityQuestions),
         hint: encryptedHint,
       });
 

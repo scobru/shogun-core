@@ -110,6 +110,15 @@ class ShogunCore {
             (0, logger_1.logError)("Error initializing Gun user:", error);
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
+        this._gun.on("auth", (user) => {
+            (0, logger_1.log)("Gun auth event received", user);
+            this._user = this._gun.user();
+            this.eventEmitter.emit("auth:login", {
+                pub: user.pub,
+                alias: user.alias,
+                method: "recall",
+            });
+        });
         this.rx = new rxjs_integration_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&

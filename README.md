@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.2.5-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v1.3.0-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 
@@ -15,7 +15,6 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - **[Reactive Data Flows](wiki/gundb.md#reactive-programming-with-rxjs)**: RxJS integration for building responsive, real-time user interfaces
 - **[Enterprise Security](wiki/core.md#security)**: End-to-end encryption, secure key management, and modern cryptographic standards
 - **[Plugin Architecture](wiki/core.md#plugin-system)**: Extensible system for adding custom authentication methods and functionality
-- **[Smart Contract Integration](wiki/contracts.md)**: Tools for interacting with Shogun Protocol contracts on Ethereum
 
 ## Core Components
 
@@ -24,14 +23,6 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - **[WebAuthn Plugin](wiki/webauthn.md)**: Passwordless authentication with biometrics and security keys
 - **[Web3 Plugin](wiki/web3.md)**: Ethereum wallet integration and blockchain authentication
 - **[Nostr Plugin](wiki/nostr.md)**: Bitcoin and Nostr protocol integration for decentralized identity
-- **[Contracts SDK](wiki/contracts.md)**: Tools for interacting with Shogun Protocol smart contracts
-
-## External Plugins
-
-For extended functionality, install these separate plugins:
-
-- **[@shogun/bip44](https://github.com/scobru/shogun-BIP44)**: BIP-44 HD wallet management
-- **[@shogun/stealth-address](https://github.com/scobru/shogun-stealth-address)**: Privacy-enhancing stealth addresses
 
 ## Installation
 
@@ -39,9 +30,6 @@ For extended functionality, install these separate plugins:
 npm install shogun-core
 # or
 yarn add shogun-core
-
-# Optional external plugins
-npm install @shogun/bip44 @shogun/stealth-address
 ```
 
 ## Quick Start
@@ -53,11 +41,6 @@ import { ShogunCore } from "shogun-core";
 const shogun = new ShogunCore({
   peers: ["https://your-gun-peer.com/gun"],
   scope: "my-app",
-  
-  // Enable built-in authentication plugins
-  webauthn: { enabled: true },
-  web3: { enabled: true },
-  nostr: { enabled: true },
   
   // Configure logging
   logging: {
@@ -83,26 +66,12 @@ await gundb.put("user/profile", { name: "John Doe", status: "online" });
 const profile = await gundb.get("user/profile");
 
 // Reactive data with RxJS
-shogun.rx.observe("user/profile").subscribe(profile => {
+shogun.observe("user/profile").subscribe(profile => {
   console.log("Profile updated:", profile);
 });
 ```
 
 ## Advanced Usage
-
-### Custom Plugin Registration
-
-```typescript
-// Register external plugins
-import { HDWalletPlugin } from "@shogun/bip44";
-import { StealthPlugin } from "@shogun/stealth-address";
-
-shogun.register(new HDWalletPlugin());
-shogun.register(new StealthPlugin());
-
-const bip44Plugin = shogun.getPlugin("bip44");
-const stealthPlugin = shogun.getPlugin("stealth");
-```
 
 ### Event Handling
 
@@ -134,12 +103,8 @@ For detailed documentation on each component:
 - **[Web3 Plugin](wiki/web3.md)** - Ethereum wallet integration
 - **[Nostr Plugin](wiki/nostr.md)** - Bitcoin and Nostr protocol support
 
-### External Plugins
-- **[BIP44 HD Wallet Plugin](https://github.com/scobru/shogun-BIP44)** - Hierarchical deterministic wallet management
-- **[Stealth Address Plugin](https://github.com/scobru/shogun-stealth-address)** - Privacy-enhancing address generation
-
 ### Technical Documentation
-Full API documentation is available at [shogun-core-docs.vercel.app](https://shogun-core-docs.vercel.app/).
+Full API documentation is available in the `/docs` directory after building.
 
 ## Use Cases
 
@@ -149,9 +114,8 @@ Shogun Core is ideal for building:
 - **Web3 Wallets**: Browser-based cryptocurrency wallets with multiple authentication options
 - **Enterprise dApps**: Business applications requiring secure, decentralized data storage
 - **Gaming Platforms**: Real-time multiplayer games with decentralized leaderboards and assets
-- **Privacy-Focused Applications**: Apps requiring anonymous interactions and stealth features
+- **Privacy-Focused Applications**: Apps requiring anonymous interactions and privacy features
 - **Collaborative Tools**: Real-time document editing, project management, and team coordination
-- **IoT and Edge Computing**: Decentralized device management and data collection
 
 ## Browser Compatibility
 
