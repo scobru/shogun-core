@@ -1167,19 +1167,25 @@ class GunInstance {
     log("Attempting password recovery for:", username);
 
     try {
-      // Find the user's public key
-      const userPub = await this.checkUsernameExists(username);
+      // Find the user's data
+      const userData = await this.checkUsernameExists(username);
 
-      if (!userPub) {
+      if (!userData || !userData.pub) {
         return { success: false, error: "User not found" };
       }
 
-      // Access the user's data using their public key
-      const user = this.gun.user(userPub);
+      // Extract the public key from user data
+      const userPub = userData.pub;
+      log(`Found user public key for password recovery: ${userPub}`);
 
-      // Retrieve security questions and encrypted hint from the user's graph
+      // Access the user's security data directly from their public key node
+      // Security data is stored in the user's private space, so we need to access it via their public key
       const securityData = await new Promise<any>((resolve) => {
-        user.get("security").once((data: any) => {
+        (this.gun.get(userPub) as any).get("security").once((data: any) => {
+          log(
+            `Retrieved security data for user ${username}:`,
+            data ? "found" : "not found",
+          );
           resolve(data);
         });
       });
