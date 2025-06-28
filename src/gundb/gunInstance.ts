@@ -1029,6 +1029,8 @@ class GunInstance {
         sessionStorage.removeItem("gun/");
         sessionStorage.removeItem("gun/user");
         sessionStorage.removeItem("gun/auth");
+        sessionStorage.removeItem("gun/pair");
+        sessionStorage.removeItem("gun/session");
 
         log("Session storage cleared");
       }
@@ -1141,10 +1143,25 @@ class GunInstance {
         return { success: false, error: "Failed to encrypt password hint" };
       }
 
-      // Save security questions and encrypted hint
-      await this.saveUserData("security", {
+      // Save to the public graph, readable by anyone but only decryptable with the right answers.
+      const userPub = currentUser.pub;
+      const securityPayload = {
         questions: JSON.stringify(securityQuestions),
         hint: encryptedHint,
+      };
+
+      await new Promise<void>((resolve, reject) => {
+        (this.gun.get(userPub) as any)
+          .get("security")
+          .put(securityPayload, (ack: any) => {
+            if (ack.err) {
+              logError("Error saving security data to public graph:", ack.err);
+              reject(new Error(ack.err));
+            } else {
+              log(`Security data saved to public graph for ${userPub}`);
+              resolve();
+            }
+          });
       });
 
       return { success: true };
