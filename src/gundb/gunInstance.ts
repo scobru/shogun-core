@@ -455,7 +455,7 @@ class GunInstance {
                 resolve();
               }, 2000);
 
-              this.gun.get(userPub).put(userMetadata, (ack: any) => {
+              this.node.get(userPub).put(userMetadata, (ack: any) => {
                 clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(`Warning: Failed to save user metadata: ${ack.err}`);
@@ -475,7 +475,7 @@ class GunInstance {
                 resolve();
               }, 2000);
 
-              this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+              this.node.get("users").set(this.node.get(userPub), (ack: any) => {
                 clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(
@@ -495,7 +495,7 @@ class GunInstance {
                 resolve();
               }, 2000);
 
-              this.gun
+              this.node
                 .get("usernames")
                 .get(username)
                 .put(userPub, (ack: any) => {
@@ -593,7 +593,7 @@ class GunInstance {
             resolve();
           }, 2000);
 
-          this.gun.get(userPub).put(userMetadata, (ack: any) => {
+          this.node.get(userPub).put(userMetadata, (ack: any) => {
             clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to save user metadata: ${ack.err}`);
@@ -611,7 +611,7 @@ class GunInstance {
             resolve();
           }, 2000);
 
-          this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+          this.node.get("users").set(this.node.get(userPub), (ack: any) => {
             clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to add user to collection: ${ack.err}`);
@@ -683,7 +683,7 @@ class GunInstance {
       if (mappedPub) {
         // Get user data from the pub
         const userData = await new Promise<any>((resolve) => {
-          this.gun.get(mappedPub).once((data: any) => {
+          this.node.get(mappedPub).once((data: any) => {
             resolve(data);
           });
         });
@@ -797,7 +797,7 @@ class GunInstance {
               resolve();
             }, 2000);
 
-            this.gun.get(userPub).put(userMetadata, (ack: any) => {
+            this.node.get(userPub).put(userMetadata, (ack: any) => {
               clearTimeout(timeoutId);
               if (ack.err) {
                 logError(`Warning: Failed to save user metadata: ${ack.err}`);
@@ -815,7 +815,7 @@ class GunInstance {
               resolve();
             }, 2000);
 
-            this.gun.get("users").set(this.gun.get(userPub), (ack: any) => {
+            this.node.get("users").set(this.node.get(userPub), (ack: any) => {
               clearTimeout(timeoutId);
               if (ack.err) {
                 logError(
@@ -855,7 +855,7 @@ class GunInstance {
             `User ${username} found in tracking system, updating last login...`,
           );
           // Update last login time (non-blocking)
-          this.gun.get(userPub).get("lastLogin").put(Date.now());
+          this.node.get(userPub).get("lastLogin").put(Date.now());
         }
       } catch (trackingError) {
         // Log but don't fail the login for tracking system errors
@@ -1151,7 +1151,7 @@ class GunInstance {
       };
 
       await new Promise<void>((resolve, reject) => {
-        (this.gun.get(userPub) as any)
+        (this.node.get(userPub) as any)
           .get("security")
           .put(securityPayload, (ack: any) => {
             if (ack.err) {
@@ -1198,7 +1198,7 @@ class GunInstance {
       // Access the user's security data directly from their public key node
       // Security data is stored in the user's private space, so we need to access it via their public key
       const securityData = await new Promise<any>((resolve) => {
-        (this.gun.get(userPub) as any).get("security").once((data: any) => {
+        (this.node.get(userPub) as any).get("security").once((data: any) => {
           log(
             `Retrieved security data for user ${username}:`,
             data ? "found" : "not found",

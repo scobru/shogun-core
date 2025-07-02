@@ -104,7 +104,7 @@ class ShogunCore {
             throw new Error(`Failed to initialize GunInstance: ${error}`);
         }
         try {
-            this._user = this._gun.user().recall({ sessionStorage: true });
+            this._user = this._gun.user();
         }
         catch (error) {
             (0, logger_1.logError)("Error initializing Gun user:", error);

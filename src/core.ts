@@ -123,7 +123,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     try {
-      this._user = this._gun.user().recall({ sessionStorage: true });
+      this._user = this._gun.user();
     } catch (error) {
       logError("Error initializing Gun user:", error);
 

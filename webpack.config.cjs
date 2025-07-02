@@ -10,7 +10,6 @@ module.exports = {
     library: {
       name: "ShogunCore",
       type: "umd",
-      export: "default",
     },
     globalObject: "this",
   },

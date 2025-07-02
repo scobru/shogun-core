@@ -16,3 +16,5 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./core"), exports);
 __exportStar(require("./plugins"), exports);
+const core_1 = require("./core");
+exports.default = core_1.ShogunCore;
