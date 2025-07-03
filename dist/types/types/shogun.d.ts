@@ -58,6 +58,7 @@ export interface SignUpResult {
     error?: string;
     message?: string;
     wallet?: any;
+    isNewUser?: boolean;
 }
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;

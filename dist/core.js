@@ -601,5 +601,12 @@ class ShogunCore {
     getAuthMethod() {
         return this.currentAuthMethod;
     }
+    /**
+     * Debug method: Clears all Gun-related data from local and session storage
+     * This is useful for debugging and testing purposes
+     */
+    clearAllStorageData() {
+        this.gundb.clearAllStorageData();
+    }
 }
 exports.ShogunCore = ShogunCore;

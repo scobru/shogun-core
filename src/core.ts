@@ -708,4 +708,12 @@ export class ShogunCore implements IShogunCore {
   getAuthMethod(): AuthMethod | undefined {
     return this.currentAuthMethod;
   }
+
+  /**
+   * Debug method: Clears all Gun-related data from local and session storage
+   * This is useful for debugging and testing purposes
+   */
+  clearAllStorageData(): void {
+    this.gundb.clearAllStorageData();
+  }
 }

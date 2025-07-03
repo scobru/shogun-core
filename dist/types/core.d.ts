@@ -196,4 +196,9 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The current authentication method or undefined if not set
      */
     getAuthMethod(): AuthMethod | undefined;
+    /**
+     * Debug method: Clears all Gun-related data from local and session storage
+     * This is useful for debugging and testing purposes
+     */
+    clearAllStorageData(): void;
 }

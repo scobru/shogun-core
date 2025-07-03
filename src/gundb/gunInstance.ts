@@ -541,7 +541,18 @@ class GunInstance {
         this.gun.user().create(username, password, (ack: any) => {
           if (ack.err) {
             logError(`User creation error: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
+
+            // If user already exists in Gun's system but not accessible with current credentials,
+            // this might be a synchronization issue or the user was created in a different session
+            if (ack.err.includes("User already created")) {
+              resolve({
+                success: false,
+                error: `User '${username}' already exists in the system but cannot be accessed with the provided credentials. This might be due to a previous incomplete registration or synchronization issue. Please try a different username or contact support.`,
+                isUserExistsError: true,
+              });
+            } else {
+              resolve({ success: false, error: ack.err });
+            }
           } else {
             log(`User created successfully: ${username}`);
             resolve({ success: true, pub: ack.pub });
@@ -550,6 +561,16 @@ class GunInstance {
       });
 
       if (!createResult.success) {
+        // If it's a "user already exists" error, provide more helpful guidance
+        if (createResult.isUserExistsError) {
+          log(`User creation failed due to existing user: ${username}`);
+          return {
+            success: false,
+            error: createResult.error,
+            suggestion:
+              "Try using a different username or clear your browser data if you believe this is an error.",
+          };
+        }
         return createResult;
       }
 
@@ -1038,6 +1059,131 @@ class GunInstance {
       log("Logout completed successfully");
     } catch (error) {
       logError("Error during logout:", error);
+    }
+  }
+
+  /**
+   * Debug method: Clears all Gun-related data from local and session storage
+   * This is useful for debugging and testing purposes
+   */
+  clearAllStorageData(): void {
+    try {
+      log("Clearing all Gun-related storage data...");
+
+      // Clear localStorage
+      if (typeof localStorage !== "undefined") {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("gun/") || key === "pair")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+        log(`Cleared ${keysToRemove.length} items from localStorage`);
+      }
+
+      // Clear sessionStorage
+      if (typeof sessionStorage !== "undefined") {
+        const keysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith("gun/")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+        log(`Cleared ${keysToRemove.length} items from sessionStorage`);
+      }
+
+      // Also logout if currently logged in
+      if (this.isLoggedIn()) {
+        this.gun.user().leave();
+        log("User logged out");
+      }
+
+      log("All Gun-related storage data cleared");
+    } catch (error) {
+      logError("Error clearing storage data:", error);
+    }
+  }
+
+  /**
+   * Debug method: Tests Gun connectivity and returns status information
+   * This is useful for debugging connection issues
+   */
+  async testConnectivity(): Promise<{
+    peers: { [peer: string]: { connected: boolean; status: string } };
+    gunInstance: boolean;
+    userInstance: boolean;
+    canWrite: boolean;
+    canRead: boolean;
+    testWriteResult?: any;
+    testReadResult?: any;
+  }> {
+    try {
+      log("Testing Gun connectivity...");
+
+      const result = {
+        peers: this.getPeerInfo(),
+        gunInstance: !!this.gun,
+        userInstance: !!this.gun.user(),
+        canWrite: false,
+        canRead: false,
+        testWriteResult: null as any,
+        testReadResult: null as any,
+      };
+
+      // Test basic write operation
+      try {
+        const testData = { test: true, timestamp: Date.now() };
+        const writeResult = await new Promise<any>((resolve) => {
+          this.gun
+            .get("test")
+            .get("connectivity")
+            .put(testData, (ack: any) => {
+              resolve(ack);
+            });
+        });
+        result.canWrite = !writeResult?.err;
+        result.testWriteResult = writeResult;
+        log("Write test result:", writeResult);
+      } catch (writeError) {
+        logError("Write test failed:", writeError);
+        result.testWriteResult = { error: String(writeError) };
+      }
+
+      // Test basic read operation
+      try {
+        const readResult = await new Promise<any>((resolve) => {
+          this.gun
+            .get("test")
+            .get("connectivity")
+            .once((data: any) => {
+              resolve(data);
+            });
+        });
+        result.canRead = !!readResult;
+        result.testReadResult = readResult;
+        log("Read test result:", readResult);
+      } catch (readError) {
+        logError("Read test failed:", readError);
+        result.testReadResult = { error: String(readError) };
+      }
+
+      log("Connectivity test completed:", result);
+      return result;
+    } catch (error) {
+      logError("Error testing connectivity:", error);
+      return {
+        peers: {},
+        gunInstance: false,
+        userInstance: false,
+        canWrite: false,
+        canRead: false,
+        testWriteResult: { error: String(error) },
+        testReadResult: { error: String(error) },
+      };
     }
   }
 

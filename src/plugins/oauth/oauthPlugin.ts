@@ -376,24 +376,32 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       };
     }
 
-    return new Promise((resolve) => {
-      // Check if user exists first to avoid race conditions
-      core.gun.get(`~@${username}`).once(async (data) => {
-        let authResult: AuthResult;
-        if (data) {
-          // User exists, so log in
-          log(`User ${username} exists, attempting login.`);
-          authResult = await core.login(username, password);
-          authResult.isNewUser = false;
-        } else {
-          // User does not exist, so sign up
-          log(`User ${username} does not exist, attempting signup.`);
-          authResult = await core.signUp(username, password);
-          authResult.isNewUser = true;
-        }
-        resolve(authResult);
-      });
-    });
+    log(`Attempting login for user: ${username}`);
+    const loginResult = await core.login(username, password);
+
+    if (loginResult.success) {
+      log(`Login successful for user: ${username}`);
+      loginResult.isNewUser = false;
+      return loginResult;
+    }
+
+    if (
+      loginResult.error &&
+      (loginResult.error.includes("Wrong user or password") ||
+        loginResult.error.includes("No such user"))
+    ) {
+      log(`User ${username} does not exist, attempting signup.`);
+      const signupResult = await core.signUp(username, password);
+      if (signupResult.success) {
+        signupResult.isNewUser = true;
+      }
+      return signupResult;
+    }
+
+    return {
+      success: false,
+      error: loginResult.error || "An unknown error occurred during login.",
+    };
   }
 
   /**
