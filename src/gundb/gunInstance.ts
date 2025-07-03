@@ -672,7 +672,7 @@ class GunInstance {
     try {
       // First check the username mapping (faster)
       const mappedPub = await new Promise<string | null>((resolve) => {
-        this.gun
+        this.node
           .get("usernames")
           .get(username)
           .once((pub: any) => {
@@ -835,7 +835,7 @@ class GunInstance {
               resolve();
             }, 2000);
 
-            this.gun
+            this.node
               .get("usernames")
               .get(username)
               .put(userPub, (ack: any) => {
