@@ -18,6 +18,7 @@ import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
+import { restrictedPut } from "./gundb/gun-put-headers";
 
 import {
   Gun,
@@ -111,6 +112,10 @@ export class ShogunCore implements IShogunCore {
         type: error.type,
       });
     });
+
+    if (config.authToken) {
+      restrictedPut(Gun, config.authToken);
+    }
 
     try {
       if (config.gunInstance) {

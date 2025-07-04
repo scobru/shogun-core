@@ -24,6 +24,7 @@ const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
 const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
+const gun_put_headers_1 = require("./gundb/gun-put-headers");
 const gundb_1 = require("./gundb");
 Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return gundb_1.Gun; } });
 Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return gundb_1.SEA; } });
@@ -81,6 +82,9 @@ class ShogunCore {
                 type: error.type,
             });
         });
+        if (config.authToken) {
+            (0, gun_put_headers_1.restrictedPut)(gundb_1.Gun, config.authToken);
+        }
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
