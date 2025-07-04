@@ -4,15 +4,28 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
+import Gun from "gun/gun";
+import { default as SEA } from "gun/sea.js";
 
-import { IGunUserInstance, IGunInstance, IGunChain } from "gun";
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
+
+import type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
+
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import { EventEmitter } from "../utils/eventEmitter";
+
+import { GunDataEventData, GunPeerEventData } from "../types/events";
 import { GunRxJS } from "./rxjs-integration";
+
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
-import { SEA } from "gun";
 
 import derive, { DeriveOptions } from "./derive";
 
@@ -24,12 +37,16 @@ class GunInstance {
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
 
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
+  private readonly eventEmitter: EventEmitter;
 
   // Integrated modules
   private _rxjs?: GunRxJS;
 
   constructor(gun: IGunInstance<any>, appScope: string = "shogun") {
     log("Initializing GunDB");
+
+    // Initialize event emitter
+    this.eventEmitter = new EventEmitter();
 
     // Validate Gun instance
     if (!gun) {
@@ -126,11 +143,85 @@ class GunInstance {
   }
 
   /**
+   * Emits a Gun data event
+   * @private
+   */
+  private emitDataEvent(
+    eventType: "gun:put" | "gun:get" | "gun:set" | "gun:remove",
+    path: string,
+    data?: any,
+    success: boolean = true,
+    error?: string,
+  ): void {
+    const eventData: GunDataEventData = {
+      path,
+      data,
+      success,
+      error,
+      timestamp: Date.now(),
+    };
+    this.eventEmitter.emit(eventType, eventData);
+  }
+
+  /**
+   * Emits a Gun peer event
+   * @private
+   */
+  private emitPeerEvent(
+    action: "add" | "remove" | "connect" | "disconnect",
+    peer: string,
+  ): void {
+    const eventData: GunPeerEventData = {
+      peer,
+      action,
+      timestamp: Date.now(),
+    };
+    this.eventEmitter.emit(`gun:peer:${action}`, eventData);
+  }
+
+  /**
+   * Adds an event listener
+   * @param event Event name
+   * @param listener Event listener function
+   */
+  on(event: string | symbol, listener: (data: unknown) => void): void {
+    this.eventEmitter.on(event, listener);
+  }
+
+  /**
+   * Removes an event listener
+   * @param event Event name
+   * @param listener Event listener function
+   */
+  off(event: string | symbol, listener: (data: unknown) => void): void {
+    this.eventEmitter.off(event, listener);
+  }
+
+  /**
+   * Adds a one-time event listener
+   * @param event Event name
+   * @param listener Event listener function
+   */
+  once(event: string | symbol, listener: (data: unknown) => void): void {
+    this.eventEmitter.once(event, listener);
+  }
+
+  /**
+   * Emits an event
+   * @param event Event name
+   * @param data Event data
+   */
+  emit(event: string | symbol, data?: unknown): boolean {
+    return this.eventEmitter.emit(event, data);
+  }
+
+  /**
    * Adds a new peer to the network
    * @param peer URL of the peer to add
    */
   addPeer(peer: string): void {
     this.gun.opt({ peers: [peer] });
+    this.emitPeerEvent("add", peer);
     log(`Added new peer: ${peer}`);
   }
 
@@ -152,6 +243,7 @@ class GunInstance {
           peerConnection.close();
         }
 
+        this.emitPeerEvent("remove", peer);
         log(`Removed peer: ${peer}`);
       } else {
         log(`Peer not found in current connections: ${peer}`);
@@ -342,6 +434,21 @@ class GunInstance {
   }
 
   /**
+   * Gets data at the specified path (one-time read)
+   * @param path Path to get the data from
+   * @returns Promise resolving to the data
+   */
+  async getData(path: string): Promise<any> {
+    return new Promise((resolve) => {
+      this.navigateToPath(this.gun, path).once((data: any) => {
+        // Emit event for the operation
+        this.emitDataEvent("gun:get", path, data, true);
+        resolve(data);
+      });
+    });
+  }
+
+  /**
    * Puts data at the specified path
    * @param path Path to store data
    * @param data Data to store
@@ -350,9 +457,14 @@ class GunInstance {
   async put(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).put(data, (ack: any) => {
-        resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
-        );
+        const result = ack.err
+          ? { success: false, error: ack.err }
+          : { success: true };
+
+        // Emit event for the operation
+        this.emitDataEvent("gun:put", path, data, !ack.err, ack.err);
+
+        resolve(result);
       });
     });
   }
@@ -366,9 +478,14 @@ class GunInstance {
   async set(path: string, data: any): Promise<any> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).set(data, (ack: any) => {
-        resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
-        );
+        const result = ack.err
+          ? { success: false, error: ack.err }
+          : { success: true };
+
+        // Emit event for the operation
+        this.emitDataEvent("gun:set", path, data, !ack.err, ack.err);
+
+        resolve(result);
       });
     });
   }
@@ -381,9 +498,14 @@ class GunInstance {
   async remove(path: string): Promise<any> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).put(null, (ack: any) => {
-        resolve(
-          ack.err ? { success: false, error: ack.err } : { success: true },
-        );
+        const result = ack.err
+          ? { success: false, error: ack.err }
+          : { success: true };
+
+        // Emit event for the operation
+        this.emitDataEvent("gun:remove", path, null, !ack.err, ack.err);
+
+        resolve(result);
       });
     });
   }
@@ -447,16 +569,10 @@ class GunInstance {
             lastLogin: Date.now(),
           };
 
-          // Save user metadata with timeout
+          // Save user metadata
           try {
             await new Promise<void>((resolve) => {
-              const timeoutId = setTimeout(() => {
-                logError(`Warning: User metadata save timeout for ${username}`);
-                resolve();
-              }, 2000);
-
               this.node.get(userPub).put(userMetadata, (ack: any) => {
-                clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(`Warning: Failed to save user metadata: ${ack.err}`);
                 } else {
@@ -468,15 +584,7 @@ class GunInstance {
 
             // Add to users collection with timeout
             await new Promise<void>((resolve) => {
-              const timeoutId = setTimeout(() => {
-                logError(
-                  `Warning: User collection add timeout for ${username}`,
-                );
-                resolve();
-              }, 2000);
-
               this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-                clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(
                     `Warning: Failed to add user to collection: ${ack.err}`,
@@ -490,16 +598,10 @@ class GunInstance {
 
             // Create username mapping with timeout
             await new Promise<void>((resolve) => {
-              const timeoutId = setTimeout(() => {
-                logError(`Warning: Username mapping timeout for ${username}`);
-                resolve();
-              }, 2000);
-
               this.node
                 .get("usernames")
                 .get(username)
                 .put(userPub, (ack: any) => {
-                  clearTimeout(timeoutId);
                   if (ack.err) {
                     logError(
                       `Warning: Could not create username mapping: ${ack.err}`,
@@ -606,16 +708,10 @@ class GunInstance {
         lastLogin: Date.now(),
       };
 
-      // Save user metadata with timeout
+      // Save user metadata
       try {
         await new Promise<void>((resolve) => {
-          const timeoutId = setTimeout(() => {
-            logError(`Warning: User metadata save timeout for ${username}`);
-            resolve();
-          }, 2000);
-
           this.node.get(userPub).put(userMetadata, (ack: any) => {
-            clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to save user metadata: ${ack.err}`);
             } else {
@@ -627,13 +723,7 @@ class GunInstance {
 
         // Add to users collection with timeout
         await new Promise<void>((resolve) => {
-          const timeoutId = setTimeout(() => {
-            logError(`Warning: User collection add timeout for ${username}`);
-            resolve();
-          }, 2000);
-
           this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-            clearTimeout(timeoutId);
             if (ack.err) {
               logError(`Warning: Failed to add user to collection: ${ack.err}`);
             } else {
@@ -645,16 +735,10 @@ class GunInstance {
 
         // Create username mapping with timeout
         await new Promise<void>((resolve) => {
-          const timeoutId = setTimeout(() => {
-            logError(`Warning: Username mapping timeout for ${username}`);
-            resolve();
-          }, 2000);
-
           this.gun
             .get("usernames")
             .get(username)
             .put(userPub, (ack: any) => {
-              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(
                   `Warning: Could not create username mapping: ${ack.err}`,
@@ -813,13 +897,7 @@ class GunInstance {
 
           // Save user metadata with timeout
           await new Promise<void>((resolve) => {
-            const timeoutId = setTimeout(() => {
-              logError(`Warning: User metadata save timeout for ${username}`);
-              resolve();
-            }, 2000);
-
             this.node.get(userPub).put(userMetadata, (ack: any) => {
-              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(`Warning: Failed to save user metadata: ${ack.err}`);
               } else {
@@ -831,13 +909,7 @@ class GunInstance {
 
           // Add to users collection with timeout
           await new Promise<void>((resolve) => {
-            const timeoutId = setTimeout(() => {
-              logError(`Warning: User collection add timeout for ${username}`);
-              resolve();
-            }, 2000);
-
             this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-              clearTimeout(timeoutId);
               if (ack.err) {
                 logError(
                   `Warning: Failed to add user to collection: ${ack.err}`,
@@ -851,16 +923,10 @@ class GunInstance {
 
           // Create username mapping with timeout
           await new Promise<void>((resolve) => {
-            const timeoutId = setTimeout(() => {
-              logError(`Warning: Username mapping timeout for ${username}`);
-              resolve();
-            }, 2000);
-
             this.node
               .get("usernames")
               .get(username)
               .put(userPub, (ack: any) => {
-                clearTimeout(timeoutId);
                 if (ack.err) {
                   logError(
                     `Warning: Could not create username mapping: ${ack.err}`,
@@ -1454,14 +1520,23 @@ class GunInstance {
     return new Promise((resolve, reject) => {
       const user = this.gun.user();
       if (!user.is) {
+        this.emitDataEvent(
+          "gun:put",
+          `user/${path}`,
+          data,
+          false,
+          "User not authenticated",
+        );
         reject(new Error("User not authenticated"));
         return;
       }
 
       this.navigateToPath(user, path).put(data, (ack: any) => {
         if (ack.err) {
+          this.emitDataEvent("gun:put", `user/${path}`, data, false, ack.err);
           reject(new Error(ack.err));
         } else {
+          this.emitDataEvent("gun:put", `user/${path}`, data, true);
           resolve();
         }
       });
@@ -1477,11 +1552,19 @@ class GunInstance {
     return new Promise((resolve) => {
       const user = this.gun.user();
       if (!user.is) {
+        this.emitDataEvent(
+          "gun:get",
+          `user/${path}`,
+          null,
+          false,
+          "User not authenticated",
+        );
         resolve(null);
         return;
       }
 
       this.navigateToPath(user, path).once((data: any) => {
+        this.emitDataEvent("gun:get", `user/${path}`, data, true);
         resolve(data);
       });
     });
@@ -1573,4 +1656,8 @@ class GunInstance {
   static Errors = GunErrors;
 }
 
-export { GunInstance };
+export { GunInstance, SEA, Gun, GunRxJS, crypto, utils, GunErrors, derive };
+
+export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
+export type { GunDataEventData, GunPeerEventData };
+export type { DeriveOptions };

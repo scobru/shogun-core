@@ -13,17 +13,6 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.derive = void 0;
 // Export the main class
 __exportStar(require("./gunInstance"), exports);
-__exportStar(require("./gun-es/gun-es"), exports);
-__exportStar(require("./rxjs-integration"), exports);
-__exportStar(require("./errors"), exports);
-__exportStar(require("./utils"), exports);
-__exportStar(require("./crypto"), exports);
-var derive_1 = require("./derive");
-Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return __importDefault(derive_1).default; } });

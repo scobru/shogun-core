@@ -34,6 +34,34 @@ export interface ErrorEventData {
     details?: unknown;
 }
 /**
+ * Interface representing Gun data operation event data
+ * @interface GunDataEventData
+ * @property {string} path - The path where the operation occurred
+ * @property {any} [data] - The data involved in the operation
+ * @property {boolean} success - Whether the operation was successful
+ * @property {string} [error] - Error message if operation failed
+ * @property {number} timestamp - Timestamp of the operation
+ */
+export interface GunDataEventData {
+    path: string;
+    data?: any;
+    success: boolean;
+    error?: string;
+    timestamp: number;
+}
+/**
+ * Interface representing Gun peer event data
+ * @interface GunPeerEventData
+ * @property {string} peer - The peer URL
+ * @property {string} action - The action performed (add, remove, connect, disconnect)
+ * @property {number} timestamp - Timestamp of the event
+ */
+export interface GunPeerEventData {
+    peer: string;
+    action: "add" | "remove" | "connect" | "disconnect";
+    timestamp: number;
+}
+/**
  * Type defining all available Shogun event listeners
  */
 export type ShogunEventMap = {
@@ -41,6 +69,14 @@ export type ShogunEventMap = {
     "auth:logout": void;
     "auth:signup": AuthEventData;
     "wallet:created": WalletEventData;
+    "gun:put": GunDataEventData;
+    "gun:get": GunDataEventData;
+    "gun:set": GunDataEventData;
+    "gun:remove": GunDataEventData;
+    "gun:peer:add": GunPeerEventData;
+    "gun:peer:remove": GunPeerEventData;
+    "gun:peer:connect": GunPeerEventData;
+    "gun:peer:disconnect": GunPeerEventData;
     error: ErrorEventData;
 };
 /**
