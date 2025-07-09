@@ -735,7 +735,7 @@ class GunInstance {
 
         // Create username mapping with timeout
         await new Promise<void>((resolve) => {
-          this.gun
+          this.node
             .get("usernames")
             .get(username)
             .put(userPub, (ack: any) => {
@@ -799,7 +799,7 @@ class GunInstance {
       const existingUser = await new Promise<any>((resolve) => {
         let found = false;
 
-        this.gun
+        this.node
           .get("users")
           .map()
           .once((userData: any, key: string) => {
@@ -808,15 +808,6 @@ class GunInstance {
               resolve(userData);
             }
           });
-
-        // Resolve with null after a brief delay if nothing found
-        // We need some mechanism to resolve when no match is found
-        // Using a minimal delay instead of a long timeout
-        setTimeout(() => {
-          if (!found) {
-            resolve(null);
-          }
-        }, 100);
       });
 
       return existingUser;
@@ -1516,7 +1507,7 @@ class GunInstance {
    * @param data Data to save
    * @returns Promise that resolves when the data is saved
    */
-  async saveUserData(path: string, data: any): Promise<void> {
+  async putUserData(path: string, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
       const user = this.gun.user();
       if (!user.is) {
@@ -1537,7 +1528,7 @@ class GunInstance {
           reject(new Error(ack.err));
         } else {
           this.emitDataEvent("gun:put", `user/${path}`, data, true);
-          resolve();
+          resolve(ack);
         }
       });
     });
