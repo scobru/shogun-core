@@ -36,6 +36,13 @@ import {
   GunErrors,
 } from "./gundb";
 
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
+
 export type {
   IGunUserInstance,
   IGunInstance,
@@ -121,7 +128,11 @@ export class ShogunCore implements IShogunCore {
       if (config.gunInstance) {
         this._gun = config.gunInstance;
       } else {
-        this._gun = Gun(config.peers || []);
+        this._gun = Gun({
+          peers: config.peers || [],
+          radisk: true,
+          file: "radata",
+        });
       }
     } catch (error) {
       logError("Error creating Gun instance:", error);
@@ -469,59 +480,7 @@ export class ShogunCore implements IShogunCore {
         log("Authentication method set to default: password");
       }
 
-      const timeoutDuration = this.config?.timeouts?.login ?? 15000;
-
-      const loginPromiseWithTimeout = new Promise<AuthResult>(
-        (resolve, reject) => {
-          let isResolved = false;
-
-          const timeoutId = setTimeout(() => {
-            if (!isResolved) {
-              isResolved = true;
-              resolve({
-                success: false,
-                error: "Login timeout",
-              });
-            }
-          }, timeoutDuration);
-
-          const safeResolve = (result: AuthResult) => {
-            if (!isResolved) {
-              isResolved = true;
-              clearTimeout(timeoutId);
-              resolve(result);
-            }
-          };
-
-          const executeLogin = async () => {
-            try {
-              const loginResult = await this.gundb.login(username, password);
-
-              if (!loginResult.success) {
-                safeResolve({
-                  success: false,
-                  error: loginResult.error || "Wrong user or password",
-                });
-              } else {
-                safeResolve({
-                  success: true,
-                  userPub: loginResult.userPub,
-                  username: loginResult.username,
-                });
-              }
-            } catch (error: any) {
-              safeResolve({
-                success: false,
-                error: error.message || "Login error",
-              });
-            }
-          };
-
-          executeLogin();
-        },
-      );
-
-      const result = await loginPromiseWithTimeout;
+      const result = await this.gundb.login(username, password);
 
       if (result.success) {
         this.eventEmitter.emit("auth:login", {
@@ -531,6 +490,8 @@ export class ShogunCore implements IShogunCore {
         log(
           `Current auth method before wallet check: ${this.currentAuthMethod}`,
         );
+      } else {
+        result.error = result.error || "Wrong user or password";
       }
 
       return result;
@@ -598,69 +559,30 @@ export class ShogunCore implements IShogunCore {
 
       log(`Attempting user registration: ${username}`);
 
-      const timeoutDuration = this.config?.timeouts?.signup ?? 30000; // Default timeout of 30 seconds
+      const result = await this.gundb.signUp(username, password);
 
-      const signupPromiseWithTimeout = new Promise<SignUpResult>(
-        (resolve, reject) => {
-          let isResolved = false;
+      if (result.success) {
+        this.eventEmitter.emit("debug", {
+          action: "signup_complete",
+          username,
+          userPub: result.userPub,
+          timestamp: Date.now(),
+        });
 
-          const timeoutId = setTimeout(() => {
-            if (!isResolved) {
-              isResolved = true;
-              resolve({
-                success: false,
-                error: "Registration timeout",
-              });
-            }
-          }, timeoutDuration);
+        this.eventEmitter.emit("auth:signup", {
+          userPub: result.userPub ?? "",
+          username,
+        });
+      } else {
+        this.eventEmitter.emit("debug", {
+          action: "signup_failed",
+          username,
+          error: result.error,
+          timestamp: Date.now(),
+        });
+      }
 
-          const safeResolve = (result: SignUpResult) => {
-            if (!isResolved) {
-              isResolved = true;
-              clearTimeout(timeoutId);
-              resolve(result);
-            }
-          };
-
-          const executeSignup = async () => {
-            try {
-              const result = await this.gundb.signUp(username, password);
-
-              if (result.success) {
-                this.eventEmitter.emit("debug", {
-                  action: "signup_complete",
-                  username,
-                  userPub: result.userPub,
-                  timestamp: Date.now(),
-                });
-
-                this.eventEmitter.emit("auth:signup", {
-                  userPub: result.userPub ?? "",
-                  username,
-                });
-              } else {
-                this.eventEmitter.emit("debug", {
-                  action: "signup_failed",
-                  username,
-                  error: result.error,
-                  timestamp: Date.now(),
-                });
-              }
-
-              safeResolve(result);
-            } catch (error: any) {
-              safeResolve({
-                success: false,
-                error: error.message || "Registration error",
-              });
-            }
-          };
-
-          executeSignup();
-        },
-      );
-
-      return await signupPromiseWithTimeout;
+      return result;
     } catch (error: any) {
       logError(`Error during registration for user ${username}:`, error);
 
@@ -767,3 +689,21 @@ export class ShogunCore implements IShogunCore {
 }
 
 export default ShogunCore;
+
+declare global {
+  interface Window {
+    initShogun: (config: ShogunSDKConfig) => ShogunCore;
+    shogunCore: ShogunCore;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.initShogun = (config: ShogunSDKConfig): ShogunCore => {
+    if (window.shogunCore) {
+      return window.shogunCore;
+    }
+    const shogun = new ShogunCore(config);
+    window.shogunCore = shogun;
+    return shogun;
+  };
+}

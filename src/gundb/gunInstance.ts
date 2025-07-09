@@ -6,14 +6,6 @@
  */
 import Gun from "gun/gun";
 import { default as SEA } from "gun/sea.js";
-
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
-
 import type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 
 import { log, logError } from "../utils/logger";
@@ -582,21 +574,18 @@ class GunInstance {
               });
             });
 
-            // Add to users collection with timeout
-            await new Promise<void>((resolve) => {
-              this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-                if (ack.err) {
-                  logError(
-                    `Warning: Failed to add user to collection: ${ack.err}`,
-                  );
-                } else {
-                  log(`User added to collection: ${username}`);
-                }
-                resolve();
-              });
+            // Add to users collection (non-blocking)
+            this.node.get("users").set(this.node.get(userPub), (ack: any) => {
+              if (ack.err) {
+                logError(
+                  `Warning: Failed to add user to collection: ${ack.err}`,
+                );
+              } else {
+                log(`User added to collection: ${username}`);
+              }
             });
 
-            // Create username mapping with timeout
+            // Create username mapping
             await new Promise<void>((resolve) => {
               this.node
                 .get("usernames")
@@ -721,19 +710,16 @@ class GunInstance {
           });
         });
 
-        // Add to users collection with timeout
-        await new Promise<void>((resolve) => {
-          this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-            if (ack.err) {
-              logError(`Warning: Failed to add user to collection: ${ack.err}`);
-            } else {
-              log(`User added to collection: ${username}`);
-            }
-            resolve();
-          });
+        // Add to users collection (non-blocking)
+        this.node.get("users").set(this.node.get(userPub), (ack: any) => {
+          if (ack.err) {
+            logError(`Warning: Failed to add user to collection: ${ack.err}`);
+          } else {
+            log(`User added to collection: ${username}`);
+          }
         });
 
-        // Create username mapping with timeout
+        // Create username mapping
         await new Promise<void>((resolve) => {
           this.node
             .get("usernames")
@@ -886,7 +872,7 @@ class GunInstance {
             lastLogin: Date.now(),
           };
 
-          // Save user metadata with timeout
+          // Save user metadata
           await new Promise<void>((resolve) => {
             this.node.get(userPub).put(userMetadata, (ack: any) => {
               if (ack.err) {
@@ -898,21 +884,16 @@ class GunInstance {
             });
           });
 
-          // Add to users collection with timeout
-          await new Promise<void>((resolve) => {
-            this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-              if (ack.err) {
-                logError(
-                  `Warning: Failed to add user to collection: ${ack.err}`,
-                );
-              } else {
-                log(`User added to collection: ${username}`);
-              }
-              resolve();
-            });
+          // Add to users collection (non-blocking)
+          this.node.get("users").set(this.node.get(userPub), (ack: any) => {
+            if (ack.err) {
+              logError(`Warning: Failed to add user to collection: ${ack.err}`);
+            } else {
+              log(`User added to collection: ${username}`);
+            }
           });
 
-          // Create username mapping with timeout
+          // Create username mapping
           await new Promise<void>((resolve) => {
             this.node
               .get("usernames")

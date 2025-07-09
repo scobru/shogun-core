@@ -4,6 +4,12 @@ import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, 
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, utils, derive, GunErrors } from "./gundb";
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
 export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
 export { SEA, Gun, GunRxJS, crypto, utils, derive, GunErrors, GunInstance };
 export * from "./utils/errorHandler";
@@ -202,3 +208,9 @@ export declare class ShogunCore implements IShogunCore {
     clearAllStorageData(): void;
 }
 export default ShogunCore;
+declare global {
+    interface Window {
+        initShogun: (config: ShogunSDKConfig) => ShogunCore;
+        shogunCore: ShogunCore;
+    }
+}

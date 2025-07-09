@@ -393,9 +393,22 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       log(`User ${username} does not exist, attempting signup.`);
       const signupResult = await core.signUp(username, password);
       if (signupResult.success) {
-        signupResult.isNewUser = true;
+        // After successful signup, login the user to establish a session
+        log(`Signup successful for ${username}, now logging in.`);
+        const postSignupLoginResult = await core.login(username, password);
+        if (postSignupLoginResult.success) {
+          postSignupLoginResult.isNewUser = true; // Mark that this was a signup flow
+          return postSignupLoginResult;
+        }
+        // This would be an unexpected error if login fails right after signup
+        return {
+          success: false,
+          error:
+            postSignupLoginResult.error ||
+            "Login failed after successful signup.",
+        };
       }
-      return signupResult;
+      return signupResult; // Return original signup failure
     }
 
     return {
