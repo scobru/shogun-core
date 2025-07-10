@@ -206,6 +206,7 @@ export declare class ShogunCore implements IShogunCore {
      * This is useful for debugging and testing purposes
      */
     clearAllStorageData(): void;
+    getIsLoggedIn(): boolean;
 }
 export default ShogunCore;
 declare global {

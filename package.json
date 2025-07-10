@@ -1,7 +1,7 @@
 {
   "name": "shogun-core",
-  "version": "1.4.2",
-  "description": "SHOGUN SDK - Core library for Shogun SDK",
+  "version": "1.4.3",
+  "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/types/index.d.ts",

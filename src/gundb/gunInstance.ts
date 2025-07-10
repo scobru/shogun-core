@@ -70,6 +70,7 @@ class GunInstance {
     }
 
     this.gun = gun;
+
     if (typeof window !== "undefined") {
       (window as any).ShogunDB = this;
       (window as any).ShogunGun = gun;

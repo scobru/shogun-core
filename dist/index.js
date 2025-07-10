@@ -574,6 +574,9 @@ class ShogunCore {
     clearAllStorageData() {
         this.gundb.clearAllStorageData();
     }
+    getIsLoggedIn() {
+        return !!this.user?.is;
+    }
 }
 exports.ShogunCore = ShogunCore;
 exports.default = ShogunCore;

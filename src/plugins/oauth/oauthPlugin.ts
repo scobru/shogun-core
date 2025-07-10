@@ -365,56 +365,39 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   private async _loginOrSignUp(
     username: string,
-    password?: string,
+    password: string,
   ): Promise<AuthResult> {
-    const core = this.assertInitialized();
+    if (!this.core) {
+      return { success: false, error: "Shogun core not available" };
+    }
 
-    if (!password) {
+    log(`[OAuth] Attempting signup for ${username}.`);
+    const signupResult = await this.core.signUp(username, password);
+
+    if (signupResult.success) {
+      log(`[OAuth] Signup successful for ${username}, now logging in.`);
+      const loginResult = await this.core.login(username, password);
+      if (loginResult.success) {
+        loginResult.isNewUser = true;
+        return loginResult;
+      }
       return {
         success: false,
-        error: "Password not provided for login/signup.",
+        error: loginResult.error || "Login failed after successful signup.",
       };
     }
 
-    log(`Attempting login for user: ${username}`);
-    const loginResult = await core.login(username, password);
-
-    if (loginResult.success) {
-      log(`Login successful for user: ${username}`);
-      loginResult.isNewUser = false;
-      return loginResult;
-    }
-
     if (
-      loginResult.error &&
-      (loginResult.error.includes("Wrong user or password") ||
-        loginResult.error.includes("No such user"))
+      signupResult.error &&
+      (signupResult.error.includes("User already created") ||
+        signupResult.error.includes("already exists"))
     ) {
-      log(`User ${username} does not exist, attempting signup.`);
-      const signupResult = await core.signUp(username, password);
-      if (signupResult.success) {
-        // After successful signup, login the user to establish a session
-        log(`Signup successful for ${username}, now logging in.`);
-        const postSignupLoginResult = await core.login(username, password);
-        if (postSignupLoginResult.success) {
-          postSignupLoginResult.isNewUser = true; // Mark that this was a signup flow
-          return postSignupLoginResult;
-        }
-        // This would be an unexpected error if login fails right after signup
-        return {
-          success: false,
-          error:
-            postSignupLoginResult.error ||
-            "Login failed after successful signup.",
-        };
-      }
-      return signupResult; // Return original signup failure
+      log(`[OAuth] User ${username} already exists, attempting login.`);
+      return this.core.login(username, password);
     }
 
-    return {
-      success: false,
-      error: loginResult.error || "An unknown error occurred during login.",
-    };
+    // Return the original signup error for other failures
+    return signupResult;
   }
 
   /**

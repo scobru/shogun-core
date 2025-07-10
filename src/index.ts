@@ -686,6 +686,10 @@ export class ShogunCore implements IShogunCore {
   clearAllStorageData(): void {
     this.gundb.clearAllStorageData();
   }
+
+  public getIsLoggedIn(): boolean {
+    return !!this.user?.is;
+  }
 }
 
 export default ShogunCore;
