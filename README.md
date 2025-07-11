@@ -34,113 +34,131 @@ yarn add shogun-core
 
 ## Quick Start
 
+This example demonstrates how to initialize `ShogunCore` in a Node.js or browser project using a bundler like Webpack or Vite.
+
 ```typescript
 import { ShogunCore } from "shogun-core";
 
-// Initialize Shogun Core
+// Define your list of Gun peers
+const relays = [
+  "wss://ruling-mastodon-improved.ngrok-free.app/gun",
+  "https://gun-manhattan.herokuapp.com/gun",
+  "https://peer.wallie.io/gun",
+];
+
+// Initialize Shogun Core with plugins
 const shogun = new ShogunCore({
-  peers: ["https://your-gun-peer.com/gun"],
-  scope: "my-app",
-  
-  // Configure logging
+  peers: relays,
+  scope: "my-awesome-app",
+  authToken: "YOUR_GUN_SUPER_PEER_SECRET", // Optional, for private peers
+
+  // Enable and configure logging
   logging: {
     enabled: true,
-    level: "info"
-  }
+    level: "info", // "none", "error", "warn", "info", "debug", "verbose"
+  },
+
+  // Enable and configure Web3 (e.g., MetaMask) authentication
+  web3: { 
+    enabled: true 
+  },
+
+  // Enable and configure WebAuthn (biometrics, security keys)
+  webauthn: {
+    enabled: true,
+    rpName: "My Awesome App", // Name of your application
+  },
+
+  // Enable and configure Nostr
+  nostr: { 
+    enabled: true 
+  },
+
+  // Enable and configure OAuth providers
+  oauth: {
+    enabled: true,
+    usePKCE: true, // Recommended for SPAs
+    providers: {
+      google: {
+        clientId: "YOUR_GOOGLE_CLIENT_ID",
+        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // For server-side flow
+        redirectUri: "http://localhost:3000/auth/callback",
+        scope: ["openid", "email", "profile"],
+      },
+    },
+  },
 });
 
 // Basic authentication
 const loginResult = await shogun.login("username", "password");
-if (loginResult.success) {
-  console.log("User logged in:", loginResult.userPub);
-}
 
-// Access built-in plugins
-const webauthnPlugin = shogun.getPlugin("webauthn");
-const web3Plugin = shogun.getPlugin("web3");
-const nostrPlugin = shogun.getPlugin("nostr");
+console.log("Shogun Core initialized!");
 
-// Work with decentralized data
-const gundb = shogun.gundb;
-await gundb.put("user/profile", { name: "John Doe", status: "online" });
-const profile = await gundb.get("user/profile");
+// You can now use the instance to interact with plugins and data
+// For example, to initiate a Web3 login:
+// const web3Plugin = shogun.getPlugin("web3");
+// if (web3Plugin) {
+//   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+//   await web3Plugin.login(accounts[0]);
+// }
+```
 
-// Reactive data with RxJS
-shogun.observe("user/profile").subscribe(profile => {
-  console.log("Profile updated:", profile);
-});
+### Browser Usage (via CDN)
+
+You can also use Shogun Core directly in the browser by including it from a CDN. This is ideal for static sites or lightweight applications.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shogun Core in Browser</title>
+</head>
+<body>
+    <h1>My dApp</h1>
+    <!-- Required dependencies for Shogun Core -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    
+    <!-- Shogun Core library -->
+    <script src="https://cdn.jsdelivr.net/npm/shogun-core/dist/browser/shogun-core.js"></script>
+    
+    <script>
+        // The script exposes a global `initShogun` function
+        const shogun = initShogun({
+            peers: ['https://gun-manhattan.herokuapp.com/gun'],
+            scope: 'my-browser-app',
+            web3: { enabled: true },
+            webauthn: {
+                enabled: true,
+                rpName: 'My Browser dApp',
+                rpId: window.location.hostname,
+            }
+        });
+
+        console.log('Shogun Core initialized in browser!', shogun);
+
+        async function connectWallet() {
+            if (shogun.hasPlugin('web3')) {
+                const web3Plugin = shogun.getPlugin('web3');
+                try {
+                    const provider = await web3Plugin.getProvider();
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    await web3Plugin.login(address);
+                    console.log('Logged in with address:', address);
+                } catch (error) {
+                    console.error('Web3 login failed:', error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
 ```
 
 ## Advanced Usage
 
 ### Event Handling
 
-```typescript
-// Listen for authentication events
-shogun.on("auth:login", (data) => {
-  console.log("User logged in:", data.userPub);
-});
-
-shogun.on("auth:logout", () => {
-  console.log("User logged out");
-});
-
-shogun.on("error", (error) => {
-  console.error("SDK error:", error);
-});
 ```
-
-## Documentation
-
-For detailed documentation on each component:
-
-### Core Documentation
-- **[Core SDK API](wiki/core.md)** - Main SDK initialization, configuration, and authentication
-- **[GunDB Integration](wiki/gundb.md)** - Decentralized database operations and reactive data
-
-### Plugin Documentation
-- **[WebAuthn Plugin](wiki/webauthn.md)** - Biometric and security key authentication
-- **[Web3 Plugin](wiki/web3.md)** - Ethereum wallet integration
-- **[Nostr Plugin](wiki/nostr.md)** - Bitcoin and Nostr protocol support
-
-### Technical Documentation
-Full API documentation is available in the `/docs` directory after building.
-
-## Use Cases
-
-Shogun Core is ideal for building:
-
-- **Decentralized Social Networks**: Chat apps, forums, and social platforms with user-owned data
-- **Web3 Wallets**: Browser-based cryptocurrency wallets with multiple authentication options
-- **Enterprise dApps**: Business applications requiring secure, decentralized data storage
-- **Gaming Platforms**: Real-time multiplayer games with decentralized leaderboards and assets
-- **Privacy-Focused Applications**: Apps requiring anonymous interactions and privacy features
-- **Collaborative Tools**: Real-time document editing, project management, and team coordination
-
-## Browser Compatibility
-
-Shogun Core supports all modern browsers with:
-- WebAuthn API support (Chrome 67+, Firefox 60+, Safari 14+)
-- WebCrypto API support
-- IndexedDB support
-- WebSocket support for real-time synchronization
-
-## Node.js Support
-
-Full Node.js support for server-side applications, testing, and automation.
-
-## Contributing
-
-We welcome contributions! Please follow our contribution guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please follow [Conventional Commits](https://conventionalcommits.org/) for commit messages.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
+```

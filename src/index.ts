@@ -70,26 +70,17 @@ export type * from "./types/plugin";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "v1.2.9c";
-
-  private _gun!: IGunInstance<any>;
-
-  private _user: IGunUserInstance<any> | null = null;
-
+  public static readonly API_VERSION = "^1.4.3";
   public gundb: GunInstance;
-
   public storage: ShogunStorage;
-
-  private readonly eventEmitter: EventEmitter;
-
   public provider?: ethers.Provider;
-
   public config: ShogunSDKConfig;
-
   public rx!: GunRxJS;
 
+  private _gun!: IGunInstance<any>;
+  private _user: IGunUserInstance<any> | null = null;
+  private readonly eventEmitter: EventEmitter;
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
-
   private currentAuthMethod?: AuthMethod;
 
   /**
@@ -103,9 +94,7 @@ export class ShogunCore implements IShogunCore {
     log("Initializing Shogun " + ShogunCore.API_VERSION);
 
     this.config = config;
-
     this.storage = new ShogunStorage();
-
     this.eventEmitter = new EventEmitter();
 
     if (config.logging) {
@@ -143,8 +132,6 @@ export class ShogunCore implements IShogunCore {
     try {
       this.gundb = new GunInstance(this._gun, config.scope || "");
       this._gun = this.gundb.gun;
-
-      // Forward Gun events from GunInstance to main event emitter
       this.setupGunEventForwarding();
     } catch (error) {
       logError("Error initializing GunInstance:", error);
@@ -156,7 +143,6 @@ export class ShogunCore implements IShogunCore {
       this._user = this._gun.user();
     } catch (error) {
       logError("Error initializing Gun user:", error);
-
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
@@ -171,7 +157,6 @@ export class ShogunCore implements IShogunCore {
     });
 
     this.rx = new GunRxJS(this._gun);
-
     this.registerBuiltinPlugins(config);
 
     if (
@@ -219,13 +204,13 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    // Forward all Gun peer events
     const peerEvents = [
       "gun:peer:add",
       "gun:peer:remove",
       "gun:peer:connect",
       "gun:peer:disconnect",
     ];
+
     peerEvents.forEach((eventName) => {
       this.gundb.on(eventName, (data: any) => {
         this.eventEmitter.emit(eventName, data);
@@ -440,7 +425,6 @@ export class ShogunCore implements IShogunCore {
         log("Logout ignored: user not authenticated");
         return;
       }
-
       this.gundb.logout();
       this.eventEmitter.emit("auth:logout", {});
       log("Logout completed successfully");
@@ -449,7 +433,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error,
+        error
       );
     }
   }
@@ -488,7 +472,7 @@ export class ShogunCore implements IShogunCore {
         });
 
         log(
-          `Current auth method before wallet check: ${this.currentAuthMethod}`,
+          `Current auth method before wallet check: ${this.currentAuthMethod}`
         );
       } else {
         result.error = result.error || "Wrong user or password";
@@ -500,7 +484,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error,
+        error
       );
 
       return {
@@ -522,7 +506,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string,
+    passwordConfirmation?: string
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -558,7 +542,6 @@ export class ShogunCore implements IShogunCore {
       });
 
       log(`Attempting user registration: ${username}`);
-
       const result = await this.gundb.signUp(username, password);
 
       if (result.success) {
@@ -585,8 +568,6 @@ export class ShogunCore implements IShogunCore {
       return result;
     } catch (error: any) {
       logError(`Error during registration for user ${username}:`, error);
-
-      // Emit a debug event to monitor the flow in case of exception
       this.eventEmitter.emit("debug", {
         action: "signup_exception",
         username,
@@ -665,7 +646,7 @@ export class ShogunCore implements IShogunCore {
    */
   setAuthMethod(method: AuthMethod): void {
     log(
-      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`
     );
     this.currentAuthMethod = method;
     log(`Authentication method successfully set to: ${method}`);
