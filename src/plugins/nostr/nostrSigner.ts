@@ -1,6 +1,7 @@
 import { NostrConnector } from "./nostrConnector";
 import { logDebug, logError } from "../../utils/logger";
 import derive from "../../gundb/derive";
+import { ethers } from "ethers";
 
 /**
  * Nostr Signing Credential for oneshot signing
@@ -160,30 +161,9 @@ export class NostrSigner {
 
     try {
       // SAME LOGIC as NostrConnector.generatePassword
-      // Normalize the signature to ensure it's clean
       const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
-
-      // Create a hash using a simple algorithm
-      let hash = "";
-      let runningValue = 0;
-
-      for (let i = 0; i < normalizedSig.length; i++) {
-        const charCode = normalizedSig.charCodeAt(i);
-        runningValue = (runningValue * 31 + charCode) & 0xffffffff;
-
-        if (i % 8 === 7) {
-          hash += runningValue.toString(16).padStart(8, "0");
-        }
-      }
-
-      // Ensure we have at least 64 characters
-      while (hash.length < 64) {
-        runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
-        hash += runningValue.toString(16).padStart(8, "0");
-      }
-
-      // Trim to 64 characters (matching the normal approach)
-      return hash.substring(0, 64);
+      const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
+      return passwordHash;
     } catch (error) {
       logError("Error generating password:", error);
       throw new Error("Failed to generate password from signature");

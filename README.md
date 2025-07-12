@@ -8,22 +8,6 @@
 
 Shogun Core is a comprehensive SDK for building decentralized applications (dApps) that simplifies authentication, wallet management, and decentralized data storage. It combines GunDB's peer-to-peer networking with modern authentication standards and blockchain integration to provide a secure, user-friendly foundation for Web3 applications.
 
-## Key Features
-
-- **[Multi-Method Authentication](wiki/core.md#authentication)**: Support for traditional passwords, WebAuthn biometrics, Ethereum wallets, and Nostr/Bitcoin protocols
-- **[Decentralized Storage](wiki/gundb.md)**: Built on GunDB with offline resilience, real-time sync, and peer-to-peer networking
-- **[Reactive Data Flows](wiki/gundb.md#reactive-programming-with-rxjs)**: RxJS integration for building responsive, real-time user interfaces
-- **[Enterprise Security](wiki/core.md#security)**: End-to-end encryption, secure key management, and modern cryptographic standards
-- **[Plugin Architecture](wiki/core.md#plugin-system)**: Extensible system for adding custom authentication methods and functionality
-
-## Core Components
-
-- **[Core SDK](wiki/core.md)**: Main SDK entry point, configuration, and plugin management
-- **[GunDB Integration](wiki/gundb.md)**: Enhanced wrapper around GunDB with direct authentication and RxJS support
-- **[WebAuthn Plugin](wiki/webauthn.md)**: Passwordless authentication with biometrics and security keys
-- **[Web3 Plugin](wiki/web3.md)**: Ethereum wallet integration and blockchain authentication
-- **[Nostr Plugin](wiki/nostr.md)**: Bitcoin and Nostr protocol integration for decentralized identity
-
 ## Installation
 
 ```bash

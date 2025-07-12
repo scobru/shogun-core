@@ -24,7 +24,6 @@ const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
 const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
-const gun_put_headers_1 = require("./gundb/gun-put-headers");
 const gundb_1 = require("./gundb");
 Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return gundb_1.Gun; } });
 Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return gundb_1.SEA; } });
@@ -34,12 +33,6 @@ Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { 
 Object.defineProperty(exports, "utils", { enumerable: true, get: function () { return gundb_1.utils; } });
 Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return gundb_1.derive; } });
 Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return gundb_1.GunErrors; } });
-require("gun/lib/then");
-require("gun/lib/radix");
-require("gun/lib/radisk");
-require("gun/lib/store");
-require("gun/lib/rindexed");
-require("gun/lib/webrtc");
 __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./plugins"), exports);
 __exportStar(require("./types/shogun"), exports);
@@ -55,15 +48,15 @@ __exportStar(require("./types/shogun"), exports);
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "v1.2.9c";
-    _gun;
-    _user = null;
+    static API_VERSION = "^1.4.3";
     gundb;
     storage;
-    eventEmitter;
     provider;
     config;
     rx;
+    _gun;
+    _user = null;
+    eventEmitter;
     plugins = new Map();
     currentAuthMethod;
     /**
@@ -89,7 +82,7 @@ class ShogunCore {
             });
         });
         if (config.authToken) {
-            (0, gun_put_headers_1.restrictedPut)(gundb_1.Gun, config.authToken);
+            (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
         }
         try {
             if (config.gunInstance) {
@@ -110,7 +103,6 @@ class ShogunCore {
         try {
             this.gundb = new gundb_1.GunInstance(this._gun, config.scope || "");
             this._gun = this.gundb.gun;
-            // Forward Gun events from GunInstance to main event emitter
             this.setupGunEventForwarding();
         }
         catch (error) {
@@ -174,7 +166,6 @@ class ShogunCore {
                 this.eventEmitter.emit(eventName, data);
             });
         });
-        // Forward all Gun peer events
         const peerEvents = [
             "gun:peer:add",
             "gun:peer:remove",
@@ -217,12 +208,8 @@ class ShogunCore {
             if (config.oauth?.enabled) {
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 oauthPlugin._category = shogun_1.PluginCategory.Authentication;
-                // Configure the plugin with provider settings from config
-                if (config.oauth.providers) {
-                    oauthPlugin.configure({
-                        providers: config.oauth.providers,
-                    });
-                }
+                // Configure the plugin with the complete OAuth configuration
+                oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
                 (0, logger_1.log)("OAuth plugin registered with providers:", config.oauth.providers);
             }
@@ -486,7 +473,6 @@ class ShogunCore {
         }
         catch (error) {
             (0, logger_1.logError)(`Error during registration for user ${username}:`, error);
-            // Emit a debug event to monitor the flow in case of exception
             this.eventEmitter.emit("debug", {
                 action: "signup_exception",
                 username,
@@ -498,6 +484,14 @@ class ShogunCore {
                 error: error.message ?? "Unknown error during registration",
             };
         }
+    }
+    async auth(gunPair) {
+        return this.gundb.gun.user().auth(gunPair, (ack) => {
+            if (ack.err) {
+                return { success: false, error: ack.err };
+            }
+            return { success: true, userPub: this.gundb.gun.user().is?.pub };
+        });
     }
     // 📢 EVENT EMITTER 📢
     /**

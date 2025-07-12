@@ -27,6 +27,7 @@ export interface OAuthProviderConfig {
   authUrl: string;
   tokenUrl: string;
   userInfoUrl: string;
+  usePKCE?: boolean;
 }
 
 /**
@@ -36,6 +37,10 @@ export interface OAuthConfig extends BaseConfig {
   providers: Partial<Record<OAuthProvider, OAuthProviderConfig>>;
   usePKCE?: boolean; // Use PKCE for security
   cacheDuration?: number; // Duration for cache
+  timeout?: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  allowUnsafeClientSecret?: boolean;
 }
 
 /**
@@ -116,6 +121,7 @@ export interface OAuthPluginInterface {
   generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
+    masterkey?: string,
   ): Promise<OAuthCredentials>;
 
   /**

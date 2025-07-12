@@ -24,7 +24,6 @@ export class OAuthConnector extends EventEmitter {
     providers: {
       google: {
         clientId: "",
-        clientSecret: "",
         redirectUri: `${this.getOrigin()}/auth/callback`,
         scope: ["openid", "email", "profile"],
         authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -33,7 +32,6 @@ export class OAuthConnector extends EventEmitter {
       },
       github: {
         clientId: "",
-        clientSecret: "",
         redirectUri: `${this.getOrigin()}/auth/callback`,
         scope: ["user:email"],
         authUrl: "https://github.com/login/oauth/authorize",
@@ -42,7 +40,6 @@ export class OAuthConnector extends EventEmitter {
       },
       discord: {
         clientId: "",
-        clientSecret: "",
         redirectUri: `${this.getOrigin()}/auth/callback`,
         scope: ["identify", "email"],
         authUrl: "https://discord.com/api/oauth2/authorize",
@@ -51,7 +48,6 @@ export class OAuthConnector extends EventEmitter {
       },
       twitter: {
         clientId: "",
-        clientSecret: "",
         redirectUri: `${this.getOrigin()}/auth/callback`,
         scope: ["tweet.read", "users.read"],
         authUrl: "https://twitter.com/i/oauth2/authorize",
@@ -60,7 +56,6 @@ export class OAuthConnector extends EventEmitter {
       },
       custom: {
         clientId: "",
-        clientSecret: "",
         redirectUri: "",
         scope: [],
         authUrl: "",
@@ -73,6 +68,7 @@ export class OAuthConnector extends EventEmitter {
     timeout: 60000,
     maxRetries: 3,
     retryDelay: 1000,
+    allowUnsafeClientSecret: true, // New flag to allow client_secret in localhost
   };
 
   private config: Partial<OAuthConfig>;
@@ -253,47 +249,43 @@ export class OAuthConnector extends EventEmitter {
   }
 
   /**
-   * Initiate OAuth flow with a provider
+   * Initiate OAuth flow
    */
-  async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
+  async initiateOAuth(
+    provider: OAuthProvider,
+    pin?: string,
+  ): Promise<OAuthConnectionResult> {
+    const providerConfig = this.config.providers?.[provider];
+    if (!providerConfig) {
+      const errorMsg = `Provider '${provider}' is not configured.`;
+      logError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
     try {
-      logDebug(`Initiating OAuth flow with ${provider}`);
-
-      const providerConfig = this.config.providers![provider];
-      if (!providerConfig || !providerConfig.clientId) {
-        throw new Error(`Provider ${provider} not configured`);
-      }
-
-      // Generate state for CSRF protection
       const state = this.generateRandomString(32);
       this.setItem(`oauth_state_${provider}`, state);
 
-      // Generate PKCE challenge if enabled
-      let pkceParams = {};
-      if (this.config.usePKCE) {
-        const { codeVerifier, codeChallenge } =
-          await this.generatePKCEChallenge();
-        this.setItem(`oauth_verifier_${provider}`, codeVerifier);
-        pkceParams = {
-          code_challenge: codeChallenge,
-          code_challenge_method: "S256",
-        };
-      }
-
-      // Build authorization URL
+      let authUrl = providerConfig.authUrl;
       const authParams = new URLSearchParams({
         client_id: providerConfig.clientId,
         redirect_uri: providerConfig.redirectUri,
-        scope: providerConfig.scope.join(" "),
         response_type: "code",
         state,
-        ...pkceParams,
       });
 
-      // Handle the authorization URL that might already contain query parameters
-      let authUrl = providerConfig.authUrl || "";
-      if (!authUrl) {
-        throw new Error(`Auth URL not configured for provider ${provider}`);
+      // Add scope if configured
+      if (providerConfig.scope && providerConfig.scope.length > 0) {
+        authParams.set("scope", providerConfig.scope.join(" "));
+      }
+
+      // Add PKCE if enabled
+      if (providerConfig.usePKCE ?? this.config.usePKCE) {
+        const { codeVerifier, codeChallenge } =
+          await this.generatePKCEChallenge();
+        this.setItem(`oauth_verifier_${provider}`, codeVerifier);
+        authParams.set("code_challenge", codeChallenge);
+        authParams.set("code_challenge_method", "S256");
       }
 
       // If the authorization URL already contains query parameters, add the new parameters
@@ -326,6 +318,7 @@ export class OAuthConnector extends EventEmitter {
     provider: OAuthProvider,
     authCode: string,
     state?: string,
+    userPin?: string,
   ): Promise<OAuthConnectionResult> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
@@ -358,7 +351,11 @@ export class OAuthConnector extends EventEmitter {
       this.cacheUserInfo(userInfo.id, provider, userInfo);
 
       // Generate credentials
-      const credentials = await this.generateCredentials(userInfo, provider);
+      const credentials = await this.generateCredentials(
+        userInfo,
+        provider,
+        userPin || "",
+      );
 
       this.emit("oauth_completed", { provider, userInfo, credentials });
 
@@ -382,13 +379,13 @@ export class OAuthConnector extends EventEmitter {
   async generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
+    userPin: string,
   ): Promise<OAuthCredentials> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
       throw new Error(`Provider ${provider} is not configured.`);
     }
 
-    const salt = `${provider}@${userInfo.id}`;
     const username = userInfo.email || `${userInfo.id}@${provider}.shogun`;
 
     try {
@@ -398,6 +395,7 @@ export class OAuthConnector extends EventEmitter {
       const password = await this.generateDeterministicPassword(
         userInfo,
         provider,
+        userPin,
       );
 
       const credentials: OAuthCredentials = {
@@ -423,8 +421,9 @@ export class OAuthConnector extends EventEmitter {
   private async generateDeterministicPassword(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
+    userPin: string,
   ): Promise<string> {
-    const passwordBase = `${userInfo.id}_${provider}_${userInfo.email || ""}_shogun_oauth`;
+    const passwordBase = `${userInfo.id}_${provider}_${userInfo.email || ""}_shogun_oauth_${userPin}`;
     const passwordHash = ethers.keccak256(ethers.toUtf8Bytes(passwordBase));
     return passwordHash.slice(2, 34); // 32 character hex string
   }
@@ -438,7 +437,7 @@ export class OAuthConnector extends EventEmitter {
     code: string,
     state?: string,
   ): Promise<any> {
-    const storedState = await this.getItem(`oauth_state_${provider}`);
+    const storedState = this.getItem(`oauth_state_${provider}`);
 
     if (state && storedState !== state) {
       throw new Error("Invalid state parameter");
@@ -451,36 +450,80 @@ export class OAuthConnector extends EventEmitter {
       grant_type: "authorization_code",
     };
 
-    // Add client secret if available
-    if (providerConfig.clientSecret) {
+    // Check for PKCE first
+    const isPKCEEnabled = providerConfig.usePKCE ?? this.config.usePKCE;
+    if (isPKCEEnabled) {
+      logDebug("PKCE enabled, retrieving code verifier...");
+
+      // Debug: Show all oauth-related keys in sessionStorage
+      if (typeof sessionStorage !== "undefined") {
+        const oauthKeys = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith("oauth_")) {
+            oauthKeys.push(key);
+          }
+        }
+        logDebug("OAuth keys in sessionStorage:", oauthKeys);
+      }
+
+      const verifier = this.getItem(`oauth_verifier_${provider}`);
+      logDebug(
+        `Looking for key: oauth_verifier_${provider}, found:`,
+        !!verifier,
+      );
+      if (verifier) {
+        logDebug(
+          `Found code verifier for PKCE flow: ${verifier.substring(0, 10)}... (length: ${verifier.length})`,
+        );
+        tokenParams.code_verifier = verifier;
+      } else {
+        throw new Error("PKCE enabled but no code verifier found");
+      }
+    } else if (
+      providerConfig.clientSecret &&
+      providerConfig.clientSecret.trim() !== "" &&
+      (typeof window === "undefined" ||
+        (this.config.allowUnsafeClientSecret &&
+          window.location.hostname === "localhost"))
+    ) {
+      // Only add client secret if PKCE is not enabled
+      // Add client secret only if available AND we are in a non-browser environment.
+      // Exposing client_secret in the browser is a major security risk.
       tokenParams.client_secret = providerConfig.clientSecret;
+    } else {
+      logWarn(
+        "Client secret is required when PKCE is not enabled. Please enable PKCE or configure a client secret.",
+      );
     }
 
-    if (this.config.usePKCE) {
-      const verifier = await this.getItem(`oauth_verifier_${provider}`);
-      if (verifier) {
-        tokenParams.code_verifier = verifier;
-        this.removeItem(`oauth_verifier_${provider}`);
-      } else {
-        logWarn(
-          `PKCE is enabled, but no code verifier was found for ${provider}.`,
-        );
-      }
-    }
+    // Clean up verifier
+    this.removeItem(`oauth_verifier_${provider}`);
+
+    // Debug: Log what we're sending
+    logDebug(
+      "Token exchange parameters:",
+      JSON.stringify(tokenParams, null, 2),
+    );
+    logDebug("PKCE enabled:", isPKCEEnabled);
+    logDebug("Has code_verifier:", !!tokenParams.code_verifier);
+    logDebug("Has client_secret:", !!tokenParams.client_secret);
+
+    const urlParams = new URLSearchParams(tokenParams);
+    logDebug("Request body keys:", Array.from(urlParams.keys()));
+    logDebug("Request body has code_verifier:", urlParams.has("code_verifier"));
+    logDebug("Request body has client_secret:", urlParams.has("client_secret"));
 
     const response = await fetch(providerConfig.tokenUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
       },
-      body: new URLSearchParams(tokenParams),
+      body: urlParams.toString(),
     });
 
     if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ error: response.statusText }));
+      const errorData = await response.json().catch(() => ({}));
       throw new Error(
         `Token exchange failed: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
       );
@@ -490,7 +533,7 @@ export class OAuthConnector extends EventEmitter {
   }
 
   /**
-   * Get user info from OAuth provider
+   * Fetch user info from provider
    */
   private async fetchUserInfo(
     provider: OAuthProvider,
@@ -500,12 +543,13 @@ export class OAuthConnector extends EventEmitter {
     const response = await fetch(providerConfig.userInfoUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to get user info: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch user info: ${response.status} ${response.statusText}`,
+      );
     }
 
     const userData = await response.json();
@@ -513,7 +557,7 @@ export class OAuthConnector extends EventEmitter {
   }
 
   /**
-   * Normalize user info across different providers
+   * Normalize user info from different providers
    */
   private normalizeUserInfo(
     userData: any,
@@ -526,7 +570,6 @@ export class OAuthConnector extends EventEmitter {
           email: userData.email,
           name: userData.name,
           picture: userData.picture,
-          verified_email: userData.verified_email,
           provider,
         };
       case "github":
@@ -537,12 +580,28 @@ export class OAuthConnector extends EventEmitter {
           picture: userData.avatar_url,
           provider,
         };
+      case "discord":
+        return {
+          id: userData.id,
+          email: userData.email,
+          name: userData.username,
+          picture: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
+          provider,
+        };
+      case "twitter":
+        return {
+          id: userData.data.id,
+          email: userData.data.email,
+          name: userData.data.name,
+          picture: userData.data.profile_image_url,
+          provider,
+        };
       default:
         return {
-          id: userData.id?.toString() || userData.sub,
-          email: userData.email,
-          name: userData.name || userData.username,
-          picture: userData.picture || userData.avatar_url,
+          id: userData.id?.toString() || "",
+          email: userData.email || "",
+          name: userData.name || "",
+          picture: userData.picture || userData.avatar_url || "",
           provider,
         };
     }
@@ -559,21 +618,21 @@ export class OAuthConnector extends EventEmitter {
     const cacheKey = `${provider}_${userId}`;
     const cacheEntry: OAuthCache = {
       data: userInfo,
-      timestamp: Date.now(),
       provider,
       userId,
+      timestamp: Date.now(),
     };
 
     this.userCache.set(cacheKey, cacheEntry);
 
-    // Also store in localStorage for persistence
+    // Also try to persist in localStorage
     try {
       localStorage.setItem(
         `shogun_oauth_user_${cacheKey}`,
         JSON.stringify(cacheEntry),
       );
     } catch (error) {
-      logError("Error caching user info:", error);
+      logWarn("Failed to persist user info in localStorage:", error);
     }
   }
 
@@ -586,40 +645,41 @@ export class OAuthConnector extends EventEmitter {
   ): OAuthUserInfo | null {
     const cacheKey = `${provider}_${userId}`;
 
-    // Check memory cache first
+    // First check memory cache
     const cached = this.userCache.get(cacheKey);
-    if (
-      cached &&
-      cached.data &&
-      Date.now() - cached.timestamp <= this.config.cacheDuration!
-    ) {
-      return cached.data;
+    if (cached) {
+      // Check if cache is still valid
+      if (
+        this.config.cacheDuration &&
+        Date.now() - cached.timestamp <= this.config.cacheDuration
+      ) {
+        return cached.data || null;
+      }
     }
 
-    // Check localStorage
+    // Then check localStorage
     try {
       const localCached = localStorage.getItem(`shogun_oauth_user_${cacheKey}`);
       if (localCached) {
         const parsedCache = JSON.parse(localCached);
         if (
-          parsedCache.data &&
-          Date.now() - parsedCache.timestamp <= this.config.cacheDuration!
+          this.config.cacheDuration &&
+          Date.now() - parsedCache.timestamp <= this.config.cacheDuration
         ) {
+          // Update memory cache
           this.userCache.set(cacheKey, parsedCache);
-          return parsedCache.data;
-        } else {
-          localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
+          return parsedCache.userInfo;
         }
       }
     } catch (error) {
-      logError("Error reading cached user info:", error);
+      logWarn("Failed to read user info from localStorage:", error);
     }
 
     return null;
   }
 
   /**
-   * Clear user info cache
+   * Clear user cache
    */
   clearUserCache(userId?: string, provider?: OAuthProvider): void {
     if (userId && provider) {
@@ -628,13 +688,13 @@ export class OAuthConnector extends EventEmitter {
       try {
         localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
       } catch (error) {
-        logError("Error clearing user cache:", error);
+        logWarn("Failed to remove user info from localStorage:", error);
       }
     } else {
-      // Clear all caches
+      // Clear all cache
       this.userCache.clear();
       try {
-        const keysToRemove: string[] = [];
+        const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith("shogun_oauth_user_")) {
@@ -643,13 +703,13 @@ export class OAuthConnector extends EventEmitter {
         }
         keysToRemove.forEach((key) => localStorage.removeItem(key));
       } catch (error) {
-        logError("Error clearing all user caches:", error);
+        logWarn("Failed to clear user info from localStorage:", error);
       }
     }
   }
 
   /**
-   * Cleanup resources
+   * Cleanup
    */
   cleanup(): void {
     this.removeAllListeners();

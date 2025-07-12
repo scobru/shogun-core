@@ -412,15 +412,17 @@ class Web3Connector extends EventEmitter {
         this.cacheSignature(validAddress, signature);
 
         return this.generateCredentialsFromSignature(validAddress, signature);
-      } catch (signingError) {
+      } catch (signingError: any) {
         // Gestione del fallimento di firma
-        logWarn(
-          `Failed to get signature: ${signingError}. Using fallback method.`,
+        logError(
+          `Failed to get signature: ${signingError.message}. Authentication cannot proceed without a valid signature.`,
         );
 
-        // Generiamo credenziali deterministiche basate solo sull'indirizzo
-        // Non sicuro come la firma, ma permette di procedere con l'autenticazione
-        return this.generateFallbackCredentials(validAddress);
+        // Throw an error to stop the authentication flow.
+        // The insecure fallback has been removed.
+        throw new Error(
+          `Signature request failed or was denied: ${signingError.message}`,
+        );
       }
     } catch (error: any) {
       ErrorHandler.handle(
@@ -456,20 +458,14 @@ class Web3Connector extends EventEmitter {
   private generateFallbackCredentials(
     address: string,
   ): Web3ConnectorCredentials {
-    logWarn("Using fallback credentials generation for address:", address);
-    const username = `mm_${address.toLowerCase()}`;
-
-    // Creiamo una password deterministica basata sull'indirizzo
-    // Nota: meno sicuro della firma, ma deterministico
-    const fallbackMessage = `SHOGUN_FALLBACK:${address.toLowerCase()}`;
-    const password = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
-
-    // Usiamo il messaggio fallback sia come messaggio che come pseudo-firma
-    // Questo non è crittograficamente sicuro, ma soddisfa l'interfaccia
-    const message = fallbackMessage;
-    const signature = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
-
-    return { username, password, message, signature };
+    // THIS METHOD IS INSECURE AND HAS BEEN DISABLED.
+    // Throw an error instead of generating insecure credentials.
+    logError(
+      "INSECURE FALLBACK: generateFallbackCredentials was called. This function is disabled.",
+    );
+    throw new Error(
+      "Cannot generate credentials without a valid signature. Fallback method is disabled for security reasons.",
+    );
   }
 
   /**

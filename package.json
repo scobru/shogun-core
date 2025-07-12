@@ -22,8 +22,6 @@
     "build": "yarn docs && yarn format && yarn run build:cjs && yarn run build:browser",
     "build:cjs": "tsc",
     "build:browser": "webpack --config webpack.config.cjs",
-    "build:light": "webpack --config webpack.light.config.cjs",
-    "build:all": "yarn run build && yarn run build:light",
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
@@ -47,6 +45,7 @@
     "ethers": "^6.13.5",
     "gun": "^0.2020.1240",
     "keccak256": "^1.0.6",
+    "nostr-tools": "^2.15.0",
     "paillier-bigint": "^3.4.3",
     "qs": "^6.14.0",
     "rxjs": "^7.8.2",
@@ -54,6 +53,11 @@
     "vm-browserify": "^1.1.2"
   },
   "devDependencies": {
+    "@babel/core": "^7.24.3",
+    "@babel/preset-env": "^7.24.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.24.1",
+    "@babel/plugin-proposal-optional-chaining": "^7.24.1",
+    "babel-loader": "^9.1.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.11.24",
     "buffer": "^6.0.3",

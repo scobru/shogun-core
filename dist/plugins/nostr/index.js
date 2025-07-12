@@ -13,14 +13,8 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.nostrChain = void 0;
 __exportStar(require("./nostrConnectorPlugin"), exports);
 __exportStar(require("./nostrConnector"), exports);
 __exportStar(require("./nostrSigner"), exports);
 __exportStar(require("./types"), exports);
-var nostrChain_1 = require("./nostrChain");
-Object.defineProperty(exports, "nostrChain", { enumerable: true, get: function () { return __importDefault(nostrChain_1).default; } });

@@ -26,6 +26,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
   private oauthConnector: OAuthConnector | null = null;
   private config: Partial<OAuthConfig> = {};
+  private pin?: string;
 
   /**
    * @inheritdoc
@@ -37,6 +38,14 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     this.oauthConnector = new OAuthConnector(this.config);
 
     log("OAuth plugin initialized successfully");
+  }
+
+  /**
+   * Set the pin for the OAuth plugin
+   * @param pin - The pin to set
+   */
+  setPin(pin: string): void {
+    this.pin = pin;
   }
 
   /**
@@ -117,9 +126,14 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
+    userPin: string,
   ): Promise<OAuthCredentials> {
     log(`Generating credentials for ${provider} user`);
-    return this.assertOAuthConnector().generateCredentials(userInfo, provider);
+    return this.assertOAuthConnector().generateCredentials(
+      userInfo,
+      provider,
+      userPin,
+    );
   }
 
   /**
@@ -297,9 +311,17 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async handleOAuthCallback(
     provider: OAuthProvider,
     authCode: string,
-    state?: string,
+    state: string | undefined,
   ): Promise<AuthResult> {
     try {
+      if (!this.pin) {
+        throw createError(
+          ErrorType.VALIDATION,
+          "PIN_REQUIRED",
+          "Pin is required for OAuth callback",
+        );
+      }
+
       log(`Handling OAuth callback for ${provider}`);
       const core = this.assertInitialized();
 
@@ -314,6 +336,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       const credentials = await this.generateCredentials(
         result.userInfo,
         provider,
+        this.pin,
       );
 
       // Set authentication method

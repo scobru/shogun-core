@@ -24,9 +24,9 @@ declare class NostrConnector extends EventEmitter {
      */
     private setupEventListeners;
     /**
-     * Cleanup event listeners
+     * Generate a deterministic password from an address
      */
-    cleanup(): void;
+    private generateDeterministicPassword;
     /**
      * Get cached signature if valid
      */
@@ -72,14 +72,6 @@ declare class NostrConnector extends EventEmitter {
      */
     generateCredentials(address: string): Promise<NostrConnectorCredentials>;
     /**
-     * Generate a deterministic signature for consistent authentication
-     */
-    private generateDeterministicSignature;
-    /**
-     * Generate credentials from an existing signature
-     */
-    private generateCredentialsFromSignature;
-    /**
      * Generate a password from a signature
      */
     generatePassword(signature: string): Promise<string>;
@@ -103,5 +95,9 @@ declare class NostrConnector extends EventEmitter {
      * Request a signature from the connected wallet
      */
     private requestSignature;
+    /**
+     * Cleanup event listeners
+     */
+    cleanup(): void;
 }
 export { NostrConnector };

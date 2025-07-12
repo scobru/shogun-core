@@ -9,4 +9,3 @@ export type {
   OAuthConnectionResult,
   OAuthUserInfo,
 } from "./types";
-export { default as oauthChain } from "./oauthChain";

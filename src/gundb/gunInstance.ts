@@ -4,22 +4,32 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
+
 import Gun from "gun/gun";
-import { default as SEA } from "gun/sea.js";
+import SEA from "gun/sea";
+
+import "gun/lib/then.js";
+import "gun/lib/radix.js";
+import "gun/lib/radisk.js";
+import "gun/lib/store.js";
+import "gun/lib/rindexed.js";
+import "gun/lib/webrtc.js";
+import "gun/lib/yson.js";
+
+import { restrictedPut } from "./gun-put-headers";
+import derive, { DeriveOptions } from "./derive";
+
 import type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";
-
 import { GunDataEventData, GunPeerEventData } from "../types/events";
 import { GunRxJS } from "./rxjs-integration";
 
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 import * as utils from "./utils";
-
-import derive, { DeriveOptions } from "./derive";
 
 class GunInstance {
   public gun: IGunInstance<any>;
@@ -551,6 +561,8 @@ class GunInstance {
         // Check if user exists in our tracking system
         const existingUser = await this.checkUsernameExists(username);
 
+        log("existingUser", existingUser);
+
         if (!existingUser) {
           log(`User ${username} not in tracking system, adding them...`);
 
@@ -633,18 +645,7 @@ class GunInstance {
         this.gun.user().create(username, password, (ack: any) => {
           if (ack.err) {
             logError(`User creation error: ${ack.err}`);
-
-            // If user already exists in Gun's system but not accessible with current credentials,
-            // this might be a synchronization issue or the user was created in a different session
-            if (ack.err.includes("User already created")) {
-              resolve({
-                success: false,
-                error: `User '${username}' already exists in the system but cannot be accessed with the provided credentials. This might be due to a previous incomplete registration or synchronization issue. Please try a different username or contact support.`,
-                isUserExistsError: true,
-              });
-            } else {
-              resolve({ success: false, error: ack.err });
-            }
+            resolve({ success: false, error: ack.err });
           } else {
             log(`User created successfully: ${username}`);
             resolve({ success: true, pub: ack.pub });
@@ -653,16 +654,6 @@ class GunInstance {
       });
 
       if (!createResult.success) {
-        // If it's a "user already exists" error, provide more helpful guidance
-        if (createResult.isUserExistsError) {
-          log(`User creation failed due to existing user: ${username}`);
-          return {
-            success: false,
-            error: createResult.error,
-            suggestion:
-              "Try using a different username or clear your browser data if you believe this is an error.",
-          };
-        }
         return createResult;
       }
 
@@ -762,7 +753,7 @@ class GunInstance {
    */
   private async checkUsernameExists(username: string): Promise<any> {
     try {
-      // First check the username mapping (faster)
+      // 1. Cerca la mappatura username → pub
       const mappedPub = await new Promise<string | null>((resolve) => {
         this.node
           .get("usernames")
@@ -773,29 +764,32 @@ class GunInstance {
       });
 
       if (mappedPub) {
-        // Get user data from the pub
+        // 2. Se trovata, recupera i dati utente dal pub
         const userData = await new Promise<any>((resolve) => {
           this.node.get(mappedPub).once((data: any) => {
-            resolve(data);
+            resolve(data || null);
           });
         });
         return userData;
       }
 
-      // Fallback: Search through all users collection (slower but more reliable)
-      const existingUser = await new Promise<any>((resolve) => {
-        let found = false;
-
-        this.node
-          .get("users")
-          .map()
-          .once((userData: any, key: string) => {
-            if (!found && userData && userData.username === username) {
-              found = true;
-              resolve(userData);
-            }
-          });
-      });
+      // 3. Fallback: cerca tra tutti gli utenti (lento, con timeout)
+      const existingUser = await Promise.race([
+        new Promise<any>((resolve) => {
+          let found = false;
+          const ref = this.node
+            .get("users")
+            .map()
+            .once((userData: any, key: string) => {
+              if (!found && userData && userData.username === username) {
+                found = true;
+                resolve(userData);
+                // ref.off(); // opzionale, se vuoi interrompere la ricerca
+              }
+            });
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+      ]);
 
       return existingUser;
     } catch (error) {
@@ -861,6 +855,8 @@ class GunInstance {
       try {
         // Check if user exists in our tracking system
         const existingUser = await this.checkUsernameExists(username);
+
+        log("existingUser", existingUser);
 
         if (!existingUser) {
           log(`User ${username} not found in tracking system, adding them...`);
@@ -1372,6 +1368,8 @@ class GunInstance {
       // Find the user's data
       const userData = await this.checkUsernameExists(username);
 
+      log("userData", userData);
+
       if (!userData || !userData.pub) {
         return { success: false, error: "User not found" };
       }
@@ -1629,7 +1627,17 @@ class GunInstance {
   static Errors = GunErrors;
 }
 
-export { GunInstance, SEA, Gun, GunRxJS, crypto, utils, GunErrors, derive };
+export {
+  GunInstance,
+  SEA,
+  Gun,
+  GunRxJS,
+  crypto,
+  utils,
+  GunErrors,
+  derive,
+  restrictedPut,
+};
 
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };

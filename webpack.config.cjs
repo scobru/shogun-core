@@ -12,12 +12,17 @@ module.exports = {
       type: "umd",
     },
     globalObject: "this",
+    // Add clean webpack plugin configuration
+    clean: true,
   },
   resolve: {
-    extensions: [".ts", ".js"],
+    extensions: [".ts", ".js", ".json"],
     alias: {
-      // Alias per le dipendenze di gun, non per i file locali
-      gun$: path.resolve(__dirname, "node_modules/gun"),
+      // Explicit aliases for Gun.js modules
+      "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
+      "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
+      "gun/lib/then": path.resolve(__dirname, "node_modules/gun/lib/then.js"),
+      "gun": path.resolve(__dirname, "node_modules/gun"),
     },
     fallback: {
       crypto: require.resolve("crypto-browserify"),
@@ -38,6 +43,33 @@ module.exports = {
         use: "ts-loader",
         exclude: /node_modules/,
       },
+      {
+        test: /node_modules\/(gun|gun-browser)\/((?!build).)*\.js$/,
+        parser: {
+          amd: false,
+          commonjs: false,
+          system: false,
+          exprContext: false,
+          wrappedContext: false,
+          requireJs: false,
+        },
+      },
+      // Add explicit loader for Gun.js modules
+      {
+        test: /node_modules\/gun\/(gun\.js|sea\.js)$/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: ['@babel/preset-env'],
+              plugins: [
+                '@babel/plugin-transform-modules-commonjs',
+                '@babel/plugin-proposal-optional-chaining'
+              ]
+            }
+          }
+        ]
+      }
     ],
   },
   plugins: [
@@ -45,37 +77,54 @@ module.exports = {
       Buffer: ["buffer", "Buffer"],
       process: "process/browser",
     }),
-    // Aggiungi un polyfill per crypto.randomUUID
     new webpack.DefinePlugin({
-      "crypto.randomUUID":
+      "crypto.randomUUID": 
         'function() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0, v = c == "x" ? r : (r & 0x3 | 0x8); return v.toString(16); })}',
     }),
-    // Ignora avvisi specifici per Gun.js
+    // Ignore specific Gun.js warnings
     new webpack.IgnorePlugin({
       resourceRegExp: /gun\/(sea|lib)$/,
       contextRegExp: /node_modules/,
     }),
+    // Add module concatenation plugin for better tree-shaking
+    new webpack.optimize.ModuleConcatenationPlugin(),
   ],
   optimization: {
     minimize: true,
+    splitChunks: {
+      chunks: 'async',
+      minSize: 20000,
+      maxSize: 200000,
+      minChunks: 1,
+      maxAsyncRequests: 30,
+      maxInitialRequests: 30,
+      automaticNameDelimiter: '~',
+      enforceSizeThreshold: 50000,
+      cacheGroups: {
+        defaultVendors: {
+          test: /[\\/]node_modules[\\/]/,
+          priority: -10,
+          reuseExistingChunk: true,
+        },
+        default: {
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true,
+        }
+      }
+    }
   },
-  // Configurazione per ignorare avvisi specifici
-  ignoreWarnings: [
-    // Ignora avvisi relativi a Gun.js
-    {
-      module: /node_modules\/gun/,
-      message: /Critical dependency/,
-    },
-    // Ignora avvisi relativi a asn1.js
-    {
-      module: /node_modules\/asn1\.js/,
-      message: /.*webpack < 5 used to include polyfills.*/,
-    },
-  ],
-  // Aumentare il limite della dimensione per evitare avvisi di performance
   performance: {
-    maxEntrypointSize: 550000,
-    maxAssetSize: 550000,
-    hints: "warning",
+    maxEntrypointSize: 1000000,  // Increased to 1MB
+    maxAssetSize: 1000000,       // Increased to 1MB
+    hints: 'warning'
+  },
+  // Add source map for better debugging
+  devtool: 'source-map',
+  stats: {
+    warningsFilter: [
+      /the request of a dependency is an expression/,
+      /Critical dependency: the request of a dependency is an expression/,
+    ],
   },
 };

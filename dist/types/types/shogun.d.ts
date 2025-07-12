@@ -120,6 +120,8 @@ export interface ShogunSDKConfig {
     };
     oauth?: {
         enabled?: boolean;
+        usePKCE?: boolean;
+        allowUnsafeClientSecret?: boolean;
         providers?: Record<string, any>;
     };
     logging?: LoggingConfig;

@@ -2,6 +2,14 @@
  * The BitcoinWallet class provides functionality for connecting, signing up, and logging in using Bitcoin wallets.
  * Supports Alby and Nostr extensions, as well as manual key management.
  */
+import { ethers } from "ethers";
+import {
+  verifyEvent,
+  finalizeEvent,
+  utils as nostrUtils,
+  getEventHash,
+} from "nostr-tools";
+import type { Event } from "nostr-tools";
 import { log, logDebug, logError, logWarn } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -61,13 +69,14 @@ class NostrConnector extends EventEmitter {
   }
 
   /**
-   * Cleanup event listeners
+   * Generate a deterministic password from an address
    */
-  public cleanup(): void {
-    this.removeAllListeners();
-    this.connectedAddress = null;
-    this.connectedType = null;
-    this.manualKeyPair = null;
+  private async generateDeterministicPassword(
+    address: string,
+  ): Promise<string> {
+    const salt = "shogun-nostr-password-salt-v2"; // Use a constant salt.
+    const saltedAddress = `${address}:${salt}:${this.MESSAGE_TO_SIGN}`;
+    return ethers.sha256(ethers.toUtf8Bytes(saltedAddress));
   }
 
   /**
@@ -377,148 +386,36 @@ class NostrConnector extends EventEmitter {
       // Validate the address
       const validAddress = this.validateAddress(address);
 
-      // Check cache first
-      const cachedSignature = this.getCachedSignature(validAddress);
-      if (cachedSignature) {
-        logDebug("Using cached signature");
-        return await this.generateCredentialsFromSignature(
+      // We still need a signature to prove ownership, but we won't use it for the password.
+      // We can check the cache for a signature to avoid prompting the user again.
+      let signature = this.getCachedSignature(validAddress);
+      if (!signature) {
+        signature = await this.requestSignatureWithTimeout(
           validAddress,
-          cachedSignature,
+          this.MESSAGE_TO_SIGN,
+          this.config.timeout,
         );
-      }
-
-      // For consistent authentication, we need to use a deterministic approach
-      // that doesn't require a fresh signature each time
-      const message = this.MESSAGE_TO_SIGN;
-      let signature: string;
-
-      // NEW STRATEGY: Always try deterministic signature first for consistency
-      // This ensures that existing users get the same credentials even after localStorage.clear()
-      try {
-        // First, try to use a deterministic signature based on the address
-        // This ensures consistent credentials across sessions
-        signature = await this.generateDeterministicSignature(validAddress);
-
-        log("Using deterministic signature for consistency");
-
-        // Cache this deterministic signature for future use
         this.cacheSignature(validAddress, signature);
-
-        return await this.generateCredentialsFromSignature(
-          validAddress,
-          signature,
-        );
-      } catch (deterministicError) {
-        logError(
-          "Error generating deterministic signature:",
-          deterministicError,
-        );
-
-        // Fallback to requesting a real signature only if deterministic fails
-        try {
-          signature = await this.requestSignatureWithTimeout(
-            validAddress,
-            message,
-            this.config.timeout,
-          );
-
-          // Cache the signature for future use
-          this.cacheSignature(validAddress, signature);
-
-          log("Using real Nostr signature as fallback");
-        } catch (signError) {
-          logError("Error requesting signature:", signError);
-
-          // Final fallback: use deterministic signature anyway
-          signature = await this.generateDeterministicSignature(validAddress);
-          this.cacheSignature(validAddress, signature);
-
-          log("Using deterministic signature as final fallback");
-        }
+        log("Using real Nostr signature for proof, not for password.");
+      } else {
+        logDebug("Using cached signature for proof.");
       }
 
-      return await this.generateCredentialsFromSignature(
-        validAddress,
+      // The password is now generated deterministically from the address.
+      const password = await this.generateDeterministicPassword(validAddress);
+
+      const username = `${validAddress.toLowerCase()}`;
+
+      return {
+        username,
+        password,
+        message: this.MESSAGE_TO_SIGN,
         signature,
-      );
+      };
     } catch (error) {
       logError("Error generating credentials:", error);
       throw error;
     }
-  }
-
-  /**
-   * Generate a deterministic signature for consistent authentication
-   */
-  private async generateDeterministicSignature(
-    address: string,
-  ): Promise<string> {
-    // Create a deterministic signature based on the address and a fixed message
-    // This ensures the same credentials are generated each time for the same address
-    const baseString = `${address}_${this.MESSAGE_TO_SIGN}_shogun_deterministic`;
-
-    // Simple hash function to create a deterministic signature
-    let hash = "";
-    let runningValue = 0;
-
-    for (let i = 0; i < baseString.length; i++) {
-      const charCode = baseString.charCodeAt(i);
-      runningValue = (runningValue * 31 + charCode) & 0xffffffff;
-
-      if (i % 4 === 3) {
-        hash += runningValue.toString(16).padStart(8, "0");
-      }
-    }
-
-    // Ensure we have exactly 128 characters (64 bytes in hex)
-    while (hash.length < 128) {
-      runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
-      hash += runningValue.toString(16).padStart(8, "0");
-    }
-
-    // Ensure the result is exactly 128 characters and contains only valid hex characters
-    let deterministicSignature = hash.substring(0, 128);
-
-    // Double-check that it's a valid hex string
-    deterministicSignature = deterministicSignature
-      .toLowerCase()
-      .replace(/[^0-9a-f]/g, "0");
-
-    // Ensure it's exactly 128 characters
-    if (deterministicSignature.length < 128) {
-      deterministicSignature = deterministicSignature.padEnd(128, "0");
-    } else if (deterministicSignature.length > 128) {
-      deterministicSignature = deterministicSignature.substring(0, 128);
-    }
-
-    log(
-      `Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`,
-    );
-
-    return deterministicSignature;
-  }
-
-  /**
-   * Generate credentials from an existing signature
-   */
-  private async generateCredentialsFromSignature(
-    address: string,
-    signature: string,
-  ): Promise<NostrConnectorCredentials> {
-    log("Generating credentials from signature");
-
-    // Create deterministic username based on the address - similar to MetaMask's approach
-    const username = `${address.toLowerCase()}`;
-
-    // Create password from the signature
-    const password = await this.generatePassword(signature);
-
-    return {
-      username,
-      password,
-      message: this.MESSAGE_TO_SIGN,
-      signature,
-    };
   }
 
   /**
@@ -530,40 +427,10 @@ class NostrConnector extends EventEmitter {
     }
 
     try {
-      // Create a deterministic hash from the signature
-      // Following a similar approach to the Ethereum connector for consistency
-
-      // Normalize the signature to ensure it's clean
+      // Create a deterministic hash from the signature using a secure algorithm
       const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
-
-      // Create a hash using a simple algorithm
-      // In a production environment, you would use a proper crypto library
-      // For example:
-      // const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedSig));
-      // const hashArray = Array.from(new Uint8Array(hashBuffer));
-      // const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-      // For now, implement a simple deterministic hash
-      let hash = "";
-      let runningValue = 0;
-
-      for (let i = 0; i < normalizedSig.length; i++) {
-        const charCode = normalizedSig.charCodeAt(i);
-        runningValue = (runningValue * 31 + charCode) & 0xffffffff;
-
-        if (i % 8 === 7) {
-          hash += runningValue.toString(16).padStart(8, "0");
-        }
-      }
-
-      // Ensure we have at least 64 characters
-      while (hash.length < 64) {
-        runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
-        hash += runningValue.toString(16).padStart(8, "0");
-      }
-
-      // Trim to 64 characters (matching the Ethereum approach that returns 64 chars)
-      return hash.substring(0, 64);
+      const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
+      return passwordHash;
     } catch (error) {
       logError("Error generating password:", error);
       throw new Error("Failed to generate password from signature");
@@ -587,116 +454,59 @@ class NostrConnector extends EventEmitter {
 
       log(`Verifying signature for address: ${addressStr}`);
 
-      if (!signature || !message) {
-        logError("Invalid message or signature for verification");
+      if (!signature || !message || !addressStr) {
+        logError("Invalid message, signature, or address for verification");
         return false;
       }
 
-      // Log signature details for debugging
-      log(
-        `Signature to verify: ${signature.substring(0, 20)}... (length: ${signature.length})`,
-      );
-      log(`Message to verify: ${message}`);
-
-      // For Nostr wallet type, we need to use a proper verification approach
+      // For Nostr wallet type, use nostr-tools for verification
       if (this.connectedType === "nostr" || this.connectedType === "alby") {
-        log("Using Nostr-specific verification");
-
         try {
-          // In a production implementation, we would use proper nostr verification
-          // using secp256k1 to verify the signature
-          //
-          // For example with nostr-tools:
-          // import * as nostr from 'nostr-tools';
-          // const event = {
-          //   kind: 1,
-          //   created_at: Math.floor(Date.now() / 1000),
-          //   tags: [],
-          //   content: message,
-          //   pubkey: address,
-          //   id: '', // would be computed
-          //   sig: signature
-          // };
-          // const verified = nostr.verifySignature(event);
-          // return verified;
+          // Reconstruct the exact event that was signed
+          const eventData = {
+            kind: 1,
+            created_at: 0, // IMPORTANT: Use the same fixed timestamp used for signing
+            tags: [],
+            content: message,
+            pubkey: addressStr,
+          };
+          const event: Event = {
+            ...eventData,
+            id: getEventHash(eventData),
+            sig: signature,
+          };
 
-          // Instead for now, we're checking if the address matches what we have connected
-          // This ensures at least some level of verification
-          if (!this.connectedAddress) {
-            logError("No connected address to verify against");
-            return false;
-          }
-
-          // Convert both addresses to strings for comparison
-          const connectedAddrStr = String(this.connectedAddress).toLowerCase();
-          const verifyAddrStr = addressStr.toLowerCase();
-
-          if (verifyAddrStr !== connectedAddrStr) {
-            logError("Address mismatch in signature verification");
-            logError(`Expected: ${connectedAddrStr}, Got: ${verifyAddrStr}`);
-            return false;
-          }
-
-          // Basic verification that signature exists and is a hex string
-          const isValidHexFormat = /^[0-9a-f]+$/i.test(signature);
-          const hasValidLength = signature.length >= 64;
-
-          log(
-            `Signature format check: hex=${isValidHexFormat}, length=${hasValidLength} (${signature.length} chars)`,
-          );
-
-          if (!isValidHexFormat) {
-            logError("Invalid signature format - not a valid hex string");
-            logError(`Signature contains invalid characters: ${signature}`);
-            return false;
-          }
-
-          if (!hasValidLength) {
-            logError(
-              `Invalid signature length: ${signature.length} (minimum 64 required)`,
-            );
-            return false;
-          }
-
-          log("Nostr signature appears valid");
-          return true;
+          return verifyEvent(event);
         } catch (verifyError) {
-          logError("Error in signature verification:", verifyError);
+          logError("Error in Nostr signature verification:", verifyError);
           return false;
         }
       } else if (this.connectedType === "manual" && this.manualKeyPair) {
-        log("Using manual verification for keypair");
-        // For manual keypairs, implement proper signature verification
-        // For now, we're just checking that the address matches our keypair
+        log("Manual verification for keypair");
+        // For manual keypairs, we MUST use a secure verification method.
+        if (!this.manualKeyPair.privateKey) {
+          logError("Manual verification failed: private key is missing.");
+          return false;
+        }
         try {
-          const manualAddrStr = String(
-            this.manualKeyPair.address,
-          ).toLowerCase();
-          const verifyAddrStr = addressStr.toLowerCase();
-
-          const addressMatch = verifyAddrStr === manualAddrStr;
-          log(`Manual verification - address match: ${addressMatch}`);
-          return addressMatch;
+          const eventData = {
+            kind: 1,
+            created_at: 0, // IMPORTANT: Use the same fixed timestamp used for signing
+            tags: [],
+            content: message,
+            pubkey: addressStr,
+          };
+          const event: Event = {
+            ...eventData,
+            id: getEventHash(eventData),
+            sig: signature,
+          };
+          return verifyEvent(event);
         } catch (manualVerifyError) {
           logError(
             "Error in manual signature verification:",
             manualVerifyError,
           );
-          return false;
-        }
-      }
-
-      // For other wallet types or if API verification is enabled
-      if (this.config.useApi && this.config.apiUrl) {
-        log("Using API-based verification");
-        try {
-          // In a real implementation, this would make an API call to verify
-          // return await this.verifySignatureViaApi(message, signature, address);
-
-          // For now, return true as this is a placeholder
-          return true;
-        } catch (apiError) {
-          logError("API verification error:", apiError);
           return false;
         }
       }
@@ -764,77 +574,72 @@ class NostrConnector extends EventEmitter {
     try {
       switch (this.connectedType) {
         case "alby":
-          // Redirect Alby requests to Nostr
-          logWarn("Alby is deprecated, redirecting signature request to Nostr");
+        case "nostr":
+          if (this.connectedType === "alby") {
+            logWarn(
+              "Alby is deprecated, using Nostr functionality for signature request",
+            );
+          }
+          log("Requesting Nostr signature for message:", message);
 
           if (!window.nostr) {
             throw new Error("Nostr extension not available");
           }
 
-          // For Nostr, we need to create an event to sign
-          const albyRedirectEvent = {
+          // For Nostr, we need to create an event to sign with a fixed timestamp
+          const eventData = {
             kind: 1,
-            created_at: Math.floor(Date.now() / 1000),
+            created_at: 0, // IMPORTANT: Use a fixed timestamp to make signatures verifiable
             tags: [],
             content: message,
             pubkey: address,
           };
-
-          const albyRedirectResult =
-            await window.nostr.signEvent(albyRedirectEvent);
-          return albyRedirectResult.sig;
-
-        case "nostr":
-          log("Requesting Nostr signature for message:", message);
-          // For Nostr, we need to create an event to sign
-          const nostrEvent = {
-            kind: 1,
-            created_at: Math.floor(Date.now() / 1000),
-            tags: [],
-            content: message,
-            pubkey: address,
+          const nostrEvent: Event = {
+            ...eventData,
+            id: getEventHash(eventData),
+            sig: "", // This will be filled by window.nostr.signEvent
           };
 
-          const nostrSignedEvent = await window.nostr!.signEvent(nostrEvent);
+          const signedEvent = await window.nostr!.signEvent(nostrEvent);
           log(
             "Received Nostr signature:",
-            nostrSignedEvent.sig.substring(0, 20) + "...",
+            signedEvent.sig.substring(0, 20) + "...",
           );
 
-          // Normalize the signature to ensure compatibility with GunDB
-          let signature = nostrSignedEvent.sig;
-
-          // Ensure the signature is in the expected format (hex string)
-          if (signature && typeof signature === "string") {
-            // Remove any non-hex characters and ensure lowercase
-            signature = signature.replace(/[^a-f0-9]/gi, "").toLowerCase();
-
-            // Ensure it's a valid length hex string (64 bytes = 128 hex chars for secp256k1)
-            if (signature.length > 128) {
-              signature = signature.substring(0, 128);
-            } else if (signature.length < 128) {
-              // Pad with zeros if needed (shouldn't happen with valid signatures)
-              signature = signature.padStart(128, "0");
-            }
-
-            log(`Normalized Nostr signature: ${signature.substring(0, 10)}...`);
-          }
-
-          return signature;
+          return signedEvent.sig;
 
         case "manual":
           log("Using manual key pair for signature");
-          if (!this.manualKeyPair) {
-            throw new Error("No manual key pair available");
+          if (!this.manualKeyPair || !this.manualKeyPair.privateKey) {
+            throw new Error(
+              "No manual key pair available or private key missing",
+            );
           }
-          // In a real implementation, we would use a Bitcoin signing library here
-          // For now, create a deterministic signature from the private key and message
-          const manualSignature = `${this.manualKeyPair.privateKey.substring(0, 32)}_${message}_${Date.now()}`;
+          // Use nostr-tools to sign securely
+          const manualEventData = {
+            kind: 1,
+            created_at: 0, // IMPORTANT: Use a fixed timestamp
+            tags: [],
+            content: message,
+            pubkey: this.manualKeyPair.address,
+          };
+          const eventTemplate: Event = {
+            ...manualEventData,
+            id: getEventHash(manualEventData),
+            sig: "", // This will be filled by finalizeEvent
+          };
+          const privateKeyBytes = nostrUtils.hexToBytes(
+            this.manualKeyPair.privateKey,
+          );
+          const signedEventManual = await finalizeEvent(
+            eventTemplate,
+            privateKeyBytes,
+          );
           log(
             "Generated manual signature:",
-            manualSignature.substring(0, 20) + "...",
+            signedEventManual.sig.substring(0, 20) + "...",
           );
-          return manualSignature;
+          return signedEventManual.sig;
 
         default:
           throw new Error(`Unsupported wallet type: ${this.connectedType}`);
@@ -843,6 +648,16 @@ class NostrConnector extends EventEmitter {
       logError("Error requesting signature:", error);
       throw new Error(`Failed to get signature: ${error.message}`);
     }
+  }
+
+  /**
+   * Cleanup event listeners
+   */
+  public cleanup(): void {
+    this.removeAllListeners();
+    this.connectedAddress = null;
+    this.connectedType = null;
+    this.manualKeyPair = null;
   }
 }
 

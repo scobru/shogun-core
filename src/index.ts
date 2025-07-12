@@ -18,11 +18,11 @@ import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
-import { restrictedPut } from "./gundb/gun-put-headers";
 
 import {
   Gun,
   SEA,
+  restrictedPut,
   IGunUserInstance,
   IGunInstance,
   GunInstance,
@@ -36,13 +36,6 @@ import {
   GunErrors,
 } from "./gundb";
 
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
-
 export type {
   IGunUserInstance,
   IGunInstance,
@@ -50,6 +43,7 @@ export type {
   GunPeerEventData,
   DeriveOptions,
 };
+
 export { SEA, Gun, GunRxJS, crypto, utils, derive, GunErrors, GunInstance };
 
 export * from "./utils/errorHandler";
@@ -253,12 +247,8 @@ export class ShogunCore implements IShogunCore {
         const oauthPlugin = new OAuthPlugin();
         oauthPlugin._category = PluginCategory.Authentication;
 
-        // Configure the plugin with provider settings from config
-        if (config.oauth.providers) {
-          oauthPlugin.configure({
-            providers: config.oauth.providers,
-          });
-        }
+        // Configure the plugin with the complete OAuth configuration
+        oauthPlugin.configure(config.oauth);
 
         this.register(oauthPlugin);
         log("OAuth plugin registered with providers:", config.oauth.providers);
@@ -433,7 +423,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -472,7 +462,7 @@ export class ShogunCore implements IShogunCore {
         });
 
         log(
-          `Current auth method before wallet check: ${this.currentAuthMethod}`
+          `Current auth method before wallet check: ${this.currentAuthMethod}`,
         );
       } else {
         result.error = result.error || "Wrong user or password";
@@ -484,7 +474,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error
+        error,
       );
 
       return {
@@ -506,7 +496,7 @@ export class ShogunCore implements IShogunCore {
   async signUp(
     username: string,
     password: string,
-    passwordConfirmation?: string
+    passwordConfirmation?: string,
   ): Promise<SignUpResult> {
     log("Sign up");
     try {
@@ -582,6 +572,15 @@ export class ShogunCore implements IShogunCore {
     }
   }
 
+  async auth(gunPair: any): Promise<AuthResult> {
+    return this.gundb.gun.user().auth(gunPair, (ack: any) => {
+      if (ack.err) {
+        return { success: false, error: ack.err };
+      }
+      return { success: true, userPub: this.gundb.gun.user().is?.pub };
+    });
+  }
+
   // 📢 EVENT EMITTER 📢
 
   /**
@@ -646,7 +645,7 @@ export class ShogunCore implements IShogunCore {
    */
   setAuthMethod(method: AuthMethod): void {
     log(
-      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
     );
     this.currentAuthMethod = method;
     log(`Authentication method successfully set to: ${method}`);
