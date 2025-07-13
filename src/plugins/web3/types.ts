@@ -1,3 +1,4 @@
+import { ISEAPair } from "gun";
 import {
   BaseConfig,
   BaseResult,
@@ -13,7 +14,6 @@ export interface ConnectionResult extends BaseResult {
   address?: string;
   username?: string;
   randomPassword?: string;
-  message?: string;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface Web3ConectorPluginInterface {
    * @param address Indirizzo Ethereum
    * @returns Promise con le credenziali generate
    */
-  generateCredentials(address: string): Promise<Web3ConnectorCredentials>;
+  generateCredentials(address: string): Promise<ISEAPair>;
 
   /**
    * Rilascia le risorse e pulisce gli event listener

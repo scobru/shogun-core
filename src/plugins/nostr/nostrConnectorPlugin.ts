@@ -1,6 +1,10 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
-import { NostrConnector } from "./nostrConnector";
+import {
+  NostrConnector,
+  MESSAGE_TO_SIGN,
+  deriveNostrKeys,
+} from "./nostrConnector";
 import { NostrSigner, NostrSigningCredential } from "./nostrSigner";
 import {
   NostrConnectorCredentials,
@@ -10,6 +14,7 @@ import {
 import { log, logError, logWarn } from "../../utils/logger";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
@@ -120,9 +125,15 @@ export class NostrConnectorPlugin
    */
   async generateCredentials(
     address: string,
+    signature: string,
+    message: string,
   ): Promise<NostrConnectorCredentials> {
     log("Calling credential generation for Bitcoin wallet");
-    return this.assertBitcoinConnector().generateCredentials(address);
+    return this.assertBitcoinConnector().generateCredentials(
+      address,
+      signature,
+      message,
+    );
   }
 
   /**
@@ -379,13 +390,23 @@ export class NostrConnectorPlugin
         );
       }
 
+      const message = MESSAGE_TO_SIGN;
+      const signature = await this.assertBitcoinConnector().requestSignature(
+        address,
+        message,
+      );
+
       log("Generating credentials for Bitcoin wallet login...");
-      const credentials = await this.generateCredentials(address);
+      const credentials = await this.generateCredentials(
+        address,
+        signature,
+        message,
+      );
       if (
         !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
+        !credentials?.key ||
+        !credentials.message ||
+        !credentials.signature
       ) {
         throw createError(
           ErrorType.AUTHENTICATION,
@@ -415,15 +436,14 @@ export class NostrConnectorPlugin
       }
       log("Bitcoin wallet signature verified successfully.");
 
+      // Deriva le chiavi da address, signature, message
+      const k = await deriveNostrKeys(address, signature, message);
+
       // Set authentication method to nostr before login
       core.setAuthMethod("nostr");
 
-      // Use core's login method with direct GunDB authentication
-      log("Logging in using core login method...");
-      const loginResult = await core.login(
-        credentials.username,
-        credentials.password,
-      );
+      // Usa le chiavi derivate per login
+      const loginResult = await core.login(credentials.username, "", k);
 
       if (!loginResult.success) {
         throw createError(
@@ -491,13 +511,23 @@ export class NostrConnectorPlugin
         );
       }
 
+      const message = MESSAGE_TO_SIGN;
+      const signature = await this.assertBitcoinConnector().requestSignature(
+        address,
+        message,
+      );
+
       log("Generating credentials for Bitcoin wallet signup...");
-      const credentials = await this.generateCredentials(address);
+      const credentials = await this.generateCredentials(
+        address,
+        signature,
+        message,
+      );
       if (
         !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
+        !credentials?.key ||
+        !credentials.message ||
+        !credentials.signature
       ) {
         throw createError(
           ErrorType.AUTHENTICATION,
@@ -528,47 +558,43 @@ export class NostrConnectorPlugin
       }
       log("Bitcoin wallet signature verified successfully.");
 
+      // Deriva le chiavi da address, signature, message
+      const k = await deriveNostrKeys(address, signature, message);
+
       // Set authentication method to nostr before signup
       core.setAuthMethod("nostr");
 
-      // Use core's signUp method with direct GunDB authentication
-      log("Signing up using core signUp method...");
-      const signUpResult = await core.signUp(
-        credentials.username,
-        credentials.password,
-      );
+      // Usa le chiavi derivate per signup
+      const signupResult = await core.signUp(credentials.username, "", "", k);
 
-      if (!signUpResult.success) {
-        // Check if the error is "User already created"
-        if (
-          signUpResult.error &&
-          (signUpResult.error.includes("User already created") ||
-            signUpResult.error.includes("already created") ||
-            signUpResult.error.includes("già creato"))
-        ) {
-          // User already exists, suggest login instead
-          return {
-            success: false,
-            error:
-              "User already exists. Please try logging in instead. If login fails, try clearing the signature cache and registering again.",
-          };
+      if (signupResult.success) {
+        // Dopo la creazione, autentica subito
+        const authResult = await core.login(credentials.username, "", k);
+        if (authResult.success) {
+          log(
+            `Bitcoin wallet registration and login completed for user: ${credentials.username}`,
+          );
+          // Emetti eventi
+          core.emit("auth:signup", {
+            userPub: authResult.userPub,
+            username: credentials.username,
+            method: "bitcoin",
+          });
+          return { ...authResult };
+        } else {
+          return { ...signupResult, error: "User created but login failed" };
         }
-
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "BITCOIN_SIGNUP_FAILED",
-          signUpResult.error || "Failed to sign up with Bitcoin credentials",
-        );
+      } else {
+        // Se l'errore è che l'utente esiste già, prova direttamente l'auth
+        if (
+          signupResult.error &&
+          signupResult.error.toLowerCase().includes("exist")
+        ) {
+          const authResult = await core.login(credentials.username, "", k);
+          return { ...authResult };
+        }
+        return signupResult;
       }
-
-      // Emit signup event
-      core.emit("auth:signup", {
-        userPub: signUpResult.userPub,
-        username: credentials.username,
-        method: "bitcoin",
-      });
-
-      return signUpResult;
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;

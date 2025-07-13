@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -43,7 +43,6 @@
     "base64url": "^3.0.1",
     "constants-browserify": "^1.0.0",
     "ethers": "^6.13.5",
-    "gun": "^0.2020.1240",
     "keccak256": "^1.0.6",
     "nostr-tools": "^2.15.0",
     "paillier-bigint": "^3.4.3",
@@ -75,6 +74,7 @@
     "typescript": "^5.3.3",
     "util": "^0.12.5",
     "webpack": "^5.90.3",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "gun": "^0.2020.1240"
   }
 }

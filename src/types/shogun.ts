@@ -136,6 +136,7 @@ export interface LoggingConfig {
 export interface ShogunSDKConfig {
   gunInstance?: IGunInstance<any>;
   authToken?: string;
+  appToken?: string;
   scope?: string;
   peers?: string[];
   webauthn?: WebauthnConfig;

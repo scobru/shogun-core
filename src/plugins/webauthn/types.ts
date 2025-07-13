@@ -191,3 +191,12 @@ export interface WebauthnPluginInterface {
    */
   signUp(username: string): Promise<AuthResult>;
 }
+
+export interface WebAuthnUniformCredentials {
+  success: boolean;
+  username: string;
+  key: any;
+  credentialId: string;
+  publicKey?: ArrayBuffer | null;
+  error?: string;
+}

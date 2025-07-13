@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NostrConnector = void 0;
+exports.NostrConnector = exports.MESSAGE_TO_SIGN = void 0;
+exports.deriveNostrKeys = deriveNostrKeys;
 /**
  * The BitcoinWallet class provides functionality for connecting, signing up, and logging in using Bitcoin wallets.
  * Supports Alby and Nostr extensions, as well as manual key management.
@@ -8,13 +12,14 @@ exports.NostrConnector = void 0;
 const ethers_1 = require("ethers");
 const nostr_tools_1 = require("nostr-tools");
 const logger_1 = require("../../utils/logger");
-const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
+const derive_1 = __importDefault(require("../../gundb/derive"));
+const validation_1 = require("../../utils/validation");
+exports.MESSAGE_TO_SIGN = "I Love Shogun!";
 /**
  * Class for Bitcoin wallet connections and operations
  */
 class NostrConnector extends eventEmitter_1.EventEmitter {
-    MESSAGE_TO_SIGN = "I Love Shogun!";
     DEFAULT_CONFIG = {
         cacheDuration: 24 * 60 * 60 * 1000, // 24 hours instead of 30 minutes for better UX
         maxRetries: 3,
@@ -40,73 +45,6 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
     setupEventListeners() {
         // Currently no global events to listen to
         // This would be the place to add listeners for wallet connections/disconnections
-    }
-    /**
-     * Generate a deterministic password from an address
-     */
-    async generateDeterministicPassword(address) {
-        const salt = "shogun-nostr-password-salt-v2"; // Use a constant salt.
-        const saltedAddress = `${address}:${salt}:${this.MESSAGE_TO_SIGN}`;
-        return ethers_1.ethers.sha256(ethers_1.ethers.toUtf8Bytes(saltedAddress));
-    }
-    /**
-     * Get cached signature if valid
-     */
-    getCachedSignature(address) {
-        // First check in-memory cache
-        const cached = this.signatureCache.get(address);
-        if (cached) {
-            const now = Date.now();
-            if (now - cached.timestamp <= this.config.cacheDuration) {
-                return cached.signature;
-            }
-            else {
-                this.signatureCache.delete(address);
-            }
-        }
-        // Then check localStorage for persistence across page reloads
-        try {
-            const localStorageKey = `shogun_bitcoin_sig_${address}`;
-            const localCached = localStorage.getItem(localStorageKey);
-            if (localCached) {
-                const parsedCache = JSON.parse(localCached);
-                const now = Date.now();
-                if (now - parsedCache.timestamp <= this.config.cacheDuration) {
-                    // Restore to in-memory cache
-                    this.signatureCache.set(address, parsedCache);
-                    return parsedCache.signature;
-                }
-                else {
-                    // Remove expired cache
-                    localStorage.removeItem(localStorageKey);
-                }
-            }
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error reading signature cache from localStorage:", error);
-        }
-        return null;
-    }
-    /**
-     * Cache signature
-     */
-    cacheSignature(address, signature) {
-        const cacheEntry = {
-            signature,
-            timestamp: Date.now(),
-            address,
-        };
-        // Store in memory
-        this.signatureCache.set(address, cacheEntry);
-        // Store in localStorage for persistence
-        try {
-            const localStorageKey = `shogun_bitcoin_sig_${address}`;
-            localStorage.setItem(localStorageKey, JSON.stringify(cacheEntry));
-            (0, logger_1.log)(`Cached signature for address: ${address.substring(0, 10)}...`);
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error saving signature cache to localStorage:", error);
-        }
     }
     /**
      * Clear signature cache for a specific address or all addresses
@@ -142,43 +80,6 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
             catch (error) {
                 (0, logger_1.logError)("Error clearing all signature caches from localStorage:", error);
             }
-        }
-    }
-    /**
-     * Validates that the address is valid
-     */
-    validateAddress(address) {
-        if (!address) {
-            throw new Error("Address not provided");
-        }
-        try {
-            const normalizedAddress = String(address).trim();
-            // Basic validation for Bitcoin addresses and Nostr pubkeys
-            if (this.connectedType === "nostr") {
-                // Nostr pubkeys are hex strings (64 chars) or npub-prefixed keys
-                // Just check if it's a non-empty string, as we're getting it directly from the extension
-                if (!normalizedAddress) {
-                    throw new Error("Empty Nostr public key");
-                }
-            }
-            else if (this.connectedType === "manual") {
-                // For manual keys, just ensure we have something
-                if (!normalizedAddress) {
-                    throw new Error("Empty manual key");
-                }
-            }
-            else {
-                // Simple format check for Bitcoin addresses
-                // More sophisticated validation would require a library
-                if (!/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/.test(normalizedAddress)) {
-                    throw new Error("Invalid Bitcoin address format");
-                }
-            }
-            return normalizedAddress;
-        }
-        catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.VALIDATION, "INVALID_ADDRESS", "Invalid Bitcoin address provided", error);
-            throw error;
         }
     }
     /**
@@ -303,47 +204,13 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Generate credentials using the connected wallet
+     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dalla signature
      */
-    async generateCredentials(address) {
-        (0, logger_1.logDebug)(`Generating credentials for address: ${address}`);
-        try {
-            // Set the connectedType to nostr if it's not already set
-            // This ensures validateAddress will use the correct validation logic
-            if (!this.connectedType && address) {
-                // If the address looks like a Nostr pubkey (hex string or npub prefix)
-                if (/^[0-9a-f]{64}$/.test(address) || address.startsWith("npub")) {
-                    this.connectedType = "nostr";
-                    this.connectedAddress = address;
-                }
-            }
-            // Validate the address
-            const validAddress = this.validateAddress(address);
-            // We still need a signature to prove ownership, but we won't use it for the password.
-            // We can check the cache for a signature to avoid prompting the user again.
-            let signature = this.getCachedSignature(validAddress);
-            if (!signature) {
-                signature = await this.requestSignatureWithTimeout(validAddress, this.MESSAGE_TO_SIGN, this.config.timeout);
-                this.cacheSignature(validAddress, signature);
-                (0, logger_1.log)("Using real Nostr signature for proof, not for password.");
-            }
-            else {
-                (0, logger_1.logDebug)("Using cached signature for proof.");
-            }
-            // The password is now generated deterministically from the address.
-            const password = await this.generateDeterministicPassword(validAddress);
-            const username = `${validAddress.toLowerCase()}`;
-            return {
-                username,
-                password,
-                message: this.MESSAGE_TO_SIGN,
-                signature,
-            };
-        }
-        catch (error) {
-            (0, logger_1.logError)("Error generating credentials:", error);
-            throw error;
-        }
+    async generateCredentials(address, signature, message) {
+        const username = (0, validation_1.generateUsernameFromIdentity)("nostr", { id: address });
+        const salt = `${username}_${signature}_${message}`;
+        const key = await (0, derive_1.default)(signature, salt, { includeP256: true });
+        return { username, key, message, signature };
     }
     /**
      * Generate a password from a signature
@@ -448,25 +315,6 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         return this.connectedType;
     }
     /**
-     * Request signature with timeout
-     */
-    requestSignatureWithTimeout(address, message, timeout = 30000) {
-        return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-                reject(new Error("Signature request timed out"));
-            }, timeout);
-            this.requestSignature(address, message)
-                .then((signature) => {
-                clearTimeout(timeoutId);
-                resolve(signature);
-            })
-                .catch((error) => {
-                clearTimeout(timeoutId);
-                reject(error);
-            });
-        });
-    }
-    /**
      * Request a signature from the connected wallet
      */
     async requestSignature(address, message) {
@@ -542,6 +390,14 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
     }
 }
 exports.NostrConnector = NostrConnector;
+// Funzione helper per derivare chiavi Nostr/Bitcoin (come per Web3/WebAuthn)
+async function deriveNostrKeys(address, signature, message) {
+    // Puoi customizzare il salt come preferisci, qui usiamo address+signature+message
+    const salt = `${address}_${signature}_${message}`;
+    return await (0, derive_1.default)(signature, salt, {
+        includeP256: true,
+    });
+}
 if (typeof window !== "undefined") {
     window.NostrConnector = NostrConnector;
 }

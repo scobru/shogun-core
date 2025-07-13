@@ -12,7 +12,10 @@ import {
 import { log, logError, logWarn } from "../../utils/logger";
 import { AuthMethod, AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import { ethers } from "ethers";
+import { ShogunStorage } from "../../storage/storage";
+import derive from "../../gundb/derive";
+import { ISEAPair } from "gun";
+import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * OAuth Plugin for ShogunCore
@@ -26,26 +29,25 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
   private oauthConnector: OAuthConnector | null = null;
   private config: Partial<OAuthConfig> = {};
-  private pin?: string;
+  private storage: ShogunStorage | null = null;
 
   /**
    * @inheritdoc
    */
-  initialize(core: ShogunCore): void {
+  initialize(core: ShogunCore, appToken?: string): void {
     super.initialize(core);
 
     // Initialize the OAuth connector
     this.oauthConnector = new OAuthConnector(this.config);
+    this.storage = new ShogunStorage();
+
+    if (appToken) {
+      this.appToken = appToken;
+    } else {
+      throw new Error("App token is required for OAuth plugin");
+    }
 
     log("OAuth plugin initialized successfully");
-  }
-
-  /**
-   * Set the pin for the OAuth plugin
-   * @param pin - The pin to set
-   */
-  setPin(pin: string): void {
-    this.pin = pin;
   }
 
   /**
@@ -117,7 +119,13 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     state?: string,
   ): Promise<OAuthConnectionResult> {
     log(`Completing OAuth flow with ${provider}`);
-    return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
+
+    return this.assertOAuthConnector().completeOAuth(
+      provider,
+      authCode,
+      state,
+      this.appToken,
+    );
   }
 
   /**
@@ -126,13 +134,17 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
-    userPin: string,
   ): Promise<OAuthCredentials> {
     log(`Generating credentials for ${provider} user`);
+
+    if (!this.appToken) {
+      throw new Error("App token is required for OAuth generation");
+    }
+
     return this.assertOAuthConnector().generateCredentials(
       userInfo,
       provider,
-      userPin,
+      this.appToken,
     );
   }
 
@@ -311,17 +323,9 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async handleOAuthCallback(
     provider: OAuthProvider,
     authCode: string,
-    state: string | undefined,
+    state: string,
   ): Promise<AuthResult> {
     try {
-      if (!this.pin) {
-        throw createError(
-          ErrorType.VALIDATION,
-          "PIN_REQUIRED",
-          "Pin is required for OAuth callback",
-        );
-      }
-
       log(`Handling OAuth callback for ${provider}`);
       const core = this.assertInitialized();
 
@@ -332,20 +336,19 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw new Error(result.error || "Failed to complete OAuth flow");
       }
 
-      // Generate credentials from user info
+      // Genera credenziali da user info
       const credentials = await this.generateCredentials(
         result.userInfo,
         provider,
-        this.pin,
       );
 
       // Set authentication method
       core.setAuthMethod("oauth" as AuthMethod);
 
-      // Login or sign up the user
+      // Login o signup usando la chiave derivata
       const authResult = await this._loginOrSignUp(
         credentials.username,
-        credentials.password,
+        credentials.key,
       );
 
       if (authResult.success) {
@@ -388,35 +391,34 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   private async _loginOrSignUp(
     username: string,
-    password: string,
+    k: ISEAPair | null,
   ): Promise<AuthResult> {
     if (!this.core) {
       return { success: false, error: "Shogun core not available" };
     }
 
-    log(`[OAuth] Attempting signup for ${username}.`);
-    const signupResult = await this.core.signUp(username, password);
+    // Try login first
+    const loginResult = await this.core.login(username, "", k);
+    if (loginResult.success) {
+      this.core.gundb.savePair?.(); // Ensure session is saved
+      loginResult.isNewUser = false;
+      return loginResult;
+    }
 
+    // If login fails, try signup
+    const signupResult = await this.core.signUp(username, "", "", k);
     if (signupResult.success) {
-      log(`[OAuth] Signup successful for ${username}, now logging in.`);
-      const loginResult = await this.core.login(username, password);
-      if (loginResult.success) {
-        loginResult.isNewUser = true;
-        return loginResult;
+      // Immediately login after signup
+      const postSignupLogin = await this.core.login(username, "", k);
+      if (postSignupLogin.success) {
+        this.core.gundb.savePair?.();
+        postSignupLogin.isNewUser = true;
+        return postSignupLogin;
       }
       return {
         success: false,
-        error: loginResult.error || "Login failed after successful signup.",
+        error: postSignupLogin.error || "Login failed after successful signup.",
       };
-    }
-
-    if (
-      signupResult.error &&
-      (signupResult.error.includes("User already created") ||
-        signupResult.error.includes("already exists"))
-    ) {
-      log(`[OAuth] User ${username} already exists, attempting login.`);
-      return this.core.login(username, password);
     }
 
     // Return the original signup error for other failures
@@ -430,7 +432,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async handleSimpleOAuth(
     provider: OAuthProvider,
     authCode: string,
-    state?: string,
+    state: string,
   ): Promise<AuthResult> {
     log(
       `handleSimpleOAuth called (alias for handleOAuthCallback) for ${provider}`,

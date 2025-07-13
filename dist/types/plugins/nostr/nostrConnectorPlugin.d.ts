@@ -51,7 +51,7 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
     /**
      * @inheritdoc
      */
-    generateCredentials(address: string): Promise<NostrConnectorCredentials>;
+    generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
     /**
      * @inheritdoc
      */

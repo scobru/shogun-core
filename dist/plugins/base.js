@@ -13,12 +13,15 @@ class BasePlugin extends eventEmitter_1.EventEmitter {
     _category;
     /** Riferimento all'istanza di ShogunCore */
     core = null;
+    /** Token dell'app */
+    appToken;
     /**
      * Inizializza il plugin con un'istanza di ShogunCore
      * @param core Istanza di ShogunCore
      */
-    initialize(core) {
+    initialize(core, appToken) {
         this.core = core;
+        this.appToken = appToken;
     }
     /**
      * Distrugge il plugin e libera le risorse

@@ -12,6 +12,8 @@ import {
   SignatureCache,
   Web3Config,
 } from "./types";
+import { ISEAPair } from "gun";
+import derive from "../../gundb/derive";
 
 // Extend the Window interface to include ethereum
 declare global {
@@ -228,6 +230,19 @@ class Web3Connector extends EventEmitter {
       return null;
     }
 
+    // Check for invalid/empty signature
+    if (
+      !cached.signature ||
+      typeof cached.signature !== "string" ||
+      cached.signature.length < 16
+    ) {
+      logWarn(
+        `Invalid cached signature for address ${address} (length: ${cached.signature ? cached.signature.length : 0}), deleting from cache.`,
+      );
+      this.signatureCache.delete(address);
+      return null;
+    }
+
     return cached.signature;
   }
 
@@ -348,7 +363,6 @@ class Web3Connector extends EventEmitter {
           return {
             success: true,
             address,
-            message: "Successfully connected to MetaMask",
           };
         } catch (error) {
           logError(`Attempt ${attempt} failed:`, error);
@@ -380,9 +394,7 @@ class Web3Connector extends EventEmitter {
   /**
    * Generates credentials with caching
    */
-  async generateCredentials(
-    address: string,
-  ): Promise<Web3ConnectorCredentials> {
+  async generateCredentials(address: string): Promise<ISEAPair> {
     log("Generating credentials for address:", address);
     try {
       const validAddress = this.validateAddress(address);
@@ -412,17 +424,12 @@ class Web3Connector extends EventEmitter {
         this.cacheSignature(validAddress, signature);
 
         return this.generateCredentialsFromSignature(validAddress, signature);
-      } catch (signingError: any) {
+      } catch (signingError) {
         // Gestione del fallimento di firma
-        logError(
-          `Failed to get signature: ${signingError.message}. Authentication cannot proceed without a valid signature.`,
+        logWarn(
+          `Failed to get signature: ${signingError}. Using fallback method.`,
         );
-
-        // Throw an error to stop the authentication flow.
-        // The insecure fallback has been removed.
-        throw new Error(
-          `Signature request failed or was denied: ${signingError.message}`,
-        );
+        throw signingError;
       }
     } catch (error: any) {
       ErrorHandler.handle(
@@ -438,17 +445,14 @@ class Web3Connector extends EventEmitter {
   /**
    * Generate credentials from signature
    */
-  private generateCredentialsFromSignature(
+  private async generateCredentialsFromSignature(
     address: string,
     signature: string,
-  ): Web3ConnectorCredentials {
+  ): Promise<ISEAPair> {
     log("Generating credentials from signature");
-    const username = `${address.toLowerCase()}`;
-    const password = ethers.keccak256(
-      ethers.toUtf8Bytes(`${signature}:${address.toLowerCase()}`),
-    );
-    const message = this.MESSAGE_TO_SIGN;
-    return { username, password, message, signature };
+    const salt = `${address}:${signature}`;
+    const k = await derive(salt, null, { includeP256: true });
+    return k;
   }
 
   /**
@@ -458,14 +462,20 @@ class Web3Connector extends EventEmitter {
   private generateFallbackCredentials(
     address: string,
   ): Web3ConnectorCredentials {
-    // THIS METHOD IS INSECURE AND HAS BEEN DISABLED.
-    // Throw an error instead of generating insecure credentials.
-    logError(
-      "INSECURE FALLBACK: generateFallbackCredentials was called. This function is disabled.",
-    );
-    throw new Error(
-      "Cannot generate credentials without a valid signature. Fallback method is disabled for security reasons.",
-    );
+    logWarn("Using fallback credentials generation for address:", address);
+    const username = `mm_${address.toLowerCase()}`;
+
+    // Creiamo una password deterministica basata sull'indirizzo
+    // Nota: meno sicuro della firma, ma deterministico
+    const fallbackMessage = `SHOGUN_FALLBACK:${address.toLowerCase()}`;
+    const password = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
+
+    // Usiamo il messaggio fallback sia come messaggio che come pseudo-firma
+    // Questo non è crittograficamente sicuro, ma soddisfa l'interfaccia
+    const message = fallbackMessage;
+    const signature = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
+
+    return { username, password, message, signature };
   }
 
   /**

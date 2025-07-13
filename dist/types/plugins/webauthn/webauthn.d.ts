@@ -84,9 +84,16 @@ export declare class Webauthn extends EventEmitter {
      */
     private createCredential;
     /**
-     * Generates WebAuthn credentials
+     * Generates WebAuthn credentials (uniforme con altri plugin)
      */
-    generateCredentials(username: string, existingCredential?: WebAuthnCredentials | null, isLogin?: boolean): Promise<CredentialResult>;
+    generateCredentials(username: string, existingCredential?: WebAuthnCredentials | null, isLogin?: boolean): Promise<{
+        success: boolean;
+        username: string;
+        key: any;
+        credentialId: string;
+        publicKey?: ArrayBuffer | null;
+        error?: string;
+    }>;
     /**
      * Verifies a credential
      */
@@ -104,3 +111,19 @@ export declare class Webauthn extends EventEmitter {
     sign(data: Record<string, unknown>): Promise<unknown>;
 }
 export type { WebAuthnCredentials, DeviceInfo, CredentialResult };
+export declare function deriveWebauthnKeys(username: string, credentialId: string): Promise<{
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+    secp256k1Bitcoin: {
+        privateKey: string;
+        publicKey: string;
+        address: string;
+    };
+    secp256k1Ethereum: {
+        privateKey: string;
+        publicKey: string;
+        address: string;
+    };
+}>;

@@ -2,8 +2,7 @@
  * OAuth Connector - Simple version for GunDB user creation
  */
 import { ethers } from "ethers";
-import { log, logDebug, logError, logWarn } from "../../utils/logger";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+import { logDebug, logError, logWarn } from "../../utils/logger";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
   OAuthConfig,
@@ -15,6 +14,11 @@ import {
   OAuthCache,
   OAuthProviderConfig,
 } from "./types";
+import derive from "../../gundb/derive";
+import {
+  generateUsernameFromIdentity,
+  generateDeterministicPassword,
+} from "../../utils/validation";
 
 /**
  * OAuth Connector
@@ -251,10 +255,7 @@ export class OAuthConnector extends EventEmitter {
   /**
    * Initiate OAuth flow
    */
-  async initiateOAuth(
-    provider: OAuthProvider,
-    pin?: string,
-  ): Promise<OAuthConnectionResult> {
+  async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
       const errorMsg = `Provider '${provider}' is not configured.`;
@@ -318,7 +319,7 @@ export class OAuthConnector extends EventEmitter {
     provider: OAuthProvider,
     authCode: string,
     state?: string,
-    userPin?: string,
+    appToken?: string | null,
   ): Promise<OAuthConnectionResult> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
@@ -354,7 +355,7 @@ export class OAuthConnector extends EventEmitter {
       const credentials = await this.generateCredentials(
         userInfo,
         provider,
-        userPin || "",
+        appToken || "",
       );
 
       this.emit("oauth_completed", { provider, userInfo, credentials });
@@ -375,57 +376,45 @@ export class OAuthConnector extends EventEmitter {
 
   /**
    * Generate credentials from OAuth user info
+   * Ora restituisce anche la chiave GunDB derivata (key)
    */
   async generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
-    userPin: string,
-  ): Promise<OAuthCredentials> {
+    appToken: string,
+  ): Promise<OAuthCredentials & { key: any }> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
       throw new Error(`Provider ${provider} is not configured.`);
     }
 
-    const username = userInfo.email || `${userInfo.id}@${provider}.shogun`;
+    // Username uniforme
+    const username = generateUsernameFromIdentity(provider, userInfo);
 
     try {
       logDebug(`Generating credentials for ${provider} user: ${userInfo.id}`);
 
-      // Generate deterministic password
-      const password = await this.generateDeterministicPassword(
-        userInfo,
-        provider,
-        userPin,
-      );
+      // Salt deterministico per la derivazione della chiave
+      const salt = `${userInfo.id}_${provider}_${userInfo.email}_shogun_oauth_${appToken}`;
+      // Password deterministica (compatibilità)
+      const password = generateDeterministicPassword(salt);
+      // Deriva la chiave GunDB
+      const key = await derive(password, salt, { includeP256: true });
 
-      const credentials: OAuthCredentials = {
+      const credentials: OAuthCredentials & { key: any } = {
         username,
         password,
         provider,
+        key,
       };
 
-      // Cache the user info
       this.cacheUserInfo(userInfo.id, provider, userInfo);
-
       logDebug("OAuth credentials generated successfully");
       return credentials;
     } catch (error: any) {
       logError("Error generating OAuth credentials:", error);
       throw error;
     }
-  }
-
-  /**
-   * Generate deterministic password
-   */
-  private async generateDeterministicPassword(
-    userInfo: OAuthUserInfo,
-    provider: OAuthProvider,
-    userPin: string,
-  ): Promise<string> {
-    const passwordBase = `${userInfo.id}_${provider}_${userInfo.email || ""}_shogun_oauth_${userPin}`;
-    const passwordHash = ethers.keccak256(ethers.toUtf8Bytes(passwordBase));
-    return passwordHash.slice(2, 34); // 32 character hex string
   }
 
   /**

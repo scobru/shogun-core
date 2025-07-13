@@ -59,6 +59,7 @@ class ShogunCore {
     eventEmitter;
     plugins = new Map();
     currentAuthMethod;
+    appToken;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -83,6 +84,16 @@ class ShogunCore {
         });
         if (config.authToken) {
             (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
+        }
+        if (config.appToken) {
+            // validate app token
+            if (config.appToken.length < 8) {
+                throw new Error("App token must be 8 characters long");
+            }
+            this.appToken = config.appToken;
+        }
+        else {
+            throw new Error("App token is required for OAuth plugin");
         }
         try {
             if (config.gunInstance) {
@@ -137,6 +148,16 @@ class ShogunCore {
                     (0, logger_1.logError)(`Failed to auto-register plugin ${plugin.name}:`, error);
                 }
             }
+        }
+        if (typeof window !== "undefined") {
+            window.ShogunCore = this;
+            window.ShogunDB = this.gundb;
+            window.ShogunGun = this.gundb.gun;
+        }
+        else if (typeof global !== "undefined") {
+            global.ShogunCore = this;
+            global.ShogunDB = this.gundb;
+            global.ShogunGun = this.gundb.gun;
         }
         (0, logger_1.log)("Shogun initialized! 🚀");
     }
@@ -228,7 +249,15 @@ class ShogunCore {
         if (this.plugins.has(plugin.name)) {
             throw new Error(`Plugin with name "${plugin.name}" already registered`);
         }
-        plugin.initialize(this);
+        if (plugin.name === shogun_1.CorePlugins.OAuth) {
+            if (!this.appToken) {
+                throw new Error("App token is required for OAuth plugin");
+            }
+            plugin.initialize(this, this.appToken);
+        }
+        else {
+            plugin.initialize(this);
+        }
         this.plugins.set(plugin.name, plugin);
         (0, logger_1.log)(`Registered plugin: ${plugin.name}`);
     }
@@ -375,22 +404,15 @@ class ShogunCore {
      * @description Attempts to log in user with provided credentials.
      * Emits login event on success.
      */
-    async login(username, password) {
+    async login(username, password, pair) {
         (0, logger_1.log)("Login");
         try {
             (0, logger_1.log)(`Login attempt for user: ${username}`);
-            // Verify parameters
-            if (!username || !password) {
-                return {
-                    success: false,
-                    error: "Username and password are required",
-                };
-            }
             if (!this.currentAuthMethod) {
                 this.currentAuthMethod = "password";
                 (0, logger_1.log)("Authentication method set to default: password");
             }
-            const result = await this.gundb.login(username, password);
+            const result = await this.gundb.login(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
@@ -415,30 +437,20 @@ class ShogunCore {
      * @param username - Username
      * @param password - Password
      * @param passwordConfirmation - Password confirmation
+     * @param pair - Pair of keys
      * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    async signUp(username, password, passwordConfirmation) {
+    async signUp(username, password, passwordConfirmation, pair) {
         (0, logger_1.log)("Sign up");
         try {
-            if (!username || !password) {
-                return {
-                    success: false,
-                    error: "Username and password are required",
-                };
-            }
             if (passwordConfirmation !== undefined &&
-                password !== passwordConfirmation) {
+                password !== passwordConfirmation &&
+                !pair) {
                 return {
                     success: false,
                     error: "Passwords do not match",
-                };
-            }
-            if (password.length < 6) {
-                return {
-                    success: false,
-                    error: "Password must be at least 6 characters long",
                 };
             }
             // Emit a debug event to monitor the flow
@@ -448,7 +460,7 @@ class ShogunCore {
                 timestamp: Date.now(),
             });
             (0, logger_1.log)(`Attempting user registration: ${username}`);
-            const result = await this.gundb.signUp(username, password);
+            const result = await this.gundb.signUp(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("debug", {
                     action: "signup_complete",
@@ -484,14 +496,6 @@ class ShogunCore {
                 error: error.message ?? "Unknown error during registration",
             };
         }
-    }
-    async auth(gunPair) {
-        return this.gundb.gun.user().auth(gunPair, (ack) => {
-            if (ack.err) {
-                return { success: false, error: ack.err };
-            }
-            return { success: true, userPub: this.gundb.gun.user().is?.pub };
-        });
     }
     // 📢 EVENT EMITTER 📢
     /**
@@ -576,11 +580,11 @@ exports.ShogunCore = ShogunCore;
 exports.default = ShogunCore;
 if (typeof window !== "undefined") {
     window.initShogun = (config) => {
-        if (window.shogunCore) {
-            return window.shogunCore;
+        if (window.ShogunCore) {
+            return window.ShogunCore;
         }
         const shogun = new ShogunCore(config);
-        window.shogunCore = shogun;
+        window.ShogunCore = shogun;
         return shogun;
     };
 }

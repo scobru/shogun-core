@@ -21,7 +21,7 @@ export interface ShogunPlugin {
    * Inizializza il plugin con un'istanza di ShogunCore
    * @param core Istanza di ShogunCore
    */
-  initialize(core: ShogunCore): void;
+  initialize(core: ShogunCore, appToken?: string): void;
 
   /**
    * Metodo opzionale per distruggere il plugin e liberare risorse

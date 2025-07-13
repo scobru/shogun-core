@@ -23,12 +23,16 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
   /** Riferimento all'istanza di ShogunCore */
   protected core: ShogunCore | null = null;
 
+  /** Token dell'app */
+  protected appToken?: string;
+
   /**
    * Inizializza il plugin con un'istanza di ShogunCore
    * @param core Istanza di ShogunCore
    */
-  initialize(core: ShogunCore): void {
+  initialize(core: ShogunCore, appToken?: string): void {
     this.core = core;
+    this.appToken = appToken;
   }
 
   /**

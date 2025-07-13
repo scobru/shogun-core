@@ -3,6 +3,7 @@ import { ShogunCore } from "../../index";
 import { WebAuthnSigningCredential } from "./webauthnSigner";
 import { WebauthnPluginInterface } from "./types";
 import { WebAuthnCredentials, CredentialResult } from "./types";
+import { WebAuthnUniformCredentials } from "./types";
 import { AuthResult } from "../../types/shogun";
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -22,7 +23,7 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      */
     destroy(): void;
     /**
-     * Assicura che il modulo WebAuthn sia inizializzato
+     * Assicura che il modulo Webauthn sia inizializzato
      * @private
      */
     private assertWebauthn;
@@ -38,7 +39,7 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
     /**
      * @inheritdoc
      */
-    generateCredentials(username: string, existingCredential?: WebAuthnCredentials | null, isLogin?: boolean): Promise<CredentialResult>;
+    generateCredentials(username: string, existingCredential?: WebAuthnCredentials | null, isLogin?: boolean): Promise<WebAuthnUniformCredentials>;
     /**
      * @inheritdoc
      */

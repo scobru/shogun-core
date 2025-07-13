@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Webauthn = void 0;
+exports.deriveWebauthnKeys = deriveWebauthnKeys;
 /**
  * Constants for WebAuthn configuration
  */
@@ -11,6 +15,7 @@ const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
 const logger_1 = require("../../utils/logger");
 const types_1 = require("./types");
+const derive_1 = __importDefault(require("../../gundb/derive"));
 /**
  * Constants for WebAuthn configuration
  */
@@ -73,7 +78,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     if (result.success) {
                         this.emit(types_1.WebAuthnEventType.DEVICE_REGISTERED, {
                             type: types_1.WebAuthnEventType.DEVICE_REGISTERED,
-                            data: { username, deviceInfo: result.deviceInfo },
+                            data: { username },
                             timestamp: Date.now(),
                         });
                         return result;
@@ -324,17 +329,30 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Generates WebAuthn credentials
+     * Generates WebAuthn credentials (uniforme con altri plugin)
      */
     async generateCredentials(username, existingCredential, isLogin = false) {
         try {
             if (isLogin) {
                 const verificationResult = await this.verifyCredential(username);
+                if (!verificationResult.success || !verificationResult.credentialId) {
+                    return {
+                        success: false,
+                        username,
+                        key: undefined,
+                        credentialId: "",
+                        error: verificationResult.error,
+                        publicKey: null,
+                    };
+                }
+                // Deriva la chiave GunDB
+                const key = await deriveWebauthnKeys(username, verificationResult.credentialId);
                 return {
-                    success: verificationResult.success,
-                    error: verificationResult.error,
+                    success: true,
+                    username,
+                    key,
                     credentialId: verificationResult.credentialId,
-                    username: verificationResult.username,
+                    publicKey: null,
                 };
             }
             else {
@@ -344,8 +362,12 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                 if (credential?.response?.getPublicKey) {
                     publicKey = credential.response.getPublicKey();
                 }
+                // Deriva la chiave GunDB
+                const key = await deriveWebauthnKeys(username, credentialId);
                 return {
                     success: true,
+                    username,
+                    key,
                     credentialId,
                     publicKey,
                 };
@@ -358,7 +380,11 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                 : "Unknown error during WebAuthn operation";
             return {
                 success: false,
+                username,
+                key: undefined,
+                credentialId: "",
                 error: errorMessage,
+                publicKey: null,
             };
         }
     }
@@ -447,4 +473,12 @@ if (typeof window !== "undefined") {
 }
 else if (typeof global !== "undefined") {
     global.Webauthn = Webauthn;
+}
+// Funzione helper per derivare chiavi WebAuthn (come per Web3)
+async function deriveWebauthnKeys(username, credentialId) {
+    const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(credentialId));
+    const salt = `${username}_${credentialId}`;
+    return await (0, derive_1.default)(hashedCredentialId, salt, {
+        includeP256: true,
+    });
 }

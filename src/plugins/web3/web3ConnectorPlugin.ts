@@ -11,6 +11,8 @@ import { log, logError, logWarn } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+import { ISEAPair } from "gun";
+import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
@@ -94,9 +96,7 @@ export class Web3ConnectorPlugin
   /**
    * @inheritdoc
    */
-  async generateCredentials(
-    address: string,
-  ): Promise<Web3ConnectorCredentials> {
+  async generateCredentials(address: string): Promise<ISEAPair> {
     log("Calling credential generation");
     return this.assertMetaMask().generateCredentials(address);
   }
@@ -363,13 +363,9 @@ export class Web3ConnectorPlugin
       }
 
       log("Generating credentials for Web3 login...");
-      const credentials = await this.generateCredentials(address);
-      if (
-        !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
-      ) {
+      const k = await this.generateCredentials(address);
+      const username = address.toLowerCase();
+      if (!k?.pub || !k?.priv) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
@@ -377,36 +373,14 @@ export class Web3ConnectorPlugin
         );
       }
 
-      log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
-      log("Verifying Web3 signature...");
-      const recoveredAddress = ethers.verifyMessage(
-        credentials.message,
-        credentials.signature,
-      );
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
-        );
-        throw createError(
-          ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "Web3 signature verification failed. Address mismatch.",
-        );
-      }
-      log("Web3 signature verified successfully.");
+      log(`Credentials generated successfully. Username: ${username}`);
 
       // Set authentication method to web3 before login
       core.setAuthMethod("web3");
 
       // Use core's login method with direct GunDB authentication
       log("Logging in using core login method...");
-      const loginResult = await core.login(
-        credentials.username,
-        credentials.password,
-      );
+      const loginResult = await core.login(username, "", k);
 
       if (!loginResult.success) {
         throw createError(
@@ -419,7 +393,7 @@ export class Web3ConnectorPlugin
       // Emit login event
       core.emit("auth:login", {
         userPub: loginResult.userPub,
-        username: credentials.username,
+        username: address,
         method: "web3",
       });
 
@@ -474,13 +448,9 @@ export class Web3ConnectorPlugin
       }
 
       log("Generating credentials for Web3 registration...");
-      const credentials = await this.generateCredentials(address);
-      if (
-        !credentials?.username ||
-        !credentials?.password ||
-        !credentials.signature ||
-        !credentials.message
-      ) {
+      const k = await this.generateCredentials(address);
+      const username = address.toLowerCase();
+      if (!k?.pub || !k?.priv) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "CREDENTIAL_GENERATION_FAILED",
@@ -488,53 +458,24 @@ export class Web3ConnectorPlugin
         );
       }
 
-      log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
-      log("Verifying Web3 signature...");
-      const recoveredAddress = ethers.verifyMessage(
-        credentials.message,
-        credentials.signature,
-      );
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        logError(
-          `Signature verification failed. Expected: ${address}, Got: ${recoveredAddress}`,
-        );
-        throw createError(
-          ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "Web3 signature verification failed. Address mismatch.",
-        );
-      }
-      log("Web3 signature verified successfully.");
+      log(`Credentials generated successfully. Username: ${username}`);
 
       // Set authentication method to web3 before signup
       core.setAuthMethod("web3");
 
       // Use core's signUp method with direct GunDB authentication
       log("Signing up using core signUp method...");
-      const signUpResult = await core.signUp(
-        credentials.username,
-        credentials.password,
-      );
+      const signupResult = await core.signUp(username, "", "", k);
 
-      if (!signUpResult.success) {
+      if (!signupResult.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "WEB3_SIGNUP_FAILED",
-          signUpResult.error || "Failed to sign up with Web3 credentials",
+          signupResult.error || "Failed to sign up with Web3 credentials",
         );
       }
 
-      // Emit signup event
-      core.emit("auth:signup", {
-        userPub: signUpResult.userPub,
-        username: credentials.username,
-        method: "web3",
-      });
-
-      return signUpResult;
+      return signupResult;
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;

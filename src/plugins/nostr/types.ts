@@ -22,8 +22,8 @@ export interface ConnectionResult extends BaseResult {
 export interface NostrConnectorCredentials {
   /** Generated username based on the address */
   username: string;
-  /** Generated password based on the signature */
-  password: string;
+  /** Chiave GunDB derivata dalla signature */
+  key: any;
   /** Original message signed by the user */
   message: string;
   /** Signature provided by the wallet */
@@ -105,7 +105,11 @@ export interface NostrConnectorPluginInterface {
    * @param address Bitcoin address
    * @returns Promise with the generated credentials
    */
-  generateCredentials(address: string): Promise<NostrConnectorCredentials>;
+  generateCredentials(
+    address: string,
+    signature: string,
+    message: string,
+  ): Promise<NostrConnectorCredentials>;
 
   /**
    * Release resources and clean up event listeners

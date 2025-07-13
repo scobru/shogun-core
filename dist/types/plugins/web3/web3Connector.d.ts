@@ -3,7 +3,8 @@
  */
 import { ethers } from "ethers";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { ConnectionResult, Web3ConnectorCredentials, EthereumProvider, Web3Config } from "./types";
+import { ConnectionResult, EthereumProvider, Web3Config } from "./types";
+import { ISEAPair } from "gun";
 declare global {
     interface Window {
         ethereum?: EthereumProvider;
@@ -70,7 +71,7 @@ declare class Web3Connector extends EventEmitter {
     /**
      * Generates credentials with caching
      */
-    generateCredentials(address: string): Promise<Web3ConnectorCredentials>;
+    generateCredentials(address: string): Promise<ISEAPair>;
     /**
      * Generate credentials from signature
      */

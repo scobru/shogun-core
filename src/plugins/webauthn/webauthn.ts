@@ -19,6 +19,7 @@ import {
   WebAuthnVerificationResult,
 } from "./types";
 import { IGunInstance } from "gun";
+import derive from "../../gundb/derive";
 
 /**
  * Extends Window interface to include WebauthnAuth
@@ -126,10 +127,9 @@ export class Webauthn extends EventEmitter {
           if (result.success) {
             this.emit(WebAuthnEventType.DEVICE_REGISTERED, {
               type: WebAuthnEventType.DEVICE_REGISTERED,
-              data: { username, deviceInfo: result.deviceInfo },
+              data: { username },
               timestamp: Date.now(),
             });
-
             return result;
           }
 
@@ -454,33 +454,58 @@ export class Webauthn extends EventEmitter {
   }
 
   /**
-   * Generates WebAuthn credentials
+   * Generates WebAuthn credentials (uniforme con altri plugin)
    */
   async generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
     isLogin = false,
-  ): Promise<CredentialResult> {
+  ): Promise<{
+    success: boolean;
+    username: string;
+    key: any;
+    credentialId: string;
+    publicKey?: ArrayBuffer | null;
+    error?: string;
+  }> {
     try {
       if (isLogin) {
         const verificationResult = await this.verifyCredential(username);
+        if (!verificationResult.success || !verificationResult.credentialId) {
+          return {
+            success: false,
+            username,
+            key: undefined,
+            credentialId: "",
+            error: verificationResult.error,
+            publicKey: null,
+          };
+        }
+        // Deriva la chiave GunDB
+        const key = await deriveWebauthnKeys(
+          username,
+          verificationResult.credentialId,
+        );
         return {
-          success: verificationResult.success,
-          error: verificationResult.error,
+          success: true,
+          username,
+          key,
           credentialId: verificationResult.credentialId,
-          username: verificationResult.username,
+          publicKey: null,
         };
       } else {
         const credential = await this.createCredential(username);
         const credentialId = credential.id;
-
         let publicKey: ArrayBuffer | null = null;
         if (credential?.response?.getPublicKey) {
           publicKey = credential.response.getPublicKey();
         }
-
+        // Deriva la chiave GunDB
+        const key = await deriveWebauthnKeys(username, credentialId);
         return {
           success: true,
+          username,
+          key,
           credentialId,
           publicKey,
         };
@@ -493,7 +518,11 @@ export class Webauthn extends EventEmitter {
           : "Unknown error during WebAuthn operation";
       return {
         success: false,
+        username,
+        key: undefined,
+        credentialId: "",
         error: errorMessage,
+        publicKey: null,
       };
     }
   }
@@ -602,3 +631,16 @@ if (typeof window !== "undefined") {
 }
 
 export type { WebAuthnCredentials, DeviceInfo, CredentialResult };
+
+// Funzione helper per derivare chiavi WebAuthn (come per Web3)
+export async function deriveWebauthnKeys(
+  username: string,
+  credentialId: string,
+) {
+  const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(credentialId));
+  const salt = `${username}_${credentialId}`;
+
+  return await derive(hashedCredentialId, salt, {
+    includeP256: true,
+  });
+}

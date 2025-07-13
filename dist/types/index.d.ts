@@ -4,6 +4,7 @@ import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, 
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, utils, derive, GunErrors } from "./gundb";
+import { ISEAPair } from "gun";
 export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
 export { SEA, Gun, GunRxJS, crypto, utils, derive, GunErrors, GunInstance };
 export * from "./utils/errorHandler";
@@ -33,6 +34,7 @@ export declare class ShogunCore implements IShogunCore {
     private readonly eventEmitter;
     private readonly plugins;
     private currentAuthMethod?;
+    private appToken?;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -137,18 +139,18 @@ export declare class ShogunCore implements IShogunCore {
      * @description Attempts to log in user with provided credentials.
      * Emits login event on success.
      */
-    login(username: string, password: string): Promise<AuthResult>;
+    login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
     /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password
      * @param passwordConfirmation - Password confirmation
+     * @param pair - Pair of keys
      * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
-    auth(gunPair: any): Promise<AuthResult>;
+    signUp(username: string, password: string, passwordConfirmation?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
@@ -207,6 +209,6 @@ export default ShogunCore;
 declare global {
     interface Window {
         initShogun: (config: ShogunSDKConfig) => ShogunCore;
-        shogunCore: ShogunCore;
+        ShogunCore: ShogunCore;
     }
 }

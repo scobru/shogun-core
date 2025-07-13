@@ -5,8 +5,16 @@
  * - Direct authentication through Gun.user()
  */
 
-import Gun from "gun/gun";
-import SEA from "gun/sea";
+let Gun: any;
+let SEA: any;
+
+if (typeof window !== "undefined") {
+  Gun = require("gun/gun");
+  SEA = require("gun/sea");
+} else {
+  Gun = import("gun/gun").then((module) => module.default);
+  SEA = import("gun/sea").then((module) => module.default);
+}
 
 import "gun/lib/then.js";
 import "gun/lib/radix.js";
@@ -19,7 +27,12 @@ import "gun/lib/yson.js";
 import { restrictedPut } from "./gun-put-headers";
 import derive, { DeriveOptions } from "./derive";
 
-import type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
+import type {
+  IGunUserInstance,
+  IGunInstance,
+  IGunChain,
+  ISEAPair,
+} from "gun/types";
 
 import { log, logError } from "../utils/logger";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
@@ -80,14 +93,6 @@ class GunInstance {
     }
 
     this.gun = gun;
-
-    if (typeof window !== "undefined") {
-      (window as any).ShogunDB = this;
-      (window as any).ShogunGun = gun;
-    } else if (typeof global !== "undefined") {
-      (global as any).ShogunDB = this;
-      (global as any).ShogunGun = gun;
-    }
 
     try {
       this.user = this.gun.user().recall({ sessionStorage: true });
@@ -519,12 +524,16 @@ class GunInstance {
    * @param password Password
    * @returns Promise resolving to signup result
    */
-  async signUp(username: string, password: string): Promise<any> {
+  async signUp(
+    username: string,
+    password: string,
+    pair?: ISEAPair | null,
+  ): Promise<any> {
     log("Attempting user registration:", username);
 
     try {
       // Validate credentials
-      if (password.length < 8) {
+      if (password.length < 8 && !pair) {
         const err = "Passwords must be more than 8 characters long!";
         log(err);
         return { success: false, error: err };
@@ -539,118 +548,49 @@ class GunInstance {
       // First, try to authenticate with Gun's native system to check if user exists
       log(`Checking if user ${username} exists in Gun's native system...`);
       const authTestResult = await new Promise<any>((resolve) => {
-        this.gun.user().auth(username, password, (ack: any) => {
-          if (ack.err) {
-            // User doesn't exist or password is wrong - this is expected for new users
-            resolve({ exists: false, error: ack.err });
-          } else {
-            // User exists and password is correct
-            resolve({ exists: true, userPub: this.gun.user().is?.pub });
-          }
-        });
+        if (pair) {
+          this.gun.user().auth(pair, (ack: any) => {
+            if (ack.err) {
+              // User doesn't exist or password is wrong - this is expected for new users
+              resolve({ exists: false, error: ack.err });
+            } else {
+              // User exists and password is correct
+              resolve({ exists: true, userPub: this.gun.user().is?.pub });
+            }
+          });
+        } else {
+          this.gun.user().auth(username, password, (ack: any) => {
+            if (ack.err) {
+              resolve({ exists: false, error: ack.err });
+            } else {
+              resolve({ exists: true, userPub: this.gun.user().is?.pub });
+            }
+          });
+        }
       });
 
       if (authTestResult.exists) {
-        log(
-          `User ${username} already exists and password is correct, syncing with tracking system...`,
-        );
-
-        // User exists and can authenticate, sync with tracking system
-        const userPub = authTestResult.userPub;
-
-        // Check if user exists in our tracking system
-        const existingUser = await this.checkUsernameExists(username);
-
-        log("existingUser", existingUser);
-
-        if (!existingUser) {
-          log(`User ${username} not in tracking system, adding them...`);
-
-          // Add user to our tracking system
-          const userMetadata = {
-            username: username,
-            pub: userPub,
-            createdAt: Date.now(),
-            lastLogin: Date.now(),
-          };
-
-          // Save user metadata
-          try {
-            await new Promise<void>((resolve) => {
-              this.node.get(userPub).put(userMetadata, (ack: any) => {
-                if (ack.err) {
-                  logError(`Warning: Failed to save user metadata: ${ack.err}`);
-                } else {
-                  log(`User metadata saved for: ${username}`);
-                }
-                resolve();
-              });
-            });
-
-            // Add to users collection (non-blocking)
-            this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-              if (ack.err) {
-                logError(
-                  `Warning: Failed to add user to collection: ${ack.err}`,
-                );
-              } else {
-                log(`User added to collection: ${username}`);
-              }
-            });
-
-            // Create username mapping
-            await new Promise<void>((resolve) => {
-              this.node
-                .get("usernames")
-                .get(username)
-                .put(userPub, (ack: any) => {
-                  if (ack.err) {
-                    logError(
-                      `Warning: Could not create username mapping: ${ack.err}`,
-                    );
-                  } else {
-                    log(`Username mapping created: ${username} -> ${userPub}`);
-                  }
-                  resolve();
-                });
-            });
-          } catch (trackingError) {
-            logError(
-              `Warning: Could not update tracking system: ${trackingError}`,
-            );
-            // Don't fail signup for tracking errors
-          }
-
-          this._savePair();
-
-          return {
-            success: true,
-            userPub: userPub,
-            username: username,
-            message: "User already exists and was synced with tracking system",
-          };
-        }
-
-        return {
-          success: true,
-          userPub: userPub,
-          username: username,
-          message: "User already exists and was synced with tracking system",
-        };
+        // Await the call to runPostAuthOnAuthResult
+        return await this.runPostAuthOnAuthResult(authTestResult, username);
       }
 
       // User doesn't exist, attempt to create new user
       log(`Creating new user: ${username}`);
+
       const createResult = await new Promise<any>((resolve) => {
-        this.gun.user().create(username, password, (ack: any) => {
-          if (ack.err) {
-            logError(`User creation error: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
-          } else {
-            log(`User created successfully: ${username}`);
-            resolve({ success: true, pub: ack.pub });
-          }
-        });
+        if (pair) {
+          resolve({ success: true, pub: pair.pub });
+        } else {
+          this.gun.user().create(username, password, (ack: any) => {
+            if (ack.err) {
+              logError(`User creation error: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
+            } else {
+              log(`User created successfully: ${username}`);
+              resolve({ success: true, pub: ack.pub });
+            }
+          });
+        }
       });
 
       if (!createResult.success) {
@@ -659,14 +599,25 @@ class GunInstance {
 
       // User created successfully, now authenticate to get the userPub
       const authResult = await new Promise<any>((resolve) => {
-        this.gun.user().auth(username, password, (ack: any) => {
-          if (ack.err) {
-            logError(`Authentication after creation failed: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
-          } else {
-            resolve({ success: true, userPub: this.gun.user().is?.pub });
-          }
-        });
+        if (pair) {
+          this.gun.user().auth(pair, (ack: any) => {
+            if (ack.err) {
+              logError(`Authentication after creation failed: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
+            } else {
+              resolve({ success: true, userPub: this.gun.user().is?.pub });
+            }
+          });
+        } else {
+          this.gun.user().auth(username, password, (ack: any) => {
+            if (ack.err) {
+              logError(`Authentication after creation failed: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
+            } else {
+              resolve({ success: true, userPub: this.gun.user().is?.pub });
+            }
+          });
+        }
       });
 
       if (!authResult.success) {
@@ -681,58 +632,9 @@ class GunInstance {
         `User authentication successful after creation: ${username} (${userPub})`,
       );
 
-      // Add to tracking system
-      const userMetadata = {
-        username: username,
-        pub: userPub,
-        createdAt: Date.now(),
-        lastLogin: Date.now(),
-      };
+      await this.runPostAuthOnAuthResult(authResult, username);
 
-      // Save user metadata
-      try {
-        await new Promise<void>((resolve) => {
-          this.node.get(userPub).put(userMetadata, (ack: any) => {
-            if (ack.err) {
-              logError(`Warning: Failed to save user metadata: ${ack.err}`);
-            } else {
-              log(`User metadata saved for: ${username}`);
-            }
-            resolve();
-          });
-        });
-
-        // Add to users collection (non-blocking)
-        this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-          if (ack.err) {
-            logError(`Warning: Failed to add user to collection: ${ack.err}`);
-          } else {
-            log(`User added to collection: ${username}`);
-          }
-        });
-
-        // Create username mapping
-        await new Promise<void>((resolve) => {
-          this.node
-            .get("usernames")
-            .get(username)
-            .put(userPub, (ack: any) => {
-              if (ack.err) {
-                logError(
-                  `Warning: Could not create username mapping: ${ack.err}`,
-                );
-              } else {
-                log(`Username mapping created: ${username} -> ${userPub}`);
-              }
-              resolve();
-            });
-        });
-      } catch (trackingError) {
-        logError(`Warning: Could not update tracking system: ${trackingError}`);
-        // Don't fail signup for tracking errors
-      }
-
-      this._savePair();
+      this.savePair();
 
       return {
         success: true,
@@ -746,54 +648,251 @@ class GunInstance {
     }
   }
 
-  /**
-   * Check if a username already exists in the system
-   * @param username Username to check
-   * @returns Promise resolving to user data if exists, null otherwise
-   */
-  private async checkUsernameExists(username: string): Promise<any> {
-    try {
-      // 1. Cerca la mappatura username → pub
-      const mappedPub = await new Promise<string | null>((resolve) => {
-        this.node
-          .get("usernames")
-          .get(username)
-          .once((pub: any) => {
-            resolve(pub || null);
-          });
-      });
+  public async runPostAuthOnAuthResult(
+    authTestResult: any,
+    username: string,
+  ): Promise<any> {
+    log(
+      `User ${username} already exists and password is correct, syncing with tracking system...`,
+    );
 
-      if (mappedPub) {
-        // 2. Se trovata, recupera i dati utente dal pub
-        const userData = await new Promise<any>((resolve) => {
-          this.node.get(mappedPub).once((data: any) => {
-            resolve(data || null);
+    // User exists and can authenticate, sync with tracking system
+    const userPub = authTestResult.userPub;
+
+    if (!userPub) {
+      logError(
+        "User public key (userPub) is undefined in runPostAuthOnAuthResult.",
+      );
+      return { success: false, error: "User public key is missing." };
+    }
+
+    // Check if user exists in our tracking system
+    const existingUser = await this.checkUsernameExists(username);
+
+    log("existingUser", existingUser);
+
+    if (!existingUser) {
+      log(`User ${username} not in tracking system, adding them...`);
+
+      // Add user to our tracking system
+      const userMetadata = {
+        username: username,
+        pub: userPub,
+        createdAt: Date.now(),
+        lastLogin: Date.now(),
+      };
+
+      try {
+        // Save user metadata with enhanced synchronization
+        await new Promise<void>((resolve, reject) => {
+          const userNode = this.node.get(userPub);
+
+          userNode.put(userMetadata, (ack: any) => {
+            if (ack.err) {
+              logError(`Failed to save user metadata: ${ack.err}`);
+              reject(ack.err);
+            } else {
+              log(`User metadata saved for: ${username}`);
+              resolve();
+            }
           });
         });
-        return userData;
-      }
 
-      // 3. Fallback: cerca tra tutti gli utenti (lento, con timeout)
-      const existingUser = await Promise.race([
-        new Promise<any>((resolve) => {
-          let found = false;
-          const ref = this.node
-            .get("users")
-            .map()
-            .once((userData: any, key: string) => {
-              if (!found && userData && userData.username === username) {
-                found = true;
-                resolve(userData);
-                // ref.off(); // opzionale, se vuoi interrompere la ricerca
+        // Create username mapping with advanced synchronization
+        await new Promise<void>((resolve, reject) => {
+          const usernamesNode = this.node.get("usernames");
+          const mappingKey = "#" + username;
+
+          // Use a more robust mapping strategy
+          usernamesNode.get(mappingKey).put(userPub, (ack: any) => {
+            if (ack.err) {
+              logError(`Failed to create username mapping: ${ack.err}`);
+              reject(ack.err);
+              return;
+            }
+
+            // Advanced verification with promise-based retry
+            const verifyMapping = () => {
+              return new Promise<void>((verifyResolve, verifyReject) => {
+                // Multiple strategies to verify mapping
+                const verificationAttempts = [
+                  // Direct lookup
+                  () =>
+                    new Promise<boolean>((resolve) => {
+                      usernamesNode.get(mappingKey).once((pub: any) => {
+                        resolve(pub === userPub);
+                      });
+                    }),
+
+                  // Comprehensive scan
+                  () =>
+                    new Promise<boolean>((resolve) => {
+                      let found = false;
+                      usernamesNode.map().once((pub: any, key: string) => {
+                        if (key === mappingKey && pub === userPub) {
+                          found = true;
+                          resolve(true);
+                        }
+                      });
+
+                      // Timeout to ensure thorough scanning
+                      setTimeout(() => resolve(found), 500);
+                    }),
+                ];
+
+                // Run verification strategies sequentially
+                const runVerifications = async () => {
+                  for (const strategy of verificationAttempts) {
+                    try {
+                      const result = await strategy();
+                      if (result) {
+                        log(
+                          `Successfully verified username mapping for ${username}`,
+                        );
+                        verifyResolve();
+                        return;
+                      }
+                    } catch (error) {
+                      logError(`Verification strategy failed: ${error}`);
+                    }
+                  }
+
+                  // If all strategies fail
+                  logError(`Failed to verify username mapping for ${username}`);
+                  verifyReject(
+                    new Error("Username mapping verification failed"),
+                  );
+                };
+
+                runVerifications();
+              });
+            };
+
+            // Execute verification with timeout
+            Promise.race([
+              verifyMapping(),
+              new Promise<void>((_, reject) =>
+                setTimeout(
+                  () => reject(new Error("Verification timeout")),
+                  5000,
+                ),
+              ),
+            ])
+              .then(resolve)
+              .catch(reject);
+          });
+        });
+
+        // Add to users collection (non-blocking)
+        this.node.get("users").set(this.node.get(userPub), (ack: any) => {
+          if (ack.err) {
+            logError(`Warning: Failed to add user to collection: ${ack.err}`);
+          } else {
+            log(`User added to collection: ${username}`);
+          }
+        });
+
+        this.savePair();
+
+        return {
+          success: true,
+          userPub: userPub,
+          username: username,
+          message: "User successfully synced with tracking system",
+        };
+      } catch (trackingError) {
+        logError(
+          `Critical: Could not update tracking system: ${trackingError}`,
+        );
+        return {
+          success: false,
+          userPub: userPub,
+          username: username,
+          error: "Failed to synchronize user tracking system",
+        };
+      }
+    }
+
+    return existingUser;
+  }
+
+  public async checkUsernameExists(username: string): Promise<any> {
+    try {
+      // Normalize username to handle variations
+      const normalizedUsername = username.trim().toLowerCase();
+      const frozenKey = `#${normalizedUsername}`;
+      const alternateKey = normalizedUsername;
+
+      // Multiple lookup strategies
+      const lookupStrategies = [
+        // 1. Direct frozen mapping
+        async () => {
+          return new Promise((resolve) => {
+            this.node
+              .get("usernames")
+              .get(frozenKey)
+              .once((data) => resolve(data));
+          });
+        },
+        // 2. Alternate key lookup
+        async () => {
+          return new Promise((resolve) => {
+            this.node
+              .get("usernames")
+              .get(alternateKey)
+              .once((data) => resolve(data));
+          });
+        },
+        // 3. Comprehensive scan fallback
+        async () => {
+          return new Promise((resolve) => {
+            this.node.map().once((data, key) => {
+              if (key === frozenKey || key === alternateKey) {
+                resolve(data);
               }
             });
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
-      ]);
+          });
+        },
+      ];
 
-      return existingUser;
+      // Sequential strategy execution with timeout
+      for (const strategy of lookupStrategies) {
+        try {
+          const result = await Promise.race([
+            strategy(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Lookup timeout")), 5000),
+            ),
+          ]);
+
+          if (result) {
+            // If we found a pub, try to fetch user data
+            if (typeof result === "string") {
+              const userData = await new Promise<any>((resolve) => {
+                this.node.get(result).once((data: any) => {
+                  log(
+                    `[checkUsernameExists] User data for pub ${result}:`,
+                    data,
+                  );
+                  resolve(data || null);
+                });
+              });
+              // Always return an object with pub and username if possible
+              if (userData && userData.username) {
+                return userData;
+              }
+              return { pub: result, username };
+            }
+            return result;
+          }
+        } catch (error) {
+          log(`Username lookup strategy failed: ${error}`);
+        }
+      }
+
+      return null;
     } catch (error) {
-      logError(`Error checking username existence: ${error}`);
+      logError(`Username existence check failed: ${error}`);
       return null;
     }
   }
@@ -808,6 +907,7 @@ class GunInstance {
   async login(
     username: string,
     password: string,
+    pair?: ISEAPair | null,
     callback?: (result: any) => void,
   ): Promise<any> {
     log(`Attempting login for user: ${username}`);
@@ -816,15 +916,27 @@ class GunInstance {
       // Attempt Gun.js authentication directly first
       // This allows login even if our custom tracking system is out of sync
       const authResult = await new Promise<any>((resolve) => {
-        this.gun.user().auth(username, password, (ack: any) => {
-          if (ack.err) {
-            logError(`Login error for ${username}: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
-          } else {
-            log(`Login successful for: ${username}`);
-            resolve({ success: true, ack });
-          }
-        });
+        if (pair) {
+          this.gun.user().auth(pair, (ack: any) => {
+            if (ack.err) {
+              logError(`Login error for ${username}: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
+            } else {
+              log(`Login successful for: ${username}`);
+              resolve({ success: true, ack });
+            }
+          });
+        } else {
+          this.gun.user().auth(username, password, (ack: any) => {
+            if (ack.err) {
+              logError(`Login error for ${username}: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
+            } else {
+              log(`Login successful for: ${username}`);
+              resolve({ success: true, ack });
+            }
+          });
+        }
       });
 
       if (!authResult.success) {
@@ -850,78 +962,14 @@ class GunInstance {
 
       log(`Gun.js authentication successful for: ${username} (${userPub})`);
 
-      // Now try to sync with our custom tracking system
-      // This is best-effort and won't fail the login if it doesn't work
-      try {
-        // Check if user exists in our tracking system
-        const existingUser = await this.checkUsernameExists(username);
-
-        log("existingUser", existingUser);
-
-        if (!existingUser) {
-          log(`User ${username} not found in tracking system, adding them...`);
-
-          // Add user to our tracking system
-          const userMetadata = {
-            username: username,
-            pub: userPub,
-            createdAt: Date.now(),
-            lastLogin: Date.now(),
-          };
-
-          // Save user metadata
-          await new Promise<void>((resolve) => {
-            this.node.get(userPub).put(userMetadata, (ack: any) => {
-              if (ack.err) {
-                logError(`Warning: Failed to save user metadata: ${ack.err}`);
-              } else {
-                log(`User metadata saved for: ${username}`);
-              }
-              resolve();
-            });
-          });
-
-          // Add to users collection (non-blocking)
-          this.node.get("users").set(this.node.get(userPub), (ack: any) => {
-            if (ack.err) {
-              logError(`Warning: Failed to add user to collection: ${ack.err}`);
-            } else {
-              log(`User added to collection: ${username}`);
-            }
-          });
-
-          // Create username mapping
-          await new Promise<void>((resolve) => {
-            this.node
-              .get("usernames")
-              .get(username)
-              .put(userPub, (ack: any) => {
-                if (ack.err) {
-                  logError(
-                    `Warning: Could not create username mapping: ${ack.err}`,
-                  );
-                } else {
-                  log(`Username mapping created: ${username} -> ${userPub}`);
-                }
-                resolve();
-              });
-          });
-        } else {
-          log(
-            `User ${username} found in tracking system, updating last login...`,
-          );
-          // Update last login time (non-blocking)
-          this.node.get(userPub).get("lastLogin").put(Date.now());
-        }
-      } catch (trackingError) {
-        // Log but don't fail the login for tracking system errors
-        logError(
-          `Warning: Could not sync with tracking system: ${trackingError}`,
-        );
-      }
+      // Pass the userPub to runPostAuthOnAuthResult
+      this.runPostAuthOnAuthResult(
+        { success: true, userPub: userPub },
+        username,
+      );
 
       log(`Login completed successfully for: ${username} (${userPub})`);
-      this._savePair();
+      this.savePair();
 
       const result = {
         success: true,
@@ -939,7 +987,7 @@ class GunInstance {
     }
   }
 
-  private _savePair(): void {
+  public savePair(): void {
     try {
       const user = this.gun.user();
       const pair = (user as any)?._?.sea;
@@ -1366,9 +1414,14 @@ class GunInstance {
 
     try {
       // Find the user's data
-      const userData = await this.checkUsernameExists(username);
+      let userData = await this.checkUsernameExists(username);
 
       log("userData", userData);
+
+      // Patch: if userData is a string, treat as pub
+      if (typeof userData === "string") {
+        userData = { pub: userData, username };
+      }
 
       if (!userData || !userData.pub) {
         return { success: false, error: "User not found" };
@@ -1379,7 +1432,6 @@ class GunInstance {
       log(`Found user public key for password recovery: ${userPub}`);
 
       // Access the user's security data directly from their public key node
-      // Security data is stored in the user's private space, so we need to access it via their public key
       const securityData = await new Promise<any>((resolve) => {
         (this.node.get(userPub) as any).get("security").once((data: any) => {
           log(

@@ -1,5 +1,5 @@
 import { EventEmitter } from "../../utils/eventEmitter";
-import { ConnectionResult, NostrConnectorCredentials, AlbyProvider, NostrProvider, NostrConnectorConfig, NostrConnectorKeyPair } from "./types";
+import { ConnectionResult, AlbyProvider, NostrProvider, NostrConnectorConfig, NostrConnectorKeyPair } from "./types";
 declare global {
     interface Window {
         alby?: AlbyProvider;
@@ -7,11 +7,11 @@ declare global {
         NostrConnector?: typeof NostrConnector;
     }
 }
+export declare const MESSAGE_TO_SIGN = "I Love Shogun!";
 /**
  * Class for Bitcoin wallet connections and operations
  */
 declare class NostrConnector extends EventEmitter {
-    private readonly MESSAGE_TO_SIGN;
     private readonly DEFAULT_CONFIG;
     private readonly config;
     private readonly signatureCache;
@@ -24,25 +24,9 @@ declare class NostrConnector extends EventEmitter {
      */
     private setupEventListeners;
     /**
-     * Generate a deterministic password from an address
-     */
-    private generateDeterministicPassword;
-    /**
-     * Get cached signature if valid
-     */
-    private getCachedSignature;
-    /**
-     * Cache signature
-     */
-    private cacheSignature;
-    /**
      * Clear signature cache for a specific address or all addresses
      */
     clearSignatureCache(address?: string): void;
-    /**
-     * Validates that the address is valid
-     */
-    private validateAddress;
     /**
      * Check if Nostr extension is available
      */
@@ -68,9 +52,29 @@ declare class NostrConnector extends EventEmitter {
      */
     setKeyPair(keyPair: NostrConnectorKeyPair): void;
     /**
-     * Generate credentials using the connected wallet
+     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dalla signature
      */
-    generateCredentials(address: string): Promise<NostrConnectorCredentials>;
+    generateCredentials(address: string, signature: string, message: string): Promise<{
+        username: string;
+        key: {
+            pub: string;
+            priv: string;
+            epub: string;
+            epriv: string;
+            secp256k1Bitcoin: {
+                privateKey: string;
+                publicKey: string;
+                address: string;
+            };
+            secp256k1Ethereum: {
+                privateKey: string;
+                publicKey: string;
+                address: string;
+            };
+        };
+        message: string;
+        signature: string;
+    }>;
     /**
      * Generate a password from a signature
      */
@@ -88,16 +92,28 @@ declare class NostrConnector extends EventEmitter {
      */
     getConnectedType(): "alby" | "nostr" | "manual" | null;
     /**
-     * Request signature with timeout
-     */
-    private requestSignatureWithTimeout;
-    /**
      * Request a signature from the connected wallet
      */
-    private requestSignature;
+    requestSignature(address: string, message: string): Promise<string>;
     /**
      * Cleanup event listeners
      */
     cleanup(): void;
 }
+export declare function deriveNostrKeys(address: string, signature: string, message: string): Promise<{
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+    secp256k1Bitcoin: {
+        privateKey: string;
+        publicKey: string;
+        address: string;
+    };
+    secp256k1Ethereum: {
+        privateKey: string;
+        publicKey: string;
+        address: string;
+    };
+}>;
 export { NostrConnector };

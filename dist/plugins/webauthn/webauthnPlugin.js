@@ -5,7 +5,6 @@ const base_1 = require("../base");
 const webauthn_1 = require("./webauthn");
 const webauthnSigner_1 = require("./webauthnSigner");
 const logger_1 = require("../../utils/logger");
-const ethers_1 = require("ethers");
 const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -36,7 +35,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
         (0, logger_1.log)("WebAuthn plugin destroyed");
     }
     /**
-     * Assicura che il modulo WebAuthn sia inizializzato
+     * Assicura che il modulo Webauthn sia inizializzato
      * @private
      */
     assertWebauthn() {
@@ -250,14 +249,13 @@ class WebauthnPlugin extends base_1.BasePlugin {
             if (!this.isSupported()) {
                 throw new Error("WebAuthn is not supported by this browser");
             }
-            const assertionResult = await this.generateCredentials(username, null, true);
-            if (!assertionResult?.success) {
-                throw new Error(assertionResult?.error || "WebAuthn verification failed");
+            const credentials = await this.generateCredentials(username, null, true);
+            if (!credentials?.success) {
+                throw new Error(credentials?.error || "WebAuthn verification failed");
             }
-            const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(assertionResult.credentialId || ""));
-            // Set authentication method to webauthn before login
+            // Usa le chiavi derivate per login
             core.setAuthMethod("webauthn");
-            const loginResult = await core.login(username, hashedCredentialId);
+            const loginResult = await core.login(username, "", credentials.key);
             if (loginResult.success) {
                 (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
                 return {
@@ -296,27 +294,15 @@ class WebauthnPlugin extends base_1.BasePlugin {
             if (!this.isSupported()) {
                 throw new Error("WebAuthn is not supported by this browser");
             }
-            const attestationResult = await this.generateCredentials(username, null, false);
-            if (!attestationResult?.success) {
-                throw new Error(attestationResult?.error || "Unable to generate WebAuthn credentials");
+            const credentials = await this.generateCredentials(username, null, false);
+            if (!credentials?.success) {
+                throw new Error(credentials?.error || "Unable to generate WebAuthn credentials");
             }
-            const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(attestationResult.credentialId || ""));
-            // Set authentication method to webauthn before signup
+            // Usa le chiavi derivate per signup
             core.setAuthMethod("webauthn");
-            const signupResult = await core.signUp(username, hashedCredentialId);
+            const signupResult = await core.signUp(username, "", "", credentials.key);
             if (signupResult.success) {
-                (0, logger_1.log)(`WebAuthn registration completed successfully for user: ${username}`);
-                // Emettiamo un evento personalizzato per il registrazione WebAuthn
-                core.emit("webauthn:register", {
-                    username,
-                    credentialId: attestationResult.credentialId,
-                });
-                // Also emit the standard auth:signup event for consistency
-                core.emit("auth:signup", {
-                    userPub: signupResult.userPub,
-                    username,
-                    method: "webauthn",
-                });
+                (0, logger_1.log)(`WebAuthn signup completed successfully for user: ${username}`);
                 return {
                     ...signupResult,
                 };
