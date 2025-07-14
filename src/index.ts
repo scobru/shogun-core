@@ -685,7 +685,8 @@ declare global {
 
 if (typeof window !== "undefined") {
   window.initShogun = (config: ShogunSDKConfig): ShogunCore => {
-    window.ShogunCore = new ShogunCore(config);
-    return window.ShogunCore;
+    const instance = new ShogunCore(config);
+    window.ShogunCore = instance;
+    return instance;
   };
 }
