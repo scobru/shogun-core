@@ -267,7 +267,7 @@ export class ShogunCore implements IShogunCore {
         this.register(oauthPlugin);
         log(
           "[index] OAuth plugin registered with providers:",
-          config.oauth.providers,
+          config.oauth.providers
         );
       }
     } catch (error) {
@@ -448,7 +448,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error,
+        error
       );
     }
   }
@@ -464,7 +464,7 @@ export class ShogunCore implements IShogunCore {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<AuthResult> {
     log("[index] Login");
     try {
@@ -483,7 +483,7 @@ export class ShogunCore implements IShogunCore {
         });
 
         log(
-          `Current auth method before wallet check: ${this.currentAuthMethod}`,
+          `Current auth method before wallet check: ${this.currentAuthMethod}`
         );
       } else {
         result.error = result.error || "Wrong user or password";
@@ -495,7 +495,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error,
+        error
       );
 
       return {
@@ -519,7 +519,7 @@ export class ShogunCore implements IShogunCore {
     username: string,
     password: string,
     passwordConfirmation?: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<SignUpResult> {
     log("[index] Sign up");
     try {
@@ -647,7 +647,7 @@ export class ShogunCore implements IShogunCore {
    */
   setAuthMethod(method: AuthMethod): void {
     log(
-      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`
     );
     this.currentAuthMethod = method;
     log(`Authentication method successfully set to: ${method}`);
@@ -685,11 +685,7 @@ declare global {
 
 if (typeof window !== "undefined") {
   window.initShogun = (config: ShogunSDKConfig): ShogunCore => {
-    if (window.ShogunCore) {
-      return window.ShogunCore;
-    }
-    const shogun = new ShogunCore(config);
-    window.ShogunCore = shogun;
-    return shogun;
+    window.ShogunCore = new ShogunCore(config);
+    return window.ShogunCore;
   };
 }
