@@ -472,9 +472,7 @@ export class OAuthConnector extends EventEmitter {
     } else if (
       providerConfig.clientSecret &&
       providerConfig.clientSecret.trim() !== "" &&
-      (typeof window === "undefined" ||
-        (this.config.allowUnsafeClientSecret &&
-          window.location.hostname === "localhost"))
+      this.config.allowUnsafeClientSecret
     ) {
       // Only add client secret if PKCE is not enabled
       // Add client secret only if available AND we are in a non-browser environment.

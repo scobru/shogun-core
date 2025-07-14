@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShogunCore Vanilla Test</title>
+  <style>
+    body { font-family: monospace; background: #f8f8f8; color: #222; padding: 2em; }
+    pre { background: #fff; border: 1px solid #ccc; padding: 1em; }
+    .ok { color: green; }
+    .fail { color: red; }
+  </style>
+</head>
+<body>
+  <h1>ShogunCore Vanilla Test</h1>
+  <pre id="output">Loading...</pre>
+  <script src="../dist/browser/shogun-core.js"></script>
+  <script>
+    function log(msg, cls) {
+      const el = document.getElementById('output');
+      el.innerHTML += `<div class="${cls||''}">${msg}</div>`;
+    }
+    document.getElementById('output').textContent = '';
+
+    if (typeof window.initShogun === 'function') {
+      log('✓ <b>initShogun</b> found on window', 'ok');
+      // Config minimale: adatta secondo le tue esigenze e dipendenze reali
+      const config = {
+        appToken: "12345678", // almeno 8 caratteri
+        oauth: { enabled: false },
+        peers: [], // puoi aggiungere peer GUN se vuoi testare la connessione
+      };
+      try {
+        const shogun = window.initShogun(config);
+        log('✓ <b>ShogunCore</b> instance created', 'ok');
+        // Mostra le chiavi disponibili
+      } catch (e) {
+        log('✗ Error creating ShogunCore: ' + e.message, 'fail');
+        console.error(e);
+      }
+    } else {
+      log('✗ <b>initShogun</b> NOT found on window', 'fail');
+    }
+  </script>
+</body>
+</html>
+
+
+

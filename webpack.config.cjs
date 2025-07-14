@@ -19,6 +19,7 @@ module.exports = {
     extensions: [".ts", ".js", ".json"],
     alias: {
       // Explicit aliases for Gun.js modules
+      "gun$": path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
       "gun/lib/then": path.resolve(__dirname, "node_modules/gun/lib/then.js"),
@@ -34,6 +35,7 @@ module.exports = {
       vm: require.resolve("vm-browserify"),
       assert: require.resolve("assert/"),
       constants: require.resolve("constants-browserify"),
+      gun: path.resolve(__dirname, "node_modules/gun/gun.js"),
     },
   },
   module: {
@@ -126,8 +128,5 @@ module.exports = {
       /the request of a dependency is an expression/,
       /Critical dependency: the request of a dependency is an expression/,
     ],
-  },
-  externals: {
-    gun: 'commonjs gun'
   },
 };

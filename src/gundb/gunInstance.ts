@@ -1066,21 +1066,8 @@ class GunInstance {
       (user as any)._ = { sea: pair };
 
       // Try to recall the session without timeout
-      const recallResult = await new Promise<boolean>((resolve) => {
-        try {
-          user.recall({ sessionStorage: true }, (ack: any) => {
-            if (ack.err) {
-              logError(`Session recall error: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-        } catch (error) {
-          logError(`Session recall exception: ${error}`);
-          resolve(false);
-        }
-      });
+      const recallResult = user.recall({ sessionStorage: true });
+      log("recallResult", recallResult);
 
       if (recallResult && user.is?.pub === session.pub) {
         log(
