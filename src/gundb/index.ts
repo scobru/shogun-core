@@ -1,2 +1,2 @@
 // Export the main class
-export * from "./gunInstance";
+export * from "./gun-Instance";

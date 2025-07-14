@@ -106,15 +106,7 @@ export class ShogunCore implements IShogunCore {
       restrictedPut(Gun, config.authToken);
     }
 
-    if (config.oauth) {
-      // validate app token
-      if (config.appToken && config.appToken.length < 8) {
-        throw new Error("App token must be 8 characters long");
-      }
-      this.appToken = config.appToken;
-    } else {
-      throw new Error("App token is required for OAuth plugin");
-    }
+    this.appToken = config.appToken;
 
     try {
       if (config.gunInstance) {
@@ -210,14 +202,19 @@ export class ShogunCore implements IShogunCore {
    */
   private setupGunEventForwarding(): void {
     // Forward all Gun data events
-    const gunEvents = ["put", "get", "set", "remove"];
+    const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
     gunEvents.forEach((eventName) => {
       this.gundb.on(eventName, (data: any) => {
         this.eventEmitter.emit(eventName, data);
       });
     });
 
-    const peerEvents = ["add", "remove", "connect", "disconnect"];
+    const peerEvents = [
+      "gun:peer:add",
+      "gun:peer:remove",
+      "gun:peer:connect",
+      "gun:peer:disconnect",
+    ];
 
     peerEvents.forEach((eventName) => {
       this.gundb.on(eventName, (data: any) => {
@@ -267,7 +264,7 @@ export class ShogunCore implements IShogunCore {
         this.register(oauthPlugin);
         log(
           "[index] OAuth plugin registered with providers:",
-          config.oauth.providers
+          config.oauth.providers,
         );
       }
     } catch (error) {
@@ -448,7 +445,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -464,7 +461,7 @@ export class ShogunCore implements IShogunCore {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     log("[index] Login");
     try {
@@ -483,7 +480,7 @@ export class ShogunCore implements IShogunCore {
         });
 
         log(
-          `Current auth method before wallet check: ${this.currentAuthMethod}`
+          `Current auth method before wallet check: ${this.currentAuthMethod}`,
         );
       } else {
         result.error = result.error || "Wrong user or password";
@@ -495,7 +492,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error
+        error,
       );
 
       return {
@@ -519,7 +516,7 @@ export class ShogunCore implements IShogunCore {
     username: string,
     password: string,
     passwordConfirmation?: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     log("[index] Sign up");
     try {
@@ -647,7 +644,7 @@ export class ShogunCore implements IShogunCore {
    */
   setAuthMethod(method: AuthMethod): void {
     log(
-      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`
+      `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
     );
     this.currentAuthMethod = method;
     log(`Authentication method successfully set to: ${method}`);

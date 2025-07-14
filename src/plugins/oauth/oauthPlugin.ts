@@ -13,9 +13,7 @@ import { log, logError, logWarn } from "../../utils/logger";
 import { AuthMethod, AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ShogunStorage } from "../../storage/storage";
-import derive from "../../gundb/derive";
 import { ISEAPair } from "gun";
-import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * OAuth Plugin for ShogunCore

@@ -14,7 +14,6 @@ import {
 import { log, logError, logWarn } from "../../utils/logger";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore

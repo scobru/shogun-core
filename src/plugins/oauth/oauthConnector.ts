@@ -1,13 +1,11 @@
 /**
  * OAuth Connector - Simple version for GunDB user creation
  */
-import { ethers } from "ethers";
 import { logDebug, logError, logWarn } from "../../utils/logger";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
   OAuthConfig,
   OAuthProvider,
-  OAuthTokenResponse,
   OAuthUserInfo,
   OAuthCredentials,
   OAuthConnectionResult,
@@ -123,7 +121,10 @@ export class OAuthConnector extends EventEmitter {
    * Storage abstraction (browser sessionStorage or Node.js Map)
    */
   private setItem(key: string, value: string): void {
-    if (typeof sessionStorage !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      typeof sessionStorage !== "undefined"
+    ) {
       sessionStorage.setItem(key, value);
     } else {
       this.memoryStorage.set(key, value);
@@ -131,7 +132,10 @@ export class OAuthConnector extends EventEmitter {
   }
 
   private getItem(key: string): string | null {
-    if (typeof sessionStorage !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      typeof sessionStorage !== "undefined"
+    ) {
       return sessionStorage.getItem(key);
     } else {
       return this.memoryStorage.get(key) || null;
@@ -139,7 +143,10 @@ export class OAuthConnector extends EventEmitter {
   }
 
   private removeItem(key: string): void {
-    if (typeof sessionStorage !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      typeof sessionStorage !== "undefined"
+    ) {
       sessionStorage.removeItem(key);
     } else {
       this.memoryStorage.delete(key);
@@ -427,10 +434,11 @@ export class OAuthConnector extends EventEmitter {
     state?: string,
   ): Promise<any> {
     const storedState = this.getItem(`oauth_state_${provider}`);
-
     if (state && storedState !== state) {
+      this.removeItem(`oauth_state_${provider}`); // Cleanup anche in caso di errore
       throw new Error("Invalid state parameter");
     }
+    this.removeItem(`oauth_state_${provider}`); // Cleanup dopo validazione
 
     const tokenParams: Record<string, string> = {
       client_id: providerConfig.clientId,
@@ -472,12 +480,15 @@ export class OAuthConnector extends EventEmitter {
     } else if (
       providerConfig.clientSecret &&
       providerConfig.clientSecret.trim() !== "" &&
-      this.config.allowUnsafeClientSecret
+      this.config.allowUnsafeClientSecret &&
+      typeof window === "undefined"
     ) {
-      // Only add client secret if PKCE is not enabled
-      // Add client secret only if available AND we are in a non-browser environment.
-      // Exposing client_secret in the browser is a major security risk.
+      // Solo Node.js/server
       tokenParams.client_secret = providerConfig.clientSecret;
+    } else if (providerConfig.clientSecret && typeof window !== "undefined") {
+      throw new Error(
+        "Client secret must never be used in browser environments.",
+      );
     } else {
       logWarn(
         "Client secret is required when PKCE is not enabled. Please enable PKCE or configure a client secret.",
@@ -487,11 +498,25 @@ export class OAuthConnector extends EventEmitter {
     // Clean up verifier
     this.removeItem(`oauth_verifier_${provider}`);
 
-    // Debug: Log what we're sending
-    logDebug(
-      "Token exchange parameters:",
-      JSON.stringify(tokenParams, null, 2),
-    );
+    // Debug: Log what we're sending (maschera dati sensibili in produzione)
+    if (
+      typeof process !== "undefined" &&
+      process.env &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      logDebug(
+        "Token exchange parameters:",
+        JSON.stringify(
+          {
+            ...tokenParams,
+            code_verifier: tokenParams.code_verifier ? "***" : undefined,
+            client_secret: tokenParams.client_secret ? "***" : undefined,
+          },
+          null,
+          2,
+        ),
+      );
+    }
     logDebug("PKCE enabled:", isPKCEEnabled);
     logDebug("Has code_verifier:", !!tokenParams.code_verifier);
     logDebug("Has client_secret:", !!tokenParams.client_secret);
@@ -612,11 +637,16 @@ export class OAuthConnector extends EventEmitter {
 
     this.userCache.set(cacheKey, cacheEntry);
 
-    // Also try to persist in localStorage
+    // Salva solo dati minimi in localStorage
     try {
+      const minimalCacheEntry = {
+        userId: userInfo.id,
+        provider,
+        timestamp: Date.now(),
+      };
       localStorage.setItem(
         `shogun_oauth_user_${cacheKey}`,
-        JSON.stringify(cacheEntry),
+        JSON.stringify(minimalCacheEntry),
       );
     } catch (error) {
       logWarn("Failed to persist user info in localStorage:", error);

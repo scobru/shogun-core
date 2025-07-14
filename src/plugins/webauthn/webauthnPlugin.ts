@@ -6,10 +6,8 @@ import { WebauthnPluginInterface } from "./types";
 import { WebAuthnCredentials, CredentialResult } from "./types";
 import { WebAuthnUniformCredentials } from "./types";
 import { log, logError } from "../../utils/logger";
-import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
-import { deriveWebauthnKeys } from "./webauthn";
 
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore

@@ -13,7 +13,7 @@
 <body>
   <h1>ShogunCore Vanilla Test</h1>
   <pre id="output">Loading...</pre>
-  <script src="../dist/browser/shogun-core.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shogun-core@1.5.7/dist/browser/shogun-core.js"></script>
   <script>
     function log(msg, cls) {
       const el = document.getElementById('output');
@@ -23,16 +23,17 @@
 
     if (typeof window.initShogun === 'function') {
       log('✓ <b>initShogun</b> found on window', 'ok');
-      // Config minimale: adatta secondo le tue esigenze e dipendenze reali
       const config = {
-        appToken: "12345678", // almeno 8 caratteri
+        appToken: "12345678",
         oauth: { enabled: false },
-        peers: [], // puoi aggiungere peer GUN se vuoi testare la connessione
+        peers: [],
       };
       try {
         const shogun = window.initShogun(config);
         log('✓ <b>ShogunCore</b> instance created', 'ok');
-        // Mostra le chiavi disponibili
+        log('typeof shogun.getPlugin: ' + typeof shogun.getPlugin, 'ok');
+        log('shogun instanceof window.ShogunCoreClass: ' + (shogun instanceof window.ShogunCoreClass), 'ok');
+        log('ShogunCore keys: ' + Object.keys(shogun).join(', '), 'ok');
       } catch (e) {
         log('✗ Error creating ShogunCore: ' + e.message, 'fail');
         console.error(e);

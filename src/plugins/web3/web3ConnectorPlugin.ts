@@ -2,17 +2,12 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Web3Connector } from "./web3Connector";
 import { Web3Signer, Web3SigningCredential } from "./web3Signer";
-import {
-  Web3ConnectorCredentials,
-  ConnectionResult,
-  Web3ConectorPluginInterface,
-} from "./types";
-import { log, logError, logWarn } from "../../utils/logger";
+import { ConnectionResult, Web3ConectorPluginInterface } from "./types";
+import { log, logError } from "../../utils/logger";
 import { ethers } from "ethers";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ISEAPair } from "gun";
-import { generateUsernameFromIdentity } from "../../utils/validation";
 
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore

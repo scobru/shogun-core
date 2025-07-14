@@ -7,7 +7,7 @@ const MAX_USERNAME_LENGTH = 64;
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { log, logError, logDebug } from "../../utils/logger";
+import { logError, logDebug } from "../../utils/logger";
 import {
   DeviceInfo,
   WebAuthnCredentials,
