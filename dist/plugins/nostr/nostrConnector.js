@@ -104,7 +104,7 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
             // Attempt to connect to the specified wallet type
             switch (type) {
                 case "alby":
-                    (0, logger_1.log)("Alby is deprecated, redirecting to Nostr");
+                    (0, logger_1.log)("[nostrConnector] Alby is deprecated, redirecting to Nostr");
                     result = await this.connectNostr();
                     break;
                 case "nostr":
@@ -268,7 +268,7 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                 }
             }
             else if (this.connectedType === "manual" && this.manualKeyPair) {
-                (0, logger_1.log)("Manual verification for keypair");
+                (0, logger_1.log)("[nostrConnector] Manual verification for keypair");
                 // For manual keypairs, we MUST use a secure verification method.
                 if (!this.manualKeyPair.privateKey) {
                     (0, logger_1.logError)("Manual verification failed: private key is missing.");
@@ -328,7 +328,7 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                     if (this.connectedType === "alby") {
                         (0, logger_1.logWarn)("Alby is deprecated, using Nostr functionality for signature request");
                     }
-                    (0, logger_1.log)("Requesting Nostr signature for message:", message);
+                    (0, logger_1.log)("[nostrConnector] Requesting Nostr signature for message:", message);
                     if (!window.nostr) {
                         throw new Error("Nostr extension not available");
                     }
@@ -349,7 +349,7 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
                     (0, logger_1.log)("Received Nostr signature:", signedEvent.sig.substring(0, 20) + "...");
                     return signedEvent.sig;
                 case "manual":
-                    (0, logger_1.log)("Using manual key pair for signature");
+                    (0, logger_1.log)("[nostrConnector] Using manual key pair for signature");
                     if (!this.manualKeyPair || !this.manualKeyPair.privateKey) {
                         throw new Error("No manual key pair available or private key missing");
                     }

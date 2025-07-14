@@ -23,7 +23,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         // Inizializziamo il modulo Web3
         this.Web3 = new web3Connector_1.Web3Connector();
         this.signer = new web3Signer_1.Web3Signer(this.Web3);
-        (0, logger_1.log)("Web3 plugin initialized with signer support");
+        (0, logger_1.log)("[web3ConnectorPlugin] Web3 plugin initialized with signer support");
     }
     /**
      * @inheritdoc
@@ -35,7 +35,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         this.Web3 = null;
         this.signer = null;
         super.destroy();
-        (0, logger_1.log)("Web3 plugin destroyed");
+        (0, logger_1.log)("[web3ConnectorPlugin] Web3 plugin destroyed");
     }
     /**
      * Assicura che il modulo Web3 sia inizializzato
@@ -75,7 +75,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async generateCredentials(address) {
-        (0, logger_1.log)("Calling credential generation");
+        (0, logger_1.log)("[web3ConnectorPlugin] Calling credential generation");
         return this.assertMetaMask().generateCredentials(address);
     }
     /**
@@ -262,7 +262,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     async login(address) {
-        (0, logger_1.log)("Login with Web3");
+        (0, logger_1.log)("[web3ConnectorPlugin] Login with Web3");
         try {
             const core = this.assertInitialized();
             (0, logger_1.log)(`Web3 login attempt for address: ${address}`);
@@ -272,7 +272,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
-            (0, logger_1.log)("Generating credentials for Web3 login...");
+            (0, logger_1.log)("[web3ConnectorPlugin] Generating credentials for Web3 login...");
             const k = await this.generateCredentials(address);
             const username = address.toLowerCase();
             if (!k?.pub || !k?.priv) {
@@ -282,7 +282,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             // Set authentication method to web3 before login
             core.setAuthMethod("web3");
             // Use core's login method with direct GunDB authentication
-            (0, logger_1.log)("Logging in using core login method...");
+            (0, logger_1.log)("[web3ConnectorPlugin] Logging in using core login method...");
             const loginResult = await core.login(username, "", k);
             if (!loginResult.success) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_LOGIN_FAILED", loginResult.error || "Failed to log in with Web3 credentials");
@@ -314,7 +314,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     async signUp(address) {
-        (0, logger_1.log)("Sign up with Web3");
+        (0, logger_1.log)("[web3ConnectorPlugin] Sign up with Web3");
         try {
             const core = this.assertInitialized();
             (0, logger_1.log)(`Web3 registration attempt for address: ${address}`);
@@ -324,7 +324,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
-            (0, logger_1.log)("Generating credentials for Web3 registration...");
+            (0, logger_1.log)("[web3ConnectorPlugin] Generating credentials for Web3 registration...");
             const k = await this.generateCredentials(address);
             const username = address.toLowerCase();
             if (!k?.pub || !k?.priv) {
@@ -334,7 +334,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             // Set authentication method to web3 before signup
             core.setAuthMethod("web3");
             // Use core's signUp method with direct GunDB authentication
-            (0, logger_1.log)("Signing up using core signUp method...");
+            (0, logger_1.log)("[web3ConnectorPlugin] Signing up using core signUp method...");
             const signupResult = await core.signUp(username, "", "", k);
             if (!signupResult.success) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_SIGNUP_FAILED", signupResult.error || "Failed to sign up with Web3 credentials");

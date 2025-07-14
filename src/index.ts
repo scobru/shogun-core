@@ -75,6 +75,7 @@ export class ShogunCore implements IShogunCore {
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
   private currentAuthMethod?: AuthMethod;
   private appToken?: string;
+
   /**
    * Initialize the Shogun SDK
    * @param config - SDK Configuration object
@@ -83,7 +84,7 @@ export class ShogunCore implements IShogunCore {
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
-    log("Initializing Shogun " + ShogunCore.API_VERSION);
+    log("[index] Initializing Shogun " + ShogunCore.API_VERSION);
 
     this.config = config;
     this.storage = new ShogunStorage();
@@ -105,9 +106,9 @@ export class ShogunCore implements IShogunCore {
       restrictedPut(Gun, config.authToken);
     }
 
-    if (config.appToken && config.oauth?.enabled) {
+    if (config.oauth) {
       // validate app token
-      if (config.appToken.length < 8) {
+      if (config.appToken && config.appToken.length < 8) {
         throw new Error("App token must be 8 characters long");
       }
       this.appToken = config.appToken;
@@ -149,7 +150,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     this._gun.on("auth", (user) => {
-      log("Gun auth event received", user);
+      log("[index] [INDEX}Gun auth event received", user);
       this._user = this._gun.user();
       this.eventEmitter.emit("auth:login", {
         pub: user.pub,
@@ -184,7 +185,7 @@ export class ShogunCore implements IShogunCore {
       (global as any).ShogunGun = this.gundb.gun;
     }
 
-    log("Shogun initialized! 🚀");
+    log("[index] Shogun initialized! 🚀");
   }
 
   /**
@@ -224,7 +225,7 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    log("Gun event forwarding setup completed");
+    log("[index] Gun event forwarding setup completed");
   }
 
   /**
@@ -238,21 +239,21 @@ export class ShogunCore implements IShogunCore {
         const webauthnPlugin = new WebauthnPlugin();
         webauthnPlugin._category = PluginCategory.Authentication;
         this.register(webauthnPlugin);
-        log("Webauthn plugin registered");
+        log("[index] Webauthn plugin registered");
       }
 
       if (config.web3?.enabled) {
         const web3ConnectorPlugin = new Web3ConnectorPlugin();
         web3ConnectorPlugin._category = PluginCategory.Authentication;
         this.register(web3ConnectorPlugin);
-        log("Web3Connector plugin registered");
+        log("[index] Web3Connector plugin registered");
       }
 
       if (config.nostr?.enabled) {
         const nostrConnectorPlugin = new NostrConnectorPlugin();
         nostrConnectorPlugin._category = PluginCategory.Authentication;
         this.register(nostrConnectorPlugin);
-        log("NostrConnector plugin registered");
+        log("[index] NostrConnector plugin registered");
       }
 
       // Register OAuth plugin if enabled
@@ -264,7 +265,10 @@ export class ShogunCore implements IShogunCore {
         oauthPlugin.configure(config.oauth);
 
         this.register(oauthPlugin);
-        log("OAuth plugin registered with providers:", config.oauth.providers);
+        log(
+          "[index] OAuth plugin registered with providers:",
+          config.oauth.providers,
+        );
       }
     } catch (error) {
       logError("Error registering builtin plugins:", error);
@@ -408,7 +412,7 @@ export class ShogunCore implements IShogunCore {
    */
   configureLogging(config: LoggingConfig): void {
     configureLogging(config);
-    log("Logging reconfigured with new settings");
+    log("[index] Logging reconfigured with new settings");
   }
 
   // *********************************************************************************************************
@@ -433,12 +437,12 @@ export class ShogunCore implements IShogunCore {
   logout(): void {
     try {
       if (!this.isLoggedIn()) {
-        log("Logout ignored: user not authenticated");
+        log("[index] Logout ignored: user not authenticated");
         return;
       }
       this.gundb.logout();
       this.eventEmitter.emit("auth:logout", {});
-      log("Logout completed successfully");
+      log("[index] Logout completed successfully");
     } catch (error) {
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
@@ -462,13 +466,13 @@ export class ShogunCore implements IShogunCore {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
-    log("Login");
+    log("[index] Login");
     try {
       log(`Login attempt for user: ${username}`);
 
       if (!this.currentAuthMethod) {
         this.currentAuthMethod = "password";
-        log("Authentication method set to default: password");
+        log("[index] Authentication method set to default: password");
       }
 
       const result = await this.gundb.login(username, password, pair);
@@ -517,7 +521,7 @@ export class ShogunCore implements IShogunCore {
     passwordConfirmation?: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
-    log("Sign up");
+    log("[index] Sign up");
     try {
       if (
         passwordConfirmation !== undefined &&

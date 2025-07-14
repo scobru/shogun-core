@@ -136,7 +136,7 @@ class NostrConnector extends EventEmitter {
       // Attempt to connect to the specified wallet type
       switch (type) {
         case "alby":
-          log("Alby is deprecated, redirecting to Nostr");
+          log("[nostrConnector] Alby is deprecated, redirecting to Nostr");
           result = await this.connectNostr();
           break;
         case "nostr":
@@ -328,7 +328,7 @@ class NostrConnector extends EventEmitter {
           return false;
         }
       } else if (this.connectedType === "manual" && this.manualKeyPair) {
-        log("Manual verification for keypair");
+        log("[nostrConnector] Manual verification for keypair");
         // For manual keypairs, we MUST use a secure verification method.
         if (!this.manualKeyPair.privateKey) {
           logError("Manual verification failed: private key is missing.");
@@ -401,7 +401,10 @@ class NostrConnector extends EventEmitter {
               "Alby is deprecated, using Nostr functionality for signature request",
             );
           }
-          log("Requesting Nostr signature for message:", message);
+          log(
+            "[nostrConnector] Requesting Nostr signature for message:",
+            message,
+          );
 
           if (!window.nostr) {
             throw new Error("Nostr extension not available");
@@ -430,7 +433,7 @@ class NostrConnector extends EventEmitter {
           return signedEvent.sig;
 
         case "manual":
-          log("Using manual key pair for signature");
+          log("[nostrConnector] Using manual key pair for signature");
           if (!this.manualKeyPair || !this.manualKeyPair.privateKey) {
             throw new Error(
               "No manual key pair available or private key missing",

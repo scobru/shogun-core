@@ -67,7 +67,7 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
-        (0, logger_1.log)("Initializing Shogun " + ShogunCore.API_VERSION);
+        (0, logger_1.log)("[index] Initializing Shogun " + ShogunCore.API_VERSION);
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
@@ -84,9 +84,9 @@ class ShogunCore {
         if (config.authToken) {
             (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
         }
-        if (config.appToken && config.oauth?.enabled) {
+        if (config.oauth) {
             // validate app token
-            if (config.appToken.length < 8) {
+            if (config.appToken && config.appToken.length < 8) {
                 throw new Error("App token must be 8 characters long");
             }
             this.appToken = config.appToken;
@@ -127,7 +127,7 @@ class ShogunCore {
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
         this._gun.on("auth", (user) => {
-            (0, logger_1.log)("Gun auth event received", user);
+            (0, logger_1.log)("[index] [INDEX}Gun auth event received", user);
             this._user = this._gun.user();
             this.eventEmitter.emit("auth:login", {
                 pub: user.pub,
@@ -158,7 +158,7 @@ class ShogunCore {
             global.ShogunDB = this.gundb;
             global.ShogunGun = this.gundb.gun;
         }
-        (0, logger_1.log)("Shogun initialized! 🚀");
+        (0, logger_1.log)("[index] Shogun initialized! 🚀");
     }
     /**
      * Access to the Gun instance
@@ -192,7 +192,7 @@ class ShogunCore {
                 this.eventEmitter.emit(eventName, data);
             });
         });
-        (0, logger_1.log)("Gun event forwarding setup completed");
+        (0, logger_1.log)("[index] Gun event forwarding setup completed");
     }
     /**
      * Register built-in plugins based on configuration
@@ -205,19 +205,19 @@ class ShogunCore {
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(webauthnPlugin);
-                (0, logger_1.log)("Webauthn plugin registered");
+                (0, logger_1.log)("[index] Webauthn plugin registered");
             }
             if (config.web3?.enabled) {
                 const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(web3ConnectorPlugin);
-                (0, logger_1.log)("Web3Connector plugin registered");
+                (0, logger_1.log)("[index] Web3Connector plugin registered");
             }
             if (config.nostr?.enabled) {
                 const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
-                (0, logger_1.log)("NostrConnector plugin registered");
+                (0, logger_1.log)("[index] NostrConnector plugin registered");
             }
             // Register OAuth plugin if enabled
             if (config.oauth?.enabled) {
@@ -226,7 +226,7 @@ class ShogunCore {
                 // Configure the plugin with the complete OAuth configuration
                 oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
-                (0, logger_1.log)("OAuth plugin registered with providers:", config.oauth.providers);
+                (0, logger_1.log)("[index] OAuth plugin registered with providers:", config.oauth.providers);
             }
         }
         catch (error) {
@@ -357,7 +357,7 @@ class ShogunCore {
      */
     configureLogging(config) {
         (0, logger_1.configureLogging)(config);
-        (0, logger_1.log)("Logging reconfigured with new settings");
+        (0, logger_1.log)("[index] Logging reconfigured with new settings");
     }
     // *********************************************************************************************************
     // 🔐 AUTHENTICATION
@@ -379,12 +379,12 @@ class ShogunCore {
     logout() {
         try {
             if (!this.isLoggedIn()) {
-                (0, logger_1.log)("Logout ignored: user not authenticated");
+                (0, logger_1.log)("[index] Logout ignored: user not authenticated");
                 return;
             }
             this.gundb.logout();
             this.eventEmitter.emit("auth:logout", {});
-            (0, logger_1.log)("Logout completed successfully");
+            (0, logger_1.log)("[index] Logout completed successfully");
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
@@ -399,12 +399,12 @@ class ShogunCore {
      * Emits login event on success.
      */
     async login(username, password, pair) {
-        (0, logger_1.log)("Login");
+        (0, logger_1.log)("[index] Login");
         try {
             (0, logger_1.log)(`Login attempt for user: ${username}`);
             if (!this.currentAuthMethod) {
                 this.currentAuthMethod = "password";
-                (0, logger_1.log)("Authentication method set to default: password");
+                (0, logger_1.log)("[index] Authentication method set to default: password");
             }
             const result = await this.gundb.login(username, password, pair);
             if (result.success) {
@@ -437,7 +437,7 @@ class ShogunCore {
      * Validates password requirements and emits signup event on success.
      */
     async signUp(username, password, passwordConfirmation, pair) {
-        (0, logger_1.log)("Sign up");
+        (0, logger_1.log)("[index] Sign up");
         try {
             if (passwordConfirmation !== undefined &&
                 password !== passwordConfirmation &&

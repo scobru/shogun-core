@@ -39,7 +39,7 @@ export class Web3ConnectorPlugin
     this.Web3 = new Web3Connector();
     this.signer = new Web3Signer(this.Web3);
 
-    log("Web3 plugin initialized with signer support");
+    log("[web3ConnectorPlugin] Web3 plugin initialized with signer support");
   }
 
   /**
@@ -52,7 +52,7 @@ export class Web3ConnectorPlugin
     this.Web3 = null;
     this.signer = null;
     super.destroy();
-    log("Web3 plugin destroyed");
+    log("[web3ConnectorPlugin] Web3 plugin destroyed");
   }
 
   /**
@@ -97,7 +97,7 @@ export class Web3ConnectorPlugin
    * @inheritdoc
    */
   async generateCredentials(address: string): Promise<ISEAPair> {
-    log("Calling credential generation");
+    log("[web3ConnectorPlugin] Calling credential generation");
     return this.assertMetaMask().generateCredentials(address);
   }
 
@@ -340,7 +340,7 @@ export class Web3ConnectorPlugin
    * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
    */
   async login(address: string): Promise<AuthResult> {
-    log("Login with Web3");
+    log("[web3ConnectorPlugin] Login with Web3");
 
     try {
       const core = this.assertInitialized();
@@ -362,7 +362,7 @@ export class Web3ConnectorPlugin
         );
       }
 
-      log("Generating credentials for Web3 login...");
+      log("[web3ConnectorPlugin] Generating credentials for Web3 login...");
       const k = await this.generateCredentials(address);
       const username = address.toLowerCase();
       if (!k?.pub || !k?.priv) {
@@ -379,7 +379,7 @@ export class Web3ConnectorPlugin
       core.setAuthMethod("web3");
 
       // Use core's login method with direct GunDB authentication
-      log("Logging in using core login method...");
+      log("[web3ConnectorPlugin] Logging in using core login method...");
       const loginResult = await core.login(username, "", k);
 
       if (!loginResult.success) {
@@ -425,7 +425,7 @@ export class Web3ConnectorPlugin
    * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
    */
   async signUp(address: string): Promise<AuthResult> {
-    log("Sign up with Web3");
+    log("[web3ConnectorPlugin] Sign up with Web3");
 
     try {
       const core = this.assertInitialized();
@@ -447,7 +447,9 @@ export class Web3ConnectorPlugin
         );
       }
 
-      log("Generating credentials for Web3 registration...");
+      log(
+        "[web3ConnectorPlugin] Generating credentials for Web3 registration...",
+      );
       const k = await this.generateCredentials(address);
       const username = address.toLowerCase();
       if (!k?.pub || !k?.priv) {
@@ -464,7 +466,7 @@ export class Web3ConnectorPlugin
       core.setAuthMethod("web3");
 
       // Use core's signUp method with direct GunDB authentication
-      log("Signing up using core signUp method...");
+      log("[web3ConnectorPlugin] Signing up using core signUp method...");
       const signupResult = await core.signUp(username, "", "", k);
 
       if (!signupResult.success) {

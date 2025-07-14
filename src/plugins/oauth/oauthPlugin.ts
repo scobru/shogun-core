@@ -47,7 +47,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       throw new Error("App token is required for OAuth plugin");
     }
 
-    log("OAuth plugin initialized successfully");
+    log("[oauthPlugin]  OAuth plugin initialized successfully");
   }
 
   /**
@@ -60,7 +60,10 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // If connector is already initialized, update its configuration
     if (this.oauthConnector) {
       this.oauthConnector.updateConfig(this.config);
-      log("OAuth connector configuration updated", this.config.providers);
+      log(
+        "[oauthPlugin]  OAuth connector configuration updated",
+        this.config.providers,
+      );
     }
   }
 
@@ -73,7 +76,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     }
     this.oauthConnector = null;
     super.destroy();
-    log("OAuth plugin destroyed");
+    log("[oauthPlugin]  OAuth plugin destroyed");
   }
 
   /**

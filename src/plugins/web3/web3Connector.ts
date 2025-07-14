@@ -395,16 +395,19 @@ class Web3Connector extends EventEmitter {
    * Generates credentials with caching
    */
   async generateCredentials(address: string): Promise<ISEAPair> {
-    log("Generating credentials for address:", address);
+    log("[web3Connector] Generating credentials for address:", address);
     try {
       const validAddress = this.validateAddress(address);
 
-      log("Valid Address:", validAddress);
+      log("[web3Connector] Valid Address:", validAddress);
 
       // Check cache first
       const cachedSignature = this.getCachedSignature(validAddress);
       if (cachedSignature) {
-        log("Using cached signature for address:", validAddress);
+        log(
+          "[web3Connector] Using cached signature for address:",
+          validAddress,
+        );
         return this.generateCredentialsFromSignature(
           validAddress,
           cachedSignature,
@@ -412,7 +415,7 @@ class Web3Connector extends EventEmitter {
       }
 
       try {
-        log("Request signature with timeout");
+        log("[web3Connector] Request signature with timeout");
         // Tentiamo di ottenere la firma con timeout
         const signature = await this.requestSignatureWithTimeout(
           validAddress,
@@ -449,7 +452,7 @@ class Web3Connector extends EventEmitter {
     address: string,
     signature: string,
   ): Promise<ISEAPair> {
-    log("Generating credentials from signature");
+    log("[web3Connector] Generating credentials from signature");
     const salt = `${address}:${signature}`;
     const k = await derive(salt, null, { includeP256: true });
     return k;
@@ -535,7 +538,7 @@ class Web3Connector extends EventEmitter {
         window.ethereum.on("accountsChanged", errorHandler);
       }
 
-      log("Initialize and Sign");
+      log("[web3Connector] Initialize and Sign");
 
       const initializeAndSign = async () => {
         try {
@@ -549,8 +552,8 @@ class Web3Connector extends EventEmitter {
           const signer = await this.provider.getSigner();
           const signerAddress = await signer.getAddress();
 
-          log("Signer:", signer);
-          log("Signer Address:", signerAddress);
+          log("[web3Connector] Signer:", signer);
+          log("[web3Connector] Signer Address:", signerAddress);
 
           if (signerAddress.toLowerCase() !== address.toLowerCase()) {
             throw new Error(
@@ -560,7 +563,7 @@ class Web3Connector extends EventEmitter {
 
           log(`Requesting signature for message: ${message}`);
           const signature = await signer.signMessage(message);
-          log("Signature obtained successfully");
+          log("[web3Connector] Signature obtained successfully");
 
           cleanup();
           resolve(signature);

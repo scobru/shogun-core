@@ -321,18 +321,18 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * Generates credentials with caching
      */
     async generateCredentials(address) {
-        (0, logger_1.log)("Generating credentials for address:", address);
+        (0, logger_1.log)("[web3Connector] Generating credentials for address:", address);
         try {
             const validAddress = this.validateAddress(address);
-            (0, logger_1.log)("Valid Address:", validAddress);
+            (0, logger_1.log)("[web3Connector] Valid Address:", validAddress);
             // Check cache first
             const cachedSignature = this.getCachedSignature(validAddress);
             if (cachedSignature) {
-                (0, logger_1.log)("Using cached signature for address:", validAddress);
+                (0, logger_1.log)("[web3Connector] Using cached signature for address:", validAddress);
                 return this.generateCredentialsFromSignature(validAddress, cachedSignature);
             }
             try {
-                (0, logger_1.log)("Request signature with timeout");
+                (0, logger_1.log)("[web3Connector] Request signature with timeout");
                 // Tentiamo di ottenere la firma con timeout
                 const signature = await this.requestSignatureWithTimeout(validAddress, this.MESSAGE_TO_SIGN, this.config.timeout);
                 // Cache the new signature
@@ -354,7 +354,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * Generate credentials from signature
      */
     async generateCredentialsFromSignature(address, signature) {
-        (0, logger_1.log)("Generating credentials from signature");
+        (0, logger_1.log)("[web3Connector] Generating credentials from signature");
         const salt = `${address}:${signature}`;
         const k = await (0, derive_1.default)(salt, null, { includeP256: true });
         return k;
@@ -423,7 +423,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             if (window.ethereum?.on) {
                 window.ethereum.on("accountsChanged", errorHandler);
             }
-            (0, logger_1.log)("Initialize and Sign");
+            (0, logger_1.log)("[web3Connector] Initialize and Sign");
             const initializeAndSign = async () => {
                 try {
                     if (!this.provider) {
@@ -434,14 +434,14 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     }
                     const signer = await this.provider.getSigner();
                     const signerAddress = await signer.getAddress();
-                    (0, logger_1.log)("Signer:", signer);
-                    (0, logger_1.log)("Signer Address:", signerAddress);
+                    (0, logger_1.log)("[web3Connector] Signer:", signer);
+                    (0, logger_1.log)("[web3Connector] Signer Address:", signerAddress);
                     if (signerAddress.toLowerCase() !== address.toLowerCase()) {
                         throw new Error(`Signer address (${signerAddress}) does not match expected address (${address})`);
                     }
                     (0, logger_1.log)(`Requesting signature for message: ${message}`);
                     const signature = await signer.signMessage(message);
-                    (0, logger_1.log)("Signature obtained successfully");
+                    (0, logger_1.log)("[web3Connector] Signature obtained successfully");
                     cleanup();
                     resolve(signature);
                 }

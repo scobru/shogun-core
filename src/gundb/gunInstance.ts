@@ -57,7 +57,7 @@ class GunInstance {
   private _rxjs?: GunRxJS;
 
   constructor(gun: IGunInstance<any>, appScope: string = "shogun") {
-    log("Initializing GunDB");
+    log("[gunInstance]  Initializing GunDB");
 
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
@@ -129,7 +129,7 @@ class GunInstance {
 
   private subscribeToAuthEvents() {
     this.gun.on("auth", (ack: any) => {
-      log("Auth event received:", ack);
+      log("[gunInstance]  Auth event received:", ack);
 
       if (ack.err) {
         ErrorHandler.handle(
@@ -528,7 +528,7 @@ class GunInstance {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<any> {
-    log("Attempting user registration:", username);
+    log("[gunInstance]  Attempting user registration:", username);
 
     try {
       // Validate credentials
@@ -668,7 +668,7 @@ class GunInstance {
     // Check if user exists in our tracking system
     const existingUser = await this.checkUsernameExists(username);
 
-    log("existingUser", existingUser);
+    log("[gunInstance]  existingUser", existingUser);
 
     if (!existingUser) {
       log(`User ${username} not in tracking system, adding them...`);
@@ -1037,7 +1037,7 @@ class GunInstance {
       const pairInfo = localStorage.getItem("gun/pair");
 
       if (!sessionInfo || !pairInfo) {
-        log("No saved session found");
+        log("[gunInstance]  No saved session found");
         return { success: false, error: "No saved session" };
       }
 
@@ -1049,7 +1049,7 @@ class GunInstance {
       const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
 
       if (sessionAge > maxSessionAge) {
-        log("Session expired, clearing storage");
+        log("[gunInstance]  Session expired, clearing storage");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Session expired" };
@@ -1088,7 +1088,7 @@ class GunInstance {
         );
         return { success: true, userPub: session.pub };
       } else {
-        log("Session restoration failed, clearing storage");
+        log("[gunInstance]  Session restoration failed, clearing storage");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Session restoration failed" };
@@ -1106,7 +1106,7 @@ class GunInstance {
     try {
       // Check if the user is actually logged in before attempting to logout
       if (!this.isLoggedIn()) {
-        log("No user logged in, skipping logout");
+        log("[gunInstance]  No user logged in, skipping logout");
         return;
       }
 
@@ -1124,7 +1124,7 @@ class GunInstance {
         // Also clear old format for backward compatibility
         localStorage.removeItem("pair");
 
-        log("Local session data cleared");
+        log("[gunInstance]  Local session data cleared");
       }
 
       // Clear sessionStorage as well
@@ -1135,10 +1135,10 @@ class GunInstance {
         sessionStorage.removeItem("gun/pair");
         sessionStorage.removeItem("gun/session");
 
-        log("Session storage cleared");
+        log("[gunInstance]  Session storage cleared");
       }
 
-      log("Logout completed successfully");
+      log("[gunInstance]  Logout completed successfully");
     } catch (error) {
       logError("Error during logout:", error);
     }
@@ -1150,7 +1150,7 @@ class GunInstance {
    */
   clearAllStorageData(): void {
     try {
-      log("Clearing all Gun-related storage data...");
+      log("[gunInstance]  Clearing all Gun-related storage data...");
 
       // Clear localStorage
       if (typeof localStorage !== "undefined") {
@@ -1181,10 +1181,10 @@ class GunInstance {
       // Also logout if currently logged in
       if (this.isLoggedIn()) {
         this.gun.user().leave();
-        log("User logged out");
+        log("[gunInstance]  User logged out");
       }
 
-      log("All Gun-related storage data cleared");
+      log("[gunInstance]  All Gun-related storage data cleared");
     } catch (error) {
       logError("Error clearing storage data:", error);
     }
@@ -1204,7 +1204,7 @@ class GunInstance {
     testReadResult?: any;
   }> {
     try {
-      log("Testing Gun connectivity...");
+      log("[gunInstance]  Testing Gun connectivity...");
 
       const result = {
         peers: this.getPeerInfo(),
@@ -1229,7 +1229,7 @@ class GunInstance {
         });
         result.canWrite = !writeResult?.err;
         result.testWriteResult = writeResult;
-        log("Write test result:", writeResult);
+        log("[gunInstance]  Write test result:", writeResult);
       } catch (writeError) {
         logError("Write test failed:", writeError);
         result.testWriteResult = { error: String(writeError) };
@@ -1247,13 +1247,13 @@ class GunInstance {
         });
         result.canRead = !!readResult;
         result.testReadResult = readResult;
-        log("Read test result:", readResult);
+        log("[gunInstance]  Read test result:", readResult);
       } catch (readError) {
         logError("Read test failed:", readError);
         result.testReadResult = { error: String(readError) };
       }
 
-      log("Connectivity test completed:", result);
+      log("[gunInstance]  Connectivity test completed:", result);
       return result;
     } catch (error) {
       logError("Error testing connectivity:", error);
@@ -1313,7 +1313,7 @@ class GunInstance {
     securityQuestions: string[],
     securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
-    log("Setting password hint for:", username);
+    log("[gunInstance]  Setting password hint for:", username);
 
     // Verify that the user is authenticated with password
     const loginResult = await this.login(username, password);
@@ -1409,13 +1409,13 @@ class GunInstance {
     username: string,
     securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
-    log("Attempting password recovery for:", username);
+    log("[gunInstance]  Attempting password recovery for:", username);
 
     try {
       // Find the user's data
       let userData = await this.checkUsernameExists(username);
 
-      log("userData", userData);
+      log("[gunInstance]  userData", userData);
 
       // Patch: if userData is a string, treat as pub
       if (typeof userData === "string") {
@@ -1606,12 +1606,12 @@ class GunInstance {
     options?: DeriveOptions,
   ): Promise<any> {
     try {
-      log("Deriving cryptographic keys with options:", options);
+      log("[gunInstance]  Deriving cryptographic keys with options:", options);
 
       // Call the derive function with the provided parameters
       const derivedKeys = await derive(password, extra, options);
 
-      log("Key derivation completed successfully");
+      log("[gunInstance]  Key derivation completed successfully");
       return derivedKeys;
     } catch (error) {
       logError("Error during key derivation:", error);

@@ -23,7 +23,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
         // Inizializziamo il modulo WebAuthn
         this.webauthn = new webauthn_1.Webauthn(core.gun);
         this.signer = new webauthnSigner_1.WebAuthnSigner(this.webauthn);
-        (0, logger_1.log)("WebAuthn plugin initialized with signer support");
+        (0, logger_1.log)("[webauthnPlugin] WebAuthn plugin initialized with signer support");
     }
     /**
      * @inheritdoc
@@ -32,7 +32,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
         this.webauthn = null;
         this.signer = null;
         super.destroy();
-        (0, logger_1.log)("WebAuthn plugin destroyed");
+        (0, logger_1.log)("[webauthnPlugin] WebAuthn plugin destroyed");
     }
     /**
      * Assicura che il modulo Webauthn sia inizializzato
@@ -239,7 +239,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Requires browser support for WebAuthn and existing credentials.
      */
     async login(username) {
-        (0, logger_1.log)("Login with WebAuthn");
+        (0, logger_1.log)("[webauthnPlugin] Login with WebAuthn");
         try {
             const core = this.assertInitialized();
             (0, logger_1.log)(`Attempting WebAuthn login for user: ${username}`);
@@ -284,7 +284,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Requires browser support for WebAuthn.
      */
     async signUp(username) {
-        (0, logger_1.log)("Sign up with WebAuthn");
+        (0, logger_1.log)("[webauthnPlugin] Sign up with WebAuthn");
         try {
             const core = this.assertInitialized();
             (0, logger_1.log)(`Attempting WebAuthn registration for user: ${username}`);

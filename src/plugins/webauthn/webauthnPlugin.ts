@@ -34,7 +34,7 @@ export class WebauthnPlugin
     this.webauthn = new Webauthn(core.gun);
     this.signer = new WebAuthnSigner(this.webauthn);
 
-    log("WebAuthn plugin initialized with signer support");
+    log("[webauthnPlugin] WebAuthn plugin initialized with signer support");
   }
 
   /**
@@ -44,7 +44,7 @@ export class WebauthnPlugin
     this.webauthn = null;
     this.signer = null;
     super.destroy();
-    log("WebAuthn plugin destroyed");
+    log("[webauthnPlugin] WebAuthn plugin destroyed");
   }
 
   /**
@@ -352,7 +352,7 @@ export class WebauthnPlugin
    * Requires browser support for WebAuthn and existing credentials.
    */
   async login(username: string): Promise<AuthResult> {
-    log("Login with WebAuthn");
+    log("[webauthnPlugin] Login with WebAuthn");
 
     try {
       const core = this.assertInitialized();
@@ -411,7 +411,7 @@ export class WebauthnPlugin
    * Requires browser support for WebAuthn.
    */
   async signUp(username: string): Promise<AuthResult> {
-    log("Sign up with WebAuthn");
+    log("[webauthnPlugin] Sign up with WebAuthn");
 
     try {
       const core = this.assertInitialized();

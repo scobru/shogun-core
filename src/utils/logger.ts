@@ -47,7 +47,7 @@ export function configureLogging(config: LoggingConfig): void {
  */
 export function log(message: string, ...args: unknown[]): void {
   const timestamp = new Date().toISOString();
-  const formattedMessage = `[${timestamp}] ${message}`;
+  const formattedMessage = `[SHOGUN CORE] [${timestamp}] ${message}`;
 
   console.log(formattedMessage, ...args);
 }
