@@ -680,7 +680,12 @@ declare global {
   interface Window {
     initShogun: (config: ShogunSDKConfig) => ShogunCore;
     ShogunCore: ShogunCore;
+    ShogunCoreClass: typeof ShogunCore;
   }
+}
+
+if (typeof window !== "undefined") {
+  window.ShogunCoreClass = ShogunCore;
 }
 
 if (typeof window !== "undefined") {
