@@ -31,7 +31,6 @@ import {
   GunPeerEventData,
   GunRxJS,
   crypto,
-  utils,
   derive,
   GunErrors,
 } from "./gundb";
@@ -45,7 +44,7 @@ export type {
   DeriveOptions,
 };
 
-export { SEA, Gun, GunRxJS, crypto, utils, derive, GunErrors, GunInstance };
+export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance };
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
@@ -63,7 +62,7 @@ export type * from "./types/plugin";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^1.4.3";
+  public static readonly API_VERSION = "^1.5.1";
   public gundb: GunInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
@@ -106,7 +105,7 @@ export class ShogunCore implements IShogunCore {
       restrictedPut(Gun, config.authToken);
     }
 
-    if (config.appToken) {
+    if (config.appToken && config.oauth?.enabled) {
       // validate app token
       if (config.appToken.length < 8) {
         throw new Error("App token must be 8 characters long");
@@ -210,19 +209,14 @@ export class ShogunCore implements IShogunCore {
    */
   private setupGunEventForwarding(): void {
     // Forward all Gun data events
-    const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
+    const gunEvents = ["put", "get", "set", "remove"];
     gunEvents.forEach((eventName) => {
       this.gundb.on(eventName, (data: any) => {
         this.eventEmitter.emit(eventName, data);
       });
     });
 
-    const peerEvents = [
-      "gun:peer:add",
-      "gun:peer:remove",
-      "gun:peer:connect",
-      "gun:peer:disconnect",
-    ];
+    const peerEvents = ["add", "remove", "connect", "disconnect"];
 
     peerEvents.forEach((eventName) => {
       this.gundb.on(eventName, (data: any) => {

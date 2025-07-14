@@ -42,13 +42,12 @@ import { GunRxJS } from "./rxjs-integration";
 
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
-import * as utils from "./utils";
 
 class GunInstance {
   public gun: IGunInstance<any>;
   public user: IGunUserInstance<any> | null = null;
   public crypto: typeof crypto;
-  public utils: typeof utils;
+  public sea: typeof SEA;
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
 
   private readonly onAuthCallbacks: Array<(user: any) => void> = [];
@@ -105,9 +104,9 @@ class GunInstance {
 
     this.crypto = crypto;
 
-    this.utils = utils;
-
     this.node = this.gun.get(appScope);
+
+    this.sea = SEA;
 
     // Attempt to restore session immediately instead of with timeout
     this.restoreSessionOnInit();
@@ -1685,7 +1684,6 @@ export {
   Gun,
   GunRxJS,
   crypto,
-  utils,
   GunErrors,
   derive,
   restrictedPut,

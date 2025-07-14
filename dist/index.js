@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = exports.GunInstance = exports.GunErrors = exports.derive = exports.utils = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
 const eventEmitter_1 = require("./utils/eventEmitter");
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./utils/errorHandler");
@@ -30,7 +30,6 @@ Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { ret
 Object.defineProperty(exports, "GunInstance", { enumerable: true, get: function () { return gundb_1.GunInstance; } });
 Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return gundb_1.GunRxJS; } });
 Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { return gundb_1.crypto; } });
-Object.defineProperty(exports, "utils", { enumerable: true, get: function () { return gundb_1.utils; } });
 Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return gundb_1.derive; } });
 Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return gundb_1.GunErrors; } });
 __exportStar(require("./utils/errorHandler"), exports);
@@ -48,7 +47,7 @@ __exportStar(require("./types/shogun"), exports);
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "^1.4.3";
+    static API_VERSION = "^1.5.1";
     gundb;
     storage;
     provider;
@@ -85,7 +84,7 @@ class ShogunCore {
         if (config.authToken) {
             (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
         }
-        if (config.appToken) {
+        if (config.appToken && config.oauth?.enabled) {
             // validate app token
             if (config.appToken.length < 8) {
                 throw new Error("App token must be 8 characters long");
@@ -181,18 +180,13 @@ class ShogunCore {
      */
     setupGunEventForwarding() {
         // Forward all Gun data events
-        const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
+        const gunEvents = ["put", "get", "set", "remove"];
         gunEvents.forEach((eventName) => {
             this.gundb.on(eventName, (data) => {
                 this.eventEmitter.emit(eventName, data);
             });
         });
-        const peerEvents = [
-            "gun:peer:add",
-            "gun:peer:remove",
-            "gun:peer:connect",
-            "gun:peer:disconnect",
-        ];
+        const peerEvents = ["add", "remove", "connect", "disconnect"];
         peerEvents.forEach((eventName) => {
             this.gundb.on(eventName, (data) => {
                 this.eventEmitter.emit(eventName, data);

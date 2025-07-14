@@ -3,10 +3,10 @@ import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, AuthMethod } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
-import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, utils, derive, GunErrors } from "./gundb";
+import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, derive, GunErrors } from "./gundb";
 import { ISEAPair } from "gun";
 export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
-export { SEA, Gun, GunRxJS, crypto, utils, derive, GunErrors, GunInstance };
+export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance };
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
@@ -23,7 +23,7 @@ export type * from "./types/plugin";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    static readonly API_VERSION = "^1.4.3";
+    static readonly API_VERSION = "^1.5.1";
     gundb: GunInstance;
     storage: ShogunStorage;
     provider?: ethers.Provider;
