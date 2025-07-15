@@ -401,7 +401,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // Try login first
     const loginResult = await this.core.login(username, "", k);
     if (loginResult.success) {
-      this.core.gundb.savePair?.(); // Ensure session is saved
+      this.core.db.savePair?.(); // Ensure session is saved
       loginResult.isNewUser = false;
       return loginResult;
     }
@@ -412,7 +412,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Immediately login after signup
       const postSignupLogin = await this.core.login(username, "", k);
       if (postSignupLogin.success) {
-        this.core.gundb.savePair?.();
+        this.core.db.savePair?.();
         postSignupLogin.isNewUser = true;
         return postSignupLogin;
       }

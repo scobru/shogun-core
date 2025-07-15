@@ -62,7 +62,7 @@ export interface SignUpResult {
 }
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
-    gundb: GunInstance;
+    db: GunInstance;
     rx: GunRxJS;
     storage: ShogunStorage;
     config: ShogunSDKConfig;

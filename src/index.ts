@@ -63,7 +63,7 @@ export type * from "./types/plugin";
  */
 export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "^1.5.1";
-  public gundb: GunInstance;
+  public db: GunInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
   public config: ShogunSDKConfig;
@@ -125,8 +125,8 @@ export class ShogunCore implements IShogunCore {
     }
 
     try {
-      this.gundb = new GunInstance(this._gun, config.scope || "");
-      this._gun = this.gundb.gun;
+      this.db = new GunInstance(this._gun, config.scope || "");
+      this._gun = this.db.gun;
       this.setupGunEventForwarding();
     } catch (error) {
       logError("Error initializing GunInstance:", error);
@@ -169,12 +169,12 @@ export class ShogunCore implements IShogunCore {
 
     if (typeof window !== "undefined") {
       (window as any).ShogunCore = this;
-      (window as any).ShogunDB = this.gundb;
-      (window as any).ShogunGun = this.gundb.gun;
+      (window as any).ShogunDB = this.db;
+      (window as any).ShogunGun = this.db.gun;
     } else if (typeof global !== "undefined") {
       (global as any).ShogunCore = this;
-      (global as any).ShogunDB = this.gundb;
-      (global as any).ShogunGun = this.gundb.gun;
+      (global as any).ShogunDB = this.db;
+      (global as any).ShogunGun = this.db.gun;
     }
 
     log("[index] Shogun initialized! 🚀");
@@ -204,7 +204,7 @@ export class ShogunCore implements IShogunCore {
     // Forward all Gun data events
     const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
     gunEvents.forEach((eventName) => {
-      this.gundb.on(eventName, (data: any) => {
+      this.db.on(eventName, (data: any) => {
         this.eventEmitter.emit(eventName, data);
       });
     });
@@ -217,7 +217,7 @@ export class ShogunCore implements IShogunCore {
     ];
 
     peerEvents.forEach((eventName) => {
-      this.gundb.on(eventName, (data: any) => {
+      this.db.on(eventName, (data: any) => {
         this.eventEmitter.emit(eventName, data);
       });
     });
@@ -423,7 +423,7 @@ export class ShogunCore implements IShogunCore {
    * and presence of authentication credentials in storage
    */
   isLoggedIn(): boolean {
-    return this.gundb.isLoggedIn();
+    return this.db.isLoggedIn();
   }
 
   /**
@@ -437,7 +437,7 @@ export class ShogunCore implements IShogunCore {
         log("[index] Logout ignored: user not authenticated");
         return;
       }
-      this.gundb.logout();
+      this.db.logout();
       this.eventEmitter.emit("auth:logout", {});
       log("[index] Logout completed successfully");
     } catch (error) {
@@ -472,7 +472,7 @@ export class ShogunCore implements IShogunCore {
         log("[index] Authentication method set to default: password");
       }
 
-      const result = await this.gundb.login(username, password, pair);
+      const result = await this.db.login(username, password, pair);
 
       if (result.success) {
         this.eventEmitter.emit("auth:login", {
@@ -540,7 +540,7 @@ export class ShogunCore implements IShogunCore {
 
       log(`Attempting user registration: ${username}`);
 
-      const result = await this.gundb.signUp(username, password, pair);
+      const result = await this.db.signUp(username, password, pair);
 
       if (result.success) {
         this.eventEmitter.emit("debug", {
@@ -663,7 +663,7 @@ export class ShogunCore implements IShogunCore {
    * This is useful for debugging and testing purposes
    */
   clearAllStorageData(): void {
-    this.gundb.clearAllStorageData();
+    this.db.clearAllStorageData();
   }
 
   public getIsLoggedIn(): boolean {

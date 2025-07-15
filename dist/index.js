@@ -48,7 +48,7 @@ __exportStar(require("./types/shogun"), exports);
  */
 class ShogunCore {
     static API_VERSION = "^1.5.1";
-    gundb;
+    db;
     storage;
     provider;
     config;
@@ -102,8 +102,8 @@ class ShogunCore {
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
-            this.gundb = new gundb_1.GunInstance(this._gun, config.scope || "");
-            this._gun = this.gundb.gun;
+            this.db = new gundb_1.GunInstance(this._gun, config.scope || "");
+            this._gun = this.db.gun;
             this.setupGunEventForwarding();
         }
         catch (error) {
@@ -141,13 +141,13 @@ class ShogunCore {
         }
         if (typeof window !== "undefined") {
             window.ShogunCore = this;
-            window.ShogunDB = this.gundb;
-            window.ShogunGun = this.gundb.gun;
+            window.ShogunDB = this.db;
+            window.ShogunGun = this.db.gun;
         }
         else if (typeof global !== "undefined") {
             global.ShogunCore = this;
-            global.ShogunDB = this.gundb;
-            global.ShogunGun = this.gundb.gun;
+            global.ShogunDB = this.db;
+            global.ShogunGun = this.db.gun;
         }
         (0, logger_1.log)("[index] Shogun initialized! 🚀");
     }
@@ -173,7 +173,7 @@ class ShogunCore {
         // Forward all Gun data events
         const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
         gunEvents.forEach((eventName) => {
-            this.gundb.on(eventName, (data) => {
+            this.db.on(eventName, (data) => {
                 this.eventEmitter.emit(eventName, data);
             });
         });
@@ -184,7 +184,7 @@ class ShogunCore {
             "gun:peer:disconnect",
         ];
         peerEvents.forEach((eventName) => {
-            this.gundb.on(eventName, (data) => {
+            this.db.on(eventName, (data) => {
                 this.eventEmitter.emit(eventName, data);
             });
         });
@@ -365,7 +365,7 @@ class ShogunCore {
      * and presence of authentication credentials in storage
      */
     isLoggedIn() {
-        return this.gundb.isLoggedIn();
+        return this.db.isLoggedIn();
     }
     /**
      * Perform user logout
@@ -378,7 +378,7 @@ class ShogunCore {
                 (0, logger_1.log)("[index] Logout ignored: user not authenticated");
                 return;
             }
-            this.gundb.logout();
+            this.db.logout();
             this.eventEmitter.emit("auth:logout", {});
             (0, logger_1.log)("[index] Logout completed successfully");
         }
@@ -402,7 +402,7 @@ class ShogunCore {
                 this.currentAuthMethod = "password";
                 (0, logger_1.log)("[index] Authentication method set to default: password");
             }
-            const result = await this.gundb.login(username, password, pair);
+            const result = await this.db.login(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
@@ -450,7 +450,7 @@ class ShogunCore {
                 timestamp: Date.now(),
             });
             (0, logger_1.log)(`Attempting user registration: ${username}`);
-            const result = await this.gundb.signUp(username, password, pair);
+            const result = await this.db.signUp(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("debug", {
                     action: "signup_complete",
@@ -560,7 +560,7 @@ class ShogunCore {
      * This is useful for debugging and testing purposes
      */
     clearAllStorageData() {
-        this.gundb.clearAllStorageData();
+        this.db.clearAllStorageData();
     }
     getIsLoggedIn() {
         return !!this.user?.is;
