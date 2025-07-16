@@ -86,9 +86,6 @@ export interface IShogunCore extends PluginManager {
   // Error handling methods
   getRecentErrors(count?: number): ShogunError[];
 
-  // Logging configuration
-  configureLogging(config: LoggingConfig): void;
-
   // Direct authentication methods
   login(username: string, password: string): Promise<AuthResult>;
 
@@ -119,18 +116,6 @@ export interface WebauthnConfig {
 }
 
 /**
- * Logging configuration
- */
-export interface LoggingConfig {
-  /** Enable logging (default: true in development, false in production) */
-  enabled?: boolean;
-  /** Log level: 'error', 'warning', 'info', 'debug' */
-  level?: "error" | "warning" | "info" | "debug";
-  /** Custom prefix for log messages */
-  prefix?: string;
-}
-
-/**
  * Shogun SDK configuration
  */
 export interface ShogunSDKConfig {
@@ -152,7 +137,6 @@ export interface ShogunSDKConfig {
     allowUnsafeClientSecret?: boolean;
     providers?: Record<string, any>;
   };
-  logging?: LoggingConfig;
   timeouts?: {
     login?: number;
     signup?: number;

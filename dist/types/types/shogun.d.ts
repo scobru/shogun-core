@@ -74,7 +74,6 @@ export interface IShogunCore extends PluginManager {
     removeAllListeners(eventName?: string | symbol): any;
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
-    configureLogging(config: LoggingConfig): void;
     login(username: string, password: string): Promise<AuthResult>;
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     getAuthenticationMethod(type: AuthMethod): any;
@@ -91,17 +90,6 @@ export interface WebauthnConfig {
     rpName?: string;
     /** Relying party ID */
     rpId?: string;
-}
-/**
- * Logging configuration
- */
-export interface LoggingConfig {
-    /** Enable logging (default: true in development, false in production) */
-    enabled?: boolean;
-    /** Log level: 'error', 'warning', 'info', 'debug' */
-    level?: "error" | "warning" | "info" | "debug";
-    /** Custom prefix for log messages */
-    prefix?: string;
 }
 /**
  * Shogun SDK configuration
@@ -125,7 +113,6 @@ export interface ShogunSDKConfig {
         allowUnsafeClientSecret?: boolean;
         providers?: Record<string, any>;
     };
-    logging?: LoggingConfig;
     timeouts?: {
         login?: number;
         signup?: number;

@@ -1,3 +1,6 @@
+/**
+ * Type for any event data
+ */
 export type EventData = Record<string, unknown>;
 /**
  * Generic event listener type

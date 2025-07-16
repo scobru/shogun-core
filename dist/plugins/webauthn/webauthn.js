@@ -13,7 +13,6 @@ const MAX_USERNAME_LENGTH = 64;
 const ethers_1 = require("ethers");
 const errorHandler_1 = require("../../utils/errorHandler");
 const eventEmitter_1 = require("../../utils/eventEmitter");
-const logger_1 = require("../../utils/logger");
 const types_1 = require("./types");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 /**
@@ -296,14 +295,14 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     requireResidentKey: this.config.requireResidentKey,
                 },
             };
-            (0, logger_1.logDebug)("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
+            console.log("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
             const credential = await navigator.credentials.create({
                 publicKey: publicKeyCredentialCreationOptions,
             });
             if (!credential) {
                 throw new Error("Credential creation failed");
             }
-            (0, logger_1.logDebug)("Credentials created successfully:", credential);
+            console.log("Credentials created successfully:", credential);
             const webAuthnCredential = credential;
             // Convert to WebAuthnCredentialData
             const credentialData = {
@@ -323,7 +322,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             return credentialData;
         }
         catch (error) {
-            (0, logger_1.logError)("Detailed error in credential creation:", error);
+            console.error("Detailed error in credential creation:", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
             throw new Error(`Error creating credentials: ${errorMessage}`);
         }
@@ -374,7 +373,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             }
         }
         catch (error) {
-            (0, logger_1.logError)("Error in generateCredentials:", error);
+            console.error("Error in generateCredentials:", error);
             const errorMessage = error instanceof Error
                 ? error.message
                 : "Unknown error during WebAuthn operation";
@@ -424,7 +423,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             };
         }
         catch (error) {
-            (0, logger_1.logError)("Error verifying credentials:", error);
+            console.error("Error verifying credentials:", error);
             const errorMessage = error instanceof Error
                 ? error.message
                 : "Unknown error verifying credentials";

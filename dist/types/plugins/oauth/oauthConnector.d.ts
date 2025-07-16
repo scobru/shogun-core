@@ -1,3 +1,6 @@
+/**
+ * OAuth Connector - Secure version for GunDB user creation
+ */
 import { EventEmitter } from "../../utils/eventEmitter";
 import { OAuthConfig, OAuthProvider, OAuthUserInfo, OAuthCredentials, OAuthConnectionResult } from "./types";
 /**

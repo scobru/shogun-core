@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ErrorHandler = exports.ErrorType = void 0;
 exports.createError = createError;
-const logger_1 = require("./logger");
 /**
  * Types of errors that can occur in the application
  */
@@ -61,7 +60,7 @@ class ErrorHandler {
      */
     static handleError(error) {
         // Log the error
-        (0, logger_1.logError)(`[${error.type}] ${error.code}: ${error.message}`);
+        console.error(`[${error.type}] ${error.code}: ${error.message}`);
         // Store the error in memory
         this.errors.push(error);
         // Keep only the last maxErrors
@@ -87,19 +86,19 @@ class ErrorHandler {
         // Log the error
         switch (logLevel) {
             case "debug":
-                (0, logger_1.log)(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+                console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
                 break;
             case "warn":
-                (0, logger_1.log)(`[${type}.${code}] (WARN) ${finalMessage}`);
+                console.log(`[${type}.${code}] (WARN) ${finalMessage}`);
                 break;
             case "info":
-                (0, logger_1.log)(`[${type}.${code}] (INFO) ${finalMessage}`);
+                console.log(`[${type}.${code}] (INFO) ${finalMessage}`);
                 break;
             case "error":
             default:
-                (0, logger_1.log)(`[${type}.${code}] (ERROR) ${finalMessage}`);
+                console.log(`[${type}.${code}] (ERROR) ${finalMessage}`);
                 if (originalError && originalError instanceof Error) {
-                    (0, logger_1.log)(originalError.stack || "No stack trace available");
+                    console.log(originalError.stack || "No stack trace available");
                 }
                 break;
         }
@@ -154,7 +153,7 @@ class ErrorHandler {
                 listener(error);
             }
             catch (listenerError) {
-                (0, logger_1.logError)(`Error in error listener: ${listenerError}`);
+                console.error(`Error in error listener: ${listenerError}`);
             }
         }
     }
@@ -196,7 +195,7 @@ class ErrorHandler {
                 lastError = error;
                 const delay = retryDelay * attempt;
                 if (attempt < maxRetries) {
-                    (0, logger_1.log)(`Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                    console.log(`Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`);
                     await new Promise((resolve) => setTimeout(resolve, delay));
                 }
             }

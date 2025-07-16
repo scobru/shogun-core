@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NostrSigner = void 0;
 const nostrConnector_1 = require("./nostrConnector");
-const logger_1 = require("../../utils/logger");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 const ethers_1 = require("ethers");
 /**
@@ -26,7 +25,7 @@ class NostrSigner {
      */
     async createSigningCredential(address) {
         try {
-            (0, logger_1.logDebug)(`Creating Nostr signing credential for address: ${address}`);
+            console.log(`Creating Nostr signing credential for address: ${address}`);
             // Validate address (same validation as normal approach)
             const validAddress = this.validateAddress(address);
             // Generate signature using the SAME approach as normal Nostr
@@ -43,11 +42,11 @@ class NostrSigner {
             };
             // Store credential for later use
             this.credentials.set(validAddress.toLowerCase(), signingCredential);
-            (0, logger_1.logDebug)("Created Nostr signing credential:", signingCredential);
+            console.log("Created Nostr signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating Nostr signing credential:", error);
+            console.error("Error creating Nostr signing credential:", error);
             throw new Error(`Failed to create Nostr signing credential: ${error.message}`);
         }
     }
@@ -109,7 +108,7 @@ class NostrSigner {
         else if (deterministicSignature.length > 128) {
             deterministicSignature = deterministicSignature.substring(0, 128);
         }
-        (0, logger_1.logDebug)(`Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`);
+        console.log(`Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`);
         return deterministicSignature;
     }
     /**
@@ -126,7 +125,7 @@ class NostrSigner {
             return passwordHash;
         }
         catch (error) {
-            (0, logger_1.logError)("Error generating password:", error);
+            console.error("Error generating password:", error);
             throw new Error("Failed to generate password from signature");
         }
     }
@@ -146,11 +145,11 @@ class NostrSigner {
                 const dataToSign = JSON.stringify(data);
                 // For now, create a deterministic signature based on the data and credential
                 const signature = await this.signData(dataToSign, credential);
-                (0, logger_1.logDebug)("Nostr authentication successful:", { data, signature });
+                console.log("Nostr authentication successful:", { data, signature });
                 return signature;
             }
             catch (error) {
-                (0, logger_1.logError)("Nostr authentication error:", error);
+                console.error("Nostr authentication error:", error);
                 throw error;
             }
         };
@@ -185,7 +184,7 @@ class NostrSigner {
             };
         }
         catch (error) {
-            (0, logger_1.logError)("Error deriving keys from Nostr credential:", error);
+            console.error("Error deriving keys from Nostr credential:", error);
             throw error;
         }
     }
@@ -242,7 +241,7 @@ class NostrSigner {
             });
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating Gun user:", error);
+            console.error("Error creating Gun user:", error);
             return { success: false, error: error.message };
         }
     }
@@ -270,7 +269,7 @@ class NostrSigner {
             return "SEA" + JSON.stringify(seaSignature);
         }
         catch (error) {
-            (0, logger_1.logError)("Error signing with derived keys:", error);
+            console.error("Error signing with derived keys:", error);
             throw error;
         }
     }

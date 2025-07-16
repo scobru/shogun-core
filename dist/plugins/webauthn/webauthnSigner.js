@@ -7,7 +7,6 @@ exports.WebAuthnSigner = void 0;
 const webauthn_1 = require("./webauthn");
 const p256_1 = require("@noble/curves/p256");
 const sha256_1 = require("@noble/hashes/sha256");
-const logger_1 = require("../../utils/logger");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 const ethers_1 = require("ethers");
 /**
@@ -83,7 +82,7 @@ class WebAuthnSigner {
                 throw new Error("Failed to get public key from credential");
             }
             const rawKey = new Uint8Array(publicKey);
-            (0, logger_1.logDebug)("Raw public key bytes:", rawKey);
+            console.log("Raw public key bytes:", rawKey);
             // Extract coordinates like webauthn.js (slice positions may need adjustment)
             const xCoord = rawKey.slice(27, 59);
             const yCoord = rawKey.slice(59, 91);
@@ -101,11 +100,11 @@ class WebAuthnSigner {
             };
             // Store credential for later use
             this.credentials.set(credential.id, signingCredential);
-            (0, logger_1.logDebug)("Created signing credential:", signingCredential);
+            console.log("Created signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating signing credential:", error);
+            console.error("Error creating signing credential:", error);
             throw new Error(`Failed to create signing credential: ${error.message}`);
         }
     }
@@ -141,11 +140,11 @@ class WebAuthnSigner {
                 if (!assertion) {
                     throw new Error("WebAuthn assertion failed");
                 }
-                (0, logger_1.logDebug)("WebAuthn assertion successful:", { options, assertion });
+                console.log("WebAuthn assertion successful:", { options, assertion });
                 return assertion.response;
             }
             catch (error) {
-                (0, logger_1.logError)("WebAuthn assertion error:", error);
+                console.error("WebAuthn assertion error:", error);
                 throw error;
             }
         };
@@ -172,7 +171,7 @@ class WebAuthnSigner {
             };
         }
         catch (error) {
-            (0, logger_1.logError)("Error deriving keys from WebAuthn credential:", error);
+            console.error("Error deriving keys from WebAuthn credential:", error);
             throw error;
         }
     }
@@ -229,7 +228,7 @@ class WebAuthnSigner {
             });
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating Gun user:", error);
+            console.error("Error creating Gun user:", error);
             return { success: false, error: error.message };
         }
     }
@@ -260,7 +259,7 @@ class WebAuthnSigner {
             return "SEA" + JSON.stringify(seaSignature);
         }
         catch (error) {
-            (0, logger_1.logError)("Error signing with derived keys:", error);
+            console.error("Error signing with derived keys:", error);
             throw error;
         }
     }

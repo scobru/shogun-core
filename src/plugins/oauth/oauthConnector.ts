@@ -1,7 +1,6 @@
 /**
  * OAuth Connector - Secure version for GunDB user creation
  */
-import { logDebug, logError, logWarn } from "../../utils/logger";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
   OAuthConfig,
@@ -110,7 +109,7 @@ export class OAuthConnector extends EventEmitter {
 
       // Verifica che PKCE sia abilitato per tutti i provider nel browser
       if (typeof window !== "undefined" && !providerConfig.usePKCE) {
-        logWarn(
+        console.warn(
           `Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`,
         );
       }
@@ -118,11 +117,11 @@ export class OAuthConnector extends EventEmitter {
       // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
       if (typeof window !== "undefined" && providerConfig.clientSecret) {
         if (providerName === "google" && providerConfig.usePKCE) {
-          logDebug(
+          console.log(
             `Provider ${providerName} ha client_secret configurato - OK per Google con PKCE`,
           );
         } else {
-          logError(
+          console.error(
             `Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`,
           );
           throw new Error(
@@ -146,7 +145,7 @@ export class OAuthConnector extends EventEmitter {
         ...(config.providers || {}),
       },
     };
-    logDebug("OAuthConnector configuration updated", this.config);
+    console.log("OAuthConnector configuration updated", this.config);
   }
 
   /**
@@ -309,7 +308,7 @@ export class OAuthConnector extends EventEmitter {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
       const errorMsg = `Provider '${provider}' is not configured.`;
-      logError(errorMsg);
+      console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
 
@@ -317,12 +316,12 @@ export class OAuthConnector extends EventEmitter {
     if (typeof window !== "undefined" && providerConfig.clientSecret) {
       // Google OAuth richiede client_secret anche con PKCE
       if (provider === "google" && providerConfig.usePKCE) {
-        logDebug(
+        console.log(
           `Provider ${provider} ha client_secret configurato - OK per Google con PKCE`,
         );
       } else {
         const errorMsg = `Client secret non può essere usato nel browser per ${provider}`;
-        logError(errorMsg);
+        console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
     }
@@ -356,18 +355,18 @@ export class OAuthConnector extends EventEmitter {
         providerConfig.usePKCE ?? this.config.usePKCE ?? true;
       if (!isPKCEEnabled && typeof window !== "undefined") {
         const errorMsg = `PKCE è obbligatorio per ${provider} nel browser per motivi di sicurezza`;
-        logError(errorMsg);
+        console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
 
       if (isPKCEEnabled) {
-        logDebug("PKCE is enabled, generating challenge...");
+        console.log("PKCE is enabled, generating challenge...");
         const { codeVerifier, codeChallenge } =
           await this.generatePKCEChallenge();
-        logDebug(
+        console.log(
           `Generated code verifier: ${codeVerifier.substring(0, 10)}... (length: ${codeVerifier.length})`,
         );
-        logDebug(
+        console.log(
           `Generated code challenge: ${codeChallenge.substring(0, 10)}... (length: ${codeChallenge.length})`,
         );
 
@@ -376,13 +375,13 @@ export class OAuthConnector extends EventEmitter {
           `oauth_verifier_timestamp_${provider}`,
           stateTimestamp.toString(),
         );
-        logDebug(
+        console.log(
           `Saved code verifier to storage with key: oauth_verifier_${provider}`,
         );
 
         authParams.set("code_challenge", codeChallenge);
         authParams.set("code_challenge_method", "S256");
-        logDebug("Added PKCE parameters to auth URL");
+        console.log("Added PKCE parameters to auth URL");
       }
 
       // If the authorization URL already contains query parameters, add the new parameters
@@ -400,7 +399,7 @@ export class OAuthConnector extends EventEmitter {
         authUrl,
       };
     } catch (error: any) {
-      logError(`Error initiating OAuth with ${provider}:`, error);
+      console.error(`Error initiating OAuth with ${provider}:`, error);
       return {
         success: false,
         error: error.message,
@@ -420,7 +419,7 @@ export class OAuthConnector extends EventEmitter {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
       const errorMsg = `Provider '${provider}' is not configured.`;
-      logError(errorMsg);
+      console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
 
@@ -434,7 +433,7 @@ export class OAuthConnector extends EventEmitter {
 
       if (!tokenData.access_token) {
         const errorMsg = "No access token received from provider";
-        logError(errorMsg, tokenData);
+        console.error(errorMsg, tokenData);
         return { success: false, error: errorMsg };
       }
 
@@ -462,7 +461,7 @@ export class OAuthConnector extends EventEmitter {
         userInfo,
       };
     } catch (error: any) {
-      logError(`Error completing OAuth with ${provider}:`, error);
+      console.error(`Error completing OAuth with ${provider}:`, error);
       return {
         success: false,
         error: error.message,
@@ -488,7 +487,9 @@ export class OAuthConnector extends EventEmitter {
     const username = generateUsernameFromIdentity(provider, userInfo);
 
     try {
-      logDebug(`Generating credentials for ${provider} user: ${userInfo.id}`);
+      console.log(
+        `Generating credentials for ${provider} user: ${userInfo.id}`,
+      );
 
       // Salt deterministico per la derivazione della chiave
       const salt = `${userInfo.id}_${provider}_${userInfo.email}_shogun_oauth_${appToken}`;
@@ -505,10 +506,10 @@ export class OAuthConnector extends EventEmitter {
       };
 
       this.cacheUserInfo(userInfo.id, provider, userInfo);
-      logDebug("OAuth credentials generated successfully");
+      console.log("OAuth credentials generated successfully");
       return credentials;
     } catch (error: any) {
-      logError("Error generating OAuth credentials:", error);
+      console.error("Error generating OAuth credentials:", error);
       throw error;
     }
   }
@@ -557,7 +558,7 @@ export class OAuthConnector extends EventEmitter {
     // Check for PKCE first
     const isPKCEEnabled = providerConfig.usePKCE ?? this.config.usePKCE;
     if (isPKCEEnabled) {
-      logDebug("PKCE enabled, retrieving code verifier...");
+      console.log("PKCE enabled, retrieving code verifier...");
 
       // Debug: Show all oauth-related keys in sessionStorage
       if (typeof sessionStorage !== "undefined") {
@@ -568,14 +569,14 @@ export class OAuthConnector extends EventEmitter {
             oauthKeys.push(key);
           }
         }
-        logDebug("OAuth keys in sessionStorage:", oauthKeys);
+        console.log("OAuth keys in sessionStorage:", oauthKeys);
       }
 
       const verifier = this.getItem(`oauth_verifier_${provider}`);
       const verifierTimestamp = this.getItem(
         `oauth_verifier_timestamp_${provider}`,
       );
-      logDebug(
+      console.log(
         `Looking for key: oauth_verifier_${provider}, found:`,
         !!verifier,
       );
@@ -583,24 +584,24 @@ export class OAuthConnector extends EventEmitter {
         const verifierTimestampInt = parseInt(verifierTimestamp, 10);
         const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000; // Default 10 minuti
         if (Date.now() - verifierTimestampInt > stateTimeout) {
-          logWarn(`Code verifier expired for PKCE flow for ${provider}`);
+          console.warn(`Code verifier expired for PKCE flow for ${provider}`);
           this.removeItem(`oauth_verifier_${provider}`);
           this.removeItem(`oauth_verifier_timestamp_${provider}`);
           throw new Error("Code verifier expired");
         }
-        logDebug(
+        console.log(
           `Found code verifier for PKCE flow: ${verifier.substring(0, 10)}... (length: ${verifier.length})`,
         );
         tokenParams.code_verifier = verifier;
       } else {
         // Fallback: prova a generare un nuovo verifier (non ideale ma funziona per test)
-        logWarn(
+        console.warn(
           "PKCE enabled but no code verifier found. Attempting fallback...",
         );
         try {
           const { codeVerifier } = await this.generatePKCEChallenge();
           tokenParams.code_verifier = codeVerifier;
-          logDebug("Generated fallback code verifier");
+          console.log("Generated fallback code verifier");
         } catch (fallbackError) {
           throw new Error(
             "PKCE enabled but no code verifier found and fallback failed",
@@ -621,7 +622,7 @@ export class OAuthConnector extends EventEmitter {
         providerConfig.clientSecret.trim() !== ""
       ) {
         tokenParams.client_secret = providerConfig.clientSecret;
-        logDebug("Using client_secret for server-side OAuth flow");
+        console.log("Using client_secret for server-side OAuth flow");
       } else {
         throw new Error(
           "Client secret is required when PKCE is not enabled for server-side flows.",
@@ -637,7 +638,7 @@ export class OAuthConnector extends EventEmitter {
       providerConfig.clientSecret.trim() !== ""
     ) {
       tokenParams.client_secret = providerConfig.clientSecret;
-      logDebug(
+      console.log(
         "Adding client_secret for Google OAuth (required even with PKCE)",
       );
     }
@@ -647,7 +648,7 @@ export class OAuthConnector extends EventEmitter {
     this.removeItem(`oauth_verifier_timestamp_${provider}`);
 
     const urlParams = new URLSearchParams(tokenParams);
-    logDebug("Request body keys:", Array.from(urlParams.keys()));
+    console.log("Request body keys:", Array.from(urlParams.keys()));
 
     const response = await fetch(providerConfig.tokenUrl, {
       method: "POST",
@@ -772,7 +773,7 @@ export class OAuthConnector extends EventEmitter {
         JSON.stringify(minimalCacheEntry),
       );
     } catch (error) {
-      logWarn("Failed to persist user info in localStorage:", error);
+      console.warn("Failed to persist user info in localStorage:", error);
     }
   }
 
@@ -812,7 +813,7 @@ export class OAuthConnector extends EventEmitter {
         }
       }
     } catch (error) {
-      logWarn("Failed to read user info from localStorage:", error);
+      console.warn("Failed to read user info from localStorage:", error);
     }
 
     return null;
@@ -828,7 +829,7 @@ export class OAuthConnector extends EventEmitter {
       try {
         localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
       } catch (error) {
-        logWarn("Failed to remove user info from localStorage:", error);
+        console.warn("Failed to remove user info from localStorage:", error);
       }
     } else {
       // Clear all cache
@@ -843,7 +844,7 @@ export class OAuthConnector extends EventEmitter {
         }
         keysToRemove.forEach((key) => localStorage.removeItem(key));
       } catch (error) {
-        logWarn("Failed to clear user info from localStorage:", error);
+        console.warn("Failed to clear user info from localStorage:", error);
       }
     }
   }
@@ -895,7 +896,7 @@ export class OAuthConnector extends EventEmitter {
 
       keysToRemove.forEach((key) => sessionStorage.removeItem(key));
       if (keysToRemove.length > 0) {
-        logDebug(`Cleaned up ${keysToRemove.length} expired OAuth entries`);
+        console.log(`Cleaned up ${keysToRemove.length} expired OAuth entries`);
       }
     }
 
@@ -916,7 +917,7 @@ export class OAuthConnector extends EventEmitter {
 
     memoryKeysToRemove.forEach((key) => this.memoryStorage.delete(key));
     if (memoryKeysToRemove.length > 0) {
-      logDebug(
+      console.log(
         `Cleaned up ${memoryKeysToRemove.length} expired OAuth entries from memory`,
       );
     }

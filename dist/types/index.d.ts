@@ -1,6 +1,6 @@
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, LoggingConfig, PluginCategory, AuthMethod } from "./types/shogun";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, derive, GunErrors } from "./gundb";
@@ -111,18 +111,6 @@ export declare class ShogunCore implements IShogunCore {
      * @returns List of most recent errors
      */
     getRecentErrors(count?: number): ShogunError[];
-    /**
-     * Configure logging behavior for the Shogun SDK
-     * @param {LoggingConfig} config - Logging configuration object containing:
-     *   - level: The minimum log level to display (error, warn, info, debug, trace)
-     *   - logToConsole: Whether to output logs to the console (default: true)
-     *   - customLogger: Optional custom logger implementation
-     *   - logTimestamps: Whether to include timestamps in logs (default: true)
-     * @returns {void}
-     * @description Updates the logging configuration for the SDK. Changes take effect immediately
-     * for all subsequent log operations.
-     */
-    configureLogging(config: LoggingConfig): void;
     /**
      * Check if user is logged in
      * @returns {boolean} True if user is logged in, false otherwise

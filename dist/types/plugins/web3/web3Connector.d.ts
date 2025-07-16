@@ -69,36 +69,31 @@ declare class Web3Connector extends EventEmitter {
      */
     connectMetaMask(): Promise<ConnectionResult>;
     /**
-     * Generates credentials with caching
+     * Generates credentials for the given address
      */
     generateCredentials(address: string): Promise<ISEAPair>;
     /**
-     * Generate credentials from signature
+     * Generates credentials from a signature
      */
     private generateCredentialsFromSignature;
     /**
-     * Generate fallback credentials when signature request fails
-     * Questo è meno sicuro della firma, ma permette di procedere con l'autenticazione
+     * Generates fallback credentials (for testing/development)
      */
     private generateFallbackCredentials;
     /**
-     * Checks if MetaMask is available in the browser
-     * @returns true if MetaMask is available
+     * Checks if MetaMask is available
      */
     static isMetaMaskAvailable(): boolean;
     /**
-     * Request signature using BrowserProvider
+     * Requests signature with timeout
      */
     private requestSignatureWithTimeout;
     /**
-     * Checks if any Ethereum provider is available
+     * Checks if the connector is available
      */
     isAvailable(): boolean;
     /**
-     * Configure custom JSON-RPC provider
-     * @param rpcUrl - RPC endpoint URL
-     * @param privateKey - Wallet private key
-     * @throws {Error} For invalid parameters
+     * Sets a custom provider for testing/development
      */
     setCustomProvider(rpcUrl: string, privateKey: string): void;
     /**

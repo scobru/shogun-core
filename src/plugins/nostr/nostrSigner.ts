@@ -1,5 +1,4 @@
 import { NostrConnector } from "./nostrConnector";
-import { logDebug, logError } from "../../utils/logger";
 import derive from "../../gundb/derive";
 import { ethers } from "ethers";
 
@@ -37,7 +36,7 @@ export class NostrSigner {
     address: string,
   ): Promise<NostrSigningCredential> {
     try {
-      logDebug(`Creating Nostr signing credential for address: ${address}`);
+      console.log(`Creating Nostr signing credential for address: ${address}`);
 
       // Validate address (same validation as normal approach)
       const validAddress = this.validateAddress(address);
@@ -60,10 +59,10 @@ export class NostrSigner {
       // Store credential for later use
       this.credentials.set(validAddress.toLowerCase(), signingCredential);
 
-      logDebug("Created Nostr signing credential:", signingCredential);
+      console.log("Created Nostr signing credential:", signingCredential);
       return signingCredential;
     } catch (error: any) {
-      logError("Error creating Nostr signing credential:", error);
+      console.error("Error creating Nostr signing credential:", error);
       throw new Error(
         `Failed to create Nostr signing credential: ${error.message}`,
       );
@@ -144,7 +143,7 @@ export class NostrSigner {
       deterministicSignature = deterministicSignature.substring(0, 128);
     }
 
-    logDebug(
+    console.log(
       `Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`,
     );
 
@@ -165,7 +164,7 @@ export class NostrSigner {
       const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
       return passwordHash;
     } catch (error) {
-      logError("Error generating password:", error);
+      console.error("Error generating password:", error);
       throw new Error("Failed to generate password from signature");
     }
   }
@@ -189,10 +188,10 @@ export class NostrSigner {
         // For now, create a deterministic signature based on the data and credential
         const signature = await this.signData(dataToSign, credential);
 
-        logDebug("Nostr authentication successful:", { data, signature });
+        console.log("Nostr authentication successful:", { data, signature });
         return signature;
       } catch (error: any) {
-        logError("Nostr authentication error:", error);
+        console.error("Nostr authentication error:", error);
         throw error;
       }
     };
@@ -239,7 +238,7 @@ export class NostrSigner {
         epriv: derivedKeys.epriv,
       };
     } catch (error: any) {
-      logError("Error deriving keys from Nostr credential:", error);
+      console.error("Error deriving keys from Nostr credential:", error);
       throw error;
     }
   }
@@ -305,7 +304,7 @@ export class NostrSigner {
           });
       });
     } catch (error: any) {
-      logError("Error creating Gun user:", error);
+      console.error("Error creating Gun user:", error);
       return { success: false, error: error.message };
     }
   }
@@ -344,7 +343,7 @@ export class NostrSigner {
 
       return "SEA" + JSON.stringify(seaSignature);
     } catch (error: any) {
-      logError("Error signing with derived keys:", error);
+      console.error("Error signing with derived keys:", error);
       throw error;
     }
   }

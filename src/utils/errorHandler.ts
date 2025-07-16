@@ -1,4 +1,3 @@
-import { log, logError } from "./logger";
 import { LogLevel } from "../types/common";
 
 /**
@@ -77,7 +76,7 @@ export class ErrorHandler {
    */
   static handleError(error: ShogunError): void {
     // Log the error
-    logError(`[${error.type}] ${error.code}: ${error.message}`);
+    console.error(`[${error.type}] ${error.code}: ${error.message}`);
 
     // Store the error in memory
     this.errors.push(error);
@@ -114,19 +113,19 @@ export class ErrorHandler {
     // Log the error
     switch (logLevel) {
       case "debug":
-        log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+        console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
         break;
       case "warn":
-        log(`[${type}.${code}] (WARN) ${finalMessage}`);
+        console.log(`[${type}.${code}] (WARN) ${finalMessage}`);
         break;
       case "info":
-        log(`[${type}.${code}] (INFO) ${finalMessage}`);
+        console.log(`[${type}.${code}] (INFO) ${finalMessage}`);
         break;
       case "error":
       default:
-        log(`[${type}.${code}] (ERROR) ${finalMessage}`);
+        console.log(`[${type}.${code}] (ERROR) ${finalMessage}`);
         if (originalError && originalError instanceof Error) {
-          log(originalError.stack || "No stack trace available");
+          console.log(originalError.stack || "No stack trace available");
         }
         break;
     }
@@ -191,7 +190,7 @@ export class ErrorHandler {
       try {
         listener(error);
       } catch (listenerError) {
-        logError(`Error in error listener: ${listenerError}`);
+        console.error(`Error in error listener: ${listenerError}`);
       }
     }
   }
@@ -245,7 +244,7 @@ export class ErrorHandler {
         const delay = retryDelay * attempt;
 
         if (attempt < maxRetries) {
-          log(
+          console.log(
             `Retrying operation after ${delay}ms (attempt ${attempt}/${maxRetries})`,
           );
           await new Promise((resolve) => setTimeout(resolve, delay));

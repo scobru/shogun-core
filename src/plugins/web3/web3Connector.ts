@@ -2,7 +2,6 @@
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
 import { ethers } from "ethers";
-import { log, logDebug, logError, logWarn } from "../../utils/logger";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
 import {
@@ -72,15 +71,15 @@ class Web3Connector extends EventEmitter {
           this.provider = new ethers.BrowserProvider(
             ethereumProvider as ethers.Eip1193Provider,
           );
-          logDebug("BrowserProvider initialized successfully");
+          console.log("BrowserProvider initialized successfully");
         } else {
-          logWarn("No compatible Ethereum provider found");
+          console.warn("No compatible Ethereum provider found");
         }
       } catch (error) {
-        logError("Failed to initialize BrowserProvider", error);
+        console.error("Failed to initialize BrowserProvider", error);
       }
     } else {
-      logWarn("Window object not available (non-browser environment)");
+      console.warn("Window object not available (non-browser environment)");
     }
   }
 
@@ -138,18 +137,18 @@ class Web3Connector extends EventEmitter {
         const provider = source();
 
         if (provider && typeof provider.request === "function") {
-          logDebug(`Found compatible Ethereum provider: ${name}`);
+          console.log(`Found compatible Ethereum provider: ${name}`);
           return provider;
         }
       } catch (error) {
         // Continue to next provider source
-        logWarn(`Error checking provider ${name}:`, error);
+        console.warn(`Error checking provider ${name}:`, error);
         continue;
       }
     }
 
     // No provider found
-    logWarn("No compatible Ethereum provider found");
+    console.warn("No compatible Ethereum provider found");
     return undefined;
   }
 
@@ -166,15 +165,15 @@ class Web3Connector extends EventEmitter {
           this.provider = new ethers.BrowserProvider(
             ethereumProvider as ethers.Eip1193Provider,
           );
-          logDebug("BrowserProvider initialized successfully");
+          console.log("BrowserProvider initialized successfully");
         } else {
-          logWarn("No compatible Ethereum provider found");
+          console.warn("No compatible Ethereum provider found");
         }
       } else {
-        logWarn("Window object not available (non-browser environment)");
+        console.warn("Window object not available (non-browser environment)");
       }
     } catch (error) {
-      logError("Failed to initialize BrowserProvider", error);
+      console.error("Failed to initialize BrowserProvider", error);
     }
   }
 
@@ -202,7 +201,7 @@ class Web3Connector extends EventEmitter {
           });
         }
       } catch (error) {
-        logWarn("Failed to setup account change listeners", error);
+        console.warn("Failed to setup account change listeners", error);
       }
     }
   }
@@ -236,7 +235,7 @@ class Web3Connector extends EventEmitter {
       typeof cached.signature !== "string" ||
       cached.signature.length < 16
     ) {
-      logWarn(
+      console.warn(
         `Invalid cached signature for address ${address} (length: ${cached.signature ? cached.signature.length : 0}), deleting from cache.`,
       );
       this.signatureCache.delete(address);
@@ -287,10 +286,10 @@ class Web3Connector extends EventEmitter {
    */
   async connectMetaMask(): Promise<ConnectionResult> {
     try {
-      logDebug("Attempting to connect to MetaMask...");
+      console.log("Attempting to connect to MetaMask...");
 
       if (!this.provider) {
-        logDebug("Provider not initialized, setting up...");
+        console.log("Provider not initialized, setting up...");
         this.initProvider();
         if (!this.provider) {
           throw new Error(
@@ -306,7 +305,7 @@ class Web3Connector extends EventEmitter {
       }
 
       // Richiedi esplicitamente l'accesso all'account MetaMask
-      logDebug("Requesting account access...");
+      console.log("Requesting account access...");
       let accounts: string[] = [];
 
       // Try multiple methods of requesting accounts for compatibility
@@ -316,7 +315,7 @@ class Web3Connector extends EventEmitter {
           method: "eth_requestAccounts",
         });
       } catch (requestError) {
-        logWarn(
+        console.warn(
           "First account request failed, trying window.ethereum:",
           requestError,
         );
@@ -328,7 +327,7 @@ class Web3Connector extends EventEmitter {
               method: "eth_requestAccounts",
             });
           } catch (fallbackError) {
-            logError("All account request methods failed", fallbackError);
+            console.error("All account request methods failed", fallbackError);
             throw new Error("User denied account access");
           }
         } else {
@@ -336,26 +335,26 @@ class Web3Connector extends EventEmitter {
         }
       }
 
-      logDebug(
+      console.log(
         `Accounts requested successfully: ${accounts.length} accounts returned`,
       );
 
       if (!accounts || accounts.length === 0) {
-        logDebug("No accounts found, trying to get signer...");
+        console.log("No accounts found, trying to get signer...");
       }
 
       for (let attempt = 1; attempt <= this.config.maxRetries!; attempt++) {
         try {
-          logDebug(`Attempt ${attempt} to get signer...`);
+          console.log(`Attempt ${attempt} to get signer...`);
           const signer = await this.provider.getSigner();
           const address = await signer.getAddress();
 
           if (!address) {
-            logError("No address returned from signer");
-            continue;
+            console.error("No address returned from signer");
+            throw new Error("No address returned from signer");
           }
 
-          logDebug(
+          console.log(
             `Successfully connected to MetaMask with address: ${address}`,
           );
           this.emit("connected", { address });
@@ -364,10 +363,10 @@ class Web3Connector extends EventEmitter {
             success: true,
             address,
           };
-        } catch (error) {
-          logError(`Attempt ${attempt} failed:`, error);
+        } catch (error: any) {
+          console.error(`Attempt ${attempt} failed:`, error);
 
-          if (attempt === this.config.maxRetries) {
+          if (attempt === this.config.maxRetries!) {
             throw error;
           }
 
@@ -378,11 +377,12 @@ class Web3Connector extends EventEmitter {
         }
       }
 
-      throw new Error("Failed to connect after retries");
+      throw new Error("Failed to get signer after all attempts");
     } catch (error: any) {
-      logError("Failed to connect to MetaMask:", error);
+      console.error("Failed to connect to MetaMask:", error);
+
       ErrorHandler.handle(
-        ErrorType.NETWORK,
+        ErrorType.WEBAUTHN,
         "METAMASK_CONNECTION_ERROR",
         error.message ?? "Unknown error while connecting to MetaMask",
         error,
@@ -392,19 +392,22 @@ class Web3Connector extends EventEmitter {
   }
 
   /**
-   * Generates credentials with caching
+   * Generates credentials for the given address
    */
   async generateCredentials(address: string): Promise<ISEAPair> {
-    log("[web3Connector] Generating credentials for address:", address);
     try {
+      console.log(
+        "[web3Connector] Generating credentials for address:",
+        address,
+      );
+
       const validAddress = this.validateAddress(address);
+      console.log("[web3Connector] Valid Address:", validAddress);
 
-      log("[web3Connector] Valid Address:", validAddress);
-
-      // Check cache first
+      // Check if we have a cached signature
       const cachedSignature = this.getCachedSignature(validAddress);
       if (cachedSignature) {
-        log(
+        console.log(
           "[web3Connector] Using cached signature for address:",
           validAddress,
         );
@@ -414,29 +417,31 @@ class Web3Connector extends EventEmitter {
         );
       }
 
+      // Request signature with timeout
+      console.log("[web3Connector] Request signature with timeout");
+      let signature: string;
+
       try {
-        log("[web3Connector] Request signature with timeout");
-        // Tentiamo di ottenere la firma con timeout
-        const signature = await this.requestSignatureWithTimeout(
+        signature = await this.requestSignatureWithTimeout(
           validAddress,
           this.MESSAGE_TO_SIGN,
           this.config.timeout,
         );
-
-        // Cache the new signature
-        this.cacheSignature(validAddress, signature);
-
-        return this.generateCredentialsFromSignature(validAddress, signature);
-      } catch (signingError) {
+      } catch (signingError: any) {
         // Gestione del fallimento di firma
-        logWarn(
+        console.warn(
           `Failed to get signature: ${signingError}. Using fallback method.`,
         );
         throw signingError;
       }
+
+      // Cache the signature
+      this.cacheSignature(validAddress, signature);
+
+      return this.generateCredentialsFromSignature(validAddress, signature);
     } catch (error: any) {
       ErrorHandler.handle(
-        ErrorType.AUTHENTICATION,
+        ErrorType.WEBAUTHN,
         "CREDENTIALS_GENERATION_ERROR",
         error.message ?? "Error generating MetaMask credentials",
         error,
@@ -446,66 +451,75 @@ class Web3Connector extends EventEmitter {
   }
 
   /**
-   * Generate credentials from signature
+   * Generates credentials from a signature
    */
   private async generateCredentialsFromSignature(
     address: string,
     signature: string,
   ): Promise<ISEAPair> {
-    log("[web3Connector] Generating credentials from signature");
-    const salt = `${address}:${signature}`;
-    const k = await derive(salt, null, { includeP256: true });
-    return k;
+    console.log("[web3Connector] Generating credentials from signature");
+
+    const hashedAddress = ethers.keccak256(ethers.toUtf8Bytes(address));
+    const salt = `${address}_${signature}`;
+
+    return await derive(hashedAddress, salt, {
+      includeP256: true,
+    });
   }
 
   /**
-   * Generate fallback credentials when signature request fails
-   * Questo è meno sicuro della firma, ma permette di procedere con l'autenticazione
+   * Generates fallback credentials (for testing/development)
    */
   private generateFallbackCredentials(
     address: string,
   ): Web3ConnectorCredentials {
-    logWarn("Using fallback credentials generation for address:", address);
-    const username = `mm_${address.toLowerCase()}`;
+    console.warn("Using fallback credentials generation for address:", address);
 
-    // Creiamo una password deterministica basata sull'indirizzo
-    // Nota: meno sicuro della firma, ma deterministico
-    const fallbackMessage = `SHOGUN_FALLBACK:${address.toLowerCase()}`;
-    const password = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
+    // Generate a deterministic but insecure fallback
+    const fallbackSignature = ethers.keccak256(
+      ethers.toUtf8Bytes(address + "fallback"),
+    );
 
-    // Usiamo il messaggio fallback sia come messaggio che come pseudo-firma
-    // Questo non è crittograficamente sicuro, ma soddisfa l'interfaccia
-    const message = fallbackMessage;
-    const signature = ethers.keccak256(ethers.toUtf8Bytes(fallbackMessage));
-
-    return { username, password, message, signature };
+    return {
+      username: address.toLowerCase(),
+      password: fallbackSignature,
+      message: this.MESSAGE_TO_SIGN,
+      signature: fallbackSignature,
+    };
   }
 
   /**
-   * Checks if MetaMask is available in the browser
-   * @returns true if MetaMask is available
+   * Checks if MetaMask is available
    */
   public static isMetaMaskAvailable(): boolean {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") {
+      return false;
+    }
 
-    // Check standard location
-    if (window.ethereum?.isMetaMask === true) return true;
-
-    // Check alternate locations (for compatibility with multiple wallet extensions)
-    const alternateProviders = [
-      (window as any).web3?.currentProvider,
-      (window as any).metamask,
+    // Check multiple possible sources
+    const sources = [
+      () => window.ethereum,
+      () => (window as any).web3?.currentProvider,
+      () => (window as any).metamask,
+      () => window._ethereumProviders?.[0],
     ];
 
-    for (const provider of alternateProviders) {
-      if (provider?.isMetaMask === true) return true;
+    for (const source of sources) {
+      try {
+        const provider = source();
+        if (provider && typeof provider.request === "function") {
+          return true;
+        }
+      } catch {
+        // Continue to next source
+      }
     }
 
     return false;
   }
 
   /**
-   * Request signature using BrowserProvider
+   * Requests signature with timeout
    */
   private requestSignatureWithTimeout(
     address: string,
@@ -513,101 +527,67 @@ class Web3Connector extends EventEmitter {
     timeout: number = 30000,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
-      let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
-        timeoutId = null;
-        reject(new Error("Timeout requesting signature"));
+      const timeoutId = setTimeout(() => {
+        reject(new Error("Signature request timed out"));
       }, timeout);
 
       const cleanup = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        if (window.ethereum?.removeListener) {
-          window.ethereum.removeListener("accountsChanged", errorHandler);
-        }
+        clearTimeout(timeoutId);
       };
 
       const errorHandler = (error: any) => {
         cleanup();
-        reject(error as Error);
+        reject(error);
       };
-
-      // Aggiungere listener per l'evento accountsChanged che può interrompere la firma
-      if (window.ethereum?.on) {
-        window.ethereum.on("accountsChanged", errorHandler);
-      }
-
-      log("[web3Connector] Initialize and Sign");
 
       const initializeAndSign = async () => {
         try {
-          if (!this.provider) {
-            this.initProvider();
-            if (!this.provider) {
-              throw new Error("Provider not initialized");
-            }
-          }
+          console.log("[web3Connector] Initialize and Sign");
 
-          const signer = await this.provider.getSigner();
+          const signer = await this.provider!.getSigner();
           const signerAddress = await signer.getAddress();
 
-          log("[web3Connector] Signer:", signer);
-          log("[web3Connector] Signer Address:", signerAddress);
+          console.log("[web3Connector] Signer:", signer);
+          console.log("[web3Connector] Signer Address:", signerAddress);
 
+          // Verify the signer address matches the expected address
           if (signerAddress.toLowerCase() !== address.toLowerCase()) {
             throw new Error(
               `Signer address (${signerAddress}) does not match expected address (${address})`,
             );
           }
 
-          log(`Requesting signature for message: ${message}`);
+          console.log(`Requesting signature for message: ${message}`);
           const signature = await signer.signMessage(message);
-          log("[web3Connector] Signature obtained successfully");
+          console.log("[web3Connector] Signature obtained successfully");
 
           cleanup();
           resolve(signature);
         } catch (error: any) {
-          logError("Failed to request signature:", error);
-          cleanup();
-          reject(error as Error);
+          console.error("Failed to request signature:", error);
+          errorHandler(error);
         }
       };
 
-      const signature = initializeAndSign();
-
-      return signature;
+      initializeAndSign();
     });
   }
 
   /**
-   * Checks if any Ethereum provider is available
+   * Checks if the connector is available
    */
   isAvailable(): boolean {
-    return (
-      typeof window !== "undefined" && !!this.getAvailableEthereumProvider()
-    );
+    return Web3Connector.isMetaMaskAvailable();
   }
 
   /**
-   * Configure custom JSON-RPC provider
-   * @param rpcUrl - RPC endpoint URL
-   * @param privateKey - Wallet private key
-   * @throws {Error} For invalid parameters
+   * Sets a custom provider for testing/development
    */
   public setCustomProvider(rpcUrl: string, privateKey: string): void {
-    if (!rpcUrl || typeof rpcUrl !== "string") {
-      throw new Error("Invalid RPC URL");
-    }
-
-    if (!privateKey || typeof privateKey !== "string") {
-      throw new Error("Invalid private key");
-    }
-
     try {
       this.customProvider = new ethers.JsonRpcProvider(rpcUrl);
       this.customWallet = new ethers.Wallet(privateKey, this.customProvider);
-      logDebug("Custom provider configured successfully");
+      console.log("Custom provider configured successfully");
     } catch (error: any) {
       throw new Error(
         `Error configuring provider: ${error.message ?? "Unknown error"}`,

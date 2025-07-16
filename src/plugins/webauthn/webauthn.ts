@@ -7,7 +7,6 @@ const MAX_USERNAME_LENGTH = 64;
 import { ethers } from "ethers";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { EventEmitter } from "../../utils/eventEmitter";
-import { logError, logDebug } from "../../utils/logger";
 import {
   DeviceInfo,
   WebAuthnCredentials,
@@ -409,7 +408,7 @@ export class Webauthn extends EventEmitter {
           },
         };
 
-      logDebug(
+      console.log(
         "Attempting to create credentials with options:",
         publicKeyCredentialCreationOptions,
       );
@@ -422,7 +421,7 @@ export class Webauthn extends EventEmitter {
         throw new Error("Credential creation failed");
       }
 
-      logDebug("Credentials created successfully:", credential);
+      console.log("Credentials created successfully:", credential);
       const webAuthnCredential = credential as PublicKeyCredential;
 
       // Convert to WebAuthnCredentialData
@@ -446,7 +445,7 @@ export class Webauthn extends EventEmitter {
       this.credential = credentialData;
       return credentialData;
     } catch (error: unknown) {
-      logError("Detailed error in credential creation:", error);
+      console.error("Detailed error in credential creation:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       throw new Error(`Error creating credentials: ${errorMessage}`);
@@ -511,7 +510,7 @@ export class Webauthn extends EventEmitter {
         };
       }
     } catch (error: unknown) {
-      logError("Error in generateCredentials:", error);
+      console.error("Error in generateCredentials:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -569,7 +568,7 @@ export class Webauthn extends EventEmitter {
         username,
       };
     } catch (error: unknown) {
-      logError("Error verifying credentials:", error);
+      console.error("Error verifying credentials:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

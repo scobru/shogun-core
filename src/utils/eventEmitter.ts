@@ -1,8 +1,6 @@
 /**
  * Type for any event data
  */
-import { logError } from "./logger";
-
 export type EventData = Record<string, unknown>;
 
 /**
@@ -48,7 +46,7 @@ export class EventEmitter<
       try {
         listener(data);
       } catch (error) {
-        logError(`Error in event listener for ${String(event)}:`, error);
+        console.error(`Error in event listener for ${String(event)}:`, error);
       }
     });
 

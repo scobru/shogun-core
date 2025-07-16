@@ -9,7 +9,6 @@ import {
   OAuthCredentials,
   OAuthUserInfo,
 } from "./types";
-import { log, logError, logWarn } from "../../utils/logger";
 import { AuthMethod, AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ShogunStorage } from "../../storage/storage";
@@ -48,7 +47,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // Validazione di sicurezza post-inizializzazione
     this.validateOAuthSecurity();
 
-    log("[oauthPlugin]  OAuth plugin initialized successfully");
+    console.log("[oauthPlugin]  OAuth plugin initialized successfully");
   }
 
   /**
@@ -65,7 +64,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
       // Verifica che PKCE sia abilitato per tutti i provider
       if (!providerConfig.usePKCE && typeof window !== "undefined") {
-        logWarn(
+        console.warn(
           `[oauthPlugin] Provider ${provider} non ha PKCE abilitato - non sicuro per browser`,
         );
       }
@@ -73,13 +72,13 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
       if (providerConfig.clientSecret && typeof window !== "undefined") {
         if (provider === "google" && providerConfig.usePKCE) {
-          log(
+          console.log(
             `[oauthPlugin] Provider ${provider} ha client_secret configurato - OK per Google con PKCE`,
           );
           // Non lanciare errore per Google con PKCE
           continue;
         } else {
-          logError(
+          console.error(
             `[oauthPlugin] Provider ${provider} ha client_secret configurato nel browser - RIMUOVERE`,
           );
           throw new Error(
@@ -100,7 +99,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // If connector is already initialized, update its configuration
     if (this.oauthConnector) {
       this.oauthConnector.updateConfig(this.config);
-      log(
+      console.log(
         "[oauthPlugin]  OAuth connector configuration updated",
         this.config.providers,
       );
@@ -116,7 +115,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     }
     this.oauthConnector = null;
     super.destroy();
-    log("[oauthPlugin]  OAuth plugin destroyed");
+    console.log("[oauthPlugin]  OAuth plugin destroyed");
   }
 
   /**
@@ -149,7 +148,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * @inheritdoc
    */
   async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
-    log(`Initiating OAuth flow with ${provider}`);
+    console.log(`Initiating OAuth flow with ${provider}`);
     return this.assertOAuthConnector().initiateOAuth(provider);
   }
 
@@ -161,7 +160,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     authCode: string,
     state?: string,
   ): Promise<OAuthConnectionResult> {
-    log(`Completing OAuth flow with ${provider}`);
+    console.log(`Completing OAuth flow with ${provider}`);
 
     return this.assertOAuthConnector().completeOAuth(
       provider,
@@ -178,7 +177,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
   ): Promise<OAuthCredentials> {
-    log(`Generating credentials for ${provider} user`);
+    console.log(`Generating credentials for ${provider} user`);
 
     if (!this.appToken) {
       throw new Error("App token is required for OAuth generation");
@@ -198,11 +197,11 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * @description Authenticates user using OAuth with external providers
    */
   async login(provider: OAuthProvider): Promise<AuthResult> {
-    log(`OAuth login with ${provider}`);
+    console.log(`OAuth login with ${provider}`);
 
     try {
       const core = this.assertInitialized();
-      log(`OAuth login attempt with provider: ${provider}`);
+      console.log(`OAuth login attempt with provider: ${provider}`);
 
       if (!provider) {
         throw createError(
@@ -282,11 +281,11 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * @description Creates a new user account using OAuth with external providers
    */
   async signUp(provider: OAuthProvider): Promise<AuthResult> {
-    log(`OAuth signup with ${provider}`);
+    console.log(`OAuth signup with ${provider}`);
 
     try {
       const core = this.assertInitialized();
-      log(`OAuth signup attempt with provider: ${provider}`);
+      console.log(`OAuth signup attempt with provider: ${provider}`);
 
       if (!provider) {
         throw createError(
@@ -369,7 +368,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     state: string,
   ): Promise<AuthResult> {
     try {
-      log(`Handling OAuth callback for ${provider}`);
+      console.log(`Handling OAuth callback for ${provider}`);
       const core = this.assertInitialized();
 
       // Validazione di sicurezza pre-callback
@@ -429,7 +428,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
       return authResult;
     } catch (error: any) {
-      logError(`Error handling OAuth callback for ${provider}:`, error);
+      console.error(`Error handling OAuth callback for ${provider}:`, error);
 
       // Pulisci i dati OAuth anche in caso di errore
       this.cleanupExpiredOAuthData();
@@ -500,7 +499,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     authCode: string,
     state: string,
   ): Promise<AuthResult> {
-    log(
+    console.log(
       `handleSimpleOAuth called (alias for handleOAuthCallback) for ${provider}`,
     );
     return this.handleOAuthCallback(provider, authCode, state);

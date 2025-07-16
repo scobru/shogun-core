@@ -64,7 +64,6 @@ const restricted_put_1 = require("./restricted-put");
 Object.defineProperty(exports, "restrictedPut", { enumerable: true, get: function () { return restricted_put_1.restrictedPut; } });
 const derive_1 = __importDefault(require("./derive"));
 exports.derive = derive_1.default;
-const logger_1 = require("../utils/logger");
 const errorHandler_1 = require("../utils/errorHandler");
 const eventEmitter_1 = require("../utils/eventEmitter");
 const gun_rxjs_1 = require("./gun-rxjs");
@@ -84,7 +83,7 @@ class GunInstance {
     // Integrated modules
     _rxjs;
     constructor(gun, appScope = "shogun") {
-        (0, logger_1.log)("[gunInstance]  Initializing GunDB");
+        console.log("[gunInstance]  Initializing GunDB");
         // Initialize event emitter
         this.eventEmitter = new eventEmitter_1.EventEmitter();
         // Validate Gun instance
@@ -119,19 +118,19 @@ class GunInstance {
             const sessionResult = this.restoreSession();
             this.node = this.gun.get(appScope);
             if (sessionResult.success) {
-                (0, logger_1.log)(`Session automatically restored for user: ${sessionResult.userPub}`);
+                console.log(`Session automatically restored for user: ${sessionResult.userPub}`);
             }
             else {
-                (0, logger_1.log)(`No previous session to restore: ${sessionResult.error}`);
+                console.log(`No previous session to restore: ${sessionResult.error}`);
             }
         }
         catch (error) {
-            (0, logger_1.logError)("Error during automatic session restoration:", error);
+            console.error("Error during automatic session restoration:", error);
         }
     }
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {
-            (0, logger_1.log)("[gunInstance]  Auth event received:", ack);
+            console.log("[gunInstance]  Auth event received:", ack);
             if (ack.err) {
                 errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
             }
@@ -209,7 +208,7 @@ class GunInstance {
     addPeer(peer) {
         this.gun.opt({ peers: [peer] });
         this.emitPeerEvent("add", peer);
-        (0, logger_1.log)(`Added new peer: ${peer}`);
+        console.log(`Added new peer: ${peer}`);
     }
     /**
      * Removes a peer from the network
@@ -228,14 +227,14 @@ class GunInstance {
                     peerConnection.close();
                 }
                 this.emitPeerEvent("remove", peer);
-                (0, logger_1.log)(`Removed peer: ${peer}`);
+                console.log(`Removed peer: ${peer}`);
             }
             else {
-                (0, logger_1.log)(`Peer not found in current connections: ${peer}`);
+                console.log(`Peer not found in current connections: ${peer}`);
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error removing peer ${peer}:`, error);
+            console.error(`Error removing peer ${peer}:`, error);
         }
     }
     /**
@@ -255,7 +254,7 @@ class GunInstance {
             return [];
         }
         catch (error) {
-            (0, logger_1.logError)("Error getting current peers:", error);
+            console.error("Error getting current peers:", error);
             return [];
         }
     }
@@ -272,7 +271,7 @@ class GunInstance {
             return [];
         }
         catch (error) {
-            (0, logger_1.logError)("Error getting configured peers:", error);
+            console.error("Error getting configured peers:", error);
             return [];
         }
     }
@@ -302,7 +301,7 @@ class GunInstance {
             return peerInfo;
         }
         catch (error) {
-            (0, logger_1.logError)("Error getting peer info:", error);
+            console.error("Error getting peer info:", error);
             return {};
         }
     }
@@ -316,10 +315,10 @@ class GunInstance {
             this.removePeer(peer);
             // Add it back immediately instead of with timeout
             this.addPeer(peer);
-            (0, logger_1.log)(`Reconnected to peer: ${peer}`);
+            console.log(`Reconnected to peer: ${peer}`);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error reconnecting to peer ${peer}:`, error);
+            console.error(`Error reconnecting to peer ${peer}:`, error);
         }
     }
     /**
@@ -340,11 +339,11 @@ class GunInstance {
                         this.addPeer(peer);
                     });
                 }
-                (0, logger_1.log)(`Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`);
+                console.log(`Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`);
             }
         }
         catch (error) {
-            (0, logger_1.logError)("Error resetting peers:", error);
+            console.error("Error resetting peers:", error);
         }
     }
     /**
@@ -477,21 +476,21 @@ class GunInstance {
      * @returns Promise resolving to signup result
      */
     async signUp(username, password, pair) {
-        (0, logger_1.log)("[gunInstance]  Attempting user registration:", username);
+        console.log("[gunInstance]  Attempting user registration:", username);
         try {
             // Validate credentials
             if (password.length < 8 && !pair) {
                 const err = "Passwords must be more than 8 characters long!";
-                (0, logger_1.log)(err);
+                console.log(err);
                 return { success: false, error: err };
             }
             if (username.length < 1) {
                 const err = "Username must be more than 0 characters long!";
-                (0, logger_1.log)(err);
+                console.log(err);
                 return { success: false, error: err };
             }
             // First, try to authenticate with Gun's native system to check if user exists
-            (0, logger_1.log)(`Checking if user ${username} exists in Gun's native system...`);
+            console.log(`Checking if user ${username} exists in Gun's native system...`);
             const authTestResult = await new Promise((resolve) => {
                 if (pair) {
                     this.gun.user().auth(pair, (ack) => {
@@ -521,7 +520,7 @@ class GunInstance {
                 return await this.runPostAuthOnAuthResult(authTestResult, username);
             }
             // User doesn't exist, attempt to create new user
-            (0, logger_1.log)(`Creating new user: ${username}`);
+            console.log(`Creating new user: ${username}`);
             const createResult = await new Promise((resolve) => {
                 if (pair) {
                     resolve({ success: true, pub: pair.pub });
@@ -529,11 +528,11 @@ class GunInstance {
                 else {
                     this.gun.user().create(username, password, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`User creation error: ${ack.err}`);
+                            console.error(`User creation error: ${ack.err}`);
                             resolve({ success: false, error: ack.err });
                         }
                         else {
-                            (0, logger_1.log)(`User created successfully: ${username}`);
+                            console.log(`User created successfully: ${username}`);
                             resolve({ success: true, pub: ack.pub });
                         }
                     });
@@ -547,7 +546,7 @@ class GunInstance {
                 if (pair) {
                     this.gun.user().auth(pair, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Authentication after creation failed: ${ack.err}`);
+                            console.error(`Authentication after creation failed: ${ack.err}`);
                             resolve({ success: false, error: ack.err });
                         }
                         else {
@@ -558,7 +557,7 @@ class GunInstance {
                 else {
                     this.gun.user().auth(username, password, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Authentication after creation failed: ${ack.err}`);
+                            console.error(`Authentication after creation failed: ${ack.err}`);
                             resolve({ success: false, error: ack.err });
                         }
                         else {
@@ -574,7 +573,7 @@ class GunInstance {
                 };
             }
             const userPub = authResult.userPub;
-            (0, logger_1.log)(`User authentication successful after creation: ${username} (${userPub})`);
+            console.log(`User authentication successful after creation: ${username} (${userPub})`);
             await this.runPostAuthOnAuthResult(authResult, username);
             this.savePair();
             return {
@@ -585,23 +584,23 @@ class GunInstance {
             };
         }
         catch (error) {
-            (0, logger_1.logError)(`Exception during signup for ${username}: ${error}`);
+            console.error(`Exception during signup for ${username}: ${error}`);
             return { success: false, error: String(error) };
         }
     }
     async runPostAuthOnAuthResult(authTestResult, username) {
-        (0, logger_1.log)(`User ${username} already exists and password is correct, syncing with tracking system...`);
+        console.log(`User ${username} already exists and password is correct, syncing with tracking system...`);
         // User exists and can authenticate, sync with tracking system
         const userPub = authTestResult.userPub;
         if (!userPub) {
-            (0, logger_1.logError)("User public key (userPub) is undefined in runPostAuthOnAuthResult.");
+            console.error("User public key (userPub) is undefined in runPostAuthOnAuthResult.");
             return { success: false, error: "User public key is missing." };
         }
         // Check if user exists in our tracking system
         const existingUser = await this.checkUsernameExists(username);
-        (0, logger_1.log)("[gunInstance]  existingUser", existingUser);
+        console.log("[gunInstance]  existingUser", existingUser);
         if (!existingUser) {
-            (0, logger_1.log)(`User ${username} not in tracking system, adding them...`);
+            console.log(`User ${username} not in tracking system, adding them...`);
             // Add user to our tracking system
             const userMetadata = {
                 username: username,
@@ -615,11 +614,11 @@ class GunInstance {
                     const userNode = this.node.get(userPub);
                     userNode.put(userMetadata, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Failed to save user metadata: ${ack.err}`);
+                            console.error(`Failed to save user metadata: ${ack.err}`);
                             reject(ack.err);
                         }
                         else {
-                            (0, logger_1.log)(`User metadata saved for: ${username}`);
+                            console.log(`User metadata saved for: ${username}`);
                             resolve();
                         }
                     });
@@ -631,7 +630,7 @@ class GunInstance {
                     // Use a more robust mapping strategy
                     usernamesNode.get(mappingKey).put(userPub, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Failed to create username mapping: ${ack.err}`);
+                            console.error(`Failed to create username mapping: ${ack.err}`);
                             reject(ack.err);
                             return;
                         }
@@ -665,17 +664,17 @@ class GunInstance {
                                         try {
                                             const result = await strategy();
                                             if (result) {
-                                                (0, logger_1.log)(`Successfully verified username mapping for ${username}`);
+                                                console.log(`Successfully verified username mapping for ${username}`);
                                                 verifyResolve();
                                                 return;
                                             }
                                         }
                                         catch (error) {
-                                            (0, logger_1.logError)(`Verification strategy failed: ${error}`);
+                                            console.error(`Verification strategy failed: ${error}`);
                                         }
                                     }
                                     // If all strategies fail
-                                    (0, logger_1.logError)(`Failed to verify username mapping for ${username}`);
+                                    console.error(`Failed to verify username mapping for ${username}`);
                                     verifyReject(new Error("Username mapping verification failed"));
                                 };
                                 runVerifications();
@@ -693,10 +692,10 @@ class GunInstance {
                 // Add to users collection (non-blocking)
                 this.node.get("users").set(this.node.get(userPub), (ack) => {
                     if (ack.err) {
-                        (0, logger_1.logError)(`Warning: Failed to add user to collection: ${ack.err}`);
+                        console.error(`Warning: Failed to add user to collection: ${ack.err}`);
                     }
                     else {
-                        (0, logger_1.log)(`User added to collection: ${username}`);
+                        console.log(`User added to collection: ${username}`);
                     }
                 });
                 this.savePair();
@@ -708,7 +707,7 @@ class GunInstance {
                 };
             }
             catch (trackingError) {
-                (0, logger_1.logError)(`Critical: Could not update tracking system: ${trackingError}`);
+                console.error(`Critical: Could not update tracking system: ${trackingError}`);
                 return {
                     success: false,
                     userPub: userPub,
@@ -768,7 +767,7 @@ class GunInstance {
                         if (typeof result === "string") {
                             const userData = await new Promise((resolve) => {
                                 this.node.get(result).once((data) => {
-                                    (0, logger_1.log)(`[checkUsernameExists] User data for pub ${result}:`, data);
+                                    console.log(`[checkUsernameExists] User data for pub ${result}:`, data);
                                     resolve(data || null);
                                 });
                             });
@@ -782,13 +781,13 @@ class GunInstance {
                     }
                 }
                 catch (error) {
-                    (0, logger_1.log)(`Username lookup strategy failed: ${error}`);
+                    console.log(`Username lookup strategy failed: ${error}`);
                 }
             }
             return null;
         }
         catch (error) {
-            (0, logger_1.logError)(`Username existence check failed: ${error}`);
+            console.error(`Username existence check failed: ${error}`);
             return null;
         }
     }
@@ -800,7 +799,7 @@ class GunInstance {
      * @returns Promise resolving to login result
      */
     async login(username, password, pair, callback) {
-        (0, logger_1.log)(`Attempting login for user: ${username}`);
+        console.log(`Attempting login for user: ${username}`);
         try {
             // Attempt Gun.js authentication directly first
             // This allows login even if our custom tracking system is out of sync
@@ -808,11 +807,11 @@ class GunInstance {
                 if (pair) {
                     this.gun.user().auth(pair, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Login error for ${username}: ${ack.err}`);
+                            console.error(`Login error for ${username}: ${ack.err}`);
                             resolve({ success: false, error: ack.err });
                         }
                         else {
-                            (0, logger_1.log)(`Login successful for: ${username}`);
+                            console.log(`Login successful for: ${username}`);
                             resolve({ success: true, ack });
                         }
                     });
@@ -820,11 +819,11 @@ class GunInstance {
                 else {
                     this.gun.user().auth(username, password, (ack) => {
                         if (ack.err) {
-                            (0, logger_1.logError)(`Login error for ${username}: ${ack.err}`);
+                            console.error(`Login error for ${username}: ${ack.err}`);
                             resolve({ success: false, error: ack.err });
                         }
                         else {
-                            (0, logger_1.log)(`Login successful for: ${username}`);
+                            console.log(`Login successful for: ${username}`);
                             resolve({ success: true, ack });
                         }
                     });
@@ -850,10 +849,10 @@ class GunInstance {
                     callback(result);
                 return result;
             }
-            (0, logger_1.log)(`Gun.js authentication successful for: ${username} (${userPub})`);
+            console.log(`Gun.js authentication successful for: ${username} (${userPub})`);
             // Pass the userPub to runPostAuthOnAuthResult
             this.runPostAuthOnAuthResult({ success: true, userPub: userPub }, username);
-            (0, logger_1.log)(`Login completed successfully for: ${username} (${userPub})`);
+            console.log(`Login completed successfully for: ${username} (${userPub})`);
             this.savePair();
             const result = {
                 success: true,
@@ -865,7 +864,7 @@ class GunInstance {
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(`Exception during login for ${username}: ${error}`);
+            console.error(`Exception during login for ${username}: ${error}`);
             const result = { success: false, error: String(error) };
             if (callback)
                 callback(result);
@@ -894,11 +893,11 @@ class GunInstance {
                     sessionStorage.setItem("gun/pair", JSON.stringify(pair));
                     sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
                 }
-                (0, logger_1.log)(`Session saved for user: ${userInfo.alias || userInfo.pub}`);
+                console.log(`Session saved for user: ${userInfo.alias || userInfo.pub}`);
             }
         }
         catch (error) {
-            (0, logger_1.logError)("Error saving auth pair and session:", error);
+            console.error("Error saving auth pair and session:", error);
         }
     }
     /**
@@ -913,7 +912,7 @@ class GunInstance {
             const sessionInfo = localStorage.getItem("gun/session");
             const pairInfo = localStorage.getItem("gun/pair");
             if (!sessionInfo || !pairInfo) {
-                (0, logger_1.log)("[gunInstance]  No saved session found");
+                console.log("[gunInstance]  No saved session found");
                 return { success: false, error: "No saved session" };
             }
             const session = JSON.parse(sessionInfo);
@@ -922,32 +921,32 @@ class GunInstance {
             const sessionAge = Date.now() - session.timestamp;
             const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
             if (sessionAge > maxSessionAge) {
-                (0, logger_1.log)("[gunInstance]  Session expired, clearing storage");
+                console.log("[gunInstance]  Session expired, clearing storage");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Session expired" };
             }
-            (0, logger_1.log)(`Attempting to restore session for user: ${session.alias || session.pub}`);
+            console.log(`Attempting to restore session for user: ${session.alias || session.pub}`);
             // Try to restore the session with Gun
             const user = this.gun.user();
             // Set the pair directly
             user._ = { sea: pair };
             // Try to recall the session without timeout
             const recallResult = user.recall({ sessionStorage: true });
-            (0, logger_1.log)("recallResult", recallResult);
+            console.log("recallResult", recallResult);
             if (recallResult && user.is?.pub === session.pub) {
-                (0, logger_1.log)(`Session restored successfully for: ${session.alias || session.pub}`);
+                console.log(`Session restored successfully for: ${session.alias || session.pub}`);
                 return { success: true, userPub: session.pub };
             }
             else {
-                (0, logger_1.log)("[gunInstance]  Session restoration failed, clearing storage");
+                console.log("[gunInstance]  Session restoration failed, clearing storage");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Session restoration failed" };
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error restoring session: ${error}`);
+            console.error(`Error restoring session: ${error}`);
             return { success: false, error: String(error) };
         }
     }
@@ -958,11 +957,11 @@ class GunInstance {
         try {
             // Check if the user is actually logged in before attempting to logout
             if (!this.isLoggedIn()) {
-                (0, logger_1.log)("[gunInstance]  No user logged in, skipping logout");
+                console.log("[gunInstance]  No user logged in, skipping logout");
                 return;
             }
             const currentUser = this.getCurrentUser();
-            (0, logger_1.log)(`Logging out user: ${currentUser?.pub || "unknown"}`);
+            console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
             // Direct logout using Gun
             this.gun.user().leave();
             // Clear local storage session data
@@ -971,7 +970,7 @@ class GunInstance {
                 localStorage.removeItem("gun/session");
                 // Also clear old format for backward compatibility
                 localStorage.removeItem("pair");
-                (0, logger_1.log)("[gunInstance]  Local session data cleared");
+                console.log("[gunInstance]  Local session data cleared");
             }
             // Clear sessionStorage as well
             if (typeof sessionStorage !== "undefined") {
@@ -980,12 +979,12 @@ class GunInstance {
                 sessionStorage.removeItem("gun/auth");
                 sessionStorage.removeItem("gun/pair");
                 sessionStorage.removeItem("gun/session");
-                (0, logger_1.log)("[gunInstance]  Session storage cleared");
+                console.log("[gunInstance]  Session storage cleared");
             }
-            (0, logger_1.log)("[gunInstance]  Logout completed successfully");
+            console.log("[gunInstance]  Logout completed successfully");
         }
         catch (error) {
-            (0, logger_1.logError)("Error during logout:", error);
+            console.error("Error during logout:", error);
         }
     }
     /**
@@ -994,7 +993,7 @@ class GunInstance {
      */
     clearAllStorageData() {
         try {
-            (0, logger_1.log)("[gunInstance]  Clearing all Gun-related storage data...");
+            console.log("[gunInstance]  Clearing all Gun-related storage data...");
             // Clear localStorage
             if (typeof localStorage !== "undefined") {
                 const keysToRemove = [];
@@ -1005,7 +1004,7 @@ class GunInstance {
                     }
                 }
                 keysToRemove.forEach((key) => localStorage.removeItem(key));
-                (0, logger_1.log)(`Cleared ${keysToRemove.length} items from localStorage`);
+                console.log(`Cleared ${keysToRemove.length} items from localStorage`);
             }
             // Clear sessionStorage
             if (typeof sessionStorage !== "undefined") {
@@ -1017,17 +1016,17 @@ class GunInstance {
                     }
                 }
                 keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-                (0, logger_1.log)(`Cleared ${keysToRemove.length} items from sessionStorage`);
+                console.log(`Cleared ${keysToRemove.length} items from sessionStorage`);
             }
             // Also logout if currently logged in
             if (this.isLoggedIn()) {
                 this.gun.user().leave();
-                (0, logger_1.log)("[gunInstance]  User logged out");
+                console.log("[gunInstance]  User logged out");
             }
-            (0, logger_1.log)("[gunInstance]  All Gun-related storage data cleared");
+            console.log("[gunInstance]  All Gun-related storage data cleared");
         }
         catch (error) {
-            (0, logger_1.logError)("Error clearing storage data:", error);
+            console.error("Error clearing storage data:", error);
         }
     }
     /**
@@ -1036,7 +1035,7 @@ class GunInstance {
      */
     async testConnectivity() {
         try {
-            (0, logger_1.log)("[gunInstance]  Testing Gun connectivity...");
+            console.log("[gunInstance]  Testing Gun connectivity...");
             const result = {
                 peers: this.getPeerInfo(),
                 gunInstance: !!this.gun,
@@ -1059,10 +1058,10 @@ class GunInstance {
                 });
                 result.canWrite = !writeResult?.err;
                 result.testWriteResult = writeResult;
-                (0, logger_1.log)("[gunInstance]  Write test result:", writeResult);
+                console.log("[gunInstance]  Write test result:", writeResult);
             }
             catch (writeError) {
-                (0, logger_1.logError)("Write test failed:", writeError);
+                console.error("Write test failed:", writeError);
                 result.testWriteResult = { error: String(writeError) };
             }
             // Test basic read operation
@@ -1077,17 +1076,17 @@ class GunInstance {
                 });
                 result.canRead = !!readResult;
                 result.testReadResult = readResult;
-                (0, logger_1.log)("[gunInstance]  Read test result:", readResult);
+                console.log("[gunInstance]  Read test result:", readResult);
             }
             catch (readError) {
-                (0, logger_1.logError)("Read test failed:", readError);
+                console.error("Read test failed:", readError);
                 result.testReadResult = { error: String(readError) };
             }
-            (0, logger_1.log)("[gunInstance]  Connectivity test completed:", result);
+            console.log("[gunInstance]  Connectivity test completed:", result);
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)("Error testing connectivity:", error);
+            console.error("Error testing connectivity:", error);
             return {
                 peers: {},
                 gunInstance: false,
@@ -1134,7 +1133,7 @@ class GunInstance {
      * @returns Promise resolving with the operation result
      */
     async setPasswordHint(username, password, hint, securityQuestions, securityAnswers) {
-        (0, logger_1.log)("[gunInstance]  Setting password hint for:", username);
+        console.log("[gunInstance]  Setting password hint for:", username);
         // Verify that the user is authenticated with password
         const loginResult = await this.login(username, password);
         if (!loginResult.success) {
@@ -1167,7 +1166,7 @@ class GunInstance {
                 }
             }
             catch (hashError) {
-                (0, logger_1.logError)("Error generating hash:", hashError);
+                console.error("Error generating hash:", hashError);
                 return { success: false, error: "Failed to generate security hash" };
             }
             // Encrypt the password hint with the proof of work
@@ -1187,7 +1186,7 @@ class GunInstance {
                 }
             }
             catch (encryptError) {
-                (0, logger_1.logError)("Error encrypting hint:", encryptError);
+                console.error("Error encrypting hint:", encryptError);
                 return { success: false, error: "Failed to encrypt password hint" };
             }
             // Save to the public graph, readable by anyone but only decryptable with the right answers.
@@ -1201,11 +1200,11 @@ class GunInstance {
                     .get("security")
                     .put(securityPayload, (ack) => {
                     if (ack.err) {
-                        (0, logger_1.logError)("Error saving security data to public graph:", ack.err);
+                        console.error("Error saving security data to public graph:", ack.err);
                         reject(new Error(ack.err));
                     }
                     else {
-                        (0, logger_1.log)(`Security data saved to public graph for ${userPub}`);
+                        console.log(`Security data saved to public graph for ${userPub}`);
                         resolve();
                     }
                 });
@@ -1213,7 +1212,7 @@ class GunInstance {
             return { success: true };
         }
         catch (error) {
-            (0, logger_1.logError)("Error setting password hint:", error);
+            console.error("Error setting password hint:", error);
             return { success: false, error: String(error) };
         }
     }
@@ -1224,11 +1223,11 @@ class GunInstance {
      * @returns Promise resolving with the password hint
      */
     async forgotPassword(username, securityAnswers) {
-        (0, logger_1.log)("[gunInstance]  Attempting password recovery for:", username);
+        console.log("[gunInstance]  Attempting password recovery for:", username);
         try {
             // Find the user's data
             let userData = await this.checkUsernameExists(username);
-            (0, logger_1.log)("[gunInstance]  userData", userData);
+            console.log("[gunInstance]  userData", userData);
             // Patch: if userData is a string, treat as pub
             if (typeof userData === "string") {
                 userData = { pub: userData, username };
@@ -1238,11 +1237,11 @@ class GunInstance {
             }
             // Extract the public key from user data
             const userPub = userData.pub;
-            (0, logger_1.log)(`Found user public key for password recovery: ${userPub}`);
+            console.log(`Found user public key for password recovery: ${userPub}`);
             // Access the user's security data directly from their public key node
             const securityData = await new Promise((resolve) => {
                 this.node.get(userPub).get("security").once((data) => {
-                    (0, logger_1.log)(`Retrieved security data for user ${username}:`, data ? "found" : "not found");
+                    console.log(`Retrieved security data for user ${username}:`, data ? "found" : "not found");
                     resolve(data);
                 });
             });
@@ -1273,7 +1272,7 @@ class GunInstance {
                 }
             }
             catch (hashError) {
-                (0, logger_1.logError)("Error generating hash:", hashError);
+                console.error("Error generating hash:", hashError);
                 return { success: false, error: "Failed to generate security hash" };
             }
             // Decrypt the password hint with the proof of work
@@ -1304,7 +1303,7 @@ class GunInstance {
             return { success: true, hint: hint };
         }
         catch (error) {
-            (0, logger_1.logError)("Error recovering password hint:", error);
+            console.error("Error recovering password hint:", error);
             return { success: false, error: String(error) };
         }
     }
@@ -1389,14 +1388,14 @@ class GunInstance {
      */
     async derive(password, extra, options) {
         try {
-            (0, logger_1.log)("[gunInstance]  Deriving cryptographic keys with options:", options);
+            console.log("[gunInstance]  Deriving cryptographic keys with options:", options);
             // Call the derive function with the provided parameters
             const derivedKeys = await (0, derive_1.default)(password, extra, options);
-            (0, logger_1.log)("[gunInstance]  Key derivation completed successfully");
+            console.log("[gunInstance]  Key derivation completed successfully");
             return derivedKeys;
         }
         catch (error) {
-            (0, logger_1.logError)("Error during key derivation:", error);
+            console.error("Error during key derivation:", error);
             // Use centralized error handler
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "KEY_DERIVATION_FAILED", error instanceof Error
                 ? error.message

@@ -1,5 +1,4 @@
 import { EventEmitter } from "./utils/eventEmitter";
-import { log, logError, configureLogging } from "./utils/logger";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import {
@@ -7,7 +6,6 @@ import {
   ShogunSDKConfig,
   AuthResult,
   SignUpResult,
-  LoggingConfig,
   PluginCategory,
   CorePlugins,
   AuthMethod,
@@ -84,15 +82,11 @@ export class ShogunCore implements IShogunCore {
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
-    log("[index] Initializing Shogun " + ShogunCore.API_VERSION);
+    console.log("[index] Initializing Shogun " + ShogunCore.API_VERSION);
 
     this.config = config;
     this.storage = new ShogunStorage();
     this.eventEmitter = new EventEmitter();
-
-    if (config.logging) {
-      configureLogging(config.logging);
-    }
 
     ErrorHandler.addListener((error: ShogunError) => {
       this.eventEmitter.emit("error", {
@@ -119,7 +113,7 @@ export class ShogunCore implements IShogunCore {
         });
       }
     } catch (error) {
-      logError("Error creating Gun instance:", error);
+      console.error("Error creating Gun instance:", error);
 
       throw new Error(`Failed to create Gun instance: ${error}`);
     }
@@ -129,7 +123,7 @@ export class ShogunCore implements IShogunCore {
       this._gun = this.db.gun;
       this.setupGunEventForwarding();
     } catch (error) {
-      logError("Error initializing GunInstance:", error);
+      console.error("Error initializing GunInstance:", error);
 
       throw new Error(`Failed to initialize GunInstance: ${error}`);
     }
@@ -137,12 +131,12 @@ export class ShogunCore implements IShogunCore {
     try {
       this._user = this._gun.user();
     } catch (error) {
-      logError("Error initializing Gun user:", error);
+      console.error("Error initializing Gun user:", error);
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
     this._gun.on("auth", (user) => {
-      log("[index] [INDEX}Gun auth event received", user);
+      console.log("[index] [INDEX}Gun auth event received", user);
       this._user = this._gun.user();
       this.eventEmitter.emit("auth:login", {
         pub: user.pub,
@@ -162,7 +156,10 @@ export class ShogunCore implements IShogunCore {
         try {
           this.register(plugin);
         } catch (error) {
-          logError(`Failed to auto-register plugin ${plugin.name}:`, error);
+          console.error(
+            `Failed to auto-register plugin ${plugin.name}:`,
+            error,
+          );
         }
       }
     }
@@ -177,7 +174,7 @@ export class ShogunCore implements IShogunCore {
       (global as any).ShogunGun = this.db.gun;
     }
 
-    log("[index] Shogun initialized! ��");
+    console.log("[index] Shogun initialized! ");
   }
 
   /**
@@ -188,9 +185,9 @@ export class ShogunCore implements IShogunCore {
     try {
       // Initialize the GunInstance asynchronously
       await this.db.initialize();
-      log("[index] Shogun async initialization completed");
+      console.log("[index] Shogun async initialization completed");
     } catch (error) {
-      logError("Error during async initialization:", error);
+      console.error("Error during async initialization:", error);
       throw new Error(`Failed to initialize ShogunCore: ${error}`);
     }
   }
@@ -237,7 +234,7 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    log("[index] Gun event forwarding setup completed");
+    console.log("[index] Gun event forwarding setup completed");
   }
 
   /**
@@ -251,21 +248,21 @@ export class ShogunCore implements IShogunCore {
         const webauthnPlugin = new WebauthnPlugin();
         webauthnPlugin._category = PluginCategory.Authentication;
         this.register(webauthnPlugin);
-        log("[index] Webauthn plugin registered");
+        console.log("[index] Webauthn plugin registered");
       }
 
       if (config.web3?.enabled) {
         const web3ConnectorPlugin = new Web3ConnectorPlugin();
         web3ConnectorPlugin._category = PluginCategory.Authentication;
         this.register(web3ConnectorPlugin);
-        log("[index] Web3Connector plugin registered");
+        console.log("[index] Web3Connector plugin registered");
       }
 
       if (config.nostr?.enabled) {
         const nostrConnectorPlugin = new NostrConnectorPlugin();
         nostrConnectorPlugin._category = PluginCategory.Authentication;
         this.register(nostrConnectorPlugin);
-        log("[index] NostrConnector plugin registered");
+        console.log("[index] NostrConnector plugin registered");
       }
 
       // Register OAuth plugin if enabled
@@ -277,13 +274,13 @@ export class ShogunCore implements IShogunCore {
         oauthPlugin.configure(config.oauth);
 
         this.register(oauthPlugin);
-        log(
+        console.log(
           "[index] OAuth plugin registered with providers:",
           config.oauth.providers,
         );
       }
     } catch (error) {
-      logError("Error registering builtin plugins:", error);
+      console.error("Error registering builtin plugins:", error);
     }
   }
 
@@ -309,7 +306,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     this.plugins.set(plugin.name, plugin);
-    log(`Registered plugin: ${plugin.name}`);
+    console.log(`Registered plugin: ${plugin.name}`);
   }
 
   /**
@@ -319,7 +316,7 @@ export class ShogunCore implements IShogunCore {
   unregister(pluginName: string): void {
     const plugin = this.plugins.get(pluginName);
     if (!plugin) {
-      log(`Plugin "${pluginName}" not found, nothing to unregister`);
+      console.log(`Plugin "${pluginName}" not found, nothing to unregister`);
       return;
     }
 
@@ -328,7 +325,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     this.plugins.delete(pluginName);
-    log(`Unregistered plugin: ${pluginName}`);
+    console.log(`Unregistered plugin: ${pluginName}`);
   }
 
   /**
@@ -408,26 +405,6 @@ export class ShogunCore implements IShogunCore {
   }
 
   // *********************************************************************************************************
-  // 🔐 LOGGING 🔐
-  // *********************************************************************************************************
-
-  /**
-   * Configure logging behavior for the Shogun SDK
-   * @param {LoggingConfig} config - Logging configuration object containing:
-   *   - level: The minimum log level to display (error, warn, info, debug, trace)
-   *   - logToConsole: Whether to output logs to the console (default: true)
-   *   - customLogger: Optional custom logger implementation
-   *   - logTimestamps: Whether to include timestamps in logs (default: true)
-   * @returns {void}
-   * @description Updates the logging configuration for the SDK. Changes take effect immediately
-   * for all subsequent log operations.
-   */
-  configureLogging(config: LoggingConfig): void {
-    configureLogging(config);
-    log("[index] Logging reconfigured with new settings");
-  }
-
-  // *********************************************************************************************************
   // 🔐 AUTHENTICATION
   // *********************************************************************************************************
 
@@ -449,12 +426,12 @@ export class ShogunCore implements IShogunCore {
   logout(): void {
     try {
       if (!this.isLoggedIn()) {
-        log("[index] Logout ignored: user not authenticated");
+        console.log("[index] Logout ignored: user not authenticated");
         return;
       }
       this.db.logout();
       this.eventEmitter.emit("auth:logout", {});
-      log("[index] Logout completed successfully");
+      console.log("[index] Logout completed successfully");
     } catch (error) {
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
@@ -478,13 +455,13 @@ export class ShogunCore implements IShogunCore {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
-    log("[index] Login");
+    console.log("[index] Login");
     try {
-      log(`Login attempt for user: ${username}`);
+      console.log(`Login attempt for user: ${username}`);
 
       if (!this.currentAuthMethod) {
         this.currentAuthMethod = "password";
-        log("[index] Authentication method set to default: password");
+        console.log("[index] Authentication method set to default: password");
       }
 
       const result = await this.db.login(username, password, pair);
@@ -494,7 +471,7 @@ export class ShogunCore implements IShogunCore {
           userPub: result.userPub ?? "",
         });
 
-        log(
+        console.log(
           `Current auth method before wallet check: ${this.currentAuthMethod}`,
         );
       } else {
@@ -533,7 +510,7 @@ export class ShogunCore implements IShogunCore {
     passwordConfirmation?: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
-    log("[index] Sign up");
+    console.log("[index] Sign up");
     try {
       if (
         passwordConfirmation !== undefined &&
@@ -553,7 +530,7 @@ export class ShogunCore implements IShogunCore {
         timestamp: Date.now(),
       });
 
-      log(`Attempting user registration: ${username}`);
+      console.log(`Attempting user registration: ${username}`);
 
       const result = await this.db.signUp(username, password, pair);
 
@@ -580,7 +557,7 @@ export class ShogunCore implements IShogunCore {
 
       return result;
     } catch (error: any) {
-      logError(`Error during registration for user ${username}:`, error);
+      console.error(`Error during registration for user ${username}:`, error);
       this.eventEmitter.emit("debug", {
         action: "signup_exception",
         username,
@@ -658,11 +635,11 @@ export class ShogunCore implements IShogunCore {
    * @param method The authentication method used
    */
   setAuthMethod(method: AuthMethod): void {
-    log(
+    console.log(
       `Setting authentication method from '${this.currentAuthMethod}' to '${method}'`,
     );
     this.currentAuthMethod = method;
-    log(`Authentication method successfully set to: ${method}`);
+    console.log(`Authentication method successfully set to: ${method}`);
   }
 
   /**

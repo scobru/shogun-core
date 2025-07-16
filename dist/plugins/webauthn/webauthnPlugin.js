@@ -4,7 +4,6 @@ exports.WebauthnPlugin = void 0;
 const base_1 = require("../base");
 const webauthn_1 = require("./webauthn");
 const webauthnSigner_1 = require("./webauthnSigner");
-const logger_1 = require("../../utils/logger");
 const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -23,7 +22,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
         // Inizializziamo il modulo WebAuthn
         this.webauthn = new webauthn_1.Webauthn(core.gun);
         this.signer = new webauthnSigner_1.WebAuthnSigner(this.webauthn);
-        (0, logger_1.log)("[webauthnPlugin] WebAuthn plugin initialized with signer support");
+        console.log("[webauthnPlugin] WebAuthn plugin initialized with signer support");
     }
     /**
      * @inheritdoc
@@ -32,7 +31,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
         this.webauthn = null;
         this.signer = null;
         super.destroy();
-        (0, logger_1.log)("[webauthnPlugin] WebAuthn plugin destroyed");
+        console.log("[webauthnPlugin] WebAuthn plugin destroyed");
     }
     /**
      * Assicura che il modulo Webauthn sia inizializzato
@@ -97,11 +96,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     async createSigningCredential(username) {
         try {
-            (0, logger_1.log)(`Creating signing credential for user: ${username}`);
+            console.log(`Creating signing credential for user: ${username}`);
             return await this.assertSigner().createSigningCredential(username);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error creating signing credential: ${error.message}`);
+            console.error(`Error creating signing credential: ${error.message}`);
             throw error;
         }
     }
@@ -110,11 +109,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     createAuthenticator(credentialId) {
         try {
-            (0, logger_1.log)(`Creating authenticator for credential: ${credentialId}`);
+            console.log(`Creating authenticator for credential: ${credentialId}`);
             return this.assertSigner().createAuthenticator(credentialId);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error creating authenticator: ${error.message}`);
+            console.error(`Error creating authenticator: ${error.message}`);
             throw error;
         }
     }
@@ -123,11 +122,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     async createDerivedKeyPair(credentialId, username, extra) {
         try {
-            (0, logger_1.log)(`Creating derived key pair for credential: ${credentialId}`);
+            console.log(`Creating derived key pair for credential: ${credentialId}`);
             return await this.assertSigner().createDerivedKeyPair(credentialId, username, extra);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error creating derived key pair: ${error.message}`);
+            console.error(`Error creating derived key pair: ${error.message}`);
             throw error;
         }
     }
@@ -136,11 +135,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     async signWithDerivedKeys(data, credentialId, username, extra) {
         try {
-            (0, logger_1.log)(`Signing data with derived keys for credential: ${credentialId}`);
+            console.log(`Signing data with derived keys for credential: ${credentialId}`);
             return await this.assertSigner().signWithDerivedKeys(data, credentialId, username, extra);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error signing with derived keys: ${error.message}`);
+            console.error(`Error signing with derived keys: ${error.message}`);
             throw error;
         }
     }
@@ -170,11 +169,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
     async createGunUserFromSigningCredential(credentialId, username) {
         try {
             const core = this.assertInitialized();
-            (0, logger_1.log)(`Creating Gun user from signing credential: ${credentialId}`);
+            console.log(`Creating Gun user from signing credential: ${credentialId}`);
             return await this.assertSigner().createGunUser(credentialId, username, core.gun);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error creating Gun user from signing credential: ${error.message}`);
+            console.error(`Error creating Gun user from signing credential: ${error.message}`);
             throw error;
         }
     }
@@ -196,11 +195,11 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     async verifyConsistency(credentialId, username, expectedUserPub) {
         try {
-            (0, logger_1.log)(`Verifying consistency for credential: ${credentialId}`);
+            console.log(`Verifying consistency for credential: ${credentialId}`);
             return await this.assertSigner().verifyConsistency(credentialId, username, expectedUserPub);
         }
         catch (error) {
-            (0, logger_1.logError)(`Error verifying consistency: ${error.message}`);
+            console.error(`Error verifying consistency: ${error.message}`);
             return { consistent: false };
         }
     }
@@ -210,7 +209,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     async setupConsistentOneshotSigning(username) {
         try {
-            (0, logger_1.log)(`Setting up consistent oneshot signing for: ${username}`);
+            console.log(`Setting up consistent oneshot signing for: ${username}`);
             // 1. Create signing credential (with consistent hashing)
             const credential = await this.createSigningCredential(username);
             // 2. Create authenticator
@@ -226,7 +225,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
             };
         }
         catch (error) {
-            (0, logger_1.logError)(`Error setting up consistent oneshot signing: ${error.message}`);
+            console.error(`Error setting up consistent oneshot signing: ${error.message}`);
             throw error;
         }
     }
@@ -239,10 +238,10 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Requires browser support for WebAuthn and existing credentials.
      */
     async login(username) {
-        (0, logger_1.log)("[webauthnPlugin] Login with WebAuthn");
+        console.log("[webauthnPlugin] Login with WebAuthn");
         try {
             const core = this.assertInitialized();
-            (0, logger_1.log)(`Attempting WebAuthn login for user: ${username}`);
+            console.log(`Attempting WebAuthn login for user: ${username}`);
             if (!username) {
                 throw new Error("Username required for WebAuthn login");
             }
@@ -257,7 +256,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
             core.setAuthMethod("webauthn");
             const loginResult = await core.login(username, "", credentials.key);
             if (loginResult.success) {
-                (0, logger_1.log)(`WebAuthn login completed successfully for user: ${username}`);
+                console.log(`WebAuthn login completed successfully for user: ${username}`);
                 return {
                     ...loginResult,
                 };
@@ -267,7 +266,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error during WebAuthn login: ${error}`);
+            console.error(`Error during WebAuthn login: ${error}`);
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_LOGIN_ERROR", error.message || "Error during WebAuthn login", error);
             return {
                 success: false,
@@ -284,10 +283,10 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Requires browser support for WebAuthn.
      */
     async signUp(username) {
-        (0, logger_1.log)("[webauthnPlugin] Sign up with WebAuthn");
+        console.log("[webauthnPlugin] Sign up with WebAuthn");
         try {
             const core = this.assertInitialized();
-            (0, logger_1.log)(`Attempting WebAuthn registration for user: ${username}`);
+            console.log(`Attempting WebAuthn registration for user: ${username}`);
             if (!username) {
                 throw new Error("Username required for WebAuthn registration");
             }
@@ -302,7 +301,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
             core.setAuthMethod("webauthn");
             const signupResult = await core.signUp(username, "", "", credentials.key);
             if (signupResult.success) {
-                (0, logger_1.log)(`WebAuthn signup completed successfully for user: ${username}`);
+                console.log(`WebAuthn signup completed successfully for user: ${username}`);
                 return {
                     ...signupResult,
                 };
@@ -312,7 +311,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error during WebAuthn registration: ${error}`);
+            console.error(`Error during WebAuthn registration: ${error}`);
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_SIGNUP_ERROR", error.message || "Error during WebAuthn registration", error);
             return {
                 success: false,

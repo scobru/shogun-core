@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Web3Signer = void 0;
 const web3Connector_1 = require("./web3Connector");
 const ethers_1 = require("ethers");
-const logger_1 = require("../../utils/logger");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 /**
  * Web3 Signer - Provides oneshot signing functionality
@@ -26,7 +25,7 @@ class Web3Signer {
      */
     async createSigningCredential(address) {
         try {
-            (0, logger_1.logDebug)(`Creating Web3 signing credential for address: ${address}`);
+            console.log(`Creating Web3 signing credential for address: ${address}`);
             // Validate address
             const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
             // Request signature using the same approach as normal Web3
@@ -43,11 +42,11 @@ class Web3Signer {
             };
             // Store credential for later use
             this.credentials.set(validAddress.toLowerCase(), signingCredential);
-            (0, logger_1.logDebug)("Created Web3 signing credential:", signingCredential);
+            console.log("Created Web3 signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating Web3 signing credential:", error);
+            console.error("Error creating Web3 signing credential:", error);
             throw new Error(`Failed to create Web3 signing credential: ${error.message}`);
         }
     }
@@ -62,13 +61,13 @@ class Web3Signer {
             if (signerAddress.toLowerCase() !== address.toLowerCase()) {
                 throw new Error(`Signer address (${signerAddress}) does not match expected address (${address})`);
             }
-            (0, logger_1.logDebug)(`Requesting signature for message: ${this.MESSAGE_TO_SIGN}`);
+            console.log(`Requesting signature for message: ${this.MESSAGE_TO_SIGN}`);
             const signature = await signer.signMessage(this.MESSAGE_TO_SIGN);
-            (0, logger_1.logDebug)("Signature obtained successfully");
+            console.log("Signature obtained successfully");
             return signature;
         }
         catch (error) {
-            (0, logger_1.logError)("Failed to request signature:", error);
+            console.error("Failed to request signature:", error);
             throw error;
         }
     }
@@ -92,11 +91,11 @@ class Web3Signer {
                 // Sign the data
                 const dataToSign = JSON.stringify(data);
                 const signature = await signer.signMessage(dataToSign);
-                (0, logger_1.logDebug)("Web3 authentication successful:", { data, signature });
+                console.log("Web3 authentication successful:", { data, signature });
                 return signature;
             }
             catch (error) {
-                (0, logger_1.logError)("Web3 authentication error:", error);
+                console.error("Web3 authentication error:", error);
                 throw error;
             }
         };
@@ -123,7 +122,7 @@ class Web3Signer {
             };
         }
         catch (error) {
-            (0, logger_1.logError)("Error deriving keys from Web3 credential:", error);
+            console.error("Error deriving keys from Web3 credential:", error);
             throw error;
         }
     }
@@ -180,7 +179,7 @@ class Web3Signer {
             });
         }
         catch (error) {
-            (0, logger_1.logError)("Error creating Gun user:", error);
+            console.error("Error creating Gun user:", error);
             return { success: false, error: error.message };
         }
     }
@@ -210,7 +209,7 @@ class Web3Signer {
             return "SEA" + JSON.stringify(seaSignature);
         }
         catch (error) {
-            (0, logger_1.logError)("Error signing with derived keys:", error);
+            console.error("Error signing with derived keys:", error);
             throw error;
         }
     }
