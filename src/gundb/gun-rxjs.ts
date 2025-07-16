@@ -16,7 +16,7 @@ export class GunRxJS {
    */
   constructor(gun: IGunInstance<any>) {
     this.gun = gun;
-    this.user = gun.user().recall({ sessionStorage: true });
+    this.user = gun.user();
   }
 
   /**

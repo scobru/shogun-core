@@ -149,7 +149,22 @@ class ShogunCore {
             global.ShogunDB = this.db;
             global.ShogunGun = this.db.gun;
         }
-        (0, logger_1.log)("[index] Shogun initialized! 🚀");
+        (0, logger_1.log)("[index] Shogun initialized! ��");
+    }
+    /**
+     * Initialize the SDK asynchronously
+     * This method should be called after construction to perform async operations
+     */
+    async initialize() {
+        try {
+            // Initialize the GunInstance asynchronously
+            await this.db.initialize();
+            (0, logger_1.log)("[index] Shogun async initialization completed");
+        }
+        catch (error) {
+            (0, logger_1.logError)("Error during async initialization:", error);
+            throw new Error(`Failed to initialize ShogunCore: ${error}`);
+        }
     }
     /**
      * Access to the Gun instance

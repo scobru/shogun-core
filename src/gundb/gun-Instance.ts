@@ -93,28 +93,32 @@ class GunInstance {
 
     this.gun = gun;
 
-    try {
-      this.user = this.gun.user().recall({ sessionStorage: true });
-    } catch (error) {
-      logError("Error initializing Gun user:", error);
-      throw new Error(`Failed to initialize Gun user: ${error}`);
-    }
+    this.user = this.gun.user();
 
     this.subscribeToAuthEvents();
 
     this.crypto = crypto;
 
-    this.node = this.gun.get(appScope);
-
     this.sea = SEA;
 
-    // Attempt to restore session immediately instead of with timeout
-    this.restoreSessionOnInit();
+    this.node = null as unknown as IGunChain<
+      any,
+      IGunInstance<any>,
+      IGunInstance<any>,
+      string
+    >;
   }
 
-  private async restoreSessionOnInit() {
+  /**
+   * Initialize the GunInstance asynchronously
+   * This method should be called after construction to perform async operations
+   */
+  async initialize(appScope: string = "shogun"): Promise<void> {
     try {
-      const sessionResult = await this.restoreSession();
+      const sessionResult = this.restoreSession();
+
+      this.node = this.gun.get(appScope);
+
       if (sessionResult.success) {
         log(
           `Session automatically restored for user: ${sessionResult.userPub}`,
@@ -1023,11 +1027,11 @@ class GunInstance {
    * Attempts to restore user session from local storage
    * @returns Promise resolving to session restoration result
    */
-  async restoreSession(): Promise<{
+  restoreSession(): {
     success: boolean;
     userPub?: string;
     error?: string;
-  }> {
+  } {
     try {
       if (typeof localStorage === "undefined") {
         return { success: false, error: "localStorage not available" };

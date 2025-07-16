@@ -44,6 +44,11 @@ export declare class ShogunCore implements IShogunCore {
      */
     constructor(config: ShogunSDKConfig);
     /**
+     * Initialize the SDK asynchronously
+     * This method should be called after construction to perform async operations
+     */
+    initialize(): Promise<void>;
+    /**
      * Access to the Gun instance
      * @returns The Gun instance
      */

@@ -177,7 +177,22 @@ export class ShogunCore implements IShogunCore {
       (global as any).ShogunGun = this.db.gun;
     }
 
-    log("[index] Shogun initialized! 🚀");
+    log("[index] Shogun initialized! ��");
+  }
+
+  /**
+   * Initialize the SDK asynchronously
+   * This method should be called after construction to perform async operations
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Initialize the GunInstance asynchronously
+      await this.db.initialize();
+      log("[index] Shogun async initialization completed");
+    } catch (error) {
+      logError("Error during async initialization:", error);
+      throw new Error(`Failed to initialize ShogunCore: ${error}`);
+    }
   }
 
   /**

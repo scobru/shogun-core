@@ -16,7 +16,7 @@ class GunRxJS {
      */
     constructor(gun) {
         this.gun = gun;
-        this.user = gun.user().recall({ sessionStorage: true });
+        this.user = gun.user();
     }
     /**
      * Get the current user

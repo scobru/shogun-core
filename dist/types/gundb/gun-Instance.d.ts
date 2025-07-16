@@ -30,7 +30,11 @@ declare class GunInstance {
     private readonly eventEmitter;
     private _rxjs?;
     constructor(gun: IGunInstance<any>, appScope?: string);
-    private restoreSessionOnInit;
+    /**
+     * Initialize the GunInstance asynchronously
+     * This method should be called after construction to perform async operations
+     */
+    initialize(appScope?: string): Promise<void>;
     private subscribeToAuthEvents;
     private notifyAuthListeners;
     /**
@@ -184,11 +188,11 @@ declare class GunInstance {
      * Attempts to restore user session from local storage
      * @returns Promise resolving to session restoration result
      */
-    restoreSession(): Promise<{
+    restoreSession(): {
         success: boolean;
         userPub?: string;
         error?: string;
-    }>;
+    };
     /**
      * Logs out the current user using direct Gun authentication
      */
