@@ -388,6 +388,21 @@ class GunInstance {
         return this.gun;
     }
     /**
+     * Gets the current user
+     * @returns Current user object or null
+     */
+    getCurrentUser() {
+        try {
+            const user = this.gun.user();
+            const pub = user?.is?.pub;
+            return pub ? { pub, user } : null;
+        }
+        catch (error) {
+            console.error("[gunInstance]  Error getting current user:", error);
+            return null;
+        }
+    }
+    /**
      * Gets the current user instance
      * @returns User instance
      */
@@ -468,6 +483,311 @@ class GunInstance {
                 resolve(result);
             });
         });
+    }
+    /**
+     * Checks if a user is currently logged in
+     * @returns True if logged in
+     */
+    isLoggedIn() {
+        try {
+            const user = this.gun.user();
+            return !!(user && user.is && user.is.pub);
+        }
+        catch (error) {
+            console.error("[gunInstance]  Error checking login status:", error);
+            return false;
+        }
+    }
+    /**
+     * Attempts to restore user session from local storage
+     * @returns Promise resolving to session restoration result
+     */
+    restoreSession() {
+        try {
+            if (typeof localStorage === "undefined") {
+                return { success: false, error: "localStorage not available" };
+            }
+            const sessionInfo = localStorage.getItem("gun/session");
+            const pairInfo = localStorage.getItem("gun/pair");
+            if (!sessionInfo || !pairInfo) {
+                console.log("[gunInstance]  No saved session found");
+                return { success: false, error: "No saved session" };
+            }
+            let session, pair;
+            try {
+                session = JSON.parse(sessionInfo);
+                pair = JSON.parse(pairInfo);
+            }
+            catch (parseError) {
+                console.error("[gunInstance]  Error parsing session data:", parseError);
+                // Clear corrupted data
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+                return { success: false, error: "Corrupted session data" };
+            }
+            // Validate session data
+            if (!session.pub || !pair.pub || !pair.priv) {
+                console.log("[gunInstance]  Invalid session data, clearing storage");
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+                return { success: false, error: "Invalid session data" };
+            }
+            // Check if session is not too old (optional - you can adjust this)
+            const sessionAge = Date.now() - session.timestamp;
+            const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+            if (sessionAge > maxSessionAge) {
+                console.log("[gunInstance]  Session expired, clearing storage");
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+                return { success: false, error: "Session expired" };
+            }
+            console.log(`Attempting to restore session for user: ${session.alias || session.pub}`);
+            // Try to restore the session with Gun
+            const user = this.gun.user();
+            if (!user) {
+                console.error("[gunInstance]  Gun user instance not available");
+                return { success: false, error: "Gun user instance not available" };
+            }
+            // Set the pair directly with error handling
+            try {
+                user._ = { sea: pair };
+            }
+            catch (pairError) {
+                console.error("[gunInstance]  Error setting user pair:", pairError);
+                return { success: false, error: "Failed to set user credentials" };
+            }
+            // Try to recall the session with better error handling
+            let recallResult;
+            try {
+                recallResult = user.recall({ sessionStorage: true });
+                console.log("recallResult", recallResult);
+            }
+            catch (recallError) {
+                console.error("[gunInstance]  Error during recall:", recallError);
+                // Clear corrupted session data
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+                return { success: false, error: "Session recall failed" };
+            }
+            // Check if recall was successful
+            if (recallResult && user.is?.pub === session.pub) {
+                console.log(`Session restored successfully for: ${session.alias || session.pub}`);
+                return { success: true, userPub: session.pub };
+            }
+            else {
+                console.log("[gunInstance]  Session restoration failed, clearing storage");
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+                return { success: false, error: "Session restoration failed" };
+            }
+        }
+        catch (error) {
+            console.error(`Error restoring session: ${error}`);
+            // Clear potentially corrupted data on any error
+            try {
+                localStorage.removeItem("gun/session");
+                localStorage.removeItem("gun/pair");
+            }
+            catch (clearError) {
+                console.error("[gunInstance]  Error clearing corrupted session data:", clearError);
+            }
+            return { success: false, error: String(error) };
+        }
+    }
+    /**
+     * Logs out the current user using direct Gun authentication
+     */
+    logout() {
+        try {
+            // Check if the user is actually logged in before attempting to logout
+            if (!this.isLoggedIn()) {
+                console.log("[gunInstance]  No user logged in, skipping logout");
+                return;
+            }
+            const currentUser = this.getCurrentUser();
+            console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
+            // Direct logout using Gun with error handling
+            try {
+                const user = this.gun.user();
+                if (user && typeof user.leave === "function") {
+                    user.leave();
+                }
+            }
+            catch (gunError) {
+                console.error("[gunInstance]  Error during Gun logout:", gunError);
+                // Continue with storage cleanup even if Gun logout fails
+            }
+            // Clear local storage session data
+            if (typeof localStorage !== "undefined") {
+                try {
+                    localStorage.removeItem("gun/pair");
+                    localStorage.removeItem("gun/session");
+                    // Also clear old format for backward compatibility
+                    localStorage.removeItem("pair");
+                    console.log("[gunInstance]  Local session data cleared");
+                }
+                catch (storageError) {
+                    console.error("[gunInstance]  Error clearing localStorage:", storageError);
+                }
+            }
+            // Clear sessionStorage as well
+            if (typeof sessionStorage !== "undefined") {
+                try {
+                    sessionStorage.removeItem("gun/");
+                    sessionStorage.removeItem("gun/user");
+                    sessionStorage.removeItem("gun/auth");
+                    sessionStorage.removeItem("gun/pair");
+                    sessionStorage.removeItem("gun/session");
+                    console.log("[gunInstance]  Session storage cleared");
+                }
+                catch (sessionError) {
+                    console.error("[gunInstance]  Error clearing sessionStorage:", sessionError);
+                }
+            }
+            console.log("[gunInstance]  Logout completed successfully");
+        }
+        catch (error) {
+            console.error("Error during logout:", error);
+        }
+    }
+    /**
+     * Debug method: Clears all Gun-related data from local and session storage
+     * This is useful for debugging and testing purposes
+     */
+    clearAllStorageData() {
+        try {
+            console.log("[gunInstance]  Clearing all Gun-related storage data...");
+            // Clear localStorage
+            if (typeof localStorage !== "undefined") {
+                try {
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith("gun/") || key === "pair")) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach((key) => localStorage.removeItem(key));
+                    console.log(`Cleared ${keysToRemove.length} items from localStorage`);
+                }
+                catch (localError) {
+                    console.error("[gunInstance]  Error clearing localStorage:", localError);
+                }
+            }
+            // Clear sessionStorage
+            if (typeof sessionStorage !== "undefined") {
+                try {
+                    const keysToRemove = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && key.startsWith("gun/")) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+                    console.log(`Cleared ${keysToRemove.length} items from sessionStorage`);
+                }
+                catch (sessionError) {
+                    console.error("[gunInstance]  Error clearing sessionStorage:", sessionError);
+                }
+            }
+            // Also logout if currently logged in
+            if (this.isLoggedIn()) {
+                try {
+                    const user = this.gun.user();
+                    if (user && typeof user.leave === "function") {
+                        user.leave();
+                        console.log("[gunInstance]  User logged out");
+                    }
+                }
+                catch (logoutError) {
+                    console.error("[gunInstance]  Error during logout:", logoutError);
+                }
+            }
+            console.log("[gunInstance]  All Gun-related storage data cleared");
+        }
+        catch (error) {
+            console.error("Error clearing storage data:", error);
+        }
+    }
+    /**
+     * Debug method: Tests Gun connectivity and returns status information
+     * This is useful for debugging connection issues
+     */
+    async testConnectivity() {
+        try {
+            console.log("[gunInstance]  Testing Gun connectivity...");
+            const result = {
+                peers: this.getPeerInfo(),
+                gunInstance: !!this.gun,
+                userInstance: !!this.gun.user(),
+                canWrite: false,
+                canRead: false,
+                testWriteResult: null,
+                testReadResult: null,
+            };
+            // Test basic write operation
+            try {
+                const testData = { test: true, timestamp: Date.now() };
+                const writeResult = await new Promise((resolve) => {
+                    this.gun
+                        .get("test")
+                        .get("connectivity")
+                        .put(testData, (ack) => {
+                        resolve(ack);
+                    });
+                });
+                result.canWrite = !writeResult?.err;
+                result.testWriteResult = writeResult;
+                console.log("[gunInstance]  Write test result:", writeResult);
+            }
+            catch (writeError) {
+                console.error("Write test failed:", writeError);
+                result.testWriteResult = { error: String(writeError) };
+            }
+            // Test basic read operation
+            try {
+                const readResult = await new Promise((resolve) => {
+                    this.gun
+                        .get("test")
+                        .get("connectivity")
+                        .once((data) => {
+                        resolve(data);
+                    });
+                });
+                result.canRead = !!readResult;
+                result.testReadResult = readResult;
+                console.log("[gunInstance]  Read test result:", readResult);
+            }
+            catch (readError) {
+                console.error("Read test failed:", readError);
+                result.testReadResult = { error: String(readError) };
+            }
+            console.log("[gunInstance]  Connectivity test completed:", result);
+            return result;
+        }
+        catch (error) {
+            console.error("Error testing connectivity:", error);
+            return {
+                peers: {},
+                gunInstance: false,
+                userInstance: false,
+                canWrite: false,
+                canRead: false,
+                testWriteResult: { error: String(error) },
+                testReadResult: { error: String(error) },
+            };
+        }
+    }
+    /**
+     * Accesses the RxJS module for reactive programming
+     * @returns GunRxJS instance
+     */
+    rx() {
+        if (!this._rxjs) {
+            this._rxjs = new gun_rxjs_1.GunRxJS(this.gun);
+        }
+        return this._rxjs;
     }
     /**
      * Signs up a new user using direct Gun authentication
@@ -899,229 +1219,6 @@ class GunInstance {
         catch (error) {
             console.error("Error saving auth pair and session:", error);
         }
-    }
-    /**
-     * Attempts to restore user session from local storage
-     * @returns Promise resolving to session restoration result
-     */
-    restoreSession() {
-        try {
-            if (typeof localStorage === "undefined") {
-                return { success: false, error: "localStorage not available" };
-            }
-            const sessionInfo = localStorage.getItem("gun/session");
-            const pairInfo = localStorage.getItem("gun/pair");
-            if (!sessionInfo || !pairInfo) {
-                console.log("[gunInstance]  No saved session found");
-                return { success: false, error: "No saved session" };
-            }
-            const session = JSON.parse(sessionInfo);
-            const pair = JSON.parse(pairInfo);
-            // Check if session is not too old (optional - you can adjust this)
-            const sessionAge = Date.now() - session.timestamp;
-            const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-            if (sessionAge > maxSessionAge) {
-                console.log("[gunInstance]  Session expired, clearing storage");
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
-                return { success: false, error: "Session expired" };
-            }
-            console.log(`Attempting to restore session for user: ${session.alias || session.pub}`);
-            // Try to restore the session with Gun
-            const user = this.gun.user();
-            // Set the pair directly
-            user._ = { sea: pair };
-            // Try to recall the session without timeout
-            const recallResult = user.recall({ sessionStorage: true });
-            console.log("recallResult", recallResult);
-            if (recallResult && user.is?.pub === session.pub) {
-                console.log(`Session restored successfully for: ${session.alias || session.pub}`);
-                return { success: true, userPub: session.pub };
-            }
-            else {
-                console.log("[gunInstance]  Session restoration failed, clearing storage");
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
-                return { success: false, error: "Session restoration failed" };
-            }
-        }
-        catch (error) {
-            console.error(`Error restoring session: ${error}`);
-            return { success: false, error: String(error) };
-        }
-    }
-    /**
-     * Logs out the current user using direct Gun authentication
-     */
-    logout() {
-        try {
-            // Check if the user is actually logged in before attempting to logout
-            if (!this.isLoggedIn()) {
-                console.log("[gunInstance]  No user logged in, skipping logout");
-                return;
-            }
-            const currentUser = this.getCurrentUser();
-            console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
-            // Direct logout using Gun
-            this.gun.user().leave();
-            // Clear local storage session data
-            if (typeof localStorage !== "undefined") {
-                localStorage.removeItem("gun/pair");
-                localStorage.removeItem("gun/session");
-                // Also clear old format for backward compatibility
-                localStorage.removeItem("pair");
-                console.log("[gunInstance]  Local session data cleared");
-            }
-            // Clear sessionStorage as well
-            if (typeof sessionStorage !== "undefined") {
-                sessionStorage.removeItem("gun/");
-                sessionStorage.removeItem("gun/user");
-                sessionStorage.removeItem("gun/auth");
-                sessionStorage.removeItem("gun/pair");
-                sessionStorage.removeItem("gun/session");
-                console.log("[gunInstance]  Session storage cleared");
-            }
-            console.log("[gunInstance]  Logout completed successfully");
-        }
-        catch (error) {
-            console.error("Error during logout:", error);
-        }
-    }
-    /**
-     * Debug method: Clears all Gun-related data from local and session storage
-     * This is useful for debugging and testing purposes
-     */
-    clearAllStorageData() {
-        try {
-            console.log("[gunInstance]  Clearing all Gun-related storage data...");
-            // Clear localStorage
-            if (typeof localStorage !== "undefined") {
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.startsWith("gun/") || key === "pair")) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach((key) => localStorage.removeItem(key));
-                console.log(`Cleared ${keysToRemove.length} items from localStorage`);
-            }
-            // Clear sessionStorage
-            if (typeof sessionStorage !== "undefined") {
-                const keysToRemove = [];
-                for (let i = 0; i < sessionStorage.length; i++) {
-                    const key = sessionStorage.key(i);
-                    if (key && key.startsWith("gun/")) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-                console.log(`Cleared ${keysToRemove.length} items from sessionStorage`);
-            }
-            // Also logout if currently logged in
-            if (this.isLoggedIn()) {
-                this.gun.user().leave();
-                console.log("[gunInstance]  User logged out");
-            }
-            console.log("[gunInstance]  All Gun-related storage data cleared");
-        }
-        catch (error) {
-            console.error("Error clearing storage data:", error);
-        }
-    }
-    /**
-     * Debug method: Tests Gun connectivity and returns status information
-     * This is useful for debugging connection issues
-     */
-    async testConnectivity() {
-        try {
-            console.log("[gunInstance]  Testing Gun connectivity...");
-            const result = {
-                peers: this.getPeerInfo(),
-                gunInstance: !!this.gun,
-                userInstance: !!this.gun.user(),
-                canWrite: false,
-                canRead: false,
-                testWriteResult: null,
-                testReadResult: null,
-            };
-            // Test basic write operation
-            try {
-                const testData = { test: true, timestamp: Date.now() };
-                const writeResult = await new Promise((resolve) => {
-                    this.gun
-                        .get("test")
-                        .get("connectivity")
-                        .put(testData, (ack) => {
-                        resolve(ack);
-                    });
-                });
-                result.canWrite = !writeResult?.err;
-                result.testWriteResult = writeResult;
-                console.log("[gunInstance]  Write test result:", writeResult);
-            }
-            catch (writeError) {
-                console.error("Write test failed:", writeError);
-                result.testWriteResult = { error: String(writeError) };
-            }
-            // Test basic read operation
-            try {
-                const readResult = await new Promise((resolve) => {
-                    this.gun
-                        .get("test")
-                        .get("connectivity")
-                        .once((data) => {
-                        resolve(data);
-                    });
-                });
-                result.canRead = !!readResult;
-                result.testReadResult = readResult;
-                console.log("[gunInstance]  Read test result:", readResult);
-            }
-            catch (readError) {
-                console.error("Read test failed:", readError);
-                result.testReadResult = { error: String(readError) };
-            }
-            console.log("[gunInstance]  Connectivity test completed:", result);
-            return result;
-        }
-        catch (error) {
-            console.error("Error testing connectivity:", error);
-            return {
-                peers: {},
-                gunInstance: false,
-                userInstance: false,
-                canWrite: false,
-                canRead: false,
-                testWriteResult: { error: String(error) },
-                testReadResult: { error: String(error) },
-            };
-        }
-    }
-    /**
-     * Checks if a user is currently logged in
-     * @returns True if logged in
-     */
-    isLoggedIn() {
-        return !!this.gun.user()?.is?.pub;
-    }
-    /**
-     * Gets the current user
-     * @returns Current user object or null
-     */
-    getCurrentUser() {
-        const pub = this.gun.user()?.is?.pub;
-        return pub ? { pub, user: this.gun.user() } : null;
-    }
-    /**
-     * Accesses the RxJS module for reactive programming
-     * @returns GunRxJS instance
-     */
-    rx() {
-        if (!this._rxjs) {
-            this._rxjs = new gun_rxjs_1.GunRxJS(this.gun);
-        }
-        return this._rxjs;
     }
     /**
      * Sets up security questions and password hint

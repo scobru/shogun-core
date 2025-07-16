@@ -130,6 +130,11 @@ declare class GunInstance {
      */
     getGun(): IGunInstance<any>;
     /**
+     * Gets the current user
+     * @returns Current user object or null
+     */
+    getCurrentUser(): any;
+    /**
      * Gets the current user instance
      * @returns User instance
      */
@@ -167,23 +172,10 @@ declare class GunInstance {
      */
     remove(path: string): Promise<any>;
     /**
-     * Signs up a new user using direct Gun authentication
-     * @param username Username
-     * @param password Password
-     * @returns Promise resolving to signup result
+     * Checks if a user is currently logged in
+     * @returns True if logged in
      */
-    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<any>;
-    runPostAuthOnAuthResult(authTestResult: any, username: string): Promise<any>;
-    checkUsernameExists(username: string): Promise<any>;
-    /**
-     * Logs in a user using direct Gun authentication
-     * @param username Username
-     * @param password Password
-     * @param callback Optional callback for login result
-     * @returns Promise resolving to login result
-     */
-    login(username: string, password: string, pair?: ISEAPair | null, callback?: (result: any) => void): Promise<any>;
-    savePair(): void;
+    isLoggedIn(): boolean;
     /**
      * Attempts to restore user session from local storage
      * @returns Promise resolving to session restoration result
@@ -221,20 +213,28 @@ declare class GunInstance {
         testReadResult?: any;
     }>;
     /**
-     * Checks if a user is currently logged in
-     * @returns True if logged in
-     */
-    isLoggedIn(): boolean;
-    /**
-     * Gets the current user
-     * @returns Current user object or null
-     */
-    getCurrentUser(): any;
-    /**
      * Accesses the RxJS module for reactive programming
      * @returns GunRxJS instance
      */
     rx(): GunRxJS;
+    /**
+     * Signs up a new user using direct Gun authentication
+     * @param username Username
+     * @param password Password
+     * @returns Promise resolving to signup result
+     */
+    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<any>;
+    runPostAuthOnAuthResult(authTestResult: any, username: string): Promise<any>;
+    checkUsernameExists(username: string): Promise<any>;
+    /**
+     * Logs in a user using direct Gun authentication
+     * @param username Username
+     * @param password Password
+     * @param callback Optional callback for login result
+     * @returns Promise resolving to login result
+     */
+    login(username: string, password: string, pair?: ISEAPair | null, callback?: (result: any) => void): Promise<any>;
+    savePair(): void;
     /**
      * Sets up security questions and password hint
      * @param username Username
