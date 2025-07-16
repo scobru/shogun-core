@@ -41,6 +41,7 @@ export interface OAuthConfig extends BaseConfig {
   maxRetries?: number;
   retryDelay?: number;
   allowUnsafeClientSecret?: boolean;
+  stateTimeout?: number; // Timeout per il state parameter (default: 10 minuti)
 }
 
 /**

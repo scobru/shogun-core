@@ -1,5 +1,5 @@
 /**
- * OAuth Connector - Simple version for GunDB user creation
+ * OAuth Connector - Secure version for GunDB user creation
  */
 import { logDebug, logError, logWarn } from "../../utils/logger";
 import { EventEmitter } from "../../utils/eventEmitter";
@@ -31,6 +31,7 @@ export class OAuthConnector extends EventEmitter {
         authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
         tokenUrl: "https://oauth2.googleapis.com/token",
         userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+        usePKCE: true, // Forza PKCE per Google
       },
       github: {
         clientId: "",
@@ -39,6 +40,7 @@ export class OAuthConnector extends EventEmitter {
         authUrl: "https://github.com/login/oauth/authorize",
         tokenUrl: "https://github.com/login/oauth/access_token",
         userInfoUrl: "https://api.github.com/user",
+        usePKCE: true,
       },
       discord: {
         clientId: "",
@@ -47,6 +49,7 @@ export class OAuthConnector extends EventEmitter {
         authUrl: "https://discord.com/api/oauth2/authorize",
         tokenUrl: "https://discord.com/api/oauth2/token",
         userInfoUrl: "https://discord.com/api/users/@me",
+        usePKCE: true,
       },
       twitter: {
         clientId: "",
@@ -55,6 +58,7 @@ export class OAuthConnector extends EventEmitter {
         authUrl: "https://twitter.com/i/oauth2/authorize",
         tokenUrl: "https://api.twitter.com/2/oauth2/token",
         userInfoUrl: "https://api.twitter.com/2/users/me",
+        usePKCE: true,
       },
       custom: {
         clientId: "",
@@ -63,14 +67,16 @@ export class OAuthConnector extends EventEmitter {
         authUrl: "",
         tokenUrl: "",
         userInfoUrl: "",
+        usePKCE: true,
       },
     },
-    usePKCE: true,
+    usePKCE: true, // PKCE abilitato di default per sicurezza
     cacheDuration: 24 * 60 * 60 * 1000, // 24 hours
     timeout: 60000,
     maxRetries: 3,
     retryDelay: 1000,
-    allowUnsafeClientSecret: true, // New flag to allow client_secret in localhost
+    allowUnsafeClientSecret: false, // Disabilitato per sicurezza
+    stateTimeout: 10 * 60 * 1000, // 10 minuti per il timeout dello state
   };
 
   private config: Partial<OAuthConfig>;
@@ -88,6 +94,43 @@ export class OAuthConnector extends EventEmitter {
         ...(config.providers || {}),
       },
     };
+
+    // Validazione di sicurezza post-costruzione
+    this.validateSecurityConfig();
+  }
+
+  /**
+   * Valida la configurazione di sicurezza
+   */
+  private validateSecurityConfig(): void {
+    const providers = this.config.providers || {};
+
+    for (const [providerName, providerConfig] of Object.entries(providers)) {
+      if (!providerConfig) continue;
+
+      // Verifica che PKCE sia abilitato per tutti i provider nel browser
+      if (typeof window !== "undefined" && !providerConfig.usePKCE) {
+        logWarn(
+          `Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`,
+        );
+      }
+
+      // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
+      if (typeof window !== "undefined" && providerConfig.clientSecret) {
+        if (providerName === "google" && providerConfig.usePKCE) {
+          logDebug(
+            `Provider ${providerName} ha client_secret configurato - OK per Google con PKCE`,
+          );
+        } else {
+          logError(
+            `Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`,
+          );
+          throw new Error(
+            `Client secret non può essere usato nel browser per ${providerName}`,
+          );
+        }
+      }
+    }
   }
 
   /**
@@ -270,9 +313,30 @@ export class OAuthConnector extends EventEmitter {
       return { success: false, error: errorMsg };
     }
 
+    // Validazione di sicurezza pre-inizializzazione
+    if (typeof window !== "undefined" && providerConfig.clientSecret) {
+      // Google OAuth richiede client_secret anche con PKCE
+      if (provider === "google" && providerConfig.usePKCE) {
+        logDebug(
+          `Provider ${provider} ha client_secret configurato - OK per Google con PKCE`,
+        );
+      } else {
+        const errorMsg = `Client secret non può essere usato nel browser per ${provider}`;
+        logError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+    }
+
     try {
       const state = this.generateRandomString(32);
+      const stateTimestamp = Date.now();
+
+      // Salva state con timestamp per validazione timeout
       this.setItem(`oauth_state_${provider}`, state);
+      this.setItem(
+        `oauth_state_timestamp_${provider}`,
+        stateTimestamp.toString(),
+      );
 
       let authUrl = providerConfig.authUrl;
       const authParams = new URLSearchParams({
@@ -287,8 +351,16 @@ export class OAuthConnector extends EventEmitter {
         authParams.set("scope", providerConfig.scope.join(" "));
       }
 
-      // Add PKCE if enabled
-      if (providerConfig.usePKCE ?? this.config.usePKCE) {
+      // PKCE è obbligatorio per sicurezza
+      const isPKCEEnabled =
+        providerConfig.usePKCE ?? this.config.usePKCE ?? true;
+      if (!isPKCEEnabled && typeof window !== "undefined") {
+        const errorMsg = `PKCE è obbligatorio per ${provider} nel browser per motivi di sicurezza`;
+        logError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
+      if (isPKCEEnabled) {
         logDebug("PKCE is enabled, generating challenge...");
         const { codeVerifier, codeChallenge } =
           await this.generatePKCEChallenge();
@@ -300,6 +372,10 @@ export class OAuthConnector extends EventEmitter {
         );
 
         this.setItem(`oauth_verifier_${provider}`, codeVerifier);
+        this.setItem(
+          `oauth_verifier_timestamp_${provider}`,
+          stateTimestamp.toString(),
+        );
         logDebug(
           `Saved code verifier to storage with key: oauth_verifier_${provider}`,
         );
@@ -447,11 +523,29 @@ export class OAuthConnector extends EventEmitter {
     state?: string,
   ): Promise<any> {
     const storedState = this.getItem(`oauth_state_${provider}`);
-    if (state && storedState !== state) {
-      this.removeItem(`oauth_state_${provider}`); // Cleanup anche in caso di errore
-      throw new Error("Invalid state parameter");
+    const storedStateTimestamp = this.getItem(
+      `oauth_state_timestamp_${provider}`,
+    );
+
+    if (!state || !storedState || state !== storedState) {
+      this.removeItem(`oauth_state_${provider}`);
+      this.removeItem(`oauth_state_timestamp_${provider}`);
+      throw new Error("Invalid state parameter or expired");
     }
-    this.removeItem(`oauth_state_${provider}`); // Cleanup dopo validazione
+
+    // Validazione del timestamp dello state
+    if (storedStateTimestamp) {
+      const stateTimestamp = parseInt(storedStateTimestamp, 10);
+      const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000; // Default 10 minuti
+      if (Date.now() - stateTimestamp > stateTimeout) {
+        this.removeItem(`oauth_state_${provider}`);
+        this.removeItem(`oauth_state_timestamp_${provider}`);
+        throw new Error("State parameter expired");
+      }
+    }
+
+    this.removeItem(`oauth_state_${provider}`);
+    this.removeItem(`oauth_state_timestamp_${provider}`);
 
     const tokenParams: Record<string, string> = {
       client_id: providerConfig.clientId,
@@ -478,11 +572,22 @@ export class OAuthConnector extends EventEmitter {
       }
 
       const verifier = this.getItem(`oauth_verifier_${provider}`);
+      const verifierTimestamp = this.getItem(
+        `oauth_verifier_timestamp_${provider}`,
+      );
       logDebug(
         `Looking for key: oauth_verifier_${provider}, found:`,
         !!verifier,
       );
-      if (verifier) {
+      if (verifier && verifierTimestamp) {
+        const verifierTimestampInt = parseInt(verifierTimestamp, 10);
+        const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000; // Default 10 minuti
+        if (Date.now() - verifierTimestampInt > stateTimeout) {
+          logWarn(`Code verifier expired for PKCE flow for ${provider}`);
+          this.removeItem(`oauth_verifier_${provider}`);
+          this.removeItem(`oauth_verifier_timestamp_${provider}`);
+          throw new Error("Code verifier expired");
+        }
         logDebug(
           `Found code verifier for PKCE flow: ${verifier.substring(0, 10)}... (length: ${verifier.length})`,
         );
@@ -502,72 +607,47 @@ export class OAuthConnector extends EventEmitter {
           );
         }
       }
-    } else if (
-      providerConfig.clientSecret &&
-      providerConfig.clientSecret.trim() !== "" &&
-      this.config.allowUnsafeClientSecret
-    ) {
-      // Permetti client_secret nel browser se esplicitamente abilitato
-      tokenParams.client_secret = providerConfig.clientSecret;
-    } else if (
-      providerConfig.clientSecret &&
-      providerConfig.clientSecret.trim() !== "" &&
-      !this.config.allowUnsafeClientSecret
-    ) {
-      // Aggiungi client_secret anche se allowUnsafeClientSecret è false (per compatibilità)
-      tokenParams.client_secret = providerConfig.clientSecret;
-      logWarn(
-        "Using client_secret without allowUnsafeClientSecret - not recommended for production",
-      );
-    } else if (
+    } else {
+      // PKCE non abilitato - non sicuro per browser
+      if (typeof window !== "undefined") {
+        throw new Error(
+          "PKCE è obbligatorio per applicazioni browser. Client secret non può essere usato nel browser.",
+        );
+      }
+
+      // Solo per ambiente Node.js con client_secret
+      if (
+        providerConfig.clientSecret &&
+        providerConfig.clientSecret.trim() !== ""
+      ) {
+        tokenParams.client_secret = providerConfig.clientSecret;
+        logDebug("Using client_secret for server-side OAuth flow");
+      } else {
+        throw new Error(
+          "Client secret is required when PKCE is not enabled for server-side flows.",
+        );
+      }
+    }
+
+    // Google OAuth richiede client_secret anche con PKCE
+    // Questo è un comportamento specifico di Google, non una vulnerabilità
+    if (
+      provider === "google" &&
       providerConfig.clientSecret &&
       providerConfig.clientSecret.trim() !== ""
     ) {
-      // Fallback: se c'è un client_secret configurato, usalo sempre
       tokenParams.client_secret = providerConfig.clientSecret;
-      logWarn(
-        "Using client_secret as fallback - not recommended for production",
-      );
-    } else if (providerConfig.clientSecret && typeof window !== "undefined") {
-      throw new Error(
-        "Client secret must never be used in browser environments.",
-      );
-    } else {
-      logWarn(
-        "Client secret is required when PKCE is not enabled. Please enable PKCE or configure a client secret.",
+      logDebug(
+        "Adding client_secret for Google OAuth (required even with PKCE)",
       );
     }
 
     // Clean up verifier
     this.removeItem(`oauth_verifier_${provider}`);
-
-    // Debug: Log what we're sending (maschera dati sensibili in produzione)
-    if (
-      typeof process !== "undefined" &&
-      process.env &&
-      process.env.NODE_ENV !== "production"
-    ) {
-      logDebug(
-        "Token exchange parameters:",
-        JSON.stringify(
-          {
-            ...tokenParams,
-            code_verifier: tokenParams.code_verifier ? "***" : undefined,
-            client_secret: tokenParams.client_secret ? "***" : undefined,
-          },
-          null,
-          2,
-        ),
-      );
-    }
-    logDebug("PKCE enabled:", isPKCEEnabled);
-    logDebug("Has code_verifier:", !!tokenParams.code_verifier);
-    logDebug("Has client_secret:", !!tokenParams.client_secret);
+    this.removeItem(`oauth_verifier_timestamp_${provider}`);
 
     const urlParams = new URLSearchParams(tokenParams);
     logDebug("Request body keys:", Array.from(urlParams.keys()));
-    logDebug("Request body has code_verifier:", urlParams.has("code_verifier"));
-    logDebug("Request body has client_secret:", urlParams.has("client_secret"));
 
     const response = await fetch(providerConfig.tokenUrl, {
       method: "POST",
@@ -774,5 +854,71 @@ export class OAuthConnector extends EventEmitter {
   cleanup(): void {
     this.removeAllListeners();
     this.userCache.clear();
+    this.cleanupExpiredOAuthData();
+  }
+
+  /**
+   * Pulisce i dati OAuth scaduti dallo storage
+   */
+  private cleanupExpiredOAuthData(): void {
+    const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000;
+    const currentTime = Date.now();
+
+    // Pulisci sessionStorage
+    if (typeof sessionStorage !== "undefined") {
+      const keysToRemove: string[] = [];
+
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith("oauth_state_timestamp_")) {
+          const timestamp = sessionStorage.getItem(key);
+          if (timestamp) {
+            const stateTime = parseInt(timestamp, 10);
+            if (currentTime - stateTime > stateTimeout) {
+              const stateKey = key.replace("_timestamp", "");
+              keysToRemove.push(key, stateKey);
+            }
+          }
+        }
+
+        if (key && key.startsWith("oauth_verifier_timestamp_")) {
+          const timestamp = sessionStorage.getItem(key);
+          if (timestamp) {
+            const verifierTime = parseInt(timestamp, 10);
+            if (currentTime - verifierTime > stateTimeout) {
+              const verifierKey = key.replace("_timestamp", "");
+              keysToRemove.push(key, verifierKey);
+            }
+          }
+        }
+      }
+
+      keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+      if (keysToRemove.length > 0) {
+        logDebug(`Cleaned up ${keysToRemove.length} expired OAuth entries`);
+      }
+    }
+
+    // Pulisci memoryStorage (Node.js)
+    const memoryKeysToRemove: string[] = [];
+    for (const [key, value] of this.memoryStorage.entries()) {
+      if (
+        key.startsWith("oauth_state_timestamp_") ||
+        key.startsWith("oauth_verifier_timestamp_")
+      ) {
+        const timestamp = parseInt(value, 10);
+        if (currentTime - timestamp > stateTimeout) {
+          const baseKey = key.replace("_timestamp", "");
+          memoryKeysToRemove.push(key, baseKey);
+        }
+      }
+    }
+
+    memoryKeysToRemove.forEach((key) => this.memoryStorage.delete(key));
+    if (memoryKeysToRemove.length > 0) {
+      logDebug(
+        `Cleaned up ${memoryKeysToRemove.length} expired OAuth entries from memory`,
+      );
+    }
   }
 }

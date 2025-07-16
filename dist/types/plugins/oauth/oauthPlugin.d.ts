@@ -18,6 +18,10 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      */
     initialize(core: ShogunCore, appToken?: string): void;
     /**
+     * Valida la configurazione di sicurezza OAuth
+     */
+    private validateOAuthSecurity;
+    /**
      * Configure the OAuth plugin with provider settings
      * @param config - Configuration options for OAuth
      */
@@ -70,6 +74,10 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      * This method would be called when the OAuth provider redirects back
      */
     handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
+    /**
+     * Pulisce i dati OAuth scaduti
+     */
+    private cleanupExpiredOAuthData;
     /**
      * Private helper to login or sign up a user
      */

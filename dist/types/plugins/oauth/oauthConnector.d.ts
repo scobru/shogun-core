@@ -10,6 +10,10 @@ export declare class OAuthConnector extends EventEmitter {
     private readonly memoryStorage;
     constructor(config?: Partial<OAuthConfig>);
     /**
+     * Valida la configurazione di sicurezza
+     */
+    private validateSecurityConfig;
+    /**
      * Update the connector configuration
      * @param config - New configuration options
      */
@@ -96,4 +100,8 @@ export declare class OAuthConnector extends EventEmitter {
      * Cleanup
      */
     cleanup(): void;
+    /**
+     * Pulisce i dati OAuth scaduti dallo storage
+     */
+    private cleanupExpiredOAuthData;
 }

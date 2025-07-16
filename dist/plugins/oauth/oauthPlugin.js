@@ -31,7 +31,38 @@ class OAuthPlugin extends base_1.BasePlugin {
         else {
             throw new Error("App token is required for OAuth plugin");
         }
+        // Validazione di sicurezza post-inizializzazione
+        this.validateOAuthSecurity();
         (0, logger_1.log)("[oauthPlugin]  OAuth plugin initialized successfully");
+    }
+    /**
+     * Valida la configurazione di sicurezza OAuth
+     */
+    validateOAuthSecurity() {
+        if (!this.oauthConnector)
+            return;
+        const providers = this.oauthConnector.getAvailableProviders();
+        for (const provider of providers) {
+            const providerConfig = this.config.providers?.[provider];
+            if (!providerConfig)
+                continue;
+            // Verifica che PKCE sia abilitato per tutti i provider
+            if (!providerConfig.usePKCE && typeof window !== "undefined") {
+                (0, logger_1.logWarn)(`[oauthPlugin] Provider ${provider} non ha PKCE abilitato - non sicuro per browser`);
+            }
+            // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
+            if (providerConfig.clientSecret && typeof window !== "undefined") {
+                if (provider === "google" && providerConfig.usePKCE) {
+                    (0, logger_1.log)(`[oauthPlugin] Provider ${provider} ha client_secret configurato - OK per Google con PKCE`);
+                    // Non lanciare errore per Google con PKCE
+                    continue;
+                }
+                else {
+                    (0, logger_1.logError)(`[oauthPlugin] Provider ${provider} ha client_secret configurato nel browser - RIMUOVERE`);
+                    throw new Error(`Client secret non può essere usato nel browser per ${provider}`);
+                }
+            }
+        }
     }
     /**
      * Configure the OAuth plugin with provider settings
@@ -215,6 +246,10 @@ class OAuthPlugin extends base_1.BasePlugin {
         try {
             (0, logger_1.log)(`Handling OAuth callback for ${provider}`);
             const core = this.assertInitialized();
+            // Validazione di sicurezza pre-callback
+            if (!authCode || !state) {
+                throw new Error("Authorization code and state parameter are required");
+            }
             // Complete the OAuth flow
             const result = await this.completeOAuth(provider, authCode, state);
             if (!result.success || !result.userInfo) {
@@ -248,15 +283,29 @@ class OAuthPlugin extends base_1.BasePlugin {
                     method: "oauth",
                     provider,
                 });
+                // Pulisci i dati OAuth scaduti dopo un login riuscito
+                this.cleanupExpiredOAuthData();
             }
             return authResult;
         }
         catch (error) {
             (0, logger_1.logError)(`Error handling OAuth callback for ${provider}:`, error);
+            // Pulisci i dati OAuth anche in caso di errore
+            this.cleanupExpiredOAuthData();
             return {
                 success: false,
                 error: error.message || "Failed to handle OAuth callback",
             };
+        }
+    }
+    /**
+     * Pulisce i dati OAuth scaduti
+     */
+    cleanupExpiredOAuthData() {
+        if (this.oauthConnector) {
+            // Il metodo cleanupExpiredOAuthData è privato nel connector
+            // quindi usiamo il metodo pubblico clearUserCache
+            this.oauthConnector.clearUserCache();
         }
     }
     /**

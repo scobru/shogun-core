@@ -28,6 +28,7 @@ export interface OAuthConfig extends BaseConfig {
     maxRetries?: number;
     retryDelay?: number;
     allowUnsafeClientSecret?: boolean;
+    stateTimeout?: number;
 }
 /**
  * OAuth token response
