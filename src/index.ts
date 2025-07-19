@@ -108,8 +108,8 @@ export class ShogunCore implements IShogunCore {
       } else {
         this._gun = Gun({
           peers: config.peers || [],
-          radisk: true,
-          file: "radata",
+          radisk: false,
+          localStorage: false,
         });
       }
     } catch (error) {

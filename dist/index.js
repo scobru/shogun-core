@@ -88,8 +88,8 @@ class ShogunCore {
             else {
                 this._gun = (0, gundb_1.Gun)({
                     peers: config.peers || [],
-                    radisk: true,
-                    file: "radata",
+                    radisk: false,
+                    localStorage: false,
                 });
             }
         }

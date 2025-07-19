@@ -1080,14 +1080,14 @@ class GunInstance {
                 try {
                     const result = await Promise.race([
                         strategy(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), 5000)),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), 3000)),
                     ]);
                     if (result) {
                         // If we found a pub, try to fetch user data
                         if (typeof result === "string") {
                             const userData = await new Promise((resolve) => {
                                 this.node.get(result).once((data) => {
-                                    console.log(`[checkUsernameExists] User data for pub ${result}:`, data);
+                                    console.debug(`[checkUsernameExists] User data for pub ${result}:`, data);
                                     resolve(data || null);
                                 });
                             });
@@ -1101,13 +1101,14 @@ class GunInstance {
                     }
                 }
                 catch (error) {
-                    console.log(`Username lookup strategy failed: ${error}`);
+                    // Silenzioso per errori di timeout o rete
+                    console.debug(`Username lookup strategy failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`);
                 }
             }
             return null;
         }
         catch (error) {
-            console.error(`Username existence check failed: ${error}`);
+            console.debug(`Username existence check failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`);
             return null;
         }
     }
