@@ -895,6 +895,7 @@ class GunInstance {
    * Signs up a new user using direct Gun authentication
    * @param username Username
    * @param password Password
+   * @param pair Optional SEA pair for Web3 login
    * @returns Promise resolving to signup result
    */
   async signUp(
@@ -1928,24 +1929,57 @@ class GunInstance {
    * @returns Promise that resolves with the data
    */
   async getUserData(path: string): Promise<any> {
-    return new Promise((resolve) => {
-      const user = this.gun.user();
-      if (!user.is) {
-        this.emitDataEvent(
-          "gun:get",
-          `user/${path}`,
-          null,
-          false,
-          "User not authenticated",
-        );
-        resolve(null);
+    return new Promise((resolve, reject) => {
+      // Validazione del path
+      if (!path || typeof path !== "string") {
+        const error = "Path must be a non-empty string";
+        this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
+        reject(new Error(error));
         return;
       }
 
-      this.navigateToPath(user, path).once((data: any) => {
-        this.emitDataEvent("gun:get", `user/${path}`, data, true);
-        resolve(data);
-      });
+      const user = this.gun.user();
+      if (!user.is) {
+        const error = "User not authenticated";
+        this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
+        reject(new Error(error));
+        return;
+      }
+
+      // Timeout per evitare attese infinite
+      const timeout = setTimeout(() => {
+        const error = "Operation timeout";
+        this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
+        reject(new Error(error));
+      }, 10000); // 10 secondi di timeout
+
+      try {
+        this.navigateToPath(user, path).once((data: any) => {
+          clearTimeout(timeout);
+
+          // Gestisci i riferimenti GunDB
+          if (data && typeof data === "object" && data["#"]) {
+            // È un riferimento GunDB, carica i dati effettivi
+            const referencePath = data["#"];
+            this.navigateToPath(this.gun, referencePath).once(
+              (actualData: any) => {
+                this.emitDataEvent("gun:get", `user/${path}`, actualData, true);
+                resolve(actualData);
+              },
+            );
+          } else {
+            // Dati diretti, restituisci così come sono
+            this.emitDataEvent("gun:get", `user/${path}`, data, true);
+            resolve(data);
+          }
+        });
+      } catch (error) {
+        clearTimeout(timeout);
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+        this.emitDataEvent("gun:get", `user/${path}`, null, false, errorMsg);
+        reject(error);
+      }
     });
   }
 
@@ -2032,6 +2066,160 @@ class GunInstance {
       includeSecp256k1Bitcoin: true,
       includeSecp256k1Ethereum: true,
     });
+  }
+
+  /**
+   * Creates a frozen space entry for immutable data
+   * @param data Data to freeze
+   * @param options Optional configuration
+   * @returns Promise resolving to the frozen data hash
+   */
+  async createFrozenSpace(
+    data: any,
+    options?: {
+      namespace?: string;
+      path?: string;
+      description?: string;
+      metadata?: Record<string, any>;
+    },
+  ): Promise<{ hash: string; fullPath: string; data: any }> {
+    return new Promise((resolve, reject) => {
+      try {
+        // Prepara i dati da congelare
+        const frozenData = {
+          data: data,
+          timestamp: Date.now(),
+          description: options?.description || "",
+          metadata: options?.metadata || {},
+        };
+
+        // Genera hash dei dati usando SEA
+        const dataString = JSON.stringify(frozenData);
+        SEA.work(
+          dataString,
+          null,
+          null,
+          { name: "SHA-256" },
+          (hash: string) => {
+            if (!hash) {
+              reject(new Error("Failed to generate hash for frozen data"));
+              return;
+            }
+
+            // Costruisci il percorso completo
+            const namespace = options?.namespace || "default";
+            const customPath = options?.path || "";
+            const fullPath = customPath
+              ? `${namespace}/${customPath}/${hash}`
+              : `${namespace}/${hash}`;
+
+            // Usa navigateToPath per gestire correttamente i percorsi con /
+            const targetNode = this.navigateToPath(this.gun, fullPath);
+
+            targetNode.put(frozenData, (ack: any) => {
+              if (ack.err) {
+                reject(new Error(`Failed to create frozen space: ${ack.err}`));
+              } else {
+                console.log(
+                  `[createFrozenSpace] Created frozen entry: ${fullPath}`,
+                );
+                resolve({
+                  hash: hash,
+                  fullPath: fullPath,
+                  data: frozenData,
+                });
+              }
+            });
+          },
+        );
+      } catch (error) {
+        reject(new Error(`Error creating frozen space: ${error}`));
+      }
+    });
+  }
+
+  /**
+   * Retrieves data from frozen space
+   * @param hash Hash of the frozen data
+   * @param namespace Optional namespace
+   * @param path Optional custom path
+   * @returns Promise resolving to the frozen data
+   */
+  async getFrozenSpace(
+    hash: string,
+    namespace: string = "default",
+    path?: string,
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      // Costruisci il percorso completo
+      const fullPath = path
+        ? `${namespace}/${path}/${hash}`
+        : `${namespace}/${hash}`;
+
+      // Usa navigateToPath per gestire correttamente i percorsi con /
+      const targetNode = this.navigateToPath(this.gun, fullPath);
+
+      targetNode.once((data: any) => {
+        if (!data) {
+          reject(new Error(`Frozen data not found: ${fullPath}`));
+        } else {
+          resolve(data);
+        }
+      });
+    });
+  }
+
+  /**
+   * Verifies if data matches a frozen space entry
+   * @param data Data to verify
+   * @param hash Expected hash
+   * @param namespace Optional namespace
+   * @param path Optional custom path
+   * @returns Promise resolving to verification result
+   */
+  async verifyFrozenSpace(
+    data: any,
+    hash: string,
+    namespace: string = "default",
+    path?: string,
+  ): Promise<{ verified: boolean; frozenData?: any; error?: string }> {
+    try {
+      // Genera hash dei dati forniti
+      const dataString = JSON.stringify(data);
+      const generatedHash = await new Promise<string>((resolve, reject) => {
+        SEA.work(
+          dataString,
+          null,
+          null,
+          { name: "SHA-256" },
+          (hash: string) => {
+            if (hash) {
+              resolve(hash);
+            } else {
+              reject(new Error("Failed to generate hash"));
+            }
+          },
+        );
+      });
+
+      // Confronta gli hash
+      if (generatedHash !== hash) {
+        return { verified: false, error: "Hash mismatch" };
+      }
+
+      // Verifica che esista nel frozen space
+      const frozenData = await this.getFrozenSpace(hash, namespace, path);
+
+      return {
+        verified: true,
+        frozenData: frozenData,
+      };
+    } catch (error) {
+      return {
+        verified: false,
+        error: `Verification failed: ${error}`,
+      };
+    }
   }
 
   // Errors

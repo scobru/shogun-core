@@ -221,6 +221,7 @@ declare class GunInstance {
      * Signs up a new user using direct Gun authentication
      * @param username Username
      * @param password Password
+     * @param pair Optional SEA pair for Web3 login
      * @returns Promise resolving to signup result
      */
     signUp(username: string, password: string, pair?: ISEAPair | null): Promise<any>;
@@ -339,6 +340,43 @@ declare class GunInstance {
      * @returns Promise resolving to all key types
      */
     deriveAll(password: any, extra?: any): Promise<any>;
+    /**
+     * Creates a frozen space entry for immutable data
+     * @param data Data to freeze
+     * @param options Optional configuration
+     * @returns Promise resolving to the frozen data hash
+     */
+    createFrozenSpace(data: any, options?: {
+        namespace?: string;
+        path?: string;
+        description?: string;
+        metadata?: Record<string, any>;
+    }): Promise<{
+        hash: string;
+        fullPath: string;
+        data: any;
+    }>;
+    /**
+     * Retrieves data from frozen space
+     * @param hash Hash of the frozen data
+     * @param namespace Optional namespace
+     * @param path Optional custom path
+     * @returns Promise resolving to the frozen data
+     */
+    getFrozenSpace(hash: string, namespace?: string, path?: string): Promise<any>;
+    /**
+     * Verifies if data matches a frozen space entry
+     * @param data Data to verify
+     * @param hash Expected hash
+     * @param namespace Optional namespace
+     * @param path Optional custom path
+     * @returns Promise resolving to verification result
+     */
+    verifyFrozenSpace(data: any, hash: string, namespace?: string, path?: string): Promise<{
+        verified: boolean;
+        frozenData?: any;
+        error?: string;
+    }>;
     static Errors: typeof GunErrors;
 }
 export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, };
