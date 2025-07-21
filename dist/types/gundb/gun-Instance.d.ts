@@ -230,10 +230,20 @@ declare class GunInstance {
      * Logs in a user using direct Gun authentication
      * @param username Username
      * @param password Password
+     * @param pair Optional SEA pair for Web3 login
      * @param callback Optional callback for login result
      * @returns Promise resolving to login result
      */
     login(username: string, password: string, pair?: ISEAPair | null, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Updates the user's alias (username) in Gun and saves the updated credentials
+     * @param newAlias New alias/username to set
+     * @returns Promise resolving to update result
+     */
+    updateUserAlias(newAlias: string): Promise<{
+        success: boolean;
+        error?: string;
+    }>;
     savePair(): void;
     /**
      * Sets up security questions and password hint

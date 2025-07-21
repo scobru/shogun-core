@@ -196,6 +196,19 @@ export declare class ShogunCore implements IShogunCore {
      * This is useful for debugging and testing purposes
      */
     clearAllStorageData(): void;
+    /**
+     * Updates the user's alias (username) in Gun and saves the updated credentials
+     * @param newAlias New alias/username to set
+     * @returns Promise resolving to update result
+     */
+    updateUserAlias(newAlias: string): Promise<{
+        success: boolean;
+        error?: string;
+    }>;
+    /**
+     * Saves the current user credentials to storage
+     */
+    savePair(): void;
     getIsLoggedIn(): boolean;
 }
 export default ShogunCore;

@@ -103,7 +103,7 @@ class GunInstance {
             throw new Error(`Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`);
         }
         this.gun = gun;
-        this.user = this.gun.user();
+        this.user = this.gun.user().recall({ sessionStorage: true });
         this.subscribeToAuthEvents();
         this.crypto = crypto;
         this.sea = SEA;
@@ -910,18 +910,21 @@ class GunInstance {
     }
     async runPostAuthOnAuthResult(authTestResult, username) {
         console.log(`User ${username} already exists and password is correct, syncing with tracking system...`);
-        // User exists and can authenticate, sync with tracking system
+        // L'utente esiste e può autenticarsi, sincronizza con il sistema di tracciamento
         const userPub = authTestResult.userPub;
         if (!userPub) {
-            console.error("User public key (userPub) is undefined in runPostAuthOnAuthResult.");
-            return { success: false, error: "User public key is missing." };
+            console.error("La chiave pubblica dell'utente (userPub) non è definita in runPostAuthOnAuthResult.");
+            return {
+                success: false,
+                error: "La chiave pubblica dell'utente è mancante.",
+            };
         }
-        // Check if user exists in our tracking system
+        // Controlla se l'utente esiste nel nostro sistema di tracciamento
         const existingUser = await this.checkUsernameExists(username);
         console.log("[gunInstance]  existingUser", existingUser);
         if (!existingUser) {
-            console.log(`User ${username} not in tracking system, adding them...`);
-            // Add user to our tracking system
+            console.log(`L'utente ${username} non è nel sistema di tracciamento, lo aggiungo...`);
+            // Aggiungi l'utente al nostro sistema di tracciamento
             const userMetadata = {
                 username: username,
                 pub: userPub,
@@ -929,93 +932,133 @@ class GunInstance {
                 lastLogin: Date.now(),
             };
             try {
-                // Save user metadata with enhanced synchronization
+                // Salva i metadati dell'utente con sincronizzazione migliorata
                 await new Promise((resolve, reject) => {
                     const userNode = this.node.get(userPub);
                     userNode.put(userMetadata, (ack) => {
                         if (ack.err) {
-                            console.error(`Failed to save user metadata: ${ack.err}`);
+                            console.error(`Impossibile salvare i metadati dell'utente: ${ack.err}`);
                             reject(ack.err);
                         }
                         else {
-                            console.log(`User metadata saved for: ${username}`);
+                            console.log(`Metadati utente salvati per: ${username}`);
                             resolve();
                         }
                     });
                 });
-                // Create username mapping with advanced synchronization
+                // Crea il mapping del nome utente con sincronizzazione avanzata
+                // Ristrutturato per usare async/await per un flusso più chiaro e correggere problemi di sintassi/tipo
                 await new Promise((resolve, reject) => {
+                    // Rendi la callback della promise esterna async
                     const usernamesNode = this.node.get("usernames");
                     const mappingKey = "#" + username;
-                    // Use a more robust mapping strategy
-                    usernamesNode.get(mappingKey).put(userPub, (ack) => {
-                        if (ack.err) {
-                            console.error(`Failed to create username mapping: ${ack.err}`);
-                            reject(ack.err);
-                            return;
-                        }
-                        // Advanced verification with promise-based retry
+                    try {
+                        // 1. Mappa il nome utente alla chiave pubblica dell'utente
+                        new Promise((putResolve, putReject) => {
+                            usernamesNode.get(mappingKey).put(userPub, (ack) => {
+                                if (ack.err) {
+                                    console.error(`Impossibile creare il mapping del nome utente: ${ack.err}`);
+                                    putReject(ack.err);
+                                }
+                                else {
+                                    console.log(`Mapping del nome utente creato per: ${username}`);
+                                    putResolve();
+                                }
+                            });
+                        });
+                        // 2. Crea una voce hash per i dati di mapping
+                        const mappingData = {
+                            username: username,
+                            userPub: userPub,
+                            createdAt: Date.now(),
+                        };
+                        const hash = SEA.work(JSON.stringify(mappingData), null, null, {
+                            name: "SHA-256",
+                        });
+                        new Promise((putResolve, putReject) => {
+                            this.node
+                                .get("usernames")
+                                .get("#" + hash)
+                                .put(mappingData, (ack) => {
+                                // Tipizza esplicitamente ack come any
+                                if (ack.err) {
+                                    console.error(`Impossibile salvare i dati di mapping hash: ${ack.err}`);
+                                    putReject(ack.err);
+                                }
+                                else {
+                                    console.log(`Dati di mapping hash salvati per: ${username}`);
+                                    putResolve();
+                                }
+                            });
+                        });
+                        // 3. Verifica avanzata con retry basato su promise
                         const verifyMapping = () => {
                             return new Promise((verifyResolve, verifyReject) => {
-                                // Multiple strategies to verify mapping
+                                // Molteplici strategie per verificare il mapping
                                 const verificationAttempts = [
-                                    // Direct lookup
-                                    () => new Promise((resolve) => {
+                                    // Ricerca diretta
+                                    () => new Promise((res) => {
                                         usernamesNode.get(mappingKey).once((pub) => {
-                                            resolve(pub === userPub);
+                                            res(pub === userPub);
                                         });
                                     }),
-                                    // Comprehensive scan
-                                    () => new Promise((resolve) => {
+                                    // Scansione completa
+                                    () => new Promise((res) => {
                                         let found = false;
                                         usernamesNode.map().once((pub, key) => {
                                             if (key === mappingKey && pub === userPub) {
                                                 found = true;
-                                                resolve(true);
+                                                res(true);
                                             }
                                         });
-                                        // Timeout to ensure thorough scanning
-                                        setTimeout(() => resolve(found), 500);
+                                        // Timeout per garantire una scansione approfondita
+                                        setTimeout(() => res(found), 500);
                                     }),
                                 ];
-                                // Run verification strategies sequentially
+                                // Esegui le strategie di verifica in sequenza
                                 const runVerifications = async () => {
                                     for (const strategy of verificationAttempts) {
                                         try {
                                             const result = await strategy();
                                             if (result) {
-                                                console.log(`Successfully verified username mapping for ${username}`);
+                                                console.log(`Mapping del nome utente verificato con successo per ${username}`);
                                                 verifyResolve();
                                                 return;
                                             }
                                         }
                                         catch (error) {
-                                            console.error(`Verification strategy failed: ${error}`);
+                                            console.error(`Strategia di verifica fallita: ${error}`);
                                         }
                                     }
-                                    // If all strategies fail
-                                    console.error(`Failed to verify username mapping for ${username}`);
-                                    verifyReject(new Error("Username mapping verification failed"));
+                                    // Se tutte le strategie falliscono
+                                    console.error(`Impossibile verificare il mapping del nome utente per ${username}`);
+                                    verifyReject(new Error("Verifica del mapping del nome utente fallita"));
                                 };
                                 runVerifications();
                             });
                         };
-                        // Execute verification with timeout
+                        // Esegui la verifica con timeout
                         Promise.race([
+                            // Attendi la promise di verifica
                             verifyMapping(),
-                            new Promise((_, reject) => setTimeout(() => reject(new Error("Verification timeout")), 5000)),
-                        ])
-                            .then(resolve)
-                            .catch(reject);
-                    });
+                            new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout di verifica")), 5000)),
+                        ]);
+                        // Se tutti i passaggi precedenti hanno successo, risolvi la promise esterna
+                        resolve();
+                    }
+                    catch (error) {
+                        // Se un qualsiasi passaggio fallisce, rifiuta la promise esterna
+                        console.error(`Errore durante il mapping o la verifica del nome utente: ${error}`);
+                        reject(error);
+                    }
                 });
-                // Add to users collection (non-blocking)
+                // Aggiungi alla collezione di utenti (non bloccante)
                 this.node.get("users").set(this.node.get(userPub), (ack) => {
                     if (ack.err) {
-                        console.error(`Warning: Failed to add user to collection: ${ack.err}`);
+                        console.error(`Avviso: Impossibile aggiungere l'utente alla collezione: ${ack.err}`);
                     }
                     else {
-                        console.log(`User added to collection: ${username}`);
+                        console.log(`Utente aggiunto alla collezione: ${username}`);
                     }
                 });
                 this.savePair();
@@ -1023,16 +1066,16 @@ class GunInstance {
                     success: true,
                     userPub: userPub,
                     username: username,
-                    message: "User successfully synced with tracking system",
+                    message: "Utente sincronizzato con successo con il sistema di tracciamento",
                 };
             }
             catch (trackingError) {
-                console.error(`Critical: Could not update tracking system: ${trackingError}`);
+                console.error(`Critico: Impossibile aggiornare il sistema di tracciamento: ${trackingError}`);
                 return {
                     success: false,
                     userPub: userPub,
                     username: username,
-                    error: "Failed to synchronize user tracking system",
+                    error: "Impossibile sincronizzare il sistema di tracciamento dell'utente",
                 };
             }
         }
@@ -1044,34 +1087,103 @@ class GunInstance {
             const normalizedUsername = username.trim().toLowerCase();
             const frozenKey = `#${normalizedUsername}`;
             const alternateKey = normalizedUsername;
-            // Multiple lookup strategies
+            // Multiple lookup strategies with frozen space priority
             const lookupStrategies = [
-                // 1. Direct frozen mapping
+                // 1. Frozen space scan (HIGHEST PRIORITY - immutable data)
+                async () => {
+                    return new Promise((resolve) => {
+                        let found = false;
+                        this.node
+                            .get("usernames")
+                            .map()
+                            .once((mappingData, hash) => {
+                            if (mappingData &&
+                                mappingData.username === normalizedUsername &&
+                                !found) {
+                                found = true;
+                                // Return enriched data with hash for integrity verification
+                                resolve({
+                                    ...mappingData,
+                                    hash,
+                                    source: "frozen_space",
+                                    immutable: true,
+                                });
+                            }
+                        });
+                        // Timeout per evitare blocchi infiniti
+                        setTimeout(() => {
+                            if (!found)
+                                resolve(null);
+                        }, 2000);
+                    });
+                },
+                // 2. Direct frozen mapping (legacy compatibility)
                 async () => {
                     return new Promise((resolve) => {
                         this.node
                             .get("usernames")
                             .get(frozenKey)
-                            .once((data) => resolve(data));
+                            .once((data) => {
+                            if (data) {
+                                resolve({
+                                    pub: data,
+                                    username: normalizedUsername,
+                                    source: "direct_mapping",
+                                    immutable: false,
+                                });
+                            }
+                            else {
+                                resolve(null);
+                            }
+                        });
                     });
                 },
-                // 2. Alternate key lookup
+                // 3. Alternate key lookup (fallback)
                 async () => {
                     return new Promise((resolve) => {
                         this.node
                             .get("usernames")
                             .get(alternateKey)
-                            .once((data) => resolve(data));
-                    });
-                },
-                // 3. Comprehensive scan fallback
-                async () => {
-                    return new Promise((resolve) => {
-                        this.node.map().once((data, key) => {
-                            if (key === frozenKey || key === alternateKey) {
-                                resolve(data);
+                            .once((data) => {
+                            if (data) {
+                                resolve({
+                                    pub: data,
+                                    username: normalizedUsername,
+                                    source: "alternate_key",
+                                    immutable: false,
+                                });
+                            }
+                            else {
+                                resolve(null);
                             }
                         });
+                    });
+                },
+                // 4. Comprehensive scan fallback (last resort)
+                async () => {
+                    return new Promise((resolve) => {
+                        let found = false;
+                        this.node
+                            .get("usernames")
+                            .map()
+                            .once((data, key) => {
+                            if ((key === frozenKey || key === alternateKey) &&
+                                data &&
+                                !found) {
+                                found = true;
+                                resolve({
+                                    pub: data,
+                                    username: normalizedUsername,
+                                    source: "comprehensive_scan",
+                                    immutable: false,
+                                });
+                            }
+                        });
+                        // Timeout per evitare blocchi infiniti
+                        setTimeout(() => {
+                            if (!found)
+                                resolve(null);
+                        }, 1500);
                     });
                 },
             ];
@@ -1083,19 +1195,36 @@ class GunInstance {
                         new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), 3000)),
                     ]);
                     if (result) {
+                        console.debug(`[checkUsernameExists] Found user via ${result.source}:`, result);
                         // If we found a pub, try to fetch user data
-                        if (typeof result === "string") {
+                        if (typeof result.pub === "string" && result.pub) {
+                            const pubKey = result.pub; // Cast esplicito per TypeScript
                             const userData = await new Promise((resolve) => {
-                                this.node.get(result).once((data) => {
-                                    console.debug(`[checkUsernameExists] User data for pub ${result}:`, data);
+                                this.node.get(pubKey).once((data) => {
+                                    console.debug(`[checkUsernameExists] User data for pub ${pubKey}:`, data);
                                     resolve(data || null);
                                 });
                             });
                             // Always return an object with pub and username if possible
                             if (userData && userData.username) {
-                                return userData;
+                                return {
+                                    ...userData,
+                                    source: result.source,
+                                    immutable: result.immutable,
+                                    hash: result.hash,
+                                };
                             }
-                            return { pub: result, username };
+                            return {
+                                pub: result.pub,
+                                username: normalizedUsername,
+                                source: result.source,
+                                immutable: result.immutable,
+                                hash: result.hash,
+                            };
+                        }
+                        // If result is already a complete object (from frozen space)
+                        if (result.userPub && result.username) {
+                            return result;
                         }
                         return result;
                     }
@@ -1116,6 +1245,7 @@ class GunInstance {
      * Logs in a user using direct Gun authentication
      * @param username Username
      * @param password Password
+     * @param pair Optional SEA pair for Web3 login
      * @param callback Optional callback for login result
      * @returns Promise resolving to login result
      */
@@ -1174,7 +1304,16 @@ class GunInstance {
             // Pass the userPub to runPostAuthOnAuthResult
             this.runPostAuthOnAuthResult({ success: true, userPub: userPub }, username);
             console.log(`Login completed successfully for: ${username} (${userPub})`);
-            this.savePair();
+            // IMPORTANTE: Salva sempre le credenziali dopo un login riuscito
+            // Questo è cruciale per Web3 login e session restoration
+            try {
+                this.savePair();
+                console.log(`[gunInstance] Credenziali salvate per: ${username}`);
+            }
+            catch (saveError) {
+                console.error(`[gunInstance] Errore nel salvare le credenziali:`, saveError);
+                // Non bloccare il login se il salvataggio fallisce
+            }
             const result = {
                 success: true,
                 userPub,
@@ -1192,11 +1331,38 @@ class GunInstance {
             return result;
         }
     }
+    /**
+     * Updates the user's alias (username) in Gun and saves the updated credentials
+     * @param newAlias New alias/username to set
+     * @returns Promise resolving to update result
+     */
+    async updateUserAlias(newAlias) {
+        try {
+            console.log(`[gunInstance] Updating user alias to: ${newAlias}`);
+            const user = this.gun.user();
+            if (!user || !user.is) {
+                return { success: false, error: "User not authenticated" };
+            }
+            // Update the alias in Gun's user object
+            user.is.alias = newAlias;
+            // Save the updated credentials
+            this.savePair();
+            console.log(`[gunInstance] User alias updated successfully to: ${newAlias}`);
+            return { success: true };
+        }
+        catch (error) {
+            console.error(`[gunInstance] Error updating user alias:`, error);
+            return { success: false, error: String(error) };
+        }
+    }
     savePair() {
         try {
             const user = this.gun.user();
             const pair = user?._?.sea;
             const userInfo = user?.is;
+            console.log("[gunInstance] Tentativo di salvataggio credenziali...");
+            console.log("[gunInstance] User info:", userInfo);
+            console.log("[gunInstance] Pair disponibile:", !!pair);
             if (pair && userInfo) {
                 // Save the crypto pair and session info
                 const sessionInfo = {
@@ -1204,17 +1370,41 @@ class GunInstance {
                     alias: userInfo.alias || "",
                     timestamp: Date.now(),
                 };
+                console.log("[gunInstance] Session info da salvare:", sessionInfo);
                 // Save to localStorage if available
                 if (typeof localStorage !== "undefined") {
-                    localStorage.setItem("gun/pair", JSON.stringify(pair));
-                    localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+                    try {
+                        localStorage.setItem("gun/pair", JSON.stringify(pair));
+                        localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+                        console.log("[gunInstance] Credenziali salvate in localStorage");
+                    }
+                    catch (localError) {
+                        console.error("[gunInstance] Errore nel salvare in localStorage:", localError);
+                    }
+                }
+                else {
+                    console.warn("[gunInstance] localStorage non disponibile");
                 }
                 // Also save to sessionStorage for cross-app sharing
                 if (typeof sessionStorage !== "undefined") {
-                    sessionStorage.setItem("gun/pair", JSON.stringify(pair));
-                    sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+                    try {
+                        sessionStorage.setItem("gun/pair", JSON.stringify(pair));
+                        sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
+                        console.log("[gunInstance] Credenziali salvate in sessionStorage");
+                    }
+                    catch (sessionError) {
+                        console.error("[gunInstance] Errore nel salvare in sessionStorage:", sessionError);
+                    }
+                }
+                else {
+                    console.warn("[gunInstance] sessionStorage non disponibile");
                 }
                 console.log(`Session saved for user: ${userInfo.alias || userInfo.pub}`);
+            }
+            else {
+                console.warn("[gunInstance] Impossibile salvare credenziali: pair o userInfo mancanti");
+                console.log("[gunInstance] Pair:", pair);
+                console.log("[gunInstance] UserInfo:", userInfo);
             }
         }
         catch (error) {

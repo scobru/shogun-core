@@ -66,7 +66,6 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
-        console.log("[index] Initializing Shogun " + ShogunCore.API_VERSION);
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new eventEmitter_1.EventEmitter();
@@ -114,7 +113,6 @@ class ShogunCore {
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
         this._gun.on("auth", (user) => {
-            console.log("[index] [INDEX}Gun auth event received", user);
             this._user = this._gun.user();
             this.eventEmitter.emit("auth:login", {
                 pub: user.pub,
@@ -145,7 +143,6 @@ class ShogunCore {
             global.ShogunDB = this.db;
             global.ShogunGun = this.db.gun;
         }
-        console.log("[index] Shogun initialized! ");
     }
     /**
      * Initialize the SDK asynchronously
@@ -153,9 +150,7 @@ class ShogunCore {
      */
     async initialize() {
         try {
-            // Initialize the GunInstance asynchronously
             await this.db.initialize();
-            console.log("[index] Shogun async initialization completed");
         }
         catch (error) {
             console.error("Error during async initialization:", error);
@@ -181,7 +176,6 @@ class ShogunCore {
      * @private
      */
     setupGunEventForwarding() {
-        // Forward all Gun data events
         const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
         gunEvents.forEach((eventName) => {
             this.db.on(eventName, (data) => {
@@ -199,7 +193,6 @@ class ShogunCore {
                 this.eventEmitter.emit(eventName, data);
             });
         });
-        console.log("[index] Gun event forwarding setup completed");
     }
     /**
      * Register built-in plugins based on configuration
@@ -207,33 +200,26 @@ class ShogunCore {
      */
     registerBuiltinPlugins(config) {
         try {
-            // Authentication plugins group
             if (config.webauthn?.enabled) {
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(webauthnPlugin);
-                console.log("[index] Webauthn plugin registered");
             }
             if (config.web3?.enabled) {
                 const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(web3ConnectorPlugin);
-                console.log("[index] Web3Connector plugin registered");
             }
             if (config.nostr?.enabled) {
                 const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
-                console.log("[index] NostrConnector plugin registered");
             }
-            // Register OAuth plugin if enabled
             if (config.oauth?.enabled) {
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 oauthPlugin._category = shogun_1.PluginCategory.Authentication;
-                // Configure the plugin with the complete OAuth configuration
                 oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
-                console.log("[index] OAuth plugin registered with providers:", config.oauth.providers);
             }
         }
         catch (error) {
@@ -260,7 +246,6 @@ class ShogunCore {
             plugin.initialize(this);
         }
         this.plugins.set(plugin.name, plugin);
-        console.log(`Registered plugin: ${plugin.name}`);
     }
     /**
      * Unregister a plugin from the SDK
@@ -269,14 +254,12 @@ class ShogunCore {
     unregister(pluginName) {
         const plugin = this.plugins.get(pluginName);
         if (!plugin) {
-            console.log(`Plugin "${pluginName}" not found, nothing to unregister`);
             return;
         }
         if (plugin.destroy) {
             plugin.destroy();
         }
         this.plugins.delete(pluginName);
-        console.log(`Unregistered plugin: ${pluginName}`);
     }
     /**
      * Retrieve a registered plugin by name
@@ -368,12 +351,10 @@ class ShogunCore {
     logout() {
         try {
             if (!this.isLoggedIn()) {
-                console.log("[index] Logout ignored: user not authenticated");
                 return;
             }
             this.db.logout();
             this.eventEmitter.emit("auth:logout", {});
-            console.log("[index] Logout completed successfully");
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
@@ -388,19 +369,15 @@ class ShogunCore {
      * Emits login event on success.
      */
     async login(username, password, pair) {
-        console.log("[index] Login");
         try {
-            console.log(`Login attempt for user: ${username}`);
             if (!this.currentAuthMethod) {
                 this.currentAuthMethod = "password";
-                console.log("[index] Authentication method set to default: password");
             }
             const result = await this.db.login(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
                 });
-                console.log(`Current auth method before wallet check: ${this.currentAuthMethod}`);
             }
             else {
                 result.error = result.error || "Wrong user or password";
@@ -426,7 +403,6 @@ class ShogunCore {
      * Validates password requirements and emits signup event on success.
      */
     async signUp(username, password, passwordConfirmation, pair) {
-        console.log("[index] Sign up");
         try {
             if (passwordConfirmation !== undefined &&
                 password !== passwordConfirmation &&
@@ -436,13 +412,11 @@ class ShogunCore {
                     error: "Passwords do not match",
                 };
             }
-            // Emit a debug event to monitor the flow
             this.eventEmitter.emit("debug", {
                 action: "signup_start",
                 username,
                 timestamp: Date.now(),
             });
-            console.log(`Attempting user registration: ${username}`);
             const result = await this.db.signUp(username, password, pair);
             if (result.success) {
                 this.eventEmitter.emit("debug", {
@@ -537,9 +511,7 @@ class ShogunCore {
      * @param method The authentication method used
      */
     setAuthMethod(method) {
-        console.log(`Setting authentication method from '${this.currentAuthMethod}' to '${method}'`);
         this.currentAuthMethod = method;
-        console.log(`Authentication method successfully set to: ${method}`);
     }
     /**
      * Get the current authentication method
@@ -554,6 +526,40 @@ class ShogunCore {
      */
     clearAllStorageData() {
         this.db.clearAllStorageData();
+    }
+    /**
+     * Updates the user's alias (username) in Gun and saves the updated credentials
+     * @param newAlias New alias/username to set
+     * @returns Promise resolving to update result
+     */
+    async updateUserAlias(newAlias) {
+        try {
+            console.log(`[ShogunCore] Updating user alias to: ${newAlias}`);
+            if (!this.db) {
+                return { success: false, error: "Database not initialized" };
+            }
+            return await this.db.updateUserAlias(newAlias);
+        }
+        catch (error) {
+            console.error(`[ShogunCore] Error updating user alias:`, error);
+            return { success: false, error: String(error) };
+        }
+    }
+    /**
+     * Saves the current user credentials to storage
+     */
+    savePair() {
+        try {
+            console.log(`[ShogunCore] Saving user credentials`);
+            if (!this.db) {
+                console.warn("[ShogunCore] Database not initialized, cannot save credentials");
+                return;
+            }
+            this.db.savePair();
+        }
+        catch (error) {
+            console.error(`[ShogunCore] Error saving credentials:`, error);
+        }
     }
     getIsLoggedIn() {
         return !!this.user?.is;
