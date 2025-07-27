@@ -37,7 +37,6 @@ const shogun = new ShogunCore({
     "https://peer.wallie.io/gun",
   ],
   scope: "my-app",
-  logging: { enabled: true, level: "info" },
   web3: { enabled: true },
   webauthn: {
     enabled: true,
@@ -49,7 +48,6 @@ const shogun = new ShogunCore({
     enabled: true,
     usePKCE: true, // Mandatory for security
     allowUnsafeClientSecret: true, // Required for Google OAuth
-    stateTimeout: 10 * 60 * 1000, // 10 minutes timeout
     providers: {
       google: {
         clientId: "YOUR_CLIENT_ID",
@@ -62,6 +60,14 @@ const shogun = new ShogunCore({
         usePKCE: true, // Force PKCE for Google
       },
     },
+  },
+  plugins: {
+    autoRegister: [], // Array of custom plugins to auto-register
+  },
+  timeouts: {
+    login: 30000, // 30 seconds
+    signup: 30000, // 30 seconds
+    operation: 60000, // 60 seconds
   },
 });
 
@@ -374,13 +380,26 @@ export default OAuthCallback;
 ### Core Methods
 
 - `login(username: string, password: string): Promise<AuthResult>`
-- `signUp(username: string, password: string): Promise<SignUpResult>`
+- `loginWithPair(pair: ISEAPair): Promise<AuthResult>` - Login with GunDB pair directly
+- `signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>`
 - `logout(): void`
 - `isLoggedIn(): boolean`
+- `getIsLoggedIn(): boolean` - Alternative method to check login status
 - `getPlugin<T>(name: string): T | undefined`
 - `hasPlugin(name: string): boolean`
+- `getAuthenticationMethod(type: AuthMethod): any` - Get auth method by type
 - `on(eventName: string, listener: Function): this`
 - `off(eventName: string, listener: Function): this`
+- `once(eventName: string, listener: Function): this`
+- `removeAllListeners(eventName?: string): this`
+- `emit(eventName: string, data?: any): boolean`
+- `getRecentErrors(count?: number): ShogunError[]`
+- `updateUserAlias(newAlias: string): Promise<{success: boolean, error?: string}>`
+- `savePair(): void` - Save current user credentials to storage
+- `exportPair(): string` - Export user pair as JSON string
+- `clearAllStorageData(): void` - Clear all Gun-related data (debug method)
+- `setAuthMethod(method: AuthMethod): void`
+- `getAuthMethod(): AuthMethod | undefined`
 
 ### Plugin Methods
 
@@ -426,15 +445,11 @@ export default OAuthCallback;
 
 ```typescript
 interface ShogunSDKConfig {
+  gunInstance?: IGunInstance<any>;
   peers?: string[];
   scope?: string;
   authToken?: string;
   appToken?: string;
-
-  logging?: {
-    enabled?: boolean;
-    level?: "none" | "error" | "warn" | "info" | "debug" | "verbose";
-  };
 
   webauthn?: {
     enabled?: boolean;
@@ -454,7 +469,6 @@ interface ShogunSDKConfig {
     enabled?: boolean;
     usePKCE?: boolean; // Mandatory for security
     allowUnsafeClientSecret?: boolean; // Required for Google OAuth
-    stateTimeout?: number; // Timeout for state parameter (default: 10 minutes)
     providers?: Record<string, OAuthProviderConfig>;
   };
 
@@ -462,6 +476,10 @@ interface ShogunSDKConfig {
     login?: number;
     signup?: number;
     operation?: number;
+  };
+
+  plugins?: {
+    autoRegister?: ShogunPlugin[];
   };
 }
 
@@ -745,6 +763,7 @@ const shogun = new ShogunCore({
 - GunDB (peer-to-peer database)
 - TypeScript: ^5.8.2
 
-## Version
+## Version Information
 
-Current version: 1.5.19
+- **API Version**: ^1.5.1
+- **Current Version**: 1.5.19
