@@ -5,15 +5,38 @@
  * - Direct authentication through Gun.user()
  */
 
-let Gun: any;
-let SEA: any;
+import type {
+  GunType,
+  SEAType,
+  GunUser,
+  UserInfo,
+  AuthCallback,
+  AuthResult,
+  GunData,
+  GunNode,
+  UsernameLookupResult,
+  ConnectivityTestResult,
+  SignupResult,
+  UserExistenceResult,
+  UserCreationResult,
+  EventData,
+  EventListener,
+  GunOperationResult,
+} from "./types";
+
+let Gun: GunType;
+let SEA: SEAType;
 
 if (typeof window !== "undefined") {
-  Gun = require("gun/gun");
-  SEA = require("gun/sea");
+  Gun = require("gun/gun") as GunType;
+  SEA = require("gun/sea") as SEAType;
 } else {
-  Gun = import("gun/gun").then((module) => module.default);
-  SEA = import("gun/sea").then((module) => module.default);
+  Gun = import("gun/gun").then(
+    (module) => module.default,
+  ) as unknown as GunType;
+  SEA = import("gun/sea").then(
+    (module) => module.default,
+  ) as unknown as SEAType;
 }
 
 import "gun/lib/then.js";
@@ -41,6 +64,7 @@ import { GunRxJS } from "./gun-rxjs";
 
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
+import { ISEA } from "gun";
 
 class GunInstance {
   public gun: IGunInstance<any>;
@@ -49,7 +73,7 @@ class GunInstance {
   public sea: typeof SEA;
   public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
 
-  private readonly onAuthCallbacks: Array<(user: any) => void> = [];
+  private readonly onAuthCallbacks: Array<AuthCallback> = [];
   private readonly eventEmitter: EventEmitter;
 
   // Integrated modules
@@ -159,7 +183,7 @@ class GunInstance {
   private emitDataEvent(
     eventType: "gun:put" | "gun:get" | "gun:set" | "gun:remove",
     path: string,
-    data?: any,
+    data?: GunData,
     success: boolean = true,
     error?: string,
   ): void {
@@ -194,7 +218,7 @@ class GunInstance {
    * @param event Event name
    * @param listener Event listener function
    */
-  on(event: string | symbol, listener: (data: unknown) => void): void {
+  on(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.on(event, listener);
   }
 
@@ -203,7 +227,7 @@ class GunInstance {
    * @param event Event name
    * @param listener Event listener function
    */
-  off(event: string | symbol, listener: (data: unknown) => void): void {
+  off(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.off(event, listener);
   }
 
@@ -212,7 +236,7 @@ class GunInstance {
    * @param event Event name
    * @param listener Event listener function
    */
-  once(event: string | symbol, listener: (data: unknown) => void): void {
+  once(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.once(event, listener);
   }
 
@@ -221,7 +245,7 @@ class GunInstance {
    * @param event Event name
    * @param data Event data
    */
-  emit(event: string | symbol, data?: unknown): boolean {
+  emit(event: string | symbol, data?: EventData): boolean {
     return this.eventEmitter.emit(event, data);
   }
 
@@ -388,7 +412,7 @@ class GunInstance {
    * @param callback Function to call on auth events
    * @returns Function to unsubscribe the callback
    */
-  onAuth(callback: (user: any) => void): () => void {
+  onAuth(callback: AuthCallback): () => void {
     this.onAuthCallbacks.push(callback);
     const user = this.gun.user();
     if (user && user.is) callback(user);
@@ -404,7 +428,7 @@ class GunInstance {
    * @param path Path string (e.g., "test/data/marco")
    * @returns Gun node at the specified path
    */
-  private navigateToPath(node: any, path: string): any {
+  private navigateToPath(node: GunNode, path: string): GunNode {
     if (!path) return node;
 
     // Split path by '/' and filter out empty segments
@@ -430,7 +454,7 @@ class GunInstance {
    * Gets the current user
    * @returns Current user object or null
    */
-  getCurrentUser(): any {
+  getCurrentUser(): UserInfo | null {
     try {
       const user = this.gun.user();
       const pub = user?.is?.pub;
@@ -445,7 +469,7 @@ class GunInstance {
    * Gets the current user instance
    * @returns User instance
    */
-  getUser(): any {
+  getUser(): GunUser {
     return this.gun.user();
   }
 
@@ -463,9 +487,9 @@ class GunInstance {
    * @param path Path to get the data from
    * @returns Promise resolving to the data
    */
-  async getData(path: string): Promise<any> {
+  async getData(path: string): Promise<GunData> {
     return new Promise((resolve) => {
-      this.navigateToPath(this.gun, path).once((data: any) => {
+      this.navigateToPath(this.gun, path).once((data: GunData) => {
         // Emit event for the operation
         this.emitDataEvent("gun:get", path, data, true);
         resolve(data);
@@ -479,7 +503,7 @@ class GunInstance {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async put(path: string, data: any): Promise<any> {
+  async put(path: string, data: GunData): Promise<GunOperationResult> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).put(data, (ack: any) => {
         const result = ack.err
@@ -500,7 +524,7 @@ class GunInstance {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async set(path: string, data: any): Promise<any> {
+  async set(path: string, data: GunData): Promise<GunOperationResult> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).set(data, (ack: any) => {
         const result = ack.err
@@ -520,7 +544,7 @@ class GunInstance {
    * @param path Path to remove
    * @returns Promise resolving to operation result
    */
-  async remove(path: string): Promise<any> {
+  async remove(path: string): Promise<GunOperationResult> {
     return new Promise((resolve) => {
       this.navigateToPath(this.gun, path).put(null, (ack: any) => {
         const result = ack.err
@@ -805,26 +829,18 @@ class GunInstance {
    * Debug method: Tests Gun connectivity and returns status information
    * This is useful for debugging connection issues
    */
-  async testConnectivity(): Promise<{
-    peers: { [peer: string]: { connected: boolean; status: string } };
-    gunInstance: boolean;
-    userInstance: boolean;
-    canWrite: boolean;
-    canRead: boolean;
-    testWriteResult?: any;
-    testReadResult?: any;
-  }> {
+  async testConnectivity(): Promise<ConnectivityTestResult> {
     try {
       console.log("[gunInstance]  Testing Gun connectivity...");
 
-      const result = {
+      const result: ConnectivityTestResult = {
         peers: this.getPeerInfo(),
         gunInstance: !!this.gun,
         userInstance: !!this.gun.user(),
         canWrite: false,
         canRead: false,
-        testWriteResult: null as any,
-        testReadResult: null as any,
+        testWriteResult: undefined,
+        testReadResult: undefined,
       };
 
       // Test basic write operation
@@ -848,11 +864,11 @@ class GunInstance {
 
       // Test basic read operation
       try {
-        const readResult = await new Promise<any>((resolve) => {
+        const readResult = await new Promise<GunData>((resolve) => {
           this.gun
             .get("test")
             .get("connectivity")
-            .once((data: any) => {
+            .once((data: GunData) => {
               resolve(data);
             });
         });
@@ -902,7 +918,7 @@ class GunInstance {
     username: string,
     password: string,
     pair?: ISEAPair | null,
-  ): Promise<any> {
+  ): Promise<SignupResult> {
     console.log("[gunInstance]  Attempting user registration:", username);
 
     try {
@@ -923,27 +939,29 @@ class GunInstance {
       console.log(
         `Checking if user ${username} exists in Gun's native system...`,
       );
-      const authTestResult = await new Promise<any>((resolve) => {
-        if (pair) {
-          this.gun.user().auth(pair, (ack: any) => {
-            if (ack.err) {
-              // User doesn't exist or password is wrong - this is expected for new users
-              resolve({ exists: false, error: ack.err });
-            } else {
-              // User exists and password is correct
-              resolve({ exists: true, userPub: this.gun.user().is?.pub });
-            }
-          });
-        } else {
-          this.gun.user().auth(username, password, (ack: any) => {
-            if (ack.err) {
-              resolve({ exists: false, error: ack.err });
-            } else {
-              resolve({ exists: true, userPub: this.gun.user().is?.pub });
-            }
-          });
-        }
-      });
+      const authTestResult = await new Promise<UserExistenceResult>(
+        (resolve) => {
+          if (pair) {
+            this.gun.user().auth(pair, (ack: any) => {
+              if (ack.err) {
+                // User doesn't exist or password is wrong - this is expected for new users
+                resolve({ exists: false, error: ack.err });
+              } else {
+                // User exists and password is correct
+                resolve({ exists: true, userPub: this.gun.user().is?.pub });
+              }
+            });
+          } else {
+            this.gun.user().auth(username, password, (ack: any) => {
+              if (ack.err) {
+                resolve({ exists: false, error: ack.err });
+              } else {
+                resolve({ exists: true, userPub: this.gun.user().is?.pub });
+              }
+            });
+          }
+        },
+      );
 
       if (authTestResult.exists) {
         // Await the call to runPostAuthOnAuthResult
@@ -953,7 +971,7 @@ class GunInstance {
       // User doesn't exist, attempt to create new user
       console.log(`Creating new user: ${username}`);
 
-      const createResult = await new Promise<any>((resolve) => {
+      const createResult = await new Promise<UserCreationResult>((resolve) => {
         if (pair) {
           resolve({ success: true, pub: pair.pub });
         } else {
@@ -974,7 +992,7 @@ class GunInstance {
       }
 
       // User created successfully, now authenticate to get the userPub
-      const authResult = await new Promise<any>((resolve) => {
+      const authResult = await new Promise<AuthResult>((resolve) => {
         if (pair) {
           this.gun.user().auth(pair, (ack: any) => {
             if (ack.err) {
@@ -1992,10 +2010,14 @@ class GunInstance {
    * @returns Promise resolving to derived keys object
    */
   async derive(
-    password: any,
-    extra?: any,
+    password: string | number,
+    extra?: string | string[],
     options?: DeriveOptions,
-  ): Promise<any> {
+  ): Promise<{
+    p256?: { pub: string; priv: string; epub: string; epriv: string };
+    secp256k1Bitcoin?: { pub: string; priv: string; address: string };
+    secp256k1Ethereum?: { pub: string; priv: string; address: string };
+  }> {
     try {
       console.log(
         "[gunInstance]  Deriving cryptographic keys with options:",
@@ -2005,8 +2027,48 @@ class GunInstance {
       // Call the derive function with the provided parameters
       const derivedKeys = await derive(password, extra, options);
 
+      // Map the returned keys to the expected format
+      const result: {
+        p256?: { pub: string; priv: string; epub: string; epriv: string };
+        secp256k1Bitcoin?: { pub: string; priv: string; address: string };
+        secp256k1Ethereum?: { pub: string; priv: string; address: string };
+      } = {};
+
+      // Map P-256 keys (already in correct format)
+      if (
+        derivedKeys.pub &&
+        derivedKeys.priv &&
+        derivedKeys.epub &&
+        derivedKeys.epriv
+      ) {
+        result.p256 = {
+          pub: derivedKeys.pub,
+          priv: derivedKeys.priv,
+          epub: derivedKeys.epub,
+          epriv: derivedKeys.epriv,
+        };
+      }
+
+      // Map Bitcoin keys (privateKey -> priv, publicKey -> pub)
+      if (derivedKeys.secp256k1Bitcoin) {
+        result.secp256k1Bitcoin = {
+          pub: derivedKeys.secp256k1Bitcoin.publicKey,
+          priv: derivedKeys.secp256k1Bitcoin.privateKey,
+          address: derivedKeys.secp256k1Bitcoin.address,
+        };
+      }
+
+      // Map Ethereum keys (privateKey -> priv, publicKey -> pub)
+      if (derivedKeys.secp256k1Ethereum) {
+        result.secp256k1Ethereum = {
+          pub: derivedKeys.secp256k1Ethereum.publicKey,
+          priv: derivedKeys.secp256k1Ethereum.privateKey,
+          address: derivedKeys.secp256k1Ethereum.address,
+        };
+      }
+
       console.log("[gunInstance]  Key derivation completed successfully");
-      return derivedKeys;
+      return result;
     } catch (error) {
       console.error("Error during key derivation:", error);
 
@@ -2030,8 +2092,12 @@ class GunInstance {
    * @param extra - Additional entropy
    * @returns Promise resolving to P-256 keys
    */
-  async deriveP256(password: any, extra?: any): Promise<any> {
-    return this.derive(password, extra, { includeP256: true });
+  async deriveP256(
+    password: string | number,
+    extra?: string | string[],
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
+    const result = await this.derive(password, extra, { includeP256: true });
+    return result.p256!;
   }
 
   /**
@@ -2040,8 +2106,14 @@ class GunInstance {
    * @param extra - Additional entropy
    * @returns Promise resolving to Bitcoin keys and address
    */
-  async deriveBitcoin(password: any, extra?: any): Promise<any> {
-    return this.derive(password, extra, { includeSecp256k1Bitcoin: true });
+  async deriveBitcoin(
+    password: string | number,
+    extra?: string | string[],
+  ): Promise<{ pub: string; priv: string; address: string }> {
+    const result = await this.derive(password, extra, {
+      includeSecp256k1Bitcoin: true,
+    });
+    return result.secp256k1Bitcoin!;
   }
 
   /**
@@ -2050,8 +2122,14 @@ class GunInstance {
    * @param extra - Additional entropy
    * @returns Promise resolving to Ethereum keys and address
    */
-  async deriveEthereum(password: any, extra?: any): Promise<any> {
-    return this.derive(password, extra, { includeSecp256k1Ethereum: true });
+  async deriveEthereum(
+    password: string | number,
+    extra?: string | string[],
+  ): Promise<{ pub: string; priv: string; address: string }> {
+    const result = await this.derive(password, extra, {
+      includeSecp256k1Ethereum: true,
+    });
+    return result.secp256k1Ethereum!;
   }
 
   /**
@@ -2060,12 +2138,24 @@ class GunInstance {
    * @param extra - Additional entropy
    * @returns Promise resolving to all key types
    */
-  async deriveAll(password: any, extra?: any): Promise<any> {
-    return this.derive(password, extra, {
+  async deriveAll(
+    password: string | number,
+    extra?: string | string[],
+  ): Promise<{
+    p256: { pub: string; priv: string; epub: string; epriv: string };
+    secp256k1Bitcoin: { pub: string; priv: string; address: string };
+    secp256k1Ethereum: { pub: string; priv: string; address: string };
+  }> {
+    const result = await this.derive(password, extra, {
       includeP256: true,
       includeSecp256k1Bitcoin: true,
       includeSecp256k1Ethereum: true,
     });
+    return {
+      p256: result.p256!,
+      secp256k1Bitcoin: result.secp256k1Bitcoin!,
+      secp256k1Ethereum: result.secp256k1Ethereum!,
+    };
   }
 
   /**

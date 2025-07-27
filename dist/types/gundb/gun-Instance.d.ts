@@ -4,8 +4,9 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-declare let Gun: any;
-declare let SEA: any;
+import type { GunType, SEAType, GunUser, UserInfo, AuthCallback, GunData, ConnectivityTestResult, SignupResult, EventData, EventListener, GunOperationResult } from "./types";
+declare let Gun: GunType;
+declare let SEA: SEAType;
 import "gun/lib/then.js";
 import "gun/lib/radix.js";
 import "gun/lib/radisk.js";
@@ -52,25 +53,25 @@ declare class GunInstance {
      * @param event Event name
      * @param listener Event listener function
      */
-    on(event: string | symbol, listener: (data: unknown) => void): void;
+    on(event: string | symbol, listener: EventListener): void;
     /**
      * Removes an event listener
      * @param event Event name
      * @param listener Event listener function
      */
-    off(event: string | symbol, listener: (data: unknown) => void): void;
+    off(event: string | symbol, listener: EventListener): void;
     /**
      * Adds a one-time event listener
      * @param event Event name
      * @param listener Event listener function
      */
-    once(event: string | symbol, listener: (data: unknown) => void): void;
+    once(event: string | symbol, listener: EventListener): void;
     /**
      * Emits an event
      * @param event Event name
      * @param data Event data
      */
-    emit(event: string | symbol, data?: unknown): boolean;
+    emit(event: string | symbol, data?: EventData): boolean;
     /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add
@@ -116,7 +117,7 @@ declare class GunInstance {
      * @param callback Function to call on auth events
      * @returns Function to unsubscribe the callback
      */
-    onAuth(callback: (user: any) => void): () => void;
+    onAuth(callback: AuthCallback): () => void;
     /**
      * Helper method to navigate to a nested path by splitting and chaining .get() calls
      * @param node Starting Gun node
@@ -133,12 +134,12 @@ declare class GunInstance {
      * Gets the current user
      * @returns Current user object or null
      */
-    getCurrentUser(): any;
+    getCurrentUser(): UserInfo | null;
     /**
      * Gets the current user instance
      * @returns User instance
      */
-    getUser(): any;
+    getUser(): GunUser;
     /**
      * Gets a node at the specified path
      * @param path Path to the node
@@ -150,27 +151,27 @@ declare class GunInstance {
      * @param path Path to get the data from
      * @returns Promise resolving to the data
      */
-    getData(path: string): Promise<any>;
+    getData(path: string): Promise<GunData>;
     /**
      * Puts data at the specified path
      * @param path Path to store data
      * @param data Data to store
      * @returns Promise resolving to operation result
      */
-    put(path: string, data: any): Promise<any>;
+    put(path: string, data: GunData): Promise<GunOperationResult>;
     /**
      * Sets data at the specified path
      * @param path Path to store data
      * @param data Data to store
      * @returns Promise resolving to operation result
      */
-    set(path: string, data: any): Promise<any>;
+    set(path: string, data: GunData): Promise<GunOperationResult>;
     /**
      * Removes data at the specified path
      * @param path Path to remove
      * @returns Promise resolving to operation result
      */
-    remove(path: string): Promise<any>;
+    remove(path: string): Promise<GunOperationResult>;
     /**
      * Checks if a user is currently logged in
      * @returns True if logged in
@@ -198,20 +199,7 @@ declare class GunInstance {
      * Debug method: Tests Gun connectivity and returns status information
      * This is useful for debugging connection issues
      */
-    testConnectivity(): Promise<{
-        peers: {
-            [peer: string]: {
-                connected: boolean;
-                status: string;
-            };
-        };
-        gunInstance: boolean;
-        userInstance: boolean;
-        canWrite: boolean;
-        canRead: boolean;
-        testWriteResult?: any;
-        testReadResult?: any;
-    }>;
+    testConnectivity(): Promise<ConnectivityTestResult>;
     /**
      * Accesses the RxJS module for reactive programming
      * @returns GunRxJS instance
@@ -224,7 +212,7 @@ declare class GunInstance {
      * @param pair Optional SEA pair for Web3 login
      * @returns Promise resolving to signup result
      */
-    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<any>;
+    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<SignupResult>;
     runPostAuthOnAuthResult(authTestResult: any, username: string): Promise<any>;
     checkUsernameExists(username: string): Promise<any>;
     /**
@@ -311,35 +299,82 @@ declare class GunInstance {
      * @param options - Derivation options to specify which key types to generate
      * @returns Promise resolving to derived keys object
      */
-    derive(password: any, extra?: any, options?: DeriveOptions): Promise<any>;
+    derive(password: string | number, extra?: string | string[], options?: DeriveOptions): Promise<{
+        p256?: {
+            pub: string;
+            priv: string;
+            epub: string;
+            epriv: string;
+        };
+        secp256k1Bitcoin?: {
+            pub: string;
+            priv: string;
+            address: string;
+        };
+        secp256k1Ethereum?: {
+            pub: string;
+            priv: string;
+            address: string;
+        };
+    }>;
     /**
      * Derive P-256 keys (default Gun.SEA behavior)
      * @param password - Password for key derivation
      * @param extra - Additional entropy
      * @returns Promise resolving to P-256 keys
      */
-    deriveP256(password: any, extra?: any): Promise<any>;
+    deriveP256(password: string | number, extra?: string | string[]): Promise<{
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    }>;
     /**
      * Derive Bitcoin secp256k1 keys with P2PKH address
      * @param password - Password for key derivation
      * @param extra - Additional entropy
      * @returns Promise resolving to Bitcoin keys and address
      */
-    deriveBitcoin(password: any, extra?: any): Promise<any>;
+    deriveBitcoin(password: string | number, extra?: string | string[]): Promise<{
+        pub: string;
+        priv: string;
+        address: string;
+    }>;
     /**
      * Derive Ethereum secp256k1 keys with Keccak256 address
      * @param password - Password for key derivation
      * @param extra - Additional entropy
      * @returns Promise resolving to Ethereum keys and address
      */
-    deriveEthereum(password: any, extra?: any): Promise<any>;
+    deriveEthereum(password: string | number, extra?: string | string[]): Promise<{
+        pub: string;
+        priv: string;
+        address: string;
+    }>;
     /**
      * Derive all supported key types
      * @param password - Password for key derivation
      * @param extra - Additional entropy
      * @returns Promise resolving to all key types
      */
-    deriveAll(password: any, extra?: any): Promise<any>;
+    deriveAll(password: string | number, extra?: string | string[]): Promise<{
+        p256: {
+            pub: string;
+            priv: string;
+            epub: string;
+            epriv: string;
+        };
+        secp256k1Bitcoin: {
+            pub: string;
+            priv: string;
+            address: string;
+        };
+        secp256k1Ethereum: {
+            pub: string;
+            priv: string;
+            address: string;
+        };
+    }>;
     /**
      * Creates a frozen space entry for immutable data
      * @param data Data to freeze

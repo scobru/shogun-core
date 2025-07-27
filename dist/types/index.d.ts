@@ -134,6 +134,14 @@ export declare class ShogunCore implements IShogunCore {
      */
     login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
     /**
+     * Login with GunDB pair directly
+     * @param pair - GunDB SEA pair for authentication
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Authenticates user using a GunDB pair directly.
+     * Emits login event on success.
+     */
+    loginWithPair(pair: ISEAPair): Promise<AuthResult>;
+    /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password
@@ -209,6 +217,12 @@ export declare class ShogunCore implements IShogunCore {
      * Saves the current user credentials to storage
      */
     savePair(): void;
+    /**
+     * Esporta la coppia di chiavi dell'utente corrente come stringa JSON.
+     * Utile per backup o migrazione dell'account.
+     * @returns {string} La coppia SEA serializzata in formato JSON, oppure stringa vuota se non disponibile.
+     */
+    exportPair(): string;
     getIsLoggedIn(): boolean;
 }
 export default ShogunCore;

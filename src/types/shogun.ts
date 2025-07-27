@@ -36,7 +36,13 @@ export enum CorePlugins {
   OAuth = "oauth",
 }
 
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth";
+export type AuthMethod =
+  | "password"
+  | "webauthn"
+  | "web3"
+  | "nostr"
+  | "oauth"
+  | "pair";
 
 // Authentication result interfaces
 export interface AuthResult {

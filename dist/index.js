@@ -393,6 +393,43 @@ class ShogunCore {
         }
     }
     /**
+     * Login with GunDB pair directly
+     * @param pair - GunDB SEA pair for authentication
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Authenticates user using a GunDB pair directly.
+     * Emits login event on success.
+     */
+    async loginWithPair(pair) {
+        try {
+            if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+                return {
+                    success: false,
+                    error: "Invalid pair structure - missing required keys",
+                };
+            }
+            // Use the new loginWithPair method from GunInstance
+            const result = await this.db.login("", "", pair);
+            if (result.success) {
+                this.currentAuthMethod = "pair";
+                this.eventEmitter.emit("auth:login", {
+                    userPub: result.userPub ?? "",
+                });
+            }
+            else {
+                result.error =
+                    result.error || "Authentication failed with provided pair";
+            }
+            return result;
+        }
+        catch (error) {
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
+            return {
+                success: false,
+                error: error.message ?? "Unknown error during pair login",
+            };
+        }
+    }
+    /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password
@@ -561,8 +598,22 @@ class ShogunCore {
             console.error(`[ShogunCore] Error saving credentials:`, error);
         }
     }
+    // esporta la coppia utente come json
+    /**
+     * Esporta la coppia di chiavi dell'utente corrente come stringa JSON.
+     * Utile per backup o migrazione dell'account.
+     * @returns {string} La coppia SEA serializzata in formato JSON, oppure stringa vuota se non disponibile.
+     */
+    exportPair() {
+        if (!this.user ||
+            !this.user._ ||
+            typeof this.user._.sea === "undefined") {
+            return "";
+        }
+        return JSON.stringify(this.user._.sea);
+    }
     getIsLoggedIn() {
-        return !!this.user?.is;
+        return !!(this.user && this.user.is);
     }
 }
 exports.ShogunCore = ShogunCore;

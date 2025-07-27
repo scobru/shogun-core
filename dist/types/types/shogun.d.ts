@@ -33,7 +33,7 @@ export declare enum CorePlugins {
     /** OAuth plugin */
     OAuth = "oauth"
 }
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "pair";
 export interface AuthResult {
     success: boolean;
     error?: string;

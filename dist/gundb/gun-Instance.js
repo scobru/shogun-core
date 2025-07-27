@@ -723,8 +723,8 @@ class GunInstance {
                 userInstance: !!this.gun.user(),
                 canWrite: false,
                 canRead: false,
-                testWriteResult: null,
-                testReadResult: null,
+                testWriteResult: undefined,
+                testReadResult: undefined,
             };
             // Test basic write operation
             try {
@@ -1715,8 +1715,38 @@ class GunInstance {
             console.log("[gunInstance]  Deriving cryptographic keys with options:", options);
             // Call the derive function with the provided parameters
             const derivedKeys = await (0, derive_1.default)(password, extra, options);
+            // Map the returned keys to the expected format
+            const result = {};
+            // Map P-256 keys (already in correct format)
+            if (derivedKeys.pub &&
+                derivedKeys.priv &&
+                derivedKeys.epub &&
+                derivedKeys.epriv) {
+                result.p256 = {
+                    pub: derivedKeys.pub,
+                    priv: derivedKeys.priv,
+                    epub: derivedKeys.epub,
+                    epriv: derivedKeys.epriv,
+                };
+            }
+            // Map Bitcoin keys (privateKey -> priv, publicKey -> pub)
+            if (derivedKeys.secp256k1Bitcoin) {
+                result.secp256k1Bitcoin = {
+                    pub: derivedKeys.secp256k1Bitcoin.publicKey,
+                    priv: derivedKeys.secp256k1Bitcoin.privateKey,
+                    address: derivedKeys.secp256k1Bitcoin.address,
+                };
+            }
+            // Map Ethereum keys (privateKey -> priv, publicKey -> pub)
+            if (derivedKeys.secp256k1Ethereum) {
+                result.secp256k1Ethereum = {
+                    pub: derivedKeys.secp256k1Ethereum.publicKey,
+                    priv: derivedKeys.secp256k1Ethereum.privateKey,
+                    address: derivedKeys.secp256k1Ethereum.address,
+                };
+            }
             console.log("[gunInstance]  Key derivation completed successfully");
-            return derivedKeys;
+            return result;
         }
         catch (error) {
             console.error("Error during key derivation:", error);
@@ -1734,7 +1764,8 @@ class GunInstance {
      * @returns Promise resolving to P-256 keys
      */
     async deriveP256(password, extra) {
-        return this.derive(password, extra, { includeP256: true });
+        const result = await this.derive(password, extra, { includeP256: true });
+        return result.p256;
     }
     /**
      * Derive Bitcoin secp256k1 keys with P2PKH address
@@ -1743,7 +1774,10 @@ class GunInstance {
      * @returns Promise resolving to Bitcoin keys and address
      */
     async deriveBitcoin(password, extra) {
-        return this.derive(password, extra, { includeSecp256k1Bitcoin: true });
+        const result = await this.derive(password, extra, {
+            includeSecp256k1Bitcoin: true,
+        });
+        return result.secp256k1Bitcoin;
     }
     /**
      * Derive Ethereum secp256k1 keys with Keccak256 address
@@ -1752,7 +1786,10 @@ class GunInstance {
      * @returns Promise resolving to Ethereum keys and address
      */
     async deriveEthereum(password, extra) {
-        return this.derive(password, extra, { includeSecp256k1Ethereum: true });
+        const result = await this.derive(password, extra, {
+            includeSecp256k1Ethereum: true,
+        });
+        return result.secp256k1Ethereum;
     }
     /**
      * Derive all supported key types
@@ -1761,11 +1798,16 @@ class GunInstance {
      * @returns Promise resolving to all key types
      */
     async deriveAll(password, extra) {
-        return this.derive(password, extra, {
+        const result = await this.derive(password, extra, {
             includeP256: true,
             includeSecp256k1Bitcoin: true,
             includeSecp256k1Ethereum: true,
         });
+        return {
+            p256: result.p256,
+            secp256k1Bitcoin: result.secp256k1Bitcoin,
+            secp256k1Ethereum: result.secp256k1Ethereum,
+        };
     }
     /**
      * Creates a frozen space entry for immutable data
