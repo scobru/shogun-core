@@ -433,7 +433,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
             userPub: authResult.userPub,
             username: credentials.username,
             email: result.userInfo.email,
-            name: result.userInfo.name,
+            name: result.userInfo.name || result.userInfo.email || `OAuth User (${provider})`,
             picture: result.userInfo.picture,
             oauth: {
               provider,

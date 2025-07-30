@@ -287,6 +287,7 @@ class OAuthPlugin extends base_1.BasePlugin {
                 // Return auth result with OAuth user data included
                 return {
                     ...authResult,
+                    sea: authResult.sea, // Include SEA pair from core
                     user: {
                         userPub: authResult.userPub,
                         username: credentials.username,
@@ -338,6 +339,10 @@ class OAuthPlugin extends base_1.BasePlugin {
         if (loginResult.success) {
             this.core.db.savePair?.(); // Ensure session is saved
             loginResult.isNewUser = false;
+            // Include SEA pair from core
+            if (this.core.user && this.core.user._?.sea) {
+                loginResult.sea = this.core.user._.sea;
+            }
             return loginResult;
         }
         // If login fails, try signup
@@ -348,6 +353,10 @@ class OAuthPlugin extends base_1.BasePlugin {
             if (postSignupLogin.success) {
                 this.core.db.savePair?.();
                 postSignupLogin.isNewUser = true;
+                // Include SEA pair from core
+                if (this.core.user && this.core.user._?.sea) {
+                    postSignupLogin.sea = this.core.user._.sea;
+                }
                 return postSignupLogin;
             }
             return {
