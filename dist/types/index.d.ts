@@ -23,7 +23,7 @@ export type * from "./types/plugin";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    static readonly API_VERSION = "^1.5.1";
+    static readonly API_VERSION = "^1.6.0";
     db: GunInstance;
     storage: ShogunStorage;
     provider?: ethers.Provider;

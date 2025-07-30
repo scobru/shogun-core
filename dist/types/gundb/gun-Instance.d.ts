@@ -4,9 +4,9 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-import type { GunType, SEAType, GunUser, UserInfo, AuthCallback, GunData, ConnectivityTestResult, SignupResult, EventData, EventListener, GunOperationResult } from "./types";
-declare let Gun: GunType;
-declare let SEA: SEAType;
+import type { GunUser, UserInfo, AuthCallback, GunData, ConnectivityTestResult, SignupResult, EventData, EventListener, GunOperationResult } from "./types";
+import Gun from "gun/gun";
+import SEA from "gun/sea";
 import "gun/lib/then.js";
 import "gun/lib/radix.js";
 import "gun/lib/radisk.js";

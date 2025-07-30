@@ -46,7 +46,7 @@ __exportStar(require("./types/shogun"), exports);
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "^1.5.1";
+    static API_VERSION = "^1.6.0";
     db;
     storage;
     provider;

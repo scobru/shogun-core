@@ -43,16 +43,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
-let Gun;
-let SEA;
-if (typeof window !== "undefined") {
-    exports.Gun = Gun = require("gun/gun");
-    exports.SEA = SEA = require("gun/sea");
-}
-else {
-    exports.Gun = Gun = Promise.resolve().then(() => __importStar(require("gun/gun"))).then((module) => module.default);
-    exports.SEA = SEA = Promise.resolve().then(() => __importStar(require("gun/sea"))).then((module) => module.default);
-}
+const gun_1 = __importDefault(require("gun/gun"));
+exports.Gun = gun_1.default;
+const sea_1 = __importDefault(require("gun/sea"));
+exports.SEA = sea_1.default;
 require("gun/lib/then.js");
 require("gun/lib/radix.js");
 require("gun/lib/radisk.js");
@@ -106,7 +100,7 @@ class GunInstance {
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.subscribeToAuthEvents();
         this.crypto = crypto;
-        this.sea = SEA;
+        this.sea = sea_1.default;
         this.node = null;
     }
     /**
@@ -973,7 +967,7 @@ class GunInstance {
                             userPub: userPub,
                             createdAt: Date.now(),
                         };
-                        const hash = SEA.work(JSON.stringify(mappingData), null, null, {
+                        const hash = sea_1.default.work(JSON.stringify(mappingData), null, null, {
                             name: "SHA-256",
                         });
                         new Promise((putResolve, putReject) => {
@@ -1439,8 +1433,8 @@ class GunInstance {
             let proofOfWork;
             try {
                 // Use SEA directly if available
-                if (SEA && SEA.work) {
-                    proofOfWork = await SEA.work(answersText, null, null, {
+                if (sea_1.default && sea_1.default.work) {
+                    proofOfWork = await sea_1.default.work(answersText, null, null, {
                         name: "SHA-256",
                     });
                 }
@@ -1461,8 +1455,8 @@ class GunInstance {
             // Encrypt the password hint with the proof of work
             let encryptedHint;
             try {
-                if (SEA && SEA.encrypt) {
-                    encryptedHint = await SEA.encrypt(hint, proofOfWork);
+                if (sea_1.default && sea_1.default.encrypt) {
+                    encryptedHint = await sea_1.default.encrypt(hint, proofOfWork);
                 }
                 else if (this.crypto && this.crypto.encrypt) {
                     encryptedHint = await this.crypto.encrypt(hint, proofOfWork);
@@ -1545,8 +1539,8 @@ class GunInstance {
             let proofOfWork;
             try {
                 // Use SEA directly if available
-                if (SEA && SEA.work) {
-                    proofOfWork = await SEA.work(answersText, null, null, {
+                if (sea_1.default && sea_1.default.work) {
+                    proofOfWork = await sea_1.default.work(answersText, null, null, {
                         name: "SHA-256",
                     });
                 }
@@ -1567,8 +1561,8 @@ class GunInstance {
             // Decrypt the password hint with the proof of work
             let hint;
             try {
-                if (SEA && SEA.decrypt) {
-                    hint = await SEA.decrypt(securityData.hint, proofOfWork);
+                if (sea_1.default && sea_1.default.decrypt) {
+                    hint = await sea_1.default.decrypt(securityData.hint, proofOfWork);
                 }
                 else if (this.crypto && this.crypto.decrypt) {
                     hint = await this.crypto.decrypt(securityData.hint, proofOfWork);
@@ -1816,7 +1810,7 @@ class GunInstance {
      * @returns Promise resolving to the frozen data hash
      */
     async createFrozenSpace(data, options) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
                 // Prepara i dati da congelare
                 const frozenData = {
@@ -1827,32 +1821,33 @@ class GunInstance {
                 };
                 // Genera hash dei dati usando SEA
                 const dataString = JSON.stringify(frozenData);
-                SEA.work(dataString, null, null, { name: "SHA-256" }, (hash) => {
-                    if (!hash) {
-                        reject(new Error("Failed to generate hash for frozen data"));
-                        return;
+                const hash = await sea_1.default.work(dataString, null, null, {
+                    name: "SHA-256",
+                });
+                if (!hash) {
+                    reject(new Error("Failed to generate hash for frozen data"));
+                    return;
+                }
+                // Costruisci il percorso completo
+                const namespace = options?.namespace || "default";
+                const customPath = options?.path || "";
+                const fullPath = customPath
+                    ? `${namespace}/${customPath}/${hash}`
+                    : `${namespace}/${hash}`;
+                // Usa navigateToPath per gestire correttamente i percorsi con /
+                const targetNode = this.navigateToPath(this.gun, fullPath);
+                targetNode.put(frozenData, (ack) => {
+                    if (ack.err) {
+                        reject(new Error(`Failed to create frozen space: ${ack.err}`));
                     }
-                    // Costruisci il percorso completo
-                    const namespace = options?.namespace || "default";
-                    const customPath = options?.path || "";
-                    const fullPath = customPath
-                        ? `${namespace}/${customPath}/${hash}`
-                        : `${namespace}/${hash}`;
-                    // Usa navigateToPath per gestire correttamente i percorsi con /
-                    const targetNode = this.navigateToPath(this.gun, fullPath);
-                    targetNode.put(frozenData, (ack) => {
-                        if (ack.err) {
-                            reject(new Error(`Failed to create frozen space: ${ack.err}`));
-                        }
-                        else {
-                            console.log(`[createFrozenSpace] Created frozen entry: ${fullPath}`);
-                            resolve({
-                                hash: hash,
-                                fullPath: fullPath,
-                                data: frozenData,
-                            });
-                        }
-                    });
+                    else {
+                        console.log(`[createFrozenSpace] Created frozen entry: ${fullPath}`);
+                        resolve({
+                            hash: hash,
+                            fullPath: fullPath,
+                            data: frozenData,
+                        });
+                    }
                 });
             }
             catch (error) {
@@ -1897,16 +1892,12 @@ class GunInstance {
         try {
             // Genera hash dei dati forniti
             const dataString = JSON.stringify(data);
-            const generatedHash = await new Promise((resolve, reject) => {
-                SEA.work(dataString, null, null, { name: "SHA-256" }, (hash) => {
-                    if (hash) {
-                        resolve(hash);
-                    }
-                    else {
-                        reject(new Error("Failed to generate hash"));
-                    }
-                });
+            const generatedHash = await sea_1.default.work(dataString, null, null, {
+                name: "SHA-256",
             });
+            if (!generatedHash) {
+                return { verified: false, error: "Failed to generate hash" };
+            }
             // Confronta gli hash
             if (generatedHash !== hash) {
                 return { verified: false, error: "Hash mismatch" };

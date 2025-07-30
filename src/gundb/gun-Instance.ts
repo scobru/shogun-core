@@ -6,15 +6,12 @@
  */
 
 import type {
-  GunType,
-  SEAType,
   GunUser,
   UserInfo,
   AuthCallback,
   AuthResult,
   GunData,
   GunNode,
-  UsernameLookupResult,
   ConnectivityTestResult,
   SignupResult,
   UserExistenceResult,
@@ -24,21 +21,8 @@ import type {
   GunOperationResult,
 } from "./types";
 
-let Gun: GunType;
-let SEA: SEAType;
-
-if (typeof window !== "undefined") {
-  Gun = require("gun/gun") as GunType;
-  SEA = require("gun/sea") as SEAType;
-} else {
-  Gun = import("gun/gun").then(
-    (module) => module.default,
-  ) as unknown as GunType;
-  SEA = import("gun/sea").then(
-    (module) => module.default,
-  ) as unknown as SEAType;
-}
-
+import Gun from "gun/gun";
+import SEA from "gun/sea";
 import "gun/lib/then.js";
 import "gun/lib/radix.js";
 import "gun/lib/radisk.js";
@@ -64,7 +48,6 @@ import { GunRxJS } from "./gun-rxjs";
 
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
-import { ISEA } from "gun";
 
 class GunInstance {
   public gun: IGunInstance<any>;
@@ -2173,7 +2156,7 @@ class GunInstance {
       metadata?: Record<string, any>;
     },
   ): Promise<{ hash: string; fullPath: string; data: any }> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         // Prepara i dati da congelare
         const frozenData = {
@@ -2185,43 +2168,39 @@ class GunInstance {
 
         // Genera hash dei dati usando SEA
         const dataString = JSON.stringify(frozenData);
-        SEA.work(
-          dataString,
-          null,
-          null,
-          { name: "SHA-256" },
-          (hash: string) => {
-            if (!hash) {
-              reject(new Error("Failed to generate hash for frozen data"));
-              return;
-            }
+        const hash = await SEA.work(dataString, null, null, {
+          name: "SHA-256",
+        });
 
-            // Costruisci il percorso completo
-            const namespace = options?.namespace || "default";
-            const customPath = options?.path || "";
-            const fullPath = customPath
-              ? `${namespace}/${customPath}/${hash}`
-              : `${namespace}/${hash}`;
+        if (!hash) {
+          reject(new Error("Failed to generate hash for frozen data"));
+          return;
+        }
 
-            // Usa navigateToPath per gestire correttamente i percorsi con /
-            const targetNode = this.navigateToPath(this.gun, fullPath);
+        // Costruisci il percorso completo
+        const namespace = options?.namespace || "default";
+        const customPath = options?.path || "";
+        const fullPath = customPath
+          ? `${namespace}/${customPath}/${hash}`
+          : `${namespace}/${hash}`;
 
-            targetNode.put(frozenData, (ack: any) => {
-              if (ack.err) {
-                reject(new Error(`Failed to create frozen space: ${ack.err}`));
-              } else {
-                console.log(
-                  `[createFrozenSpace] Created frozen entry: ${fullPath}`,
-                );
-                resolve({
-                  hash: hash,
-                  fullPath: fullPath,
-                  data: frozenData,
-                });
-              }
+        // Usa navigateToPath per gestire correttamente i percorsi con /
+        const targetNode = this.navigateToPath(this.gun, fullPath);
+
+        targetNode.put(frozenData, (ack: any) => {
+          if (ack.err) {
+            reject(new Error(`Failed to create frozen space: ${ack.err}`));
+          } else {
+            console.log(
+              `[createFrozenSpace] Created frozen entry: ${fullPath}`,
+            );
+            resolve({
+              hash: hash,
+              fullPath: fullPath,
+              data: frozenData,
             });
-          },
-        );
+          }
+        });
       } catch (error) {
         reject(new Error(`Error creating frozen space: ${error}`));
       }
@@ -2276,21 +2255,13 @@ class GunInstance {
     try {
       // Genera hash dei dati forniti
       const dataString = JSON.stringify(data);
-      const generatedHash = await new Promise<string>((resolve, reject) => {
-        SEA.work(
-          dataString,
-          null,
-          null,
-          { name: "SHA-256" },
-          (hash: string) => {
-            if (hash) {
-              resolve(hash);
-            } else {
-              reject(new Error("Failed to generate hash"));
-            }
-          },
-        );
+      const generatedHash = await SEA.work(dataString, null, null, {
+        name: "SHA-256",
       });
+
+      if (!generatedHash) {
+        return { verified: false, error: "Failed to generate hash" };
+      }
 
       // Confronta gli hash
       if (generatedHash !== hash) {
