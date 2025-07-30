@@ -27,6 +27,23 @@ export class WebauthnPlugin
    */
   initialize(core: ShogunCore): void {
     super.initialize(core);
+
+    // Verifica se siamo in ambiente browser
+    if (typeof window === "undefined") {
+      console.warn(
+        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment",
+      );
+      return;
+    }
+
+    // Verifica se WebAuthn è supportato
+    if (!this.isSupported()) {
+      console.warn(
+        "[webauthnPlugin] WebAuthn not supported in this environment",
+      );
+      return;
+    }
+
     // Inizializziamo il modulo WebAuthn
     this.webauthn = new Webauthn(core.gun);
     this.signer = new WebAuthnSigner(this.webauthn);
@@ -74,7 +91,17 @@ export class WebauthnPlugin
    * @inheritdoc
    */
   isSupported(): boolean {
-    return this.assertWebauthn().isSupported();
+    // Verifica se siamo in ambiente browser
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    // Se il plugin non è stato inizializzato, verifica direttamente il supporto
+    if (!this.webauthn) {
+      return typeof window.PublicKeyCredential !== "undefined";
+    }
+
+    return this.webauthn.isSupported();
   }
 
   /**

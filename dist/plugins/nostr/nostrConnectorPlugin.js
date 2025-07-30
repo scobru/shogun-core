@@ -80,6 +80,36 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         return this.assertBitcoinConnector().isNostrExtensionAvailable();
     }
     /**
+     * Connect to Nostr wallet automatically
+     * This is a convenience method for easy wallet connection
+     */
+    async connectNostrWallet() {
+        try {
+            console.log("[nostrConnectorPlugin] Attempting to connect to Nostr wallet...");
+            if (!this.isNostrExtensionAvailable()) {
+                return {
+                    success: false,
+                    error: "Nostr extension not available. Please install a Nostr extension like nos2x, Alby, or Coracle.",
+                };
+            }
+            const result = await this.connectBitcoinWallet("nostr");
+            if (result.success) {
+                console.log(`[nostrConnectorPlugin] Successfully connected to Nostr wallet: ${result.address?.substring(0, 10)}...`);
+            }
+            else {
+                console.error("[nostrConnectorPlugin] Failed to connect to Nostr wallet:", result.error);
+            }
+            return result;
+        }
+        catch (error) {
+            console.error("[nostrConnectorPlugin] Error connecting to Nostr wallet:", error);
+            return {
+                success: false,
+                error: error.message || "Unknown error connecting to Nostr wallet",
+            };
+        }
+    }
+    /**
      * @inheritdoc
      */
     async connectBitcoinWallet(type = "nostr") {

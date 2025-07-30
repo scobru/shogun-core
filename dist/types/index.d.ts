@@ -87,6 +87,110 @@ export declare class ShogunCore implements IShogunCore {
      */
     getPlugin<T>(name: string): T | undefined;
     /**
+     * Get information about all registered plugins
+     * @returns Array of plugin information objects
+     */
+    getPluginsInfo(): Array<{
+        name: string;
+        version: string;
+        category?: PluginCategory;
+        description?: string;
+    }>;
+    /**
+     * Get the total number of registered plugins
+     * @returns Number of registered plugins
+     */
+    getPluginCount(): number;
+    /**
+     * Check if all plugins are properly initialized
+     * @returns Object with initialization status for each plugin
+     */
+    getPluginsInitializationStatus(): Record<string, {
+        initialized: boolean;
+        error?: string;
+    }>;
+    /**
+     * Validate plugin system integrity
+     * @returns Object with validation results
+     */
+    validatePluginSystem(): {
+        totalPlugins: number;
+        initializedPlugins: number;
+        failedPlugins: string[];
+        warnings: string[];
+    };
+    /**
+     * Attempt to reinitialize failed plugins
+     * @returns Object with reinitialization results
+     */
+    reinitializeFailedPlugins(): {
+        success: string[];
+        failed: Array<{
+            name: string;
+            error: string;
+        }>;
+    };
+    /**
+     * Check plugin compatibility with current ShogunCore version
+     * @returns Object with compatibility information
+     */
+    checkPluginCompatibility(): {
+        compatible: Array<{
+            name: string;
+            version: string;
+        }>;
+        incompatible: Array<{
+            name: string;
+            version: string;
+            reason: string;
+        }>;
+        unknown: Array<{
+            name: string;
+            version: string;
+        }>;
+    };
+    /**
+     * Get comprehensive debug information about the plugin system
+     * @returns Complete plugin system debug information
+     */
+    getPluginSystemDebugInfo(): {
+        shogunCoreVersion: string;
+        totalPlugins: number;
+        plugins: Array<{
+            name: string;
+            version: string;
+            category?: PluginCategory;
+            description?: string;
+            initialized: boolean;
+            error?: string;
+        }>;
+        initializationStatus: Record<string, {
+            initialized: boolean;
+            error?: string;
+        }>;
+        validation: {
+            totalPlugins: number;
+            initializedPlugins: number;
+            failedPlugins: string[];
+            warnings: string[];
+        };
+        compatibility: {
+            compatible: Array<{
+                name: string;
+                version: string;
+            }>;
+            incompatible: Array<{
+                name: string;
+                version: string;
+                reason: string;
+            }>;
+            unknown: Array<{
+                name: string;
+                version: string;
+            }>;
+        };
+    };
+    /**
      * Check if a plugin is registered
      * @param name Name of the plugin to check
      * @returns true if the plugin is registered, false otherwise

@@ -19,6 +19,16 @@ class WebauthnPlugin extends base_1.BasePlugin {
      */
     initialize(core) {
         super.initialize(core);
+        // Verifica se siamo in ambiente browser
+        if (typeof window === "undefined") {
+            console.warn("[webauthnPlugin] WebAuthn plugin disabled - not in browser environment");
+            return;
+        }
+        // Verifica se WebAuthn è supportato
+        if (!this.isSupported()) {
+            console.warn("[webauthnPlugin] WebAuthn not supported in this environment");
+            return;
+        }
         // Inizializziamo il modulo WebAuthn
         this.webauthn = new webauthn_1.Webauthn(core.gun);
         this.signer = new webauthnSigner_1.WebAuthnSigner(this.webauthn);
@@ -59,7 +69,15 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     isSupported() {
-        return this.assertWebauthn().isSupported();
+        // Verifica se siamo in ambiente browser
+        if (typeof window === "undefined") {
+            return false;
+        }
+        // Se il plugin non è stato inizializzato, verifica direttamente il supporto
+        if (!this.webauthn) {
+            return typeof window.PublicKeyCredential !== "undefined";
+        }
+        return this.webauthn.isSupported();
     }
     /**
      * @inheritdoc

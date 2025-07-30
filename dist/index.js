@@ -124,14 +124,23 @@ class ShogunCore {
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
             config.plugins.autoRegister.length > 0) {
+            console.log(`[ShogunCore] Auto-registering ${config.plugins.autoRegister.length} plugins...`);
             for (const plugin of config.plugins.autoRegister) {
                 try {
+                    if (!plugin) {
+                        console.warn("[ShogunCore] Skipping null/undefined plugin in auto-registration");
+                        continue;
+                    }
+                    console.log(`[ShogunCore] Auto-registering plugin: ${plugin.name || "unnamed"}`);
                     this.register(plugin);
+                    console.log(`[ShogunCore] Auto-registered plugin: ${plugin.name || "unnamed"}`);
                 }
                 catch (error) {
-                    console.error(`Failed to auto-register plugin ${plugin.name}:`, error);
+                    console.error(`[ShogunCore] Failed to auto-register plugin ${plugin?.name || "unknown"}:`, error);
+                    errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "AUTO_REGISTRATION_FAILED", `Failed to auto-register plugin ${plugin?.name || "unknown"}: ${error instanceof Error ? error.message : String(error)}`, error);
                 }
             }
+            console.log(`[ShogunCore] Auto-registration completed. Total plugins: ${this.plugins.size}`);
         }
         if (typeof window !== "undefined") {
             window.ShogunCore = this;
@@ -200,30 +209,47 @@ class ShogunCore {
      */
     registerBuiltinPlugins(config) {
         try {
+            console.log("[ShogunCore] Starting built-in plugins registration...");
+            // Disabilita WebAuthn in ambiente server
+            const isServerEnvironment = typeof window === "undefined";
+            if (isServerEnvironment && config.webauthn?.enabled) {
+                console.warn("[ShogunCore] WebAuthn disabled - not supported in server environment");
+                config.webauthn.enabled = false;
+            }
             if (config.webauthn?.enabled) {
+                console.log("[ShogunCore] Registering WebAuthn plugin...");
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(webauthnPlugin);
+                console.log("[ShogunCore] WebAuthn plugin registered successfully");
             }
             if (config.web3?.enabled) {
+                console.log("[ShogunCore] Registering Web3 plugin...");
                 const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(web3ConnectorPlugin);
+                console.log("[ShogunCore] Web3 plugin registered successfully");
             }
             if (config.nostr?.enabled) {
+                console.log("[ShogunCore] Registering Nostr plugin...");
                 const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
+                console.log("[ShogunCore] Nostr plugin registered successfully");
             }
             if (config.oauth?.enabled) {
+                console.log("[ShogunCore] Registering OAuth plugin...");
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 oauthPlugin._category = shogun_1.PluginCategory.Authentication;
                 oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
+                console.log("[ShogunCore] OAuth plugin registered successfully");
             }
+            console.log(`[ShogunCore] Built-in plugins registration completed. Total plugins: ${this.plugins.size}`);
         }
         catch (error) {
-            console.error("Error registering builtin plugins:", error);
+            console.error("[ShogunCore] Error registering builtin plugins:", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "BUILTIN_PLUGIN_REGISTRATION_FAILED", `Failed to register built-in plugins: ${error instanceof Error ? error.message : String(error)}`, error);
         }
     }
     // 🔌 PLUGIN MANAGER 🔌
@@ -233,33 +259,86 @@ class ShogunCore {
      * @throws Error if a plugin with the same name is already registered
      */
     register(plugin) {
-        if (this.plugins.has(plugin.name)) {
-            throw new Error(`Plugin with name "${plugin.name}" already registered`);
-        }
-        if (plugin.name === shogun_1.CorePlugins.OAuth) {
-            if (!this.appToken) {
-                throw new Error("App token is required for OAuth plugin");
+        try {
+            // Validazione del plugin
+            if (!plugin) {
+                throw new Error("Plugin cannot be null or undefined");
             }
-            plugin.initialize(this, this.appToken);
+            if (!plugin.name || typeof plugin.name !== "string") {
+                throw new Error("Plugin must have a valid name property");
+            }
+            if (!plugin.initialize || typeof plugin.initialize !== "function") {
+                throw new Error(`Plugin ${plugin.name} must implement the initialize method`);
+            }
+            // Verifica se il plugin è già registrato
+            if (this.plugins.has(plugin.name)) {
+                throw new Error(`Plugin with name "${plugin.name}" already registered`);
+            }
+            console.log(`[ShogunCore] Registering plugin: ${plugin.name} (version: ${plugin.version || "unknown"})`);
+            // Inizializzazione del plugin con gestione speciale per OAuth
+            if (plugin.name === shogun_1.CorePlugins.OAuth) {
+                if (!this.appToken) {
+                    throw new Error("App token is required for OAuth plugin");
+                }
+                plugin.initialize(this, this.appToken);
+            }
+            else {
+                plugin.initialize(this);
+            }
+            // Registrazione del plugin
+            this.plugins.set(plugin.name, plugin);
+            console.log(`[ShogunCore] Plugin ${plugin.name} registered successfully`);
+            // Emetti evento di registrazione plugin
+            this.eventEmitter.emit("plugin:registered", {
+                name: plugin.name,
+                version: plugin.version,
+                category: plugin._category,
+            });
         }
-        else {
-            plugin.initialize(this);
+        catch (error) {
+            console.error(`[ShogunCore] Failed to register plugin ${plugin?.name || "unknown"}:`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_REGISTRATION_FAILED", `Failed to register plugin ${plugin?.name || "unknown"}: ${error instanceof Error ? error.message : String(error)}`, error);
+            throw error; // Rilancia l'errore per permettere al chiamante di gestirlo
         }
-        this.plugins.set(plugin.name, plugin);
     }
     /**
      * Unregister a plugin from the SDK
      * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName) {
-        const plugin = this.plugins.get(pluginName);
-        if (!plugin) {
-            return;
+        try {
+            if (!pluginName || typeof pluginName !== "string") {
+                throw new Error("Plugin name must be a valid string");
+            }
+            const plugin = this.plugins.get(pluginName);
+            if (!plugin) {
+                console.warn(`[ShogunCore] Plugin "${pluginName}" not found for unregistration`);
+                return;
+            }
+            console.log(`[ShogunCore] Unregistering plugin: ${pluginName}`);
+            // Distruggi il plugin se ha un metodo destroy
+            if (plugin.destroy && typeof plugin.destroy === "function") {
+                try {
+                    plugin.destroy();
+                    console.log(`[ShogunCore] Plugin ${pluginName} destroyed successfully`);
+                }
+                catch (destroyError) {
+                    console.error(`[ShogunCore] Error destroying plugin ${pluginName}:`, destroyError);
+                    errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_DESTROY_FAILED", `Failed to destroy plugin ${pluginName}: ${destroyError instanceof Error ? destroyError.message : String(destroyError)}`, destroyError);
+                }
+            }
+            // Rimuovi il plugin dalla mappa
+            this.plugins.delete(pluginName);
+            console.log(`[ShogunCore] Plugin ${pluginName} unregistered successfully`);
+            // Emetti evento di deregistrazione plugin
+            this.eventEmitter.emit("plugin:unregistered", {
+                name: pluginName,
+            });
         }
-        if (plugin.destroy) {
-            plugin.destroy();
+        catch (error) {
+            console.error(`[ShogunCore] Failed to unregister plugin ${pluginName}:`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_UNREGISTRATION_FAILED", `Failed to unregister plugin ${pluginName}: ${error instanceof Error ? error.message : String(error)}`, error);
         }
-        this.plugins.delete(pluginName);
     }
     /**
      * Retrieve a registered plugin by name
@@ -268,7 +347,199 @@ class ShogunCore {
      * @template T Type of the plugin or its public interface
      */
     getPlugin(name) {
-        return this.plugins.get(name);
+        if (!name || typeof name !== "string") {
+            console.warn("[ShogunCore] Invalid plugin name provided to getPlugin");
+            return undefined;
+        }
+        const plugin = this.plugins.get(name);
+        if (!plugin) {
+            console.warn(`[ShogunCore] Plugin "${name}" not found`);
+            return undefined;
+        }
+        return plugin;
+    }
+    /**
+     * Get information about all registered plugins
+     * @returns Array of plugin information objects
+     */
+    getPluginsInfo() {
+        const pluginsInfo = [];
+        this.plugins.forEach((plugin) => {
+            pluginsInfo.push({
+                name: plugin.name,
+                version: plugin.version || "unknown",
+                category: plugin._category,
+                description: plugin.description,
+            });
+        });
+        return pluginsInfo;
+    }
+    /**
+     * Get the total number of registered plugins
+     * @returns Number of registered plugins
+     */
+    getPluginCount() {
+        return this.plugins.size;
+    }
+    /**
+     * Check if all plugins are properly initialized
+     * @returns Object with initialization status for each plugin
+     */
+    getPluginsInitializationStatus() {
+        const status = {};
+        this.plugins.forEach((plugin, name) => {
+            try {
+                // Verifica se il plugin ha un metodo per controllare l'inizializzazione
+                if (typeof plugin.assertInitialized === "function") {
+                    plugin.assertInitialized();
+                    status[name] = { initialized: true };
+                }
+                else {
+                    // Fallback: verifica se il plugin ha un riferimento al core
+                    status[name] = {
+                        initialized: !!plugin.core,
+                        error: !plugin.core
+                            ? "No core reference found"
+                            : undefined,
+                    };
+                }
+            }
+            catch (error) {
+                status[name] = {
+                    initialized: false,
+                    error: error instanceof Error ? error.message : String(error),
+                };
+            }
+        });
+        return status;
+    }
+    /**
+     * Validate plugin system integrity
+     * @returns Object with validation results
+     */
+    validatePluginSystem() {
+        const status = this.getPluginsInitializationStatus();
+        const totalPlugins = Object.keys(status).length;
+        const initializedPlugins = Object.values(status).filter((s) => s.initialized).length;
+        const failedPlugins = Object.entries(status)
+            .filter(([_, s]) => !s.initialized)
+            .map(([name, _]) => name);
+        const warnings = [];
+        if (totalPlugins === 0) {
+            warnings.push("No plugins registered");
+        }
+        if (failedPlugins.length > 0) {
+            warnings.push(`Failed plugins: ${failedPlugins.join(", ")}`);
+        }
+        return {
+            totalPlugins,
+            initializedPlugins,
+            failedPlugins,
+            warnings,
+        };
+    }
+    /**
+     * Attempt to reinitialize failed plugins
+     * @returns Object with reinitialization results
+     */
+    reinitializeFailedPlugins() {
+        const status = this.getPluginsInitializationStatus();
+        const failedPlugins = Object.entries(status)
+            .filter(([_, s]) => !s.initialized)
+            .map(([name, _]) => name);
+        const success = [];
+        const failed = [];
+        failedPlugins.forEach((pluginName) => {
+            try {
+                const plugin = this.plugins.get(pluginName);
+                if (!plugin) {
+                    failed.push({ name: pluginName, error: "Plugin not found" });
+                    return;
+                }
+                console.log(`[ShogunCore] Attempting to reinitialize plugin: ${pluginName}`);
+                // Reinizializza il plugin
+                if (pluginName === shogun_1.CorePlugins.OAuth) {
+                    if (!this.appToken) {
+                        failed.push({
+                            name: pluginName,
+                            error: "App token required for OAuth plugin",
+                        });
+                        return;
+                    }
+                    plugin.initialize(this, this.appToken);
+                }
+                else {
+                    plugin.initialize(this);
+                }
+                success.push(pluginName);
+                console.log(`[ShogunCore] Successfully reinitialized plugin: ${pluginName}`);
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                failed.push({ name: pluginName, error: errorMessage });
+                console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
+            }
+        });
+        return { success, failed };
+    }
+    /**
+     * Check plugin compatibility with current ShogunCore version
+     * @returns Object with compatibility information
+     */
+    checkPluginCompatibility() {
+        const compatible = [];
+        const incompatible = [];
+        const unknown = [];
+        this.plugins.forEach((plugin) => {
+            const pluginInfo = {
+                name: plugin.name,
+                version: plugin.version || "unknown",
+            };
+            // Verifica se il plugin ha informazioni di compatibilità
+            if (typeof plugin.getCompatibilityInfo === "function") {
+                try {
+                    const compatibilityInfo = plugin.getCompatibilityInfo();
+                    if (compatibilityInfo && compatibilityInfo.compatible) {
+                        compatible.push(pluginInfo);
+                    }
+                    else {
+                        incompatible.push({
+                            ...pluginInfo,
+                            reason: compatibilityInfo?.reason || "Unknown compatibility issue",
+                        });
+                    }
+                }
+                catch (error) {
+                    unknown.push(pluginInfo);
+                }
+            }
+            else {
+                // Se non ha informazioni di compatibilità, considera sconosciuto
+                unknown.push(pluginInfo);
+            }
+        });
+        return { compatible, incompatible, unknown };
+    }
+    /**
+     * Get comprehensive debug information about the plugin system
+     * @returns Complete plugin system debug information
+     */
+    getPluginSystemDebugInfo() {
+        const pluginsInfo = this.getPluginsInfo();
+        const initializationStatus = this.getPluginsInitializationStatus();
+        const plugins = pluginsInfo.map((info) => ({
+            ...info,
+            initialized: initializationStatus[info.name]?.initialized || false,
+            error: initializationStatus[info.name]?.error,
+        }));
+        return {
+            shogunCoreVersion: ShogunCore.API_VERSION,
+            totalPlugins: this.getPluginCount(),
+            plugins,
+            initializationStatus,
+            validation: this.validatePluginSystem(),
+            compatibility: this.checkPluginCompatibility(),
+        };
     }
     /**
      * Check if a plugin is registered

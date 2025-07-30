@@ -31,15 +31,54 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
    * @param core Istanza di ShogunCore
    */
   initialize(core: ShogunCore, appToken?: string): void {
-    this.core = core;
-    this.appToken = appToken;
+    try {
+      if (!core) {
+        throw new Error(
+          "ShogunCore instance is required for plugin initialization",
+        );
+      }
+
+      console.log(`[${this.name}] Initializing plugin...`);
+
+      this.core = core;
+      this.appToken = appToken;
+
+      console.log(`[${this.name}] Plugin initialized successfully`);
+
+      // Emetti evento di inizializzazione
+      this.emit("initialized", {
+        name: this.name,
+        version: this.version,
+        category: this._category,
+      });
+    } catch (error) {
+      console.error(`[${this.name}] Failed to initialize plugin:`, error);
+      throw new Error(
+        `Failed to initialize plugin ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
    * Distrugge il plugin e libera le risorse
    */
   destroy(): void {
-    this.core = null;
+    try {
+      console.log(`[${this.name}] Destroying plugin...`);
+
+      // Emetti evento di distruzione
+      this.emit("destroyed", {
+        name: this.name,
+        version: this.version,
+      });
+
+      this.core = null;
+      this.appToken = undefined;
+
+      console.log(`[${this.name}] Plugin destroyed successfully`);
+    } catch (error) {
+      console.error(`[${this.name}] Error during plugin destruction:`, error);
+    }
   }
 
   /**

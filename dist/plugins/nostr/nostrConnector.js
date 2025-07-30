@@ -141,15 +141,17 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         if (!this.isNostrExtensionAvailable()) {
             return {
                 success: false,
-                error: "Nostr extension is not available. Please install a Nostr compatible extension.",
+                error: "Nostr extension is not available. Please install a Nostr compatible extension like nos2x, Alby, or Coracle.",
             };
         }
         try {
+            console.log("[nostrConnector] Attempting to connect to Nostr extension...");
             // Get public key from Nostr extension
             const pubKey = await window.nostr.getPublicKey();
             if (!pubKey) {
                 throw new Error("Could not get public key from Nostr extension");
             }
+            console.log(`[nostrConnector] Successfully connected to Nostr extension: ${pubKey.substring(0, 10)}...`);
             this.connectedAddress = pubKey;
             this.connectedType = "nostr";
             // Emit connected event
@@ -163,7 +165,17 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
             };
         }
         catch (error) {
-            throw new Error(`Nostr connection error: ${error.message}`);
+            console.error("[nostrConnector] Nostr connection error:", error);
+            // Provide more specific error messages
+            if (error.message && error.message.includes("User rejected")) {
+                throw new Error("Nostr connection was rejected by the user");
+            }
+            else if (error.message && error.message.includes("not available")) {
+                throw new Error("Nostr extension is not available or not properly installed");
+            }
+            else {
+                throw new Error(`Nostr connection error: ${error.message}`);
+            }
         }
     }
     /**

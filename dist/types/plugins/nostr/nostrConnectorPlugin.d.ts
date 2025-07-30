@@ -45,6 +45,11 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      */
     isNostrExtensionAvailable(): boolean;
     /**
+     * Connect to Nostr wallet automatically
+     * This is a convenience method for easy wallet connection
+     */
+    connectNostrWallet(): Promise<ConnectionResult>;
+    /**
      * @inheritdoc
      */
     connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;

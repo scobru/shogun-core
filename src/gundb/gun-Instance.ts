@@ -1082,139 +1082,23 @@ class GunInstance {
           });
         });
 
-        // Crea il mapping del nome utente con sincronizzazione avanzata
-        // Ristrutturato per usare async/await per un flusso più chiaro e correggere problemi di sintassi/tipo
+        // Crea il mapping del nome utente (semplificato)
         await new Promise<void>((resolve, reject) => {
-          // Rendi la callback della promise esterna async
           const usernamesNode = this.node.get("usernames");
           const mappingKey = "#" + username;
 
-          try {
-            // 1. Mappa il nome utente alla chiave pubblica dell'utente
-            new Promise<void>((putResolve, putReject) => {
-              usernamesNode.get(mappingKey).put(userPub, (ack: any) => {
-                if (ack.err) {
-                  console.error(
-                    `Impossibile creare il mapping del nome utente: ${ack.err}`,
-                  );
-                  putReject(ack.err);
-                } else {
-                  console.log(
-                    `Mapping del nome utente creato per: ${username}`,
-                  );
-                  putResolve();
-                }
-              });
-            });
-
-            // 2. Crea una voce hash per i dati di mapping
-            const mappingData = {
-              username: username,
-              userPub: userPub,
-              createdAt: Date.now(),
-            };
-
-            const hash = SEA.work(JSON.stringify(mappingData), null, null, {
-              name: "SHA-256",
-            });
-
-            new Promise<void>((putResolve, putReject) => {
-              this.node
-                .get("usernames")
-                .get("#" + hash)
-                .put(mappingData, (ack: any) => {
-                  // Tipizza esplicitamente ack come any
-                  if (ack.err) {
-                    console.error(
-                      `Impossibile salvare i dati di mapping hash: ${ack.err}`,
-                    );
-                    putReject(ack.err);
-                  } else {
-                    console.log(
-                      `Dati di mapping hash salvati per: ${username}`,
-                    );
-                    putResolve();
-                  }
-                });
-            });
-
-            // 3. Verifica avanzata con retry basato su promise
-            const verifyMapping = () => {
-              return new Promise<void>((verifyResolve, verifyReject) => {
-                // Molteplici strategie per verificare il mapping
-                const verificationAttempts = [
-                  // Ricerca diretta
-                  () =>
-                    new Promise<boolean>((res) => {
-                      usernamesNode.get(mappingKey).once((pub: any) => {
-                        res(pub === userPub);
-                      });
-                    }),
-
-                  // Scansione completa
-                  () =>
-                    new Promise<boolean>((res) => {
-                      let found = false;
-                      usernamesNode.map().once((pub: any, key: string) => {
-                        if (key === mappingKey && pub === userPub) {
-                          found = true;
-                          res(true);
-                        }
-                      });
-
-                      // Timeout per garantire una scansione approfondita
-                      setTimeout(() => res(found), 500);
-                    }),
-                ];
-
-                // Esegui le strategie di verifica in sequenza
-                const runVerifications = async () => {
-                  for (const strategy of verificationAttempts) {
-                    try {
-                      const result = await strategy();
-                      if (result) {
-                        console.log(
-                          `Mapping del nome utente verificato con successo per ${username}`,
-                        );
-                        verifyResolve();
-                        return;
-                      }
-                    } catch (error) {
-                      console.error(`Strategia di verifica fallita: ${error}`);
-                    }
-                  }
-
-                  // Se tutte le strategie falliscono
-                  console.error(
-                    `Impossibile verificare il mapping del nome utente per ${username}`,
-                  );
-                  verifyReject(
-                    new Error("Verifica del mapping del nome utente fallita"),
-                  );
-                };
-
-                runVerifications();
-              });
-            };
-
-            // Esegui la verifica con timeout
-            Promise.race([
-              // Attendi la promise di verifica
-              verifyMapping(),
-              new Promise<void>((_, rej) =>
-                setTimeout(() => rej(new Error("Timeout di verifica")), 5000),
-              ),
-            ]);
-
-            // Se tutti i passaggi precedenti hanno successo, risolvi la promise esterna
-            resolve();
-          } catch (error) {
-            // Se un qualsiasi passaggio fallisce, rifiuta la promise esterna
-            console.error(
-              `Errore durante il mapping o la verifica del nome utente: ${error}`,
-            );
-            reject(error);
-          }
+          // Mappa il nome utente alla chiave pubblica dell'utente
+          usernamesNode.get(mappingKey).put(userPub, (ack: any) => {
+            if (ack.err) {
+              console.error(
+                `Impossibile creare il mapping del nome utente: ${ack.err}`,
+              );
+              reject(ack.err);
+            } else {
+              console.log(`Mapping del nome utente creato per: ${username}`);
+              resolve();
+            }
+          });
         });
 
         // Aggiungi alla collezione di utenti (non bloccante)

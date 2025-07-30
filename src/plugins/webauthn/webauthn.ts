@@ -73,7 +73,11 @@ export class Webauthn extends EventEmitter {
     this.config = {
       ...DEFAULT_CONFIG,
       ...config,
-      rpId: config?.rpId ?? window.location.hostname.split(":")[0],
+      rpId:
+        config?.rpId ??
+        (typeof window !== "undefined"
+          ? window.location.hostname.split(":")[0]
+          : "localhost"),
     };
   }
 

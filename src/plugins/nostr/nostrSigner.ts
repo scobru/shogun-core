@@ -205,7 +205,7 @@ export class NostrSigner {
     credential: NostrSigningCredential,
   ): Promise<string> {
     // Create a deterministic signature for the data
-    const signatureBase = `${credential.signature}_${data}_${Date.now()}`;
+    const signatureBase = `${credential.signature}_${data}`;
     return this.generateDeterministicSignature(signatureBase);
   }
 
