@@ -646,6 +646,11 @@ class ShogunCore {
             }
             const result = await this.db.login(username, password, pair);
             if (result.success) {
+                // Include SEA pair in the response
+                const seaPair = this.user?._?.sea;
+                if (seaPair) {
+                    result.sea = seaPair;
+                }
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
                 });
@@ -681,6 +686,11 @@ class ShogunCore {
             // Use the new loginWithPair method from GunInstance
             const result = await this.db.login("", "", pair);
             if (result.success) {
+                // Include SEA pair in the response
+                const seaPair = this.user?._?.sea;
+                if (seaPair) {
+                    result.sea = seaPair;
+                }
                 this.currentAuthMethod = "pair";
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
@@ -727,6 +737,11 @@ class ShogunCore {
             });
             const result = await this.db.signUp(username, password, pair);
             if (result.success) {
+                // Include SEA pair in the response
+                const seaPair = this.user?._?.sea;
+                if (seaPair) {
+                    result.sea = seaPair;
+                }
                 this.eventEmitter.emit("debug", {
                     action: "signup_complete",
                     username,

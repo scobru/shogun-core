@@ -41,6 +41,12 @@ export interface AuthResult {
     username?: string;
     sessionToken?: string;
     authMethod?: AuthMethod;
+    sea?: {
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    };
     redirectUrl?: string;
     pendingAuth?: boolean;
     message?: string;
@@ -74,6 +80,12 @@ export interface SignUpResult {
     message?: string;
     wallet?: any;
     isNewUser?: boolean;
+    sea?: {
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    };
 }
 export interface IShogunCore extends PluginManager {
     gun: IGunInstance<any>;
