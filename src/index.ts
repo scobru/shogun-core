@@ -782,11 +782,18 @@ export class ShogunCore implements IShogunCore {
       case "password":
       default:
         return {
-          login: (username: string, password: string) => {
-            this.login(username, password);
+          login: async (
+            username: string,
+            password: string,
+          ): Promise<AuthResult> => {
+            return await this.login(username, password);
           },
-          signUp: (username: string, password: string, confirm?: string) => {
-            this.signUp(username, password, confirm);
+          signUp: async (
+            username: string,
+            password: string,
+            confirm?: string,
+          ): Promise<SignUpResult> => {
+            return await this.signUp(username, password, confirm);
           },
         };
     }

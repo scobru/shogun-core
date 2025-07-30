@@ -891,11 +891,22 @@ class GunInstance {
             console.log(`User authentication successful after creation: ${username} (${userPub})`);
             await this.runPostAuthOnAuthResult(authResult, username);
             this.savePair();
+            // Get the SEA pair from the user object
+            const seaPair = this.gun.user()?._?.sea;
             return {
                 success: true,
                 userPub,
                 username,
                 message: "User created successfully",
+                // Include SEA pair for consistency with SignUpResult interface
+                sea: seaPair
+                    ? {
+                        pub: seaPair.pub,
+                        priv: seaPair.priv,
+                        epub: seaPair.epub,
+                        epriv: seaPair.epriv,
+                    }
+                    : undefined,
             };
         }
         catch (error) {
@@ -1219,10 +1230,21 @@ class GunInstance {
                 console.error(`[gunInstance] Errore nel salvare le credenziali:`, saveError);
                 // Non bloccare il login se il salvataggio fallisce
             }
+            // Get the SEA pair from the user object
+            const seaPair = this.gun.user()?._?.sea;
             const result = {
                 success: true,
                 userPub,
                 username,
+                // Include SEA pair for consistency with AuthResult interface
+                sea: seaPair
+                    ? {
+                        pub: seaPair.pub,
+                        priv: seaPair.priv,
+                        epub: seaPair.epub,
+                        epriv: seaPair.epriv,
+                    }
+                    : undefined,
             };
             if (callback)
                 callback(result);

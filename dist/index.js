@@ -582,11 +582,11 @@ class ShogunCore {
             case "password":
             default:
                 return {
-                    login: (username, password) => {
-                        this.login(username, password);
+                    login: async (username, password) => {
+                        return await this.login(username, password);
                     },
-                    signUp: (username, password, confirm) => {
-                        this.signUp(username, password, confirm);
+                    signUp: async (username, password, confirm) => {
+                        return await this.signUp(username, password, confirm);
                     },
                 };
         }

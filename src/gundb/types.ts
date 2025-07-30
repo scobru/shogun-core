@@ -29,6 +29,12 @@ export type AuthResult = {
   userPub?: string;
   error?: string;
   ack?: any; // Use any for Gun.js compatibility
+  sea?: {
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
 };
 
 // Data operation types - using any for Gun.js compatibility
@@ -114,6 +120,12 @@ export interface SignupResult {
   username?: string;
   message?: string;
   error?: string;
+  sea?: {
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
 }
 
 // Post auth result

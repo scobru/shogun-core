@@ -17,6 +17,12 @@ export type AuthResult = {
     userPub?: string;
     error?: string;
     ack?: any;
+    sea?: {
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    };
 };
 export type GunData = any;
 export type GunNode = any;
@@ -85,6 +91,12 @@ export interface SignupResult {
     username?: string;
     message?: string;
     error?: string;
+    sea?: {
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    };
 }
 export interface PostAuthResult {
     success: boolean;

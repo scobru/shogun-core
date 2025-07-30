@@ -138,6 +138,8 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @param provider - OAuth provider to use
      * @returns {Promise<AuthResult>} Authentication result
      * @description Authenticates user using OAuth with external providers
+     * NOTE: This method only initiates the OAuth flow. The actual authentication
+     * happens in handleOAuthCallback when the provider redirects back.
      */
     async login(provider) {
         console.log(`OAuth login with ${provider}`);
@@ -190,6 +192,8 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @param provider - OAuth provider to use
      * @returns {Promise<AuthResult>} Registration result
      * @description Creates a new user account using OAuth with external providers
+     * NOTE: This method only initiates the OAuth flow. The actual registration
+     * happens in handleOAuthCallback when the provider redirects back.
      */
     async signUp(provider) {
         console.log(`OAuth signup with ${provider}`);
@@ -292,7 +296,9 @@ class OAuthPlugin extends base_1.BasePlugin {
                         userPub: authResult.userPub,
                         username: credentials.username,
                         email: result.userInfo.email,
-                        name: result.userInfo.name,
+                        name: result.userInfo.name ||
+                            result.userInfo.email ||
+                            `OAuth User (${provider})`,
                         picture: result.userInfo.picture,
                         oauth: {
                             provider,

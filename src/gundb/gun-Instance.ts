@@ -1013,11 +1013,23 @@ class GunInstance {
 
       this.savePair();
 
+      // Get the SEA pair from the user object
+      const seaPair = (this.gun.user() as any)?._?.sea;
+
       return {
         success: true,
         userPub,
         username,
         message: "User created successfully",
+        // Include SEA pair for consistency with SignUpResult interface
+        sea: seaPair
+          ? {
+              pub: seaPair.pub,
+              priv: seaPair.priv,
+              epub: seaPair.epub,
+              epriv: seaPair.epriv,
+            }
+          : undefined,
       };
     } catch (error) {
       console.error(`Exception during signup for ${username}: ${error}`);
@@ -1422,10 +1434,22 @@ class GunInstance {
         // Non bloccare il login se il salvataggio fallisce
       }
 
+      // Get the SEA pair from the user object
+      const seaPair = (this.gun.user() as any)?._?.sea;
+
       const result = {
         success: true,
         userPub,
         username,
+        // Include SEA pair for consistency with AuthResult interface
+        sea: seaPair
+          ? {
+              pub: seaPair.pub,
+              priv: seaPair.priv,
+              epub: seaPair.epub,
+              epriv: seaPair.epriv,
+            }
+          : undefined,
       };
 
       if (callback) callback(result);

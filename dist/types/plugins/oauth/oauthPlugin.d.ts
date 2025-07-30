@@ -60,6 +60,8 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      * @param provider - OAuth provider to use
      * @returns {Promise<AuthResult>} Authentication result
      * @description Authenticates user using OAuth with external providers
+     * NOTE: This method only initiates the OAuth flow. The actual authentication
+     * happens in handleOAuthCallback when the provider redirects back.
      */
     login(provider: OAuthProvider): Promise<AuthResult>;
     /**
@@ -67,6 +69,8 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      * @param provider - OAuth provider to use
      * @returns {Promise<AuthResult>} Registration result
      * @description Creates a new user account using OAuth with external providers
+     * NOTE: This method only initiates the OAuth flow. The actual registration
+     * happens in handleOAuthCallback when the provider redirects back.
      */
     signUp(provider: OAuthProvider): Promise<AuthResult>;
     /**
