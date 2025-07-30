@@ -278,7 +278,7 @@ class NostrConnector extends EventEmitter {
   }
 
   /**
-   * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dalla signature
+   * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dall'address
    */
   async generateCredentials(
     address: string,
@@ -286,8 +286,9 @@ class NostrConnector extends EventEmitter {
     message: string,
   ) {
     const username = generateUsernameFromIdentity("nostr", { id: address });
-    const salt = `${username}_${signature}_${message}`;
-    const key = await derive(signature, salt, { includeP256: true });
+    // Usa solo l'address per rendere le credenziali deterministiche
+    const salt = `${username}_${address}_${message}`;
+    const key = await derive(address, salt, { includeP256: true });
     return { username, key, message, signature };
   }
 
@@ -520,9 +521,9 @@ export async function deriveNostrKeys(
   signature: string,
   message: string,
 ) {
-  // Puoi customizzare il salt come preferisci, qui usiamo address+signature+message
-  const salt = `${address}_${signature}_${message}`;
-  return await derive(signature, salt, {
+  // Usa solo l'address per rendere le credenziali deterministiche
+  const salt = `${address}_${message}`;
+  return await derive(address, salt, {
     includeP256: true,
   });
 }

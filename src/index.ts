@@ -125,14 +125,14 @@ export class ShogunCore implements IShogunCore {
     }
 
     try {
-      this._user = this._gun.user();
+      this._user = this._gun.user().recall({ sessionStorage: true });
     } catch (error) {
       console.error("Error initializing Gun user:", error);
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
     this._gun.on("auth", (user) => {
-      this._user = this._gun.user();
+      this._user = this._gun.user().recall({ sessionStorage: true });
       this.eventEmitter.emit("auth:login", {
         pub: user.pub,
         alias: user.alias,

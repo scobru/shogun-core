@@ -215,12 +215,13 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
         }
     }
     /**
-     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dalla signature
+     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dall'address
      */
     async generateCredentials(address, signature, message) {
         const username = (0, validation_1.generateUsernameFromIdentity)("nostr", { id: address });
-        const salt = `${username}_${signature}_${message}`;
-        const key = await (0, derive_1.default)(signature, salt, { includeP256: true });
+        // Usa solo l'address per rendere le credenziali deterministiche
+        const salt = `${username}_${address}_${message}`;
+        const key = await (0, derive_1.default)(address, salt, { includeP256: true });
         return { username, key, message, signature };
     }
     /**
@@ -403,9 +404,9 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
 exports.NostrConnector = NostrConnector;
 // Funzione helper per derivare chiavi Nostr/Bitcoin (come per Web3/WebAuthn)
 async function deriveNostrKeys(address, signature, message) {
-    // Puoi customizzare il salt come preferisci, qui usiamo address+signature+message
-    const salt = `${address}_${signature}_${message}`;
-    return await (0, derive_1.default)(signature, salt, {
+    // Usa solo l'address per rendere le credenziali deterministiche
+    const salt = `${address}_${message}`;
+    return await (0, derive_1.default)(address, salt, {
         includeP256: true,
     });
 }

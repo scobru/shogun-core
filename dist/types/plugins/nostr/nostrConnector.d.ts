@@ -52,7 +52,7 @@ declare class NostrConnector extends EventEmitter {
      */
     setKeyPair(keyPair: NostrConnectorKeyPair): void;
     /**
-     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dalla signature
+     * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dall'address
      */
     generateCredentials(address: string, signature: string, message: string): Promise<{
         username: string;
