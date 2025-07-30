@@ -862,6 +862,12 @@ export class ShogunCore implements IShogunCore {
       const result = await this.db.login(username, password, pair);
 
       if (result.success) {
+        // Include SEA pair in the response
+        const seaPair = (this.user?._ as any)?.sea;
+        if (seaPair) {
+          (result as any).sea = seaPair;
+        }
+
         this.eventEmitter.emit("auth:login", {
           userPub: result.userPub ?? "",
         });
@@ -905,6 +911,12 @@ export class ShogunCore implements IShogunCore {
       const result = await this.db.login("", "", pair);
 
       if (result.success) {
+        // Include SEA pair in the response
+        const seaPair = (this.user?._ as any)?.sea;
+        if (seaPair) {
+          (result as any).sea = seaPair;
+        }
+
         this.currentAuthMethod = "pair";
         this.eventEmitter.emit("auth:login", {
           userPub: result.userPub ?? "",
@@ -967,6 +979,12 @@ export class ShogunCore implements IShogunCore {
       const result = await this.db.signUp(username, password, pair);
 
       if (result.success) {
+        // Include SEA pair in the response
+        const seaPair = (this.user?._ as any)?.sea;
+        if (seaPair) {
+          (result as any).sea = seaPair;
+        }
+
         this.eventEmitter.emit("debug", {
           action: "signup_complete",
           username,

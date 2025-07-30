@@ -52,6 +52,13 @@ export interface AuthResult {
   username?: string;
   sessionToken?: string;
   authMethod?: AuthMethod;
+  // Include SEA pair for session persistence
+  sea?: {
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
   // Properties for OAuth flow
   redirectUrl?: string;
   pendingAuth?: boolean;
@@ -88,6 +95,13 @@ export interface SignUpResult {
   message?: string;
   wallet?: any;
   isNewUser?: boolean;
+  // Include SEA pair for session persistence
+  sea?: {
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
 }
 
 export interface IShogunCore extends PluginManager {

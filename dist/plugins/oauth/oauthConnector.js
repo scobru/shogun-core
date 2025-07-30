@@ -600,14 +600,17 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             timestamp: Date.now(),
         };
         this.userCache.set(cacheKey, cacheEntry);
-        // Salva solo dati minimi in localStorage
+        // Salva solo dati minimi in localStorage (solo se disponibile)
         try {
-            const minimalCacheEntry = {
-                userId: userInfo.id,
-                provider,
-                timestamp: Date.now(),
-            };
-            localStorage.setItem(`shogun_oauth_user_${cacheKey}`, JSON.stringify(minimalCacheEntry));
+            if (typeof window !== "undefined" &&
+                typeof localStorage !== "undefined") {
+                const minimalCacheEntry = {
+                    userId: userInfo.id,
+                    provider,
+                    timestamp: Date.now(),
+                };
+                localStorage.setItem(`shogun_oauth_user_${cacheKey}`, JSON.stringify(minimalCacheEntry));
+            }
         }
         catch (error) {
             console.warn("Failed to persist user info in localStorage:", error);
@@ -627,16 +630,19 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
                 return cached.data || null;
             }
         }
-        // Then check localStorage
+        // Then check localStorage (solo se disponibile)
         try {
-            const localCached = localStorage.getItem(`shogun_oauth_user_${cacheKey}`);
-            if (localCached) {
-                const parsedCache = JSON.parse(localCached);
-                if (this.config.cacheDuration &&
-                    Date.now() - parsedCache.timestamp <= this.config.cacheDuration) {
-                    // Update memory cache
-                    this.userCache.set(cacheKey, parsedCache);
-                    return parsedCache.userInfo;
+            if (typeof window !== "undefined" &&
+                typeof localStorage !== "undefined") {
+                const localCached = localStorage.getItem(`shogun_oauth_user_${cacheKey}`);
+                if (localCached) {
+                    const parsedCache = JSON.parse(localCached);
+                    if (this.config.cacheDuration &&
+                        Date.now() - parsedCache.timestamp <= this.config.cacheDuration) {
+                        // Update memory cache
+                        this.userCache.set(cacheKey, parsedCache);
+                        return parsedCache.userInfo;
+                    }
                 }
             }
         }
@@ -653,7 +659,10 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             const cacheKey = `${provider}_${userId}`;
             this.userCache.delete(cacheKey);
             try {
-                localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
+                if (typeof window !== "undefined" &&
+                    typeof localStorage !== "undefined") {
+                    localStorage.removeItem(`shogun_oauth_user_${cacheKey}`);
+                }
             }
             catch (error) {
                 console.warn("Failed to remove user info from localStorage:", error);
@@ -663,14 +672,17 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             // Clear all cache
             this.userCache.clear();
             try {
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith("shogun_oauth_user_")) {
-                        keysToRemove.push(key);
+                if (typeof window !== "undefined" &&
+                    typeof localStorage !== "undefined") {
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith("shogun_oauth_user_")) {
+                            keysToRemove.push(key);
+                        }
                     }
+                    keysToRemove.forEach((key) => localStorage.removeItem(key));
                 }
-                keysToRemove.forEach((key) => localStorage.removeItem(key));
             }
             catch (error) {
                 console.warn("Failed to clear user info from localStorage:", error);
