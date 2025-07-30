@@ -424,6 +424,26 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
         // Pulisci i dati OAuth scaduti dopo un login riuscito
         this.cleanupExpiredOAuthData();
+
+        // Return auth result with OAuth user data included
+        return {
+          ...authResult,
+          user: {
+            userPub: authResult.userPub,
+            username: credentials.username,
+            email: result.userInfo.email,
+            name: result.userInfo.name,
+            picture: result.userInfo.picture,
+            oauth: {
+              provider,
+              id: result.userInfo.id,
+              email: result.userInfo.email,
+              name: result.userInfo.name,
+              picture: result.userInfo.picture,
+              lastLogin: Date.now(),
+            },
+          },
+        };
       }
 
       return authResult;

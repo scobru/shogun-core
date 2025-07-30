@@ -295,6 +295,12 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             if (providerConfig.scope && providerConfig.scope.length > 0) {
                 authParams.set("scope", providerConfig.scope.join(" "));
             }
+            // Add Google-specific parameters for better UX
+            if (provider === "google") {
+                authParams.set("prompt", "select_account"); // Force account selection
+                authParams.set("access_type", "offline"); // Get refresh token
+                authParams.set("include_granted_scopes", "true"); // Include previously granted scopes
+            }
             // PKCE è obbligatorio per sicurezza
             const isPKCEEnabled = providerConfig.usePKCE ?? this.config.usePKCE ?? true;
             if (!isPKCEEnabled && typeof window !== "undefined") {

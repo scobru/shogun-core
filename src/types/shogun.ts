@@ -58,6 +58,22 @@ export interface AuthResult {
   message?: string;
   provider?: string;
   isNewUser?: boolean;
+  // OAuth user data
+  user?: {
+    userPub?: string;
+    username?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+    oauth?: {
+      provider: string;
+      id: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+      lastLogin: number;
+    };
+  };
 }
 
 /**
