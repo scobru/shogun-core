@@ -596,6 +596,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 📖 [Documentation](https://shogun-docs.vercel.app)
+- 📖 [Documentation](https://shogun-core-docs.vercel.app/)
 - 💬 [Telegram Community](t.me/shogun_eco)
 - 🐛 [Issue Tracker](https://github.com/scobru/shogun-core/issues)
