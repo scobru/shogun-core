@@ -17,13 +17,25 @@ class OAuthPlugin extends base_1.BasePlugin {
     config = {};
     storage = null;
     /**
+     * Constructor for OAuthPlugin
+     * @param config - Initial configuration for OAuth
+     */
+    constructor(config) {
+        super();
+        if (config) {
+            this.config = config;
+        }
+    }
+    /**
      * @inheritdoc
      */
     initialize(core) {
         this.core = core;
         this.storage = new storage_1.ShogunStorage();
-        // Inizializziamo il connector OAuth
-        this.oauthConnector = new oauthConnector_1.OAuthConnector();
+        // Inizializziamo il connector OAuth con la configurazione già presente
+        this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
+        // Valida la configurazione di sicurezza dopo l'inizializzazione
+        this.validateOAuthSecurity();
     }
     /**
      * Valida la configurazione di sicurezza OAuth
@@ -61,10 +73,12 @@ class OAuthPlugin extends base_1.BasePlugin {
         this.config = { ...this.config, ...config };
         // Inizializza il connector se non è già stato fatto
         if (!this.oauthConnector) {
-            this.oauthConnector = new oauthConnector_1.OAuthConnector();
+            this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
         }
-        // Update connector configuration
-        this.oauthConnector.updateConfig(this.config);
+        else {
+            // Update connector configuration se già inizializzato
+            this.oauthConnector.updateConfig(this.config);
+        }
         // Validate security settings
         this.validateOAuthSecurity();
     }

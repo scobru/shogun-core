@@ -14,6 +14,11 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
     private config;
     private storage;
     /**
+     * Constructor for OAuthPlugin
+     * @param config - Initial configuration for OAuth
+     */
+    constructor(config?: Partial<OAuthConfig>);
+    /**
      * @inheritdoc
      */
     initialize(core: ShogunCore): void;

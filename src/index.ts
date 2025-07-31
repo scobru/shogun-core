@@ -303,9 +303,8 @@ export class ShogunCore implements IShogunCore {
       }
 
       if (config.oauth?.enabled) {
-        const oauthPlugin = new OAuthPlugin();
+        const oauthPlugin = new OAuthPlugin(config.oauth);
         oauthPlugin._category = PluginCategory.Authentication;
-        oauthPlugin.configure(config.oauth);
         this.register(oauthPlugin);
       }
     } catch (error) {

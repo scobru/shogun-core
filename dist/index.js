@@ -251,9 +251,8 @@ class ShogunCore {
                 this.register(nostrConnectorPlugin);
             }
             if (config.oauth?.enabled) {
-                const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
+                const oauthPlugin = new oauthPlugin_1.OAuthPlugin(config.oauth);
                 oauthPlugin._category = shogun_1.PluginCategory.Authentication;
-                oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
             }
         }

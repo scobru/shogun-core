@@ -29,14 +29,28 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   private storage: ShogunStorage | null = null;
 
   /**
+   * Constructor for OAuthPlugin
+   * @param config - Initial configuration for OAuth
+   */
+  constructor(config?: Partial<OAuthConfig>) {
+    super();
+    if (config) {
+      this.config = config;
+    }
+  }
+
+  /**
    * @inheritdoc
    */
   initialize(core: ShogunCore): void {
     this.core = core;
     this.storage = new ShogunStorage();
 
-    // Inizializziamo il connector OAuth
-    this.oauthConnector = new OAuthConnector();
+    // Inizializziamo il connector OAuth con la configurazione già presente
+    this.oauthConnector = new OAuthConnector(this.config);
+
+    // Valida la configurazione di sicurezza dopo l'inizializzazione
+    this.validateOAuthSecurity();
   }
 
   /**
@@ -84,11 +98,11 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
     // Inizializza il connector se non è già stato fatto
     if (!this.oauthConnector) {
-      this.oauthConnector = new OAuthConnector();
+      this.oauthConnector = new OAuthConnector(this.config);
+    } else {
+      // Update connector configuration se già inizializzato
+      this.oauthConnector.updateConfig(this.config);
     }
-
-    // Update connector configuration
-    this.oauthConnector.updateConfig(this.config);
 
     // Validate security settings
     this.validateOAuthSecurity();
