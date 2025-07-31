@@ -13,10 +13,10 @@ export interface ShogunPlugin {
     /** Categoria del plugin (opzionale) */
     _category?: PluginCategory;
     /**
-     * Inizializza il plugin con un'istanza di ShogunCore
+     * Metodo opzionale per inizializzare il plugin
      * @param core Istanza di ShogunCore
      */
-    initialize(core: ShogunCore, appToken?: string): void;
+    initialize(core: ShogunCore): void;
     /**
      * Metodo opzionale per distruggere il plugin e liberare risorse
      */

@@ -298,14 +298,12 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     requireResidentKey: this.config.requireResidentKey,
                 },
             };
-            console.log("Attempting to create credentials with options:", publicKeyCredentialCreationOptions);
             const credential = await navigator.credentials.create({
                 publicKey: publicKeyCredentialCreationOptions,
             });
             if (!credential) {
                 throw new Error("Credential creation failed");
             }
-            console.log("Credentials created successfully:", credential);
             const webAuthnCredential = credential;
             // Convert to WebAuthnCredentialData
             const credentialData = {

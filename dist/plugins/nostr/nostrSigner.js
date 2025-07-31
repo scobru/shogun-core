@@ -25,7 +25,6 @@ class NostrSigner {
      */
     async createSigningCredential(address) {
         try {
-            console.log(`Creating Nostr signing credential for address: ${address}`);
             // Validate address (same validation as normal approach)
             const validAddress = this.validateAddress(address);
             // Generate signature using the SAME approach as normal Nostr
@@ -42,7 +41,6 @@ class NostrSigner {
             };
             // Store credential for later use
             this.credentials.set(validAddress.toLowerCase(), signingCredential);
-            console.log("Created Nostr signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
@@ -108,7 +106,6 @@ class NostrSigner {
         else if (deterministicSignature.length > 128) {
             deterministicSignature = deterministicSignature.substring(0, 128);
         }
-        console.log(`Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`);
         return deterministicSignature;
     }
     /**
@@ -145,7 +142,6 @@ class NostrSigner {
                 const dataToSign = JSON.stringify(data);
                 // For now, create a deterministic signature based on the data and credential
                 const signature = await this.signData(dataToSign, credential);
-                console.log("Nostr authentication successful:", { data, signature });
                 return signature;
             }
             catch (error) {

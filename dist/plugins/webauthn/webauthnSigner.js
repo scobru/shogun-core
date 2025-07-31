@@ -82,7 +82,6 @@ class WebAuthnSigner {
                 throw new Error("Failed to get public key from credential");
             }
             const rawKey = new Uint8Array(publicKey);
-            console.log("Raw public key bytes:", rawKey);
             // Extract coordinates like webauthn.js (slice positions may need adjustment)
             const xCoord = rawKey.slice(27, 59);
             const yCoord = rawKey.slice(59, 91);
@@ -100,7 +99,6 @@ class WebAuthnSigner {
             };
             // Store credential for later use
             this.credentials.set(credential.id, signingCredential);
-            console.log("Created signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
@@ -140,7 +138,6 @@ class WebAuthnSigner {
                 if (!assertion) {
                     throw new Error("WebAuthn assertion failed");
                 }
-                console.log("WebAuthn assertion successful:", { options, assertion });
                 return assertion.response;
             }
             catch (error) {

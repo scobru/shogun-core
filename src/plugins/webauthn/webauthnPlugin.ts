@@ -2,9 +2,12 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Webauthn } from "./webauthn";
 import { WebAuthnSigner, WebAuthnSigningCredential } from "./webauthnSigner";
-import { WebauthnPluginInterface } from "./types";
-import { WebAuthnCredentials, CredentialResult } from "./types";
-import { WebAuthnUniformCredentials } from "./types";
+import {
+  WebAuthnCredentials,
+  CredentialResult,
+  WebauthnPluginInterface,
+  WebAuthnUniformCredentials,
+} from "./types";
 import { AuthResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
@@ -174,7 +177,6 @@ export class WebauthnPlugin
     username: string,
   ): Promise<WebAuthnSigningCredential> {
     try {
-      console.log(`Creating signing credential for user: ${username}`);
       return await this.assertSigner().createSigningCredential(username);
     } catch (error: any) {
       console.error(`Error creating signing credential: ${error.message}`);
@@ -189,7 +191,6 @@ export class WebauthnPlugin
     credentialId: string,
   ): (data: any) => Promise<AuthenticatorAssertionResponse> {
     try {
-      console.log(`Creating authenticator for credential: ${credentialId}`);
       return this.assertSigner().createAuthenticator(credentialId);
     } catch (error: any) {
       console.error(`Error creating authenticator: ${error.message}`);
@@ -206,7 +207,6 @@ export class WebauthnPlugin
     extra?: string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
-      console.log(`Creating derived key pair for credential: ${credentialId}`);
       return await this.assertSigner().createDerivedKeyPair(
         credentialId,
         username,
@@ -228,9 +228,6 @@ export class WebauthnPlugin
     extra?: string[],
   ): Promise<string> {
     try {
-      console.log(
-        `Signing data with derived keys for credential: ${credentialId}`,
-      );
       return await this.assertSigner().signWithDerivedKeys(
         data,
         credentialId,
@@ -278,7 +275,6 @@ export class WebauthnPlugin
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
       const core = this.assertInitialized();
-      console.log(`Creating Gun user from signing credential: ${credentialId}`);
       return await this.assertSigner().createGunUser(
         credentialId,
         username,
@@ -320,7 +316,6 @@ export class WebauthnPlugin
     expectedUserPub?: string;
   }> {
     try {
-      console.log(`Verifying consistency for credential: ${credentialId}`);
       return await this.assertSigner().verifyConsistency(
         credentialId,
         username,
@@ -344,8 +339,6 @@ export class WebauthnPlugin
     hashedCredentialId: string;
   }> {
     try {
-      console.log(`Setting up consistent oneshot signing for: ${username}`);
-
       // 1. Create signing credential (with consistent hashing)
       const credential = await this.createSigningCredential(username);
 
@@ -382,11 +375,8 @@ export class WebauthnPlugin
    * Requires browser support for WebAuthn and existing credentials.
    */
   async login(username: string): Promise<AuthResult> {
-    console.log("[webauthnPlugin] Login with WebAuthn");
-
     try {
       const core = this.assertInitialized();
-      console.log(`Attempting WebAuthn login for user: ${username}`);
 
       if (!username) {
         throw new Error("Username required for WebAuthn login");
@@ -408,9 +398,6 @@ export class WebauthnPlugin
       const loginResult = await core.login(username, "", credentials.key);
 
       if (loginResult.success) {
-        console.log(
-          `WebAuthn login completed successfully for user: ${username}`,
-        );
         return {
           ...loginResult,
         };
@@ -443,11 +430,8 @@ export class WebauthnPlugin
    * Requires browser support for WebAuthn.
    */
   async signUp(username: string): Promise<AuthResult> {
-    console.log("[webauthnPlugin] Sign up with WebAuthn");
-
     try {
       const core = this.assertInitialized();
-      console.log(`Attempting WebAuthn registration for user: ${username}`);
 
       if (!username) {
         throw new Error("Username required for WebAuthn registration");
@@ -472,9 +456,6 @@ export class WebauthnPlugin
       const signupResult = await core.signUp(username, "", "", credentials.key);
 
       if (signupResult.success) {
-        console.log(
-          `WebAuthn signup completed successfully for user: ${username}`,
-        );
         return {
           ...signupResult,
         };

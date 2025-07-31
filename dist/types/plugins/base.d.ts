@@ -17,13 +17,11 @@ export declare abstract class BasePlugin extends EventEmitter implements ShogunP
     _category?: PluginCategory;
     /** Riferimento all'istanza di ShogunCore */
     protected core: ShogunCore | null;
-    /** Token dell'app */
-    protected appToken?: string;
     /**
      * Inizializza il plugin con un'istanza di ShogunCore
      * @param core Istanza di ShogunCore
      */
-    initialize(core: ShogunCore, appToken?: string): void;
+    initialize(core: ShogunCore): void;
     /**
      * Distrugge il plugin e libera le risorse
      */

@@ -22,7 +22,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         // Inizializziamo il modulo Web3
         this.Web3 = new web3Connector_1.Web3Connector();
         this.signer = new web3Signer_1.Web3Signer(this.Web3);
-        console.log("[web3ConnectorPlugin] Web3 plugin initialized with signer support");
+        // Rimuovo i console.log superflui
     }
     /**
      * @inheritdoc
@@ -34,7 +34,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         this.Web3 = null;
         this.signer = null;
         super.destroy();
-        console.log("[web3ConnectorPlugin] Web3 plugin destroyed");
+        // Linea 50
     }
     /**
      * Assicura che il modulo Web3 sia inizializzato
@@ -74,7 +74,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async generateCredentials(address) {
-        console.log("[web3ConnectorPlugin] Calling credential generation");
+        // Rimuovo i console.log superflui
         return this.assertMetaMask().generateCredentials(address);
     }
     /**
@@ -120,7 +120,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     async createSigningCredential(address) {
         try {
-            console.log(`Creating Web3 signing credential for address: ${address}`);
             return await this.assertSigner().createSigningCredential(address);
         }
         catch (error) {
@@ -133,7 +132,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     createAuthenticator(address) {
         try {
-            console.log(`Creating Web3 authenticator for address: ${address}`);
             return this.assertSigner().createAuthenticator(address);
         }
         catch (error) {
@@ -146,7 +144,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     async createDerivedKeyPair(address, extra) {
         try {
-            console.log(`Creating derived key pair for address: ${address}`);
             return await this.assertSigner().createDerivedKeyPair(address, extra);
         }
         catch (error) {
@@ -159,7 +156,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     async signWithDerivedKeys(data, address, extra) {
         try {
-            console.log(`Signing data with derived keys for address: ${address}`);
             return await this.assertSigner().signWithDerivedKeys(data, address, extra);
         }
         catch (error) {
@@ -193,7 +189,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
     async createGunUserFromSigningCredential(address) {
         try {
             const core = this.assertInitialized();
-            console.log(`Creating Gun user from Web3 signing credential: ${address}`);
             return await this.assertSigner().createGunUser(address, core.gun);
         }
         catch (error) {
@@ -219,7 +214,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     async verifyConsistency(address, expectedUserPub) {
         try {
-            console.log(`Verifying Web3 consistency for address: ${address}`);
             return await this.assertSigner().verifyConsistency(address, expectedUserPub);
         }
         catch (error) {
@@ -233,7 +227,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      */
     async setupConsistentOneshotSigning(address) {
         try {
-            console.log(`Setting up consistent Web3 oneshot signing for: ${address}`);
             // 1. Create signing credential (with consistent password generation)
             const credential = await this.createSigningCredential(address);
             // 2. Create authenticator
@@ -261,34 +254,29 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     async login(address) {
-        console.log("[web3ConnectorPlugin] Login with Web3");
         try {
             const core = this.assertInitialized();
-            console.log(`Web3 login attempt for address: ${address}`);
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 login");
             }
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
-            console.log("[web3ConnectorPlugin] Generating credentials for Web3 login...");
             const k = await this.generateCredentials(address);
             const username = address.toLowerCase();
             if (!k?.pub || !k?.priv) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Web3 credentials not generated correctly or signature missing");
             }
-            console.log(`Credentials generated successfully. Username: ${username}`);
             // Set authentication method to web3 before login
             core.setAuthMethod("web3");
             // Use core's login method with direct GunDB authentication
-            console.log("[web3ConnectorPlugin] Logging in using core login method...");
             const loginResult = await core.login(username, "", k);
             if (!loginResult.success) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_LOGIN_FAILED", loginResult.error || "Failed to log in with Web3 credentials");
             }
             // Emit login event
             core.emit("auth:login", {
-                userPub: loginResult.userPub,
+                userPub: loginResult.userPub || "",
                 username: address,
                 method: "web3",
             });
@@ -313,27 +301,22 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
      * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
      */
     async signUp(address) {
-        console.log("[web3ConnectorPlugin] Sign up with Web3");
         try {
             const core = this.assertInitialized();
-            console.log(`Web3 registration attempt for address: ${address}`);
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 registration");
             }
             if (!this.isAvailable()) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
-            console.log("[web3ConnectorPlugin] Generating credentials for Web3 registration...");
             const k = await this.generateCredentials(address);
             const username = address.toLowerCase();
             if (!k?.pub || !k?.priv) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Web3 credentials not generated correctly or signature missing");
             }
-            console.log(`Credentials generated successfully. Username: ${username}`);
             // Set authentication method to web3 before signup
             core.setAuthMethod("web3");
             // Use core's signUp method with direct GunDB authentication
-            console.log("[web3ConnectorPlugin] Signing up using core signUp method...");
             const signupResult = await core.signUp(username, "", "", k);
             if (!signupResult.success) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_SIGNUP_FAILED", signupResult.error || "Failed to sign up with Web3 credentials");

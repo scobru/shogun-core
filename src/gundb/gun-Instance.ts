@@ -63,8 +63,6 @@ class GunInstance {
   private _rxjs?: GunRxJS;
 
   constructor(gun: IGunInstance<any>, appScope: string = "shogun") {
-    console.log("[gunInstance]  Initializing GunDB");
-
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
@@ -126,11 +124,11 @@ class GunInstance {
       this.node = this.gun.get(appScope);
 
       if (sessionResult.success) {
-        console.log(
-          `Session automatically restored for user: ${sessionResult.userPub}`,
-        );
+        // console.log(
+        //   `Session automatically restored for user: ${sessionResult.userPub}`,
+        // );
       } else {
-        console.log(`No previous session to restore: ${sessionResult.error}`);
+        // console.log(`No previous session to restore: ${sessionResult.error}`);
       }
     } catch (error) {
       console.error("Error during automatic session restoration:", error);
@@ -139,7 +137,7 @@ class GunInstance {
 
   private subscribeToAuthEvents() {
     this.gun.on("auth", (ack: any) => {
-      console.log("[gunInstance]  Auth event received:", ack);
+      // console.log("[gunInstance]  Auth event received:", ack);
 
       if (ack.err) {
         ErrorHandler.handle(
@@ -574,7 +572,7 @@ class GunInstance {
       const pairInfo = localStorage.getItem("gun/pair");
 
       if (!sessionInfo || !pairInfo) {
-        console.log("[gunInstance]  No saved session found");
+        // console.log("[gunInstance]  No saved session found");
         return { success: false, error: "No saved session" };
       }
 
@@ -592,7 +590,7 @@ class GunInstance {
 
       // Validate session data
       if (!session.pub || !pair.pub || !pair.priv) {
-        console.log("[gunInstance]  Invalid session data, clearing storage");
+        // console.log("[gunInstance]  Invalid session data, clearing storage");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Invalid session data" };
@@ -603,15 +601,15 @@ class GunInstance {
       const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
 
       if (sessionAge > maxSessionAge) {
-        console.log("[gunInstance]  Session expired, clearing storage");
+        // console.log("[gunInstance]  Session expired, clearing storage");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Session expired" };
       }
 
-      console.log(
-        `Attempting to restore session for user: ${session.alias || session.pub}`,
-      );
+      // console.log(
+      //   `Attempting to restore session for user: ${session.alias || session.pub}`,
+      // );
 
       // Try to restore the session with Gun
       const user = this.gun.user();
@@ -633,7 +631,7 @@ class GunInstance {
       let recallResult;
       try {
         recallResult = user.recall({ sessionStorage: true });
-        console.log("recallResult", recallResult);
+        // console.log("recallResult", recallResult);
       } catch (recallError) {
         console.error("[gunInstance]  Error during recall:", recallError);
         // Clear corrupted session data
@@ -644,14 +642,14 @@ class GunInstance {
 
       // Check if recall was successful
       if (recallResult && user.is?.pub === session.pub) {
-        console.log(
-          `Session restored successfully for: ${session.alias || session.pub}`,
-        );
+        // console.log(
+        //   `Session restored successfully for: ${session.alias || session.pub}`,
+        // );
         return { success: true, userPub: session.pub };
       } else {
-        console.log(
-          "[gunInstance]  Session restoration failed, clearing storage",
-        );
+        // console.log(
+        //   "[gunInstance]  Session restoration failed, clearing storage",
+        // );
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Session restoration failed" };
@@ -684,7 +682,7 @@ class GunInstance {
       }
 
       const currentUser = this.getCurrentUser();
-      console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
+      // console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
 
       // Direct logout using Gun with error handling
       try {
@@ -706,7 +704,7 @@ class GunInstance {
           // Also clear old format for backward compatibility
           localStorage.removeItem("pair");
 
-          console.log("[gunInstance]  Local session data cleared");
+          // console.log("[gunInstance]  Local session data cleared");
         } catch (storageError) {
           console.error(
             "[gunInstance]  Error clearing localStorage:",
@@ -724,7 +722,7 @@ class GunInstance {
           sessionStorage.removeItem("gun/pair");
           sessionStorage.removeItem("gun/session");
 
-          console.log("[gunInstance]  Session storage cleared");
+          // console.log("[gunInstance]  Session storage cleared");
         } catch (sessionError) {
           console.error(
             "[gunInstance]  Error clearing sessionStorage:",
@@ -733,7 +731,7 @@ class GunInstance {
         }
       }
 
-      console.log("[gunInstance]  Logout completed successfully");
+      // console.log("[gunInstance]  Logout completed successfully");
     } catch (error) {
       console.error("Error during logout:", error);
     }
@@ -745,7 +743,7 @@ class GunInstance {
    */
   clearAllStorageData(): void {
     try {
-      console.log("[gunInstance]  Clearing all Gun-related storage data...");
+      // console.log("[gunInstance]  Clearing all Gun-related storage data...");
 
       // Clear localStorage
       if (typeof localStorage !== "undefined") {
@@ -758,7 +756,7 @@ class GunInstance {
             }
           }
           keysToRemove.forEach((key) => localStorage.removeItem(key));
-          console.log(`Cleared ${keysToRemove.length} items from localStorage`);
+          // console.log(`Cleared ${keysToRemove.length} items from localStorage`);
         } catch (localError) {
           console.error(
             "[gunInstance]  Error clearing localStorage:",
@@ -778,9 +776,9 @@ class GunInstance {
             }
           }
           keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-          console.log(
-            `Cleared ${keysToRemove.length} items from sessionStorage`,
-          );
+          // console.log(
+          //   `Cleared ${keysToRemove.length} items from sessionStorage`,
+          // );
         } catch (sessionError) {
           console.error(
             "[gunInstance]  Error clearing sessionStorage:",
@@ -795,14 +793,14 @@ class GunInstance {
           const user = this.gun.user();
           if (user && typeof user.leave === "function") {
             user.leave();
-            console.log("[gunInstance]  User logged out");
+            // console.log("[gunInstance]  User logged out");
           }
         } catch (logoutError) {
           console.error("[gunInstance]  Error during logout:", logoutError);
         }
       }
 
-      console.log("[gunInstance]  All Gun-related storage data cleared");
+      // console.log("[gunInstance]  All Gun-related storage data cleared");
     } catch (error) {
       console.error("Error clearing storage data:", error);
     }
@@ -814,7 +812,7 @@ class GunInstance {
    */
   async testConnectivity(): Promise<ConnectivityTestResult> {
     try {
-      console.log("[gunInstance]  Testing Gun connectivity...");
+      // console.log("[gunInstance]  Testing Gun connectivity...");
 
       const result: ConnectivityTestResult = {
         peers: this.getPeerInfo(),
@@ -839,7 +837,7 @@ class GunInstance {
         });
         result.canWrite = !writeResult?.err;
         result.testWriteResult = writeResult;
-        console.log("[gunInstance]  Write test result:", writeResult);
+        // console.log("[gunInstance]  Write test result:", writeResult);
       } catch (writeError) {
         console.error("Write test failed:", writeError);
         result.testWriteResult = { error: String(writeError) };
@@ -857,13 +855,13 @@ class GunInstance {
         });
         result.canRead = !!readResult;
         result.testReadResult = readResult;
-        console.log("[gunInstance]  Read test result:", readResult);
+        // console.log("[gunInstance]  Read test result:", readResult);
       } catch (readError) {
         console.error("Read test failed:", readError);
         result.testReadResult = { error: String(readError) };
       }
 
-      console.log("[gunInstance]  Connectivity test completed:", result);
+      // console.log("[gunInstance]  Connectivity test completed:", result);
       return result;
     } catch (error) {
       console.error("Error testing connectivity:", error);
@@ -902,26 +900,26 @@ class GunInstance {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<SignupResult> {
-    console.log("[gunInstance]  Attempting user registration:", username);
+    // console.log("[gunInstance]  Attempting user registration:", username);
 
     try {
       // Validate credentials
       if (password.length < 8 && !pair) {
         const err = "Passwords must be more than 8 characters long!";
-        console.log(err);
+        // console.log(err);
         return { success: false, error: err };
       }
 
       if (username.length < 1) {
         const err = "Username must be more than 0 characters long!";
-        console.log(err);
+        // console.log(err);
         return { success: false, error: err };
       }
 
       // First, try to authenticate with Gun's native system to check if user exists
-      console.log(
-        `Checking if user ${username} exists in Gun's native system...`,
-      );
+      // console.log(
+      //   `Checking if user ${username} exists in Gun's native system...`,
+      // );
       const authTestResult = await new Promise<UserExistenceResult>(
         (resolve) => {
           if (pair) {
@@ -952,7 +950,7 @@ class GunInstance {
       }
 
       // User doesn't exist, attempt to create new user
-      console.log(`Creating new user: ${username}`);
+      // console.log(`Creating new user: ${username}`);
 
       const createResult = await new Promise<UserCreationResult>((resolve) => {
         if (pair) {
@@ -963,7 +961,7 @@ class GunInstance {
               console.error(`User creation error: ${ack.err}`);
               resolve({ success: false, error: ack.err });
             } else {
-              console.log(`User created successfully: ${username}`);
+              // console.log(`User created successfully: ${username}`);
               resolve({ success: true, pub: ack.pub });
             }
           });
@@ -1005,9 +1003,9 @@ class GunInstance {
       }
 
       const userPub = authResult.userPub;
-      console.log(
-        `User authentication successful after creation: ${username} (${userPub})`,
-      );
+      // console.log(
+      //   `User authentication successful after creation: ${username} (${userPub})`,
+      // );
 
       await this.runPostAuthOnAuthResult(authResult, username);
 
@@ -1041,9 +1039,9 @@ class GunInstance {
     authTestResult: any,
     username: string,
   ): Promise<any> {
-    console.log(
-      `User ${username} already exists and password is correct, syncing with tracking system...`,
-    );
+    // console.log(
+    //   `User ${username} already exists and password is correct, syncing with tracking system...`,
+    // );
 
     // L'utente esiste e può autenticarsi, sincronizza con il sistema di tracciamento
     const userPub = authTestResult.userPub;
@@ -1061,12 +1059,12 @@ class GunInstance {
     // Controlla se l'utente esiste nel nostro sistema di tracciamento
     const existingUser = await this.checkUsernameExists(username);
 
-    console.log("[gunInstance]  existingUser", existingUser);
+    // console.log("[gunInstance]  existingUser", existingUser);
 
     if (!existingUser) {
-      console.log(
-        `L'utente ${username} non è nel sistema di tracciamento, lo aggiungo...`,
-      );
+      // console.log(
+      //   `L'utente ${username} non è nel sistema di tracciamento, lo aggiungo...`,
+      // );
 
       // Aggiungi l'utente al nostro sistema di tracciamento
       const userMetadata = {
@@ -1088,7 +1086,7 @@ class GunInstance {
               );
               reject(ack.err);
             } else {
-              console.log(`Metadati utente salvati per: ${username}`);
+              // console.log(`Metadati utente salvati per: ${username}`);
               resolve();
             }
           });
@@ -1107,7 +1105,7 @@ class GunInstance {
               );
               reject(ack.err);
             } else {
-              console.log(`Mapping del nome utente creato per: ${username}`);
+              // console.log(`Mapping del nome utente creato per: ${username}`);
               resolve();
             }
           });
@@ -1120,7 +1118,7 @@ class GunInstance {
               `Avviso: Impossibile aggiungere l'utente alla collezione: ${ack.err}`,
             );
           } else {
-            console.log(`Utente aggiunto alla collezione: ${username}`);
+            // console.log(`Utente aggiunto alla collezione: ${username}`);
           }
         });
 
@@ -1285,20 +1283,20 @@ class GunInstance {
           ]);
 
           if (result) {
-            console.debug(
-              `[checkUsernameExists] Found user via ${result.source}:`,
-              result,
-            );
+            // console.debug(
+            //   `[checkUsernameExists] Found user via ${result.source}:`,
+            //   result,
+            // );
 
             // If we found a pub, try to fetch user data
             if (typeof result.pub === "string" && result.pub) {
               const pubKey = result.pub as string; // Cast esplicito per TypeScript
               const userData = await new Promise<any>((resolve) => {
                 this.node.get(pubKey).once((data: any) => {
-                  console.debug(
-                    `[checkUsernameExists] User data for pub ${pubKey}:`,
-                    data,
-                  );
+                  // console.debug(
+                  //   `[checkUsernameExists] User data for pub ${pubKey}:`,
+                  //   data,
+                  // );
                   resolve(data || null);
                 });
               });
@@ -1330,17 +1328,17 @@ class GunInstance {
           }
         } catch (error) {
           // Silenzioso per errori di timeout o rete
-          console.debug(
-            `Username lookup strategy failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
-          );
+          // console.debug(
+          //   `Username lookup strategy failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
+          // );
         }
       }
 
       return null;
     } catch (error) {
-      console.debug(
-        `Username existence check failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
-      );
+      // console.debug(
+      //   `Username existence check failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
+      // );
       return null;
     }
   }
@@ -1359,7 +1357,7 @@ class GunInstance {
     pair?: ISEAPair | null,
     callback?: (result: any) => void,
   ): Promise<any> {
-    console.log(`Attempting login for user: ${username}`);
+    // console.log(`Attempting login for user: ${username}`);
 
     try {
       // Attempt Gun.js authentication directly first
@@ -1371,7 +1369,7 @@ class GunInstance {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
             } else {
-              console.log(`Login successful for: ${username}`);
+              // console.log(`Login successful for: ${username}`);
               resolve({ success: true, ack });
             }
           });
@@ -1381,7 +1379,7 @@ class GunInstance {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
             } else {
-              console.log(`Login successful for: ${username}`);
+              // console.log(`Login successful for: ${username}`);
               resolve({ success: true, ack });
             }
           });
@@ -1409,9 +1407,9 @@ class GunInstance {
         return result;
       }
 
-      console.log(
-        `Gun.js authentication successful for: ${username} (${userPub})`,
-      );
+      // console.log(
+      //   `Gun.js authentication successful for: ${username} (${userPub})`,
+      // );
 
       // Pass the userPub to runPostAuthOnAuthResult
       this.runPostAuthOnAuthResult(
@@ -1419,13 +1417,13 @@ class GunInstance {
         username,
       );
 
-      console.log(`Login completed successfully for: ${username} (${userPub})`);
+      // console.log(`Login completed successfully for: ${username} (${userPub})`);
 
       // IMPORTANTE: Salva sempre le credenziali dopo un login riuscito
       // Questo è cruciale per Web3 login e session restoration
       try {
         this.savePair();
-        console.log(`[gunInstance] Credenziali salvate per: ${username}`);
+        // console.log(`[gunInstance] Credenziali salvate per: ${username}`);
       } catch (saveError) {
         console.error(
           `[gunInstance] Errore nel salvare le credenziali:`,
@@ -1471,7 +1469,7 @@ class GunInstance {
     newAlias: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`[gunInstance] Updating user alias to: ${newAlias}`);
+      // console.log(`[gunInstance] Updating user alias to: ${newAlias}`);
 
       const user = this.gun.user();
       if (!user || !user.is) {
@@ -1484,9 +1482,9 @@ class GunInstance {
       // Save the updated credentials
       this.savePair();
 
-      console.log(
-        `[gunInstance] User alias updated successfully to: ${newAlias}`,
-      );
+      // console.log(
+      //   `[gunInstance] User alias updated successfully to: ${newAlias}`,
+      // );
       return { success: true };
     } catch (error) {
       console.error(`[gunInstance] Error updating user alias:`, error);
@@ -1500,9 +1498,9 @@ class GunInstance {
       const pair = (user as any)?._?.sea;
       const userInfo = user?.is;
 
-      console.log("[gunInstance] Tentativo di salvataggio credenziali...");
-      console.log("[gunInstance] User info:", userInfo);
-      console.log("[gunInstance] Pair disponibile:", !!pair);
+      // console.log("[gunInstance] Tentativo di salvataggio credenziali...");
+      // console.log("[gunInstance] User info:", userInfo);
+      // console.log("[gunInstance] Pair disponibile:", !!pair);
 
       if (pair && userInfo) {
         // Save the crypto pair and session info
@@ -1512,14 +1510,14 @@ class GunInstance {
           timestamp: Date.now(),
         };
 
-        console.log("[gunInstance] Session info da salvare:", sessionInfo);
+        // console.log("[gunInstance] Session info da salvare:", sessionInfo);
 
         // Save to localStorage if available
         if (typeof localStorage !== "undefined") {
           try {
             localStorage.setItem("gun/pair", JSON.stringify(pair));
             localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
-            console.log("[gunInstance] Credenziali salvate in localStorage");
+            // console.log("[gunInstance] Credenziali salvate in localStorage");
           } catch (localError) {
             console.error(
               "[gunInstance] Errore nel salvare in localStorage:",
@@ -1527,7 +1525,7 @@ class GunInstance {
             );
           }
         } else {
-          console.warn("[gunInstance] localStorage non disponibile");
+          // console.warn("[gunInstance] localStorage non disponibile");
         }
 
         // Also save to sessionStorage for cross-app sharing
@@ -1535,7 +1533,7 @@ class GunInstance {
           try {
             sessionStorage.setItem("gun/pair", JSON.stringify(pair));
             sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
-            console.log("[gunInstance] Credenziali salvate in sessionStorage");
+            // console.log("[gunInstance] Credenziali salvate in sessionStorage");
           } catch (sessionError) {
             console.error(
               "[gunInstance] Errore nel salvare in sessionStorage:",
@@ -1543,18 +1541,18 @@ class GunInstance {
             );
           }
         } else {
-          console.warn("[gunInstance] sessionStorage non disponibile");
+          // console.warn("[gunInstance] sessionStorage non disponibile");
         }
 
-        console.log(
-          `Session saved for user: ${userInfo.alias || userInfo.pub}`,
-        );
+        // console.log(
+        //   `Session saved for user: ${userInfo.alias || userInfo.pub}`,
+        // );
       } else {
-        console.warn(
-          "[gunInstance] Impossibile salvare credenziali: pair o userInfo mancanti",
-        );
-        console.log("[gunInstance] Pair:", pair);
-        console.log("[gunInstance] UserInfo:", userInfo);
+        // console.warn(
+        //   "[gunInstance] Impossibile salvare credenziali: pair o userInfo mancanti",
+        // );
+        // console.log("[gunInstance] Pair:", pair);
+        // console.log("[gunInstance] UserInfo:", userInfo);
       }
     } catch (error) {
       console.error("Error saving auth pair and session:", error);
@@ -1577,7 +1575,7 @@ class GunInstance {
     securityQuestions: string[],
     securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
-    console.log("[gunInstance]  Setting password hint for:", username);
+    // console.log("[gunInstance]  Setting password hint for:", username);
 
     // Verify that the user is authenticated with password
     const loginResult = await this.login(username, password);
@@ -1653,7 +1651,7 @@ class GunInstance {
               );
               reject(new Error(ack.err));
             } else {
-              console.log(`Security data saved to public graph for ${userPub}`);
+              // console.log(`Security data saved to public graph for ${userPub}`);
               resolve();
             }
           });
@@ -1676,13 +1674,13 @@ class GunInstance {
     username: string,
     securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
-    console.log("[gunInstance]  Attempting password recovery for:", username);
+    // console.log("[gunInstance]  Attempting password recovery for:", username);
 
     try {
       // Find the user's data
       let userData = await this.checkUsernameExists(username);
 
-      console.log("[gunInstance]  userData", userData);
+      // console.log("[gunInstance]  userData", userData);
 
       // Patch: if userData is a string, treat as pub
       if (typeof userData === "string") {
@@ -1695,15 +1693,15 @@ class GunInstance {
 
       // Extract the public key from user data
       const userPub = userData.pub;
-      console.log(`Found user public key for password recovery: ${userPub}`);
+      // console.log(`Found user public key for password recovery: ${userPub}`);
 
       // Access the user's security data directly from their public key node
       const securityData = await new Promise<any>((resolve) => {
         (this.node.get(userPub) as any).get("security").once((data: any) => {
-          console.log(
-            `Retrieved security data for user ${username}:`,
-            data ? "found" : "not found",
-          );
+          // console.log(
+          //   `Retrieved security data for user ${username}:`,
+          //   data ? "found" : "not found",
+          // );
           resolve(data);
         });
       });
@@ -1910,10 +1908,10 @@ class GunInstance {
     secp256k1Ethereum?: { pub: string; priv: string; address: string };
   }> {
     try {
-      console.log(
-        "[gunInstance]  Deriving cryptographic keys with options:",
-        options,
-      );
+      // console.log(
+      //   "[gunInstance]  Deriving cryptographic keys with options:",
+      //   options,
+      // );
 
       // Call the derive function with the provided parameters
       const derivedKeys = await derive(password, extra, options);
@@ -1958,7 +1956,7 @@ class GunInstance {
         };
       }
 
-      console.log("[gunInstance]  Key derivation completed successfully");
+      // console.log("[gunInstance]  Key derivation completed successfully");
       return result;
     } catch (error) {
       console.error("Error during key derivation:", error);
@@ -2099,9 +2097,9 @@ class GunInstance {
           if (ack.err) {
             reject(new Error(`Failed to create frozen space: ${ack.err}`));
           } else {
-            console.log(
-              `[createFrozenSpace] Created frozen entry: ${fullPath}`,
-            );
+            // console.log(
+            //   `[createFrozenSpace] Created frozen entry: ${fullPath}`,
+            // );
             resolve({
               hash: hash,
               fullPath: fullPath,

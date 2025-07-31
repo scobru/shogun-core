@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunCore = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
-const eventEmitter_1 = require("./utils/eventEmitter");
+const events_1 = require("./types/events");
 const errorHandler_1 = require("./utils/errorHandler");
 const storage_1 = require("./storage/storage");
 const shogun_1 = require("./types/shogun");
@@ -57,7 +57,7 @@ class ShogunCore {
     eventEmitter;
     plugins = new Map();
     currentAuthMethod;
-    appToken;
+    wallets;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -68,7 +68,7 @@ class ShogunCore {
     constructor(config) {
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
-        this.eventEmitter = new eventEmitter_1.EventEmitter();
+        this.eventEmitter = new events_1.ShogunEventEmitter();
         errorHandler_1.ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
@@ -79,7 +79,6 @@ class ShogunCore {
         if (config.authToken) {
             (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
         }
-        this.appToken = config.appToken;
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
@@ -115,33 +114,54 @@ class ShogunCore {
         this._gun.on("auth", (user) => {
             this._user = this._gun.user().recall({ sessionStorage: true });
             this.eventEmitter.emit("auth:login", {
-                pub: user.pub,
-                alias: user.alias,
-                method: "recall",
+                userPub: user.pub,
+                method: "password",
             });
         });
         this.rx = new gundb_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         if (config.plugins?.autoRegister &&
             config.plugins.autoRegister.length > 0) {
-            console.log(`[ShogunCore] Auto-registering ${config.plugins.autoRegister.length} plugins...`);
             for (const plugin of config.plugins.autoRegister) {
                 try {
                     if (!plugin) {
                         console.warn("[ShogunCore] Skipping null/undefined plugin in auto-registration");
                         continue;
                     }
-                    console.log(`[ShogunCore] Auto-registering plugin: ${plugin.name || "unnamed"}`);
                     this.register(plugin);
-                    console.log(`[ShogunCore] Auto-registered plugin: ${plugin.name || "unnamed"}`);
                 }
                 catch (error) {
                     console.error(`[ShogunCore] Failed to auto-register plugin ${plugin?.name || "unknown"}:`, error);
                     errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "AUTO_REGISTRATION_FAILED", `Failed to auto-register plugin ${plugin?.name || "unknown"}: ${error instanceof Error ? error.message : String(error)}`, error);
                 }
             }
-            console.log(`[ShogunCore] Auto-registration completed. Total plugins: ${this.plugins.size}`);
         }
+        // Gestisce l'evento di login per derivare i wallet dall'utente autenticato
+        this.on("auth:login", async (data) => {
+            // Verifica che _user e le proprietà sea siano definite
+            const sea = this._user?.sea;
+            if (!sea || !sea.priv || !sea.pub) {
+                console.warn("[ShogunCore] SEA keys not found on user during auth:login");
+                this.wallets = undefined;
+                return;
+            }
+            this.wallets = await (0, gundb_1.derive)(sea.priv, sea.pub, {
+                includeSecp256k1Bitcoin: true,
+                includeSecp256k1Ethereum: true,
+            });
+        });
+        this.on("auth:signup", async (data) => {
+            const sea = this._user?.sea;
+            if (!sea || !sea.priv || !sea.pub) {
+                console.warn("[ShogunCore] SEA keys not found on user during auth:signup");
+                this.wallets = undefined;
+                return;
+            }
+            this.wallets = await (0, gundb_1.derive)(sea.priv, sea.pub, {
+                includeSecp256k1Bitcoin: true,
+                includeSecp256k1Ethereum: true,
+            });
+        });
         if (typeof window !== "undefined") {
             window.ShogunCore = this;
             window.ShogunDB = this.db;
@@ -209,7 +229,6 @@ class ShogunCore {
      */
     registerBuiltinPlugins(config) {
         try {
-            console.log("[ShogunCore] Starting built-in plugins registration...");
             // Disabilita WebAuthn in ambiente server
             const isServerEnvironment = typeof window === "undefined";
             if (isServerEnvironment && config.webauthn?.enabled) {
@@ -217,35 +236,26 @@ class ShogunCore {
                 config.webauthn.enabled = false;
             }
             if (config.webauthn?.enabled) {
-                console.log("[ShogunCore] Registering WebAuthn plugin...");
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(webauthnPlugin);
-                console.log("[ShogunCore] WebAuthn plugin registered successfully");
             }
             if (config.web3?.enabled) {
-                console.log("[ShogunCore] Registering Web3 plugin...");
                 const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(web3ConnectorPlugin);
-                console.log("[ShogunCore] Web3 plugin registered successfully");
             }
             if (config.nostr?.enabled) {
-                console.log("[ShogunCore] Registering Nostr plugin...");
                 const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
                 this.register(nostrConnectorPlugin);
-                console.log("[ShogunCore] Nostr plugin registered successfully");
             }
             if (config.oauth?.enabled) {
-                console.log("[ShogunCore] Registering OAuth plugin...");
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 oauthPlugin._category = shogun_1.PluginCategory.Authentication;
                 oauthPlugin.configure(config.oauth);
                 this.register(oauthPlugin);
-                console.log("[ShogunCore] OAuth plugin registered successfully");
             }
-            console.log(`[ShogunCore] Built-in plugins registration completed. Total plugins: ${this.plugins.size}`);
         }
         catch (error) {
             console.error("[ShogunCore] Error registering builtin plugins:", error);
@@ -274,20 +284,9 @@ class ShogunCore {
             if (this.plugins.has(plugin.name)) {
                 throw new Error(`Plugin with name "${plugin.name}" already registered`);
             }
-            console.log(`[ShogunCore] Registering plugin: ${plugin.name} (version: ${plugin.version || "unknown"})`);
-            // Inizializzazione del plugin con gestione speciale per OAuth
-            if (plugin.name === shogun_1.CorePlugins.OAuth) {
-                if (!this.appToken) {
-                    throw new Error("App token is required for OAuth plugin");
-                }
-                plugin.initialize(this, this.appToken);
-            }
-            else {
-                plugin.initialize(this);
-            }
+            plugin.initialize(this);
             // Registrazione del plugin
             this.plugins.set(plugin.name, plugin);
-            console.log(`[ShogunCore] Plugin ${plugin.name} registered successfully`);
             // Emetti evento di registrazione plugin
             this.eventEmitter.emit("plugin:registered", {
                 name: plugin.name,
@@ -315,12 +314,10 @@ class ShogunCore {
                 console.warn(`[ShogunCore] Plugin "${pluginName}" not found for unregistration`);
                 return;
             }
-            console.log(`[ShogunCore] Unregistering plugin: ${pluginName}`);
             // Distruggi il plugin se ha un metodo destroy
             if (plugin.destroy && typeof plugin.destroy === "function") {
                 try {
                     plugin.destroy();
-                    console.log(`[ShogunCore] Plugin ${pluginName} destroyed successfully`);
                 }
                 catch (destroyError) {
                     console.error(`[ShogunCore] Error destroying plugin ${pluginName}:`, destroyError);
@@ -329,7 +326,6 @@ class ShogunCore {
             }
             // Rimuovi il plugin dalla mappa
             this.plugins.delete(pluginName);
-            console.log(`[ShogunCore] Plugin ${pluginName} unregistered successfully`);
             // Emetti evento di deregistrazione plugin
             this.eventEmitter.emit("plugin:unregistered", {
                 name: pluginName,
@@ -456,23 +452,16 @@ class ShogunCore {
                     failed.push({ name: pluginName, error: "Plugin not found" });
                     return;
                 }
-                console.log(`[ShogunCore] Attempting to reinitialize plugin: ${pluginName}`);
                 // Reinizializza il plugin
                 if (pluginName === shogun_1.CorePlugins.OAuth) {
-                    if (!this.appToken) {
-                        failed.push({
-                            name: pluginName,
-                            error: "App token required for OAuth plugin",
-                        });
-                        return;
-                    }
-                    plugin.initialize(this, this.appToken);
+                    // Rimuovo la chiamata a initialize
+                    plugin.initialize(this);
                 }
                 else {
+                    // Rimuovo la chiamata a initialize
                     plugin.initialize(this);
                 }
                 success.push(pluginName);
-                console.log(`[ShogunCore] Successfully reinitialized plugin: ${pluginName}`);
             }
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
@@ -625,7 +614,7 @@ class ShogunCore {
                 return;
             }
             this.db.logout();
-            this.eventEmitter.emit("auth:logout", {});
+            this.eventEmitter.emit("auth:logout");
         }
         catch (error) {
             errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
@@ -653,6 +642,9 @@ class ShogunCore {
                 }
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
+                    method: this.currentAuthMethod === "pair"
+                        ? "password"
+                        : this.currentAuthMethod || "password",
                 });
             }
             else {
@@ -694,6 +686,7 @@ class ShogunCore {
                 this.currentAuthMethod = "pair";
                 this.eventEmitter.emit("auth:login", {
                     userPub: result.userPub ?? "",
+                    method: "password",
                 });
             }
             else {
@@ -751,6 +744,7 @@ class ShogunCore {
                 this.eventEmitter.emit("auth:signup", {
                     userPub: result.userPub ?? "",
                     username,
+                    method: "password",
                 });
             }
             else {
@@ -857,7 +851,6 @@ class ShogunCore {
      */
     async updateUserAlias(newAlias) {
         try {
-            console.log(`[ShogunCore] Updating user alias to: ${newAlias}`);
             if (!this.db) {
                 return { success: false, error: "Database not initialized" };
             }
@@ -873,7 +866,6 @@ class ShogunCore {
      */
     savePair() {
         try {
-            console.log(`[ShogunCore] Saving user credentials`);
             if (!this.db) {
                 console.warn("[ShogunCore] Database not initialized, cannot save credentials");
                 return;

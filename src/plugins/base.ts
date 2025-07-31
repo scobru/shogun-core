@@ -23,40 +23,12 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
   /** Riferimento all'istanza di ShogunCore */
   protected core: ShogunCore | null = null;
 
-  /** Token dell'app */
-  protected appToken?: string;
-
   /**
    * Inizializza il plugin con un'istanza di ShogunCore
    * @param core Istanza di ShogunCore
    */
-  initialize(core: ShogunCore, appToken?: string): void {
-    try {
-      if (!core) {
-        throw new Error(
-          "ShogunCore instance is required for plugin initialization",
-        );
-      }
-
-      console.log(`[${this.name}] Initializing plugin...`);
-
-      this.core = core;
-      this.appToken = appToken;
-
-      console.log(`[${this.name}] Plugin initialized successfully`);
-
-      // Emetti evento di inizializzazione
-      this.emit("initialized", {
-        name: this.name,
-        version: this.version,
-        category: this._category,
-      });
-    } catch (error) {
-      console.error(`[${this.name}] Failed to initialize plugin:`, error);
-      throw new Error(
-        `Failed to initialize plugin ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  initialize(core: ShogunCore): void {
+    this.core = core;
   }
 
   /**
@@ -64,8 +36,6 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
    */
   destroy(): void {
     try {
-      console.log(`[${this.name}] Destroying plugin...`);
-
       // Emetti evento di distruzione
       this.emit("destroyed", {
         name: this.name,
@@ -73,9 +43,6 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
       });
 
       this.core = null;
-      this.appToken = undefined;
-
-      console.log(`[${this.name}] Plugin destroyed successfully`);
     } catch (error) {
       console.error(`[${this.name}] Error during plugin destruction:`, error);
     }

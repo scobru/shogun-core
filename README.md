@@ -16,6 +16,8 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
+- 📡 **Event System**: Typed event system for monitoring authentication and data changes
+- 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
 
 ## Installation
 
@@ -44,12 +46,6 @@ const shogun = new ShogunCore({
   peers: relays,
   scope: "my-awesome-app",
   authToken: "YOUR_GUN_SUPER_PEER_SECRET", // Optional, for private peers
-
-  // Enable and configure logging
-  logging: {
-    enabled: true,
-    level: "info", // "none", "error", "warn", "info", "debug", "verbose"
-  },
 
   // Enable and configure Web3 (e.g., MetaMask) authentication
   web3: {
@@ -89,9 +85,57 @@ await shogun.initialize();
 console.log("Shogun Core initialized!");
 ```
 
-### Authentication Examples
+## Plugin Authentication APIs
 
-#### Traditional Login
+Shogun Core provides a unified plugin system for different authentication methods. Each plugin implements standardized `login()` and `signUp()` methods that return consistent `AuthResult` objects.
+
+### Core Types
+
+```typescript
+// Authentication result interface
+interface AuthResult {
+  success: boolean;
+  error?: string;
+  userPub?: string;           // User's public key
+  username?: string;          // Username or identifier
+  sessionToken?: string;      // Session token if applicable
+  authMethod?: AuthMethod;    // Authentication method used
+  sea?: {                     // GunDB SEA pair for session persistence
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
+  // OAuth-specific properties
+  redirectUrl?: string;       // OAuth redirect URL
+  pendingAuth?: boolean;      // Indicates pending OAuth flow
+  message?: string;          // Status message
+  provider?: string;         // OAuth provider name
+  isNewUser?: boolean;       // True if this was a registration
+  user?: {                   // OAuth user data
+    userPub?: string;
+    username?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+    oauth?: {
+      provider: string;
+      id: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+      lastLogin: number;
+    };
+  };
+}
+
+// Supported authentication methods
+type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
+```
+
+### 1. Traditional Authentication
+
+Direct username/password authentication using ShogunCore methods:
 
 ```typescript
 // Sign up a new user
@@ -107,42 +151,186 @@ if (loginResult.success) {
 }
 ```
 
-#### Web3 Authentication (MetaMask)
+### 2. Web3 Plugin API
+
+Ethereum wallet authentication via MetaMask or other Web3 providers:
 
 ```typescript
-// Get the Web3 plugin
-const web3Plugin = shogun.getPlugin("web3");
-if (web3Plugin) {
-  try {
-    const provider = await web3Plugin.getProvider();
-    const signer = provider.getSigner();
-    const address = await signer.getAddress();
-    await web3Plugin.login(address);
-    console.log("Logged in with address:", address);
-  } catch (error) {
-    console.error("Web3 login failed:", error);
+const web3Plugin = shogun.getPlugin<Web3ConnectorPlugin>("web3");
+
+if (web3Plugin && web3Plugin.isAvailable()) {
+  // Connect to MetaMask
+  const connectionResult = await web3Plugin.connectMetaMask();
+  
+  if (connectionResult.success) {
+    const address = connectionResult.address!;
+    
+    // Login with Web3 wallet
+    const loginResult = await web3Plugin.login(address);
+    if (loginResult.success) {
+      console.log("Web3 login successful");
+      console.log("User public key:", loginResult.userPub);
+    }
+    
+    // Register new user with Web3 wallet
+    const signUpResult = await web3Plugin.signUp(address);
+    if (signUpResult.success) {
+      console.log("Web3 registration successful");
+    }
   }
+}
+
+// Plugin Interface
+interface Web3ConnectorPluginInterface {
+  // Authentication methods
+  login(address: string): Promise<AuthResult>;
+  signUp(address: string): Promise<AuthResult>;
+  
+  // Connection methods
+  isAvailable(): boolean;
+  connectMetaMask(): Promise<ConnectionResult>;
+  getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
+  getSigner(): Promise<ethers.Signer>;
+  
+  // Credential management
+  generateCredentials(address: string): Promise<ISEAPair>;
+  generatePassword(signature: string): Promise<string>;
+  verifySignature(message: string, signature: string): Promise<string>;
 }
 ```
 
-#### WebAuthn Authentication
+### 3. WebAuthn Plugin API
+
+Biometric and hardware key authentication:
 
 ```typescript
-// Get the WebAuthn plugin
-const webauthnPlugin = shogun.getPlugin("webauthn");
-if (webauthnPlugin) {
-  try {
-    // Register a new credential
-    await webauthnPlugin.register("username");
+const webauthnPlugin = shogun.getPlugin<WebauthnPlugin>("webauthn");
 
-    // Authenticate with existing credential
-    const result = await webauthnPlugin.authenticate();
-    if (result.success) {
-      console.log("WebAuthn authentication successful");
-    }
-  } catch (error) {
-    console.error("WebAuthn authentication failed:", error);
+if (webauthnPlugin && webauthnPlugin.isSupported()) {
+  // Register new user with WebAuthn
+  const signUpResult = await webauthnPlugin.signUp("username");
+  if (signUpResult.success) {
+    console.log("WebAuthn registration successful");
   }
+
+  // Authenticate existing user
+  const loginResult = await webauthnPlugin.login("username");
+  if (loginResult.success) {
+    console.log("WebAuthn authentication successful");
+  }
+}
+
+// Plugin Interface
+interface WebauthnPluginInterface {
+  // Authentication methods
+  login(username: string): Promise<AuthResult>;
+  signUp(username: string): Promise<AuthResult>;
+  
+  // Capability checks
+  isSupported(): boolean;
+  
+  // WebAuthn-specific methods
+  register(username: string, displayName?: string): Promise<WebAuthnCredential>;
+  authenticate(username?: string): Promise<WebAuthnCredential>;
+  generateCredentials(username: string, pair?: ISEAPair | null, login?: boolean): Promise<WebAuthnUniformCredentials>;
+}
+```
+
+### 4. Nostr Plugin API
+
+Bitcoin wallet and Nostr protocol authentication:
+
+```typescript
+const nostrPlugin = shogun.getPlugin<NostrConnectorPlugin>("nostr");
+
+if (nostrPlugin && nostrPlugin.isAvailable()) {
+  // Connect to Nostr wallet (Bitcoin extension)
+  const connectionResult = await nostrPlugin.connectNostrWallet();
+  
+  if (connectionResult.success) {
+    const address = connectionResult.address!;
+    
+    // Login with Nostr/Bitcoin wallet
+    const loginResult = await nostrPlugin.login(address);
+    if (loginResult.success) {
+      console.log("Nostr login successful");
+    }
+    
+    // Register with Nostr/Bitcoin wallet
+    const signUpResult = await nostrPlugin.signUp(address);
+    if (signUpResult.success) {
+      console.log("Nostr registration successful");
+    }
+  }
+}
+
+// Plugin Interface
+interface NostrConnectorPluginInterface {
+  // Authentication methods
+  login(address: string): Promise<AuthResult>;
+  signUp(address: string): Promise<AuthResult>;
+  
+  // Connection methods
+  isAvailable(): boolean;
+  connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+  connectNostrWallet(): Promise<ConnectionResult>;
+  
+  // Credential and signature management
+  generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
+  verifySignature(message: string, signature: string, address: string): Promise<boolean>;
+  generatePassword(signature: string): Promise<string>;
+}
+```
+
+### 5. OAuth Plugin API
+
+Social login with external providers (Google, GitHub, etc.):
+
+```typescript
+const oauthPlugin = shogun.getPlugin<OAuthPlugin>("oauth");
+
+if (oauthPlugin && oauthPlugin.isSupported()) {
+  // Get available providers
+  const providers = oauthPlugin.getAvailableProviders(); // ["google", "github", ...]
+  
+  // Initiate login with OAuth (returns redirect URL)
+  const loginResult = await oauthPlugin.login("google");
+  if (loginResult.success && loginResult.redirectUrl) {
+    // Redirect user to OAuth provider
+    window.location.href = loginResult.redirectUrl;
+  }
+  
+  // Handle OAuth callback (after redirect back from provider)
+  const callbackResult = await oauthPlugin.handleOAuthCallback(
+    "google", 
+    authCode,  // From URL params
+    state      // From URL params
+  );
+  
+  if (callbackResult.success) {
+    console.log("OAuth authentication successful");
+    if (callbackResult.user) {
+      console.log("User email:", callbackResult.user.email);
+      console.log("User name:", callbackResult.user.name);
+    }
+  }
+}
+
+// Plugin Interface
+interface OAuthPluginInterface {
+  // Authentication methods
+  login(provider: OAuthProvider): Promise<AuthResult>;
+  signUp(provider: OAuthProvider): Promise<AuthResult>;
+  
+  // OAuth flow management
+  isSupported(): boolean;
+  getAvailableProviders(): OAuthProvider[];
+  initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
+  completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
+  handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
+  
+  // Credential management
+  generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials>;
 }
 ```
 
@@ -219,39 +407,9 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 
 #### Event Handling
 
-- `on(eventName: string, listener: Function): this` - Subscribe to events
-- `off(eventName: string, listener: Function): this` - Unsubscribe from events
-- `emit(eventName: string, data?: any): boolean` - Emit custom events
-
-### Built-in Plugins
-
-#### Web3 Plugin
-
-```typescript
-const web3Plugin = shogun.getPlugin("web3");
-// Methods: getProvider(), login(address), logout(), isConnected()
-```
-
-#### WebAuthn Plugin
-
-```typescript
-const webauthnPlugin = shogun.getPlugin("webauthn");
-// Methods: register(username), authenticate(), isSupported()
-```
-
-#### Nostr Plugin
-
-```typescript
-const nostrPlugin = shogun.getPlugin("nostr");
-// Methods: connect(), login(), logout()
-```
-
-#### OAuth Plugin
-
-```typescript
-const oauthPlugin = shogun.getPlugin("oauth");
-// Methods: login(provider), handleCallback(code), logout()
-```
+- `on<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Subscribe to typed events
+- `off<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Unsubscribe from events
+- `emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K]): boolean` - Emit custom events
 
 ### Configuration Options
 
@@ -294,12 +452,36 @@ interface ShogunSDKConfig {
 
 ## Event System
 
-Shogun Core provides a comprehensive event system for monitoring authentication and data changes:
+Shogun Core provides a comprehensive typed event system for monitoring authentication and data changes:
 
 ```typescript
-// Listen for authentication events
+// Available events with their data types
+interface ShogunEventMap {
+  "auth:login": AuthEventData;      // User logged in
+  "auth:logout": void;              // User logged out
+  "auth:signup": AuthEventData;     // New user registered
+  "wallet:created": WalletEventData; // Wallet derived from user keys
+  "gun:put": GunDataEventData;      // Data written to GunDB
+  "gun:get": GunDataEventData;      // Data read from GunDB
+  "gun:set": GunDataEventData;      // Data updated in GunDB
+  "gun:remove": GunDataEventData;   // Data removed from GunDB
+  "gun:peer:add": GunPeerEventData; // Peer added
+  "gun:peer:remove": GunPeerEventData; // Peer removed
+  "gun:peer:connect": GunPeerEventData; // Peer connected
+  "gun:peer:disconnect": GunPeerEventData; // Peer disconnected
+  "plugin:registered": { name: string; version?: string; category?: string }; // Plugin registered
+  "plugin:unregistered": { name: string }; // Plugin unregistered
+  "debug": { action: string; [key: string]: any }; // Debug information
+  "error": ErrorEventData;          // Error occurred
+}
+
+// Listen for authentication events with full type safety
 shogun.on("auth:login", (data) => {
   console.log("User logged in:", data.username);
+  console.log("Authentication method:", data.method);
+  if (data.provider) {
+    console.log("OAuth provider:", data.provider);
+  }
 });
 
 shogun.on("auth:logout", () => {
@@ -310,10 +492,36 @@ shogun.on("auth:signup", (data) => {
   console.log("New user signed up:", data.username);
 });
 
+// Listen for wallet creation (Bitcoin and Ethereum wallets derived from user keys)
+shogun.on("wallet:created", (data) => {
+  console.log("Wallet created:", data.address);
+});
+
 // Listen for errors
 shogun.on("error", (error) => {
   console.error("Shogun error:", error.message);
 });
+```
+
+## Cryptographic Wallets
+
+Shogun Core automatically derives Bitcoin and Ethereum wallets from user authentication keys:
+
+```typescript
+// After successful authentication, wallets are available
+if (shogun.wallets) {
+  console.log("Bitcoin wallet:", {
+    address: shogun.wallets.secp256k1Bitcoin.address,
+    publicKey: shogun.wallets.secp256k1Bitcoin.publicKey,
+    // privateKey is available but should be handled securely
+  });
+  
+  console.log("Ethereum wallet:", {
+    address: shogun.wallets.secp256k1Ethereum.address,
+    publicKey: shogun.wallets.secp256k1Ethereum.publicKey,
+    // privateKey is available but should be handled securely
+  });
+}
 ```
 
 ## Error Handling
@@ -328,10 +536,10 @@ try {
 } catch (error) {
   if (error instanceof ShogunError) {
     switch (error.type) {
-      case ErrorType.AUTHENTICATION_FAILED:
+      case ErrorType.AUTHENTICATION:
         console.error("Invalid credentials");
         break;
-      case ErrorType.NETWORK_ERROR:
+      case ErrorType.NETWORK:
         console.error("Network connection failed");
         break;
       default:

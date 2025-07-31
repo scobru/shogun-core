@@ -52,6 +52,12 @@ export declare class ErrorHandler {
     private static errors;
     private static maxErrors;
     private static listeners;
+    private static externalLogger;
+    /**
+     * Set an external logging service for production error monitoring
+     * @param logger - External logger function to send errors to a monitoring service
+     */
+    static setExternalLogger(logger: (error: ShogunError) => void): void;
     /**
      * Handles an error by logging it and notifying listeners
      * @param error - The error to handle

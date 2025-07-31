@@ -39,10 +39,6 @@ export class NostrConnectorPlugin
     // Initialize the Bitcoin wallet module
     this.bitcoinConnector = new NostrConnector();
     this.signer = new NostrSigner(this.bitcoinConnector);
-
-    console.log(
-      "[nostrConnectorPlugin] Bitcoin wallet plugin initialized with signer support",
-    );
   }
 
   /**
@@ -55,7 +51,6 @@ export class NostrConnectorPlugin
     this.bitcoinConnector = null;
     this.signer = null;
     super.destroy();
-    console.log("[nostrConnectorPlugin] Bitcoin wallet plugin destroyed");
   }
 
   /**
@@ -94,9 +89,6 @@ export class NostrConnectorPlugin
    * Note: Alby is deprecated in favor of Nostr
    */
   isAlbyAvailable(): boolean {
-    console.log(
-      "[nostrConnectorPlugin] Alby is deprecated, using Nostr instead",
-    );
     return this.isNostrExtensionAvailable();
   }
 
@@ -113,10 +105,6 @@ export class NostrConnectorPlugin
    */
   async connectNostrWallet(): Promise<ConnectionResult> {
     try {
-      console.log(
-        "[nostrConnectorPlugin] Attempting to connect to Nostr wallet...",
-      );
-
       if (!this.isNostrExtensionAvailable()) {
         return {
           success: false,
@@ -128,14 +116,6 @@ export class NostrConnectorPlugin
       const result = await this.connectBitcoinWallet("nostr");
 
       if (result.success) {
-        console.log(
-          `[nostrConnectorPlugin] Successfully connected to Nostr wallet: ${result.address?.substring(0, 10)}...`,
-        );
-      } else {
-        console.error(
-          "[nostrConnectorPlugin] Failed to connect to Nostr wallet:",
-          result.error,
-        );
       }
 
       return result;
@@ -160,9 +140,6 @@ export class NostrConnectorPlugin
     // Prioritize nostr over alby (since they are functionally identical)
     // If type is alby, try to use nostr instead
     if (type === "alby") {
-      console.log(
-        "[nostrConnectorPlugin] Alby is deprecated, using Nostr instead",
-      );
       type = "nostr";
     }
     return this.assertBitcoinConnector().connectWallet(type);
@@ -176,9 +153,6 @@ export class NostrConnectorPlugin
     signature: string,
     message: string,
   ): Promise<NostrConnectorCredentials> {
-    console.log(
-      "[nostrConnectorPlugin] Calling credential generation for Bitcoin wallet",
-    );
     return this.assertBitcoinConnector().generateCredentials(
       address,
       signature,
@@ -233,7 +207,6 @@ export class NostrConnectorPlugin
     address: string,
   ): Promise<NostrSigningCredential> {
     try {
-      console.log(`Creating Nostr signing credential for address: ${address}`);
       return await this.assertSigner().createSigningCredential(address);
     } catch (error: any) {
       console.error(
@@ -248,7 +221,6 @@ export class NostrConnectorPlugin
    */
   createAuthenticator(address: string): (data: any) => Promise<string> {
     try {
-      console.log(`Creating Nostr authenticator for address: ${address}`);
       return this.assertSigner().createAuthenticator(address);
     } catch (error: any) {
       console.error(`Error creating Nostr authenticator: ${error.message}`);
@@ -264,7 +236,6 @@ export class NostrConnectorPlugin
     extra?: string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
-      console.log(`Creating derived key pair for address: ${address}`);
       return await this.assertSigner().createDerivedKeyPair(address, extra);
     } catch (error: any) {
       console.error(`Error creating derived key pair: ${error.message}`);
@@ -281,7 +252,6 @@ export class NostrConnectorPlugin
     extra?: string[],
   ): Promise<string> {
     try {
-      console.log(`Signing data with derived keys for address: ${address}`);
       return await this.assertSigner().signWithDerivedKeys(
         data,
         address,
@@ -325,9 +295,6 @@ export class NostrConnectorPlugin
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
       const core = this.assertInitialized();
-      console.log(
-        `Creating Gun user from Nostr signing credential: ${address}`,
-      );
       return await this.assertSigner().createGunUser(address, core.gun);
     } catch (error: any) {
       console.error(
@@ -364,7 +331,6 @@ export class NostrConnectorPlugin
     expectedUserPub?: string;
   }> {
     try {
-      console.log(`Verifying Nostr consistency for address: ${address}`);
       return await this.assertSigner().verifyConsistency(
         address,
         expectedUserPub,
@@ -387,10 +353,6 @@ export class NostrConnectorPlugin
     password: string;
   }> {
     try {
-      console.log(
-        `Setting up consistent Nostr oneshot signing for: ${address}`,
-      );
-
       // 1. Create signing credential (with consistent password generation)
       const credential = await this.createSigningCredential(address);
 
@@ -424,11 +386,8 @@ export class NostrConnectorPlugin
    * @description Authenticates the user using Bitcoin wallet credentials after signature verification
    */
   async login(address: string): Promise<AuthResult> {
-    console.log("[nostrConnectorPlugin] Login with Bitcoin wallet");
-
     try {
       const core = this.assertInitialized();
-      console.log(`Bitcoin wallet login attempt for address: ${address}`);
 
       if (!address) {
         throw createError(
@@ -452,9 +411,6 @@ export class NostrConnectorPlugin
         message,
       );
 
-      console.log(
-        "[nostrConnectorPlugin] Generating credentials for Bitcoin wallet login...",
-      );
       const credentials = await this.generateCredentials(
         address,
         signature,
@@ -473,13 +429,6 @@ export class NostrConnectorPlugin
         );
       }
 
-      console.log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
-      console.log(
-        "[nostrConnectorPlugin] Verifying Bitcoin wallet signature...",
-      );
       const isValid = await this.verifySignature(
         credentials.message,
         credentials.signature,
@@ -494,9 +443,6 @@ export class NostrConnectorPlugin
           "Bitcoin wallet signature verification failed",
         );
       }
-      console.log(
-        "[nostrConnectorPlugin] Bitcoin wallet signature verified successfully.",
-      );
 
       // Deriva le chiavi da address, signature, message
       const k = await deriveNostrKeys(address, signature, message);
@@ -517,7 +463,7 @@ export class NostrConnectorPlugin
 
       // Emit login event
       core.emit("auth:login", {
-        userPub: loginResult.userPub,
+        userPub: loginResult.userPub || "",
         username: credentials.username,
         method: "bitcoin",
       });
@@ -551,11 +497,8 @@ export class NostrConnectorPlugin
    * @description Creates a new user account with Bitcoin wallet credentials
    */
   async signUp(address: string): Promise<AuthResult> {
-    console.log("[nostrConnectorPlugin] Sign up with Bitcoin wallet");
-
     try {
       const core = this.assertInitialized();
-      console.log(`Bitcoin wallet signup attempt for address: ${address}`);
 
       if (!address) {
         throw createError(
@@ -579,9 +522,6 @@ export class NostrConnectorPlugin
         message,
       );
 
-      console.log(
-        "[nostrConnectorPlugin] Generating credentials for Bitcoin wallet signup...",
-      );
       const credentials = await this.generateCredentials(
         address,
         signature,
@@ -600,14 +540,7 @@ export class NostrConnectorPlugin
         );
       }
 
-      console.log(
-        `Credentials generated successfully. Username: ${credentials.username}`,
-      );
-
       // Verify signature
-      console.log(
-        "[nostrConnectorPlugin] Verifying Bitcoin wallet signature...",
-      );
       const isValid = await this.verifySignature(
         credentials.message,
         credentials.signature,
@@ -622,9 +555,6 @@ export class NostrConnectorPlugin
           "Bitcoin wallet signature verification failed",
         );
       }
-      console.log(
-        "[nostrConnectorPlugin] Bitcoin wallet signature verified successfully.",
-      );
 
       // Deriva le chiavi da address, signature, message
       const k = await deriveNostrKeys(address, signature, message);
@@ -644,7 +574,7 @@ export class NostrConnectorPlugin
           );
           // Emetti eventi
           core.emit("auth:signup", {
-            userPub: authResult.userPub,
+            userPub: authResult.userPub || "",
             username: credentials.username,
             method: "bitcoin",
           });

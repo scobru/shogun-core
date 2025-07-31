@@ -2,14 +2,16 @@ import { EventEmitter } from "../utils/eventEmitter";
 /**
  * Interface representing authentication event data
  * @interface AuthEventData
- * @property {string} userPub - The user's public key
+ * @property {string} [userPub] - The user's public key (optional)
  * @property {string} [username] - Optional username
- * @property {"password" | "webauthn" | "web3" | "nostr" | "oauth" } method - Authentication method used
+ * @property {"password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" } method - Authentication method used
+ * @property {string} [provider] - Optional provider name (for OAuth)
  */
 export interface AuthEventData {
-    userPub: string;
+    userPub?: string;
     username?: string;
-    method: "password" | "webauthn" | "web3" | "nostr" | "oauth";
+    method: "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin";
+    provider?: string;
 }
 /**
  * Interface representing wallet event data
@@ -24,13 +26,15 @@ export interface WalletEventData {
 /**
  * Interface representing error event data
  * @interface ErrorEventData
- * @property {string} code - Error code
+ * @property {string} action - Error action/code
  * @property {string} message - Error message
+ * @property {string} type - Error type
  * @property {unknown} [details] - Optional additional error details
  */
 export interface ErrorEventData {
-    code: string;
+    action: string;
     message: string;
+    type: string;
     details?: unknown;
 }
 /**
@@ -77,6 +81,18 @@ export type ShogunEventMap = {
     "gun:peer:remove": GunPeerEventData;
     "gun:peer:connect": GunPeerEventData;
     "gun:peer:disconnect": GunPeerEventData;
+    "plugin:registered": {
+        name: string;
+        version?: string;
+        category?: string;
+    };
+    "plugin:unregistered": {
+        name: string;
+    };
+    debug: {
+        action: string;
+        [key: string]: any;
+    };
     error: ErrorEventData;
 };
 /**
@@ -92,19 +108,19 @@ export declare class ShogunEventEmitter extends EventEmitter<ShogunEventMap> {
      * @param {ShogunEventMap[K]} data - Event data
      * @returns {boolean} - Returns true if the event had listeners, false otherwise
      */
-    emit<K extends keyof ShogunEventMap>(event: K, data?: ShogunEventMap[K]): boolean;
+    emit<K extends keyof ShogunEventMap>(event: K, data?: ShogunEventMap[K] extends void ? never : ShogunEventMap[K]): boolean;
     /**
      * Register a listener for a typed Shogun event
      * @template K - Event key type
      * @param {K} event - Event name
      * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function
      */
-    on<K extends keyof ShogunEventMap>(event: K, listener: (data: ShogunEventMap[K]) => void): void;
+    on<K extends keyof ShogunEventMap>(event: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): void;
     /**
      * Remove a listener for a typed Shogun event
      * @template K - Event key type
      * @param {K} event - Event name
      * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function to remove
      */
-    off<K extends keyof ShogunEventMap>(event: K, listener: (data: ShogunEventMap[K]) => void): void;
+    off<K extends keyof ShogunEventMap>(event: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): void;
 }

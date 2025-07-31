@@ -16,7 +16,7 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
     /**
      * @inheritdoc
      */
-    initialize(core: ShogunCore, appToken?: string): void;
+    initialize(core: ShogunCore): void;
     /**
      * Valida la configurazione di sicurezza OAuth
      */

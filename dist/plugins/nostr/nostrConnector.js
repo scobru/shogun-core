@@ -219,9 +219,11 @@ class NostrConnector extends eventEmitter_1.EventEmitter {
      */
     async generateCredentials(address, signature, message) {
         const username = (0, validation_1.generateUsernameFromIdentity)("nostr", { id: address });
-        // Usa solo l'address per rendere le credenziali deterministiche
-        const salt = `${username}_${address}_${message}`;
-        const key = await (0, derive_1.default)(address, salt, { includeP256: true });
+        // Usa un hashing robusto di address con keccak256
+        const hashedAddress = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(address));
+        // Include la signature nel salt per aggiungere un ulteriore livello di sicurezza
+        const salt = `${username}_${address}_${message}_${signature}`;
+        const key = await (0, derive_1.default)(hashedAddress, salt, { includeP256: true });
         return { username, key, message, signature };
     }
     /**

@@ -36,8 +36,6 @@ export class Web3Signer {
     address: string,
   ): Promise<Web3SigningCredential> {
     try {
-      console.log(`Creating Web3 signing credential for address: ${address}`);
-
       // Validate address
       const validAddress = ethers.getAddress(address.toLowerCase());
 
@@ -61,7 +59,6 @@ export class Web3Signer {
       // Store credential for later use
       this.credentials.set(validAddress.toLowerCase(), signingCredential);
 
-      console.log("Created Web3 signing credential:", signingCredential);
       return signingCredential;
     } catch (error: any) {
       console.error("Error creating Web3 signing credential:", error);
@@ -86,9 +83,7 @@ export class Web3Signer {
         );
       }
 
-      console.log(`Requesting signature for message: ${this.MESSAGE_TO_SIGN}`);
       const signature = await signer.signMessage(this.MESSAGE_TO_SIGN);
-      console.log("Signature obtained successfully");
 
       return signature;
     } catch (error: any) {
@@ -121,7 +116,6 @@ export class Web3Signer {
         const dataToSign = JSON.stringify(data);
         const signature = await signer.signMessage(dataToSign);
 
-        console.log("Web3 authentication successful:", { data, signature });
         return signature;
       } catch (error: any) {
         console.error("Web3 authentication error:", error);

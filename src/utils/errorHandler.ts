@@ -69,6 +69,15 @@ export class ErrorHandler {
   private static errors: ShogunError[] = [];
   private static maxErrors: number = 100;
   private static listeners: Array<(error: ShogunError) => void> = [];
+  private static externalLogger: ((error: ShogunError) => void) | null = null;
+
+  /**
+   * Set an external logging service for production error monitoring
+   * @param logger - External logger function to send errors to a monitoring service
+   */
+  static setExternalLogger(logger: (error: ShogunError) => void): void {
+    this.externalLogger = logger;
+  }
 
   /**
    * Handles an error by logging it and notifying listeners
@@ -84,6 +93,15 @@ export class ErrorHandler {
     // Keep only the last maxErrors
     if (this.errors.length > this.maxErrors) {
       this.errors = this.errors.slice(-this.maxErrors);
+    }
+
+    // Send to external logger if set (for production monitoring)
+    if (this.externalLogger) {
+      try {
+        this.externalLogger(error);
+      } catch (e) {
+        console.error("Failed to send error to external logger:", e);
+      }
     }
 
     // Notify listeners

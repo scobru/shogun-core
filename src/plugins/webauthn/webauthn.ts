@@ -412,11 +412,6 @@ export class Webauthn extends EventEmitter {
           },
         };
 
-      console.log(
-        "Attempting to create credentials with options:",
-        publicKeyCredentialCreationOptions,
-      );
-
       const credential = await navigator.credentials.create({
         publicKey: publicKeyCredentialCreationOptions,
       });
@@ -425,7 +420,6 @@ export class Webauthn extends EventEmitter {
         throw new Error("Credential creation failed");
       }
 
-      console.log("Credentials created successfully:", credential);
       const webAuthnCredential = credential as PublicKeyCredential;
 
       // Convert to WebAuthnCredentialData

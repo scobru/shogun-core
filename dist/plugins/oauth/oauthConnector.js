@@ -10,6 +10,7 @@ exports.OAuthConnector = void 0;
 const eventEmitter_1 = require("../../utils/eventEmitter");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 const validation_1 = require("../../utils/validation");
+const ethers_1 = require("ethers");
 /**
  * OAuth Connector
  */
@@ -98,6 +99,8 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             // Verifica che PKCE sia abilitato per tutti i provider nel browser
             if (typeof window !== "undefined" && !providerConfig.usePKCE) {
                 console.warn(`Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`);
+                // Forzo PKCE per tutti i provider nel browser, eccetto se già configurato diversamente
+                providerConfig.usePKCE = true;
             }
             // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
             if (typeof window !== "undefined" && providerConfig.clientSecret) {
@@ -106,7 +109,9 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
                 }
                 else {
                     console.error(`Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`);
-                    throw new Error(`Client secret non può essere usato nel browser per ${providerName}`);
+                    // Rimuovo client_secret per sicurezza nel browser
+                    delete providerConfig.clientSecret;
+                    console.log(`Provider ${providerName} client_secret rimosso per sicurezza nel browser`);
                 }
             }
         }
@@ -345,7 +350,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
     /**
      * Complete OAuth flow
      */
-    async completeOAuth(provider, authCode, state, appToken) {
+    async completeOAuth(provider, authCode, state) {
         const providerConfig = this.config.providers?.[provider];
         if (!providerConfig) {
             const errorMsg = `Provider '${provider}' is not configured.`;
@@ -363,7 +368,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             // Cache user info
             this.cacheUserInfo(userInfo.id, provider, userInfo);
             // Generate credentials
-            const credentials = await this.generateCredentials(userInfo, provider, appToken || "");
+            const credentials = await this.generateCredentials(userInfo, provider);
             this.emit("oauth_completed", { provider, userInfo, credentials });
             return {
                 success: true,
@@ -383,7 +388,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
      * Generate credentials from OAuth user info
      * Ora restituisce anche la chiave GunDB derivata (key)
      */
-    async generateCredentials(userInfo, provider, appToken) {
+    async generateCredentials(userInfo, provider) {
         const providerConfig = this.config.providers?.[provider];
         if (!providerConfig) {
             throw new Error(`Provider ${provider} is not configured.`);
@@ -392,8 +397,8 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         const username = (0, validation_1.generateUsernameFromIdentity)(provider, userInfo);
         try {
             console.log(`Generating credentials for ${provider} user: ${userInfo.id}`);
-            // Salt deterministico per la derivazione della chiave
-            const salt = `${userInfo.id}_${provider}_${userInfo.email}_shogun_oauth_${appToken}`;
+            const saltData = `${userInfo.id}_${provider}_${userInfo.email || "no-email"}`;
+            const salt = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(saltData));
             // Password deterministica (compatibilità)
             const password = (0, validation_1.generateDeterministicPassword)(salt);
             // Deriva la chiave GunDB

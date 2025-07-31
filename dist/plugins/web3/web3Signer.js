@@ -25,7 +25,6 @@ class Web3Signer {
      */
     async createSigningCredential(address) {
         try {
-            console.log(`Creating Web3 signing credential for address: ${address}`);
             // Validate address
             const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
             // Request signature using the same approach as normal Web3
@@ -42,7 +41,6 @@ class Web3Signer {
             };
             // Store credential for later use
             this.credentials.set(validAddress.toLowerCase(), signingCredential);
-            console.log("Created Web3 signing credential:", signingCredential);
             return signingCredential;
         }
         catch (error) {
@@ -61,9 +59,7 @@ class Web3Signer {
             if (signerAddress.toLowerCase() !== address.toLowerCase()) {
                 throw new Error(`Signer address (${signerAddress}) does not match expected address (${address})`);
             }
-            console.log(`Requesting signature for message: ${this.MESSAGE_TO_SIGN}`);
             const signature = await signer.signMessage(this.MESSAGE_TO_SIGN);
-            console.log("Signature obtained successfully");
             return signature;
         }
         catch (error) {
@@ -91,7 +87,6 @@ class Web3Signer {
                 // Sign the data
                 const dataToSign = JSON.stringify(data);
                 const signature = await signer.signMessage(dataToSign);
-                console.log("Web3 authentication successful:", { data, signature });
                 return signature;
             }
             catch (error) {

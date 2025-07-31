@@ -1,8 +1,9 @@
 const path = require("path");
 const webpack = require("webpack");
+const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = {
-  mode: "production",
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   entry: "./src/index.ts",
   output: {
     path: path.resolve(__dirname, "dist/browser"),
@@ -92,7 +93,17 @@ module.exports = {
     new webpack.optimize.ModuleConcatenationPlugin(),
   ],
   optimization: {
-    minimize: true,
+    minimize: process.env.NODE_ENV === 'production',
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            drop_console: process.env.NODE_ENV === 'production',
+            drop_debugger: true,
+          },
+        },
+      }),
+    ],
     splitChunks: {
       chunks: 'async',
       minSize: 20000,

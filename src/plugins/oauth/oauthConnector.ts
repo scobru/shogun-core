@@ -16,6 +16,7 @@ import {
   generateUsernameFromIdentity,
   generateDeterministicPassword,
 } from "../../utils/validation";
+import { ethers } from "ethers";
 
 /**
  * OAuth Connector
@@ -112,6 +113,8 @@ export class OAuthConnector extends EventEmitter {
         console.warn(
           `Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`,
         );
+        // Forzo PKCE per tutti i provider nel browser, eccetto se già configurato diversamente
+        providerConfig.usePKCE = true;
       }
 
       // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
@@ -124,8 +127,10 @@ export class OAuthConnector extends EventEmitter {
           console.error(
             `Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`,
           );
-          throw new Error(
-            `Client secret non può essere usato nel browser per ${providerName}`,
+          // Rimuovo client_secret per sicurezza nel browser
+          delete providerConfig.clientSecret;
+          console.log(
+            `Provider ${providerName} client_secret rimosso per sicurezza nel browser`,
           );
         }
       }
@@ -421,7 +426,6 @@ export class OAuthConnector extends EventEmitter {
     provider: OAuthProvider,
     authCode: string,
     state?: string,
-    appToken?: string | null,
   ): Promise<OAuthConnectionResult> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
@@ -454,11 +458,7 @@ export class OAuthConnector extends EventEmitter {
       this.cacheUserInfo(userInfo.id, provider, userInfo);
 
       // Generate credentials
-      const credentials = await this.generateCredentials(
-        userInfo,
-        provider,
-        appToken || "",
-      );
+      const credentials = await this.generateCredentials(userInfo, provider);
 
       this.emit("oauth_completed", { provider, userInfo, credentials });
 
@@ -483,7 +483,6 @@ export class OAuthConnector extends EventEmitter {
   async generateCredentials(
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
-    appToken: string,
   ): Promise<OAuthCredentials & { key: any }> {
     const providerConfig = this.config.providers?.[provider];
     if (!providerConfig) {
@@ -498,8 +497,8 @@ export class OAuthConnector extends EventEmitter {
         `Generating credentials for ${provider} user: ${userInfo.id}`,
       );
 
-      // Salt deterministico per la derivazione della chiave
-      const salt = `${userInfo.id}_${provider}_${userInfo.email}_shogun_oauth_${appToken}`;
+      const saltData = `${userInfo.id}_${provider}_${userInfo.email || "no-email"}`;
+      const salt = ethers.keccak256(ethers.toUtf8Bytes(saltData));
       // Password deterministica (compatibilità)
       const password = generateDeterministicPassword(salt);
       // Deriva la chiave GunDB

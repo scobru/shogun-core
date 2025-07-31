@@ -101,7 +101,6 @@ export class WebAuthnSigner {
       }
 
       const rawKey = new Uint8Array(publicKey);
-      console.log("Raw public key bytes:", rawKey);
 
       // Extract coordinates like webauthn.js (slice positions may need adjustment)
       const xCoord = rawKey.slice(27, 59);
@@ -127,7 +126,6 @@ export class WebAuthnSigner {
       // Store credential for later use
       this.credentials.set(credential.id, signingCredential);
 
-      console.log("Created signing credential:", signingCredential);
       return signingCredential;
     } catch (error: any) {
       console.error("Error creating signing credential:", error);
@@ -175,7 +173,6 @@ export class WebAuthnSigner {
           throw new Error("WebAuthn assertion failed");
         }
 
-        console.log("WebAuthn assertion successful:", { options, assertion });
         return assertion.response as AuthenticatorAssertionResponse;
       } catch (error: any) {
         console.error("WebAuthn assertion error:", error);

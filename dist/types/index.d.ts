@@ -1,6 +1,7 @@
+import { ShogunEventMap } from "./types/events";
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod } from "./types/shogun";
+import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, derive, GunErrors } from "./gundb";
@@ -34,7 +35,7 @@ export declare class ShogunCore implements IShogunCore {
     private readonly eventEmitter;
     private readonly plugins;
     private currentAuthMethod?;
-    private appToken?;
+    wallets: Wallets | undefined;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -263,28 +264,28 @@ export declare class ShogunCore implements IShogunCore {
      * @param data The data to pass with the event.
      * @returns {boolean} Indicates if the event had listeners.
      */
-    emit(eventName: string | symbol, data?: any): boolean;
+    emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K] extends void ? never : ShogunEventMap[K]): boolean;
     /**
      * Add an event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
      * @returns {this} Returns this instance for method chaining
      */
-    on(eventName: string | symbol, listener: (data: unknown) => void): this;
+    on<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
     /**
      * Add a one-time event listener
      * @param eventName The name of the event to listen for
      * @param listener The callback function to execute when the event is emitted
      * @returns {this} Returns this instance for method chaining
      */
-    once(eventName: string | symbol, listener: (data: unknown) => void): this;
+    once<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
     /**
      * Remove an event listener
      * @param eventName The name of the event to stop listening for
      * @param listener The callback function to remove
      * @returns {this} Returns this instance for method chaining
      */
-    off(eventName: string | symbol, listener: (data: unknown) => void): this;
+    off<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
     /**
      * Remove all listeners for a specific event or all events
      * @param eventName Optional. The name of the event to remove listeners for.

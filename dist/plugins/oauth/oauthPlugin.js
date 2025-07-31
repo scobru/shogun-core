@@ -2,9 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OAuthPlugin = void 0;
 const base_1 = require("../base");
-const oauthConnector_1 = require("./oauthConnector");
 const errorHandler_1 = require("../../utils/errorHandler");
-const storage_1 = require("../../storage/storage");
 /**
  * OAuth Plugin for ShogunCore
  * Provides authentication with external OAuth providers
@@ -19,20 +17,9 @@ class OAuthPlugin extends base_1.BasePlugin {
     /**
      * @inheritdoc
      */
-    initialize(core, appToken) {
-        super.initialize(core);
-        // Initialize the OAuth connector
-        this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
-        this.storage = new storage_1.ShogunStorage();
-        if (appToken) {
-            this.appToken = appToken;
-        }
-        else {
-            throw new Error("App token is required for OAuth plugin");
-        }
-        // Validazione di sicurezza post-inizializzazione
-        this.validateOAuthSecurity();
-        console.log("[oauthPlugin]  OAuth plugin initialized successfully");
+    initialize(core) {
+        this.core = core;
+        // this.setupConnectors();
     }
     /**
      * Valida la configurazione di sicurezza OAuth
@@ -121,17 +108,14 @@ class OAuthPlugin extends base_1.BasePlugin {
      */
     async completeOAuth(provider, authCode, state) {
         console.log(`Completing OAuth flow with ${provider}`);
-        return this.assertOAuthConnector().completeOAuth(provider, authCode, state, this.appToken);
+        return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
     }
     /**
      * @inheritdoc
      */
     async generateCredentials(userInfo, provider) {
         console.log(`Generating credentials for ${provider} user`);
-        if (!this.appToken) {
-            throw new Error("App token is required for OAuth generation");
-        }
-        return this.assertOAuthConnector().generateCredentials(userInfo, provider, this.appToken);
+        return this.assertOAuthConnector().generateCredentials(userInfo, provider);
     }
     /**
      * Login with OAuth
@@ -281,7 +265,7 @@ class OAuthPlugin extends base_1.BasePlugin {
                 // Emit appropriate event
                 const eventType = authResult.isNewUser ? "auth:signup" : "auth:login";
                 core.emit(eventType, {
-                    userPub: authResult.userPub,
+                    userPub: authResult.userPub || "",
                     username: credentials.username,
                     method: "oauth",
                     provider,

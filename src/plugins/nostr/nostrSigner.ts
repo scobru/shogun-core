@@ -36,8 +36,6 @@ export class NostrSigner {
     address: string,
   ): Promise<NostrSigningCredential> {
     try {
-      console.log(`Creating Nostr signing credential for address: ${address}`);
-
       // Validate address (same validation as normal approach)
       const validAddress = this.validateAddress(address);
 
@@ -59,7 +57,6 @@ export class NostrSigner {
       // Store credential for later use
       this.credentials.set(validAddress.toLowerCase(), signingCredential);
 
-      console.log("Created Nostr signing credential:", signingCredential);
       return signingCredential;
     } catch (error: any) {
       console.error("Error creating Nostr signing credential:", error);
@@ -143,10 +140,6 @@ export class NostrSigner {
       deterministicSignature = deterministicSignature.substring(0, 128);
     }
 
-    console.log(
-      `Generated deterministic signature: ${deterministicSignature.substring(0, 16)}... (${deterministicSignature.length} chars)`,
-    );
-
     return deterministicSignature;
   }
 
@@ -188,7 +181,6 @@ export class NostrSigner {
         // For now, create a deterministic signature based on the data and credential
         const signature = await this.signData(dataToSign, credential);
 
-        console.log("Nostr authentication successful:", { data, signature });
         return signature;
       } catch (error: any) {
         console.error("Nostr authentication error:", error);

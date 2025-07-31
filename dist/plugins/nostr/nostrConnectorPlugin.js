@@ -23,7 +23,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         // Initialize the Bitcoin wallet module
         this.bitcoinConnector = new nostrConnector_1.NostrConnector();
         this.signer = new nostrSigner_1.NostrSigner(this.bitcoinConnector);
-        console.log("[nostrConnectorPlugin] Bitcoin wallet plugin initialized with signer support");
     }
     /**
      * @inheritdoc
@@ -35,7 +34,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         this.bitcoinConnector = null;
         this.signer = null;
         super.destroy();
-        console.log("[nostrConnectorPlugin] Bitcoin wallet plugin destroyed");
     }
     /**
      * Ensure that the Bitcoin wallet module is initialized
@@ -70,7 +68,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * Note: Alby is deprecated in favor of Nostr
      */
     isAlbyAvailable() {
-        console.log("[nostrConnectorPlugin] Alby is deprecated, using Nostr instead");
         return this.isNostrExtensionAvailable();
     }
     /**
@@ -85,7 +82,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async connectNostrWallet() {
         try {
-            console.log("[nostrConnectorPlugin] Attempting to connect to Nostr wallet...");
             if (!this.isNostrExtensionAvailable()) {
                 return {
                     success: false,
@@ -94,10 +90,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             }
             const result = await this.connectBitcoinWallet("nostr");
             if (result.success) {
-                console.log(`[nostrConnectorPlugin] Successfully connected to Nostr wallet: ${result.address?.substring(0, 10)}...`);
-            }
-            else {
-                console.error("[nostrConnectorPlugin] Failed to connect to Nostr wallet:", result.error);
             }
             return result;
         }
@@ -116,7 +108,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         // Prioritize nostr over alby (since they are functionally identical)
         // If type is alby, try to use nostr instead
         if (type === "alby") {
-            console.log("[nostrConnectorPlugin] Alby is deprecated, using Nostr instead");
             type = "nostr";
         }
         return this.assertBitcoinConnector().connectWallet(type);
@@ -125,7 +116,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async generateCredentials(address, signature, message) {
-        console.log("[nostrConnectorPlugin] Calling credential generation for Bitcoin wallet");
         return this.assertBitcoinConnector().generateCredentials(address, signature, message);
     }
     /**
@@ -160,7 +150,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async createSigningCredential(address) {
         try {
-            console.log(`Creating Nostr signing credential for address: ${address}`);
             return await this.assertSigner().createSigningCredential(address);
         }
         catch (error) {
@@ -173,7 +162,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     createAuthenticator(address) {
         try {
-            console.log(`Creating Nostr authenticator for address: ${address}`);
             return this.assertSigner().createAuthenticator(address);
         }
         catch (error) {
@@ -186,7 +174,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async createDerivedKeyPair(address, extra) {
         try {
-            console.log(`Creating derived key pair for address: ${address}`);
             return await this.assertSigner().createDerivedKeyPair(address, extra);
         }
         catch (error) {
@@ -199,7 +186,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async signWithDerivedKeys(data, address, extra) {
         try {
-            console.log(`Signing data with derived keys for address: ${address}`);
             return await this.assertSigner().signWithDerivedKeys(data, address, extra);
         }
         catch (error) {
@@ -233,7 +219,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
     async createGunUserFromSigningCredential(address) {
         try {
             const core = this.assertInitialized();
-            console.log(`Creating Gun user from Nostr signing credential: ${address}`);
             return await this.assertSigner().createGunUser(address, core.gun);
         }
         catch (error) {
@@ -259,7 +244,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async verifyConsistency(address, expectedUserPub) {
         try {
-            console.log(`Verifying Nostr consistency for address: ${address}`);
             return await this.assertSigner().verifyConsistency(address, expectedUserPub);
         }
         catch (error) {
@@ -273,7 +257,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async setupConsistentOneshotSigning(address) {
         try {
-            console.log(`Setting up consistent Nostr oneshot signing for: ${address}`);
             // 1. Create signing credential (with consistent password generation)
             const credential = await this.createSigningCredential(address);
             // 2. Create authenticator
@@ -301,10 +284,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * @description Authenticates the user using Bitcoin wallet credentials after signature verification
      */
     async login(address) {
-        console.log("[nostrConnectorPlugin] Login with Bitcoin wallet");
         try {
             const core = this.assertInitialized();
-            console.log(`Bitcoin wallet login attempt for address: ${address}`);
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for login");
             }
@@ -313,7 +294,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             }
             const message = nostrConnector_1.MESSAGE_TO_SIGN;
             const signature = await this.assertBitcoinConnector().requestSignature(address, message);
-            console.log("[nostrConnectorPlugin] Generating credentials for Bitcoin wallet login...");
             const credentials = await this.generateCredentials(address, signature, message);
             if (!credentials?.username ||
                 !credentials?.key ||
@@ -321,14 +301,11 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                 !credentials.signature) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
             }
-            console.log(`Credentials generated successfully. Username: ${credentials.username}`);
-            console.log("[nostrConnectorPlugin] Verifying Bitcoin wallet signature...");
             const isValid = await this.verifySignature(credentials.message, credentials.signature, address);
             if (!isValid) {
                 console.error(`Signature verification failed for address: ${address}`);
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
-            console.log("[nostrConnectorPlugin] Bitcoin wallet signature verified successfully.");
             // Deriva le chiavi da address, signature, message
             const k = await (0, nostrConnector_1.deriveNostrKeys)(address, signature, message);
             // Set authentication method to nostr before login
@@ -340,7 +317,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             }
             // Emit login event
             core.emit("auth:login", {
-                userPub: loginResult.userPub,
+                userPub: loginResult.userPub || "",
                 username: credentials.username,
                 method: "bitcoin",
             });
@@ -365,10 +342,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * @description Creates a new user account with Bitcoin wallet credentials
      */
     async signUp(address) {
-        console.log("[nostrConnectorPlugin] Sign up with Bitcoin wallet");
         try {
             const core = this.assertInitialized();
-            console.log(`Bitcoin wallet signup attempt for address: ${address}`);
             if (!address) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for signup");
             }
@@ -377,7 +352,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             }
             const message = nostrConnector_1.MESSAGE_TO_SIGN;
             const signature = await this.assertBitcoinConnector().requestSignature(address, message);
-            console.log("[nostrConnectorPlugin] Generating credentials for Bitcoin wallet signup...");
             const credentials = await this.generateCredentials(address, signature, message);
             if (!credentials?.username ||
                 !credentials?.key ||
@@ -385,15 +359,12 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                 !credentials.signature) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
             }
-            console.log(`Credentials generated successfully. Username: ${credentials.username}`);
             // Verify signature
-            console.log("[nostrConnectorPlugin] Verifying Bitcoin wallet signature...");
             const isValid = await this.verifySignature(credentials.message, credentials.signature, address);
             if (!isValid) {
                 console.error(`Signature verification failed for address: ${address}`);
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
-            console.log("[nostrConnectorPlugin] Bitcoin wallet signature verified successfully.");
             // Deriva le chiavi da address, signature, message
             const k = await (0, nostrConnector_1.deriveNostrKeys)(address, signature, message);
             // Set authentication method to nostr before signup
@@ -407,7 +378,7 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
                     console.log(`Bitcoin wallet registration and login completed for user: ${credentials.username}`);
                     // Emetti eventi
                     core.emit("auth:signup", {
-                        userPub: authResult.userPub,
+                        userPub: authResult.userPub || "",
                         username: credentials.username,
                         method: "bitcoin",
                     });

@@ -31,23 +31,9 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   /**
    * @inheritdoc
    */
-  initialize(core: ShogunCore, appToken?: string): void {
-    super.initialize(core);
-
-    // Initialize the OAuth connector
-    this.oauthConnector = new OAuthConnector(this.config);
-    this.storage = new ShogunStorage();
-
-    if (appToken) {
-      this.appToken = appToken;
-    } else {
-      throw new Error("App token is required for OAuth plugin");
-    }
-
-    // Validazione di sicurezza post-inizializzazione
-    this.validateOAuthSecurity();
-
-    console.log("[oauthPlugin]  OAuth plugin initialized successfully");
+  initialize(core: ShogunCore): void {
+    this.core = core;
+    // this.setupConnectors();
   }
 
   /**
@@ -162,12 +148,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   ): Promise<OAuthConnectionResult> {
     console.log(`Completing OAuth flow with ${provider}`);
 
-    return this.assertOAuthConnector().completeOAuth(
-      provider,
-      authCode,
-      state,
-      this.appToken,
-    );
+    return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
   }
 
   /**
@@ -179,15 +160,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   ): Promise<OAuthCredentials> {
     console.log(`Generating credentials for ${provider} user`);
 
-    if (!this.appToken) {
-      throw new Error("App token is required for OAuth generation");
-    }
-
-    return this.assertOAuthConnector().generateCredentials(
-      userInfo,
-      provider,
-      this.appToken,
-    );
+    return this.assertOAuthConnector().generateCredentials(userInfo, provider);
   }
 
   /**
@@ -420,7 +393,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         // Emit appropriate event
         const eventType = authResult.isNewUser ? "auth:signup" : "auth:login";
         core.emit(eventType, {
-          userPub: authResult.userPub,
+          userPub: authResult.userPub || "",
           username: credentials.username,
           method: "oauth",
           provider,

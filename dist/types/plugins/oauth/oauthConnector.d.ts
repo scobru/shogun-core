@@ -67,12 +67,12 @@ export declare class OAuthConnector extends EventEmitter {
     /**
      * Complete OAuth flow
      */
-    completeOAuth(provider: OAuthProvider, authCode: string, state?: string, appToken?: string | null): Promise<OAuthConnectionResult>;
+    completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
     /**
      * Generate credentials from OAuth user info
      * Ora restituisce anche la chiave GunDB derivata (key)
      */
-    generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider, appToken: string): Promise<OAuthCredentials & {
+    generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials & {
         key: any;
     }>;
     /**

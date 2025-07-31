@@ -42,6 +42,7 @@ export type AuthMethod =
   | "web3"
   | "nostr"
   | "oauth"
+  | "bitcoin"
   | "pair";
 
 // Authentication result interfaces
@@ -157,7 +158,6 @@ export interface WebauthnConfig {
 export interface ShogunSDKConfig {
   gunInstance?: IGunInstance<any>;
   authToken?: string;
-  appToken?: string;
   scope?: string;
   peers?: string[];
   webauthn?: WebauthnConfig;
@@ -188,4 +188,17 @@ export interface ShogunEvents {
   "auth:signup": (data: { username: string; userPub: string }) => void;
   "auth:login": (data: { username: string; userPub: string }) => void;
   "auth:logout": (data: Record<string, never>) => void;
+}
+
+export interface Wallets {
+  secp256k1Bitcoin: {
+    privateKey: string;
+    publicKey: string;
+    address: string;
+  };
+  secp256k1Ethereum: {
+    privateKey: string;
+    publicKey: string;
+    address: string;
+  };
 }
