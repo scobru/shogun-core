@@ -33,7 +33,10 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   initialize(core: ShogunCore): void {
     this.core = core;
-    // this.setupConnectors();
+    this.storage = new ShogunStorage();
+    
+    // Inizializziamo il connector OAuth
+    this.oauthConnector = new OAuthConnector();
   }
 
   /**
@@ -58,9 +61,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
       if (providerConfig.clientSecret && typeof window !== "undefined") {
         if (provider === "google" && providerConfig.usePKCE) {
-          console.log(
-            `[oauthPlugin] Provider ${provider} ha client_secret configurato - OK per Google con PKCE`,
-          );
           // Non lanciare errore per Google con PKCE
           continue;
         } else {
@@ -82,14 +82,16 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   configure(config: Partial<OAuthConfig>): void {
     this.config = { ...this.config, ...config };
 
-    // If connector is already initialized, update its configuration
-    if (this.oauthConnector) {
-      this.oauthConnector.updateConfig(this.config);
-      console.log(
-        "[oauthPlugin]  OAuth connector configuration updated",
-        this.config.providers,
-      );
+    // Inizializza il connector se non è già stato fatto
+    if (!this.oauthConnector) {
+      this.oauthConnector = new OAuthConnector();
     }
+
+    // Update connector configuration
+    this.oauthConnector.updateConfig(this.config);
+    
+    // Validate security settings
+    this.validateOAuthSecurity();
   }
 
   /**
@@ -100,8 +102,8 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       this.oauthConnector.cleanup();
     }
     this.oauthConnector = null;
+    this.storage = null;
     super.destroy();
-    console.log("[oauthPlugin]  OAuth plugin destroyed");
   }
 
   /**
@@ -134,7 +136,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * @inheritdoc
    */
   async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
-    console.log(`Initiating OAuth flow with ${provider}`);
     return this.assertOAuthConnector().initiateOAuth(provider);
   }
 
@@ -146,8 +147,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     authCode: string,
     state?: string,
   ): Promise<OAuthConnectionResult> {
-    console.log(`Completing OAuth flow with ${provider}`);
-
     return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
   }
 
@@ -158,8 +157,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
   ): Promise<OAuthCredentials> {
-    console.log(`Generating credentials for ${provider} user`);
-
     return this.assertOAuthConnector().generateCredentials(userInfo, provider);
   }
 
@@ -172,11 +169,8 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * happens in handleOAuthCallback when the provider redirects back.
    */
   async login(provider: OAuthProvider): Promise<AuthResult> {
-    console.log(`OAuth login with ${provider}`);
-
     try {
       const core = this.assertInitialized();
-      console.log(`OAuth login attempt with provider: ${provider}`);
 
       if (!provider) {
         throw createError(
@@ -258,11 +252,8 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * happens in handleOAuthCallback when the provider redirects back.
    */
   async signUp(provider: OAuthProvider): Promise<AuthResult> {
-    console.log(`OAuth signup with ${provider}`);
-
     try {
       const core = this.assertInitialized();
-      console.log(`OAuth signup attempt with provider: ${provider}`);
 
       if (!provider) {
         throw createError(
@@ -345,7 +336,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     state: string,
   ): Promise<AuthResult> {
     try {
-      console.log(`Handling OAuth callback for ${provider}`);
       const core = this.assertInitialized();
 
       // Validazione di sicurezza pre-callback
@@ -429,8 +419,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
       return authResult;
     } catch (error: any) {
-      console.error(`Error handling OAuth callback for ${provider}:`, error);
-
       // Pulisci i dati OAuth anche in caso di errore
       this.cleanupExpiredOAuthData();
 
@@ -508,9 +496,6 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     authCode: string,
     state: string,
   ): Promise<AuthResult> {
-    console.log(
-      `handleSimpleOAuth called (alias for handleOAuthCallback) for ${provider}`,
-    );
     return this.handleOAuthCallback(provider, authCode, state);
   }
 
