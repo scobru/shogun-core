@@ -2,7 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OAuthPlugin = void 0;
 const base_1 = require("../base");
+const oauthConnector_1 = require("./oauthConnector");
 const errorHandler_1 = require("../../utils/errorHandler");
+const storage_1 = require("../../storage/storage");
 /**
  * OAuth Plugin for ShogunCore
  * Provides authentication with external OAuth providers
@@ -19,7 +21,9 @@ class OAuthPlugin extends base_1.BasePlugin {
      */
     initialize(core) {
         this.core = core;
-        // this.setupConnectors();
+        this.storage = new storage_1.ShogunStorage();
+        // Inizializziamo il connector OAuth
+        this.oauthConnector = new oauthConnector_1.OAuthConnector();
     }
     /**
      * Valida la configurazione di sicurezza OAuth
@@ -39,7 +43,6 @@ class OAuthPlugin extends base_1.BasePlugin {
             // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
             if (providerConfig.clientSecret && typeof window !== "undefined") {
                 if (provider === "google" && providerConfig.usePKCE) {
-                    console.log(`[oauthPlugin] Provider ${provider} ha client_secret configurato - OK per Google con PKCE`);
                     // Non lanciare errore per Google con PKCE
                     continue;
                 }
@@ -56,11 +59,14 @@ class OAuthPlugin extends base_1.BasePlugin {
      */
     configure(config) {
         this.config = { ...this.config, ...config };
-        // If connector is already initialized, update its configuration
-        if (this.oauthConnector) {
-            this.oauthConnector.updateConfig(this.config);
-            console.log("[oauthPlugin]  OAuth connector configuration updated", this.config.providers);
+        // Inizializza il connector se non è già stato fatto
+        if (!this.oauthConnector) {
+            this.oauthConnector = new oauthConnector_1.OAuthConnector();
         }
+        // Update connector configuration
+        this.oauthConnector.updateConfig(this.config);
+        // Validate security settings
+        this.validateOAuthSecurity();
     }
     /**
      * @inheritdoc
@@ -70,8 +76,8 @@ class OAuthPlugin extends base_1.BasePlugin {
             this.oauthConnector.cleanup();
         }
         this.oauthConnector = null;
+        this.storage = null;
         super.destroy();
-        console.log("[oauthPlugin]  OAuth plugin destroyed");
     }
     /**
      * Ensure that the OAuth connector is initialized
@@ -100,21 +106,18 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     async initiateOAuth(provider) {
-        console.log(`Initiating OAuth flow with ${provider}`);
         return this.assertOAuthConnector().initiateOAuth(provider);
     }
     /**
      * @inheritdoc
      */
     async completeOAuth(provider, authCode, state) {
-        console.log(`Completing OAuth flow with ${provider}`);
         return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
     }
     /**
      * @inheritdoc
      */
     async generateCredentials(userInfo, provider) {
-        console.log(`Generating credentials for ${provider} user`);
         return this.assertOAuthConnector().generateCredentials(userInfo, provider);
     }
     /**
@@ -126,10 +129,8 @@ class OAuthPlugin extends base_1.BasePlugin {
      * happens in handleOAuthCallback when the provider redirects back.
      */
     async login(provider) {
-        console.log(`OAuth login with ${provider}`);
         try {
             const core = this.assertInitialized();
-            console.log(`OAuth login attempt with provider: ${provider}`);
             if (!provider) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth login");
             }
@@ -180,10 +181,8 @@ class OAuthPlugin extends base_1.BasePlugin {
      * happens in handleOAuthCallback when the provider redirects back.
      */
     async signUp(provider) {
-        console.log(`OAuth signup with ${provider}`);
         try {
             const core = this.assertInitialized();
-            console.log(`OAuth signup attempt with provider: ${provider}`);
             if (!provider) {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth signup");
             }
@@ -231,7 +230,6 @@ class OAuthPlugin extends base_1.BasePlugin {
      */
     async handleOAuthCallback(provider, authCode, state) {
         try {
-            console.log(`Handling OAuth callback for ${provider}`);
             const core = this.assertInitialized();
             // Validazione di sicurezza pre-callback
             if (!authCode || !state) {
@@ -298,7 +296,6 @@ class OAuthPlugin extends base_1.BasePlugin {
             return authResult;
         }
         catch (error) {
-            console.error(`Error handling OAuth callback for ${provider}:`, error);
             // Pulisci i dati OAuth anche in caso di errore
             this.cleanupExpiredOAuthData();
             return {
@@ -362,7 +359,6 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @deprecated Use handleOAuthCallback instead
      */
     async handleSimpleOAuth(provider, authCode, state) {
-        console.log(`handleSimpleOAuth called (alias for handleOAuthCallback) for ${provider}`);
         return this.handleOAuthCallback(provider, authCode, state);
     }
     /**

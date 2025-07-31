@@ -34,7 +34,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   initialize(core: ShogunCore): void {
     this.core = core;
     this.storage = new ShogunStorage();
-    
+
     // Inizializziamo il connector OAuth
     this.oauthConnector = new OAuthConnector();
   }
@@ -89,7 +89,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
     // Update connector configuration
     this.oauthConnector.updateConfig(this.config);
-    
+
     // Validate security settings
     this.validateOAuthSecurity();
   }
