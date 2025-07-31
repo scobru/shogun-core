@@ -1,5 +1,5 @@
 import { BaseConfig, BaseResult, BaseCacheEntry } from "../../types/common";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 /**
  * Result of connection attempt
  */
@@ -114,9 +114,9 @@ export interface NostrConnectorPluginInterface {
      */
     login(address: string): Promise<AuthResult>;
     /**
-     * Signup with Bitcoin wallet
-     * @param address Bitcoin address
-     * @returns Promise with the operation result
+     * Sign up with Nostr wallet
+     * @param address Nostr address
+     * @returns Promise with authentication result
      */
-    signUp(address: string): Promise<AuthResult>;
+    signUp(address: string): Promise<SignUpResult>;
 }

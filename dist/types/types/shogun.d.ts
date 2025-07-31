@@ -80,11 +80,31 @@ export interface SignUpResult {
     message?: string;
     wallet?: any;
     isNewUser?: boolean;
+    authMethod?: AuthMethod;
+    sessionToken?: string;
     sea?: {
         pub: string;
         priv: string;
         epub: string;
         epriv: string;
+    };
+    redirectUrl?: string;
+    pendingAuth?: boolean;
+    provider?: string;
+    user?: {
+        userPub?: string;
+        username?: string;
+        email?: string;
+        name?: string;
+        picture?: string;
+        oauth?: {
+            provider: string;
+            id: string;
+            email?: string;
+            name?: string;
+            picture?: string;
+            lastLogin: number;
+        };
     };
 }
 export interface IShogunCore extends PluginManager {

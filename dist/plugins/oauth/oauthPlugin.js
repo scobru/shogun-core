@@ -187,12 +187,9 @@ class OAuthPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Sign up with OAuth
-     * @param provider - OAuth provider to use
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using OAuth with external providers
-     * NOTE: This method only initiates the OAuth flow. The actual registration
-     * happens in handleOAuthCallback when the provider redirects back.
+     * Register new user with OAuth provider
+     * @param provider - OAuth provider
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(provider) {
         try {
@@ -338,7 +335,7 @@ class OAuthPlugin extends base_1.BasePlugin {
         // Try login first
         const loginResult = await this.core.login(username, "", k);
         if (loginResult.success) {
-            this.core.db.savePair?.(); // Ensure session is saved
+            // Session is automatically saved by the login method
             loginResult.isNewUser = false;
             // Include SEA pair from core
             if (this.core.user && this.core.user._?.sea) {
@@ -352,7 +349,7 @@ class OAuthPlugin extends base_1.BasePlugin {
             // Immediately login after signup
             const postSignupLogin = await this.core.login(username, "", k);
             if (postSignupLogin.success) {
-                this.core.db.savePair?.();
+                // Session is automatically saved by the login method
                 postSignupLogin.isNewUser = true;
                 // Include SEA pair from core
                 if (this.core.user && this.core.user._?.sea) {

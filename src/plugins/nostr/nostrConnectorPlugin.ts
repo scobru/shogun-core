@@ -11,7 +11,7 @@ import {
   ConnectionResult,
   NostrConnectorPluginInterface,
 } from "./types";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 
 /**
@@ -491,12 +491,11 @@ export class NostrConnectorPlugin
   }
 
   /**
-   * Register a new user with Bitcoin wallet
-   * @param address - Bitcoin address
-   * @returns {Promise<AuthResult>} Registration result
-   * @description Creates a new user account with Bitcoin wallet credentials
+   * Register new user with Nostr wallet
+   * @param address - Nostr address
+   * @returns {Promise<SignUpResult>} Registration result
    */
-  async signUp(address: string): Promise<AuthResult> {
+  async signUp(address: string): Promise<SignUpResult> {
     try {
       const core = this.assertInitialized();
 

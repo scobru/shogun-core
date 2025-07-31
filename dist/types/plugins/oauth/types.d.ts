@@ -1,5 +1,5 @@
 import { BaseConfig, BaseResult, BaseCacheEntry } from "../../types/common";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 /**
  * Supported OAuth providers
  */
@@ -99,9 +99,11 @@ export interface OAuthPluginInterface {
      */
     login(provider: OAuthProvider): Promise<AuthResult>;
     /**
-     * Sign up with OAuth
+     * Sign up with OAuth provider
+     * @param provider OAuth provider to use
+     * @returns Promise with authentication result
      */
-    signUp(provider: OAuthProvider): Promise<AuthResult>;
+    signUp(provider: OAuthProvider): Promise<SignUpResult>;
 }
 /**
  * Cache entry for OAuth data

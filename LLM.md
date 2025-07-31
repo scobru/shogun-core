@@ -6,6 +6,13 @@ Shogun Core is a TypeScript SDK for building decentralized applications (dApps) 
 
 ## Recent Improvements
 
+### ✅ **Type Consistency Fixes (v1.6.15+)**
+
+- **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
+- **Type Safety**: Fixed TypeScript inconsistencies across all plugins
+- **API Standardization**: All plugins implement unified `login()` and `signUp()` interfaces
+- **Enhanced SignUpResult**: Extended to support OAuth redirects and provider-specific data
+
 ### Enhanced Event System (v1.6.0+)
 
 - **Typed Event System**: Complete TypeScript event system with `ShogunEventMap` for type-safe event handling
@@ -91,9 +98,112 @@ const shogun = new ShogunCore({
 await shogun.initialize();
 ```
 
+## Core API Reference
+
+### ShogunCore (index.ts) - Main Entry Point
+
+```typescript
+class ShogunCore implements IShogunCore {
+  // Core properties
+  public db: GunInstance;
+  public storage: ShogunStorage;
+  public provider?: ethers.Provider;
+  public config: ShogunSDKConfig;
+  public rx: GunRxJS;
+  public wallets?: Wallets;
+
+  // Constructor & Initialization
+  constructor(config: ShogunSDKConfig);
+  async initialize(): Promise<void>;
+
+  // Authentication Methods - ✅ FIXED TYPES
+  async login(username: string, password: string, pair?: ISEAPair): Promise<AuthResult>;
+  async signUp(username: string, password: string, email?: string, pair?: ISEAPair): Promise<SignUpResult>;
+  async loginWithPair(pair: ISEAPair): Promise<AuthResult>;
+  logout(): void;
+  isLoggedIn(): boolean;
+
+  // Plugin Management
+  getPlugin<T>(name: string): T | undefined;
+  hasPlugin(name: string): boolean;
+  register(plugin: ShogunPlugin): void;
+  unregister(pluginName: string): void;
+  getAuthenticationMethod(type: AuthMethod): any;
+
+  // Event System - Type Safe
+  on<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this;
+  off<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this;
+  emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K]): boolean;
+
+  // Utility Methods
+  exportPair(): string;
+  updateUserAlias(newAlias: string): Promise<boolean>;
+  saveCredentials(credentials: any): Promise<void>;
+  clearAllStorageData(): void;
+  getRecentErrors(count?: number): ShogunError[];
+}
+```
+
+### GunInstance (gun-Instance.ts) - Database Layer
+
+```typescript
+class GunInstance {
+  public gun: IGunInstance<any>;
+  public user: IGunUserInstance<any> | null;
+  public crypto: typeof crypto;
+  public sea: typeof SEA;
+
+  // Constructor
+  constructor(gun: IGunInstance<any>, appScope?: string);
+  async initialize(appScope?: string): Promise<void>;
+
+  // Authentication - ✅ FIXED TYPES
+  async login(username: string, password: string, pair?: ISEAPair): Promise<AuthResult>;
+  async signUp(username: string, password: string, pair?: ISEAPair): Promise<SignUpResult>;
+  logout(): void;
+  isLoggedIn(): boolean;
+
+  // User Management
+  async checkUsernameExists(username: string): Promise<any>;
+  async updateUserAlias(newAlias: string): Promise<{ success: boolean; error?: string }>;
+  restoreSession(): { success: boolean; userPub?: string; error?: string };
+
+  // Data Operations
+  async getData(path: string): Promise<GunData>;
+  async put(path: string, data: GunData): Promise<GunOperationResult>;
+  async set(path: string, data: GunData): Promise<GunOperationResult>;
+  async remove(path: string): Promise<GunOperationResult>;
+  async putUserData(path: string, data: any): Promise<void>;
+  async getUserData(path: string): Promise<any>;
+
+  // Cryptographic Operations
+  async hashText(text: string): Promise<string>;
+  async encrypt(data: any, key: string): Promise<string>;
+  async decrypt(encryptedData: string, key: string): Promise<any>;
+  async derive(password: string | number, extra?: string[], options?: DeriveOptions): Promise<any>;
+
+  // Frozen Space (Immutable Data)
+  async createFrozenSpace(data: any, options?: any): Promise<{ hash: string; fullPath: string; data: any }>;
+  async getFrozenSpace(hash: string, namespace?: string, path?: string): Promise<any>;
+  async verifyFrozenSpace(data: any, hash: string, namespace?: string, path?: string): Promise<any>;
+
+  // Peer Management
+  addPeer(peer: string): void;
+  removePeer(peer: string): void;
+  getCurrentPeers(): string[];
+  getAllConfiguredPeers(): string[];
+  resetPeers(newPeers?: string[]): void;
+
+  // Event System
+  on(event: string | symbol, listener: EventListener): void;
+  off(event: string | symbol, listener: EventListener): void;
+  emit(event: string | symbol, data?: EventData): boolean;
+}
+```
+
 ## Plugin Authentication APIs
 
-### Core Types and Interfaces
+### Core Types and Interfaces - ✅ UNIFIED
 
 ```typescript
 // Authentication result interface - returned by all plugin methods
@@ -133,235 +243,276 @@ interface AuthResult {
   };
 }
 
+// ✅ ENHANCED - Now includes all OAuth fields
+interface SignUpResult {
+  success: boolean;
+  userPub?: string;
+  username?: string;
+  pub?: string;
+  error?: string;
+  message?: string;
+  wallet?: any;
+  isNewUser?: boolean;
+  authMethod?: AuthMethod;
+  sessionToken?: string;
+  sea?: SEAPair;
+  // OAuth flow support - ✅ ADDED
+  redirectUrl?: string;
+  pendingAuth?: boolean;
+  provider?: string;
+  user?: OAuthUserInfo;
+}
+
 // Supported authentication methods
 type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
+```
 
-// Event system with full TypeScript support
-interface ShogunEventMap {
-  "auth:login": AuthEventData;
-  "auth:logout": void;
-  "auth:signup": AuthEventData;
-  "wallet:created": WalletEventData;
-  "gun:put": GunDataEventData;
-  "gun:get": GunDataEventData;
-  "gun:set": GunDataEventData;
-  "gun:remove": GunDataEventData;
-  "gun:peer:add": GunPeerEventData;
-  "gun:peer:remove": GunPeerEventData;
-  "gun:peer:connect": GunPeerEventData;
-  "gun:peer:disconnect": GunPeerEventData;
-  "plugin:registered": { name: string; version?: string; category?: string };
-  "plugin:unregistered": { name: string };
-  "debug": { action: string; [key: string]: any };
-  "error": ErrorEventData;
+### 1. WebAuthn Plugin API - ✅ FIXED TYPES
+
+```typescript
+class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
+  name = "webauthn";
+  version = "1.0.0";
+
+  // Core Authentication - ✅ CORRECT RETURN TYPES
+  async login(username: string): Promise<AuthResult>;
+  async signUp(username: string): Promise<SignUpResult>; // ✅ FIXED
+
+  // Capability Checks
+  isSupported(): boolean;
+
+  // WebAuthn-specific Methods
+  async generateCredentials(username: string, existingCredential?: WebAuthnCredentials, isLogin?: boolean): Promise<WebAuthnUniformCredentials>;
+  async createAccount(username: string, credentials: WebAuthnCredentials | null, isNewDevice?: boolean): Promise<CredentialResult>;
+  async authenticateUser(username: string, salt: string | null, options?: any): Promise<CredentialResult>;
+  abortAuthentication(): void;
+  async removeDevice(username: string, credentialId: string, credentials: WebAuthnCredentials): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
+
+  // Oneshot Signing API
+  async createSigningCredential(username: string): Promise<WebAuthnSigningCredential>;
+  createAuthenticator(credentialId: string): (data: any) => Promise<AuthenticatorAssertionResponse>;
+  async createDerivedKeyPair(credentialId: string, username: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(data: any, credentialId: string, username: string, extra?: string[]): Promise<string>;
+  async createGunUserFromSigningCredential(credentialId: string, username: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+
+  // Credential Management
+  getSigningCredential(credentialId: string): WebAuthnSigningCredential | undefined;
+  listSigningCredentials(): WebAuthnSigningCredential[];
+  removeSigningCredential(credentialId: string): boolean;
+  getGunUserPubFromSigningCredential(credentialId: string): string | undefined;
+  getHashedCredentialId(credentialId: string): string | undefined;
+
+  // Consistency Verification
+  async verifyConsistency(credentialId: string, username: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
+  async setupConsistentOneshotSigning(username: string): Promise<{ credential: WebAuthnSigningCredential; authenticator: Function; gunUser: any; pub: string; hashedCredentialId: string }>;
 }
 ```
 
-### 1. Traditional Authentication
+### 2. Web3 Plugin API - ✅ FIXED TYPES
 
 ```typescript
-// Direct username/password authentication
-const signUpResult = await shogun.signUp("username", "password");
-if (signUpResult.success) {
-  console.log("User created:", signUpResult.username);
-}
+class Web3ConnectorPlugin extends BasePlugin implements Web3ConectorPluginInterface {
+  name = "web3";
+  version = "1.0.0";
 
-const loginResult = await shogun.login("username", "password");
-if (loginResult.success) {
-  console.log("Logged in as:", loginResult.username);
-}
-```
+  // Core Authentication - ✅ CORRECT RETURN TYPES
+  async login(address: string): Promise<AuthResult>;
+  async signUp(address: string): Promise<SignUpResult>; // ✅ FIXED
 
-### 2. Web3 Plugin API (MetaMask/Ethereum)
-
-```typescript
-const web3Plugin = shogun.getPlugin<Web3ConnectorPlugin>("web3");
-
-if (web3Plugin && web3Plugin.isAvailable()) {
-  // Connect to MetaMask
-  const connectionResult = await web3Plugin.connectMetaMask();
-  
-  if (connectionResult.success) {
-    const address = connectionResult.address!;
-    
-    // Login with Web3 wallet
-    const loginResult = await web3Plugin.login(address);
-    if (loginResult.success) {
-      console.log("Web3 login successful");
-      console.log("User public key:", loginResult.userPub);
-    }
-    
-    // Register new user with Web3 wallet
-    const signUpResult = await web3Plugin.signUp(address);
-    if (signUpResult.success) {
-      console.log("Web3 registration successful");
-    }
-  }
-}
-
-// Complete Web3 Plugin Interface
-interface Web3ConnectorPluginInterface {
-  // Core authentication methods
-  login(address: string): Promise<AuthResult>;
-  signUp(address: string): Promise<AuthResult>;
-  
-  // Connection and availability
+  // Connection and Availability
   isAvailable(): boolean;
-  connectMetaMask(): Promise<ConnectionResult>;
-  getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
-  getSigner(): Promise<ethers.Signer>;
-  
-  // Credential management
-  generateCredentials(address: string): Promise<ISEAPair>;
-  generatePassword(signature: string): Promise<string>;
-  verifySignature(message: string, signature: string): Promise<string>;
+  async connectMetaMask(): Promise<ConnectionResult>;
+  async getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
+  async getSigner(): Promise<ethers.Signer>;
+
+  // Credential Management
+  async generateCredentials(address: string): Promise<ISEAPair>;
+  async generatePassword(signature: string): Promise<string>;
+  async verifySignature(message: string, signature: string): Promise<string>;
   setCustomProvider(rpcUrl: string, privateKey: string): void;
   cleanup(): void;
+
+  // Oneshot Signing API
+  async createSigningCredential(address: string): Promise<Web3SigningCredential>;
+  createAuthenticator(address: string): (data: any) => Promise<string>;
+  async createDerivedKeyPair(address: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
+  async createGunUserFromSigningCredential(address: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+
+  // Credential Management
+  getSigningCredential(address: string): Web3SigningCredential | undefined;
+  listSigningCredentials(): Web3SigningCredential[];
+  removeSigningCredential(address: string): boolean;
+  getGunUserPubFromSigningCredential(address: string): string | undefined;
+  getPassword(address: string): string | undefined;
+
+  // Consistency Verification
+  async verifyConsistency(address: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
+  async setupConsistentOneshotSigning(address: string): Promise<{ credential: Web3SigningCredential; authenticator: Function; gunUser: any; username: string; password: string }>;
 }
 ```
 
-### 3. WebAuthn Plugin API (Biometrics/Hardware Keys)
+### 3. Nostr Plugin API - ✅ FIXED TYPES
+
+```typescript
+class NostrConnectorPlugin extends BasePlugin implements NostrConnectorPluginInterface {
+  name = "nostr";
+  version = "1.0.0";
+
+  // Core Authentication - ✅ CORRECT RETURN TYPES
+  async login(address: string): Promise<AuthResult>;
+  async signUp(address: string): Promise<SignUpResult>; // ✅ FIXED
+
+  // Bitcoin Wallet Specific
+  async loginWithBitcoinWallet(address: string): Promise<AuthResult>;
+  async signUpWithBitcoinWallet(address: string): Promise<AuthResult>;
+
+  // Connection Methods
+  isAvailable(): boolean;
+  isAlbyAvailable(): boolean;
+  isNostrExtensionAvailable(): boolean;
+  async connectNostrWallet(): Promise<ConnectionResult>;
+  async connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+
+  // Credential and Signature Management
+  async generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
+  async verifySignature(message: string, signature: string, address: string): Promise<boolean>;
+  async generatePassword(signature: string): Promise<string>;
+  clearSignatureCache(address?: string): void;
+  cleanup(): void;
+
+  // Oneshot Signing API
+  async createSigningCredential(address: string): Promise<NostrSigningCredential>;
+  createAuthenticator(address: string): (data: any) => Promise<string>;
+  async createDerivedKeyPair(address: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
+  async createGunUserFromSigningCredential(address: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+
+  // Credential Management
+  getSigningCredential(address: string): NostrSigningCredential | undefined;
+  listSigningCredentials(): NostrSigningCredential[];
+  removeSigningCredential(address: string): boolean;
+  getGunUserPubFromSigningCredential(address: string): string | undefined;
+  getPassword(address: string): string | undefined;
+
+  // Consistency Verification
+  async verifyConsistency(address: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
+  async setupConsistentOneshotSigning(address: string): Promise<{ credential: NostrSigningCredential; authenticator: Function; gunUser: any; username: string; password: string }>;
+}
+```
+
+### 4. OAuth Plugin API - ✅ FIXED TYPES
+
+```typescript
+class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
+  name = "oauth";
+  version = "1.0.0";
+
+  // Core Authentication - ✅ CORRECT RETURN TYPES
+  async login(provider: OAuthProvider): Promise<AuthResult>;
+  async signUp(provider: OAuthProvider): Promise<SignUpResult>; // ✅ FIXED
+
+  // OAuth Flow Management
+  isSupported(): boolean;
+  getAvailableProviders(): OAuthProvider[];
+  async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
+  async completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
+  async handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>; // ✅ CORRECT - Callback completes auth
+
+  // Credential and User Management
+  async generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials>;
+  getCachedUserInfo(userId: string, provider: OAuthProvider): OAuthUserInfo | null;
+  clearUserCache(userId?: string, provider?: OAuthProvider): void;
+
+  // Configuration
+  configure(config: Partial<OAuthConfig>): void;
+
+  // Legacy Methods (Deprecated)
+  async handleSimpleOAuth(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
+}
+```
+
+## Usage Examples with Fixed Types
+
+### Traditional Authentication
+
+```typescript
+// Sign up - Returns SignUpResult ✅
+const signUpResult: SignUpResult = await shogun.signUp("username", "password");
+if (signUpResult.success) {
+  console.log("User created:", signUpResult.username);
+  console.log("Is new user:", signUpResult.isNewUser);
+}
+
+// Login - Returns AuthResult ✅
+const loginResult: AuthResult = await shogun.login("username", "password");
+if (loginResult.success) {
+  console.log("Logged in as:", loginResult.username);
+  console.log("Auth method:", loginResult.authMethod);
+}
+```
+
+### WebAuthn Authentication
 
 ```typescript
 const webauthnPlugin = shogun.getPlugin<WebauthnPlugin>("webauthn");
 
 if (webauthnPlugin && webauthnPlugin.isSupported()) {
-  // Register new user with WebAuthn
-  const signUpResult = await webauthnPlugin.signUp("username");
+  // Register - Returns SignUpResult ✅
+  const signUpResult: SignUpResult = await webauthnPlugin.signUp("username");
   if (signUpResult.success) {
     console.log("WebAuthn registration successful");
+    console.log("User pub:", signUpResult.userPub);
   }
 
-  // Authenticate existing user
-  const loginResult = await webauthnPlugin.login("username");
+  // Login - Returns AuthResult ✅
+  const loginResult: AuthResult = await webauthnPlugin.login("username");
   if (loginResult.success) {
     console.log("WebAuthn authentication successful");
   }
 }
-
-// Complete WebAuthn Plugin Interface
-interface WebauthnPluginInterface {
-  // Core authentication methods
-  login(username: string): Promise<AuthResult>;
-  signUp(username: string): Promise<AuthResult>;
-  
-  // Capability checks
-  isSupported(): boolean;
-  
-  // WebAuthn-specific methods
-  register(username: string, displayName?: string): Promise<WebAuthnCredential>;
-  authenticate(username?: string): Promise<WebAuthnCredential>;
-  generateCredentials(username: string, pair?: ISEAPair | null, login?: boolean): Promise<WebAuthnUniformCredentials>;
-  
-  // Management
-  cleanup(): void;
-}
 ```
 
-### 4. Nostr Plugin API (Bitcoin/Nostr)
+### Web3 Authentication
 
 ```typescript
-const nostrPlugin = shogun.getPlugin<NostrConnectorPlugin>("nostr");
+const web3Plugin = shogun.getPlugin<Web3ConnectorPlugin>("web3");
 
-if (nostrPlugin && nostrPlugin.isAvailable()) {
-  // Connect to Nostr wallet (Bitcoin extension)
-  const connectionResult = await nostrPlugin.connectNostrWallet();
+if (web3Plugin && web3Plugin.isAvailable()) {
+  const connectionResult = await web3Plugin.connectMetaMask();
   
   if (connectionResult.success) {
     const address = connectionResult.address!;
     
-    // Login with Nostr/Bitcoin wallet
-    const loginResult = await nostrPlugin.login(address);
-    if (loginResult.success) {
-      console.log("Nostr login successful");
-    }
+    // Login - Returns AuthResult ✅
+    const loginResult: AuthResult = await web3Plugin.login(address);
     
-    // Register with Nostr/Bitcoin wallet
-    const signUpResult = await nostrPlugin.signUp(address);
-    if (signUpResult.success) {
-      console.log("Nostr registration successful");
-    }
+    // Register - Returns SignUpResult ✅
+    const signUpResult: SignUpResult = await web3Plugin.signUp(address);
   }
-}
-
-// Complete Nostr Plugin Interface
-interface NostrConnectorPluginInterface {
-  // Core authentication methods
-  login(address: string): Promise<AuthResult>;
-  signUp(address: string): Promise<AuthResult>;
-  
-  // Connection methods
-  isAvailable(): boolean;
-  connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
-  connectNostrWallet(): Promise<ConnectionResult>;
-  
-  // Credential and signature management
-  generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
-  verifySignature(message: string, signature: string, address: string): Promise<boolean>;
-  generatePassword(signature: string): Promise<string>;
-  clearSignatureCache(address?: string): void;
-  cleanup(): void;
-  
-  // Nostr-specific signer methods
-  createSigningCredential(address: string): Promise<NostrSigningCredential>;
-  createAuthenticator(address: string): (data: any) => Promise<string>;
-  createDerivedKeyPair(address: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
 }
 ```
 
-### 5. OAuth Plugin API (Social Login)
+### OAuth Authentication
 
 ```typescript
 const oauthPlugin = shogun.getPlugin<OAuthPlugin>("oauth");
 
 if (oauthPlugin && oauthPlugin.isSupported()) {
-  // Get available providers
-  const providers = oauthPlugin.getAvailableProviders(); // ["google", "github", ...]
-  
-  // Initiate login with OAuth (returns redirect URL)
-  const loginResult = await oauthPlugin.login("google");
-  if (loginResult.success && loginResult.redirectUrl) {
-    // Redirect user to OAuth provider
-    window.location.href = loginResult.redirectUrl;
+  // Initiate signup - Returns SignUpResult with redirectUrl ✅
+  const signUpResult: SignUpResult = await oauthPlugin.signUp("google");
+  if (signUpResult.success && signUpResult.redirectUrl) {
+    window.location.href = signUpResult.redirectUrl; // Redirect to Google
   }
   
-  // Handle OAuth callback (after redirect back from provider)
-  const callbackResult = await oauthPlugin.handleOAuthCallback(
-    "google", 
-    authCode,  // From URL params
-    state      // From URL params
+  // Handle callback - Returns AuthResult ✅
+  const callbackResult: AuthResult = await oauthPlugin.handleOAuthCallback(
+    "google", authCode, state
   );
   
-  if (callbackResult.success) {
-    console.log("OAuth authentication successful");
-    if (callbackResult.user) {
-      console.log("User email:", callbackResult.user.email);
-      console.log("User name:", callbackResult.user.name);
-    }
+  if (callbackResult.success && callbackResult.user) {
+    console.log("OAuth user:", callbackResult.user.email);
   }
-}
-
-// Complete OAuth Plugin Interface
-interface OAuthPluginInterface {
-  // Core authentication methods
-  login(provider: OAuthProvider): Promise<AuthResult>;
-  signUp(provider: OAuthProvider): Promise<AuthResult>;
-  
-  // OAuth flow management
-  isSupported(): boolean;
-  getAvailableProviders(): OAuthProvider[];
-  initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
-  completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
-  handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
-  
-  // Credential and user management
-  generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials>;
-  getCachedUserInfo(userId: string, provider: OAuthProvider): OAuthUserInfo | null;
-  clearUserCache(userId?: string, provider?: OAuthProvider): void;
-  
-  // Configuration
-  configure(config: Partial<OAuthConfig>): void;
 }
 ```
 
@@ -379,7 +530,8 @@ export const useOAuth = (protocol) => {
     }
     
     try {
-      const result = await protocol.loginWithOAuth(provider);
+      // Returns AuthResult ✅
+      const result: AuthResult = await protocol.loginWithOAuth(provider);
       
       if (result.success && result.redirectUrl) {
         // The protocol handles the redirect
@@ -404,7 +556,8 @@ export const useOAuth = (protocol) => {
     }
     
     try {
-      const result = await protocol.registerWithOAuth(provider);
+      // Returns SignUpResult ✅
+      const result: SignUpResult = await protocol.registerWithOAuth(provider);
       
       if (result.success && result.redirectUrl) {
         // The protocol handles the redirect
@@ -498,122 +651,7 @@ shogun.on("wallet:created", (data) => {
 });
 ```
 
-### OAuth Callback Component
-
-```jsx
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-
-const OAuthCallback = ({ protocol }) => {
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const processing = useRef(false);
-
-  const handleAuth = useCallback(async () => {
-    if (processing.current) {
-      console.warn("OAuth callback is already being processed, skipping.");
-      return;
-    }
-    processing.current = true;
-
-    try {
-      const params = new URLSearchParams(location.search);
-      const code = params.get("code");
-      const state = params.get("state");
-      const error = params.get("error");
-      const errorDescription = params.get("error_description");
-      const provider = params.get("provider") || "google";
-
-      // Check for OAuth errors
-      if (error) {
-        throw new Error(
-          `OAuth error: ${error}${errorDescription ? ` - ${errorDescription}` : ""}`
-        );
-      }
-
-      // Security validation
-      if (!code) {
-        throw new Error("Authorization code not found in URL.");
-      }
-
-      if (!state) {
-        throw new Error(
-          "State parameter not found in URL - possible CSRF attack."
-        );
-      }
-
-      console.log(`Handling OAuth callback for ${provider}`);
-
-      // Handle OAuth callback using the protocol
-      if (protocol && protocol.handleOAuthCallback) {
-        const result = await protocol.handleOAuthCallback(code, state, provider);
-        
-        if (result && result.success) {
-          console.log("OAuth authentication successful:", result);
-
-          // Emit success event
-          window.dispatchEvent(new CustomEvent('oauth:success', {
-            detail: { provider, user: result.user }
-          }));
-
-          // Navigate to main page
-          navigate("/", { state: { authSuccess: true } });
-        } else {
-          throw new Error(result?.error || "Authentication failed");
-        }
-      }
-    } catch (e) {
-      console.error("Error handling OAuth callback:", e);
-
-      // Handle specific errors
-      if (e.message?.includes("invalid_grant")) {
-        setError("Your session has expired. Please try signing in again.");
-        navigate("/?error=token_expired");
-      } else if (e.message?.includes("state parameter expired")) {
-        setError("Authentication session expired. Please try signing in again.");
-        navigate("/?error=session_expired");
-      } else if (e.message?.includes("CSRF")) {
-        setError("Security validation failed. Please try signing in again.");
-        navigate("/?error=security_error");
-      } else {
-        setError(e.message || "An unexpected error occurred.");
-      }
-    } finally {
-      processing.current = false;
-    }
-  }, [navigate, location, protocol]);
-
-  useEffect(() => {
-    handleAuth();
-  }, [handleAuth]);
-
-  if (error) {
-    return (
-      <div className="oauth-callback-container">
-        <div className="oauth-callback-card">
-          <h2 className="oauth-callback-error">Authentication Failed</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate("/")}>Try Again</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="oauth-callback-container">
-      <div className="oauth-callback-card">
-        <div className="loading-spinner"></div>
-        <p>Processing authentication...</p>
-      </div>
-    </div>
-  );
-};
-
-export default OAuthCallback;
-```
-
-### OAuth Security Features
+## OAuth Security Features
 
 - **PKCE (Proof Key for Code Exchange)**: Mandatory for all OAuth providers
 - **Account Selection**: Google OAuth forces account selection with `prompt=select_account`
@@ -627,7 +665,7 @@ export default OAuthCallback;
 import { ShogunError, ErrorType } from "shogun-core";
 
 try {
-  await shogun.login("username", "password");
+  const result: AuthResult = await shogun.login("username", "password");
 } catch (error) {
   if (error instanceof ShogunError) {
     switch (error.type) {
@@ -667,6 +705,7 @@ export class CustomAuthPlugin extends BasePlugin {
     // Plugin initialization logic
   }
 
+  // ✅ MUST RETURN AuthResult
   async login(identifier: string): Promise<AuthResult> {
     const core = this.assertInitialized();
     
@@ -686,8 +725,15 @@ export class CustomAuthPlugin extends BasePlugin {
     return result;
   }
 
-  async signUp(identifier: string): Promise<AuthResult> {
+  // ✅ MUST RETURN SignUpResult
+  async signUp(identifier: string): Promise<SignUpResult> {
     // Custom registration logic
+    const core = this.assertInitialized();
+    
+    // Custom signup logic
+    const result = await core.signUp(username, "", "", keypair);
+    
+    return result;
   }
 
   destroy(): void {
@@ -707,3 +753,5 @@ export class CustomAuthPlugin extends BasePlugin {
 6. **Use PKCE for OAuth** in browser environments
 7. **Validate user input** before passing to plugin methods
 8. **Monitor wallet events** for automatic wallet derivation
+9. **✅ NEW: Always use correct return types** - `AuthResult` for login, `SignUpResult` for signup
+10. **✅ NEW: Check type consistency** when implementing custom plugins

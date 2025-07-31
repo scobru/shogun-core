@@ -1,7 +1,7 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { OAuthPluginInterface, OAuthConfig, OAuthProvider, OAuthConnectionResult, OAuthCredentials, OAuthUserInfo } from "./types";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 /**
  * OAuth Plugin for ShogunCore
  * Provides authentication with external OAuth providers
@@ -70,14 +70,11 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      */
     login(provider: OAuthProvider): Promise<AuthResult>;
     /**
-     * Sign up with OAuth
-     * @param provider - OAuth provider to use
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using OAuth with external providers
-     * NOTE: This method only initiates the OAuth flow. The actual registration
-     * happens in handleOAuthCallback when the provider redirects back.
+     * Register new user with OAuth provider
+     * @param provider - OAuth provider
+     * @returns {Promise<SignUpResult>} Registration result
      */
-    signUp(provider: OAuthProvider): Promise<AuthResult>;
+    signUp(provider: OAuthProvider): Promise<SignUpResult>;
     /**
      * Handle OAuth callback (for frontend integration)
      * This method would be called when the OAuth provider redirects back

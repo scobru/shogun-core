@@ -96,12 +96,34 @@ export interface SignUpResult {
   message?: string;
   wallet?: any;
   isNewUser?: boolean;
+  authMethod?: AuthMethod;
+  sessionToken?: string;
   // Include SEA pair for session persistence
   sea?: {
     pub: string;
     priv: string;
     epub: string;
     epriv: string;
+  };
+  // Properties for OAuth flow
+  redirectUrl?: string;
+  pendingAuth?: boolean;
+  provider?: string;
+  // OAuth user data
+  user?: {
+    userPub?: string;
+    username?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+    oauth?: {
+      provider: string;
+      id: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+      lastLogin: number;
+    };
   };
 }
 

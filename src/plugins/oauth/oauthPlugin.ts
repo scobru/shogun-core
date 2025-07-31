@@ -9,7 +9,7 @@ import {
   OAuthCredentials,
   OAuthUserInfo,
 } from "./types";
-import { AuthMethod, AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult, AuthMethod } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ShogunStorage } from "../../storage/storage";
 import { ISEAPair } from "gun";
@@ -258,14 +258,11 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   }
 
   /**
-   * Sign up with OAuth
-   * @param provider - OAuth provider to use
-   * @returns {Promise<AuthResult>} Registration result
-   * @description Creates a new user account using OAuth with external providers
-   * NOTE: This method only initiates the OAuth flow. The actual registration
-   * happens in handleOAuthCallback when the provider redirects back.
+   * Register new user with OAuth provider
+   * @param provider - OAuth provider
+   * @returns {Promise<SignUpResult>} Registration result
    */
-  async signUp(provider: OAuthProvider): Promise<AuthResult> {
+  async signUp(provider: OAuthProvider): Promise<SignUpResult> {
     try {
       const core = this.assertInitialized();
 
@@ -468,7 +465,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // Try login first
     const loginResult = await this.core.login(username, "", k);
     if (loginResult.success) {
-      this.core.db.savePair?.(); // Ensure session is saved
+      // Session is automatically saved by the login method
       loginResult.isNewUser = false;
       // Include SEA pair from core
       if (this.core.user && (this.core.user._ as any)?.sea) {
@@ -483,7 +480,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Immediately login after signup
       const postSignupLogin = await this.core.login(username, "", k);
       if (postSignupLogin.success) {
-        this.core.db.savePair?.();
+        // Session is automatically saved by the login method
         postSignupLogin.isNewUser = true;
         // Include SEA pair from core
         if (this.core.user && (this.core.user._ as any)?.sea) {

@@ -67,8 +67,12 @@ class ErrorHandler {
      * @param error - The error to handle
      */
     static handleError(error) {
-        // Log the error
-        console.error(`[${error.type}] ${error.code}: ${error.message}`);
+        // Log essential errors only
+        if (error.type === ErrorType.AUTHENTICATION ||
+            error.type === ErrorType.AUTHORIZATION ||
+            error.type === ErrorType.SECURITY) {
+            console.error(`[${error.type}] ${error.code}: ${error.message}`);
+        }
         // Store the error in memory
         this.errors.push(error);
         // Keep only the last maxErrors
@@ -81,11 +85,19 @@ class ErrorHandler {
                 this.externalLogger(error);
             }
             catch (e) {
+                // Fallback logging for external logger errors
                 console.error("Failed to send error to external logger:", e);
             }
         }
-        // Notify listeners
-        this.notifyListeners(error);
+        // Notify all listeners
+        this.listeners.forEach((listener) => {
+            try {
+                listener(error);
+            }
+            catch (e) {
+                // Silent error to prevent infinite loops
+            }
+        });
     }
     /**
      * Handles a raw error by converting it to ShogunError
@@ -240,6 +252,29 @@ class ErrorHandler {
             stats.byCode[error.code] = (stats.byCode[error.code] || 0) + 1;
         }
         return stats;
+    }
+    /**
+     * Debug helper - logs messages only in development
+     */
+    static debug(type, code, message, level = "debug") {
+        // Only log debug messages in development environment
+        if (process.env.NODE_ENV === "development") {
+            const finalMessage = `${message}`;
+            switch (level) {
+                case "error":
+                    console.error(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "warn":
+                    console.warn(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "info":
+                    console.log(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "debug":
+                    console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+                    break;
+            }
+        }
     }
 }
 exports.ErrorHandler = ErrorHandler;

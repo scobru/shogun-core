@@ -94125,7 +94125,7 @@ function normalizeString(str) {
 }
 async function stretchKey(input, salt, iterations = 300_000) {
     const baseKey = await crypto.subtle.importKey("raw", input, { name: "PBKDF2" }, false, ["deriveBits"]);
-    const keyBits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, baseKey, 256);
+    const keyBits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations, hash: "SHA-256" }, baseKey, 256);
     return new Uint8Array(keyBits);
 }
 function bytesToHex(bytes) {
@@ -94363,6 +94363,32 @@ const GunErrors = __importStar(__webpack_require__(/*! ./errors */ "./src/gundb/
 exports.GunErrors = GunErrors;
 const crypto = __importStar(__webpack_require__(/*! ./crypto */ "./src/gundb/crypto.ts"));
 exports.crypto = crypto;
+/**
+ * Configuration constants for timeouts and security
+ */
+const CONFIG = {
+    TIMEOUTS: {
+        LOOKUP_FROZEN_SPACE: 2000,
+        LOOKUP_DIRECT_MAPPING: 1500,
+        LOOKUP_ALTERNATE_KEY: 1500,
+        LOOKUP_COMPREHENSIVE: 1500,
+        USER_DATA_OPERATION: 5000,
+        STRATEGY_TIMEOUT: 3000,
+    },
+    RATE_LIMITING: {
+        MAX_LOGIN_ATTEMPTS: 5,
+        LOGIN_COOLDOWN_MS: 300000, // 5 minutes
+        MAX_SIGNUP_ATTEMPTS: 3,
+        SIGNUP_COOLDOWN_MS: 600000, // 10 minutes
+    },
+    PASSWORD: {
+        MIN_LENGTH: 12,
+        REQUIRE_UPPERCASE: true,
+        REQUIRE_LOWERCASE: true,
+        REQUIRE_NUMBERS: true,
+        REQUIRE_SPECIAL_CHARS: true,
+    },
+};
 class GunInstance {
     gun;
     user = null;
@@ -94371,6 +94397,8 @@ class GunInstance {
     node;
     onAuthCallbacks = [];
     eventEmitter;
+    // Rate limiting storage
+    rateLimitStorage = new Map();
     // Integrated modules
     _rxjs;
     constructor(gun, appScope = "shogun") {
@@ -94408,12 +94436,10 @@ class GunInstance {
             const sessionResult = this.restoreSession();
             this.node = this.gun.get(appScope);
             if (sessionResult.success) {
-                // console.log(
-                //   `Session automatically restored for user: ${sessionResult.userPub}`,
-                // );
+                // Session automatically restored
             }
             else {
-                // console.log(`No previous session to restore: ${sessionResult.error}`);
+                // No previous session to restore
             }
         }
         catch (error) {
@@ -94422,7 +94448,7 @@ class GunInstance {
     }
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {
-            // console.log("[gunInstance]  Auth event received:", ack);
+            // Auth event received
             if (ack.err) {
                 errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
             }
@@ -94631,7 +94657,7 @@ class GunInstance {
                         this.addPeer(peer);
                     });
                 }
-                console.log(`Reset peers. New peers: ${newPeers ? newPeers.join(", ") : "none"}`);
+                console.log(`Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`);
             }
         }
         catch (error) {
@@ -94690,7 +94716,7 @@ class GunInstance {
             return pub ? { pub, user } : null;
         }
         catch (error) {
-            console.error("[gunInstance]  Error getting current user:", error);
+            console.error("Error getting current user:", error);
             return null;
         }
     }
@@ -94786,7 +94812,7 @@ class GunInstance {
             return !!(user && user.is && user.is.pub);
         }
         catch (error) {
-            console.error("[gunInstance]  Error checking login status:", error);
+            console.error("Error checking login status:", error);
             return false;
         }
     }
@@ -94802,7 +94828,7 @@ class GunInstance {
             const sessionInfo = localStorage.getItem("gun/session");
             const pairInfo = localStorage.getItem("gun/pair");
             if (!sessionInfo || !pairInfo) {
-                // console.log("[gunInstance]  No saved session found");
+                // No saved session found
                 return { success: false, error: "No saved session" };
             }
             let session, pair;
@@ -94811,138 +94837,119 @@ class GunInstance {
                 pair = JSON.parse(pairInfo);
             }
             catch (parseError) {
-                console.error("[gunInstance]  Error parsing session data:", parseError);
+                console.error("Error parsing session data:", parseError);
                 // Clear corrupted data
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Corrupted session data" };
             }
-            // Validate session data
-            if (!session.pub || !pair.pub || !pair.priv) {
-                // console.log("[gunInstance]  Invalid session data, clearing storage");
+            // Validate session data structure
+            if (!session.username || !session.pair || !session.userPub) {
+                // Invalid session data, clearing storage
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
-                return { success: false, error: "Invalid session data" };
+                return { success: false, error: "Incomplete session data" };
             }
-            // Check if session is not too old (optional - you can adjust this)
-            const sessionAge = Date.now() - session.timestamp;
-            const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-            if (sessionAge > maxSessionAge) {
-                // console.log("[gunInstance]  Session expired, clearing storage");
+            // Check if session is expired
+            if (session.expiresAt && Date.now() > session.expiresAt) {
+                // Session expired, clearing storage
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Session expired" };
             }
-            // console.log(
-            //   `Attempting to restore session for user: ${session.alias || session.pub}`,
-            // );
-            // Try to restore the session with Gun
-            const user = this.gun.user();
-            if (!user) {
-                console.error("[gunInstance]  Gun user instance not available");
-                return { success: false, error: "Gun user instance not available" };
-            }
-            // Set the pair directly with error handling
+            // Attempt to restore user session
             try {
-                user._ = { sea: pair };
+                const userInstance = this.gun.user();
+                if (!userInstance) {
+                    console.error("Gun user instance not available");
+                    localStorage.removeItem("gun/session");
+                    localStorage.removeItem("gun/pair");
+                    return { success: false, error: "Gun user instance not available" };
+                }
+                // Set the user pair
+                try {
+                    userInstance._ = { ...userInstance._, sea: session.pair };
+                }
+                catch (pairError) {
+                    console.error("Error setting user pair:", pairError);
+                }
+                // Attempt to recall user session
+                try {
+                    const recallResult = userInstance.recall({ sessionStorage: true });
+                    // console.log("recallResult", recallResult);
+                }
+                catch (recallError) {
+                    console.error("Error during recall:", recallError);
+                }
+                // Verify session restoration success
+                if (userInstance.is && userInstance.is.pub === session.userPub) {
+                    this.user = userInstance;
+                    // Session restored successfully for user
+                    return {
+                        success: true,
+                        userPub: session.userPub,
+                    };
+                }
+                else {
+                    // Session restoration verification failed
+                    localStorage.removeItem("gun/session");
+                    localStorage.removeItem("gun/pair");
+                    return { success: false, error: "Session verification failed" };
+                }
             }
-            catch (pairError) {
-                console.error("[gunInstance]  Error setting user pair:", pairError);
-                return { success: false, error: "Failed to set user credentials" };
-            }
-            // Try to recall the session with better error handling
-            let recallResult;
-            try {
-                recallResult = user.recall({ sessionStorage: true });
-                // console.log("recallResult", recallResult);
-            }
-            catch (recallError) {
-                console.error("[gunInstance]  Error during recall:", recallError);
-                // Clear corrupted session data
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
-                return { success: false, error: "Session recall failed" };
-            }
-            // Check if recall was successful
-            if (recallResult && user.is?.pub === session.pub) {
-                // console.log(
-                //   `Session restored successfully for: ${session.alias || session.pub}`,
-                // );
-                return { success: true, userPub: session.pub };
-            }
-            else {
-                // console.log(
-                //   "[gunInstance]  Session restoration failed, clearing storage",
-                // );
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
-                return { success: false, error: "Session restoration failed" };
+            catch (error) {
+                console.error(`Error restoring session: ${error}`);
+                this.clearGunStorage();
+                return {
+                    success: false,
+                    error: `Session restoration failed: ${error}`,
+                };
             }
         }
-        catch (error) {
-            console.error(`Error restoring session: ${error}`);
-            // Clear potentially corrupted data on any error
-            try {
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
-            }
-            catch (clearError) {
-                console.error("[gunInstance]  Error clearing corrupted session data:", clearError);
-            }
-            return { success: false, error: String(error) };
+        catch (mainError) {
+            console.error(`Error in restoreSession: ${mainError}`);
+            return {
+                success: false,
+                error: `Session restoration failed: ${mainError}`,
+            };
         }
+        // removed by dead control flow
+{}
     }
-    /**
-     * Logs out the current user using direct Gun authentication
-     */
     logout() {
         try {
-            // Check if the user is actually logged in before attempting to logout
-            if (!this.isLoggedIn()) {
-                console.log("[gunInstance]  No user logged in, skipping logout");
+            const currentUser = this.gun.user();
+            if (!currentUser || !currentUser.is) {
+                console.log("No user logged in, skipping logout");
                 return;
             }
-            const currentUser = this.getCurrentUser();
-            // console.log(`Logging out user: ${currentUser?.pub || "unknown"}`);
-            // Direct logout using Gun with error handling
+            // Log out user
             try {
-                const user = this.gun.user();
-                if (user && typeof user.leave === "function") {
-                    user.leave();
-                }
+                currentUser.leave();
             }
             catch (gunError) {
-                console.error("[gunInstance]  Error during Gun logout:", gunError);
-                // Continue with storage cleanup even if Gun logout fails
+                console.error("Error during Gun logout:", gunError);
             }
-            // Clear local storage session data
-            if (typeof localStorage !== "undefined") {
-                try {
-                    localStorage.removeItem("gun/pair");
-                    localStorage.removeItem("gun/session");
-                    // Also clear old format for backward compatibility
-                    localStorage.removeItem("pair");
-                    // console.log("[gunInstance]  Local session data cleared");
-                }
-                catch (storageError) {
-                    console.error("[gunInstance]  Error clearing localStorage:", storageError);
-                }
+            // Clear user reference
+            this.user = null;
+            // Clear local session data
+            try {
+                // Clear session data if needed
             }
-            // Clear sessionStorage as well
-            if (typeof sessionStorage !== "undefined") {
-                try {
-                    sessionStorage.removeItem("gun/");
-                    sessionStorage.removeItem("gun/user");
-                    sessionStorage.removeItem("gun/auth");
-                    sessionStorage.removeItem("gun/pair");
-                    sessionStorage.removeItem("gun/session");
-                    // console.log("[gunInstance]  Session storage cleared");
-                }
-                catch (sessionError) {
-                    console.error("[gunInstance]  Error clearing sessionStorage:", sessionError);
+            catch (error) {
+                console.error("Error clearing local session data:", error);
+            }
+            // Clear session storage
+            try {
+                if (typeof sessionStorage !== "undefined") {
+                    sessionStorage.removeItem("gunSessionData");
+                    // Session storage cleared
                 }
             }
-            // console.log("[gunInstance]  Logout completed successfully");
+            catch (error) {
+                console.error("Error clearing session storage:", error);
+            }
+            // Logout completed successfully
         }
         catch (error) {
             console.error("Error during logout:", error);
@@ -94951,60 +94958,50 @@ class GunInstance {
     /**
      * Debug method: Clears all Gun-related data from local and session storage
      * This is useful for debugging and testing purposes
+     * @warning This will completely reset the user's local Gun data
      */
-    clearAllStorageData() {
+    clearGunStorage() {
         try {
-            // console.log("[gunInstance]  Clearing all Gun-related storage data...");
+            // Clearing all Gun-related storage data...
             // Clear localStorage
             if (typeof localStorage !== "undefined") {
                 try {
                     const keysToRemove = [];
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
-                        if (key && (key.startsWith("gun/") || key === "pair")) {
+                        if (key && key.startsWith("gun/")) {
                             keysToRemove.push(key);
                         }
                     }
                     keysToRemove.forEach((key) => localStorage.removeItem(key));
-                    // console.log(`Cleared ${keysToRemove.length} items from localStorage`);
+                    // Cleared items from localStorage
                 }
-                catch (localError) {
-                    console.error("[gunInstance]  Error clearing localStorage:", localError);
+                catch (error) {
+                    console.error("Error clearing localStorage:", error);
                 }
             }
             // Clear sessionStorage
             if (typeof sessionStorage !== "undefined") {
                 try {
-                    const keysToRemove = [];
-                    for (let i = 0; i < sessionStorage.length; i++) {
-                        const key = sessionStorage.key(i);
-                        if (key && key.startsWith("gun/")) {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-                    // console.log(
-                    //   `Cleared ${keysToRemove.length} items from sessionStorage`,
-                    // );
+                    sessionStorage.removeItem("gunSessionData");
+                    // Session storage cleared
                 }
-                catch (sessionError) {
-                    console.error("[gunInstance]  Error clearing sessionStorage:", sessionError);
+                catch (error) {
+                    console.error("Error clearing sessionStorage:", error);
                 }
             }
-            // Also logout if currently logged in
-            if (this.isLoggedIn()) {
+            // Clear current user
+            if (this.user) {
                 try {
-                    const user = this.gun.user();
-                    if (user && typeof user.leave === "function") {
-                        user.leave();
-                        // console.log("[gunInstance]  User logged out");
-                    }
+                    this.user.leave();
+                    this.user = null;
+                    // User logged out
                 }
                 catch (logoutError) {
-                    console.error("[gunInstance]  Error during logout:", logoutError);
+                    console.error("Error during logout:", logoutError);
                 }
             }
-            // console.log("[gunInstance]  All Gun-related storage data cleared");
+            // All Gun-related storage data cleared
         }
         catch (error) {
             console.error("Error clearing storage data:", error);
@@ -95016,67 +95013,57 @@ class GunInstance {
      */
     async testConnectivity() {
         try {
-            // console.log("[gunInstance]  Testing Gun connectivity...");
-            const result = {
-                peers: this.getPeerInfo(),
-                gunInstance: !!this.gun,
-                userInstance: !!this.gun.user(),
-                canWrite: false,
-                canRead: false,
-                testWriteResult: undefined,
-                testReadResult: undefined,
-            };
-            // Test basic write operation
+            // Testing Gun connectivity...
+            const testNode = this.gun.get("test_connectivity");
+            const testValue = `test_${Date.now()}`;
+            // Test write operation
+            let writeResult = false;
             try {
-                const testData = { test: true, timestamp: Date.now() };
-                const writeResult = await new Promise((resolve) => {
-                    this.gun
-                        .get("test")
-                        .get("connectivity")
-                        .put(testData, (ack) => {
-                        resolve(ack);
+                await new Promise((resolve, reject) => {
+                    testNode.put(testValue, (ack) => {
+                        if (ack.err) {
+                            reject(ack.err);
+                        }
+                        else {
+                            resolve(ack);
+                        }
                     });
                 });
-                result.canWrite = !writeResult?.err;
-                result.testWriteResult = writeResult;
-                // console.log("[gunInstance]  Write test result:", writeResult);
+                writeResult = true;
             }
             catch (writeError) {
                 console.error("Write test failed:", writeError);
-                result.testWriteResult = { error: String(writeError) };
             }
-            // Test basic read operation
+            // Test read operation
+            let readResult = false;
             try {
-                const readResult = await new Promise((resolve) => {
-                    this.gun
-                        .get("test")
-                        .get("connectivity")
-                        .once((data) => {
-                        resolve(data);
+                const result = await new Promise((resolve, reject) => {
+                    testNode.once((data) => {
+                        if (data === testValue) {
+                            resolve(data);
+                        }
+                        else {
+                            reject("Data mismatch");
+                        }
                     });
                 });
-                result.canRead = !!readResult;
-                result.testReadResult = readResult;
-                // console.log("[gunInstance]  Read test result:", readResult);
+                readResult = true;
             }
             catch (readError) {
                 console.error("Read test failed:", readError);
-                result.testReadResult = { error: String(readError) };
             }
-            // console.log("[gunInstance]  Connectivity test completed:", result);
+            const result = {
+                writeTest: writeResult,
+                readTest: readResult,
+                peers: this.getCurrentPeers(),
+                timestamp: new Date().toISOString(),
+            };
+            // Connectivity test completed
             return result;
         }
         catch (error) {
             console.error("Error testing connectivity:", error);
-            return {
-                peers: {},
-                gunInstance: false,
-                userInstance: false,
-                canWrite: false,
-                canRead: false,
-                testWriteResult: { error: String(error) },
-                testReadResult: { error: String(error) },
-            };
+            return { error: error, timestamp: new Date().toISOString() };
         }
     }
     /**
@@ -95090,6 +95077,191 @@ class GunInstance {
         return this._rxjs;
     }
     /**
+     * Validates password strength according to security requirements
+     */
+    validatePasswordStrength(password) {
+        if (password.length < CONFIG.PASSWORD.MIN_LENGTH) {
+            return {
+                valid: false,
+                error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
+            };
+        }
+        const validations = [];
+        if (CONFIG.PASSWORD.REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) {
+            validations.push("uppercase letter");
+        }
+        if (CONFIG.PASSWORD.REQUIRE_LOWERCASE && !/[a-z]/.test(password)) {
+            validations.push("lowercase letter");
+        }
+        if (CONFIG.PASSWORD.REQUIRE_NUMBERS && !/\d/.test(password)) {
+            validations.push("number");
+        }
+        if (CONFIG.PASSWORD.REQUIRE_SPECIAL_CHARS &&
+            !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            validations.push("special character");
+        }
+        if (validations.length > 0) {
+            return {
+                valid: false,
+                error: `Password must contain at least one: ${validations.join(", ")}`,
+            };
+        }
+        return { valid: true };
+    }
+    /**
+     * Checks rate limiting for login attempts
+     */
+    checkRateLimit(username, operation) {
+        const key = `${operation}:${username.toLowerCase()}`;
+        const now = Date.now();
+        const entry = this.rateLimitStorage.get(key);
+        const maxAttempts = operation === "login"
+            ? CONFIG.RATE_LIMITING.MAX_LOGIN_ATTEMPTS
+            : CONFIG.RATE_LIMITING.MAX_SIGNUP_ATTEMPTS;
+        const cooldownMs = operation === "login"
+            ? CONFIG.RATE_LIMITING.LOGIN_COOLDOWN_MS
+            : CONFIG.RATE_LIMITING.SIGNUP_COOLDOWN_MS;
+        if (!entry) {
+            this.rateLimitStorage.set(key, { attempts: 1, lastAttempt: now });
+            return { allowed: true };
+        }
+        // Check if still in cooldown
+        if (entry.cooldownUntil && now < entry.cooldownUntil) {
+            const remainingTime = Math.ceil((entry.cooldownUntil - now) / 60000);
+            return {
+                allowed: false,
+                error: `Too many attempts. Please try again in ${remainingTime} minutes.`,
+            };
+        }
+        // Reset if cooldown period has passed
+        if (entry.cooldownUntil && now >= entry.cooldownUntil) {
+            this.rateLimitStorage.set(key, { attempts: 1, lastAttempt: now });
+            return { allowed: true };
+        }
+        // Increment attempts
+        entry.attempts++;
+        entry.lastAttempt = now;
+        if (entry.attempts > maxAttempts) {
+            entry.cooldownUntil = now + cooldownMs;
+            const cooldownMinutes = Math.ceil(cooldownMs / 60000);
+            return {
+                allowed: false,
+                error: `Too many ${operation} attempts. Please try again in ${cooldownMinutes} minutes.`,
+            };
+        }
+        this.rateLimitStorage.set(key, entry);
+        return { allowed: true };
+    }
+    /**
+     * Resets rate limiting for successful authentication
+     */
+    resetRateLimit(username, operation) {
+        const key = `${operation}:${username.toLowerCase()}`;
+        this.rateLimitStorage.delete(key);
+    }
+    /**
+     * Validates signup credentials with enhanced security
+     */
+    validateSignupCredentials(username, password, pair) {
+        // Check rate limiting first
+        const rateLimitCheck = this.checkRateLimit(username, "signup");
+        if (!rateLimitCheck.allowed) {
+            return { valid: false, error: rateLimitCheck.error };
+        }
+        // Validate username
+        if (!username || username.length < 1) {
+            return {
+                valid: false,
+                error: "Username must be more than 0 characters long!",
+            };
+        }
+        // Validate username format (alphanumeric and some special chars only)
+        if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+            return {
+                valid: false,
+                error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
+            };
+        }
+        // If using pair authentication, skip password validation
+        if (pair) {
+            return { valid: true };
+        }
+        // Validate password strength
+        return this.validatePasswordStrength(password);
+    }
+    /**
+     * Checks if user exists by attempting authentication
+     */
+    async checkUserExistence(username, password, pair) {
+        return new Promise((resolve) => {
+            if (pair) {
+                this.gun.user().auth(pair, (ack) => {
+                    if (ack.err) {
+                        resolve({ exists: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
+                    }
+                });
+            }
+            else {
+                this.gun.user().auth(username, password, (ack) => {
+                    if (ack.err) {
+                        resolve({ exists: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
+                    }
+                });
+            }
+        });
+    }
+    /**
+     * Creates a new user in Gun
+     */
+    async createNewUser(username, password) {
+        return new Promise((resolve) => {
+            this.gun.user().create(username, password, (ack) => {
+                if (ack.err) {
+                    console.error(`User creation error: ${ack.err}`);
+                    resolve({ success: false, error: ack.err });
+                }
+                else {
+                    resolve({ success: true, userPub: ack.pub });
+                }
+            });
+        });
+    }
+    /**
+     * Authenticates user after creation
+     */
+    async authenticateNewUser(username, password, pair) {
+        return new Promise((resolve) => {
+            if (pair) {
+                this.gun.user().auth(pair, (ack) => {
+                    if (ack.err) {
+                        console.error(`Authentication after creation failed: ${ack.err}`);
+                        resolve({ success: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ success: true, userPub: ack.pub });
+                    }
+                });
+            }
+            else {
+                this.gun.user().auth(username, password, (ack) => {
+                    if (ack.err) {
+                        console.error(`Authentication after creation failed: ${ack.err}`);
+                        resolve({ success: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ success: true, userPub: ack.pub });
+                    }
+                });
+            }
+        });
+    }
+    /**
      * Signs up a new user using direct Gun authentication
      * @param username Username
      * @param password Password
@@ -95097,491 +95269,416 @@ class GunInstance {
      * @returns Promise resolving to signup result
      */
     async signUp(username, password, pair) {
-        // console.log("[gunInstance]  Attempting user registration:", username);
         try {
-            // Validate credentials
-            if (password.length < 8 && !pair) {
-                const err = "Passwords must be more than 8 characters long!";
-                // console.log(err);
-                return { success: false, error: err };
+            // Validate credentials with enhanced security
+            const validation = this.validateSignupCredentials(username, password, pair);
+            if (!validation.valid) {
+                return { success: false, error: validation.error };
             }
-            if (username.length < 1) {
-                const err = "Username must be more than 0 characters long!";
-                // console.log(err);
-                return { success: false, error: err };
-            }
-            // First, try to authenticate with Gun's native system to check if user exists
-            // console.log(
-            //   `Checking if user ${username} exists in Gun's native system...`,
-            // );
-            const authTestResult = await new Promise((resolve) => {
-                if (pair) {
-                    this.gun.user().auth(pair, (ack) => {
-                        if (ack.err) {
-                            // User doesn't exist or password is wrong - this is expected for new users
-                            resolve({ exists: false, error: ack.err });
-                        }
-                        else {
-                            // User exists and password is correct
-                            resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                        }
-                    });
-                }
-                else {
-                    this.gun.user().auth(username, password, (ack) => {
-                        if (ack.err) {
-                            resolve({ exists: false, error: ack.err });
-                        }
-                        else {
-                            resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                        }
-                    });
-                }
-            });
+            // Check if user already exists
+            const authTestResult = await this.checkUserExistence(username, password, pair);
             if (authTestResult.exists) {
-                // Await the call to runPostAuthOnAuthResult
-                return await this.runPostAuthOnAuthResult(authTestResult, username);
+                // Reset rate limiting on successful existing user authentication
+                this.resetRateLimit(username, "signup");
+                return await this.runPostAuthOnAuthResult(username, authTestResult.userPub, authTestResult);
             }
-            // User doesn't exist, attempt to create new user
-            // console.log(`Creating new user: ${username}`);
-            const createResult = await new Promise((resolve) => {
-                if (pair) {
-                    resolve({ success: true, pub: pair.pub });
-                }
-                else {
-                    this.gun.user().create(username, password, (ack) => {
-                        if (ack.err) {
-                            console.error(`User creation error: ${ack.err}`);
-                            resolve({ success: false, error: ack.err });
-                        }
-                        else {
-                            // console.log(`User created successfully: ${username}`);
-                            resolve({ success: true, pub: ack.pub });
-                        }
-                    });
-                }
-            });
+            // Create new user
+            const createResult = await this.createNewUser(username, password);
             if (!createResult.success) {
-                return createResult;
+                return { success: false, error: createResult.error };
             }
-            // User created successfully, now authenticate to get the userPub
-            const authResult = await new Promise((resolve) => {
-                if (pair) {
-                    this.gun.user().auth(pair, (ack) => {
-                        if (ack.err) {
-                            console.error(`Authentication after creation failed: ${ack.err}`);
-                            resolve({ success: false, error: ack.err });
-                        }
-                        else {
-                            resolve({ success: true, userPub: this.gun.user().is?.pub });
-                        }
-                    });
-                }
-                else {
-                    this.gun.user().auth(username, password, (ack) => {
-                        if (ack.err) {
-                            console.error(`Authentication after creation failed: ${ack.err}`);
-                            resolve({ success: false, error: ack.err });
-                        }
-                        else {
-                            resolve({ success: true, userPub: this.gun.user().is?.pub });
-                        }
-                    });
-                }
-            });
+            // Authenticate the newly created user
+            const authResult = await this.authenticateNewUser(username, password, pair);
             if (!authResult.success) {
-                return {
-                    success: false,
-                    error: "User created but authentication failed",
-                };
+                return { success: false, error: authResult.error };
             }
-            const userPub = authResult.userPub;
-            // console.log(
-            //   `User authentication successful after creation: ${username} (${userPub})`,
-            // );
-            await this.runPostAuthOnAuthResult(authResult, username);
-            this.savePair();
-            // Get the SEA pair from the user object
-            const seaPair = this.gun.user()?._?.sea;
+            // Set the user instance
+            this.user = this.gun.user();
+            // Reset rate limiting on successful signup
+            this.resetRateLimit(username, "signup");
+            // Run post-authentication tasks
+            try {
+                await this.runPostAuthOnAuthResult(username, authResult.userPub, authResult);
+            }
+            catch (postAuthError) {
+                console.error(`Post-auth error: ${postAuthError}`);
+            }
             return {
                 success: true,
-                userPub,
-                username,
-                message: "User created successfully",
-                // Include SEA pair for consistency with SignUpResult interface
-                sea: seaPair
+                userPub: authResult.userPub,
+            };
+        }
+        catch (error) {
+            console.error(`Exception during signup for ${username}: ${error}`);
+            return { success: false, error: `Signup failed: ${error}` };
+        }
+    }
+    async runPostAuthOnAuthResult(username, userPub, authResult) {
+        // Setting up user profile after authentication
+        try {
+            const existingUser = await new Promise((resolve) => {
+                this.gun.get(userPub).once((data) => {
+                    resolve(data);
+                });
+            });
+            // Check if user already has metadata to avoid overwriting
+            if (!existingUser || !existingUser.username) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        this.gun.get(userPub).put({ username }, (ack) => {
+                            if (ack.err) {
+                                console.error(`Error saving user metadata: ${ack.err}`);
+                                reject(ack.err);
+                            }
+                            else {
+                                // User metadata saved for
+                                resolve(ack);
+                            }
+                        });
+                    });
+                }
+                catch (metadataError) {
+                    console.error(`Error saving user metadata: ${metadataError}`);
+                }
+                // Create username mapping
+                try {
+                    await new Promise((resolve, reject) => {
+                        this.node
+                            .get("usernames")
+                            .get(username)
+                            .put(userPub, (ack) => {
+                            if (ack.err) {
+                                reject(ack.err);
+                            }
+                            else {
+                                // Username mapping created for
+                                resolve(ack);
+                            }
+                        });
+                    });
+                }
+                catch (mappingError) {
+                    console.error(`Error creating username mapping: ${mappingError}`);
+                }
+                // Add user to users collection
+                try {
+                    await new Promise((resolve, reject) => {
+                        this.node.get("users").set(this.gun.get(userPub), (ack) => {
+                            if (ack.err) {
+                                reject(ack.err);
+                            }
+                            else {
+                                // User added to collection
+                                resolve(ack);
+                            }
+                        });
+                    });
+                }
+                catch (collectionError) {
+                    console.error(`Error adding user to collection: ${collectionError}`);
+                }
+            }
+            return {
+                success: true,
+                userPub: userPub,
+                username: username,
+                isNewUser: !existingUser || !existingUser.username,
+                // Get the SEA pair from the user object
+                sea: this.gun.user()?._?.sea
                     ? {
-                        pub: seaPair.pub,
-                        priv: seaPair.priv,
-                        epub: seaPair.epub,
-                        epriv: seaPair.epriv,
+                        pub: this.gun.user()._?.sea.pub,
+                        priv: this.gun.user()._?.sea.priv,
+                        epub: this.gun.user()._?.sea.epub,
+                        epriv: this.gun.user()._?.sea.epriv,
                     }
                     : undefined,
             };
         }
         catch (error) {
-            console.error(`Exception during signup for ${username}: ${error}`);
-            return { success: false, error: String(error) };
-        }
-    }
-    async runPostAuthOnAuthResult(authTestResult, username) {
-        // console.log(
-        //   `User ${username} already exists and password is correct, syncing with tracking system...`,
-        // );
-        // L'utente esiste e può autenticarsi, sincronizza con il sistema di tracciamento
-        const userPub = authTestResult.userPub;
-        if (!userPub) {
-            console.error("La chiave pubblica dell'utente (userPub) non è definita in runPostAuthOnAuthResult.");
+            console.error(`Error in post-authentication setup: ${error}`);
             return {
                 success: false,
-                error: "La chiave pubblica dell'utente è mancante.",
+                error: `Post-authentication setup failed: ${error}`,
             };
         }
-        // Controlla se l'utente esiste nel nostro sistema di tracciamento
-        const existingUser = await this.checkUsernameExists(username);
-        // console.log("[gunInstance]  existingUser", existingUser);
-        if (!existingUser) {
-            // console.log(
-            //   `L'utente ${username} non è nel sistema di tracciamento, lo aggiungo...`,
-            // );
-            // Aggiungi l'utente al nostro sistema di tracciamento
-            const userMetadata = {
-                username: username,
-                pub: userPub,
-                createdAt: Date.now(),
-                lastLogin: Date.now(),
+    }
+    /**
+     * Normalizes username for consistent lookup
+     */
+    normalizeUsername(username) {
+        const normalizedUsername = username.trim().toLowerCase();
+        const frozenKey = `#${normalizedUsername}`;
+        const alternateKey = normalizedUsername;
+        return { normalizedUsername, frozenKey, alternateKey };
+    }
+    /**
+     * Strategy 1: Frozen space scan for immutable data
+     */
+    async lookupInFrozenSpace(normalizedUsername) {
+        return new Promise((resolve) => {
+            let found = false;
+            this.node
+                .get("usernames")
+                .map()
+                .once((mappingData, hash) => {
+                if (mappingData &&
+                    mappingData.username === normalizedUsername &&
+                    !found) {
+                    found = true;
+                    resolve({
+                        ...mappingData,
+                        hash,
+                        source: "frozen_space",
+                        immutable: true,
+                    });
+                }
+            });
+            setTimeout(() => {
+                if (!found)
+                    resolve(null);
+            }, CONFIG.TIMEOUTS.LOOKUP_FROZEN_SPACE);
+        });
+    }
+    /**
+     * Strategy 2: Direct frozen mapping lookup
+     */
+    async lookupDirectMapping(normalizedUsername, frozenKey) {
+        return new Promise((resolve) => {
+            this.node
+                .get("usernames")
+                .get(frozenKey)
+                .once((data) => {
+                if (data) {
+                    resolve({
+                        pub: data,
+                        username: normalizedUsername,
+                        source: "direct_mapping",
+                        immutable: false,
+                    });
+                }
+                else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+    /**
+     * Strategy 3: Alternate key lookup
+     */
+    async lookupAlternateKey(normalizedUsername, alternateKey) {
+        return new Promise((resolve) => {
+            this.node
+                .get("usernames")
+                .get(alternateKey)
+                .once((data) => {
+                if (data) {
+                    resolve({
+                        pub: data,
+                        username: normalizedUsername,
+                        source: "alternate_key",
+                        immutable: false,
+                    });
+                }
+                else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+    /**
+     * Strategy 4: Comprehensive scan fallback
+     */
+    async lookupComprehensiveScan(normalizedUsername, frozenKey, alternateKey) {
+        return new Promise((resolve) => {
+            let found = false;
+            this.node
+                .get("usernames")
+                .map()
+                .once((data, key) => {
+                if ((key === frozenKey || key === alternateKey) && data && !found) {
+                    found = true;
+                    resolve({
+                        pub: data,
+                        username: normalizedUsername,
+                        source: "comprehensive_scan",
+                        immutable: false,
+                    });
+                }
+            });
+            setTimeout(() => {
+                if (!found)
+                    resolve(null);
+            }, CONFIG.TIMEOUTS.LOOKUP_COMPREHENSIVE);
+        });
+    }
+    /**
+     * Creates lookup strategies array
+     */
+    createLookupStrategies(normalizedUsername, frozenKey, alternateKey) {
+        return [
+            () => this.lookupInFrozenSpace(normalizedUsername),
+            () => this.lookupDirectMapping(normalizedUsername, frozenKey),
+            () => this.lookupAlternateKey(normalizedUsername, alternateKey),
+            () => this.lookupComprehensiveScan(normalizedUsername, frozenKey, alternateKey),
+        ];
+    }
+    /**
+     * Processes lookup result to get complete user data
+     */
+    async processLookupResult(result, normalizedUsername) {
+        // If we found a pub, try to fetch user data
+        if (typeof result.pub === "string" && result.pub) {
+            const pubKey = result.pub;
+            const userData = await new Promise((resolve) => {
+                this.node.get(pubKey).once((data) => {
+                    resolve(data || null);
+                });
+            });
+            // Always return an object with pub and username if possible
+            if (userData && userData.username) {
+                return {
+                    ...userData,
+                    source: result.source,
+                    immutable: result.immutable,
+                    hash: result.hash,
+                };
+            }
+            return {
+                pub: result.pub,
+                username: normalizedUsername,
+                source: result.source,
+                immutable: result.immutable,
+                hash: result.hash,
             };
-            try {
-                // Salva i metadati dell'utente con sincronizzazione migliorata
-                await new Promise((resolve, reject) => {
-                    const userNode = this.node.get(userPub);
-                    userNode.put(userMetadata, (ack) => {
-                        if (ack.err) {
-                            console.error(`Impossibile salvare i metadati dell'utente: ${ack.err}`);
-                            reject(ack.err);
-                        }
-                        else {
-                            // console.log(`Metadati utente salvati per: ${username}`);
-                            resolve();
-                        }
-                    });
-                });
-                // Crea il mapping del nome utente (semplificato)
-                await new Promise((resolve, reject) => {
-                    const usernamesNode = this.node.get("usernames");
-                    const mappingKey = "#" + username;
-                    // Mappa il nome utente alla chiave pubblica dell'utente
-                    usernamesNode.get(mappingKey).put(userPub, (ack) => {
-                        if (ack.err) {
-                            console.error(`Impossibile creare il mapping del nome utente: ${ack.err}`);
-                            reject(ack.err);
-                        }
-                        else {
-                            // console.log(`Mapping del nome utente creato per: ${username}`);
-                            resolve();
-                        }
-                    });
-                });
-                // Aggiungi alla collezione di utenti (non bloccante)
-                this.node.get("users").set(this.node.get(userPub), (ack) => {
-                    if (ack.err) {
-                        console.error(`Avviso: Impossibile aggiungere l'utente alla collezione: ${ack.err}`);
-                    }
-                    else {
-                        // console.log(`Utente aggiunto alla collezione: ${username}`);
-                    }
-                });
-                this.savePair();
-                return {
-                    success: true,
-                    userPub: userPub,
-                    username: username,
-                    message: "Utente sincronizzato con successo con il sistema di tracciamento",
-                };
-            }
-            catch (trackingError) {
-                console.error(`Critico: Impossibile aggiornare il sistema di tracciamento: ${trackingError}`);
-                return {
-                    success: false,
-                    userPub: userPub,
-                    username: username,
-                    error: "Impossibile sincronizzare il sistema di tracciamento dell'utente",
-                };
-            }
         }
-        return existingUser;
+        // If result is already a complete object (from frozen space)
+        if (result.userPub && result.username) {
+            return result;
+        }
+        return result;
     }
     async checkUsernameExists(username) {
         try {
             // Normalize username to handle variations
-            const normalizedUsername = username.trim().toLowerCase();
-            const frozenKey = `#${normalizedUsername}`;
-            const alternateKey = normalizedUsername;
-            // Multiple lookup strategies with frozen space priority
-            const lookupStrategies = [
-                // 1. Frozen space scan (HIGHEST PRIORITY - immutable data)
-                async () => {
-                    return new Promise((resolve) => {
-                        let found = false;
-                        this.node
-                            .get("usernames")
-                            .map()
-                            .once((mappingData, hash) => {
-                            if (mappingData &&
-                                mappingData.username === normalizedUsername &&
-                                !found) {
-                                found = true;
-                                // Return enriched data with hash for integrity verification
-                                resolve({
-                                    ...mappingData,
-                                    hash,
-                                    source: "frozen_space",
-                                    immutable: true,
-                                });
-                            }
-                        });
-                        // Timeout per evitare blocchi infiniti
-                        setTimeout(() => {
-                            if (!found)
-                                resolve(null);
-                        }, 2000);
-                    });
-                },
-                // 2. Direct frozen mapping (legacy compatibility)
-                async () => {
-                    return new Promise((resolve) => {
-                        this.node
-                            .get("usernames")
-                            .get(frozenKey)
-                            .once((data) => {
-                            if (data) {
-                                resolve({
-                                    pub: data,
-                                    username: normalizedUsername,
-                                    source: "direct_mapping",
-                                    immutable: false,
-                                });
-                            }
-                            else {
-                                resolve(null);
-                            }
-                        });
-                    });
-                },
-                // 3. Alternate key lookup (fallback)
-                async () => {
-                    return new Promise((resolve) => {
-                        this.node
-                            .get("usernames")
-                            .get(alternateKey)
-                            .once((data) => {
-                            if (data) {
-                                resolve({
-                                    pub: data,
-                                    username: normalizedUsername,
-                                    source: "alternate_key",
-                                    immutable: false,
-                                });
-                            }
-                            else {
-                                resolve(null);
-                            }
-                        });
-                    });
-                },
-                // 4. Comprehensive scan fallback (last resort)
-                async () => {
-                    return new Promise((resolve) => {
-                        let found = false;
-                        this.node
-                            .get("usernames")
-                            .map()
-                            .once((data, key) => {
-                            if ((key === frozenKey || key === alternateKey) &&
-                                data &&
-                                !found) {
-                                found = true;
-                                resolve({
-                                    pub: data,
-                                    username: normalizedUsername,
-                                    source: "comprehensive_scan",
-                                    immutable: false,
-                                });
-                            }
-                        });
-                        // Timeout per evitare blocchi infiniti
-                        setTimeout(() => {
-                            if (!found)
-                                resolve(null);
-                        }, 1500);
-                    });
-                },
-            ];
+            const { normalizedUsername, frozenKey, alternateKey } = this.normalizeUsername(username);
+            // Create multiple lookup strategies with frozen space priority
+            const lookupStrategies = this.createLookupStrategies(normalizedUsername, frozenKey, alternateKey);
             // Sequential strategy execution with timeout
             for (const strategy of lookupStrategies) {
                 try {
                     const result = await Promise.race([
                         strategy(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), 3000)),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), CONFIG.TIMEOUTS.STRATEGY_TIMEOUT)),
                     ]);
                     if (result) {
-                        // console.debug(
-                        //   `[checkUsernameExists] Found user via ${result.source}:`,
-                        //   result,
-                        // );
-                        // If we found a pub, try to fetch user data
-                        if (typeof result.pub === "string" && result.pub) {
-                            const pubKey = result.pub; // Cast esplicito per TypeScript
-                            const userData = await new Promise((resolve) => {
-                                this.node.get(pubKey).once((data) => {
-                                    // console.debug(
-                                    //   `[checkUsernameExists] User data for pub ${pubKey}:`,
-                                    //   data,
-                                    // );
-                                    resolve(data || null);
-                                });
-                            });
-                            // Always return an object with pub and username if possible
-                            if (userData && userData.username) {
-                                return {
-                                    ...userData,
-                                    source: result.source,
-                                    immutable: result.immutable,
-                                    hash: result.hash,
-                                };
-                            }
-                            return {
-                                pub: result.pub,
-                                username: normalizedUsername,
-                                source: result.source,
-                                immutable: result.immutable,
-                                hash: result.hash,
-                            };
-                        }
-                        // If result is already a complete object (from frozen space)
-                        if (result.userPub && result.username) {
-                            return result;
-                        }
-                        return result;
+                        return await this.processLookupResult(result, normalizedUsername);
                     }
                 }
                 catch (error) {
-                    // Silenzioso per errori di timeout o rete
-                    // console.debug(
-                    //   `Username lookup strategy failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
-                    // );
+                    // Silent for timeout or network errors
                 }
             }
             return null;
         }
         catch (error) {
-            // console.debug(
-            //   `Username existence check failed: ${error instanceof Error ? error.message : "Errore sconosciuto"}`,
-            // );
             return null;
         }
     }
     /**
-     * Logs in a user using direct Gun authentication
-     * @param username Username
-     * @param password Password
-     * @param pair Optional SEA pair for Web3 login
-     * @param callback Optional callback for login result
-     * @returns Promise resolving to login result
+     * Performs authentication with Gun
      */
-    async login(username, password, pair, callback) {
-        // console.log(`Attempting login for user: ${username}`);
+    async performAuthentication(username, password, pair) {
+        return new Promise((resolve) => {
+            if (pair) {
+                this.gun.user().auth(pair, (ack) => {
+                    if (ack.err) {
+                        console.error(`Login error for ${username}: ${ack.err}`);
+                        resolve({ success: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ success: true, ack });
+                    }
+                });
+            }
+            else {
+                this.gun.user().auth(username, password, (ack) => {
+                    if (ack.err) {
+                        console.error(`Login error for ${username}: ${ack.err}`);
+                        resolve({ success: false, error: ack.err });
+                    }
+                    else {
+                        resolve({ success: true, ack });
+                    }
+                });
+            }
+        });
+    }
+    /**
+     * Builds login result object
+     */
+    buildLoginResult(username, userPub) {
+        // Get the SEA pair from the user object
+        const seaPair = this.gun.user()?._?.sea;
+        return {
+            success: true,
+            userPub,
+            username,
+            // Include SEA pair for consistency with AuthResult interface
+            sea: seaPair
+                ? {
+                    pub: seaPair.pub,
+                    priv: seaPair.priv,
+                    epub: seaPair.epub,
+                    epriv: seaPair.epriv,
+                }
+                : undefined,
+        };
+    }
+    async login(username, password, pair) {
         try {
-            // Attempt Gun.js authentication directly first
-            // This allows login even if our custom tracking system is out of sync
-            const authResult = await new Promise((resolve) => {
-                if (pair) {
-                    this.gun.user().auth(pair, (ack) => {
-                        if (ack.err) {
-                            console.error(`Login error for ${username}: ${ack.err}`);
-                            resolve({ success: false, error: ack.err });
-                        }
-                        else {
-                            // console.log(`Login successful for: ${username}`);
-                            resolve({ success: true, ack });
-                        }
-                    });
-                }
-                else {
-                    this.gun.user().auth(username, password, (ack) => {
-                        if (ack.err) {
-                            console.error(`Login error for ${username}: ${ack.err}`);
-                            resolve({ success: false, error: ack.err });
-                        }
-                        else {
-                            // console.log(`Login successful for: ${username}`);
-                            resolve({ success: true, ack });
-                        }
-                    });
-                }
-            });
-            if (!authResult.success) {
-                // If Gun.js auth fails, the user likely doesn't exist or password is wrong
-                const result = {
+            // Check rate limiting first
+            const rateLimitCheck = this.checkRateLimit(username, "login");
+            if (!rateLimitCheck.allowed) {
+                return { success: false, error: rateLimitCheck.error };
+            }
+            const loginResult = await this.performAuthentication(username, password, pair);
+            if (!loginResult.success) {
+                return {
                     success: false,
                     error: `User '${username}' not found. Please check your username or register first.`,
                 };
-                if (callback)
-                    callback(result);
-                return result;
             }
             const userPub = this.gun.user().is?.pub;
             if (!userPub) {
-                const result = {
+                return {
                     success: false,
                     error: "Authentication failed: No user pub returned.",
                 };
-                if (callback)
-                    callback(result);
-                return result;
             }
-            // console.log(
-            //   `Gun.js authentication successful for: ${username} (${userPub})`,
-            // );
+            // Reset rate limiting on successful login
+            this.resetRateLimit(username, "login");
             // Pass the userPub to runPostAuthOnAuthResult
-            this.runPostAuthOnAuthResult({ success: true, userPub: userPub }, username);
-            // console.log(`Login completed successfully for: ${username} (${userPub})`);
-            // IMPORTANTE: Salva sempre le credenziali dopo un login riuscito
-            // Questo è cruciale per Web3 login e session restoration
+            this.runPostAuthOnAuthResult(username, userPub, {
+                success: true,
+                userPub: userPub,
+            });
+            // Save credentials for future sessions
             try {
-                this.savePair();
-                // console.log(`[gunInstance] Credenziali salvate per: ${username}`);
+                const userInfo = {
+                    username,
+                    pair: pair ?? null,
+                    userPub: userPub,
+                };
+                this.saveCredentials(userInfo);
             }
             catch (saveError) {
-                console.error(`[gunInstance] Errore nel salvare le credenziali:`, saveError);
-                // Non bloccare il login se il salvataggio fallisce
+                console.error(`Error saving credentials:`, saveError);
             }
-            // Get the SEA pair from the user object
-            const seaPair = this.gun.user()?._?.sea;
-            const result = {
-                success: true,
-                userPub,
-                username,
-                // Include SEA pair for consistency with AuthResult interface
-                sea: seaPair
-                    ? {
-                        pub: seaPair.pub,
-                        priv: seaPair.priv,
-                        epub: seaPair.epub,
-                        epriv: seaPair.epriv,
-                    }
-                    : undefined,
-            };
-            if (callback)
-                callback(result);
-            return result;
+            return this.buildLoginResult(username, userPub);
         }
         catch (error) {
             console.error(`Exception during login for ${username}: ${error}`);
-            const result = { success: false, error: String(error) };
-            if (callback)
-                callback(result);
-            return result;
+            return { success: false, error: String(error) };
         }
     }
     /**
@@ -95591,83 +95688,106 @@ class GunInstance {
      */
     async updateUserAlias(newAlias) {
         try {
-            // console.log(`[gunInstance] Updating user alias to: ${newAlias}`);
-            const user = this.gun.user();
-            if (!user || !user.is) {
+            // Updating user alias to
+            if (!this.user) {
                 return { success: false, error: "User not authenticated" };
             }
-            // Update the alias in Gun's user object
-            user.is.alias = newAlias;
-            // Save the updated credentials
-            this.savePair();
-            // console.log(
-            //   `[gunInstance] User alias updated successfully to: ${newAlias}`,
-            // );
+            await new Promise((resolve, reject) => {
+                this.user.get("alias").put(newAlias, (ack) => {
+                    if (ack.err) {
+                        reject(ack.err);
+                    }
+                    else {
+                        resolve(ack);
+                    }
+                });
+            });
+            // User alias updated successfully to
             return { success: true };
         }
         catch (error) {
-            console.error(`[gunInstance] Error updating user alias:`, error);
+            console.error(`Error updating user alias:`, error);
             return { success: false, error: String(error) };
         }
     }
-    savePair() {
+    /**
+     * Encrypts session data before storage
+     */
+    async encryptSessionData(data) {
         try {
-            const user = this.gun.user();
-            const pair = user?._?.sea;
-            const userInfo = user?.is;
-            // console.log("[gunInstance] Tentativo di salvataggio credenziali...");
-            // console.log("[gunInstance] User info:", userInfo);
-            // console.log("[gunInstance] Pair disponibile:", !!pair);
-            if (pair && userInfo) {
-                // Save the crypto pair and session info
-                const sessionInfo = {
-                    pub: userInfo.pub,
-                    alias: userInfo.alias || "",
-                    timestamp: Date.now(),
-                };
-                // console.log("[gunInstance] Session info da salvare:", sessionInfo);
-                // Save to localStorage if available
-                if (typeof localStorage !== "undefined") {
-                    try {
-                        localStorage.setItem("gun/pair", JSON.stringify(pair));
-                        localStorage.setItem("gun/session", JSON.stringify(sessionInfo));
-                        // console.log("[gunInstance] Credenziali salvate in localStorage");
-                    }
-                    catch (localError) {
-                        console.error("[gunInstance] Errore nel salvare in localStorage:", localError);
-                    }
-                }
-                else {
-                    // console.warn("[gunInstance] localStorage non disponibile");
-                }
-                // Also save to sessionStorage for cross-app sharing
-                if (typeof sessionStorage !== "undefined") {
-                    try {
-                        sessionStorage.setItem("gun/pair", JSON.stringify(pair));
-                        sessionStorage.setItem("gun/session", JSON.stringify(sessionInfo));
-                        // console.log("[gunInstance] Credenziali salvate in sessionStorage");
-                    }
-                    catch (sessionError) {
-                        console.error("[gunInstance] Errore nel salvare in sessionStorage:", sessionError);
-                    }
-                }
-                else {
-                    // console.warn("[gunInstance] sessionStorage non disponibile");
-                }
-                // console.log(
-                //   `Session saved for user: ${userInfo.alias || userInfo.pub}`,
-                // );
+            // Use a derived key from device fingerprint for encryption
+            const deviceInfo = navigator.userAgent +
+                (typeof screen !== "undefined"
+                    ? screen.width + "x" + screen.height
+                    : "");
+            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
+                name: "SHA-256",
+            });
+            if (!encryptionKey) {
+                throw new Error("Failed to generate encryption key");
             }
-            else {
-                // console.warn(
-                //   "[gunInstance] Impossibile salvare credenziali: pair o userInfo mancanti",
-                // );
-                // console.log("[gunInstance] Pair:", pair);
-                // console.log("[gunInstance] UserInfo:", userInfo);
+            const encryptedData = await sea_1.default.encrypt(JSON.stringify(data), encryptionKey);
+            if (!encryptedData) {
+                throw new Error("Failed to encrypt session data");
+            }
+            return encryptedData;
+        }
+        catch (error) {
+            console.error("Error encrypting session data:", error);
+            throw error;
+        }
+    }
+    /**
+     * Decrypts session data from storage
+     */
+    async decryptSessionData(encryptedData) {
+        try {
+            // Use the same device fingerprint for decryption
+            const deviceInfo = navigator.userAgent +
+                (typeof screen !== "undefined"
+                    ? screen.width + "x" + screen.height
+                    : "");
+            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
+                name: "SHA-256",
+            });
+            if (!encryptionKey) {
+                throw new Error("Failed to generate decryption key");
+            }
+            const decryptedData = await sea_1.default.decrypt(encryptedData, encryptionKey);
+            if (decryptedData === undefined) {
+                throw new Error("Failed to decrypt session data");
+            }
+            return JSON.parse(decryptedData);
+        }
+        catch (error) {
+            console.error("Error decrypting session data:", error);
+            throw error;
+        }
+    }
+    saveCredentials(userInfo) {
+        try {
+            const sessionInfo = {
+                username: userInfo.username,
+                pair: userInfo.pair,
+                userPub: userInfo.userPub,
+                timestamp: Date.now(),
+                expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+            };
+            if (typeof sessionStorage !== "undefined") {
+                // Encrypt session data before storage
+                this.encryptSessionData(sessionInfo)
+                    .then((encryptedData) => {
+                    sessionStorage.setItem("gunSessionData", encryptedData);
+                })
+                    .catch((error) => {
+                    console.error("Failed to encrypt and save session data:", error);
+                    // Fallback to unencrypted storage (less secure)
+                    sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
+                });
             }
         }
         catch (error) {
-            console.error("Error saving auth pair and session:", error);
+            console.error(`Error saving credentials: ${error}`);
         }
     }
     /**
@@ -95680,7 +95800,7 @@ class GunInstance {
      * @returns Promise resolving with the operation result
      */
     async setPasswordHint(username, password, hint, securityQuestions, securityAnswers) {
-        // console.log("[gunInstance]  Setting password hint for:", username);
+        // Setting password hint for
         // Verify that the user is authenticated with password
         const loginResult = await this.login(username, password);
         if (!loginResult.success) {
@@ -95770,11 +95890,10 @@ class GunInstance {
      * @returns Promise resolving with the password hint
      */
     async forgotPassword(username, securityAnswers) {
-        // console.log("[gunInstance]  Attempting password recovery for:", username);
+        // Attempting password recovery for
         try {
             // Find the user's data
             let userData = await this.checkUsernameExists(username);
-            // console.log("[gunInstance]  userData", userData);
             // Patch: if userData is a string, treat as pub
             if (typeof userData === "string") {
                 userData = { pub: userData, username };
@@ -95935,7 +96054,7 @@ class GunInstance {
                 const error = "Operation timeout";
                 this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
                 reject(new Error(error));
-            }, 10000); // 10 secondi di timeout
+            }, CONFIG.TIMEOUTS.USER_DATA_OPERATION); // 10 secondi di timeout
             try {
                 this.navigateToPath(user, path).once((data) => {
                     clearTimeout(timeout);
@@ -95973,10 +96092,7 @@ class GunInstance {
      */
     async derive(password, extra, options) {
         try {
-            // console.log(
-            //   "[gunInstance]  Deriving cryptographic keys with options:",
-            //   options,
-            // );
+            // Deriving cryptographic keys with options
             // Call the derive function with the provided parameters
             const derivedKeys = await (0, derive_1.default)(password, extra, options);
             // Map the returned keys to the expected format
@@ -96009,7 +96125,7 @@ class GunInstance {
                     address: derivedKeys.secp256k1Ethereum.address,
                 };
             }
-            // console.log("[gunInstance]  Key derivation completed successfully");
+            // Key derivation completed successfully
             return result;
         }
         catch (error) {
@@ -96074,6 +96190,57 @@ class GunInstance {
         };
     }
     /**
+     * Prepares data for freezing with metadata
+     */
+    prepareFrozenData(data, options) {
+        return {
+            data: data,
+            timestamp: Date.now(),
+            description: options?.description || "",
+            metadata: options?.metadata || {},
+        };
+    }
+    /**
+     * Generates hash for frozen data
+     */
+    async generateFrozenDataHash(frozenData) {
+        const dataString = JSON.stringify(frozenData);
+        const hash = await sea_1.default.work(dataString, null, null, {
+            name: "SHA-256",
+        });
+        return hash ? hash : null;
+    }
+    /**
+     * Builds the full path for frozen data
+     */
+    buildFrozenPath(hash, options) {
+        const namespace = options?.namespace || "default";
+        const customPath = options?.path || "";
+        return customPath
+            ? `${namespace}/${customPath}/${hash}`
+            : `${namespace}/${hash}`;
+    }
+    /**
+     * Stores frozen data in Gun
+     */
+    async storeFrozenData(frozenData, fullPath, hash) {
+        return new Promise((resolve, reject) => {
+            const targetNode = this.navigateToPath(this.gun, fullPath);
+            targetNode.put(frozenData, (ack) => {
+                if (ack.err) {
+                    reject(new Error(`Failed to create frozen space: ${ack.err}`));
+                }
+                else {
+                    resolve({
+                        hash: hash,
+                        fullPath: fullPath,
+                        data: frozenData,
+                    });
+                }
+            });
+        });
+    }
+    /**
      * Creates a frozen space entry for immutable data
      * @param data Data to freeze
      * @param options Optional configuration
@@ -96082,45 +96249,19 @@ class GunInstance {
     async createFrozenSpace(data, options) {
         return new Promise(async (resolve, reject) => {
             try {
-                // Prepara i dati da congelare
-                const frozenData = {
-                    data: data,
-                    timestamp: Date.now(),
-                    description: options?.description || "",
-                    metadata: options?.metadata || {},
-                };
-                // Genera hash dei dati usando SEA
-                const dataString = JSON.stringify(frozenData);
-                const hash = await sea_1.default.work(dataString, null, null, {
-                    name: "SHA-256",
-                });
+                // Prepare the data to freeze
+                const frozenData = this.prepareFrozenData(data, options);
+                // Generate hash for the data
+                const hash = await this.generateFrozenDataHash(frozenData);
                 if (!hash) {
                     reject(new Error("Failed to generate hash for frozen data"));
                     return;
                 }
-                // Costruisci il percorso completo
-                const namespace = options?.namespace || "default";
-                const customPath = options?.path || "";
-                const fullPath = customPath
-                    ? `${namespace}/${customPath}/${hash}`
-                    : `${namespace}/${hash}`;
-                // Usa navigateToPath per gestire correttamente i percorsi con /
-                const targetNode = this.navigateToPath(this.gun, fullPath);
-                targetNode.put(frozenData, (ack) => {
-                    if (ack.err) {
-                        reject(new Error(`Failed to create frozen space: ${ack.err}`));
-                    }
-                    else {
-                        // console.log(
-                        //   `[createFrozenSpace] Created frozen entry: ${fullPath}`,
-                        // );
-                        resolve({
-                            hash: hash,
-                            fullPath: fullPath,
-                            data: frozenData,
-                        });
-                    }
-                });
+                // Build the full path
+                const fullPath = this.buildFrozenPath(hash, options);
+                // Store the frozen data
+                const result = await this.storeFrozenData(frozenData, fullPath, hash);
+                resolve(result);
             }
             catch (error) {
                 reject(new Error(`Error creating frozen space: ${error}`));
@@ -96739,70 +96880,26 @@ class ShogunCore {
         });
         this.rx = new gundb_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
-        if (config.plugins?.autoRegister &&
-            config.plugins.autoRegister.length > 0) {
-            for (const plugin of config.plugins.autoRegister) {
-                try {
-                    if (!plugin) {
-                        console.warn("[ShogunCore] Skipping null/undefined plugin in auto-registration");
-                        continue;
-                    }
-                    this.register(plugin);
-                }
-                catch (error) {
-                    console.error(`[ShogunCore] Failed to auto-register plugin ${plugin?.name || "unknown"}:`, error);
-                    errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "AUTO_REGISTRATION_FAILED", `Failed to auto-register plugin ${plugin?.name || "unknown"}: ${error instanceof Error ? error.message : String(error)}`, error);
-                }
-            }
-        }
-        // Gestisce l'evento di login per derivare i wallet dall'utente autenticato
-        this.on("auth:login", async (data) => {
-            // Verifica che _user e le proprietà sea siano definite
-            const sea = this._user?.sea;
-            if (!sea || !sea.priv || !sea.pub) {
-                console.warn("[ShogunCore] SEA keys not found on user during auth:login");
-                this.wallets = undefined;
-                return;
-            }
-            this.wallets = await (0, gundb_1.derive)(sea.priv, sea.pub, {
-                includeSecp256k1Bitcoin: true,
-                includeSecp256k1Ethereum: true,
-            });
+        // Initialize async components
+        this.initialize().catch((error) => {
+            console.warn("Error during async initialization:", error);
         });
-        this.on("auth:signup", async (data) => {
-            const sea = this._user?.sea;
-            if (!sea || !sea.priv || !sea.pub) {
-                console.warn("[ShogunCore] SEA keys not found on user during auth:signup");
-                this.wallets = undefined;
-                return;
-            }
-            this.wallets = await (0, gundb_1.derive)(sea.priv, sea.pub, {
-                includeSecp256k1Bitcoin: true,
-                includeSecp256k1Ethereum: true,
-            });
-        });
-        if (typeof window !== "undefined") {
-            window.ShogunCore = this;
-            window.ShogunDB = this.db;
-            window.ShogunGun = this.db.gun;
-        }
-        else if (typeof __webpack_require__.g !== "undefined") {
-            __webpack_require__.g.ShogunCore = this;
-            __webpack_require__.g.ShogunDB = this.db;
-            __webpack_require__.g.ShogunGun = this.db.gun;
-        }
     }
     /**
-     * Initialize the SDK asynchronously
-     * This method should be called after construction to perform async operations
+     * Initialize the Shogun SDK asynchronously
+     * This method handles initialization tasks that require async operations
      */
     async initialize() {
         try {
             await this.db.initialize();
+            this.eventEmitter.emit("debug", {
+                action: "core_initialized",
+                timestamp: Date.now(),
+            });
         }
         catch (error) {
-            console.error("Error during async initialization:", error);
-            throw new Error(`Failed to initialize ShogunCore: ${error}`);
+            console.error("Error during Shogun Core initialization:", error);
+            throw error;
         }
     }
     /**
@@ -96848,110 +96945,118 @@ class ShogunCore {
      */
     registerBuiltinPlugins(config) {
         try {
-            // Disabilita WebAuthn in ambiente server
-            const isServerEnvironment = typeof window === "undefined";
-            if (isServerEnvironment && config.webauthn?.enabled) {
-                console.warn("[ShogunCore] WebAuthn disabled - not supported in server environment");
-                config.webauthn.enabled = false;
+            // Register OAuth plugin if configuration is provided
+            if (config.oauth) {
+                console.warn("OAuth plugin will be registered with provided configuration");
+                const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
+                if (typeof oauthPlugin.configure === "function") {
+                    oauthPlugin.configure(config.oauth);
+                }
+                this.registerPlugin(oauthPlugin);
             }
-            if (config.webauthn?.enabled) {
+            // Register WebAuthn plugin if configuration is provided
+            if (config.webauthn) {
+                console.warn("WebAuthn plugin will be registered with provided configuration");
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
-                webauthnPlugin._category = shogun_1.PluginCategory.Authentication;
-                this.register(webauthnPlugin);
+                if (typeof webauthnPlugin.configure === "function") {
+                    webauthnPlugin.configure(config.webauthn);
+                }
+                this.registerPlugin(webauthnPlugin);
             }
-            if (config.web3?.enabled) {
-                const web3ConnectorPlugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
-                web3ConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
-                this.register(web3ConnectorPlugin);
+            // Register Web3 plugin if configuration is provided
+            if (config.web3) {
+                console.warn("Web3 plugin will be registered with provided configuration");
+                const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
+                if (typeof web3Plugin.configure === "function") {
+                    web3Plugin.configure(config.web3);
+                }
+                this.registerPlugin(web3Plugin);
             }
-            if (config.nostr?.enabled) {
-                const nostrConnectorPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
-                nostrConnectorPlugin._category = shogun_1.PluginCategory.Authentication;
-                this.register(nostrConnectorPlugin);
-            }
-            if (config.oauth?.enabled) {
-                const oauthPlugin = new oauthPlugin_1.OAuthPlugin(config.oauth);
-                oauthPlugin._category = shogun_1.PluginCategory.Authentication;
-                this.register(oauthPlugin);
+            // Register Nostr plugin if configuration is provided
+            if (config.nostr) {
+                console.warn("Nostr plugin will be registered with provided configuration");
+                const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
+                if (typeof nostrPlugin.configure === "function") {
+                    nostrPlugin.configure(config.nostr);
+                }
+                this.registerPlugin(nostrPlugin);
             }
         }
         catch (error) {
-            console.error("[ShogunCore] Error registering builtin plugins:", error);
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "BUILTIN_PLUGIN_REGISTRATION_FAILED", `Failed to register built-in plugins: ${error instanceof Error ? error.message : String(error)}`, error);
+            console.error("Error registering builtin plugins:", error);
         }
     }
-    // 🔌 PLUGIN MANAGER 🔌
     /**
-     * Register a new plugin with the SDK
-     * @param plugin The plugin to register
+     * Registers a plugin with the Shogun SDK
+     * @param plugin Plugin instance to register
      * @throws Error if a plugin with the same name is already registered
      */
     register(plugin) {
-        try {
-            // Validazione del plugin
-            if (!plugin) {
-                throw new Error("Plugin cannot be null or undefined");
-            }
-            if (!plugin.name || typeof plugin.name !== "string") {
-                throw new Error("Plugin must have a valid name property");
-            }
-            if (!plugin.initialize || typeof plugin.initialize !== "function") {
-                throw new Error(`Plugin ${plugin.name} must implement the initialize method`);
-            }
-            // Verifica se il plugin è già registrato
-            if (this.plugins.has(plugin.name)) {
-                throw new Error(`Plugin with name "${plugin.name}" already registered`);
-            }
-            plugin.initialize(this);
-            // Registrazione del plugin
-            this.plugins.set(plugin.name, plugin);
-            // Emetti evento di registrazione plugin
-            this.eventEmitter.emit("plugin:registered", {
-                name: plugin.name,
-                version: plugin.version,
-                category: plugin._category,
-            });
-        }
-        catch (error) {
-            console.error(`[ShogunCore] Failed to register plugin ${plugin?.name || "unknown"}:`, error);
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_REGISTRATION_FAILED", `Failed to register plugin ${plugin?.name || "unknown"}: ${error instanceof Error ? error.message : String(error)}`, error);
-            throw error; // Rilancia l'errore per permettere al chiamante di gestirlo
-        }
+        this.registerPlugin(plugin);
     }
     /**
-     * Unregister a plugin from the SDK
+     * Unregisters a plugin from the Shogun SDK
      * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName) {
+        this.unregisterPlugin(pluginName);
+    }
+    /**
+     * Internal method to register a plugin
+     * @param plugin Plugin instance to register
+     */
+    registerPlugin(plugin) {
         try {
-            if (!pluginName || typeof pluginName !== "string") {
-                throw new Error("Plugin name must be a valid string");
-            }
-            const plugin = this.plugins.get(pluginName);
-            if (!plugin) {
-                console.warn(`[ShogunCore] Plugin "${pluginName}" not found for unregistration`);
+            if (!plugin.name) {
+                console.error("Plugin registration failed: Plugin must have a name");
                 return;
             }
-            // Distruggi il plugin se ha un metodo destroy
-            if (plugin.destroy && typeof plugin.destroy === "function") {
+            if (this.plugins.has(plugin.name)) {
+                console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                return;
+            }
+            // Initialize plugin with core instance
+            plugin.initialize(this);
+            this.plugins.set(plugin.name, plugin);
+            this.eventEmitter.emit("plugin:registered", {
+                name: plugin.name,
+                version: plugin.version || "unknown",
+                category: plugin._category || "unknown",
+            });
+        }
+        catch (error) {
+            console.error(`Error registering plugin "${plugin.name}":`, error);
+        }
+    }
+    /**
+     * Internal method to unregister a plugin
+     * @param name Name of the plugin to unregister
+     */
+    unregisterPlugin(name) {
+        try {
+            const plugin = this.plugins.get(name);
+            if (!plugin) {
+                console.warn(`Plugin "${name}" not found for unregistration`);
+                return false;
+            }
+            // Destroy plugin if it has a destroy method
+            if (typeof plugin.destroy === "function") {
                 try {
                     plugin.destroy();
                 }
                 catch (destroyError) {
-                    console.error(`[ShogunCore] Error destroying plugin ${pluginName}:`, destroyError);
-                    errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_DESTROY_FAILED", `Failed to destroy plugin ${pluginName}: ${destroyError instanceof Error ? destroyError.message : String(destroyError)}`, destroyError);
+                    console.error(`Error destroying plugin "${name}":`, destroyError);
                 }
             }
-            // Rimuovi il plugin dalla mappa
-            this.plugins.delete(pluginName);
-            // Emetti evento di deregistrazione plugin
+            this.plugins.delete(name);
             this.eventEmitter.emit("plugin:unregistered", {
-                name: pluginName,
+                name: plugin.name,
             });
+            return true;
         }
         catch (error) {
-            console.error(`[ShogunCore] Failed to unregister plugin ${pluginName}:`, error);
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.PLUGIN, "PLUGIN_UNREGISTRATION_FAILED", `Failed to unregister plugin ${pluginName}: ${error instanceof Error ? error.message : String(error)}`, error);
+            console.error(`Error unregistering plugin "${name}":`, error);
+            return false;
         }
     }
     /**
@@ -96962,12 +97067,12 @@ class ShogunCore {
      */
     getPlugin(name) {
         if (!name || typeof name !== "string") {
-            console.warn("[ShogunCore] Invalid plugin name provided to getPlugin");
+            console.warn("Invalid plugin name provided to getPlugin");
             return undefined;
         }
         const plugin = this.plugins.get(name);
         if (!plugin) {
-            console.warn(`[ShogunCore] Plugin "${name}" not found`);
+            console.warn(`Plugin "${name}" not found`);
             return undefined;
         }
         return plugin;
@@ -97331,46 +97436,31 @@ class ShogunCore {
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    async signUp(username, password, passwordConfirmation, pair) {
+    async signUp(username, password = "", email = "", pair) {
         try {
-            if (passwordConfirmation !== undefined &&
-                password !== passwordConfirmation &&
-                !pair) {
-                return {
-                    success: false,
-                    error: "Passwords do not match",
-                };
+            if (!this.db) {
+                throw new Error("Database not initialized");
             }
-            this.eventEmitter.emit("debug", {
-                action: "signup_start",
-                username,
-                timestamp: Date.now(),
-            });
             const result = await this.db.signUp(username, password, pair);
             if (result.success) {
-                // Include SEA pair in the response
-                const seaPair = this.user?._?.sea;
-                if (seaPair) {
-                    result.sea = seaPair;
-                }
-                this.eventEmitter.emit("debug", {
-                    action: "signup_complete",
-                    username,
-                    userPub: result.userPub,
-                    timestamp: Date.now(),
-                });
+                // Update current authentication method
+                this.currentAuthMethod = pair ? "web3" : "password";
                 this.eventEmitter.emit("auth:signup", {
-                    userPub: result.userPub ?? "",
+                    userPub: result.userPub,
                     username,
-                    method: "password",
+                    method: this.currentAuthMethod,
+                });
+                this.eventEmitter.emit("debug", {
+                    action: "signup_success",
+                    userPub: result.userPub,
+                    method: this.currentAuthMethod,
                 });
             }
             else {
                 this.eventEmitter.emit("debug", {
                     action: "signup_failed",
-                    username,
                     error: result.error,
-                    timestamp: Date.now(),
+                    username,
                 });
             }
             return result;
@@ -97378,14 +97468,13 @@ class ShogunCore {
         catch (error) {
             console.error(`Error during registration for user ${username}:`, error);
             this.eventEmitter.emit("debug", {
-                action: "signup_exception",
+                action: "signup_error",
+                error: error instanceof Error ? error.message : String(error),
                 username,
-                error: error.message || "Unknown error",
-                timestamp: Date.now(),
             });
             return {
                 success: false,
-                error: error.message ?? "Unknown error during registration",
+                error: `Registration failed: ${error instanceof Error ? error.message : String(error)}`,
             };
         }
     }
@@ -97456,11 +97545,11 @@ class ShogunCore {
         return this.currentAuthMethod;
     }
     /**
-     * Debug method: Clears all Gun-related data from local and session storage
+     * Clears all Gun-related data from local and session storage
      * This is useful for debugging and testing purposes
      */
     clearAllStorageData() {
-        this.db.clearAllStorageData();
+        this.db.clearGunStorage();
     }
     /**
      * Updates the user's alias (username) in Gun and saves the updated credentials
@@ -97470,28 +97559,26 @@ class ShogunCore {
     async updateUserAlias(newAlias) {
         try {
             if (!this.db) {
-                return { success: false, error: "Database not initialized" };
+                return false;
             }
-            return await this.db.updateUserAlias(newAlias);
+            const result = await this.db.updateUserAlias(newAlias);
+            return result.success;
         }
         catch (error) {
-            console.error(`[ShogunCore] Error updating user alias:`, error);
-            return { success: false, error: String(error) };
+            console.error(`Error updating user alias:`, error);
+            return false;
         }
     }
     /**
      * Saves the current user credentials to storage
      */
-    savePair() {
+    async saveCredentials(credentials) {
         try {
-            if (!this.db) {
-                console.warn("[ShogunCore] Database not initialized, cannot save credentials");
-                return;
-            }
-            this.db.savePair();
+            this.storage.setItem("userCredentials", JSON.stringify(credentials));
         }
         catch (error) {
-            console.error(`[ShogunCore] Error saving credentials:`, error);
+            console.warn("Failed to save credentials to storage");
+            console.error(`Error saving credentials:`, error);
         }
     }
     // esporta la coppia utente come json
@@ -98418,10 +98505,9 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Register a new user with Bitcoin wallet
-     * @param address - Bitcoin address
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account with Bitcoin wallet credentials
+     * Register new user with Nostr wallet
+     * @param address - Nostr address
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(address) {
         try {
@@ -98943,29 +99029,29 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         this.validateSecurityConfig();
     }
     /**
-     * Valida la configurazione di sicurezza
+     * Validates security configuration
      */
     validateSecurityConfig() {
         const providers = this.config.providers || {};
         for (const [providerName, providerConfig] of Object.entries(providers)) {
             if (!providerConfig)
                 continue;
-            // Verifica che PKCE sia abilitato per tutti i provider nel browser
+            // Verify that PKCE is enabled for all providers in browser
             if (typeof window !== "undefined" && !providerConfig.usePKCE) {
-                console.warn(`Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`);
-                // Forzo PKCE per tutti i provider nel browser, eccetto se già configurato diversamente
+                console.warn(`Provider ${providerName} does not have PKCE enabled - not secure for browser`);
+                // Force PKCE for all providers in browser, except if already configured differently
                 providerConfig.usePKCE = true;
             }
-            // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
+            // Verify that there is no client_secret in browser (except Google with PKCE)
             if (typeof window !== "undefined" && providerConfig.clientSecret) {
                 if (providerName === "google" && providerConfig.usePKCE) {
-                    console.log(`Provider ${providerName} ha client_secret configurato - OK per Google con PKCE`);
+                    console.log(`Provider ${providerName} has client_secret configured - OK for Google with PKCE`);
                 }
                 else {
-                    console.error(`Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`);
-                    // Rimuovo client_secret per sicurezza nel browser
+                    console.error(`Provider ${providerName} has client_secret configured in browser - REMOVE IMMEDIATELY`);
+                    // Remove client_secret for security in browser
                     delete providerConfig.clientSecret;
-                    console.log(`Provider ${providerName} client_secret rimosso per sicurezza nel browser`);
+                    console.log(`Provider ${providerName} client_secret removed for security in browser`);
                 }
             }
         }
@@ -99129,10 +99215,10 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         if (typeof window !== "undefined" && providerConfig.clientSecret) {
             // Google OAuth richiede client_secret anche con PKCE
             if (provider === "google" && providerConfig.usePKCE) {
-                console.log(`Provider ${provider} ha client_secret configurato - OK per Google con PKCE`);
+                console.log(`Provider ${provider} has client_secret configured - OK for Google with PKCE`);
             }
             else {
-                const errorMsg = `Client secret non può essere usato nel browser per ${provider}`;
+                const errorMsg = `Client secret cannot be used in browser for ${provider}`;
                 console.error(errorMsg);
                 return { success: false, error: errorMsg };
             }
@@ -99163,7 +99249,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             // PKCE è obbligatorio per sicurezza
             const isPKCEEnabled = providerConfig.usePKCE ?? this.config.usePKCE ?? true;
             if (!isPKCEEnabled && typeof window !== "undefined") {
-                const errorMsg = `PKCE è obbligatorio per ${provider} nel browser per motivi di sicurezza`;
+                const errorMsg = `PKCE is required for ${provider} in browser for security reasons`;
                 console.error(errorMsg);
                 return { success: false, error: errorMsg };
             }
@@ -99347,7 +99433,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         else {
             // PKCE non abilitato - non sicuro per browser
             if (typeof window !== "undefined") {
-                throw new Error("PKCE è obbligatorio per applicazioni browser. Client secret non può essere usato nel browser.");
+                throw new Error("PKCE is required for browser applications. Client secret cannot be used in browser.");
             }
             // Solo per ambiente Node.js con client_secret
             if (providerConfig.clientSecret &&
@@ -99557,12 +99643,12 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         this.cleanupExpiredOAuthData();
     }
     /**
-     * Pulisce i dati OAuth scaduti dallo storage
+     * Clean up expired OAuth data from storage
      */
     cleanupExpiredOAuthData() {
         const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000;
         const currentTime = Date.now();
-        // Pulisci sessionStorage
+        // Clean sessionStorage
         if (typeof sessionStorage !== "undefined") {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
@@ -99593,7 +99679,7 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
                 console.log(`Cleaned up ${keysToRemove.length} expired OAuth entries`);
             }
         }
-        // Pulisci memoryStorage (Node.js)
+        // Clean memoryStorage (Node.js)
         const memoryKeysToRemove = [];
         for (const [key, value] of this.memoryStorage.entries()) {
             if (key.startsWith("oauth_state_timestamp_") ||
@@ -99812,12 +99898,9 @@ class OAuthPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Sign up with OAuth
-     * @param provider - OAuth provider to use
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account using OAuth with external providers
-     * NOTE: This method only initiates the OAuth flow. The actual registration
-     * happens in handleOAuthCallback when the provider redirects back.
+     * Register new user with OAuth provider
+     * @param provider - OAuth provider
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(provider) {
         try {
@@ -99963,7 +100046,7 @@ class OAuthPlugin extends base_1.BasePlugin {
         // Try login first
         const loginResult = await this.core.login(username, "", k);
         if (loginResult.success) {
-            this.core.db.savePair?.(); // Ensure session is saved
+            // Session is automatically saved by the login method
             loginResult.isNewUser = false;
             // Include SEA pair from core
             if (this.core.user && this.core.user._?.sea) {
@@ -99977,7 +100060,7 @@ class OAuthPlugin extends base_1.BasePlugin {
             // Immediately login after signup
             const postSignupLogin = await this.core.login(username, "", k);
             if (postSignupLogin.success) {
-                this.core.db.savePair?.();
+                // Session is automatically saved by the login method
                 postSignupLogin.isNewUser = true;
                 // Include SEA pair from core
                 if (this.core.user && this.core.user._?.sea) {
@@ -100880,10 +100963,9 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Registra un nuovo utente con Web3
-     * @param address - Indirizzo Ethereum
-     * @returns {Promise<AuthResult>} Risultato della registrazione
-     * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
+     * Register new user with Web3 wallet
+     * @param address - Ethereum address
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(address) {
         try {
@@ -102014,7 +102096,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Register new user with WebAuthn
      * This is the recommended method for WebAuthn registration
      * @param username - Username
-     * @returns {Promise<AuthResult>} Registration result
+     * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account using WebAuthn credentials.
      * Requires browser support for WebAuthn.
      */
@@ -102713,8 +102795,12 @@ class ErrorHandler {
      * @param error - The error to handle
      */
     static handleError(error) {
-        // Log the error
-        console.error(`[${error.type}] ${error.code}: ${error.message}`);
+        // Log essential errors only
+        if (error.type === ErrorType.AUTHENTICATION ||
+            error.type === ErrorType.AUTHORIZATION ||
+            error.type === ErrorType.SECURITY) {
+            console.error(`[${error.type}] ${error.code}: ${error.message}`);
+        }
         // Store the error in memory
         this.errors.push(error);
         // Keep only the last maxErrors
@@ -102727,11 +102813,19 @@ class ErrorHandler {
                 this.externalLogger(error);
             }
             catch (e) {
+                // Fallback logging for external logger errors
                 console.error("Failed to send error to external logger:", e);
             }
         }
-        // Notify listeners
-        this.notifyListeners(error);
+        // Notify all listeners
+        this.listeners.forEach((listener) => {
+            try {
+                listener(error);
+            }
+            catch (e) {
+                // Silent error to prevent infinite loops
+            }
+        });
     }
     /**
      * Handles a raw error by converting it to ShogunError
@@ -102886,6 +102980,29 @@ class ErrorHandler {
             stats.byCode[error.code] = (stats.byCode[error.code] || 0) + 1;
         }
         return stats;
+    }
+    /**
+     * Debug helper - logs messages only in development
+     */
+    static debug(type, code, message, level = "debug") {
+        // Only log debug messages in development environment
+        if (true) {
+            const finalMessage = `${message}`;
+            switch (level) {
+                case "error":
+                    console.error(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "warn":
+                    console.warn(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "info":
+                    console.log(`[${type}.${code}] ${finalMessage}`);
+                    break;
+                case "debug":
+                    console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+                    break;
+            }
+        }
     }
 }
 exports.ErrorHandler = ErrorHandler;

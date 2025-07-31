@@ -124,4 +124,8 @@ export declare class ErrorHandler {
         byType: Record<string, number>;
         byCode: Record<string, number>;
     };
+    /**
+     * Debug helper - logs messages only in development
+     */
+    static debug(type: ErrorType, code: string, message: string, level?: LogLevel): void;
 }

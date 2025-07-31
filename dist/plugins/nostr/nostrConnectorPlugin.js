@@ -336,10 +336,9 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Register a new user with Bitcoin wallet
-     * @param address - Bitcoin address
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account with Bitcoin wallet credentials
+     * Register new user with Nostr wallet
+     * @param address - Nostr address
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(address) {
         try {

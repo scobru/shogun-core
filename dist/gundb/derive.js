@@ -99,7 +99,7 @@ function normalizeString(str) {
 }
 async function stretchKey(input, salt, iterations = 300_000) {
     const baseKey = await crypto.subtle.importKey("raw", input, { name: "PBKDF2" }, false, ["deriveBits"]);
-    const keyBits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, baseKey, 256);
+    const keyBits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations, hash: "SHA-256" }, baseKey, 256);
     return new Uint8Array(keyBits);
 }
 function bytesToHex(bytes) {

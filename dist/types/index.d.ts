@@ -45,8 +45,8 @@ export declare class ShogunCore implements IShogunCore {
      */
     constructor(config: ShogunSDKConfig);
     /**
-     * Initialize the SDK asynchronously
-     * This method should be called after construction to perform async operations
+     * Initialize the Shogun SDK asynchronously
+     * This method handles initialization tasks that require async operations
      */
     initialize(): Promise<void>;
     /**
@@ -70,23 +70,33 @@ export declare class ShogunCore implements IShogunCore {
      */
     private registerBuiltinPlugins;
     /**
-     * Register a new plugin with the SDK
-     * @param plugin The plugin to register
+     * Registers a plugin with the Shogun SDK
+     * @param plugin Plugin instance to register
      * @throws Error if a plugin with the same name is already registered
      */
     register(plugin: ShogunPlugin): void;
     /**
-     * Unregister a plugin from the SDK
+     * Unregisters a plugin from the Shogun SDK
      * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName: string): void;
+    /**
+     * Internal method to register a plugin
+     * @param plugin Plugin instance to register
+     */
+    private registerPlugin;
+    /**
+     * Internal method to unregister a plugin
+     * @param name Name of the plugin to unregister
+     */
+    private unregisterPlugin;
     /**
      * Retrieve a registered plugin by name
      * @param name Name of the plugin
      * @returns The requested plugin or undefined if not found
      * @template T Type of the plugin or its public interface
      */
-    getPlugin<T>(name: string): T | undefined;
+    getPlugin<T = ShogunPlugin>(name: string): T | undefined;
     /**
      * Get information about all registered plugins
      * @returns Array of plugin information objects
@@ -209,7 +219,10 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): unknown;
+    getAuthenticationMethod(type: AuthMethod): ShogunPlugin | {
+        login: (username: string, password: string) => Promise<AuthResult>;
+        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
+    } | undefined;
     /**
      * Retrieve recent errors logged by the system
      * @param count - Number of errors to retrieve (default: 10)
@@ -256,7 +269,7 @@ export declare class ShogunCore implements IShogunCore {
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    signUp(username: string, password: string, passwordConfirmation?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
+    signUp(username: string, password?: string, email?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
@@ -305,7 +318,7 @@ export declare class ShogunCore implements IShogunCore {
      */
     getAuthMethod(): AuthMethod | undefined;
     /**
-     * Debug method: Clears all Gun-related data from local and session storage
+     * Clears all Gun-related data from local and session storage
      * This is useful for debugging and testing purposes
      */
     clearAllStorageData(): void;
@@ -314,14 +327,11 @@ export declare class ShogunCore implements IShogunCore {
      * @param newAlias New alias/username to set
      * @returns Promise resolving to update result
      */
-    updateUserAlias(newAlias: string): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
+    updateUserAlias(newAlias: string): Promise<boolean>;
     /**
      * Saves the current user credentials to storage
      */
-    savePair(): void;
+    saveCredentials(credentials: any): Promise<void>;
     /**
      * Esporta la coppia di chiavi dell'utente corrente come stringa JSON.
      * Utile per backup o migrazione dell'account.

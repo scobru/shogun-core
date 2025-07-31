@@ -4,7 +4,8 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-import type { GunUser, UserInfo, AuthCallback, GunData, ConnectivityTestResult, SignupResult, EventData, EventListener, GunOperationResult } from "./types";
+import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
+import type { AuthResult, SignUpResult } from "../types/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
 import "gun/lib/then.js";
@@ -29,6 +30,7 @@ declare class GunInstance {
     node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
     private readonly onAuthCallbacks;
     private readonly eventEmitter;
+    private readonly rateLimitStorage;
     private _rxjs?;
     constructor(gun: IGunInstance<any>, appScope?: string);
     /**
@@ -186,25 +188,51 @@ declare class GunInstance {
         userPub?: string;
         error?: string;
     };
-    /**
-     * Logs out the current user using direct Gun authentication
-     */
     logout(): void;
     /**
      * Debug method: Clears all Gun-related data from local and session storage
      * This is useful for debugging and testing purposes
+     * @warning This will completely reset the user's local Gun data
      */
-    clearAllStorageData(): void;
+    clearGunStorage(): void;
     /**
      * Debug method: Tests Gun connectivity and returns status information
      * This is useful for debugging connection issues
      */
-    testConnectivity(): Promise<ConnectivityTestResult>;
+    testConnectivity(): Promise<any>;
     /**
      * Accesses the RxJS module for reactive programming
      * @returns GunRxJS instance
      */
     rx(): GunRxJS;
+    /**
+     * Validates password strength according to security requirements
+     */
+    private validatePasswordStrength;
+    /**
+     * Checks rate limiting for login attempts
+     */
+    private checkRateLimit;
+    /**
+     * Resets rate limiting for successful authentication
+     */
+    private resetRateLimit;
+    /**
+     * Validates signup credentials with enhanced security
+     */
+    private validateSignupCredentials;
+    /**
+     * Checks if user exists by attempting authentication
+     */
+    private checkUserExistence;
+    /**
+     * Creates a new user in Gun
+     */
+    private createNewUser;
+    /**
+     * Authenticates user after creation
+     */
+    private authenticateNewUser;
     /**
      * Signs up a new user using direct Gun authentication
      * @param username Username
@@ -212,18 +240,46 @@ declare class GunInstance {
      * @param pair Optional SEA pair for Web3 login
      * @returns Promise resolving to signup result
      */
-    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<SignupResult>;
-    runPostAuthOnAuthResult(authTestResult: any, username: string): Promise<any>;
+    signUp(username: string, password: string, pair?: ISEAPair | null): Promise<SignUpResult>;
+    private runPostAuthOnAuthResult;
+    /**
+     * Normalizes username for consistent lookup
+     */
+    private normalizeUsername;
+    /**
+     * Strategy 1: Frozen space scan for immutable data
+     */
+    private lookupInFrozenSpace;
+    /**
+     * Strategy 2: Direct frozen mapping lookup
+     */
+    private lookupDirectMapping;
+    /**
+     * Strategy 3: Alternate key lookup
+     */
+    private lookupAlternateKey;
+    /**
+     * Strategy 4: Comprehensive scan fallback
+     */
+    private lookupComprehensiveScan;
+    /**
+     * Creates lookup strategies array
+     */
+    private createLookupStrategies;
+    /**
+     * Processes lookup result to get complete user data
+     */
+    private processLookupResult;
     checkUsernameExists(username: string): Promise<any>;
     /**
-     * Logs in a user using direct Gun authentication
-     * @param username Username
-     * @param password Password
-     * @param pair Optional SEA pair for Web3 login
-     * @param callback Optional callback for login result
-     * @returns Promise resolving to login result
+     * Performs authentication with Gun
      */
-    login(username: string, password: string, pair?: ISEAPair | null, callback?: (result: any) => void): Promise<any>;
+    private performAuthentication;
+    /**
+     * Builds login result object
+     */
+    private buildLoginResult;
+    login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
     /**
      * Updates the user's alias (username) in Gun and saves the updated credentials
      * @param newAlias New alias/username to set
@@ -233,7 +289,15 @@ declare class GunInstance {
         success: boolean;
         error?: string;
     }>;
-    savePair(): void;
+    /**
+     * Encrypts session data before storage
+     */
+    private encryptSessionData;
+    /**
+     * Decrypts session data from storage
+     */
+    private decryptSessionData;
+    private saveCredentials;
     /**
      * Sets up security questions and password hint
      * @param username Username
@@ -375,6 +439,22 @@ declare class GunInstance {
             address: string;
         };
     }>;
+    /**
+     * Prepares data for freezing with metadata
+     */
+    private prepareFrozenData;
+    /**
+     * Generates hash for frozen data
+     */
+    private generateFrozenDataHash;
+    /**
+     * Builds the full path for frozen data
+     */
+    private buildFrozenPath;
+    /**
+     * Stores frozen data in Gun
+     */
+    private storeFrozenData;
     /**
      * Creates a frozen space entry for immutable data
      * @param data Data to freeze

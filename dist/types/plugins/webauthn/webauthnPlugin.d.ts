@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { WebAuthnSigningCredential } from "./webauthnSigner";
 import { WebAuthnCredentials, CredentialResult, WebauthnPluginInterface, WebAuthnUniformCredentials } from "./types";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
@@ -144,10 +144,10 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      * Register new user with WebAuthn
      * This is the recommended method for WebAuthn registration
      * @param username - Username
-     * @returns {Promise<AuthResult>} Registration result
+     * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account using WebAuthn credentials.
      * Requires browser support for WebAuthn.
      */
-    signUp(username: string): Promise<AuthResult>;
+    signUp(username: string): Promise<SignUpResult>;
 }
 export type { WebauthnPluginInterface } from "./types";

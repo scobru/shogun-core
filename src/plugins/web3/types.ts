@@ -5,7 +5,7 @@ import {
   BaseAuthResult,
   BaseCacheEntry,
 } from "../../types/common";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 
 /**
  * Result of connection attempt
@@ -119,9 +119,9 @@ export interface Web3ConectorPluginInterface {
   login(address: string): Promise<AuthResult>;
 
   /**
-   * Signup con MetaMask
-   * @param address Indirizzo Ethereum
-   * @returns Promise con il risultato dell'operazione
+   * Sign up with Web3 wallet
+   * @param address Ethereum address
+   * @returns Promise with authentication result
    */
-  signUp(address: string): Promise<AuthResult>;
+  signUp(address: string): Promise<SignUpResult>;
 }

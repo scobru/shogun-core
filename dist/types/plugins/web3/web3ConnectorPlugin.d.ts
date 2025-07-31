@@ -3,7 +3,7 @@ import { ShogunCore } from "../../index";
 import { Web3SigningCredential } from "./web3Signer";
 import { ConnectionResult, Web3ConectorPluginInterface } from "./types";
 import { ethers } from "ethers";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ISEAPair } from "gun";
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
@@ -151,11 +151,10 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conec
      */
     login(address: string): Promise<AuthResult>;
     /**
-     * Registra un nuovo utente con Web3
-     * @param address - Indirizzo Ethereum
-     * @returns {Promise<AuthResult>} Risultato della registrazione
-     * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
+     * Register new user with Web3 wallet
+     * @param address - Ethereum address
+     * @returns {Promise<SignUpResult>} Registration result
      */
-    signUp(address: string): Promise<AuthResult>;
+    signUp(address: string): Promise<SignUpResult>;
 }
 export type { Web3ConectorPluginInterface } from "./types";

@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { NostrSigningCredential } from "./nostrSigner";
 import { NostrConnectorCredentials, ConnectionResult, NostrConnectorPluginInterface } from "./types";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
  * Supports Alby, Nostr extensions, or direct key management
@@ -157,12 +157,11 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      */
     login(address: string): Promise<AuthResult>;
     /**
-     * Register a new user with Bitcoin wallet
-     * @param address - Bitcoin address
-     * @returns {Promise<AuthResult>} Registration result
-     * @description Creates a new user account with Bitcoin wallet credentials
+     * Register new user with Nostr wallet
+     * @param address - Nostr address
+     * @returns {Promise<SignUpResult>} Registration result
      */
-    signUp(address: string): Promise<AuthResult>;
+    signUp(address: string): Promise<SignUpResult>;
     /**
      * Convenience method that matches the interface pattern
      */

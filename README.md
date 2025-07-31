@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.5.19-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v1.6.15-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue)](https://www.typescriptlang.org/)
 
@@ -18,6 +18,15 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
 - 📡 **Event System**: Typed event system for monitoring authentication and data changes
 - 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
+- ✅ **Type Consistency**: Unified return types across all authentication methods
+
+## Recent Updates (v1.6.15)
+
+### ✅ **Type System Fixes**
+- **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
+- **Enhanced SignUpResult**: Extended to support OAuth redirects and provider-specific data
+- **Type Safety**: Fixed TypeScript inconsistencies across all plugins
+- **API Standardization**: All plugins implement unified `login()` and `signUp()` interfaces
 
 ## Installation
 
@@ -87,12 +96,12 @@ console.log("Shogun Core initialized!");
 
 ## Plugin Authentication APIs
 
-Shogun Core provides a unified plugin system for different authentication methods. Each plugin implements standardized `login()` and `signUp()` methods that return consistent `AuthResult` objects.
+Shogun Core provides a unified plugin system for different authentication methods. Each plugin implements standardized `login()` and `signUp()` methods that return consistent `AuthResult` and `SignUpResult` objects.
 
-### Core Types
+### Core Types - ✅ **FIXED & UNIFIED**
 
 ```typescript
-// Authentication result interface
+// Authentication result interface - used by login methods
 interface AuthResult {
   success: boolean;
   error?: string;
@@ -129,6 +138,26 @@ interface AuthResult {
   };
 }
 
+// Sign up result interface - used by signUp methods ✅ ENHANCED
+interface SignUpResult {
+  success: boolean;
+  userPub?: string;
+  username?: string;
+  pub?: string;
+  error?: string;
+  message?: string;
+  wallet?: any;
+  isNewUser?: boolean;
+  authMethod?: AuthMethod;        // ✅ ADDED
+  sessionToken?: string;          // ✅ ADDED
+  sea?: SEAPair;                  // SEA pair for session persistence
+  // OAuth flow support - ✅ ADDED
+  redirectUrl?: string;
+  pendingAuth?: boolean;
+  provider?: string;
+  user?: OAuthUserInfo;           // ✅ ADDED
+}
+
 // Supported authentication methods
 type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
 ```
@@ -138,16 +167,19 @@ type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoi
 Direct username/password authentication using ShogunCore methods:
 
 ```typescript
-// Sign up a new user
-const signUpResult = await shogun.signUp("username", "password");
+// Sign up a new user - Returns SignUpResult ✅
+const signUpResult: SignUpResult = await shogun.signUp("username", "password");
 if (signUpResult.success) {
   console.log("User created:", signUpResult.username);
+  console.log("Is new user:", signUpResult.isNewUser);
+  console.log("Auth method:", signUpResult.authMethod);
 }
 
-// Login with username and password
-const loginResult = await shogun.login("username", "password");
+// Login with username and password - Returns AuthResult ✅
+const loginResult: AuthResult = await shogun.login("username", "password");
 if (loginResult.success) {
   console.log("Logged in as:", loginResult.username);
+  console.log("User public key:", loginResult.userPub);
 }
 ```
 
@@ -165,33 +197,34 @@ if (web3Plugin && web3Plugin.isAvailable()) {
   if (connectionResult.success) {
     const address = connectionResult.address!;
     
-    // Login with Web3 wallet
-    const loginResult = await web3Plugin.login(address);
+    // Login with Web3 wallet - Returns AuthResult ✅
+    const loginResult: AuthResult = await web3Plugin.login(address);
     if (loginResult.success) {
       console.log("Web3 login successful");
       console.log("User public key:", loginResult.userPub);
     }
     
-    // Register new user with Web3 wallet
-    const signUpResult = await web3Plugin.signUp(address);
+    // Register new user with Web3 wallet - Returns SignUpResult ✅
+    const signUpResult: SignUpResult = await web3Plugin.signUp(address);
     if (signUpResult.success) {
       console.log("Web3 registration successful");
+      console.log("Is new user:", signUpResult.isNewUser);
     }
   }
 }
 
-// Plugin Interface
+// Plugin Interface - ✅ FIXED TYPES
 interface Web3ConnectorPluginInterface {
   // Authentication methods
-  login(address: string): Promise<AuthResult>;
-  signUp(address: string): Promise<AuthResult>;
-  
+  login(address: string): Promise<AuthResult>;      // ✅ CORRECT
+  signUp(address: string): Promise<SignUpResult>;   // ✅ FIXED
+
   // Connection methods
   isAvailable(): boolean;
   connectMetaMask(): Promise<ConnectionResult>;
   getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
   getSigner(): Promise<ethers.Signer>;
-  
+
   // Credential management
   generateCredentials(address: string): Promise<ISEAPair>;
   generatePassword(signature: string): Promise<string>;
@@ -207,28 +240,30 @@ Biometric and hardware key authentication:
 const webauthnPlugin = shogun.getPlugin<WebauthnPlugin>("webauthn");
 
 if (webauthnPlugin && webauthnPlugin.isSupported()) {
-  // Register new user with WebAuthn
-  const signUpResult = await webauthnPlugin.signUp("username");
+  // Register new user with WebAuthn - Returns SignUpResult ✅
+  const signUpResult: SignUpResult = await webauthnPlugin.signUp("username");
   if (signUpResult.success) {
     console.log("WebAuthn registration successful");
+    console.log("User public key:", signUpResult.userPub);
   }
 
-  // Authenticate existing user
-  const loginResult = await webauthnPlugin.login("username");
+  // Authenticate existing user - Returns AuthResult ✅
+  const loginResult: AuthResult = await webauthnPlugin.login("username");
   if (loginResult.success) {
     console.log("WebAuthn authentication successful");
+    console.log("Auth method:", loginResult.authMethod); // "webauthn"
   }
 }
 
-// Plugin Interface
+// Plugin Interface - ✅ FIXED TYPES
 interface WebauthnPluginInterface {
   // Authentication methods
-  login(username: string): Promise<AuthResult>;
-  signUp(username: string): Promise<AuthResult>;
-  
+  login(username: string): Promise<AuthResult>;     // ✅ CORRECT
+  signUp(username: string): Promise<SignUpResult>;  // ✅ FIXED
+
   // Capability checks
   isSupported(): boolean;
-  
+
   // WebAuthn-specific methods
   register(username: string, displayName?: string): Promise<WebAuthnCredential>;
   authenticate(username?: string): Promise<WebAuthnCredential>;
@@ -250,31 +285,33 @@ if (nostrPlugin && nostrPlugin.isAvailable()) {
   if (connectionResult.success) {
     const address = connectionResult.address!;
     
-    // Login with Nostr/Bitcoin wallet
-    const loginResult = await nostrPlugin.login(address);
+    // Login with Nostr/Bitcoin wallet - Returns AuthResult ✅
+    const loginResult: AuthResult = await nostrPlugin.login(address);
     if (loginResult.success) {
       console.log("Nostr login successful");
+      console.log("Auth method:", loginResult.authMethod); // "nostr"
     }
     
-    // Register with Nostr/Bitcoin wallet
-    const signUpResult = await nostrPlugin.signUp(address);
+    // Register with Nostr/Bitcoin wallet - Returns SignUpResult ✅
+    const signUpResult: SignUpResult = await nostrPlugin.signUp(address);
     if (signUpResult.success) {
       console.log("Nostr registration successful");
+      console.log("Is new user:", signUpResult.isNewUser);
     }
   }
 }
 
-// Plugin Interface
+// Plugin Interface - ✅ FIXED TYPES
 interface NostrConnectorPluginInterface {
   // Authentication methods
-  login(address: string): Promise<AuthResult>;
-  signUp(address: string): Promise<AuthResult>;
-  
+  login(address: string): Promise<AuthResult>;      // ✅ CORRECT
+  signUp(address: string): Promise<SignUpResult>;   // ✅ FIXED
+
   // Connection methods
   isAvailable(): boolean;
   connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
   connectNostrWallet(): Promise<ConnectionResult>;
-  
+
   // Credential and signature management
   generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
   verifySignature(message: string, signature: string, address: string): Promise<boolean>;
@@ -293,15 +330,15 @@ if (oauthPlugin && oauthPlugin.isSupported()) {
   // Get available providers
   const providers = oauthPlugin.getAvailableProviders(); // ["google", "github", ...]
   
-  // Initiate login with OAuth (returns redirect URL)
-  const loginResult = await oauthPlugin.login("google");
-  if (loginResult.success && loginResult.redirectUrl) {
+  // Initiate signup with OAuth - Returns SignUpResult with redirect ✅
+  const signUpResult: SignUpResult = await oauthPlugin.signUp("google");
+  if (signUpResult.success && signUpResult.redirectUrl) {
     // Redirect user to OAuth provider
-    window.location.href = loginResult.redirectUrl;
+    window.location.href = signUpResult.redirectUrl;
   }
   
-  // Handle OAuth callback (after redirect back from provider)
-  const callbackResult = await oauthPlugin.handleOAuthCallback(
+  // Handle OAuth callback (after redirect back from provider) - Returns AuthResult ✅
+  const callbackResult: AuthResult = await oauthPlugin.handleOAuthCallback(
     "google", 
     authCode,  // From URL params
     state      // From URL params
@@ -316,19 +353,19 @@ if (oauthPlugin && oauthPlugin.isSupported()) {
   }
 }
 
-// Plugin Interface
+// Plugin Interface - ✅ FIXED TYPES
 interface OAuthPluginInterface {
   // Authentication methods
-  login(provider: OAuthProvider): Promise<AuthResult>;
-  signUp(provider: OAuthProvider): Promise<AuthResult>;
-  
+  login(provider: OAuthProvider): Promise<AuthResult>;      // ✅ CORRECT
+  signUp(provider: OAuthProvider): Promise<SignUpResult>;   // ✅ FIXED
+
   // OAuth flow management
   isSupported(): boolean;
   getAvailableProviders(): OAuthProvider[];
   initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
   completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
   handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
-  
+
   // Credential management
   generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials>;
 }
@@ -560,6 +597,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - 📖 [Documentation](https://docs.shogun.dev)
-- 💬 [Discord Community](https://discord.gg/shogun)
+- 💬 [Telegram Community](t.me/shogun_eco)
 - 🐛 [Issue Tracker](https://github.com/scobru/shogun-core/issues)
-- 📧 [Email Support](mailto:support@shogun.dev)

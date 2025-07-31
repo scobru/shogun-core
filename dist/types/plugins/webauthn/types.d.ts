@@ -1,4 +1,4 @@
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 import { BaseEvent, BaseConfig, BaseDeviceInfo, BaseResult, BaseAuthResult } from "../../types/common";
 /**
  * WebAuthn types definitions
@@ -150,7 +150,7 @@ export interface WebauthnPluginInterface {
      * @param username Nome utente
      * @returns Promise con il risultato dell'operazione
      */
-    signUp(username: string): Promise<AuthResult>;
+    signUp(username: string): Promise<SignUpResult>;
 }
 export interface WebAuthnUniformCredentials {
     success: boolean;

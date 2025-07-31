@@ -4,7 +4,7 @@ import { Web3Connector } from "./web3Connector";
 import { Web3Signer, Web3SigningCredential } from "./web3Signer";
 import { ConnectionResult, Web3ConectorPluginInterface } from "./types";
 import { ethers } from "ethers";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ISEAPair } from "gun";
 
@@ -398,12 +398,11 @@ export class Web3ConnectorPlugin
   }
 
   /**
-   * Registra un nuovo utente con Web3
-   * @param address - Indirizzo Ethereum
-   * @returns {Promise<AuthResult>} Risultato della registrazione
-   * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
+   * Register new user with Web3 wallet
+   * @param address - Ethereum address
+   * @returns {Promise<SignUpResult>} Registration result
    */
-  async signUp(address: string): Promise<AuthResult> {
+  async signUp(address: string): Promise<SignUpResult> {
     try {
       const core = this.assertInitialized();
 

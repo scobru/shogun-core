@@ -286,7 +286,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
      * Register new user with WebAuthn
      * This is the recommended method for WebAuthn registration
      * @param username - Username
-     * @returns {Promise<AuthResult>} Registration result
+     * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account using WebAuthn credentials.
      * Requires browser support for WebAuthn.
      */

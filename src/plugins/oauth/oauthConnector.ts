@@ -100,7 +100,7 @@ export class OAuthConnector extends EventEmitter {
   }
 
   /**
-   * Valida la configurazione di sicurezza
+   * Validates security configuration
    */
   private validateSecurityConfig(): void {
     const providers = this.config.providers || {};
@@ -108,29 +108,29 @@ export class OAuthConnector extends EventEmitter {
     for (const [providerName, providerConfig] of Object.entries(providers)) {
       if (!providerConfig) continue;
 
-      // Verifica che PKCE sia abilitato per tutti i provider nel browser
+      // Verify that PKCE is enabled for all providers in browser
       if (typeof window !== "undefined" && !providerConfig.usePKCE) {
         console.warn(
-          `Provider ${providerName} non ha PKCE abilitato - non sicuro per browser`,
+          `Provider ${providerName} does not have PKCE enabled - not secure for browser`,
         );
-        // Forzo PKCE per tutti i provider nel browser, eccetto se già configurato diversamente
+        // Force PKCE for all providers in browser, except if already configured differently
         providerConfig.usePKCE = true;
       }
 
-      // Verifica che non ci sia client_secret nel browser (eccetto Google con PKCE)
+      // Verify that there is no client_secret in browser (except Google with PKCE)
       if (typeof window !== "undefined" && providerConfig.clientSecret) {
         if (providerName === "google" && providerConfig.usePKCE) {
           console.log(
-            `Provider ${providerName} ha client_secret configurato - OK per Google con PKCE`,
+            `Provider ${providerName} has client_secret configured - OK for Google with PKCE`,
           );
         } else {
           console.error(
-            `Provider ${providerName} ha client_secret configurato nel browser - RIMUOVERE IMMEDIATAMENTE`,
+            `Provider ${providerName} has client_secret configured in browser - REMOVE IMMEDIATELY`,
           );
-          // Rimuovo client_secret per sicurezza nel browser
+          // Remove client_secret for security in browser
           delete providerConfig.clientSecret;
           console.log(
-            `Provider ${providerName} client_secret rimosso per sicurezza nel browser`,
+            `Provider ${providerName} client_secret removed for security in browser`,
           );
         }
       }
@@ -322,10 +322,10 @@ export class OAuthConnector extends EventEmitter {
       // Google OAuth richiede client_secret anche con PKCE
       if (provider === "google" && providerConfig.usePKCE) {
         console.log(
-          `Provider ${provider} ha client_secret configurato - OK per Google con PKCE`,
+          `Provider ${provider} has client_secret configured - OK for Google with PKCE`,
         );
       } else {
-        const errorMsg = `Client secret non può essere usato nel browser per ${provider}`;
+        const errorMsg = `Client secret cannot be used in browser for ${provider}`;
         console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
@@ -366,7 +366,7 @@ export class OAuthConnector extends EventEmitter {
       const isPKCEEnabled =
         providerConfig.usePKCE ?? this.config.usePKCE ?? true;
       if (!isPKCEEnabled && typeof window !== "undefined") {
-        const errorMsg = `PKCE è obbligatorio per ${provider} nel browser per motivi di sicurezza`;
+        const errorMsg = `PKCE is required for ${provider} in browser for security reasons`;
         console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
@@ -618,7 +618,7 @@ export class OAuthConnector extends EventEmitter {
       // PKCE non abilitato - non sicuro per browser
       if (typeof window !== "undefined") {
         throw new Error(
-          "PKCE è obbligatorio per applicazioni browser. Client secret non può essere usato nel browser.",
+          "PKCE is required for browser applications. Client secret cannot be used in browser.",
         );
       }
 
@@ -887,13 +887,13 @@ export class OAuthConnector extends EventEmitter {
   }
 
   /**
-   * Pulisce i dati OAuth scaduti dallo storage
+   * Clean up expired OAuth data from storage
    */
   private cleanupExpiredOAuthData(): void {
     const stateTimeout = this.config.stateTimeout || 10 * 60 * 1000;
     const currentTime = Date.now();
 
-    // Pulisci sessionStorage
+    // Clean sessionStorage
     if (typeof sessionStorage !== "undefined") {
       const keysToRemove: string[] = [];
 
@@ -928,7 +928,7 @@ export class OAuthConnector extends EventEmitter {
       }
     }
 
-    // Pulisci memoryStorage (Node.js)
+    // Clean memoryStorage (Node.js)
     const memoryKeysToRemove: string[] = [];
     for (const [key, value] of this.memoryStorage.entries()) {
       if (

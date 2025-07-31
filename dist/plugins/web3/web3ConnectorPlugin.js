@@ -295,10 +295,9 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         }
     }
     /**
-     * Registra un nuovo utente con Web3
-     * @param address - Indirizzo Ethereum
-     * @returns {Promise<AuthResult>} Risultato della registrazione
-     * @description Crea un nuovo account utente usando le credenziali del wallet Web3 dopo la verifica della firma
+     * Register new user with Web3 wallet
+     * @param address - Ethereum address
+     * @returns {Promise<SignUpResult>} Registration result
      */
     async signUp(address) {
         try {

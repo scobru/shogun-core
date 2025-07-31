@@ -8,7 +8,7 @@ import {
   WebauthnPluginInterface,
   WebAuthnUniformCredentials,
 } from "./types";
-import { AuthResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
 /**
@@ -425,11 +425,11 @@ export class WebauthnPlugin
    * Register new user with WebAuthn
    * This is the recommended method for WebAuthn registration
    * @param username - Username
-   * @returns {Promise<AuthResult>} Registration result
+   * @returns {Promise<SignUpResult>} Registration result
    * @description Creates a new user account using WebAuthn credentials.
    * Requires browser support for WebAuthn.
    */
-  async signUp(username: string): Promise<AuthResult> {
+  async signUp(username: string): Promise<SignUpResult> {
     try {
       const core = this.assertInitialized();
 
