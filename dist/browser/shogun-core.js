@@ -95257,7 +95257,21 @@ class GunInstance {
                     resolve({ success: false, error: ack.err });
                 }
                 else {
-                    resolve({ success: true, userPub: ack.pub });
+                    // Validate that we got a userPub from creation
+                    const userPub = ack.pub;
+                    if (!userPub ||
+                        typeof userPub !== "string" ||
+                        userPub.trim().length === 0) {
+                        console.error("User creation successful but no userPub returned:", ack);
+                        resolve({
+                            success: false,
+                            error: "User creation successful but no userPub returned",
+                        });
+                    }
+                    else {
+                        console.log(`User created successfully with userPub: ${userPub}`);
+                        resolve({ success: true, userPub: userPub });
+                    }
                 }
             });
         });
@@ -95291,23 +95305,59 @@ class GunInstance {
             }
             if (pair) {
                 this.gun.user().auth(pair, (ack) => {
+                    console.log(`Pair authentication after creation result:`, ack);
                     if (ack.err) {
                         console.error(`Authentication after creation failed: ${ack.err}`);
                         resolve({ success: false, error: ack.err });
                     }
                     else {
-                        resolve({ success: true, userPub: ack.pub });
+                        // Add a small delay to ensure user state is properly set
+                        setTimeout(() => {
+                            // Extract userPub from multiple possible sources
+                            const userPub = ack.pub || this.gun.user().is?.pub || ack.user?.pub;
+                            console.log(`Extracted userPub after pair auth: ${userPub}`);
+                            console.log(`User object after pair auth:`, this.gun.user());
+                            console.log(`User.is after pair auth:`, this.gun.user().is);
+                            if (!userPub) {
+                                console.error("Authentication successful but no userPub found");
+                                resolve({
+                                    success: false,
+                                    error: "No userPub returned from authentication",
+                                });
+                            }
+                            else {
+                                resolve({ success: true, userPub: userPub });
+                            }
+                        }, 100);
                     }
                 });
             }
             else {
                 this.gun.user().auth(sanitizedUsername, password, (ack) => {
+                    console.log(`Password authentication after creation result:`, ack);
                     if (ack.err) {
                         console.error(`Authentication after creation failed: ${ack.err}`);
                         resolve({ success: false, error: ack.err });
                     }
                     else {
-                        resolve({ success: true, userPub: ack.pub });
+                        // Add a small delay to ensure user state is properly set
+                        setTimeout(() => {
+                            // Extract userPub from multiple possible sources
+                            const userPub = ack.pub || this.gun.user().is?.pub || ack.user?.pub;
+                            console.log(`Extracted userPub after password auth: ${userPub}`);
+                            console.log(`User object after password auth:`, this.gun.user());
+                            console.log(`User.is after password auth:`, this.gun.user().is);
+                            if (!userPub) {
+                                console.error("Authentication successful but no userPub found");
+                                resolve({
+                                    success: false,
+                                    error: "No userPub returned from authentication",
+                                });
+                            }
+                            else {
+                                resolve({ success: true, userPub: userPub });
+                            }
+                        }, 100);
                     }
                 });
             }
@@ -95340,10 +95390,22 @@ class GunInstance {
             if (!createResult.success) {
                 return { success: false, error: createResult.error };
             }
+            // Add a small delay to ensure user is properly registered
+            await new Promise((resolve) => setTimeout(resolve, 100));
             // Authenticate the newly created user
             const authResult = await this.authenticateNewUser(username, password, pair);
             if (!authResult.success) {
                 return { success: false, error: authResult.error };
+            }
+            // Validate that we have a userPub
+            if (!authResult.userPub ||
+                typeof authResult.userPub !== "string" ||
+                authResult.userPub.trim().length === 0) {
+                console.error("Authentication successful but no valid userPub returned:", authResult);
+                return {
+                    success: false,
+                    error: "Authentication successful but no valid userPub returned",
+                };
             }
             // Set the user instance
             this.user = this.gun.user();
@@ -95351,6 +95413,7 @@ class GunInstance {
             this.resetRateLimit(username, "signup");
             // Run post-authentication tasks
             try {
+                console.log(`Running post-auth setup with userPub: ${authResult.userPub}`);
                 const postAuthResult = await this.runPostAuthOnAuthResult(username, authResult.userPub, authResult);
                 // Return the post-auth result which includes the complete user data
                 return postAuthResult;
@@ -95391,13 +95454,24 @@ class GunInstance {
             if (!userPub ||
                 typeof userPub !== "string" ||
                 userPub.trim().length === 0) {
+                console.error("Invalid userPub provided:", {
+                    userPub,
+                    type: typeof userPub,
+                    authResult,
+                });
                 throw new Error("Invalid userPub provided");
+            }
+            // Additional validation for userPub format
+            if (!userPub.includes(".") || userPub.length < 10) {
+                console.error("Invalid userPub format:", userPub);
+                throw new Error("Invalid userPub format");
             }
             // Sanitize username to prevent path issues
             const sanitizedUsername = this.sanitizeUsername(username);
             if (sanitizedUsername.length === 0) {
                 throw new Error("Username contains only invalid characters");
             }
+            console.log(`Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`);
             const existingUser = await new Promise((resolve) => {
                 this.gun.get(userPub).once((data) => {
                     resolve(data);
@@ -95676,8 +95750,10 @@ class GunInstance {
      */
     async performAuthentication(username, password, pair) {
         return new Promise((resolve) => {
+            console.log(`Attempting authentication for user: ${username}`);
             if (pair) {
                 this.gun.user().auth(pair, (ack) => {
+                    console.log(`Pair authentication result:`, ack);
                     if (ack.err) {
                         console.error(`Login error for ${username}: ${ack.err}`);
                         resolve({ success: false, error: ack.err });
@@ -95689,6 +95765,7 @@ class GunInstance {
             }
             else {
                 this.gun.user().auth(username, password, (ack) => {
+                    console.log(`Password authentication result:`, ack);
                     if (ack.err) {
                         console.error(`Login error for ${username}: ${ack.err}`);
                         resolve({ success: false, error: ack.err });
@@ -95735,7 +95812,12 @@ class GunInstance {
                     error: `User '${username}' not found. Please check your username or register first.`,
                 };
             }
+            // Add a small delay to ensure user state is properly set
+            await new Promise((resolve) => setTimeout(resolve, 100));
             const userPub = this.gun.user().is?.pub;
+            console.log(`Login authentication successful, extracted userPub: ${userPub}`);
+            console.log(`User object:`, this.gun.user());
+            console.log(`User.is:`, this.gun.user().is);
             if (!userPub) {
                 return {
                     success: false,
@@ -95745,10 +95827,16 @@ class GunInstance {
             // Reset rate limiting on successful login
             this.resetRateLimit(username, "login");
             // Pass the userPub to runPostAuthOnAuthResult
-            this.runPostAuthOnAuthResult(username, userPub, {
-                success: true,
-                userPub: userPub,
-            });
+            try {
+                await this.runPostAuthOnAuthResult(username, userPub, {
+                    success: true,
+                    userPub: userPub,
+                });
+            }
+            catch (postAuthError) {
+                console.error(`Post-auth error during login: ${postAuthError}`);
+                // Continue with login even if post-auth fails
+            }
             // Save credentials for future sessions
             try {
                 const userInfo = {
