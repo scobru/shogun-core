@@ -94345,7 +94345,6 @@ exports.Gun = gun_1.default;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
 __webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
-__webpack_require__(/*! gun/lib/radix.js */ "./node_modules/gun/lib/radix.js");
 __webpack_require__(/*! gun/lib/radisk.js */ "./node_modules/gun/lib/radisk.js");
 __webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
 __webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
@@ -94687,11 +94686,20 @@ class GunInstance {
      * @returns Gun node at the specified path
      */
     navigateToPath(node, path) {
-        if (!path)
+        if (!path || typeof path !== "string")
+            return node;
+        // Sanitize path to remove any control characters or invalid characters
+        const sanitizedPath = path
+            .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
+            .replace(/[^\w\-._/]/g, "") // Only allow alphanumeric, hyphens, dots, underscores, and slashes
+            .trim();
+        if (!sanitizedPath)
             return node;
         // Split path by '/' and filter out empty segments
-        const pathSegments = path
+        const pathSegments = sanitizedPath
             .split("/")
+            .filter((segment) => segment.length > 0)
+            .map((segment) => segment.trim())
             .filter((segment) => segment.length > 0);
         // Chain .get() calls for each path segment
         return pathSegments.reduce((currentNode, segment) => {
@@ -95221,7 +95229,29 @@ class GunInstance {
      */
     async createNewUser(username, password) {
         return new Promise((resolve) => {
-            this.gun.user().create(username, password, (ack) => {
+            // Validate inputs before creating user
+            if (!username ||
+                typeof username !== "string" ||
+                username.trim().length === 0) {
+                resolve({ success: false, error: "Invalid username provided" });
+                return;
+            }
+            if (!password ||
+                typeof password !== "string" ||
+                password.length === 0) {
+                resolve({ success: false, error: "Invalid password provided" });
+                return;
+            }
+            // Sanitize username
+            const sanitizedUsername = this.sanitizeUsername(username);
+            if (sanitizedUsername.length === 0) {
+                resolve({
+                    success: false,
+                    error: "Username contains only invalid characters",
+                });
+                return;
+            }
+            this.gun.user().create(sanitizedUsername, password, (ack) => {
                 if (ack.err) {
                     console.error(`User creation error: ${ack.err}`);
                     resolve({ success: false, error: ack.err });
@@ -95237,6 +95267,28 @@ class GunInstance {
      */
     async authenticateNewUser(username, password, pair) {
         return new Promise((resolve) => {
+            // Validate inputs before authentication
+            if (!username ||
+                typeof username !== "string" ||
+                username.trim().length === 0) {
+                resolve({ success: false, error: "Invalid username provided" });
+                return;
+            }
+            if (!password ||
+                typeof password !== "string" ||
+                password.length === 0) {
+                resolve({ success: false, error: "Invalid password provided" });
+                return;
+            }
+            // Sanitize username to match what was used in creation
+            const sanitizedUsername = this.sanitizeUsername(username);
+            if (sanitizedUsername.length === 0) {
+                resolve({
+                    success: false,
+                    error: "Username contains only invalid characters",
+                });
+                return;
+            }
             if (pair) {
                 this.gun.user().auth(pair, (ack) => {
                     if (ack.err) {
@@ -95249,7 +95301,7 @@ class GunInstance {
                 });
             }
             else {
-                this.gun.user().auth(username, password, (ack) => {
+                this.gun.user().auth(sanitizedUsername, password, (ack) => {
                     if (ack.err) {
                         console.error(`Authentication after creation failed: ${ack.err}`);
                         resolve({ success: false, error: ack.err });
@@ -95275,12 +95327,13 @@ class GunInstance {
             if (!validation.valid) {
                 return { success: false, error: validation.error };
             }
-            // Check if user already exists
-            const authTestResult = await this.checkUserExistence(username, password, pair);
-            if (authTestResult.exists) {
-                // Reset rate limiting on successful existing user authentication
-                this.resetRateLimit(username, "signup");
-                return await this.runPostAuthOnAuthResult(username, authTestResult.userPub, authTestResult);
+            // First, check if username already exists without authentication
+            const existingUserCheck = await this.checkUsernameExists(username);
+            if (existingUserCheck) {
+                return {
+                    success: false,
+                    error: `Username '${username}' already exists. Please choose a different username or try logging in instead.`,
+                };
             }
             // Create new user
             const createResult = await this.createNewUser(username, password);
@@ -95298,15 +95351,28 @@ class GunInstance {
             this.resetRateLimit(username, "signup");
             // Run post-authentication tasks
             try {
-                await this.runPostAuthOnAuthResult(username, authResult.userPub, authResult);
+                const postAuthResult = await this.runPostAuthOnAuthResult(username, authResult.userPub, authResult);
+                // Return the post-auth result which includes the complete user data
+                return postAuthResult;
             }
             catch (postAuthError) {
                 console.error(`Post-auth error: ${postAuthError}`);
+                // Even if post-auth fails, the user was created and authenticated successfully
+                return {
+                    success: true,
+                    userPub: authResult.userPub,
+                    username: username,
+                    isNewUser: true,
+                    sea: this.gun.user()?._?.sea
+                        ? {
+                            pub: this.gun.user()._?.sea.pub,
+                            priv: this.gun.user()._?.sea.priv,
+                            epub: this.gun.user()._?.sea.epub,
+                            epriv: this.gun.user()._?.sea.epriv,
+                        }
+                        : undefined,
+                };
             }
-            return {
-                success: true,
-                userPub: authResult.userPub,
-            };
         }
         catch (error) {
             console.error(`Exception during signup for ${username}: ${error}`);
@@ -95316,22 +95382,40 @@ class GunInstance {
     async runPostAuthOnAuthResult(username, userPub, authResult) {
         // Setting up user profile after authentication
         try {
+            // Validate required parameters
+            if (!username ||
+                typeof username !== "string" ||
+                username.trim().length === 0) {
+                throw new Error("Invalid username provided");
+            }
+            if (!userPub ||
+                typeof userPub !== "string" ||
+                userPub.trim().length === 0) {
+                throw new Error("Invalid userPub provided");
+            }
+            // Sanitize username to prevent path issues
+            const sanitizedUsername = this.sanitizeUsername(username);
+            if (sanitizedUsername.length === 0) {
+                throw new Error("Username contains only invalid characters");
+            }
             const existingUser = await new Promise((resolve) => {
                 this.gun.get(userPub).once((data) => {
                     resolve(data);
                 });
             });
             // Check if user already has metadata to avoid overwriting
-            if (!existingUser || !existingUser.username) {
+            if (!existingUser) {
                 try {
                     await new Promise((resolve, reject) => {
-                        this.gun.get(userPub).put({ username }, (ack) => {
+                        this.gun
+                            .get(userPub)
+                            .put({ username: sanitizedUsername }, (ack) => {
                             if (ack.err) {
                                 console.error(`Error saving user metadata: ${ack.err}`);
                                 reject(ack.err);
                             }
                             else {
-                                // User metadata saved for
+                                // User metadata saved successfully
                                 resolve(ack);
                             }
                         });
@@ -95339,19 +95423,20 @@ class GunInstance {
                 }
                 catch (metadataError) {
                     console.error(`Error saving user metadata: ${metadataError}`);
+                    // Don't throw here, continue with other operations
                 }
                 // Create username mapping
                 try {
                     await new Promise((resolve, reject) => {
                         this.node
                             .get("usernames")
-                            .get(username)
+                            .get(sanitizedUsername)
                             .put(userPub, (ack) => {
                             if (ack.err) {
                                 reject(ack.err);
                             }
                             else {
-                                // Username mapping created for
+                                // Username mapping created successfully
                                 resolve(ack);
                             }
                         });
@@ -95359,6 +95444,7 @@ class GunInstance {
                 }
                 catch (mappingError) {
                     console.error(`Error creating username mapping: ${mappingError}`);
+                    // Don't throw here, continue with other operations
                 }
                 // Add user to users collection
                 try {
@@ -95368,7 +95454,7 @@ class GunInstance {
                                 reject(ack.err);
                             }
                             else {
-                                // User added to collection
+                                // User added to collection successfully
                                 resolve(ack);
                             }
                         });
@@ -95376,12 +95462,13 @@ class GunInstance {
                 }
                 catch (collectionError) {
                     console.error(`Error adding user to collection: ${collectionError}`);
+                    // Don't throw here, continue with other operations
                 }
             }
             return {
                 success: true,
                 userPub: userPub,
-                username: username,
+                username: sanitizedUsername,
                 isNewUser: !existingUser || !existingUser.username,
                 // Get the SEA pair from the user object
                 sea: this.gun.user()?._?.sea
@@ -96331,6 +96418,23 @@ class GunInstance {
     }
     // Errors
     static Errors = GunErrors;
+    /**
+     * Sanitizes username to prevent path construction issues
+     * @param username Raw username
+     * @returns Sanitized username
+     */
+    sanitizeUsername(username) {
+        if (!username || typeof username !== "string") {
+            return "";
+        }
+        return username
+            .trim()
+            .toLowerCase()
+            .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
+            .replace(/[^a-zA-Z0-9._-]/g, "") // Only allow alphanumeric, dots, underscores, and hyphens
+            .replace(/^[^a-zA-Z]/, "") // Must start with a letter
+            .substring(0, 50); // Limit length
+    }
 }
 exports.GunInstance = GunInstance;
 

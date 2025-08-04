@@ -9,7 +9,6 @@ import type { AuthResult, SignUpResult } from "../types/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
 import "gun/lib/then.js";
-import "gun/lib/radix.js";
 import "gun/lib/radisk.js";
 import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
@@ -493,6 +492,12 @@ declare class GunInstance {
         error?: string;
     }>;
     static Errors: typeof GunErrors;
+    /**
+     * Sanitizes username to prevent path construction issues
+     * @param username Raw username
+     * @returns Sanitized username
+     */
+    private sanitizeUsername;
 }
 export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, };
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
