@@ -66,6 +66,16 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
+        // Polyfill console for environments where it might be missing
+        if (typeof console === "undefined") {
+            global.console = {
+                log: () => { },
+                warn: () => { },
+                error: () => { },
+                info: () => { },
+                debug: () => { },
+            };
+        }
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new events_1.ShogunEventEmitter();
@@ -92,7 +102,9 @@ class ShogunCore {
             }
         }
         catch (error) {
-            console.error("Error creating Gun instance:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error creating Gun instance:", error);
+            }
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
@@ -101,14 +113,18 @@ class ShogunCore {
             this.setupGunEventForwarding();
         }
         catch (error) {
-            console.error("Error initializing GunInstance:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing GunInstance:", error);
+            }
             throw new Error(`Failed to initialize GunInstance: ${error}`);
         }
         try {
             this._user = this._gun.user().recall({ sessionStorage: true });
         }
         catch (error) {
-            console.error("Error initializing Gun user:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing Gun user:", error);
+            }
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
         this._gun.on("auth", (user) => {
@@ -122,7 +138,9 @@ class ShogunCore {
         this.registerBuiltinPlugins(config);
         // Initialize async components
         this.initialize().catch((error) => {
-            console.warn("Error during async initialization:", error);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Error during async initialization:", error);
+            }
         });
     }
     /**
@@ -138,7 +156,9 @@ class ShogunCore {
             });
         }
         catch (error) {
-            console.error("Error during Shogun Core initialization:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error during Shogun Core initialization:", error);
+            }
             throw error;
         }
     }
@@ -155,6 +175,16 @@ class ShogunCore {
      */
     get user() {
         return this._user;
+    }
+    /**
+     * Gets the current user information
+     * @returns Current user object or null
+     */
+    getCurrentUser() {
+        if (!this.db) {
+            return null;
+        }
+        return this.db.getCurrentUser();
     }
     /**
      * Setup event forwarding from GunInstance to main event emitter
@@ -187,7 +217,9 @@ class ShogunCore {
         try {
             // Register OAuth plugin if configuration is provided
             if (config.oauth) {
-                console.warn("OAuth plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("OAuth plugin will be registered with provided configuration");
+                }
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 if (typeof oauthPlugin.configure === "function") {
                     oauthPlugin.configure(config.oauth);
@@ -196,7 +228,9 @@ class ShogunCore {
             }
             // Register WebAuthn plugin if configuration is provided
             if (config.webauthn) {
-                console.warn("WebAuthn plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("WebAuthn plugin will be registered with provided configuration");
+                }
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 if (typeof webauthnPlugin.configure === "function") {
                     webauthnPlugin.configure(config.webauthn);
@@ -205,7 +239,9 @@ class ShogunCore {
             }
             // Register Web3 plugin if configuration is provided
             if (config.web3) {
-                console.warn("Web3 plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Web3 plugin will be registered with provided configuration");
+                }
                 const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 if (typeof web3Plugin.configure === "function") {
                     web3Plugin.configure(config.web3);
@@ -214,7 +250,9 @@ class ShogunCore {
             }
             // Register Nostr plugin if configuration is provided
             if (config.nostr) {
-                console.warn("Nostr plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Nostr plugin will be registered with provided configuration");
+                }
                 const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 if (typeof nostrPlugin.configure === "function") {
                     nostrPlugin.configure(config.nostr);
@@ -223,7 +261,9 @@ class ShogunCore {
             }
         }
         catch (error) {
-            console.error("Error registering builtin plugins:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error registering builtin plugins:", error);
+            }
         }
     }
     /**
@@ -248,11 +288,15 @@ class ShogunCore {
     registerPlugin(plugin) {
         try {
             if (!plugin.name) {
-                console.error("Plugin registration failed: Plugin must have a name");
+                if (typeof console !== "undefined" && console.error) {
+                    console.error("Plugin registration failed: Plugin must have a name");
+                }
                 return;
             }
             if (this.plugins.has(plugin.name)) {
-                console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                }
                 return;
             }
             // Initialize plugin with core instance
@@ -265,7 +309,9 @@ class ShogunCore {
             });
         }
         catch (error) {
-            console.error(`Error registering plugin "${plugin.name}":`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error registering plugin "${plugin.name}":`, error);
+            }
         }
     }
     /**
@@ -276,7 +322,9 @@ class ShogunCore {
         try {
             const plugin = this.plugins.get(name);
             if (!plugin) {
-                console.warn(`Plugin "${name}" not found for unregistration`);
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${name}" not found for unregistration`);
+                }
                 return false;
             }
             // Destroy plugin if it has a destroy method
@@ -285,7 +333,9 @@ class ShogunCore {
                     plugin.destroy();
                 }
                 catch (destroyError) {
-                    console.error(`Error destroying plugin "${name}":`, destroyError);
+                    if (typeof console !== "undefined" && console.error) {
+                        console.error(`Error destroying plugin "${name}":`, destroyError);
+                    }
                 }
             }
             this.plugins.delete(name);
@@ -295,7 +345,9 @@ class ShogunCore {
             return true;
         }
         catch (error) {
-            console.error(`Error unregistering plugin "${name}":`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error unregistering plugin "${name}":`, error);
+            }
             return false;
         }
     }
@@ -307,12 +359,16 @@ class ShogunCore {
      */
     getPlugin(name) {
         if (!name || typeof name !== "string") {
-            console.warn("Invalid plugin name provided to getPlugin");
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Invalid plugin name provided to getPlugin");
+            }
             return undefined;
         }
         const plugin = this.plugins.get(name);
         if (!plugin) {
-            console.warn(`Plugin "${name}" not found`);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn(`Plugin "${name}" not found`);
+            }
             return undefined;
         }
         return plugin;
@@ -429,7 +485,9 @@ class ShogunCore {
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 failed.push({ name: pluginName, error: errorMessage });
-                console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
+                if (typeof console !== "undefined" && console.error) {
+                    console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
+                }
             }
         });
         return { success, failed };
@@ -706,7 +764,9 @@ class ShogunCore {
             return result;
         }
         catch (error) {
-            console.error(`Error during registration for user ${username}:`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error during registration for user ${username}:`, error);
+            }
             this.eventEmitter.emit("debug", {
                 action: "signup_error",
                 error: error instanceof Error ? error.message : String(error),
@@ -805,7 +865,9 @@ class ShogunCore {
             return result.success;
         }
         catch (error) {
-            console.error(`Error updating user alias:`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error updating user alias:`, error);
+            }
             return false;
         }
     }
@@ -817,8 +879,12 @@ class ShogunCore {
             this.storage.setItem("userCredentials", JSON.stringify(credentials));
         }
         catch (error) {
-            console.warn("Failed to save credentials to storage");
-            console.error(`Error saving credentials:`, error);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Failed to save credentials to storage");
+            }
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error saving credentials:`, error);
+            }
         }
     }
     // esporta la coppia utente come json
@@ -837,6 +903,53 @@ class ShogunCore {
     }
     getIsLoggedIn() {
         return !!(this.user && this.user.is);
+    }
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    async changeUsername(newUsername) {
+        try {
+            if (!this.db) {
+                throw new Error("Database not initialized");
+            }
+            const result = await this.db.changeUsername(newUsername);
+            if (result.success) {
+                this.eventEmitter.emit("auth:username_changed", {
+                    oldUsername: result.oldUsername,
+                    newUsername: result.newUsername,
+                    userPub: this.getCurrentUser()?.pub,
+                });
+                this.eventEmitter.emit("debug", {
+                    action: "username_changed",
+                    oldUsername: result.oldUsername,
+                    newUsername: result.newUsername,
+                });
+            }
+            else {
+                this.eventEmitter.emit("debug", {
+                    action: "username_change_failed",
+                    error: result.error,
+                    newUsername,
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error changing username to ${newUsername}:`, error);
+            }
+            this.eventEmitter.emit("debug", {
+                action: "username_change_error",
+                error: error instanceof Error ? error.message : String(error),
+                newUsername,
+            });
+            return {
+                success: false,
+                error: `Username change failed: ${error instanceof Error ? error.message : String(error)}`,
+            };
+        }
     }
 }
 exports.ShogunCore = ShogunCore;

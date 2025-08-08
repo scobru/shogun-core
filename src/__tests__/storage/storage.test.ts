@@ -65,14 +65,14 @@ describe("ShogunStorage", () => {
       await storage.setPair(mockPair);
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         "shogun_keypair",
-        JSON.stringify(mockPair)
+        JSON.stringify(mockPair),
       );
     });
 
     it("clearAll should clear localStorage", () => {
       storage.clearAll();
       expect(localStorageMock.removeItem).toHaveBeenCalledWith(
-        "shogun_keypair"
+        "shogun_keypair",
       );
     });
 
@@ -81,7 +81,7 @@ describe("ShogunStorage", () => {
       storage.setItem("test-key", JSON.stringify(testData));
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         "test-key",
-        JSON.stringify(testData)
+        JSON.stringify(testData),
       );
     });
 

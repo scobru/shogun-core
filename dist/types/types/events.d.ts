@@ -72,6 +72,11 @@ export type ShogunEventMap = {
     "auth:login": AuthEventData;
     "auth:logout": void;
     "auth:signup": AuthEventData;
+    "auth:username_changed": {
+        oldUsername?: string;
+        newUsername?: string;
+        userPub?: string;
+    };
     "wallet:created": WalletEventData;
     "gun:put": GunDataEventData;
     "gun:get": GunDataEventData;

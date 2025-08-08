@@ -21,7 +21,7 @@ describe("ErrorHandler", () => {
         ErrorType.AUTHENTICATION,
         "AUTH_001",
         "Authentication failed",
-        originalError
+        originalError,
       );
 
       expect(error).toEqual({
@@ -37,7 +37,7 @@ describe("ErrorHandler", () => {
       const error = createError(
         ErrorType.VALIDATION,
         "VAL_001",
-        "Invalid input"
+        "Invalid input",
       );
 
       expect(error).toEqual({
@@ -57,7 +57,7 @@ describe("ErrorHandler", () => {
         ErrorType.NETWORK,
         "NET_001",
         "Network timeout",
-        originalError
+        originalError,
       );
 
       expect(error.type).toBe(ErrorType.NETWORK);
@@ -72,11 +72,11 @@ describe("ErrorHandler", () => {
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "AUTH_001",
-        "Authentication failed"
+        "Authentication failed",
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[AuthenticationError] AUTH_001: Authentication failed"
+        "[AuthenticationError] AUTH_001: Authentication failed",
       );
 
       consoleSpy.mockRestore();
@@ -84,12 +84,8 @@ describe("ErrorHandler", () => {
 
     it("should not log non-essential errors to console", () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      
-      ErrorHandler.handle(
-        ErrorType.VALIDATION,
-        "VAL_001",
-        "Validation error"
-      );
+
+      ErrorHandler.handle(ErrorType.VALIDATION, "VAL_001", "Validation error");
 
       expect(consoleSpy).not.toHaveBeenCalled();
 
@@ -103,7 +99,7 @@ describe("ErrorHandler", () => {
         ErrorHandler.handleAndThrow(
           ErrorType.SECURITY,
           "SEC_001",
-          "Security violation"
+          "Security violation",
         );
       }).toThrow("Security violation");
     });
@@ -142,7 +138,7 @@ describe("ErrorHandler", () => {
           type: ErrorType.AUTHENTICATION,
           code: "AUTH_001",
           message: "Test error",
-        })
+        }),
       );
     });
 
@@ -191,7 +187,7 @@ describe("ErrorHandler", () => {
         ErrorType.NETWORK,
         "NET_001",
         3,
-        100
+        100,
       );
 
       expect(result).toBe("success");
@@ -199,7 +195,9 @@ describe("ErrorHandler", () => {
     });
 
     it("should throw after max retries", async () => {
-      const failingOperation = jest.fn().mockRejectedValue(new Error("Persistent failure"));
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error("Persistent failure"));
 
       await expect(
         ErrorHandler.withRetry(
@@ -207,9 +205,11 @@ describe("ErrorHandler", () => {
           ErrorType.NETWORK,
           "NET_001",
           2,
-          100
-        )
-      ).rejects.toThrow("Operation failed after 2 attempts - Error: Persistent failure");
+          100,
+        ),
+      ).rejects.toThrow(
+        "Operation failed after 2 attempts - Error: Persistent failure",
+      );
 
       expect(failingOperation).toHaveBeenCalledTimes(2);
     });
@@ -220,7 +220,7 @@ describe("ErrorHandler", () => {
       const result = await ErrorHandler.withRetry(
         successfulOperation,
         ErrorType.NETWORK,
-        "NET_001"
+        "NET_001",
       );
 
       expect(result).toBe("success");
@@ -280,11 +280,11 @@ describe("ErrorHandler", () => {
         ErrorType.VALIDATION,
         "VAL_001",
         "Debug message",
-        "debug"
+        "debug",
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[ValidationError.VAL_001] (DEBUG) Debug message"
+        "[ValidationError.VAL_001] (DEBUG) Debug message",
       );
 
       consoleSpy.mockRestore();
@@ -298,7 +298,7 @@ describe("ErrorHandler", () => {
         ErrorType.VALIDATION,
         "VAL_001",
         "Debug message",
-        "debug"
+        "debug",
       );
 
       expect(consoleSpy).not.toHaveBeenCalled();
@@ -319,8 +319,8 @@ describe("ErrorHandler", () => {
           type: ErrorType.AUTHENTICATION,
           code: "AUTH_001",
           message: "Test error",
-        })
+        }),
       );
     });
   });
-}); 
+});

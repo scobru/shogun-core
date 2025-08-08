@@ -68,7 +68,7 @@ describe("EventEmitter", () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "Error in event listener for test-event:",
-        expect.any(Error)
+        expect.any(Error),
       );
 
       consoleSpy.mockRestore();

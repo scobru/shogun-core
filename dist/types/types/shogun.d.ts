@@ -124,6 +124,16 @@ export interface IShogunCore extends PluginManager {
     login(username: string, password: string): Promise<AuthResult>;
     signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
     getAuthenticationMethod(type: AuthMethod): any;
+    getCurrentUser(): {
+        pub: string;
+        user?: any;
+    } | null;
+    changeUsername(newUsername: string): Promise<{
+        success: boolean;
+        error?: string;
+        oldUsername?: string;
+        newUsername?: string;
+    }>;
     logout(): void;
     isLoggedIn(): boolean;
 }

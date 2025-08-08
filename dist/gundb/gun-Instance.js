@@ -990,9 +990,9 @@ class GunInstance {
                 resolve({ success: false, error: "Invalid username provided" });
                 return;
             }
-            if (!password ||
-                typeof password !== "string" ||
-                password.length === 0) {
+            // Skip password validation when using pair authentication
+            if (!pair &&
+                (!password || typeof password !== "string" || password.length === 0)) {
                 resolve({ success: false, error: "Invalid password provided" });
                 return;
             }
@@ -1087,8 +1087,16 @@ class GunInstance {
                     error: `Username '${username}' already exists. Please choose a different username or try logging in instead.`,
                 };
             }
-            // Create new user
-            const createResult = await this.createNewUser(username, password);
+            // Create new user - use different method based on authentication type
+            let createResult;
+            if (pair) {
+                // For Web3/plugin authentication, use pair-based creation
+                createResult = await this.createNewUserWithPair(username, pair);
+            }
+            else {
+                // For password authentication, use standard creation
+                createResult = await this.createNewUser(username, password);
+            }
             if (!createResult.success) {
                 return { success: false, error: createResult.error };
             }
@@ -1143,6 +1151,38 @@ class GunInstance {
             console.error(`Exception during signup for ${username}: ${error}`);
             return { success: false, error: `Signup failed: ${error}` };
         }
+    }
+    /**
+     * Creates a new user in Gun with pair-based authentication (for Web3/plugins)
+     */
+    async createNewUserWithPair(username, pair) {
+        return new Promise((resolve) => {
+            // Validate inputs before creating user
+            if (!username ||
+                typeof username !== "string" ||
+                username.trim().length === 0) {
+                resolve({ success: false, error: "Invalid username provided" });
+                return;
+            }
+            if (!pair || !pair.pub || !pair.priv) {
+                resolve({ success: false, error: "Invalid pair provided" });
+                return;
+            }
+            // Sanitize username
+            const sanitizedUsername = this.sanitizeUsername(username);
+            if (sanitizedUsername.length === 0) {
+                resolve({
+                    success: false,
+                    error: "Username contains only invalid characters",
+                });
+                return;
+            }
+            // For pair-based authentication, we don't need to call gun.user().create()
+            // because the pair already contains the cryptographic credentials
+            // We just need to validate that the pair is valid and return success
+            console.log(`User created successfully with pair for: ${sanitizedUsername}`);
+            resolve({ success: true, userPub: pair.pub });
+        });
     }
     async runPostAuthOnAuthResult(username, userPub, authResult) {
         // Setting up user profile after authentication
@@ -1854,32 +1894,6 @@ class GunInstance {
         }
     }
     /**
-     * Hashes text with Gun.SEA
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    async hashText(text) {
-        return this.crypto.hashText(text);
-    }
-    /**
-     * Encrypts data with Gun.SEA
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    async encrypt(data, key) {
-        return this.crypto.encrypt(data, key);
-    }
-    /**
-     * Decrypts data with Gun.SEA
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    async decrypt(encryptedData, key) {
-        return this.crypto.decrypt(encryptedData, key);
-    }
-    /**
      * Saves user data at the specified path
      * @param path Path to save the data (supports nested paths like "test/data/marco")
      * @param data Data to save
@@ -2224,6 +2238,156 @@ class GunInstance {
             .replace(/[^a-zA-Z0-9._-]/g, "") // Only allow alphanumeric, dots, underscores, and hyphens
             .replace(/^[^a-zA-Z]/, "") // Must start with a letter
             .substring(0, 50); // Limit length
+    }
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    async changeUsername(newUsername) {
+        try {
+            // Check if user is authenticated
+            if (!this.isLoggedIn()) {
+                return { success: false, error: "User not authenticated" };
+            }
+            const currentUser = this.getCurrentUser();
+            if (!currentUser || !currentUser.pub) {
+                return { success: false, error: "No authenticated user found" };
+            }
+            const userPub = currentUser.pub;
+            // Validate new username
+            if (!newUsername ||
+                typeof newUsername !== "string" ||
+                newUsername.trim().length === 0) {
+                return { success: false, error: "New username cannot be empty" };
+            }
+            // Sanitize new username
+            const sanitizedNewUsername = this.sanitizeUsername(newUsername);
+            if (sanitizedNewUsername.length === 0) {
+                return {
+                    success: false,
+                    error: "New username contains only invalid characters",
+                };
+            }
+            // Validate username format (alphanumeric and some special chars only)
+            if (!/^[a-zA-Z0-9._-]+$/.test(sanitizedNewUsername)) {
+                return {
+                    success: false,
+                    error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
+                };
+            }
+            // Check if new username is already in use by another user
+            const existingUserCheck = await this.checkUsernameExists(sanitizedNewUsername);
+            if (existingUserCheck && existingUserCheck.pub !== userPub) {
+                return {
+                    success: false,
+                    error: `Username '${sanitizedNewUsername}' is already in use by another user`,
+                };
+            }
+            // Get current user data to find old username
+            const currentUserData = await new Promise((resolve) => {
+                this.gun.get(userPub).once((data) => {
+                    resolve(data);
+                });
+            });
+            const oldUsername = currentUserData?.username || "unknown";
+            // If the new username is the same as the old one, no need to change
+            if (oldUsername === sanitizedNewUsername) {
+                return {
+                    success: true,
+                    oldUsername,
+                    newUsername: sanitizedNewUsername,
+                };
+            }
+            // Remove old username mapping if it exists
+            if (oldUsername && oldUsername !== "unknown") {
+                try {
+                    await new Promise((resolve, reject) => {
+                        this.node
+                            .get("usernames")
+                            .get(oldUsername)
+                            .put(null, (ack) => {
+                            if (ack.err) {
+                                console.warn(`Warning: Could not remove old username mapping: ${ack.err}`);
+                            }
+                            resolve();
+                        });
+                    });
+                }
+                catch (error) {
+                    console.warn(`Warning: Error removing old username mapping: ${error}`);
+                    // Continue anyway, don't fail the operation
+                }
+            }
+            // Create new username mapping
+            try {
+                await new Promise((resolve, reject) => {
+                    this.node
+                        .get("usernames")
+                        .get(sanitizedNewUsername)
+                        .put(userPub, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(`Failed to create new username mapping: ${ack.err}`));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Failed to create new username mapping: ${error}`,
+                };
+            }
+            // Update user metadata with new username
+            try {
+                await new Promise((resolve, reject) => {
+                    this.gun
+                        .get(userPub)
+                        .put({ username: sanitizedNewUsername }, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(`Failed to update user metadata: ${ack.err}`));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+            }
+            catch (error) {
+                // If metadata update fails, try to revert the username mapping
+                try {
+                    await new Promise((resolve) => {
+                        this.node
+                            .get("usernames")
+                            .get(sanitizedNewUsername)
+                            .put(null, () => resolve());
+                    });
+                }
+                catch (revertError) {
+                    console.error(`Failed to revert username mapping after metadata update failure: ${revertError}`);
+                }
+                return {
+                    success: false,
+                    error: `Failed to update user metadata: ${error}`,
+                };
+            }
+            console.log(`Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`);
+            return {
+                success: true,
+                oldUsername,
+                newUsername: sanitizedNewUsername,
+            };
+        }
+        catch (error) {
+            console.error(`Error changing username: ${error}`);
+            return {
+                success: false,
+                error: `Username change failed: ${error}`,
+            };
+        }
     }
 }
 exports.GunInstance = GunInstance;

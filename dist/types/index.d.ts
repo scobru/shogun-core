@@ -60,6 +60,14 @@ export declare class ShogunCore implements IShogunCore {
      */
     get user(): IGunUserInstance<any> | null;
     /**
+     * Gets the current user information
+     * @returns Current user object or null
+     */
+    getCurrentUser(): {
+        pub: string;
+        user?: any;
+    } | null;
+    /**
      * Setup event forwarding from GunInstance to main event emitter
      * @private
      */
@@ -339,6 +347,17 @@ export declare class ShogunCore implements IShogunCore {
      */
     exportPair(): string;
     getIsLoggedIn(): boolean;
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    changeUsername(newUsername: string): Promise<{
+        success: boolean;
+        error?: string;
+        oldUsername?: string;
+        newUsername?: string;
+    }>;
 }
 export default ShogunCore;
 declare global {

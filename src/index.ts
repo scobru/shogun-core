@@ -203,6 +203,17 @@ export class ShogunCore implements IShogunCore {
   }
 
   /**
+   * Gets the current user information
+   * @returns Current user object or null
+   */
+  getCurrentUser(): { pub: string; user?: any } | null {
+    if (!this.db) {
+      return null;
+    }
+    return this.db.getCurrentUser();
+  }
+
+  /**
    * Setup event forwarding from GunInstance to main event emitter
    * @private
    */
@@ -1115,6 +1126,63 @@ export class ShogunCore implements IShogunCore {
 
   public getIsLoggedIn(): boolean {
     return !!(this.user && this.user.is);
+  }
+
+  /**
+   * Changes the username for the currently authenticated user
+   * @param newUsername New username to set
+   * @returns Promise resolving to the operation result
+   */
+  async changeUsername(newUsername: string): Promise<{
+    success: boolean;
+    error?: string;
+    oldUsername?: string;
+    newUsername?: string;
+  }> {
+    try {
+      if (!this.db) {
+        throw new Error("Database not initialized");
+      }
+
+      const result = await this.db.changeUsername(newUsername);
+
+      if (result.success) {
+        this.eventEmitter.emit("auth:username_changed", {
+          oldUsername: result.oldUsername,
+          newUsername: result.newUsername,
+          userPub: this.getCurrentUser()?.pub,
+        });
+
+        this.eventEmitter.emit("debug", {
+          action: "username_changed",
+          oldUsername: result.oldUsername,
+          newUsername: result.newUsername,
+        });
+      } else {
+        this.eventEmitter.emit("debug", {
+          action: "username_change_failed",
+          error: result.error,
+          newUsername,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error changing username to ${newUsername}:`, error);
+      }
+
+      this.eventEmitter.emit("debug", {
+        action: "username_change_error",
+        error: error instanceof Error ? error.message : String(error),
+        newUsername,
+      });
+
+      return {
+        success: false,
+        error: `Username change failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   }
 }
 

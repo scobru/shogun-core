@@ -121,25 +121,25 @@ class GunInstance {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`
+        `Gun instance must be an object, received: ${typeof gun}`,
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
       );
     }
 
@@ -190,7 +190,7 @@ class GunInstance {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -212,7 +212,7 @@ class GunInstance {
     path: string,
     data?: GunData,
     success: boolean = true,
-    error?: string
+    error?: string,
   ): void {
     const eventData: GunDataEventData = {
       path,
@@ -230,7 +230,7 @@ class GunInstance {
    */
   private emitPeerEvent(
     action: "add" | "remove" | "connect" | "disconnect",
-    peer: string
+    peer: string,
   ): void {
     const eventData: GunPeerEventData = {
       peer,
@@ -426,7 +426,7 @@ class GunInstance {
         }
 
         console.log(
-          `Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`
+          `Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`,
         );
       }
     } catch (error) {
@@ -934,7 +934,7 @@ class GunInstance {
    */
   private checkRateLimit(
     username: string,
-    operation: "login" | "signup"
+    operation: "login" | "signup",
   ): { allowed: boolean; error?: string } {
     const key = `${operation}:${username.toLowerCase()}`;
     const now = Date.now();
@@ -992,7 +992,7 @@ class GunInstance {
    */
   private resetRateLimit(
     username: string,
-    operation: "login" | "signup"
+    operation: "login" | "signup",
   ): void {
     const key = `${operation}:${username.toLowerCase()}`;
     this.rateLimitStorage.delete(key);
@@ -1004,7 +1004,7 @@ class GunInstance {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
     // Check rate limiting first
     const rateLimitCheck = this.checkRateLimit(username, "signup");
@@ -1044,7 +1044,7 @@ class GunInstance {
   private async checkUserExistence(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<UserExistenceResult> {
     return new Promise<UserExistenceResult>((resolve) => {
       if (pair) {
@@ -1072,7 +1072,7 @@ class GunInstance {
    */
   private async createNewUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1119,7 +1119,7 @@ class GunInstance {
             ) {
               console.error(
                 "User creation successful but no userPub returned:",
-                ack
+                ack,
               );
               resolve({
                 success: false,
@@ -1131,7 +1131,7 @@ class GunInstance {
             }
           }
         });
-      }
+      },
     );
   }
 
@@ -1141,7 +1141,7 @@ class GunInstance {
   private async authenticateNewUser(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1155,10 +1155,10 @@ class GunInstance {
           return;
         }
 
+        // Skip password validation when using pair authentication
         if (
-          !password ||
-          typeof password !== "string" ||
-          password.length === 0
+          !pair &&
+          (!password || typeof password !== "string" || password.length === 0)
         ) {
           resolve({ success: false, error: "Invalid password provided" });
           return;
@@ -1192,7 +1192,7 @@ class GunInstance {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found"
+                    "Authentication successful but no userPub found",
                   );
                   resolve({
                     success: false,
@@ -1217,17 +1217,17 @@ class GunInstance {
                 const userPub =
                   ack.pub || this.gun.user().is?.pub || ack.user?.pub;
                 console.log(
-                  `Extracted userPub after password auth: ${userPub}`
+                  `Extracted userPub after password auth: ${userPub}`,
                 );
                 console.log(
                   `User object after password auth:`,
-                  this.gun.user()
+                  this.gun.user(),
                 );
                 console.log(`User.is after password auth:`, this.gun.user().is);
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found"
+                    "Authentication successful but no userPub found",
                   );
                   resolve({
                     success: false,
@@ -1240,7 +1240,7 @@ class GunInstance {
             }
           });
         }
-      }
+      },
     );
   }
 
@@ -1254,14 +1254,14 @@ class GunInstance {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     try {
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
         username,
         password,
-        pair
+        pair,
       );
       if (!validation.valid) {
         return { success: false, error: validation.error };
@@ -1276,8 +1276,15 @@ class GunInstance {
         };
       }
 
-      // Create new user
-      const createResult = await this.createNewUser(username, password);
+      // Create new user - use different method based on authentication type
+      let createResult;
+      if (pair) {
+        // For Web3/plugin authentication, use pair-based creation
+        createResult = await this.createNewUserWithPair(username, pair);
+      } else {
+        // For password authentication, use standard creation
+        createResult = await this.createNewUser(username, password);
+      }
 
       if (!createResult.success) {
         return { success: false, error: createResult.error };
@@ -1290,7 +1297,7 @@ class GunInstance {
       const authResult = await this.authenticateNewUser(
         username,
         password,
-        pair
+        pair,
       );
 
       if (!authResult.success) {
@@ -1305,7 +1312,7 @@ class GunInstance {
       ) {
         console.error(
           "Authentication successful but no valid userPub returned:",
-          authResult
+          authResult,
         );
         return {
           success: false,
@@ -1322,12 +1329,12 @@ class GunInstance {
       // Run post-authentication tasks
       try {
         console.log(
-          `Running post-auth setup with userPub: ${authResult.userPub}`
+          `Running post-auth setup with userPub: ${authResult.userPub}`,
         );
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
-          authResult
+          authResult,
         );
 
         // Return the post-auth result which includes the complete user data
@@ -1356,10 +1363,55 @@ class GunInstance {
     }
   }
 
+  /**
+   * Creates a new user in Gun with pair-based authentication (for Web3/plugins)
+   */
+  private async createNewUserWithPair(
+    username: string,
+    pair: ISEAPair,
+  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
+    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
+      (resolve) => {
+        // Validate inputs before creating user
+        if (
+          !username ||
+          typeof username !== "string" ||
+          username.trim().length === 0
+        ) {
+          resolve({ success: false, error: "Invalid username provided" });
+          return;
+        }
+
+        if (!pair || !pair.pub || !pair.priv) {
+          resolve({ success: false, error: "Invalid pair provided" });
+          return;
+        }
+
+        // Sanitize username
+        const sanitizedUsername = this.sanitizeUsername(username);
+        if (sanitizedUsername.length === 0) {
+          resolve({
+            success: false,
+            error: "Username contains only invalid characters",
+          });
+          return;
+        }
+
+        // For pair-based authentication, we don't need to call gun.user().create()
+        // because the pair already contains the cryptographic credentials
+        // We just need to validate that the pair is valid and return success
+        console.log(
+          `User created successfully with pair for: ${sanitizedUsername}`,
+        );
+        resolve({ success: true, userPub: pair.pub });
+      },
+    );
+  }
+
   private async runPostAuthOnAuthResult(
     username: string,
     userPub: string,
-    authResult: any
+    authResult: any,
   ): Promise<SignUpResult> {
     // Setting up user profile after authentication
 
@@ -1399,7 +1451,7 @@ class GunInstance {
       }
 
       console.log(
-        `Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`
+        `Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`,
       );
 
       const existingUser = await new Promise((resolve) => {
@@ -1510,7 +1562,7 @@ class GunInstance {
    * Strategy 1: Frozen space scan for immutable data
    */
   private async lookupInFrozenSpace(
-    normalizedUsername: string
+    normalizedUsername: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       let found = false;
@@ -1544,7 +1596,7 @@ class GunInstance {
    */
   private async lookupDirectMapping(
     normalizedUsername: string,
-    frozenKey: string
+    frozenKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       this.node
@@ -1570,7 +1622,7 @@ class GunInstance {
    */
   private async lookupAlternateKey(
     normalizedUsername: string,
-    alternateKey: string
+    alternateKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       this.node
@@ -1597,7 +1649,7 @@ class GunInstance {
   private async lookupComprehensiveScan(
     normalizedUsername: string,
     frozenKey: string,
-    alternateKey: string
+    alternateKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       let found = false;
@@ -1628,7 +1680,7 @@ class GunInstance {
   private createLookupStrategies(
     normalizedUsername: string,
     frozenKey: string,
-    alternateKey: string
+    alternateKey: string,
   ): Array<() => Promise<UsernameLookupResult | null>> {
     return [
       () => this.lookupInFrozenSpace(normalizedUsername),
@@ -1638,7 +1690,7 @@ class GunInstance {
         this.lookupComprehensiveScan(
           normalizedUsername,
           frozenKey,
-          alternateKey
+          alternateKey,
         ),
     ];
   }
@@ -1648,7 +1700,7 @@ class GunInstance {
    */
   private async processLookupResult(
     result: UsernameLookupResult,
-    normalizedUsername: string
+    normalizedUsername: string,
   ): Promise<any> {
     // If we found a pub, try to fetch user data
     if (typeof result.pub === "string" && result.pub) {
@@ -1695,7 +1747,7 @@ class GunInstance {
       const lookupStrategies = this.createLookupStrategies(
         normalizedUsername,
         frozenKey,
-        alternateKey
+        alternateKey,
       );
 
       // Sequential strategy execution with timeout
@@ -1706,8 +1758,8 @@ class GunInstance {
             new Promise<null>((_, reject) =>
               setTimeout(
                 () => reject(new Error("Lookup timeout")),
-                CONFIG.TIMEOUTS.STRATEGY_TIMEOUT
-              )
+                CONFIG.TIMEOUTS.STRATEGY_TIMEOUT,
+              ),
             ),
           ]);
 
@@ -1731,7 +1783,7 @@ class GunInstance {
   private async performAuthentication(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
@@ -1758,7 +1810,7 @@ class GunInstance {
             }
           });
         }
-      }
+      },
     );
   }
 
@@ -1788,7 +1840,7 @@ class GunInstance {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     try {
       // Check rate limiting first
@@ -1800,7 +1852,7 @@ class GunInstance {
       const loginResult = await this.performAuthentication(
         username,
         password,
-        pair
+        pair,
       );
 
       if (!loginResult.success) {
@@ -1816,7 +1868,7 @@ class GunInstance {
       const userPub = this.gun.user().is?.pub;
 
       console.log(
-        `Login authentication successful, extracted userPub: ${userPub}`
+        `Login authentication successful, extracted userPub: ${userPub}`,
       );
       console.log(`User object:`, this.gun.user());
       console.log(`User.is:`, this.gun.user().is);
@@ -1868,7 +1920,7 @@ class GunInstance {
    * @returns Promise resolving to update result
    */
   async updateUserAlias(
-    newAlias: string
+    newAlias: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Updating user alias to
@@ -1915,7 +1967,7 @@ class GunInstance {
 
       const encryptedData = await SEA.encrypt(
         JSON.stringify(data),
-        encryptionKey
+        encryptionKey,
       );
       if (!encryptedData) {
         throw new Error("Failed to encrypt session data");
@@ -1984,7 +2036,7 @@ class GunInstance {
             // Fallback to unencrypted storage (less secure)
             sessionStorage.setItem(
               "gunSessionData",
-              JSON.stringify(sessionInfo)
+              JSON.stringify(sessionInfo),
             );
           });
       }
@@ -2007,7 +2059,7 @@ class GunInstance {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     // Setting password hint for
 
@@ -2081,7 +2133,7 @@ class GunInstance {
             if (ack.err) {
               console.error(
                 "Error saving security data to public graph:",
-                ack.err
+                ack.err,
               );
               reject(new Error(ack.err));
             } else {
@@ -2106,7 +2158,7 @@ class GunInstance {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     // Attempting password recovery for
 
@@ -2201,35 +2253,6 @@ class GunInstance {
   }
 
   /**
-   * Hashes text with Gun.SEA
-   * @param text Text to hash
-   * @returns Promise that resolves with the hashed text
-   */
-  async hashText(text: string): Promise<string | any> {
-    return this.crypto.hashText(text);
-  }
-
-  /**
-   * Encrypts data with Gun.SEA
-   * @param data Data to encrypt
-   * @param key Encryption key
-   * @returns Promise that resolves with the encrypted data
-   */
-  async encrypt(data: any, key: string): Promise<string> {
-    return this.crypto.encrypt(data, key);
-  }
-
-  /**
-   * Decrypts data with Gun.SEA
-   * @param encryptedData Encrypted data
-   * @param key Decryption key
-   * @returns Promise that resolves with the decrypted data
-   */
-  async decrypt(encryptedData: string, key: string): Promise<string | any> {
-    return this.crypto.decrypt(encryptedData, key);
-  }
-
-  /**
    * Saves user data at the specified path
    * @param path Path to save the data (supports nested paths like "test/data/marco")
    * @param data Data to save
@@ -2244,7 +2267,7 @@ class GunInstance {
           `user/${path}`,
           data,
           false,
-          "User not authenticated"
+          "User not authenticated",
         );
         reject(new Error("User not authenticated"));
         return;
@@ -2304,7 +2327,7 @@ class GunInstance {
               (actualData: any) => {
                 this.emitDataEvent("gun:get", `user/${path}`, actualData, true);
                 resolve(actualData);
-              }
+              },
             );
           } else {
             // Dati diretti, restituisci così come sono
@@ -2333,7 +2356,7 @@ class GunInstance {
   async derive(
     password: string | number,
     extra?: string | string[],
-    options?: DeriveOptions
+    options?: DeriveOptions,
   ): Promise<{
     p256?: { pub: string; priv: string; epub: string; epriv: string };
     secp256k1Bitcoin?: { pub: string; priv: string; address: string };
@@ -2397,7 +2420,7 @@ class GunInstance {
         error instanceof Error
           ? error.message
           : "Failed to derive cryptographic keys",
-        error
+        error,
       );
 
       throw error;
@@ -2412,7 +2435,7 @@ class GunInstance {
    */
   async deriveP256(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     const result = await this.derive(password, extra, { includeP256: true });
     return result.p256!;
@@ -2426,7 +2449,7 @@ class GunInstance {
    */
   async deriveBitcoin(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; address: string }> {
     const result = await this.derive(password, extra, {
       includeSecp256k1Bitcoin: true,
@@ -2442,7 +2465,7 @@ class GunInstance {
    */
   async deriveEthereum(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; address: string }> {
     const result = await this.derive(password, extra, {
       includeSecp256k1Ethereum: true,
@@ -2458,7 +2481,7 @@ class GunInstance {
    */
   async deriveAll(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{
     p256: { pub: string; priv: string; epub: string; epriv: string };
     secp256k1Bitcoin: { pub: string; priv: string; address: string };
@@ -2484,7 +2507,7 @@ class GunInstance {
     options?: {
       description?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): any {
     return {
       data: data,
@@ -2498,7 +2521,7 @@ class GunInstance {
    * Generates hash for frozen data
    */
   private async generateFrozenDataHash(
-    frozenData: any
+    frozenData: any,
   ): Promise<string | null> {
     const dataString = JSON.stringify(frozenData);
     const hash = await SEA.work(dataString, null, null, {
@@ -2516,7 +2539,7 @@ class GunInstance {
     options?: {
       namespace?: string;
       path?: string;
-    }
+    },
   ): string {
     const namespace = options?.namespace || "default";
     const customPath = options?.path || "";
@@ -2532,7 +2555,7 @@ class GunInstance {
   private async storeFrozenData(
     frozenData: any,
     fullPath: string,
-    hash: string
+    hash: string,
   ): Promise<{ hash: string; fullPath: string; data: any }> {
     return new Promise((resolve, reject) => {
       const targetNode = this.navigateToPath(this.gun, fullPath);
@@ -2564,7 +2587,7 @@ class GunInstance {
       path?: string;
       description?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<{ hash: string; fullPath: string; data: any }> {
     return new Promise(async (resolve, reject) => {
       try {
@@ -2601,7 +2624,7 @@ class GunInstance {
   async getFrozenSpace(
     hash: string,
     namespace: string = "default",
-    path?: string
+    path?: string,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       // Costruisci il percorso completo
@@ -2634,7 +2657,7 @@ class GunInstance {
     data: any,
     hash: string,
     namespace: string = "default",
-    path?: string
+    path?: string,
   ): Promise<{ verified: boolean; frozenData?: any; error?: string }> {
     try {
       // Genera hash dei dati forniti
@@ -2687,6 +2710,186 @@ class GunInstance {
       .replace(/[^a-zA-Z0-9._-]/g, "") // Only allow alphanumeric, dots, underscores, and hyphens
       .replace(/^[^a-zA-Z]/, "") // Must start with a letter
       .substring(0, 50); // Limit length
+  }
+
+  /**
+   * Changes the username for the currently authenticated user
+   * @param newUsername New username to set
+   * @returns Promise resolving to the operation result
+   */
+  async changeUsername(newUsername: string): Promise<{
+    success: boolean;
+    error?: string;
+    oldUsername?: string;
+    newUsername?: string;
+  }> {
+    try {
+      // Check if user is authenticated
+      if (!this.isLoggedIn()) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      const currentUser = this.getCurrentUser();
+      if (!currentUser || !currentUser.pub) {
+        return { success: false, error: "No authenticated user found" };
+      }
+
+      const userPub = currentUser.pub;
+
+      // Validate new username
+      if (
+        !newUsername ||
+        typeof newUsername !== "string" ||
+        newUsername.trim().length === 0
+      ) {
+        return { success: false, error: "New username cannot be empty" };
+      }
+
+      // Sanitize new username
+      const sanitizedNewUsername = this.sanitizeUsername(newUsername);
+      if (sanitizedNewUsername.length === 0) {
+        return {
+          success: false,
+          error: "New username contains only invalid characters",
+        };
+      }
+
+      // Validate username format (alphanumeric and some special chars only)
+      if (!/^[a-zA-Z0-9._-]+$/.test(sanitizedNewUsername)) {
+        return {
+          success: false,
+          error:
+            "Username can only contain letters, numbers, dots, underscores, and hyphens",
+        };
+      }
+
+      // Check if new username is already in use by another user
+      const existingUserCheck =
+        await this.checkUsernameExists(sanitizedNewUsername);
+      if (existingUserCheck && existingUserCheck.pub !== userPub) {
+        return {
+          success: false,
+          error: `Username '${sanitizedNewUsername}' is already in use by another user`,
+        };
+      }
+
+      // Get current user data to find old username
+      const currentUserData = await new Promise<any>((resolve) => {
+        this.gun.get(userPub).once((data: any) => {
+          resolve(data);
+        });
+      });
+
+      const oldUsername = currentUserData?.username || "unknown";
+
+      // If the new username is the same as the old one, no need to change
+      if (oldUsername === sanitizedNewUsername) {
+        return {
+          success: true,
+          oldUsername,
+          newUsername: sanitizedNewUsername,
+        };
+      }
+
+      // Remove old username mapping if it exists
+      if (oldUsername && oldUsername !== "unknown") {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            this.node
+              .get("usernames")
+              .get(oldUsername)
+              .put(null, (ack: any) => {
+                if (ack.err) {
+                  console.warn(
+                    `Warning: Could not remove old username mapping: ${ack.err}`,
+                  );
+                }
+                resolve();
+              });
+          });
+        } catch (error) {
+          console.warn(
+            `Warning: Error removing old username mapping: ${error}`,
+          );
+          // Continue anyway, don't fail the operation
+        }
+      }
+
+      // Create new username mapping
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.node
+            .get("usernames")
+            .get(sanitizedNewUsername)
+            .put(userPub, (ack: any) => {
+              if (ack.err) {
+                reject(
+                  new Error(
+                    `Failed to create new username mapping: ${ack.err}`,
+                  ),
+                );
+              } else {
+                resolve();
+              }
+            });
+        });
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to create new username mapping: ${error}`,
+        };
+      }
+
+      // Update user metadata with new username
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.gun
+            .get(userPub)
+            .put({ username: sanitizedNewUsername }, (ack: any) => {
+              if (ack.err) {
+                reject(new Error(`Failed to update user metadata: ${ack.err}`));
+              } else {
+                resolve();
+              }
+            });
+        });
+      } catch (error) {
+        // If metadata update fails, try to revert the username mapping
+        try {
+          await new Promise<void>((resolve) => {
+            this.node
+              .get("usernames")
+              .get(sanitizedNewUsername)
+              .put(null, () => resolve());
+          });
+        } catch (revertError) {
+          console.error(
+            `Failed to revert username mapping after metadata update failure: ${revertError}`,
+          );
+        }
+
+        return {
+          success: false,
+          error: `Failed to update user metadata: ${error}`,
+        };
+      }
+
+      console.log(
+        `Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`,
+      );
+
+      return {
+        success: true,
+        oldUsername,
+        newUsername: sanitizedNewUsername,
+      };
+    } catch (error) {
+      console.error(`Error changing username: ${error}`);
+      return {
+        success: false,
+        error: `Username change failed: ${error}`,
+      };
+    }
   }
 }
 

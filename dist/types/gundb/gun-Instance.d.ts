@@ -240,6 +240,10 @@ declare class GunInstance {
      * @returns Promise resolving to signup result
      */
     signUp(username: string, password: string, pair?: ISEAPair | null): Promise<SignUpResult>;
+    /**
+     * Creates a new user in Gun with pair-based authentication (for Web3/plugins)
+     */
+    private createNewUserWithPair;
     private runPostAuthOnAuthResult;
     /**
      * Normalizes username for consistent lookup
@@ -321,26 +325,6 @@ declare class GunInstance {
         hint?: string;
         error?: string;
     }>;
-    /**
-     * Hashes text with Gun.SEA
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    hashText(text: string): Promise<string | any>;
-    /**
-     * Encrypts data with Gun.SEA
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    encrypt(data: any, key: string): Promise<string>;
-    /**
-     * Decrypts data with Gun.SEA
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    decrypt(encryptedData: string, key: string): Promise<string | any>;
     /**
      * Saves user data at the specified path
      * @param path Path to save the data (supports nested paths like "test/data/marco")
@@ -498,6 +482,17 @@ declare class GunInstance {
      * @returns Sanitized username
      */
     private sanitizeUsername;
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    changeUsername(newUsername: string): Promise<{
+        success: boolean;
+        error?: string;
+        oldUsername?: string;
+        newUsername?: string;
+    }>;
 }
 export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, };
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";

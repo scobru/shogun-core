@@ -4546,7 +4546,7 @@ exports.mapToCurveSimpleSWU = mapToCurveSimpleSWU;
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const hmac_js_1 = __webpack_require__(/*! @noble/hashes/hmac.js */ "./node_modules/@noble/hashes/hmac.js");
+const hmac_js_1 = __webpack_require__(/*! @noble/hashes/hmac.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/hmac.js");
 const utils_ts_1 = __webpack_require__(/*! ../utils.js */ "./node_modules/@noble/curves/utils.js");
 const curve_ts_1 = __webpack_require__(/*! ./curve.js */ "./node_modules/@noble/curves/abstract/curve.js");
 const modular_ts_1 = __webpack_require__(/*! ./modular.js */ "./node_modules/@noble/curves/abstract/modular.js");
@@ -5817,7 +5817,7 @@ exports.p521_hasher = exports.secp521r1 = exports.p521 = exports.p384_hasher = e
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha2_js_1 = __webpack_require__(/*! @noble/hashes/sha2.js */ "./node_modules/@noble/hashes/sha2.js");
+const sha2_js_1 = __webpack_require__(/*! @noble/hashes/sha2.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/sha2.js");
 const _shortw_utils_ts_1 = __webpack_require__(/*! ./_shortw_utils.js */ "./node_modules/@noble/curves/_shortw_utils.js");
 const hash_to_curve_ts_1 = __webpack_require__(/*! ./abstract/hash-to-curve.js */ "./node_modules/@noble/curves/abstract/hash-to-curve.js");
 const modular_ts_1 = __webpack_require__(/*! ./abstract/modular.js */ "./node_modules/@noble/curves/abstract/modular.js");
@@ -5924,655 +5924,10 @@ exports.p521_hasher = (() => {
 
 /***/ }),
 
-/***/ "./node_modules/@noble/curves/p256.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/curves/p256.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.encodeToCurve = exports.hashToCurve = exports.secp256r1 = exports.p256 = void 0;
-const nist_ts_1 = __webpack_require__(/*! ./nist.js */ "./node_modules/@noble/curves/nist.js");
-exports.p256 = nist_ts_1.p256;
-exports.secp256r1 = nist_ts_1.p256;
-exports.hashToCurve = (() => nist_ts_1.p256_hasher.hashToCurve)();
-exports.encodeToCurve = (() => nist_ts_1.p256_hasher.encodeToCurve)();
-//# sourceMappingURL=p256.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/curves/secp256k1.js":
-/*!*************************************************!*\
-  !*** ./node_modules/@noble/curves/secp256k1.js ***!
-  \*************************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.encodeToCurve = exports.hashToCurve = exports.secp256k1_hasher = exports.schnorr = exports.secp256k1 = void 0;
-/**
- * SECG secp256k1. See [pdf](https://www.secg.org/sec2-v2.pdf).
- *
- * Belongs to Koblitz curves: it has efficiently-computable GLV endomorphism ψ,
- * check out {@link EndomorphismOpts}. Seems to be rigid (not backdoored).
- * @module
- */
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha2_js_1 = __webpack_require__(/*! @noble/hashes/sha2.js */ "./node_modules/@noble/hashes/sha2.js");
-const utils_js_1 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/hashes/utils.js");
-const _shortw_utils_ts_1 = __webpack_require__(/*! ./_shortw_utils.js */ "./node_modules/@noble/curves/_shortw_utils.js");
-const hash_to_curve_ts_1 = __webpack_require__(/*! ./abstract/hash-to-curve.js */ "./node_modules/@noble/curves/abstract/hash-to-curve.js");
-const modular_ts_1 = __webpack_require__(/*! ./abstract/modular.js */ "./node_modules/@noble/curves/abstract/modular.js");
-const weierstrass_ts_1 = __webpack_require__(/*! ./abstract/weierstrass.js */ "./node_modules/@noble/curves/abstract/weierstrass.js");
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/curves/utils.js");
-// Seems like generator was produced from some seed:
-// `Point.BASE.multiply(Point.Fn.inv(2n, N)).toAffine().x`
-// // gives short x 0x3b78ce563f89a0ed9414f5aa28ad0d96d6795f9c63n
-const secp256k1_CURVE = {
-    p: BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f'),
-    n: BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
-    h: BigInt(1),
-    a: BigInt(0),
-    b: BigInt(7),
-    Gx: BigInt('0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
-    Gy: BigInt('0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'),
-};
-const _0n = BigInt(0);
-const _1n = BigInt(1);
-const _2n = BigInt(2);
-const divNearest = (a, b) => (a + b / _2n) / b;
-/**
- * √n = n^((p+1)/4) for fields p = 3 mod 4. We unwrap the loop and multiply bit-by-bit.
- * (P+1n/4n).toString(2) would produce bits [223x 1, 0, 22x 1, 4x 0, 11, 00]
- */
-function sqrtMod(y) {
-    const P = secp256k1_CURVE.p;
-    // prettier-ignore
-    const _3n = BigInt(3), _6n = BigInt(6), _11n = BigInt(11), _22n = BigInt(22);
-    // prettier-ignore
-    const _23n = BigInt(23), _44n = BigInt(44), _88n = BigInt(88);
-    const b2 = (y * y * y) % P; // x^3, 11
-    const b3 = (b2 * b2 * y) % P; // x^7
-    const b6 = ((0, modular_ts_1.pow2)(b3, _3n, P) * b3) % P;
-    const b9 = ((0, modular_ts_1.pow2)(b6, _3n, P) * b3) % P;
-    const b11 = ((0, modular_ts_1.pow2)(b9, _2n, P) * b2) % P;
-    const b22 = ((0, modular_ts_1.pow2)(b11, _11n, P) * b11) % P;
-    const b44 = ((0, modular_ts_1.pow2)(b22, _22n, P) * b22) % P;
-    const b88 = ((0, modular_ts_1.pow2)(b44, _44n, P) * b44) % P;
-    const b176 = ((0, modular_ts_1.pow2)(b88, _88n, P) * b88) % P;
-    const b220 = ((0, modular_ts_1.pow2)(b176, _44n, P) * b44) % P;
-    const b223 = ((0, modular_ts_1.pow2)(b220, _3n, P) * b3) % P;
-    const t1 = ((0, modular_ts_1.pow2)(b223, _23n, P) * b22) % P;
-    const t2 = ((0, modular_ts_1.pow2)(t1, _6n, P) * b2) % P;
-    const root = (0, modular_ts_1.pow2)(t2, _2n, P);
-    if (!Fpk1.eql(Fpk1.sqr(root), y))
-        throw new Error('Cannot find square root');
-    return root;
-}
-const Fpk1 = (0, modular_ts_1.Field)(secp256k1_CURVE.p, undefined, undefined, { sqrt: sqrtMod });
-/**
- * secp256k1 curve, ECDSA and ECDH methods.
- *
- * Field: `2n**256n - 2n**32n - 2n**9n - 2n**8n - 2n**7n - 2n**6n - 2n**4n - 1n`
- *
- * @example
- * ```js
- * import { secp256k1 } from '@noble/curves/secp256k1';
- * const priv = secp256k1.utils.randomPrivateKey();
- * const pub = secp256k1.getPublicKey(priv);
- * const msg = new Uint8Array(32).fill(1); // message hash (not message) in ecdsa
- * const sig = secp256k1.sign(msg, priv); // `{prehash: true}` option is available
- * const isValid = secp256k1.verify(sig, msg, pub) === true;
- * ```
- */
-exports.secp256k1 = (0, _shortw_utils_ts_1.createCurve)({
-    ...secp256k1_CURVE,
-    Fp: Fpk1,
-    lowS: true, // Allow only low-S signatures by default in sign() and verify()
-    endo: {
-        // Endomorphism, see above
-        beta: BigInt('0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee'),
-        splitScalar: (k) => {
-            const n = secp256k1_CURVE.n;
-            const a1 = BigInt('0x3086d221a7d46bcde86c90e49284eb15');
-            const b1 = -_1n * BigInt('0xe4437ed6010e88286f547fa90abfe4c3');
-            const a2 = BigInt('0x114ca50f7a8e2f3f657c1108d9d44cfd8');
-            const b2 = a1;
-            const POW_2_128 = BigInt('0x100000000000000000000000000000000'); // (2n**128n).toString(16)
-            const c1 = divNearest(b2 * k, n);
-            const c2 = divNearest(-b1 * k, n);
-            let k1 = (0, modular_ts_1.mod)(k - c1 * a1 - c2 * a2, n);
-            let k2 = (0, modular_ts_1.mod)(-c1 * b1 - c2 * b2, n);
-            const k1neg = k1 > POW_2_128;
-            const k2neg = k2 > POW_2_128;
-            if (k1neg)
-                k1 = n - k1;
-            if (k2neg)
-                k2 = n - k2;
-            if (k1 > POW_2_128 || k2 > POW_2_128) {
-                throw new Error('splitScalar: Endomorphism failed, k=' + k);
-            }
-            return { k1neg, k1, k2neg, k2 };
-        },
-    },
-}, sha2_js_1.sha256);
-// Schnorr signatures are superior to ECDSA from above. Below is Schnorr-specific BIP0340 code.
-// https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-/** An object mapping tags to their tagged hash prefix of [SHA256(tag) | SHA256(tag)] */
-const TAGGED_HASH_PREFIXES = {};
-function taggedHash(tag, ...messages) {
-    let tagP = TAGGED_HASH_PREFIXES[tag];
-    if (tagP === undefined) {
-        const tagH = (0, sha2_js_1.sha256)(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
-        tagP = (0, utils_ts_1.concatBytes)(tagH, tagH);
-        TAGGED_HASH_PREFIXES[tag] = tagP;
-    }
-    return (0, sha2_js_1.sha256)((0, utils_ts_1.concatBytes)(tagP, ...messages));
-}
-// ECDSA compact points are 33-byte. Schnorr is 32: we strip first byte 0x02 or 0x03
-const pointToBytes = (point) => point.toBytes(true).slice(1);
-const numTo32b = (n) => (0, utils_ts_1.numberToBytesBE)(n, 32);
-const modP = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.p);
-const modN = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.n);
-const Point = /* @__PURE__ */ (() => exports.secp256k1.Point)();
-const hasEven = (y) => y % _2n === _0n;
-// Calculate point, scalar and bytes
-function schnorrGetExtPubKey(priv) {
-    let d_ = exports.secp256k1.utils.normPrivateKeyToScalar(priv); // same method executed in fromPrivateKey
-    let p = Point.fromPrivateKey(d_); // P = d'⋅G; 0 < d' < n check is done inside
-    const scalar = hasEven(p.y) ? d_ : modN(-d_);
-    return { scalar: scalar, bytes: pointToBytes(p) };
-}
-/**
- * lift_x from BIP340. Convert 32-byte x coordinate to elliptic curve point.
- * @returns valid point checked for being on-curve
- */
-function lift_x(x) {
-    (0, utils_ts_1.aInRange)('x', x, _1n, secp256k1_CURVE.p); // Fail if x ≥ p.
-    const xx = modP(x * x);
-    const c = modP(xx * x + BigInt(7)); // Let c = x³ + 7 mod p.
-    let y = sqrtMod(c); // Let y = c^(p+1)/4 mod p.
-    if (!hasEven(y))
-        y = modP(-y); // Return the unique point P such that x(P) = x and
-    const p = Point.fromAffine({ x, y }); // y(P) = y if y mod 2 = 0 or y(P) = p-y otherwise.
-    p.assertValidity();
-    return p;
-}
-const num = utils_ts_1.bytesToNumberBE;
-/**
- * Create tagged hash, convert it to bigint, reduce modulo-n.
- */
-function challenge(...args) {
-    return modN(num(taggedHash('BIP0340/challenge', ...args)));
-}
-/**
- * Schnorr public key is just `x` coordinate of Point as per BIP340.
- */
-function schnorrGetPublicKey(privateKey) {
-    return schnorrGetExtPubKey(privateKey).bytes; // d'=int(sk). Fail if d'=0 or d'≥n. Ret bytes(d'⋅G)
-}
-/**
- * Creates Schnorr signature as per BIP340. Verifies itself before returning anything.
- * auxRand is optional and is not the sole source of k generation: bad CSPRNG won't be dangerous.
- */
-function schnorrSign(message, privateKey, auxRand = (0, utils_js_1.randomBytes)(32)) {
-    const m = (0, utils_ts_1.ensureBytes)('message', message);
-    const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
-    const a = (0, utils_ts_1.ensureBytes)('auxRand', auxRand, 32); // Auxiliary random data a: a 32-byte array
-    const t = numTo32b(d ^ num(taggedHash('BIP0340/aux', a))); // Let t be the byte-wise xor of bytes(d) and hash/aux(a)
-    const rand = taggedHash('BIP0340/nonce', t, px, m); // Let rand = hash/nonce(t || bytes(P) || m)
-    const k_ = modN(num(rand)); // Let k' = int(rand) mod n
-    if (k_ === _0n)
-        throw new Error('sign failed: k is zero'); // Fail if k' = 0.
-    const { bytes: rx, scalar: k } = schnorrGetExtPubKey(k_); // Let R = k'⋅G.
-    const e = challenge(rx, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
-    const sig = new Uint8Array(64); // Let sig = bytes(R) || bytes((k + ed) mod n).
-    sig.set(rx, 0);
-    sig.set(numTo32b(modN(k + e * d)), 32);
-    // If Verify(bytes(P), m, sig) (see below) returns failure, abort
-    if (!schnorrVerify(sig, m, px))
-        throw new Error('sign: Invalid signature produced');
-    return sig;
-}
-/**
- * Verifies Schnorr signature.
- * Will swallow errors & return false except for initial type validation of arguments.
- */
-function schnorrVerify(signature, message, publicKey) {
-    const sig = (0, utils_ts_1.ensureBytes)('signature', signature, 64);
-    const m = (0, utils_ts_1.ensureBytes)('message', message);
-    const pub = (0, utils_ts_1.ensureBytes)('publicKey', publicKey, 32);
-    try {
-        const P = lift_x(num(pub)); // P = lift_x(int(pk)); fail if that fails
-        const r = num(sig.subarray(0, 32)); // Let r = int(sig[0:32]); fail if r ≥ p.
-        if (!(0, utils_ts_1.inRange)(r, _1n, secp256k1_CURVE.p))
-            return false;
-        const s = num(sig.subarray(32, 64)); // Let s = int(sig[32:64]); fail if s ≥ n.
-        if (!(0, utils_ts_1.inRange)(s, _1n, secp256k1_CURVE.n))
-            return false;
-        const e = challenge(numTo32b(r), pointToBytes(P), m); // int(challenge(bytes(r)||bytes(P)||m))%n
-        // R = s⋅G - e⋅P, where -eP == (n-e)P
-        const R = Point.BASE.multiplyUnsafe(s).add(P.multiplyUnsafe(modN(-e)));
-        const { x, y } = R.toAffine();
-        // Fail if is_infinite(R) / not has_even_y(R) / x(R) ≠ r.
-        if (R.is0() || !hasEven(y) || x !== r)
-            return false;
-        return true;
-    }
-    catch (error) {
-        return false;
-    }
-}
-/**
- * Schnorr signatures over secp256k1.
- * https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
- * @example
- * ```js
- * import { schnorr } from '@noble/curves/secp256k1';
- * const priv = schnorr.utils.randomPrivateKey();
- * const pub = schnorr.getPublicKey(priv);
- * const msg = new TextEncoder().encode('hello');
- * const sig = schnorr.sign(msg, priv);
- * const isValid = schnorr.verify(sig, msg, pub);
- * ```
- */
-exports.schnorr = (() => ({
-    getPublicKey: schnorrGetPublicKey,
-    sign: schnorrSign,
-    verify: schnorrVerify,
-    utils: {
-        randomPrivateKey: exports.secp256k1.utils.randomPrivateKey,
-        lift_x,
-        pointToBytes,
-        numberToBytesBE: utils_ts_1.numberToBytesBE,
-        bytesToNumberBE: utils_ts_1.bytesToNumberBE,
-        taggedHash,
-        mod: modular_ts_1.mod,
-    },
-}))();
-const isoMap = /* @__PURE__ */ (() => (0, hash_to_curve_ts_1.isogenyMap)(Fpk1, [
-    // xNum
-    [
-        '0x8e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38daaaaa8c7',
-        '0x7d3d4c80bc321d5b9f315cea7fd44c5d595d2fc0bf63b92dfff1044f17c6581',
-        '0x534c328d23f234e6e2a413deca25caece4506144037c40314ecbd0b53d9dd262',
-        '0x8e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38daaaaa88c',
-    ],
-    // xDen
-    [
-        '0xd35771193d94918a9ca34ccbb7b640dd86cd409542f8487d9fe6b745781eb49b',
-        '0xedadc6f64383dc1df7c4b2d51b54225406d36b641f5e41bbc52a56612a8c6d14',
-        '0x0000000000000000000000000000000000000000000000000000000000000001', // LAST 1
-    ],
-    // yNum
-    [
-        '0x4bda12f684bda12f684bda12f684bda12f684bda12f684bda12f684b8e38e23c',
-        '0xc75e0c32d5cb7c0fa9d0a54b12a0a6d5647ab046d686da6fdffc90fc201d71a3',
-        '0x29a6194691f91a73715209ef6512e576722830a201be2018a765e85a9ecee931',
-        '0x2f684bda12f684bda12f684bda12f684bda12f684bda12f684bda12f38e38d84',
-    ],
-    // yDen
-    [
-        '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffff93b',
-        '0x7a06534bb8bdb49fd5e9e6632722c2989467c1bfc8e8d978dfb425d2685c2573',
-        '0x6484aa716545ca2cf3a70c3fa8fe337e0a3d21162f0d6299a7bf8192bfd2a76f',
-        '0x0000000000000000000000000000000000000000000000000000000000000001', // LAST 1
-    ],
-].map((i) => i.map((j) => BigInt(j)))))();
-const mapSWU = /* @__PURE__ */ (() => (0, weierstrass_ts_1.mapToCurveSimpleSWU)(Fpk1, {
-    A: BigInt('0x3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533'),
-    B: BigInt('1771'),
-    Z: Fpk1.create(BigInt('-11')),
-}))();
-/** Hashing / encoding to secp256k1 points / field. RFC 9380 methods. */
-exports.secp256k1_hasher = (() => (0, hash_to_curve_ts_1.createHasher)(exports.secp256k1.Point, (scalars) => {
-    const { x, y } = mapSWU(Fpk1.create(scalars[0]));
-    return isoMap(x, y);
-}, {
-    DST: 'secp256k1_XMD:SHA-256_SSWU_RO_',
-    encodeDST: 'secp256k1_XMD:SHA-256_SSWU_NU_',
-    p: Fpk1.ORDER,
-    m: 1,
-    k: 128,
-    expand: 'xmd',
-    hash: sha2_js_1.sha256,
-}))();
-exports.hashToCurve = (() => exports.secp256k1_hasher.hashToCurve)();
-exports.encodeToCurve = (() => exports.secp256k1_hasher.encodeToCurve)();
-//# sourceMappingURL=secp256k1.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/curves/utils.js":
-/*!*********************************************!*\
-  !*** ./node_modules/@noble/curves/utils.js ***!
-  \*********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.notImplemented = exports.bitMask = exports.utf8ToBytes = exports.randomBytes = exports.isBytes = exports.hexToBytes = exports.concatBytes = exports.bytesToUtf8 = exports.bytesToHex = exports.anumber = exports.abytes = void 0;
-exports.abool = abool;
-exports.numberToHexUnpadded = numberToHexUnpadded;
-exports.hexToNumber = hexToNumber;
-exports.bytesToNumberBE = bytesToNumberBE;
-exports.bytesToNumberLE = bytesToNumberLE;
-exports.numberToBytesBE = numberToBytesBE;
-exports.numberToBytesLE = numberToBytesLE;
-exports.numberToVarBytesBE = numberToVarBytesBE;
-exports.ensureBytes = ensureBytes;
-exports.equalBytes = equalBytes;
-exports.inRange = inRange;
-exports.aInRange = aInRange;
-exports.bitLen = bitLen;
-exports.bitGet = bitGet;
-exports.bitSet = bitSet;
-exports.createHmacDrbg = createHmacDrbg;
-exports.validateObject = validateObject;
-exports.isHash = isHash;
-exports._validateObject = _validateObject;
-exports.memoized = memoized;
-/**
- * Hex, bytes and number utilities.
- * @module
- */
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const utils_js_1 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/hashes/utils.js");
-var utils_js_2 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/hashes/utils.js");
-Object.defineProperty(exports, "abytes", ({ enumerable: true, get: function () { return utils_js_2.abytes; } }));
-Object.defineProperty(exports, "anumber", ({ enumerable: true, get: function () { return utils_js_2.anumber; } }));
-Object.defineProperty(exports, "bytesToHex", ({ enumerable: true, get: function () { return utils_js_2.bytesToHex; } }));
-Object.defineProperty(exports, "bytesToUtf8", ({ enumerable: true, get: function () { return utils_js_2.bytesToUtf8; } }));
-Object.defineProperty(exports, "concatBytes", ({ enumerable: true, get: function () { return utils_js_2.concatBytes; } }));
-Object.defineProperty(exports, "hexToBytes", ({ enumerable: true, get: function () { return utils_js_2.hexToBytes; } }));
-Object.defineProperty(exports, "isBytes", ({ enumerable: true, get: function () { return utils_js_2.isBytes; } }));
-Object.defineProperty(exports, "randomBytes", ({ enumerable: true, get: function () { return utils_js_2.randomBytes; } }));
-Object.defineProperty(exports, "utf8ToBytes", ({ enumerable: true, get: function () { return utils_js_2.utf8ToBytes; } }));
-const _0n = /* @__PURE__ */ BigInt(0);
-const _1n = /* @__PURE__ */ BigInt(1);
-function abool(title, value) {
-    if (typeof value !== 'boolean')
-        throw new Error(title + ' boolean expected, got ' + value);
-}
-// Used in weierstrass, der
-function numberToHexUnpadded(num) {
-    const hex = num.toString(16);
-    return hex.length & 1 ? '0' + hex : hex;
-}
-function hexToNumber(hex) {
-    if (typeof hex !== 'string')
-        throw new Error('hex string expected, got ' + typeof hex);
-    return hex === '' ? _0n : BigInt('0x' + hex); // Big Endian
-}
-// BE: Big Endian, LE: Little Endian
-function bytesToNumberBE(bytes) {
-    return hexToNumber((0, utils_js_1.bytesToHex)(bytes));
-}
-function bytesToNumberLE(bytes) {
-    (0, utils_js_1.abytes)(bytes);
-    return hexToNumber((0, utils_js_1.bytesToHex)(Uint8Array.from(bytes).reverse()));
-}
-function numberToBytesBE(n, len) {
-    return (0, utils_js_1.hexToBytes)(n.toString(16).padStart(len * 2, '0'));
-}
-function numberToBytesLE(n, len) {
-    return numberToBytesBE(n, len).reverse();
-}
-// Unpadded, rarely used
-function numberToVarBytesBE(n) {
-    return (0, utils_js_1.hexToBytes)(numberToHexUnpadded(n));
-}
-/**
- * Takes hex string or Uint8Array, converts to Uint8Array.
- * Validates output length.
- * Will throw error for other types.
- * @param title descriptive title for an error e.g. 'private key'
- * @param hex hex string or Uint8Array
- * @param expectedLength optional, will compare to result array's length
- * @returns
- */
-function ensureBytes(title, hex, expectedLength) {
-    let res;
-    if (typeof hex === 'string') {
-        try {
-            res = (0, utils_js_1.hexToBytes)(hex);
-        }
-        catch (e) {
-            throw new Error(title + ' must be hex string or Uint8Array, cause: ' + e);
-        }
-    }
-    else if ((0, utils_js_1.isBytes)(hex)) {
-        // Uint8Array.from() instead of hash.slice() because node.js Buffer
-        // is instance of Uint8Array, and its slice() creates **mutable** copy
-        res = Uint8Array.from(hex);
-    }
-    else {
-        throw new Error(title + ' must be hex string or Uint8Array');
-    }
-    const len = res.length;
-    if (typeof expectedLength === 'number' && len !== expectedLength)
-        throw new Error(title + ' of length ' + expectedLength + ' expected, got ' + len);
-    return res;
-}
-// Compares 2 u8a-s in kinda constant time
-function equalBytes(a, b) {
-    if (a.length !== b.length)
-        return false;
-    let diff = 0;
-    for (let i = 0; i < a.length; i++)
-        diff |= a[i] ^ b[i];
-    return diff === 0;
-}
-/**
- * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
- */
-// export const utf8ToBytes: typeof utf8ToBytes_ = utf8ToBytes_;
-/**
- * Converts bytes to string using UTF8 encoding.
- * @example bytesToUtf8(Uint8Array.from([97, 98, 99])) // 'abc'
- */
-// export const bytesToUtf8: typeof bytesToUtf8_ = bytesToUtf8_;
-// Is positive bigint
-const isPosBig = (n) => typeof n === 'bigint' && _0n <= n;
-function inRange(n, min, max) {
-    return isPosBig(n) && isPosBig(min) && isPosBig(max) && min <= n && n < max;
-}
-/**
- * Asserts min <= n < max. NOTE: It's < max and not <= max.
- * @example
- * aInRange('x', x, 1n, 256n); // would assume x is in (1n..255n)
- */
-function aInRange(title, n, min, max) {
-    // Why min <= n < max and not a (min < n < max) OR b (min <= n <= max)?
-    // consider P=256n, min=0n, max=P
-    // - a for min=0 would require -1:          `inRange('x', x, -1n, P)`
-    // - b would commonly require subtraction:  `inRange('x', x, 0n, P - 1n)`
-    // - our way is the cleanest:               `inRange('x', x, 0n, P)
-    if (!inRange(n, min, max))
-        throw new Error('expected valid ' + title + ': ' + min + ' <= n < ' + max + ', got ' + n);
-}
-// Bit operations
-/**
- * Calculates amount of bits in a bigint.
- * Same as `n.toString(2).length`
- * TODO: merge with nLength in modular
- */
-function bitLen(n) {
-    let len;
-    for (len = 0; n > _0n; n >>= _1n, len += 1)
-        ;
-    return len;
-}
-/**
- * Gets single bit at position.
- * NOTE: first bit position is 0 (same as arrays)
- * Same as `!!+Array.from(n.toString(2)).reverse()[pos]`
- */
-function bitGet(n, pos) {
-    return (n >> BigInt(pos)) & _1n;
-}
-/**
- * Sets single bit at position.
- */
-function bitSet(n, pos, value) {
-    return n | ((value ? _1n : _0n) << BigInt(pos));
-}
-/**
- * Calculate mask for N bits. Not using ** operator with bigints because of old engines.
- * Same as BigInt(`0b${Array(i).fill('1').join('')}`)
- */
-const bitMask = (n) => (_1n << BigInt(n)) - _1n;
-exports.bitMask = bitMask;
-/**
- * Minimal HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
- * @returns function that will call DRBG until 2nd arg returns something meaningful
- * @example
- *   const drbg = createHmacDRBG<Key>(32, 32, hmac);
- *   drbg(seed, bytesToKey); // bytesToKey must return Key or undefined
- */
-function createHmacDrbg(hashLen, qByteLen, hmacFn) {
-    if (typeof hashLen !== 'number' || hashLen < 2)
-        throw new Error('hashLen must be a number');
-    if (typeof qByteLen !== 'number' || qByteLen < 2)
-        throw new Error('qByteLen must be a number');
-    if (typeof hmacFn !== 'function')
-        throw new Error('hmacFn must be a function');
-    // Step B, Step C: set hashLen to 8*ceil(hlen/8)
-    const u8n = (len) => new Uint8Array(len); // creates Uint8Array
-    const u8of = (byte) => Uint8Array.of(byte); // another shortcut
-    let v = u8n(hashLen); // Minimal non-full-spec HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
-    let k = u8n(hashLen); // Steps B and C of RFC6979 3.2: set hashLen, in our case always same
-    let i = 0; // Iterations counter, will throw when over 1000
-    const reset = () => {
-        v.fill(1);
-        k.fill(0);
-        i = 0;
-    };
-    const h = (...b) => hmacFn(k, v, ...b); // hmac(k)(v, ...values)
-    const reseed = (seed = u8n(0)) => {
-        // HMAC-DRBG reseed() function. Steps D-G
-        k = h(u8of(0x00), seed); // k = hmac(k || v || 0x00 || seed)
-        v = h(); // v = hmac(k || v)
-        if (seed.length === 0)
-            return;
-        k = h(u8of(0x01), seed); // k = hmac(k || v || 0x01 || seed)
-        v = h(); // v = hmac(k || v)
-    };
-    const gen = () => {
-        // HMAC-DRBG generate() function
-        if (i++ >= 1000)
-            throw new Error('drbg: tried 1000 values');
-        let len = 0;
-        const out = [];
-        while (len < qByteLen) {
-            v = h();
-            const sl = v.slice();
-            out.push(sl);
-            len += v.length;
-        }
-        return (0, utils_js_1.concatBytes)(...out);
-    };
-    const genUntil = (seed, pred) => {
-        reset();
-        reseed(seed); // Steps D-G
-        let res = undefined; // Step H: grind until k is in [1..n-1]
-        while (!(res = pred(gen())))
-            reseed();
-        reset();
-        return res;
-    };
-    return genUntil;
-}
-// Validating curves and fields
-const validatorFns = {
-    bigint: (val) => typeof val === 'bigint',
-    function: (val) => typeof val === 'function',
-    boolean: (val) => typeof val === 'boolean',
-    string: (val) => typeof val === 'string',
-    stringOrUint8Array: (val) => typeof val === 'string' || (0, utils_js_1.isBytes)(val),
-    isSafeInteger: (val) => Number.isSafeInteger(val),
-    array: (val) => Array.isArray(val),
-    field: (val, object) => object.Fp.isValid(val),
-    hash: (val) => typeof val === 'function' && Number.isSafeInteger(val.outputLen),
-};
-// type Record<K extends string | number | symbol, T> = { [P in K]: T; }
-function validateObject(object, validators, optValidators = {}) {
-    const checkField = (fieldName, type, isOptional) => {
-        const checkVal = validatorFns[type];
-        if (typeof checkVal !== 'function')
-            throw new Error('invalid validator function');
-        const val = object[fieldName];
-        if (isOptional && val === undefined)
-            return;
-        if (!checkVal(val, object)) {
-            throw new Error('param ' + String(fieldName) + ' is invalid. Expected ' + type + ', got ' + val);
-        }
-    };
-    for (const [fieldName, type] of Object.entries(validators))
-        checkField(fieldName, type, false);
-    for (const [fieldName, type] of Object.entries(optValidators))
-        checkField(fieldName, type, true);
-    return object;
-}
-// validate type tests
-// const o: { a: number; b: number; c: number } = { a: 1, b: 5, c: 6 };
-// const z0 = validateObject(o, { a: 'isSafeInteger' }, { c: 'bigint' }); // Ok!
-// // Should fail type-check
-// const z1 = validateObject(o, { a: 'tmp' }, { c: 'zz' });
-// const z2 = validateObject(o, { a: 'isSafeInteger' }, { c: 'zz' });
-// const z3 = validateObject(o, { test: 'boolean', z: 'bug' });
-// const z4 = validateObject(o, { a: 'boolean', z: 'bug' });
-function isHash(val) {
-    return typeof val === 'function' && Number.isSafeInteger(val.outputLen);
-}
-function _validateObject(object, fields, optFields = {}) {
-    if (!object || typeof object !== 'object')
-        throw new Error('expected valid options object');
-    function checkField(fieldName, expectedType, isOpt) {
-        const val = object[fieldName];
-        if (isOpt && val === undefined)
-            return;
-        const current = typeof val;
-        if (current !== expectedType || val === null)
-            throw new Error(`param "${fieldName}" is invalid: expected ${expectedType}, got ${current}`);
-    }
-    Object.entries(fields).forEach(([k, v]) => checkField(k, v, false));
-    Object.entries(optFields).forEach(([k, v]) => checkField(k, v, true));
-}
-/**
- * throws not implemented error
- */
-const notImplemented = () => {
-    throw new Error('not implemented');
-};
-exports.notImplemented = notImplemented;
-/**
- * Memoizes (caches) computation result.
- * Uses WeakMap: the value is going auto-cleaned by GC after last reference is removed.
- */
-function memoized(fn) {
-    const map = new WeakMap();
-    return (arg, ...args) => {
-        const val = map.get(arg);
-        if (val !== undefined)
-            return val;
-        const computed = fn(arg, ...args);
-        map.set(arg, computed);
-        return computed;
-    };
-}
-//# sourceMappingURL=utils.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/_md.js":
-/*!*******************************************!*\
-  !*** ./node_modules/@noble/hashes/_md.js ***!
-  \*******************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/_md.js":
+/*!**********************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/_md.js ***!
+  \**********************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -6586,7 +5941,7 @@ exports.Maj = Maj;
  * Internal Merkle-Damgard hash utils.
  * @module
  */
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
 /** Polyfill for Safari 14. https://caniuse.com/mdn-javascript_builtins_dataview_setbiguint64 */
 function setBigUint64(view, byteOffset, value, isLE) {
     if (typeof view.setBigUint64 === 'function')
@@ -6741,10 +6096,10 @@ exports.SHA512_IV = Uint32Array.from([
 
 /***/ }),
 
-/***/ "./node_modules/@noble/hashes/_u64.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/hashes/_u64.js ***!
-  \********************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/_u64.js":
+/*!***********************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/_u64.js ***!
+  \***********************************************************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -6841,10 +6196,10 @@ exports["default"] = u64;
 
 /***/ }),
 
-/***/ "./node_modules/@noble/hashes/crypto.js":
-/*!**********************************************!*\
-  !*** ./node_modules/@noble/hashes/crypto.js ***!
-  \**********************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/crypto.js":
+/*!*************************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/crypto.js ***!
+  \*************************************************************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -6856,108 +6211,10 @@ exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? glob
 
 /***/ }),
 
-/***/ "./node_modules/@noble/hashes/hkdf.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/hashes/hkdf.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.hkdf = void 0;
-exports.extract = extract;
-exports.expand = expand;
-/**
- * HKDF (RFC 5869): extract + expand in one step.
- * See https://soatok.blog/2021/11/17/understanding-hkdf/.
- * @module
- */
-const hmac_ts_1 = __webpack_require__(/*! ./hmac.js */ "./node_modules/@noble/hashes/hmac.js");
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
-/**
- * HKDF-extract from spec. Less important part. `HKDF-Extract(IKM, salt) -> PRK`
- * Arguments position differs from spec (IKM is first one, since it is not optional)
- * @param hash - hash function that would be used (e.g. sha256)
- * @param ikm - input keying material, the initial key
- * @param salt - optional salt value (a non-secret random value)
- */
-function extract(hash, ikm, salt) {
-    (0, utils_ts_1.ahash)(hash);
-    // NOTE: some libraries treat zero-length array as 'not provided';
-    // we don't, since we have undefined as 'not provided'
-    // https://github.com/RustCrypto/KDFs/issues/15
-    if (salt === undefined)
-        salt = new Uint8Array(hash.outputLen);
-    return (0, hmac_ts_1.hmac)(hash, (0, utils_ts_1.toBytes)(salt), (0, utils_ts_1.toBytes)(ikm));
-}
-const HKDF_COUNTER = /* @__PURE__ */ Uint8Array.from([0]);
-const EMPTY_BUFFER = /* @__PURE__ */ Uint8Array.of();
-/**
- * HKDF-expand from the spec. The most important part. `HKDF-Expand(PRK, info, L) -> OKM`
- * @param hash - hash function that would be used (e.g. sha256)
- * @param prk - a pseudorandom key of at least HashLen octets (usually, the output from the extract step)
- * @param info - optional context and application specific information (can be a zero-length string)
- * @param length - length of output keying material in bytes
- */
-function expand(hash, prk, info, length = 32) {
-    (0, utils_ts_1.ahash)(hash);
-    (0, utils_ts_1.anumber)(length);
-    const olen = hash.outputLen;
-    if (length > 255 * olen)
-        throw new Error('Length should be <= 255*HashLen');
-    const blocks = Math.ceil(length / olen);
-    if (info === undefined)
-        info = EMPTY_BUFFER;
-    // first L(ength) octets of T
-    const okm = new Uint8Array(blocks * olen);
-    // Re-use HMAC instance between blocks
-    const HMAC = hmac_ts_1.hmac.create(hash, prk);
-    const HMACTmp = HMAC._cloneInto();
-    const T = new Uint8Array(HMAC.outputLen);
-    for (let counter = 0; counter < blocks; counter++) {
-        HKDF_COUNTER[0] = counter + 1;
-        // T(0) = empty string (zero length)
-        // T(N) = HMAC-Hash(PRK, T(N-1) | info | N)
-        HMACTmp.update(counter === 0 ? EMPTY_BUFFER : T)
-            .update(info)
-            .update(HKDF_COUNTER)
-            .digestInto(T);
-        okm.set(T, olen * counter);
-        HMAC._cloneInto(HMACTmp);
-    }
-    HMAC.destroy();
-    HMACTmp.destroy();
-    (0, utils_ts_1.clean)(T, HKDF_COUNTER);
-    return okm.slice(0, length);
-}
-/**
- * HKDF (RFC 5869): derive keys from an initial input.
- * Combines hkdf_extract + hkdf_expand in one step
- * @param hash - hash function that would be used (e.g. sha256)
- * @param ikm - input keying material, the initial key
- * @param salt - optional salt value (a non-secret random value)
- * @param info - optional context and application specific information (can be a zero-length string)
- * @param length - length of output keying material in bytes
- * @example
- * import { hkdf } from '@noble/hashes/hkdf';
- * import { sha256 } from '@noble/hashes/sha2';
- * import { randomBytes } from '@noble/hashes/utils';
- * const inputKey = randomBytes(32);
- * const salt = randomBytes(32);
- * const info = 'application-key';
- * const hk1 = hkdf(sha256, inputKey, salt, info, 32);
- */
-const hkdf = (hash, ikm, salt, info, length) => expand(hash, extract(hash, ikm, salt), info, length);
-exports.hkdf = hkdf;
-//# sourceMappingURL=hkdf.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/hmac.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/hashes/hmac.js ***!
-  \********************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/hmac.js":
+/*!***********************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/hmac.js ***!
+  \***********************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -6968,7 +6225,7 @@ exports.hmac = exports.HMAC = void 0;
  * HMAC: RFC2104 message authentication code.
  * @module
  */
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
 class HMAC extends utils_ts_1.Hash {
     constructor(hash, _key) {
         super();
@@ -7055,333 +6312,10 @@ exports.hmac.create = (hash, key) => new HMAC(hash, key);
 
 /***/ }),
 
-/***/ "./node_modules/@noble/hashes/legacy.js":
-/*!**********************************************!*\
-  !*** ./node_modules/@noble/hashes/legacy.js ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ripemd160 = exports.RIPEMD160 = exports.md5 = exports.MD5 = exports.sha1 = exports.SHA1 = void 0;
-/**
-
-SHA1 (RFC 3174), MD5 (RFC 1321) and RIPEMD160 (RFC 2286) legacy, weak hash functions.
-Don't use them in a new protocol. What "weak" means:
-
-- Collisions can be made with 2^18 effort in MD5, 2^60 in SHA1, 2^80 in RIPEMD160.
-- No practical pre-image attacks (only theoretical, 2^123.4)
-- HMAC seems kinda ok: https://datatracker.ietf.org/doc/html/rfc6151
- * @module
- */
-const _md_ts_1 = __webpack_require__(/*! ./_md.js */ "./node_modules/@noble/hashes/_md.js");
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
-/** Initial SHA1 state */
-const SHA1_IV = /* @__PURE__ */ Uint32Array.from([
-    0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0,
-]);
-// Reusable temporary buffer
-const SHA1_W = /* @__PURE__ */ new Uint32Array(80);
-/** SHA1 legacy hash class. */
-class SHA1 extends _md_ts_1.HashMD {
-    constructor() {
-        super(64, 20, 8, false);
-        this.A = SHA1_IV[0] | 0;
-        this.B = SHA1_IV[1] | 0;
-        this.C = SHA1_IV[2] | 0;
-        this.D = SHA1_IV[3] | 0;
-        this.E = SHA1_IV[4] | 0;
-    }
-    get() {
-        const { A, B, C, D, E } = this;
-        return [A, B, C, D, E];
-    }
-    set(A, B, C, D, E) {
-        this.A = A | 0;
-        this.B = B | 0;
-        this.C = C | 0;
-        this.D = D | 0;
-        this.E = E | 0;
-    }
-    process(view, offset) {
-        for (let i = 0; i < 16; i++, offset += 4)
-            SHA1_W[i] = view.getUint32(offset, false);
-        for (let i = 16; i < 80; i++)
-            SHA1_W[i] = (0, utils_ts_1.rotl)(SHA1_W[i - 3] ^ SHA1_W[i - 8] ^ SHA1_W[i - 14] ^ SHA1_W[i - 16], 1);
-        // Compression function main loop, 80 rounds
-        let { A, B, C, D, E } = this;
-        for (let i = 0; i < 80; i++) {
-            let F, K;
-            if (i < 20) {
-                F = (0, _md_ts_1.Chi)(B, C, D);
-                K = 0x5a827999;
-            }
-            else if (i < 40) {
-                F = B ^ C ^ D;
-                K = 0x6ed9eba1;
-            }
-            else if (i < 60) {
-                F = (0, _md_ts_1.Maj)(B, C, D);
-                K = 0x8f1bbcdc;
-            }
-            else {
-                F = B ^ C ^ D;
-                K = 0xca62c1d6;
-            }
-            const T = ((0, utils_ts_1.rotl)(A, 5) + F + E + K + SHA1_W[i]) | 0;
-            E = D;
-            D = C;
-            C = (0, utils_ts_1.rotl)(B, 30);
-            B = A;
-            A = T;
-        }
-        // Add the compressed chunk to the current hash value
-        A = (A + this.A) | 0;
-        B = (B + this.B) | 0;
-        C = (C + this.C) | 0;
-        D = (D + this.D) | 0;
-        E = (E + this.E) | 0;
-        this.set(A, B, C, D, E);
-    }
-    roundClean() {
-        (0, utils_ts_1.clean)(SHA1_W);
-    }
-    destroy() {
-        this.set(0, 0, 0, 0, 0);
-        (0, utils_ts_1.clean)(this.buffer);
-    }
-}
-exports.SHA1 = SHA1;
-/** SHA1 (RFC 3174) legacy hash function. It was cryptographically broken. */
-exports.sha1 = (0, utils_ts_1.createHasher)(() => new SHA1());
-/** Per-round constants */
-const p32 = /* @__PURE__ */ Math.pow(2, 32);
-const K = /* @__PURE__ */ Array.from({ length: 64 }, (_, i) => Math.floor(p32 * Math.abs(Math.sin(i + 1))));
-/** md5 initial state: same as sha1, but 4 u32 instead of 5. */
-const MD5_IV = /* @__PURE__ */ SHA1_IV.slice(0, 4);
-// Reusable temporary buffer
-const MD5_W = /* @__PURE__ */ new Uint32Array(16);
-/** MD5 legacy hash class. */
-class MD5 extends _md_ts_1.HashMD {
-    constructor() {
-        super(64, 16, 8, true);
-        this.A = MD5_IV[0] | 0;
-        this.B = MD5_IV[1] | 0;
-        this.C = MD5_IV[2] | 0;
-        this.D = MD5_IV[3] | 0;
-    }
-    get() {
-        const { A, B, C, D } = this;
-        return [A, B, C, D];
-    }
-    set(A, B, C, D) {
-        this.A = A | 0;
-        this.B = B | 0;
-        this.C = C | 0;
-        this.D = D | 0;
-    }
-    process(view, offset) {
-        for (let i = 0; i < 16; i++, offset += 4)
-            MD5_W[i] = view.getUint32(offset, true);
-        // Compression function main loop, 64 rounds
-        let { A, B, C, D } = this;
-        for (let i = 0; i < 64; i++) {
-            let F, g, s;
-            if (i < 16) {
-                F = (0, _md_ts_1.Chi)(B, C, D);
-                g = i;
-                s = [7, 12, 17, 22];
-            }
-            else if (i < 32) {
-                F = (0, _md_ts_1.Chi)(D, B, C);
-                g = (5 * i + 1) % 16;
-                s = [5, 9, 14, 20];
-            }
-            else if (i < 48) {
-                F = B ^ C ^ D;
-                g = (3 * i + 5) % 16;
-                s = [4, 11, 16, 23];
-            }
-            else {
-                F = C ^ (B | ~D);
-                g = (7 * i) % 16;
-                s = [6, 10, 15, 21];
-            }
-            F = F + A + K[i] + MD5_W[g];
-            A = D;
-            D = C;
-            C = B;
-            B = B + (0, utils_ts_1.rotl)(F, s[i % 4]);
-        }
-        // Add the compressed chunk to the current hash value
-        A = (A + this.A) | 0;
-        B = (B + this.B) | 0;
-        C = (C + this.C) | 0;
-        D = (D + this.D) | 0;
-        this.set(A, B, C, D);
-    }
-    roundClean() {
-        (0, utils_ts_1.clean)(MD5_W);
-    }
-    destroy() {
-        this.set(0, 0, 0, 0);
-        (0, utils_ts_1.clean)(this.buffer);
-    }
-}
-exports.MD5 = MD5;
-/**
- * MD5 (RFC 1321) legacy hash function. It was cryptographically broken.
- * MD5 architecture is similar to SHA1, with some differences:
- * - Reduced output length: 16 bytes (128 bit) instead of 20
- * - 64 rounds, instead of 80
- * - Little-endian: could be faster, but will require more code
- * - Non-linear index selection: huge speed-up for unroll
- * - Per round constants: more memory accesses, additional speed-up for unroll
- */
-exports.md5 = (0, utils_ts_1.createHasher)(() => new MD5());
-// RIPEMD-160
-const Rho160 = /* @__PURE__ */ Uint8Array.from([
-    7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
-]);
-const Id160 = /* @__PURE__ */ (() => Uint8Array.from(new Array(16).fill(0).map((_, i) => i)))();
-const Pi160 = /* @__PURE__ */ (() => Id160.map((i) => (9 * i + 5) % 16))();
-const idxLR = /* @__PURE__ */ (() => {
-    const L = [Id160];
-    const R = [Pi160];
-    const res = [L, R];
-    for (let i = 0; i < 4; i++)
-        for (let j of res)
-            j.push(j[i].map((k) => Rho160[k]));
-    return res;
-})();
-const idxL = /* @__PURE__ */ (() => idxLR[0])();
-const idxR = /* @__PURE__ */ (() => idxLR[1])();
-// const [idxL, idxR] = idxLR;
-const shifts160 = /* @__PURE__ */ [
-    [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8],
-    [12, 13, 11, 15, 6, 9, 9, 7, 12, 15, 11, 13, 7, 8, 7, 7],
-    [13, 15, 14, 11, 7, 7, 6, 8, 13, 14, 13, 12, 5, 5, 6, 9],
-    [14, 11, 12, 14, 8, 6, 5, 5, 15, 12, 15, 14, 9, 9, 8, 6],
-    [15, 12, 13, 13, 9, 5, 8, 6, 14, 11, 12, 11, 8, 6, 5, 5],
-].map((i) => Uint8Array.from(i));
-const shiftsL160 = /* @__PURE__ */ idxL.map((idx, i) => idx.map((j) => shifts160[i][j]));
-const shiftsR160 = /* @__PURE__ */ idxR.map((idx, i) => idx.map((j) => shifts160[i][j]));
-const Kl160 = /* @__PURE__ */ Uint32Array.from([
-    0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e,
-]);
-const Kr160 = /* @__PURE__ */ Uint32Array.from([
-    0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000,
-]);
-// It's called f() in spec.
-function ripemd_f(group, x, y, z) {
-    if (group === 0)
-        return x ^ y ^ z;
-    if (group === 1)
-        return (x & y) | (~x & z);
-    if (group === 2)
-        return (x | ~y) ^ z;
-    if (group === 3)
-        return (x & z) | (y & ~z);
-    return x ^ (y | ~z);
-}
-// Reusable temporary buffer
-const BUF_160 = /* @__PURE__ */ new Uint32Array(16);
-class RIPEMD160 extends _md_ts_1.HashMD {
-    constructor() {
-        super(64, 20, 8, true);
-        this.h0 = 0x67452301 | 0;
-        this.h1 = 0xefcdab89 | 0;
-        this.h2 = 0x98badcfe | 0;
-        this.h3 = 0x10325476 | 0;
-        this.h4 = 0xc3d2e1f0 | 0;
-    }
-    get() {
-        const { h0, h1, h2, h3, h4 } = this;
-        return [h0, h1, h2, h3, h4];
-    }
-    set(h0, h1, h2, h3, h4) {
-        this.h0 = h0 | 0;
-        this.h1 = h1 | 0;
-        this.h2 = h2 | 0;
-        this.h3 = h3 | 0;
-        this.h4 = h4 | 0;
-    }
-    process(view, offset) {
-        for (let i = 0; i < 16; i++, offset += 4)
-            BUF_160[i] = view.getUint32(offset, true);
-        // prettier-ignore
-        let al = this.h0 | 0, ar = al, bl = this.h1 | 0, br = bl, cl = this.h2 | 0, cr = cl, dl = this.h3 | 0, dr = dl, el = this.h4 | 0, er = el;
-        // Instead of iterating 0 to 80, we split it into 5 groups
-        // And use the groups in constants, functions, etc. Much simpler
-        for (let group = 0; group < 5; group++) {
-            const rGroup = 4 - group;
-            const hbl = Kl160[group], hbr = Kr160[group]; // prettier-ignore
-            const rl = idxL[group], rr = idxR[group]; // prettier-ignore
-            const sl = shiftsL160[group], sr = shiftsR160[group]; // prettier-ignore
-            for (let i = 0; i < 16; i++) {
-                const tl = ((0, utils_ts_1.rotl)(al + ripemd_f(group, bl, cl, dl) + BUF_160[rl[i]] + hbl, sl[i]) + el) | 0;
-                al = el, el = dl, dl = (0, utils_ts_1.rotl)(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
-            }
-            // 2 loops are 10% faster
-            for (let i = 0; i < 16; i++) {
-                const tr = ((0, utils_ts_1.rotl)(ar + ripemd_f(rGroup, br, cr, dr) + BUF_160[rr[i]] + hbr, sr[i]) + er) | 0;
-                ar = er, er = dr, dr = (0, utils_ts_1.rotl)(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
-            }
-        }
-        // Add the compressed chunk to the current hash value
-        this.set((this.h1 + cl + dr) | 0, (this.h2 + dl + er) | 0, (this.h3 + el + ar) | 0, (this.h4 + al + br) | 0, (this.h0 + bl + cr) | 0);
-    }
-    roundClean() {
-        (0, utils_ts_1.clean)(BUF_160);
-    }
-    destroy() {
-        this.destroyed = true;
-        (0, utils_ts_1.clean)(this.buffer);
-        this.set(0, 0, 0, 0, 0);
-    }
-}
-exports.RIPEMD160 = RIPEMD160;
-/**
- * RIPEMD-160 - a legacy hash function from 1990s.
- * * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
- * * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
- */
-exports.ripemd160 = (0, utils_ts_1.createHasher)(() => new RIPEMD160());
-//# sourceMappingURL=legacy.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/ripemd160.js":
-/*!*************************************************!*\
-  !*** ./node_modules/@noble/hashes/ripemd160.js ***!
-  \*************************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ripemd160 = exports.RIPEMD160 = void 0;
-/**
- * RIPEMD-160 legacy hash function.
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
- * @module
- * @deprecated
- */
-const legacy_ts_1 = __webpack_require__(/*! ./legacy.js */ "./node_modules/@noble/hashes/legacy.js");
-/** @deprecated Use import from `noble/hashes/legacy` module */
-exports.RIPEMD160 = legacy_ts_1.RIPEMD160;
-/** @deprecated Use import from `noble/hashes/legacy` module */
-exports.ripemd160 = legacy_ts_1.ripemd160;
-//# sourceMappingURL=ripemd160.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/sha2.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/hashes/sha2.js ***!
-  \********************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/sha2.js":
+/*!***********************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/sha2.js ***!
+  \***********************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -7395,9 +6329,9 @@ exports.sha512_224 = exports.sha512_256 = exports.sha384 = exports.sha512 = expo
  * [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
  * @module
  */
-const _md_ts_1 = __webpack_require__(/*! ./_md.js */ "./node_modules/@noble/hashes/_md.js");
-const u64 = __webpack_require__(/*! ./_u64.js */ "./node_modules/@noble/hashes/_u64.js");
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+const _md_ts_1 = __webpack_require__(/*! ./_md.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/_md.js");
+const u64 = __webpack_require__(/*! ./_u64.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/_u64.js");
+const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
 /**
  * Round constants:
  * First 32 bits of fractional parts of the cube roots of the first 64 primes 2..311)
@@ -7772,292 +6706,10 @@ exports.sha512_224 = (0, utils_ts_1.createHasher)(() => new SHA512_224());
 
 /***/ }),
 
-/***/ "./node_modules/@noble/hashes/sha256.js":
-/*!**********************************************!*\
-  !*** ./node_modules/@noble/hashes/sha256.js ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sha224 = exports.SHA224 = exports.sha256 = exports.SHA256 = void 0;
-/**
- * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
- *
- * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
- * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
- *
- * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
- * @module
- * @deprecated
- */
-const sha2_ts_1 = __webpack_require__(/*! ./sha2.js */ "./node_modules/@noble/hashes/sha2.js");
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.SHA256 = sha2_ts_1.SHA256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.sha256 = sha2_ts_1.sha256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.SHA224 = sha2_ts_1.SHA224;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.sha224 = sha2_ts_1.sha224;
-//# sourceMappingURL=sha256.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/sha3.js":
-/*!********************************************!*\
-  !*** ./node_modules/@noble/hashes/sha3.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.shake256 = exports.shake128 = exports.keccak_512 = exports.keccak_384 = exports.keccak_256 = exports.keccak_224 = exports.sha3_512 = exports.sha3_384 = exports.sha3_256 = exports.sha3_224 = exports.Keccak = void 0;
-exports.keccakP = keccakP;
-/**
- * SHA3 (keccak) hash function, based on a new "Sponge function" design.
- * Different from older hashes, the internal state is bigger than output size.
- *
- * Check out [FIPS-202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf),
- * [Website](https://keccak.team/keccak.html),
- * [the differences between SHA-3 and Keccak](https://crypto.stackexchange.com/questions/15727/what-are-the-key-differences-between-the-draft-sha-3-standard-and-the-keccak-sub).
- *
- * Check out `sha3-addons` module for cSHAKE, k12, and others.
- * @module
- */
-const _u64_ts_1 = __webpack_require__(/*! ./_u64.js */ "./node_modules/@noble/hashes/_u64.js");
-// prettier-ignore
-const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
-// No __PURE__ annotations in sha3 header:
-// EVERYTHING is in fact used on every export.
-// Various per round constants calculations
-const _0n = BigInt(0);
-const _1n = BigInt(1);
-const _2n = BigInt(2);
-const _7n = BigInt(7);
-const _256n = BigInt(256);
-const _0x71n = BigInt(0x71);
-const SHA3_PI = [];
-const SHA3_ROTL = [];
-const _SHA3_IOTA = [];
-for (let round = 0, R = _1n, x = 1, y = 0; round < 24; round++) {
-    // Pi
-    [x, y] = [y, (2 * x + 3 * y) % 5];
-    SHA3_PI.push(2 * (5 * y + x));
-    // Rotational
-    SHA3_ROTL.push((((round + 1) * (round + 2)) / 2) % 64);
-    // Iota
-    let t = _0n;
-    for (let j = 0; j < 7; j++) {
-        R = ((R << _1n) ^ ((R >> _7n) * _0x71n)) % _256n;
-        if (R & _2n)
-            t ^= _1n << ((_1n << /* @__PURE__ */ BigInt(j)) - _1n);
-    }
-    _SHA3_IOTA.push(t);
-}
-const IOTAS = (0, _u64_ts_1.split)(_SHA3_IOTA, true);
-const SHA3_IOTA_H = IOTAS[0];
-const SHA3_IOTA_L = IOTAS[1];
-// Left rotation (without 0, 32, 64)
-const rotlH = (h, l, s) => (s > 32 ? (0, _u64_ts_1.rotlBH)(h, l, s) : (0, _u64_ts_1.rotlSH)(h, l, s));
-const rotlL = (h, l, s) => (s > 32 ? (0, _u64_ts_1.rotlBL)(h, l, s) : (0, _u64_ts_1.rotlSL)(h, l, s));
-/** `keccakf1600` internal function, additionally allows to adjust round count. */
-function keccakP(s, rounds = 24) {
-    const B = new Uint32Array(5 * 2);
-    // NOTE: all indices are x2 since we store state as u32 instead of u64 (bigints to slow in js)
-    for (let round = 24 - rounds; round < 24; round++) {
-        // Theta θ
-        for (let x = 0; x < 10; x++)
-            B[x] = s[x] ^ s[x + 10] ^ s[x + 20] ^ s[x + 30] ^ s[x + 40];
-        for (let x = 0; x < 10; x += 2) {
-            const idx1 = (x + 8) % 10;
-            const idx0 = (x + 2) % 10;
-            const B0 = B[idx0];
-            const B1 = B[idx0 + 1];
-            const Th = rotlH(B0, B1, 1) ^ B[idx1];
-            const Tl = rotlL(B0, B1, 1) ^ B[idx1 + 1];
-            for (let y = 0; y < 50; y += 10) {
-                s[x + y] ^= Th;
-                s[x + y + 1] ^= Tl;
-            }
-        }
-        // Rho (ρ) and Pi (π)
-        let curH = s[2];
-        let curL = s[3];
-        for (let t = 0; t < 24; t++) {
-            const shift = SHA3_ROTL[t];
-            const Th = rotlH(curH, curL, shift);
-            const Tl = rotlL(curH, curL, shift);
-            const PI = SHA3_PI[t];
-            curH = s[PI];
-            curL = s[PI + 1];
-            s[PI] = Th;
-            s[PI + 1] = Tl;
-        }
-        // Chi (χ)
-        for (let y = 0; y < 50; y += 10) {
-            for (let x = 0; x < 10; x++)
-                B[x] = s[y + x];
-            for (let x = 0; x < 10; x++)
-                s[y + x] ^= ~B[(x + 2) % 10] & B[(x + 4) % 10];
-        }
-        // Iota (ι)
-        s[0] ^= SHA3_IOTA_H[round];
-        s[1] ^= SHA3_IOTA_L[round];
-    }
-    (0, utils_ts_1.clean)(B);
-}
-/** Keccak sponge function. */
-class Keccak extends utils_ts_1.Hash {
-    // NOTE: we accept arguments in bytes instead of bits here.
-    constructor(blockLen, suffix, outputLen, enableXOF = false, rounds = 24) {
-        super();
-        this.pos = 0;
-        this.posOut = 0;
-        this.finished = false;
-        this.destroyed = false;
-        this.enableXOF = false;
-        this.blockLen = blockLen;
-        this.suffix = suffix;
-        this.outputLen = outputLen;
-        this.enableXOF = enableXOF;
-        this.rounds = rounds;
-        // Can be passed from user as dkLen
-        (0, utils_ts_1.anumber)(outputLen);
-        // 1600 = 5x5 matrix of 64bit.  1600 bits === 200 bytes
-        // 0 < blockLen < 200
-        if (!(0 < blockLen && blockLen < 200))
-            throw new Error('only keccak-f1600 function is supported');
-        this.state = new Uint8Array(200);
-        this.state32 = (0, utils_ts_1.u32)(this.state);
-    }
-    clone() {
-        return this._cloneInto();
-    }
-    keccak() {
-        (0, utils_ts_1.swap32IfBE)(this.state32);
-        keccakP(this.state32, this.rounds);
-        (0, utils_ts_1.swap32IfBE)(this.state32);
-        this.posOut = 0;
-        this.pos = 0;
-    }
-    update(data) {
-        (0, utils_ts_1.aexists)(this);
-        data = (0, utils_ts_1.toBytes)(data);
-        (0, utils_ts_1.abytes)(data);
-        const { blockLen, state } = this;
-        const len = data.length;
-        for (let pos = 0; pos < len;) {
-            const take = Math.min(blockLen - this.pos, len - pos);
-            for (let i = 0; i < take; i++)
-                state[this.pos++] ^= data[pos++];
-            if (this.pos === blockLen)
-                this.keccak();
-        }
-        return this;
-    }
-    finish() {
-        if (this.finished)
-            return;
-        this.finished = true;
-        const { state, suffix, pos, blockLen } = this;
-        // Do the padding
-        state[pos] ^= suffix;
-        if ((suffix & 0x80) !== 0 && pos === blockLen - 1)
-            this.keccak();
-        state[blockLen - 1] ^= 0x80;
-        this.keccak();
-    }
-    writeInto(out) {
-        (0, utils_ts_1.aexists)(this, false);
-        (0, utils_ts_1.abytes)(out);
-        this.finish();
-        const bufferOut = this.state;
-        const { blockLen } = this;
-        for (let pos = 0, len = out.length; pos < len;) {
-            if (this.posOut >= blockLen)
-                this.keccak();
-            const take = Math.min(blockLen - this.posOut, len - pos);
-            out.set(bufferOut.subarray(this.posOut, this.posOut + take), pos);
-            this.posOut += take;
-            pos += take;
-        }
-        return out;
-    }
-    xofInto(out) {
-        // Sha3/Keccak usage with XOF is probably mistake, only SHAKE instances can do XOF
-        if (!this.enableXOF)
-            throw new Error('XOF is not possible for this instance');
-        return this.writeInto(out);
-    }
-    xof(bytes) {
-        (0, utils_ts_1.anumber)(bytes);
-        return this.xofInto(new Uint8Array(bytes));
-    }
-    digestInto(out) {
-        (0, utils_ts_1.aoutput)(out, this);
-        if (this.finished)
-            throw new Error('digest() was already called');
-        this.writeInto(out);
-        this.destroy();
-        return out;
-    }
-    digest() {
-        return this.digestInto(new Uint8Array(this.outputLen));
-    }
-    destroy() {
-        this.destroyed = true;
-        (0, utils_ts_1.clean)(this.state);
-    }
-    _cloneInto(to) {
-        const { blockLen, suffix, outputLen, rounds, enableXOF } = this;
-        to || (to = new Keccak(blockLen, suffix, outputLen, enableXOF, rounds));
-        to.state32.set(this.state32);
-        to.pos = this.pos;
-        to.posOut = this.posOut;
-        to.finished = this.finished;
-        to.rounds = rounds;
-        // Suffix can change in cSHAKE
-        to.suffix = suffix;
-        to.outputLen = outputLen;
-        to.enableXOF = enableXOF;
-        to.destroyed = this.destroyed;
-        return to;
-    }
-}
-exports.Keccak = Keccak;
-const gen = (suffix, blockLen, outputLen) => (0, utils_ts_1.createHasher)(() => new Keccak(blockLen, suffix, outputLen));
-/** SHA3-224 hash function. */
-exports.sha3_224 = (() => gen(0x06, 144, 224 / 8))();
-/** SHA3-256 hash function. Different from keccak-256. */
-exports.sha3_256 = (() => gen(0x06, 136, 256 / 8))();
-/** SHA3-384 hash function. */
-exports.sha3_384 = (() => gen(0x06, 104, 384 / 8))();
-/** SHA3-512 hash function. */
-exports.sha3_512 = (() => gen(0x06, 72, 512 / 8))();
-/** keccak-224 hash function. */
-exports.keccak_224 = (() => gen(0x01, 144, 224 / 8))();
-/** keccak-256 hash function. Different from SHA3-256. */
-exports.keccak_256 = (() => gen(0x01, 136, 256 / 8))();
-/** keccak-384 hash function. */
-exports.keccak_384 = (() => gen(0x01, 104, 384 / 8))();
-/** keccak-512 hash function. */
-exports.keccak_512 = (() => gen(0x01, 72, 512 / 8))();
-const genShake = (suffix, blockLen, outputLen) => (0, utils_ts_1.createXOFer)((opts = {}) => new Keccak(blockLen, suffix, opts.dkLen === undefined ? outputLen : opts.dkLen, true));
-/** SHAKE128 XOF with 128-bit security. */
-exports.shake128 = (() => genShake(0x1f, 168, 128 / 8))();
-/** SHAKE256 XOF with 256-bit security. */
-exports.shake256 = (() => genShake(0x1f, 136, 256 / 8))();
-//# sourceMappingURL=sha3.js.map
-
-/***/ }),
-
-/***/ "./node_modules/@noble/hashes/utils.js":
-/*!*********************************************!*\
-  !*** ./node_modules/@noble/hashes/utils.js ***!
-  \*********************************************/
+/***/ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js":
+/*!************************************************************************!*\
+  !*** ./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js ***!
+  \************************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -8102,7 +6754,7 @@ exports.randomBytes = randomBytes;
 // from `crypto` to `cryptoNode`, which imports native module.
 // Makes the utils un-importable in browsers without a bundler.
 // Once node.js 18 is deprecated (2025-04-30), we can just drop the import.
-const crypto_1 = __webpack_require__(/*! @noble/hashes/crypto */ "./node_modules/@noble/hashes/crypto.js");
+const crypto_1 = __webpack_require__(/*! @noble/hashes/crypto */ "./node_modules/@noble/curves/node_modules/@noble/hashes/crypto.js");
 /** Checks if something is Uint8Array. Be careful: nodejs Buffer will return true. */
 function isBytes(a) {
     return a instanceof Uint8Array || (ArrayBuffer.isView(a) && a.constructor.name === 'Uint8Array');
@@ -8373,6 +7025,1771 @@ function randomBytes(bytesLength = 32) {
     }
     throw new Error('crypto.getRandomValues must be defined');
 }
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/curves/p256.js":
+/*!********************************************!*\
+  !*** ./node_modules/@noble/curves/p256.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.encodeToCurve = exports.hashToCurve = exports.secp256r1 = exports.p256 = void 0;
+const nist_ts_1 = __webpack_require__(/*! ./nist.js */ "./node_modules/@noble/curves/nist.js");
+exports.p256 = nist_ts_1.p256;
+exports.secp256r1 = nist_ts_1.p256;
+exports.hashToCurve = (() => nist_ts_1.p256_hasher.hashToCurve)();
+exports.encodeToCurve = (() => nist_ts_1.p256_hasher.encodeToCurve)();
+//# sourceMappingURL=p256.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/curves/secp256k1.js":
+/*!*************************************************!*\
+  !*** ./node_modules/@noble/curves/secp256k1.js ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.encodeToCurve = exports.hashToCurve = exports.secp256k1_hasher = exports.schnorr = exports.secp256k1 = void 0;
+/**
+ * SECG secp256k1. See [pdf](https://www.secg.org/sec2-v2.pdf).
+ *
+ * Belongs to Koblitz curves: it has efficiently-computable GLV endomorphism ψ,
+ * check out {@link EndomorphismOpts}. Seems to be rigid (not backdoored).
+ * @module
+ */
+/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+const sha2_js_1 = __webpack_require__(/*! @noble/hashes/sha2.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/sha2.js");
+const utils_js_1 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
+const _shortw_utils_ts_1 = __webpack_require__(/*! ./_shortw_utils.js */ "./node_modules/@noble/curves/_shortw_utils.js");
+const hash_to_curve_ts_1 = __webpack_require__(/*! ./abstract/hash-to-curve.js */ "./node_modules/@noble/curves/abstract/hash-to-curve.js");
+const modular_ts_1 = __webpack_require__(/*! ./abstract/modular.js */ "./node_modules/@noble/curves/abstract/modular.js");
+const weierstrass_ts_1 = __webpack_require__(/*! ./abstract/weierstrass.js */ "./node_modules/@noble/curves/abstract/weierstrass.js");
+const utils_ts_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/curves/utils.js");
+// Seems like generator was produced from some seed:
+// `Point.BASE.multiply(Point.Fn.inv(2n, N)).toAffine().x`
+// // gives short x 0x3b78ce563f89a0ed9414f5aa28ad0d96d6795f9c63n
+const secp256k1_CURVE = {
+    p: BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f'),
+    n: BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
+    h: BigInt(1),
+    a: BigInt(0),
+    b: BigInt(7),
+    Gx: BigInt('0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
+    Gy: BigInt('0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'),
+};
+const _0n = BigInt(0);
+const _1n = BigInt(1);
+const _2n = BigInt(2);
+const divNearest = (a, b) => (a + b / _2n) / b;
+/**
+ * √n = n^((p+1)/4) for fields p = 3 mod 4. We unwrap the loop and multiply bit-by-bit.
+ * (P+1n/4n).toString(2) would produce bits [223x 1, 0, 22x 1, 4x 0, 11, 00]
+ */
+function sqrtMod(y) {
+    const P = secp256k1_CURVE.p;
+    // prettier-ignore
+    const _3n = BigInt(3), _6n = BigInt(6), _11n = BigInt(11), _22n = BigInt(22);
+    // prettier-ignore
+    const _23n = BigInt(23), _44n = BigInt(44), _88n = BigInt(88);
+    const b2 = (y * y * y) % P; // x^3, 11
+    const b3 = (b2 * b2 * y) % P; // x^7
+    const b6 = ((0, modular_ts_1.pow2)(b3, _3n, P) * b3) % P;
+    const b9 = ((0, modular_ts_1.pow2)(b6, _3n, P) * b3) % P;
+    const b11 = ((0, modular_ts_1.pow2)(b9, _2n, P) * b2) % P;
+    const b22 = ((0, modular_ts_1.pow2)(b11, _11n, P) * b11) % P;
+    const b44 = ((0, modular_ts_1.pow2)(b22, _22n, P) * b22) % P;
+    const b88 = ((0, modular_ts_1.pow2)(b44, _44n, P) * b44) % P;
+    const b176 = ((0, modular_ts_1.pow2)(b88, _88n, P) * b88) % P;
+    const b220 = ((0, modular_ts_1.pow2)(b176, _44n, P) * b44) % P;
+    const b223 = ((0, modular_ts_1.pow2)(b220, _3n, P) * b3) % P;
+    const t1 = ((0, modular_ts_1.pow2)(b223, _23n, P) * b22) % P;
+    const t2 = ((0, modular_ts_1.pow2)(t1, _6n, P) * b2) % P;
+    const root = (0, modular_ts_1.pow2)(t2, _2n, P);
+    if (!Fpk1.eql(Fpk1.sqr(root), y))
+        throw new Error('Cannot find square root');
+    return root;
+}
+const Fpk1 = (0, modular_ts_1.Field)(secp256k1_CURVE.p, undefined, undefined, { sqrt: sqrtMod });
+/**
+ * secp256k1 curve, ECDSA and ECDH methods.
+ *
+ * Field: `2n**256n - 2n**32n - 2n**9n - 2n**8n - 2n**7n - 2n**6n - 2n**4n - 1n`
+ *
+ * @example
+ * ```js
+ * import { secp256k1 } from '@noble/curves/secp256k1';
+ * const priv = secp256k1.utils.randomPrivateKey();
+ * const pub = secp256k1.getPublicKey(priv);
+ * const msg = new Uint8Array(32).fill(1); // message hash (not message) in ecdsa
+ * const sig = secp256k1.sign(msg, priv); // `{prehash: true}` option is available
+ * const isValid = secp256k1.verify(sig, msg, pub) === true;
+ * ```
+ */
+exports.secp256k1 = (0, _shortw_utils_ts_1.createCurve)({
+    ...secp256k1_CURVE,
+    Fp: Fpk1,
+    lowS: true, // Allow only low-S signatures by default in sign() and verify()
+    endo: {
+        // Endomorphism, see above
+        beta: BigInt('0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee'),
+        splitScalar: (k) => {
+            const n = secp256k1_CURVE.n;
+            const a1 = BigInt('0x3086d221a7d46bcde86c90e49284eb15');
+            const b1 = -_1n * BigInt('0xe4437ed6010e88286f547fa90abfe4c3');
+            const a2 = BigInt('0x114ca50f7a8e2f3f657c1108d9d44cfd8');
+            const b2 = a1;
+            const POW_2_128 = BigInt('0x100000000000000000000000000000000'); // (2n**128n).toString(16)
+            const c1 = divNearest(b2 * k, n);
+            const c2 = divNearest(-b1 * k, n);
+            let k1 = (0, modular_ts_1.mod)(k - c1 * a1 - c2 * a2, n);
+            let k2 = (0, modular_ts_1.mod)(-c1 * b1 - c2 * b2, n);
+            const k1neg = k1 > POW_2_128;
+            const k2neg = k2 > POW_2_128;
+            if (k1neg)
+                k1 = n - k1;
+            if (k2neg)
+                k2 = n - k2;
+            if (k1 > POW_2_128 || k2 > POW_2_128) {
+                throw new Error('splitScalar: Endomorphism failed, k=' + k);
+            }
+            return { k1neg, k1, k2neg, k2 };
+        },
+    },
+}, sha2_js_1.sha256);
+// Schnorr signatures are superior to ECDSA from above. Below is Schnorr-specific BIP0340 code.
+// https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
+/** An object mapping tags to their tagged hash prefix of [SHA256(tag) | SHA256(tag)] */
+const TAGGED_HASH_PREFIXES = {};
+function taggedHash(tag, ...messages) {
+    let tagP = TAGGED_HASH_PREFIXES[tag];
+    if (tagP === undefined) {
+        const tagH = (0, sha2_js_1.sha256)(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
+        tagP = (0, utils_ts_1.concatBytes)(tagH, tagH);
+        TAGGED_HASH_PREFIXES[tag] = tagP;
+    }
+    return (0, sha2_js_1.sha256)((0, utils_ts_1.concatBytes)(tagP, ...messages));
+}
+// ECDSA compact points are 33-byte. Schnorr is 32: we strip first byte 0x02 or 0x03
+const pointToBytes = (point) => point.toBytes(true).slice(1);
+const numTo32b = (n) => (0, utils_ts_1.numberToBytesBE)(n, 32);
+const modP = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.p);
+const modN = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.n);
+const Point = /* @__PURE__ */ (() => exports.secp256k1.Point)();
+const hasEven = (y) => y % _2n === _0n;
+// Calculate point, scalar and bytes
+function schnorrGetExtPubKey(priv) {
+    let d_ = exports.secp256k1.utils.normPrivateKeyToScalar(priv); // same method executed in fromPrivateKey
+    let p = Point.fromPrivateKey(d_); // P = d'⋅G; 0 < d' < n check is done inside
+    const scalar = hasEven(p.y) ? d_ : modN(-d_);
+    return { scalar: scalar, bytes: pointToBytes(p) };
+}
+/**
+ * lift_x from BIP340. Convert 32-byte x coordinate to elliptic curve point.
+ * @returns valid point checked for being on-curve
+ */
+function lift_x(x) {
+    (0, utils_ts_1.aInRange)('x', x, _1n, secp256k1_CURVE.p); // Fail if x ≥ p.
+    const xx = modP(x * x);
+    const c = modP(xx * x + BigInt(7)); // Let c = x³ + 7 mod p.
+    let y = sqrtMod(c); // Let y = c^(p+1)/4 mod p.
+    if (!hasEven(y))
+        y = modP(-y); // Return the unique point P such that x(P) = x and
+    const p = Point.fromAffine({ x, y }); // y(P) = y if y mod 2 = 0 or y(P) = p-y otherwise.
+    p.assertValidity();
+    return p;
+}
+const num = utils_ts_1.bytesToNumberBE;
+/**
+ * Create tagged hash, convert it to bigint, reduce modulo-n.
+ */
+function challenge(...args) {
+    return modN(num(taggedHash('BIP0340/challenge', ...args)));
+}
+/**
+ * Schnorr public key is just `x` coordinate of Point as per BIP340.
+ */
+function schnorrGetPublicKey(privateKey) {
+    return schnorrGetExtPubKey(privateKey).bytes; // d'=int(sk). Fail if d'=0 or d'≥n. Ret bytes(d'⋅G)
+}
+/**
+ * Creates Schnorr signature as per BIP340. Verifies itself before returning anything.
+ * auxRand is optional and is not the sole source of k generation: bad CSPRNG won't be dangerous.
+ */
+function schnorrSign(message, privateKey, auxRand = (0, utils_js_1.randomBytes)(32)) {
+    const m = (0, utils_ts_1.ensureBytes)('message', message);
+    const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
+    const a = (0, utils_ts_1.ensureBytes)('auxRand', auxRand, 32); // Auxiliary random data a: a 32-byte array
+    const t = numTo32b(d ^ num(taggedHash('BIP0340/aux', a))); // Let t be the byte-wise xor of bytes(d) and hash/aux(a)
+    const rand = taggedHash('BIP0340/nonce', t, px, m); // Let rand = hash/nonce(t || bytes(P) || m)
+    const k_ = modN(num(rand)); // Let k' = int(rand) mod n
+    if (k_ === _0n)
+        throw new Error('sign failed: k is zero'); // Fail if k' = 0.
+    const { bytes: rx, scalar: k } = schnorrGetExtPubKey(k_); // Let R = k'⋅G.
+    const e = challenge(rx, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
+    const sig = new Uint8Array(64); // Let sig = bytes(R) || bytes((k + ed) mod n).
+    sig.set(rx, 0);
+    sig.set(numTo32b(modN(k + e * d)), 32);
+    // If Verify(bytes(P), m, sig) (see below) returns failure, abort
+    if (!schnorrVerify(sig, m, px))
+        throw new Error('sign: Invalid signature produced');
+    return sig;
+}
+/**
+ * Verifies Schnorr signature.
+ * Will swallow errors & return false except for initial type validation of arguments.
+ */
+function schnorrVerify(signature, message, publicKey) {
+    const sig = (0, utils_ts_1.ensureBytes)('signature', signature, 64);
+    const m = (0, utils_ts_1.ensureBytes)('message', message);
+    const pub = (0, utils_ts_1.ensureBytes)('publicKey', publicKey, 32);
+    try {
+        const P = lift_x(num(pub)); // P = lift_x(int(pk)); fail if that fails
+        const r = num(sig.subarray(0, 32)); // Let r = int(sig[0:32]); fail if r ≥ p.
+        if (!(0, utils_ts_1.inRange)(r, _1n, secp256k1_CURVE.p))
+            return false;
+        const s = num(sig.subarray(32, 64)); // Let s = int(sig[32:64]); fail if s ≥ n.
+        if (!(0, utils_ts_1.inRange)(s, _1n, secp256k1_CURVE.n))
+            return false;
+        const e = challenge(numTo32b(r), pointToBytes(P), m); // int(challenge(bytes(r)||bytes(P)||m))%n
+        // R = s⋅G - e⋅P, where -eP == (n-e)P
+        const R = Point.BASE.multiplyUnsafe(s).add(P.multiplyUnsafe(modN(-e)));
+        const { x, y } = R.toAffine();
+        // Fail if is_infinite(R) / not has_even_y(R) / x(R) ≠ r.
+        if (R.is0() || !hasEven(y) || x !== r)
+            return false;
+        return true;
+    }
+    catch (error) {
+        return false;
+    }
+}
+/**
+ * Schnorr signatures over secp256k1.
+ * https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
+ * @example
+ * ```js
+ * import { schnorr } from '@noble/curves/secp256k1';
+ * const priv = schnorr.utils.randomPrivateKey();
+ * const pub = schnorr.getPublicKey(priv);
+ * const msg = new TextEncoder().encode('hello');
+ * const sig = schnorr.sign(msg, priv);
+ * const isValid = schnorr.verify(sig, msg, pub);
+ * ```
+ */
+exports.schnorr = (() => ({
+    getPublicKey: schnorrGetPublicKey,
+    sign: schnorrSign,
+    verify: schnorrVerify,
+    utils: {
+        randomPrivateKey: exports.secp256k1.utils.randomPrivateKey,
+        lift_x,
+        pointToBytes,
+        numberToBytesBE: utils_ts_1.numberToBytesBE,
+        bytesToNumberBE: utils_ts_1.bytesToNumberBE,
+        taggedHash,
+        mod: modular_ts_1.mod,
+    },
+}))();
+const isoMap = /* @__PURE__ */ (() => (0, hash_to_curve_ts_1.isogenyMap)(Fpk1, [
+    // xNum
+    [
+        '0x8e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38daaaaa8c7',
+        '0x7d3d4c80bc321d5b9f315cea7fd44c5d595d2fc0bf63b92dfff1044f17c6581',
+        '0x534c328d23f234e6e2a413deca25caece4506144037c40314ecbd0b53d9dd262',
+        '0x8e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38daaaaa88c',
+    ],
+    // xDen
+    [
+        '0xd35771193d94918a9ca34ccbb7b640dd86cd409542f8487d9fe6b745781eb49b',
+        '0xedadc6f64383dc1df7c4b2d51b54225406d36b641f5e41bbc52a56612a8c6d14',
+        '0x0000000000000000000000000000000000000000000000000000000000000001', // LAST 1
+    ],
+    // yNum
+    [
+        '0x4bda12f684bda12f684bda12f684bda12f684bda12f684bda12f684b8e38e23c',
+        '0xc75e0c32d5cb7c0fa9d0a54b12a0a6d5647ab046d686da6fdffc90fc201d71a3',
+        '0x29a6194691f91a73715209ef6512e576722830a201be2018a765e85a9ecee931',
+        '0x2f684bda12f684bda12f684bda12f684bda12f684bda12f684bda12f38e38d84',
+    ],
+    // yDen
+    [
+        '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffff93b',
+        '0x7a06534bb8bdb49fd5e9e6632722c2989467c1bfc8e8d978dfb425d2685c2573',
+        '0x6484aa716545ca2cf3a70c3fa8fe337e0a3d21162f0d6299a7bf8192bfd2a76f',
+        '0x0000000000000000000000000000000000000000000000000000000000000001', // LAST 1
+    ],
+].map((i) => i.map((j) => BigInt(j)))))();
+const mapSWU = /* @__PURE__ */ (() => (0, weierstrass_ts_1.mapToCurveSimpleSWU)(Fpk1, {
+    A: BigInt('0x3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533'),
+    B: BigInt('1771'),
+    Z: Fpk1.create(BigInt('-11')),
+}))();
+/** Hashing / encoding to secp256k1 points / field. RFC 9380 methods. */
+exports.secp256k1_hasher = (() => (0, hash_to_curve_ts_1.createHasher)(exports.secp256k1.Point, (scalars) => {
+    const { x, y } = mapSWU(Fpk1.create(scalars[0]));
+    return isoMap(x, y);
+}, {
+    DST: 'secp256k1_XMD:SHA-256_SSWU_RO_',
+    encodeDST: 'secp256k1_XMD:SHA-256_SSWU_NU_',
+    p: Fpk1.ORDER,
+    m: 1,
+    k: 128,
+    expand: 'xmd',
+    hash: sha2_js_1.sha256,
+}))();
+exports.hashToCurve = (() => exports.secp256k1_hasher.hashToCurve)();
+exports.encodeToCurve = (() => exports.secp256k1_hasher.encodeToCurve)();
+//# sourceMappingURL=secp256k1.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/curves/utils.js":
+/*!*********************************************!*\
+  !*** ./node_modules/@noble/curves/utils.js ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.notImplemented = exports.bitMask = exports.utf8ToBytes = exports.randomBytes = exports.isBytes = exports.hexToBytes = exports.concatBytes = exports.bytesToUtf8 = exports.bytesToHex = exports.anumber = exports.abytes = void 0;
+exports.abool = abool;
+exports.numberToHexUnpadded = numberToHexUnpadded;
+exports.hexToNumber = hexToNumber;
+exports.bytesToNumberBE = bytesToNumberBE;
+exports.bytesToNumberLE = bytesToNumberLE;
+exports.numberToBytesBE = numberToBytesBE;
+exports.numberToBytesLE = numberToBytesLE;
+exports.numberToVarBytesBE = numberToVarBytesBE;
+exports.ensureBytes = ensureBytes;
+exports.equalBytes = equalBytes;
+exports.inRange = inRange;
+exports.aInRange = aInRange;
+exports.bitLen = bitLen;
+exports.bitGet = bitGet;
+exports.bitSet = bitSet;
+exports.createHmacDrbg = createHmacDrbg;
+exports.validateObject = validateObject;
+exports.isHash = isHash;
+exports._validateObject = _validateObject;
+exports.memoized = memoized;
+/**
+ * Hex, bytes and number utilities.
+ * @module
+ */
+/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+const utils_js_1 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
+var utils_js_2 = __webpack_require__(/*! @noble/hashes/utils.js */ "./node_modules/@noble/curves/node_modules/@noble/hashes/utils.js");
+Object.defineProperty(exports, "abytes", ({ enumerable: true, get: function () { return utils_js_2.abytes; } }));
+Object.defineProperty(exports, "anumber", ({ enumerable: true, get: function () { return utils_js_2.anumber; } }));
+Object.defineProperty(exports, "bytesToHex", ({ enumerable: true, get: function () { return utils_js_2.bytesToHex; } }));
+Object.defineProperty(exports, "bytesToUtf8", ({ enumerable: true, get: function () { return utils_js_2.bytesToUtf8; } }));
+Object.defineProperty(exports, "concatBytes", ({ enumerable: true, get: function () { return utils_js_2.concatBytes; } }));
+Object.defineProperty(exports, "hexToBytes", ({ enumerable: true, get: function () { return utils_js_2.hexToBytes; } }));
+Object.defineProperty(exports, "isBytes", ({ enumerable: true, get: function () { return utils_js_2.isBytes; } }));
+Object.defineProperty(exports, "randomBytes", ({ enumerable: true, get: function () { return utils_js_2.randomBytes; } }));
+Object.defineProperty(exports, "utf8ToBytes", ({ enumerable: true, get: function () { return utils_js_2.utf8ToBytes; } }));
+const _0n = /* @__PURE__ */ BigInt(0);
+const _1n = /* @__PURE__ */ BigInt(1);
+function abool(title, value) {
+    if (typeof value !== 'boolean')
+        throw new Error(title + ' boolean expected, got ' + value);
+}
+// Used in weierstrass, der
+function numberToHexUnpadded(num) {
+    const hex = num.toString(16);
+    return hex.length & 1 ? '0' + hex : hex;
+}
+function hexToNumber(hex) {
+    if (typeof hex !== 'string')
+        throw new Error('hex string expected, got ' + typeof hex);
+    return hex === '' ? _0n : BigInt('0x' + hex); // Big Endian
+}
+// BE: Big Endian, LE: Little Endian
+function bytesToNumberBE(bytes) {
+    return hexToNumber((0, utils_js_1.bytesToHex)(bytes));
+}
+function bytesToNumberLE(bytes) {
+    (0, utils_js_1.abytes)(bytes);
+    return hexToNumber((0, utils_js_1.bytesToHex)(Uint8Array.from(bytes).reverse()));
+}
+function numberToBytesBE(n, len) {
+    return (0, utils_js_1.hexToBytes)(n.toString(16).padStart(len * 2, '0'));
+}
+function numberToBytesLE(n, len) {
+    return numberToBytesBE(n, len).reverse();
+}
+// Unpadded, rarely used
+function numberToVarBytesBE(n) {
+    return (0, utils_js_1.hexToBytes)(numberToHexUnpadded(n));
+}
+/**
+ * Takes hex string or Uint8Array, converts to Uint8Array.
+ * Validates output length.
+ * Will throw error for other types.
+ * @param title descriptive title for an error e.g. 'private key'
+ * @param hex hex string or Uint8Array
+ * @param expectedLength optional, will compare to result array's length
+ * @returns
+ */
+function ensureBytes(title, hex, expectedLength) {
+    let res;
+    if (typeof hex === 'string') {
+        try {
+            res = (0, utils_js_1.hexToBytes)(hex);
+        }
+        catch (e) {
+            throw new Error(title + ' must be hex string or Uint8Array, cause: ' + e);
+        }
+    }
+    else if ((0, utils_js_1.isBytes)(hex)) {
+        // Uint8Array.from() instead of hash.slice() because node.js Buffer
+        // is instance of Uint8Array, and its slice() creates **mutable** copy
+        res = Uint8Array.from(hex);
+    }
+    else {
+        throw new Error(title + ' must be hex string or Uint8Array');
+    }
+    const len = res.length;
+    if (typeof expectedLength === 'number' && len !== expectedLength)
+        throw new Error(title + ' of length ' + expectedLength + ' expected, got ' + len);
+    return res;
+}
+// Compares 2 u8a-s in kinda constant time
+function equalBytes(a, b) {
+    if (a.length !== b.length)
+        return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++)
+        diff |= a[i] ^ b[i];
+    return diff === 0;
+}
+/**
+ * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
+ */
+// export const utf8ToBytes: typeof utf8ToBytes_ = utf8ToBytes_;
+/**
+ * Converts bytes to string using UTF8 encoding.
+ * @example bytesToUtf8(Uint8Array.from([97, 98, 99])) // 'abc'
+ */
+// export const bytesToUtf8: typeof bytesToUtf8_ = bytesToUtf8_;
+// Is positive bigint
+const isPosBig = (n) => typeof n === 'bigint' && _0n <= n;
+function inRange(n, min, max) {
+    return isPosBig(n) && isPosBig(min) && isPosBig(max) && min <= n && n < max;
+}
+/**
+ * Asserts min <= n < max. NOTE: It's < max and not <= max.
+ * @example
+ * aInRange('x', x, 1n, 256n); // would assume x is in (1n..255n)
+ */
+function aInRange(title, n, min, max) {
+    // Why min <= n < max and not a (min < n < max) OR b (min <= n <= max)?
+    // consider P=256n, min=0n, max=P
+    // - a for min=0 would require -1:          `inRange('x', x, -1n, P)`
+    // - b would commonly require subtraction:  `inRange('x', x, 0n, P - 1n)`
+    // - our way is the cleanest:               `inRange('x', x, 0n, P)
+    if (!inRange(n, min, max))
+        throw new Error('expected valid ' + title + ': ' + min + ' <= n < ' + max + ', got ' + n);
+}
+// Bit operations
+/**
+ * Calculates amount of bits in a bigint.
+ * Same as `n.toString(2).length`
+ * TODO: merge with nLength in modular
+ */
+function bitLen(n) {
+    let len;
+    for (len = 0; n > _0n; n >>= _1n, len += 1)
+        ;
+    return len;
+}
+/**
+ * Gets single bit at position.
+ * NOTE: first bit position is 0 (same as arrays)
+ * Same as `!!+Array.from(n.toString(2)).reverse()[pos]`
+ */
+function bitGet(n, pos) {
+    return (n >> BigInt(pos)) & _1n;
+}
+/**
+ * Sets single bit at position.
+ */
+function bitSet(n, pos, value) {
+    return n | ((value ? _1n : _0n) << BigInt(pos));
+}
+/**
+ * Calculate mask for N bits. Not using ** operator with bigints because of old engines.
+ * Same as BigInt(`0b${Array(i).fill('1').join('')}`)
+ */
+const bitMask = (n) => (_1n << BigInt(n)) - _1n;
+exports.bitMask = bitMask;
+/**
+ * Minimal HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
+ * @returns function that will call DRBG until 2nd arg returns something meaningful
+ * @example
+ *   const drbg = createHmacDRBG<Key>(32, 32, hmac);
+ *   drbg(seed, bytesToKey); // bytesToKey must return Key or undefined
+ */
+function createHmacDrbg(hashLen, qByteLen, hmacFn) {
+    if (typeof hashLen !== 'number' || hashLen < 2)
+        throw new Error('hashLen must be a number');
+    if (typeof qByteLen !== 'number' || qByteLen < 2)
+        throw new Error('qByteLen must be a number');
+    if (typeof hmacFn !== 'function')
+        throw new Error('hmacFn must be a function');
+    // Step B, Step C: set hashLen to 8*ceil(hlen/8)
+    const u8n = (len) => new Uint8Array(len); // creates Uint8Array
+    const u8of = (byte) => Uint8Array.of(byte); // another shortcut
+    let v = u8n(hashLen); // Minimal non-full-spec HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
+    let k = u8n(hashLen); // Steps B and C of RFC6979 3.2: set hashLen, in our case always same
+    let i = 0; // Iterations counter, will throw when over 1000
+    const reset = () => {
+        v.fill(1);
+        k.fill(0);
+        i = 0;
+    };
+    const h = (...b) => hmacFn(k, v, ...b); // hmac(k)(v, ...values)
+    const reseed = (seed = u8n(0)) => {
+        // HMAC-DRBG reseed() function. Steps D-G
+        k = h(u8of(0x00), seed); // k = hmac(k || v || 0x00 || seed)
+        v = h(); // v = hmac(k || v)
+        if (seed.length === 0)
+            return;
+        k = h(u8of(0x01), seed); // k = hmac(k || v || 0x01 || seed)
+        v = h(); // v = hmac(k || v)
+    };
+    const gen = () => {
+        // HMAC-DRBG generate() function
+        if (i++ >= 1000)
+            throw new Error('drbg: tried 1000 values');
+        let len = 0;
+        const out = [];
+        while (len < qByteLen) {
+            v = h();
+            const sl = v.slice();
+            out.push(sl);
+            len += v.length;
+        }
+        return (0, utils_js_1.concatBytes)(...out);
+    };
+    const genUntil = (seed, pred) => {
+        reset();
+        reseed(seed); // Steps D-G
+        let res = undefined; // Step H: grind until k is in [1..n-1]
+        while (!(res = pred(gen())))
+            reseed();
+        reset();
+        return res;
+    };
+    return genUntil;
+}
+// Validating curves and fields
+const validatorFns = {
+    bigint: (val) => typeof val === 'bigint',
+    function: (val) => typeof val === 'function',
+    boolean: (val) => typeof val === 'boolean',
+    string: (val) => typeof val === 'string',
+    stringOrUint8Array: (val) => typeof val === 'string' || (0, utils_js_1.isBytes)(val),
+    isSafeInteger: (val) => Number.isSafeInteger(val),
+    array: (val) => Array.isArray(val),
+    field: (val, object) => object.Fp.isValid(val),
+    hash: (val) => typeof val === 'function' && Number.isSafeInteger(val.outputLen),
+};
+// type Record<K extends string | number | symbol, T> = { [P in K]: T; }
+function validateObject(object, validators, optValidators = {}) {
+    const checkField = (fieldName, type, isOptional) => {
+        const checkVal = validatorFns[type];
+        if (typeof checkVal !== 'function')
+            throw new Error('invalid validator function');
+        const val = object[fieldName];
+        if (isOptional && val === undefined)
+            return;
+        if (!checkVal(val, object)) {
+            throw new Error('param ' + String(fieldName) + ' is invalid. Expected ' + type + ', got ' + val);
+        }
+    };
+    for (const [fieldName, type] of Object.entries(validators))
+        checkField(fieldName, type, false);
+    for (const [fieldName, type] of Object.entries(optValidators))
+        checkField(fieldName, type, true);
+    return object;
+}
+// validate type tests
+// const o: { a: number; b: number; c: number } = { a: 1, b: 5, c: 6 };
+// const z0 = validateObject(o, { a: 'isSafeInteger' }, { c: 'bigint' }); // Ok!
+// // Should fail type-check
+// const z1 = validateObject(o, { a: 'tmp' }, { c: 'zz' });
+// const z2 = validateObject(o, { a: 'isSafeInteger' }, { c: 'zz' });
+// const z3 = validateObject(o, { test: 'boolean', z: 'bug' });
+// const z4 = validateObject(o, { a: 'boolean', z: 'bug' });
+function isHash(val) {
+    return typeof val === 'function' && Number.isSafeInteger(val.outputLen);
+}
+function _validateObject(object, fields, optFields = {}) {
+    if (!object || typeof object !== 'object')
+        throw new Error('expected valid options object');
+    function checkField(fieldName, expectedType, isOpt) {
+        const val = object[fieldName];
+        if (isOpt && val === undefined)
+            return;
+        const current = typeof val;
+        if (current !== expectedType || val === null)
+            throw new Error(`param "${fieldName}" is invalid: expected ${expectedType}, got ${current}`);
+    }
+    Object.entries(fields).forEach(([k, v]) => checkField(k, v, false));
+    Object.entries(optFields).forEach(([k, v]) => checkField(k, v, true));
+}
+/**
+ * throws not implemented error
+ */
+const notImplemented = () => {
+    throw new Error('not implemented');
+};
+exports.notImplemented = notImplemented;
+/**
+ * Memoizes (caches) computation result.
+ * Uses WeakMap: the value is going auto-cleaned by GC after last reference is removed.
+ */
+function memoized(fn) {
+    const map = new WeakMap();
+    return (arg, ...args) => {
+        const val = map.get(arg);
+        if (val !== undefined)
+            return val;
+        const computed = fn(arg, ...args);
+        map.set(arg, computed);
+        return computed;
+    };
+}
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/_assert.js":
+/*!***********************************************!*\
+  !*** ./node_modules/@noble/hashes/_assert.js ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.output = exports.exists = exports.hash = exports.bytes = exports.bool = exports.number = void 0;
+function number(n) {
+    if (!Number.isSafeInteger(n) || n < 0)
+        throw new Error(`Wrong positive integer: ${n}`);
+}
+exports.number = number;
+function bool(b) {
+    if (typeof b !== 'boolean')
+        throw new Error(`Expected boolean, not ${b}`);
+}
+exports.bool = bool;
+function bytes(b, ...lengths) {
+    if (!(b instanceof Uint8Array))
+        throw new Error('Expected Uint8Array');
+    if (lengths.length > 0 && !lengths.includes(b.length))
+        throw new Error(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
+}
+exports.bytes = bytes;
+function hash(hash) {
+    if (typeof hash !== 'function' || typeof hash.create !== 'function')
+        throw new Error('Hash should be wrapped by utils.wrapConstructor');
+    number(hash.outputLen);
+    number(hash.blockLen);
+}
+exports.hash = hash;
+function exists(instance, checkFinished = true) {
+    if (instance.destroyed)
+        throw new Error('Hash instance has been destroyed');
+    if (checkFinished && instance.finished)
+        throw new Error('Hash#digest() has already been called');
+}
+exports.exists = exists;
+function output(out, instance) {
+    bytes(out);
+    const min = instance.outputLen;
+    if (out.length < min) {
+        throw new Error(`digestInto() expects output buffer of length at least ${min}`);
+    }
+}
+exports.output = output;
+const assert = {
+    number,
+    bool,
+    bytes,
+    hash,
+    exists,
+    output,
+};
+exports["default"] = assert;
+//# sourceMappingURL=_assert.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/_sha2.js":
+/*!*********************************************!*\
+  !*** ./node_modules/@noble/hashes/_sha2.js ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SHA2 = void 0;
+const _assert_js_1 = __webpack_require__(/*! ./_assert.js */ "./node_modules/@noble/hashes/_assert.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+// Polyfill for Safari 14
+function setBigUint64(view, byteOffset, value, isLE) {
+    if (typeof view.setBigUint64 === 'function')
+        return view.setBigUint64(byteOffset, value, isLE);
+    const _32n = BigInt(32);
+    const _u32_max = BigInt(0xffffffff);
+    const wh = Number((value >> _32n) & _u32_max);
+    const wl = Number(value & _u32_max);
+    const h = isLE ? 4 : 0;
+    const l = isLE ? 0 : 4;
+    view.setUint32(byteOffset + h, wh, isLE);
+    view.setUint32(byteOffset + l, wl, isLE);
+}
+// Base SHA2 class (RFC 6234)
+class SHA2 extends utils_js_1.Hash {
+    constructor(blockLen, outputLen, padOffset, isLE) {
+        super();
+        this.blockLen = blockLen;
+        this.outputLen = outputLen;
+        this.padOffset = padOffset;
+        this.isLE = isLE;
+        this.finished = false;
+        this.length = 0;
+        this.pos = 0;
+        this.destroyed = false;
+        this.buffer = new Uint8Array(blockLen);
+        this.view = (0, utils_js_1.createView)(this.buffer);
+    }
+    update(data) {
+        _assert_js_1.default.exists(this);
+        const { view, buffer, blockLen } = this;
+        data = (0, utils_js_1.toBytes)(data);
+        const len = data.length;
+        for (let pos = 0; pos < len;) {
+            const take = Math.min(blockLen - this.pos, len - pos);
+            // Fast path: we have at least one block in input, cast it to view and process
+            if (take === blockLen) {
+                const dataView = (0, utils_js_1.createView)(data);
+                for (; blockLen <= len - pos; pos += blockLen)
+                    this.process(dataView, pos);
+                continue;
+            }
+            buffer.set(data.subarray(pos, pos + take), this.pos);
+            this.pos += take;
+            pos += take;
+            if (this.pos === blockLen) {
+                this.process(view, 0);
+                this.pos = 0;
+            }
+        }
+        this.length += data.length;
+        this.roundClean();
+        return this;
+    }
+    digestInto(out) {
+        _assert_js_1.default.exists(this);
+        _assert_js_1.default.output(out, this);
+        this.finished = true;
+        // Padding
+        // We can avoid allocation of buffer for padding completely if it
+        // was previously not allocated here. But it won't change performance.
+        const { buffer, view, blockLen, isLE } = this;
+        let { pos } = this;
+        // append the bit '1' to the message
+        buffer[pos++] = 0b10000000;
+        this.buffer.subarray(pos).fill(0);
+        // we have less than padOffset left in buffer, so we cannot put length in current block, need process it and pad again
+        if (this.padOffset > blockLen - pos) {
+            this.process(view, 0);
+            pos = 0;
+        }
+        // Pad until full block byte with zeros
+        for (let i = pos; i < blockLen; i++)
+            buffer[i] = 0;
+        // Note: sha512 requires length to be 128bit integer, but length in JS will overflow before that
+        // You need to write around 2 exabytes (u64_max / 8 / (1024**6)) for this to happen.
+        // So we just write lowest 64 bits of that value.
+        setBigUint64(view, blockLen - 8, BigInt(this.length * 8), isLE);
+        this.process(view, 0);
+        const oview = (0, utils_js_1.createView)(out);
+        const len = this.outputLen;
+        // NOTE: we do division by 4 later, which should be fused in single op with modulo by JIT
+        if (len % 4)
+            throw new Error('_sha2: outputLen should be aligned to 32bit');
+        const outLen = len / 4;
+        const state = this.get();
+        if (outLen > state.length)
+            throw new Error('_sha2: outputLen bigger than state');
+        for (let i = 0; i < outLen; i++)
+            oview.setUint32(4 * i, state[i], isLE);
+    }
+    digest() {
+        const { buffer, outputLen } = this;
+        this.digestInto(buffer);
+        const res = buffer.slice(0, outputLen);
+        this.destroy();
+        return res;
+    }
+    _cloneInto(to) {
+        to || (to = new this.constructor());
+        to.set(...this.get());
+        const { blockLen, buffer, length, finished, destroyed, pos } = this;
+        to.length = length;
+        to.pos = pos;
+        to.finished = finished;
+        to.destroyed = destroyed;
+        if (length % blockLen)
+            to.buffer.set(buffer);
+        return to;
+    }
+}
+exports.SHA2 = SHA2;
+//# sourceMappingURL=_sha2.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/_u64.js":
+/*!********************************************!*\
+  !*** ./node_modules/@noble/hashes/_u64.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.add = exports.toBig = exports.split = exports.fromBig = void 0;
+const U32_MASK64 = BigInt(2 ** 32 - 1);
+const _32n = BigInt(32);
+// We are not using BigUint64Array, because they are extremely slow as per 2022
+function fromBig(n, le = false) {
+    if (le)
+        return { h: Number(n & U32_MASK64), l: Number((n >> _32n) & U32_MASK64) };
+    return { h: Number((n >> _32n) & U32_MASK64) | 0, l: Number(n & U32_MASK64) | 0 };
+}
+exports.fromBig = fromBig;
+function split(lst, le = false) {
+    let Ah = new Uint32Array(lst.length);
+    let Al = new Uint32Array(lst.length);
+    for (let i = 0; i < lst.length; i++) {
+        const { h, l } = fromBig(lst[i], le);
+        [Ah[i], Al[i]] = [h, l];
+    }
+    return [Ah, Al];
+}
+exports.split = split;
+const toBig = (h, l) => (BigInt(h >>> 0) << _32n) | BigInt(l >>> 0);
+exports.toBig = toBig;
+// for Shift in [0, 32)
+const shrSH = (h, l, s) => h >>> s;
+const shrSL = (h, l, s) => (h << (32 - s)) | (l >>> s);
+// Right rotate for Shift in [1, 32)
+const rotrSH = (h, l, s) => (h >>> s) | (l << (32 - s));
+const rotrSL = (h, l, s) => (h << (32 - s)) | (l >>> s);
+// Right rotate for Shift in (32, 64), NOTE: 32 is special case.
+const rotrBH = (h, l, s) => (h << (64 - s)) | (l >>> (s - 32));
+const rotrBL = (h, l, s) => (h >>> (s - 32)) | (l << (64 - s));
+// Right rotate for shift===32 (just swaps l&h)
+const rotr32H = (h, l) => l;
+const rotr32L = (h, l) => h;
+// Left rotate for Shift in [1, 32)
+const rotlSH = (h, l, s) => (h << s) | (l >>> (32 - s));
+const rotlSL = (h, l, s) => (l << s) | (h >>> (32 - s));
+// Left rotate for Shift in (32, 64), NOTE: 32 is special case.
+const rotlBH = (h, l, s) => (l << (s - 32)) | (h >>> (64 - s));
+const rotlBL = (h, l, s) => (h << (s - 32)) | (l >>> (64 - s));
+// JS uses 32-bit signed integers for bitwise operations which means we cannot
+// simple take carry out of low bit sum by shift, we need to use division.
+// Removing "export" has 5% perf penalty -_-
+function add(Ah, Al, Bh, Bl) {
+    const l = (Al >>> 0) + (Bl >>> 0);
+    return { h: (Ah + Bh + ((l / 2 ** 32) | 0)) | 0, l: l | 0 };
+}
+exports.add = add;
+// Addition with more than 2 elements
+const add3L = (Al, Bl, Cl) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0);
+const add3H = (low, Ah, Bh, Ch) => (Ah + Bh + Ch + ((low / 2 ** 32) | 0)) | 0;
+const add4L = (Al, Bl, Cl, Dl) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0);
+const add4H = (low, Ah, Bh, Ch, Dh) => (Ah + Bh + Ch + Dh + ((low / 2 ** 32) | 0)) | 0;
+const add5L = (Al, Bl, Cl, Dl, El) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0) + (El >>> 0);
+const add5H = (low, Ah, Bh, Ch, Dh, Eh) => (Ah + Bh + Ch + Dh + Eh + ((low / 2 ** 32) | 0)) | 0;
+// prettier-ignore
+const u64 = {
+    fromBig, split, toBig: exports.toBig,
+    shrSH, shrSL,
+    rotrSH, rotrSL, rotrBH, rotrBL,
+    rotr32H, rotr32L,
+    rotlSH, rotlSL, rotlBH, rotlBL,
+    add, add3L, add3H, add4L, add4H, add5H, add5L,
+};
+exports["default"] = u64;
+//# sourceMappingURL=_u64.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/crypto.js":
+/*!**********************************************!*\
+  !*** ./node_modules/@noble/hashes/crypto.js ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.crypto = void 0;
+exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
+//# sourceMappingURL=crypto.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/hkdf.js":
+/*!********************************************!*\
+  !*** ./node_modules/@noble/hashes/hkdf.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hkdf = exports.expand = exports.extract = void 0;
+const _assert_js_1 = __webpack_require__(/*! ./_assert.js */ "./node_modules/@noble/hashes/_assert.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+const hmac_js_1 = __webpack_require__(/*! ./hmac.js */ "./node_modules/@noble/hashes/hmac.js");
+// HKDF (RFC 5869)
+// https://soatok.blog/2021/11/17/understanding-hkdf/
+/**
+ * HKDF-Extract(IKM, salt) -> PRK
+ * Arguments position differs from spec (IKM is first one, since it is not optional)
+ * @param hash
+ * @param ikm
+ * @param salt
+ * @returns
+ */
+function extract(hash, ikm, salt) {
+    _assert_js_1.default.hash(hash);
+    // NOTE: some libraries treat zero-length array as 'not provided';
+    // we don't, since we have undefined as 'not provided'
+    // https://github.com/RustCrypto/KDFs/issues/15
+    if (salt === undefined)
+        salt = new Uint8Array(hash.outputLen); // if not provided, it is set to a string of HashLen zeros
+    return (0, hmac_js_1.hmac)(hash, (0, utils_js_1.toBytes)(salt), (0, utils_js_1.toBytes)(ikm));
+}
+exports.extract = extract;
+// HKDF-Expand(PRK, info, L) -> OKM
+const HKDF_COUNTER = new Uint8Array([0]);
+const EMPTY_BUFFER = new Uint8Array();
+/**
+ * HKDF-expand from the spec.
+ * @param prk - a pseudorandom key of at least HashLen octets (usually, the output from the extract step)
+ * @param info - optional context and application specific information (can be a zero-length string)
+ * @param length - length of output keying material in octets
+ */
+function expand(hash, prk, info, length = 32) {
+    _assert_js_1.default.hash(hash);
+    _assert_js_1.default.number(length);
+    if (length > 255 * hash.outputLen)
+        throw new Error('Length should be <= 255*HashLen');
+    const blocks = Math.ceil(length / hash.outputLen);
+    if (info === undefined)
+        info = EMPTY_BUFFER;
+    // first L(ength) octets of T
+    const okm = new Uint8Array(blocks * hash.outputLen);
+    // Re-use HMAC instance between blocks
+    const HMAC = hmac_js_1.hmac.create(hash, prk);
+    const HMACTmp = HMAC._cloneInto();
+    const T = new Uint8Array(HMAC.outputLen);
+    for (let counter = 0; counter < blocks; counter++) {
+        HKDF_COUNTER[0] = counter + 1;
+        // T(0) = empty string (zero length)
+        // T(N) = HMAC-Hash(PRK, T(N-1) | info | N)
+        HMACTmp.update(counter === 0 ? EMPTY_BUFFER : T)
+            .update(info)
+            .update(HKDF_COUNTER)
+            .digestInto(T);
+        okm.set(T, hash.outputLen * counter);
+        HMAC._cloneInto(HMACTmp);
+    }
+    HMAC.destroy();
+    HMACTmp.destroy();
+    T.fill(0);
+    HKDF_COUNTER.fill(0);
+    return okm.slice(0, length);
+}
+exports.expand = expand;
+/**
+ * HKDF (RFC 5869): extract + expand in one step.
+ * @param hash - hash function that would be used (e.g. sha256)
+ * @param ikm - input keying material, the initial key
+ * @param salt - optional salt value (a non-secret random value)
+ * @param info - optional context and application specific information
+ * @param length - length of output keying material in octets
+ */
+const hkdf = (hash, ikm, salt, info, length) => expand(hash, extract(hash, ikm, salt), info, length);
+exports.hkdf = hkdf;
+//# sourceMappingURL=hkdf.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/hmac.js":
+/*!********************************************!*\
+  !*** ./node_modules/@noble/hashes/hmac.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hmac = exports.HMAC = void 0;
+const _assert_js_1 = __webpack_require__(/*! ./_assert.js */ "./node_modules/@noble/hashes/_assert.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+// HMAC (RFC 2104)
+class HMAC extends utils_js_1.Hash {
+    constructor(hash, _key) {
+        super();
+        this.finished = false;
+        this.destroyed = false;
+        _assert_js_1.default.hash(hash);
+        const key = (0, utils_js_1.toBytes)(_key);
+        this.iHash = hash.create();
+        if (typeof this.iHash.update !== 'function')
+            throw new Error('Expected instance of class which extends utils.Hash');
+        this.blockLen = this.iHash.blockLen;
+        this.outputLen = this.iHash.outputLen;
+        const blockLen = this.blockLen;
+        const pad = new Uint8Array(blockLen);
+        // blockLen can be bigger than outputLen
+        pad.set(key.length > blockLen ? hash.create().update(key).digest() : key);
+        for (let i = 0; i < pad.length; i++)
+            pad[i] ^= 0x36;
+        this.iHash.update(pad);
+        // By doing update (processing of first block) of outer hash here we can re-use it between multiple calls via clone
+        this.oHash = hash.create();
+        // Undo internal XOR && apply outer XOR
+        for (let i = 0; i < pad.length; i++)
+            pad[i] ^= 0x36 ^ 0x5c;
+        this.oHash.update(pad);
+        pad.fill(0);
+    }
+    update(buf) {
+        _assert_js_1.default.exists(this);
+        this.iHash.update(buf);
+        return this;
+    }
+    digestInto(out) {
+        _assert_js_1.default.exists(this);
+        _assert_js_1.default.bytes(out, this.outputLen);
+        this.finished = true;
+        this.iHash.digestInto(out);
+        this.oHash.update(out);
+        this.oHash.digestInto(out);
+        this.destroy();
+    }
+    digest() {
+        const out = new Uint8Array(this.oHash.outputLen);
+        this.digestInto(out);
+        return out;
+    }
+    _cloneInto(to) {
+        // Create new instance without calling constructor since key already in state and we don't know it.
+        to || (to = Object.create(Object.getPrototypeOf(this), {}));
+        const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
+        to = to;
+        to.finished = finished;
+        to.destroyed = destroyed;
+        to.blockLen = blockLen;
+        to.outputLen = outputLen;
+        to.oHash = oHash._cloneInto(to.oHash);
+        to.iHash = iHash._cloneInto(to.iHash);
+        return to;
+    }
+    destroy() {
+        this.destroyed = true;
+        this.oHash.destroy();
+        this.iHash.destroy();
+    }
+}
+exports.HMAC = HMAC;
+/**
+ * HMAC: RFC2104 message authentication code.
+ * @param hash - function that would be used e.g. sha256
+ * @param key - message key
+ * @param message - message data
+ */
+const hmac = (hash, key, message) => new HMAC(hash, key).update(message).digest();
+exports.hmac = hmac;
+exports.hmac.create = (hash, key) => new HMAC(hash, key);
+//# sourceMappingURL=hmac.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/ripemd160.js":
+/*!*************************************************!*\
+  !*** ./node_modules/@noble/hashes/ripemd160.js ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ripemd160 = exports.RIPEMD160 = void 0;
+const _sha2_js_1 = __webpack_require__(/*! ./_sha2.js */ "./node_modules/@noble/hashes/_sha2.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+// https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+// https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
+const Rho = new Uint8Array([7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8]);
+const Id = Uint8Array.from({ length: 16 }, (_, i) => i);
+const Pi = Id.map((i) => (9 * i + 5) % 16);
+let idxL = [Id];
+let idxR = [Pi];
+for (let i = 0; i < 4; i++)
+    for (let j of [idxL, idxR])
+        j.push(j[i].map((k) => Rho[k]));
+const shifts = [
+    [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8],
+    [12, 13, 11, 15, 6, 9, 9, 7, 12, 15, 11, 13, 7, 8, 7, 7],
+    [13, 15, 14, 11, 7, 7, 6, 8, 13, 14, 13, 12, 5, 5, 6, 9],
+    [14, 11, 12, 14, 8, 6, 5, 5, 15, 12, 15, 14, 9, 9, 8, 6],
+    [15, 12, 13, 13, 9, 5, 8, 6, 14, 11, 12, 11, 8, 6, 5, 5],
+].map((i) => new Uint8Array(i));
+const shiftsL = idxL.map((idx, i) => idx.map((j) => shifts[i][j]));
+const shiftsR = idxR.map((idx, i) => idx.map((j) => shifts[i][j]));
+const Kl = new Uint32Array([0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]);
+const Kr = new Uint32Array([0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]);
+// The rotate left (circular left shift) operation for uint32
+const rotl = (word, shift) => (word << shift) | (word >>> (32 - shift));
+// It's called f() in spec.
+function f(group, x, y, z) {
+    if (group === 0)
+        return x ^ y ^ z;
+    else if (group === 1)
+        return (x & y) | (~x & z);
+    else if (group === 2)
+        return (x | ~y) ^ z;
+    else if (group === 3)
+        return (x & z) | (y & ~z);
+    else
+        return x ^ (y | ~z);
+}
+// Temporary buffer, not used to store anything between runs
+const BUF = new Uint32Array(16);
+class RIPEMD160 extends _sha2_js_1.SHA2 {
+    constructor() {
+        super(64, 20, 8, true);
+        this.h0 = 0x67452301 | 0;
+        this.h1 = 0xefcdab89 | 0;
+        this.h2 = 0x98badcfe | 0;
+        this.h3 = 0x10325476 | 0;
+        this.h4 = 0xc3d2e1f0 | 0;
+    }
+    get() {
+        const { h0, h1, h2, h3, h4 } = this;
+        return [h0, h1, h2, h3, h4];
+    }
+    set(h0, h1, h2, h3, h4) {
+        this.h0 = h0 | 0;
+        this.h1 = h1 | 0;
+        this.h2 = h2 | 0;
+        this.h3 = h3 | 0;
+        this.h4 = h4 | 0;
+    }
+    process(view, offset) {
+        for (let i = 0; i < 16; i++, offset += 4)
+            BUF[i] = view.getUint32(offset, true);
+        // prettier-ignore
+        let al = this.h0 | 0, ar = al, bl = this.h1 | 0, br = bl, cl = this.h2 | 0, cr = cl, dl = this.h3 | 0, dr = dl, el = this.h4 | 0, er = el;
+        // Instead of iterating 0 to 80, we split it into 5 groups
+        // And use the groups in constants, functions, etc. Much simpler
+        for (let group = 0; group < 5; group++) {
+            const rGroup = 4 - group;
+            const hbl = Kl[group], hbr = Kr[group]; // prettier-ignore
+            const rl = idxL[group], rr = idxR[group]; // prettier-ignore
+            const sl = shiftsL[group], sr = shiftsR[group]; // prettier-ignore
+            for (let i = 0; i < 16; i++) {
+                const tl = (rotl(al + f(group, bl, cl, dl) + BUF[rl[i]] + hbl, sl[i]) + el) | 0;
+                al = el, el = dl, dl = rotl(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
+            }
+            // 2 loops are 10% faster
+            for (let i = 0; i < 16; i++) {
+                const tr = (rotl(ar + f(rGroup, br, cr, dr) + BUF[rr[i]] + hbr, sr[i]) + er) | 0;
+                ar = er, er = dr, dr = rotl(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
+            }
+        }
+        // Add the compressed chunk to the current hash value
+        this.set((this.h1 + cl + dr) | 0, (this.h2 + dl + er) | 0, (this.h3 + el + ar) | 0, (this.h4 + al + br) | 0, (this.h0 + bl + cr) | 0);
+    }
+    roundClean() {
+        BUF.fill(0);
+    }
+    destroy() {
+        this.destroyed = true;
+        this.buffer.fill(0);
+        this.set(0, 0, 0, 0, 0);
+    }
+}
+exports.RIPEMD160 = RIPEMD160;
+/**
+ * RIPEMD-160 - a hash function from 1990s.
+ * @param message - msg that would be hashed
+ */
+exports.ripemd160 = (0, utils_js_1.wrapConstructor)(() => new RIPEMD160());
+//# sourceMappingURL=ripemd160.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/sha256.js":
+/*!**********************************************!*\
+  !*** ./node_modules/@noble/hashes/sha256.js ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sha224 = exports.sha256 = void 0;
+const _sha2_js_1 = __webpack_require__(/*! ./_sha2.js */ "./node_modules/@noble/hashes/_sha2.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+// Choice: a ? b : c
+const Chi = (a, b, c) => (a & b) ^ (~a & c);
+// Majority function, true if any two inpust is true
+const Maj = (a, b, c) => (a & b) ^ (a & c) ^ (b & c);
+// Round constants:
+// first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311)
+// prettier-ignore
+const SHA256_K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+]);
+// Initial state (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
+// prettier-ignore
+const IV = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+]);
+// Temporary buffer, not used to store anything between runs
+// Named this way because it matches specification.
+const SHA256_W = new Uint32Array(64);
+class SHA256 extends _sha2_js_1.SHA2 {
+    constructor() {
+        super(64, 32, 8, false);
+        // We cannot use array here since array allows indexing by variable
+        // which means optimizer/compiler cannot use registers.
+        this.A = IV[0] | 0;
+        this.B = IV[1] | 0;
+        this.C = IV[2] | 0;
+        this.D = IV[3] | 0;
+        this.E = IV[4] | 0;
+        this.F = IV[5] | 0;
+        this.G = IV[6] | 0;
+        this.H = IV[7] | 0;
+    }
+    get() {
+        const { A, B, C, D, E, F, G, H } = this;
+        return [A, B, C, D, E, F, G, H];
+    }
+    // prettier-ignore
+    set(A, B, C, D, E, F, G, H) {
+        this.A = A | 0;
+        this.B = B | 0;
+        this.C = C | 0;
+        this.D = D | 0;
+        this.E = E | 0;
+        this.F = F | 0;
+        this.G = G | 0;
+        this.H = H | 0;
+    }
+    process(view, offset) {
+        // Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array
+        for (let i = 0; i < 16; i++, offset += 4)
+            SHA256_W[i] = view.getUint32(offset, false);
+        for (let i = 16; i < 64; i++) {
+            const W15 = SHA256_W[i - 15];
+            const W2 = SHA256_W[i - 2];
+            const s0 = (0, utils_js_1.rotr)(W15, 7) ^ (0, utils_js_1.rotr)(W15, 18) ^ (W15 >>> 3);
+            const s1 = (0, utils_js_1.rotr)(W2, 17) ^ (0, utils_js_1.rotr)(W2, 19) ^ (W2 >>> 10);
+            SHA256_W[i] = (s1 + SHA256_W[i - 7] + s0 + SHA256_W[i - 16]) | 0;
+        }
+        // Compression function main loop, 64 rounds
+        let { A, B, C, D, E, F, G, H } = this;
+        for (let i = 0; i < 64; i++) {
+            const sigma1 = (0, utils_js_1.rotr)(E, 6) ^ (0, utils_js_1.rotr)(E, 11) ^ (0, utils_js_1.rotr)(E, 25);
+            const T1 = (H + sigma1 + Chi(E, F, G) + SHA256_K[i] + SHA256_W[i]) | 0;
+            const sigma0 = (0, utils_js_1.rotr)(A, 2) ^ (0, utils_js_1.rotr)(A, 13) ^ (0, utils_js_1.rotr)(A, 22);
+            const T2 = (sigma0 + Maj(A, B, C)) | 0;
+            H = G;
+            G = F;
+            F = E;
+            E = (D + T1) | 0;
+            D = C;
+            C = B;
+            B = A;
+            A = (T1 + T2) | 0;
+        }
+        // Add the compressed chunk to the current hash value
+        A = (A + this.A) | 0;
+        B = (B + this.B) | 0;
+        C = (C + this.C) | 0;
+        D = (D + this.D) | 0;
+        E = (E + this.E) | 0;
+        F = (F + this.F) | 0;
+        G = (G + this.G) | 0;
+        H = (H + this.H) | 0;
+        this.set(A, B, C, D, E, F, G, H);
+    }
+    roundClean() {
+        SHA256_W.fill(0);
+    }
+    destroy() {
+        this.set(0, 0, 0, 0, 0, 0, 0, 0);
+        this.buffer.fill(0);
+    }
+}
+// Constants from https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+class SHA224 extends SHA256 {
+    constructor() {
+        super();
+        this.A = 0xc1059ed8 | 0;
+        this.B = 0x367cd507 | 0;
+        this.C = 0x3070dd17 | 0;
+        this.D = 0xf70e5939 | 0;
+        this.E = 0xffc00b31 | 0;
+        this.F = 0x68581511 | 0;
+        this.G = 0x64f98fa7 | 0;
+        this.H = 0xbefa4fa4 | 0;
+        this.outputLen = 28;
+    }
+}
+/**
+ * SHA2-256 hash function
+ * @param message - data that would be hashed
+ */
+exports.sha256 = (0, utils_js_1.wrapConstructor)(() => new SHA256());
+exports.sha224 = (0, utils_js_1.wrapConstructor)(() => new SHA224());
+//# sourceMappingURL=sha256.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/sha3.js":
+/*!********************************************!*\
+  !*** ./node_modules/@noble/hashes/sha3.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shake256 = exports.shake128 = exports.keccak_512 = exports.keccak_384 = exports.keccak_256 = exports.keccak_224 = exports.sha3_512 = exports.sha3_384 = exports.sha3_256 = exports.sha3_224 = exports.Keccak = exports.keccakP = void 0;
+const _assert_js_1 = __webpack_require__(/*! ./_assert.js */ "./node_modules/@noble/hashes/_assert.js");
+const _u64_js_1 = __webpack_require__(/*! ./_u64.js */ "./node_modules/@noble/hashes/_u64.js");
+const utils_js_1 = __webpack_require__(/*! ./utils.js */ "./node_modules/@noble/hashes/utils.js");
+// Various per round constants calculations
+const [SHA3_PI, SHA3_ROTL, _SHA3_IOTA] = [[], [], []];
+const _0n = BigInt(0);
+const _1n = BigInt(1);
+const _2n = BigInt(2);
+const _7n = BigInt(7);
+const _256n = BigInt(256);
+const _0x71n = BigInt(0x71);
+for (let round = 0, R = _1n, x = 1, y = 0; round < 24; round++) {
+    // Pi
+    [x, y] = [y, (2 * x + 3 * y) % 5];
+    SHA3_PI.push(2 * (5 * y + x));
+    // Rotational
+    SHA3_ROTL.push((((round + 1) * (round + 2)) / 2) % 64);
+    // Iota
+    let t = _0n;
+    for (let j = 0; j < 7; j++) {
+        R = ((R << _1n) ^ ((R >> _7n) * _0x71n)) % _256n;
+        if (R & _2n)
+            t ^= _1n << ((_1n << BigInt(j)) - _1n);
+    }
+    _SHA3_IOTA.push(t);
+}
+const [SHA3_IOTA_H, SHA3_IOTA_L] = _u64_js_1.default.split(_SHA3_IOTA, true);
+// Left rotation (without 0, 32, 64)
+const rotlH = (h, l, s) => s > 32 ? _u64_js_1.default.rotlBH(h, l, s) : _u64_js_1.default.rotlSH(h, l, s);
+const rotlL = (h, l, s) => s > 32 ? _u64_js_1.default.rotlBL(h, l, s) : _u64_js_1.default.rotlSL(h, l, s);
+// Same as keccakf1600, but allows to skip some rounds
+function keccakP(s, rounds = 24) {
+    const B = new Uint32Array(5 * 2);
+    // NOTE: all indices are x2 since we store state as u32 instead of u64 (bigints to slow in js)
+    for (let round = 24 - rounds; round < 24; round++) {
+        // Theta θ
+        for (let x = 0; x < 10; x++)
+            B[x] = s[x] ^ s[x + 10] ^ s[x + 20] ^ s[x + 30] ^ s[x + 40];
+        for (let x = 0; x < 10; x += 2) {
+            const idx1 = (x + 8) % 10;
+            const idx0 = (x + 2) % 10;
+            const B0 = B[idx0];
+            const B1 = B[idx0 + 1];
+            const Th = rotlH(B0, B1, 1) ^ B[idx1];
+            const Tl = rotlL(B0, B1, 1) ^ B[idx1 + 1];
+            for (let y = 0; y < 50; y += 10) {
+                s[x + y] ^= Th;
+                s[x + y + 1] ^= Tl;
+            }
+        }
+        // Rho (ρ) and Pi (π)
+        let curH = s[2];
+        let curL = s[3];
+        for (let t = 0; t < 24; t++) {
+            const shift = SHA3_ROTL[t];
+            const Th = rotlH(curH, curL, shift);
+            const Tl = rotlL(curH, curL, shift);
+            const PI = SHA3_PI[t];
+            curH = s[PI];
+            curL = s[PI + 1];
+            s[PI] = Th;
+            s[PI + 1] = Tl;
+        }
+        // Chi (χ)
+        for (let y = 0; y < 50; y += 10) {
+            for (let x = 0; x < 10; x++)
+                B[x] = s[y + x];
+            for (let x = 0; x < 10; x++)
+                s[y + x] ^= ~B[(x + 2) % 10] & B[(x + 4) % 10];
+        }
+        // Iota (ι)
+        s[0] ^= SHA3_IOTA_H[round];
+        s[1] ^= SHA3_IOTA_L[round];
+    }
+    B.fill(0);
+}
+exports.keccakP = keccakP;
+class Keccak extends utils_js_1.Hash {
+    // NOTE: we accept arguments in bytes instead of bits here.
+    constructor(blockLen, suffix, outputLen, enableXOF = false, rounds = 24) {
+        super();
+        this.blockLen = blockLen;
+        this.suffix = suffix;
+        this.outputLen = outputLen;
+        this.enableXOF = enableXOF;
+        this.rounds = rounds;
+        this.pos = 0;
+        this.posOut = 0;
+        this.finished = false;
+        this.destroyed = false;
+        // Can be passed from user as dkLen
+        _assert_js_1.default.number(outputLen);
+        // 1600 = 5x5 matrix of 64bit.  1600 bits === 200 bytes
+        if (0 >= this.blockLen || this.blockLen >= 200)
+            throw new Error('Sha3 supports only keccak-f1600 function');
+        this.state = new Uint8Array(200);
+        this.state32 = (0, utils_js_1.u32)(this.state);
+    }
+    keccak() {
+        keccakP(this.state32, this.rounds);
+        this.posOut = 0;
+        this.pos = 0;
+    }
+    update(data) {
+        _assert_js_1.default.exists(this);
+        const { blockLen, state } = this;
+        data = (0, utils_js_1.toBytes)(data);
+        const len = data.length;
+        for (let pos = 0; pos < len;) {
+            const take = Math.min(blockLen - this.pos, len - pos);
+            for (let i = 0; i < take; i++)
+                state[this.pos++] ^= data[pos++];
+            if (this.pos === blockLen)
+                this.keccak();
+        }
+        return this;
+    }
+    finish() {
+        if (this.finished)
+            return;
+        this.finished = true;
+        const { state, suffix, pos, blockLen } = this;
+        // Do the padding
+        state[pos] ^= suffix;
+        if ((suffix & 0x80) !== 0 && pos === blockLen - 1)
+            this.keccak();
+        state[blockLen - 1] ^= 0x80;
+        this.keccak();
+    }
+    writeInto(out) {
+        _assert_js_1.default.exists(this, false);
+        _assert_js_1.default.bytes(out);
+        this.finish();
+        const bufferOut = this.state;
+        const { blockLen } = this;
+        for (let pos = 0, len = out.length; pos < len;) {
+            if (this.posOut >= blockLen)
+                this.keccak();
+            const take = Math.min(blockLen - this.posOut, len - pos);
+            out.set(bufferOut.subarray(this.posOut, this.posOut + take), pos);
+            this.posOut += take;
+            pos += take;
+        }
+        return out;
+    }
+    xofInto(out) {
+        // Sha3/Keccak usage with XOF is probably mistake, only SHAKE instances can do XOF
+        if (!this.enableXOF)
+            throw new Error('XOF is not possible for this instance');
+        return this.writeInto(out);
+    }
+    xof(bytes) {
+        _assert_js_1.default.number(bytes);
+        return this.xofInto(new Uint8Array(bytes));
+    }
+    digestInto(out) {
+        _assert_js_1.default.output(out, this);
+        if (this.finished)
+            throw new Error('digest() was already called');
+        this.writeInto(out);
+        this.destroy();
+        return out;
+    }
+    digest() {
+        return this.digestInto(new Uint8Array(this.outputLen));
+    }
+    destroy() {
+        this.destroyed = true;
+        this.state.fill(0);
+    }
+    _cloneInto(to) {
+        const { blockLen, suffix, outputLen, rounds, enableXOF } = this;
+        to || (to = new Keccak(blockLen, suffix, outputLen, enableXOF, rounds));
+        to.state32.set(this.state32);
+        to.pos = this.pos;
+        to.posOut = this.posOut;
+        to.finished = this.finished;
+        to.rounds = rounds;
+        // Suffix can change in cSHAKE
+        to.suffix = suffix;
+        to.outputLen = outputLen;
+        to.enableXOF = enableXOF;
+        to.destroyed = this.destroyed;
+        return to;
+    }
+}
+exports.Keccak = Keccak;
+const gen = (suffix, blockLen, outputLen) => (0, utils_js_1.wrapConstructor)(() => new Keccak(blockLen, suffix, outputLen));
+exports.sha3_224 = gen(0x06, 144, 224 / 8);
+/**
+ * SHA3-256 hash function
+ * @param message - that would be hashed
+ */
+exports.sha3_256 = gen(0x06, 136, 256 / 8);
+exports.sha3_384 = gen(0x06, 104, 384 / 8);
+exports.sha3_512 = gen(0x06, 72, 512 / 8);
+exports.keccak_224 = gen(0x01, 144, 224 / 8);
+/**
+ * keccak-256 hash function. Different from SHA3-256.
+ * @param message - that would be hashed
+ */
+exports.keccak_256 = gen(0x01, 136, 256 / 8);
+exports.keccak_384 = gen(0x01, 104, 384 / 8);
+exports.keccak_512 = gen(0x01, 72, 512 / 8);
+const genShake = (suffix, blockLen, outputLen) => (0, utils_js_1.wrapXOFConstructorWithOpts)((opts = {}) => new Keccak(blockLen, suffix, opts.dkLen === undefined ? outputLen : opts.dkLen, true));
+exports.shake128 = genShake(0x1f, 168, 128 / 8);
+exports.shake256 = genShake(0x1f, 136, 256 / 8);
+//# sourceMappingURL=sha3.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@noble/hashes/utils.js":
+/*!*********************************************!*\
+  !*** ./node_modules/@noble/hashes/utils.js ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.randomBytes = exports.wrapXOFConstructorWithOpts = exports.wrapConstructorWithOpts = exports.wrapConstructor = exports.checkOpts = exports.Hash = exports.concatBytes = exports.toBytes = exports.utf8ToBytes = exports.asyncLoop = exports.nextTick = exports.hexToBytes = exports.bytesToHex = exports.isLE = exports.rotr = exports.createView = exports.u32 = exports.u8 = void 0;
+// We use WebCrypto aka globalThis.crypto, which exists in browsers and node.js 16+.
+// node.js versions earlier than v19 don't declare it in global scope.
+// For node.js, package.json#exports field mapping rewrites import
+// from `crypto` to `cryptoNode`, which imports native module.
+// Makes the utils un-importable in browsers without a bundler.
+// Once node.js 18 is deprecated, we can just drop the import.
+const crypto_1 = __webpack_require__(/*! @noble/hashes/crypto */ "./node_modules/@noble/hashes/crypto.js");
+const u8a = (a) => a instanceof Uint8Array;
+// Cast array to different type
+const u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+exports.u8 = u8;
+const u32 = (arr) => new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
+exports.u32 = u32;
+// Cast array to view
+const createView = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+exports.createView = createView;
+// The rotate right (circular right shift) operation for uint32
+const rotr = (word, shift) => (word << (32 - shift)) | (word >>> shift);
+exports.rotr = rotr;
+// big-endian hardware is rare. Just in case someone still decides to run hashes:
+// early-throw an error because we don't support BE yet.
+exports.isLE = new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44;
+if (!exports.isLE)
+    throw new Error('Non little-endian hardware is not supported');
+const hexes = Array.from({ length: 256 }, (v, i) => i.toString(16).padStart(2, '0'));
+/**
+ * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
+ */
+function bytesToHex(bytes) {
+    if (!u8a(bytes))
+        throw new Error('Uint8Array expected');
+    // pre-caching improves the speed 6x
+    let hex = '';
+    for (let i = 0; i < bytes.length; i++) {
+        hex += hexes[bytes[i]];
+    }
+    return hex;
+}
+exports.bytesToHex = bytesToHex;
+/**
+ * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
+ */
+function hexToBytes(hex) {
+    if (typeof hex !== 'string')
+        throw new Error('hex string expected, got ' + typeof hex);
+    const len = hex.length;
+    if (len % 2)
+        throw new Error('padded hex string expected, got unpadded hex of length ' + len);
+    const array = new Uint8Array(len / 2);
+    for (let i = 0; i < array.length; i++) {
+        const j = i * 2;
+        const hexByte = hex.slice(j, j + 2);
+        const byte = Number.parseInt(hexByte, 16);
+        if (Number.isNaN(byte) || byte < 0)
+            throw new Error('Invalid byte sequence');
+        array[i] = byte;
+    }
+    return array;
+}
+exports.hexToBytes = hexToBytes;
+// There is no setImmediate in browser and setTimeout is slow.
+// call of async fn will return Promise, which will be fullfiled only on
+// next scheduler queue processing step and this is exactly what we need.
+const nextTick = async () => { };
+exports.nextTick = nextTick;
+// Returns control to thread each 'tick' ms to avoid blocking
+async function asyncLoop(iters, tick, cb) {
+    let ts = Date.now();
+    for (let i = 0; i < iters; i++) {
+        cb(i);
+        // Date.now() is not monotonic, so in case if clock goes backwards we return return control too
+        const diff = Date.now() - ts;
+        if (diff >= 0 && diff < tick)
+            continue;
+        await (0, exports.nextTick)();
+        ts += diff;
+    }
+}
+exports.asyncLoop = asyncLoop;
+/**
+ * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
+ */
+function utf8ToBytes(str) {
+    if (typeof str !== 'string')
+        throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
+    return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
+}
+exports.utf8ToBytes = utf8ToBytes;
+/**
+ * Normalizes (non-hex) string or Uint8Array to Uint8Array.
+ * Warning: when Uint8Array is passed, it would NOT get copied.
+ * Keep in mind for future mutable operations.
+ */
+function toBytes(data) {
+    if (typeof data === 'string')
+        data = utf8ToBytes(data);
+    if (!u8a(data))
+        throw new Error(`expected Uint8Array, got ${typeof data}`);
+    return data;
+}
+exports.toBytes = toBytes;
+/**
+ * Copies several Uint8Arrays into one.
+ */
+function concatBytes(...arrays) {
+    const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
+    let pad = 0; // walk through each item, ensure they have proper type
+    arrays.forEach((a) => {
+        if (!u8a(a))
+            throw new Error('Uint8Array expected');
+        r.set(a, pad);
+        pad += a.length;
+    });
+    return r;
+}
+exports.concatBytes = concatBytes;
+// For runtime check if class implements interface
+class Hash {
+    // Safe version that clones internal state
+    clone() {
+        return this._cloneInto();
+    }
+}
+exports.Hash = Hash;
+// Check if object doens't have custom constructor (like Uint8Array/Array)
+const isPlainObject = (obj) => Object.prototype.toString.call(obj) === '[object Object]' && obj.constructor === Object;
+function checkOpts(defaults, opts) {
+    if (opts !== undefined && (typeof opts !== 'object' || !isPlainObject(opts)))
+        throw new Error('Options should be object or undefined');
+    const merged = Object.assign(defaults, opts);
+    return merged;
+}
+exports.checkOpts = checkOpts;
+function wrapConstructor(hashCons) {
+    const hashC = (msg) => hashCons().update(toBytes(msg)).digest();
+    const tmp = hashCons();
+    hashC.outputLen = tmp.outputLen;
+    hashC.blockLen = tmp.blockLen;
+    hashC.create = () => hashCons();
+    return hashC;
+}
+exports.wrapConstructor = wrapConstructor;
+function wrapConstructorWithOpts(hashCons) {
+    const hashC = (msg, opts) => hashCons(opts).update(toBytes(msg)).digest();
+    const tmp = hashCons({});
+    hashC.outputLen = tmp.outputLen;
+    hashC.blockLen = tmp.blockLen;
+    hashC.create = (opts) => hashCons(opts);
+    return hashC;
+}
+exports.wrapConstructorWithOpts = wrapConstructorWithOpts;
+function wrapXOFConstructorWithOpts(hashCons) {
+    const hashC = (msg, opts) => hashCons(opts).update(toBytes(msg)).digest();
+    const tmp = hashCons({});
+    hashC.outputLen = tmp.outputLen;
+    hashC.blockLen = tmp.blockLen;
+    hashC.create = (opts) => hashCons(opts);
+    return hashC;
+}
+exports.wrapXOFConstructorWithOpts = wrapXOFConstructorWithOpts;
+/**
+ * Secure PRNG. Uses `crypto.getRandomValues`, which defers to OS.
+ */
+function randomBytes(bytesLength = 32) {
+    if (crypto_1.crypto && typeof crypto_1.crypto.getRandomValues === 'function') {
+        return crypto_1.crypto.getRandomValues(new Uint8Array(bytesLength));
+    }
+    throw new Error('crypto.getRandomValues must be defined');
+}
+exports.randomBytes = randomBytes;
 //# sourceMappingURL=utils.js.map
 
 /***/ }),
@@ -95288,9 +95705,9 @@ class GunInstance {
                 resolve({ success: false, error: "Invalid username provided" });
                 return;
             }
-            if (!password ||
-                typeof password !== "string" ||
-                password.length === 0) {
+            // Skip password validation when using pair authentication
+            if (!pair &&
+                (!password || typeof password !== "string" || password.length === 0)) {
                 resolve({ success: false, error: "Invalid password provided" });
                 return;
             }
@@ -95385,8 +95802,16 @@ class GunInstance {
                     error: `Username '${username}' already exists. Please choose a different username or try logging in instead.`,
                 };
             }
-            // Create new user
-            const createResult = await this.createNewUser(username, password);
+            // Create new user - use different method based on authentication type
+            let createResult;
+            if (pair) {
+                // For Web3/plugin authentication, use pair-based creation
+                createResult = await this.createNewUserWithPair(username, pair);
+            }
+            else {
+                // For password authentication, use standard creation
+                createResult = await this.createNewUser(username, password);
+            }
             if (!createResult.success) {
                 return { success: false, error: createResult.error };
             }
@@ -95441,6 +95866,38 @@ class GunInstance {
             console.error(`Exception during signup for ${username}: ${error}`);
             return { success: false, error: `Signup failed: ${error}` };
         }
+    }
+    /**
+     * Creates a new user in Gun with pair-based authentication (for Web3/plugins)
+     */
+    async createNewUserWithPair(username, pair) {
+        return new Promise((resolve) => {
+            // Validate inputs before creating user
+            if (!username ||
+                typeof username !== "string" ||
+                username.trim().length === 0) {
+                resolve({ success: false, error: "Invalid username provided" });
+                return;
+            }
+            if (!pair || !pair.pub || !pair.priv) {
+                resolve({ success: false, error: "Invalid pair provided" });
+                return;
+            }
+            // Sanitize username
+            const sanitizedUsername = this.sanitizeUsername(username);
+            if (sanitizedUsername.length === 0) {
+                resolve({
+                    success: false,
+                    error: "Username contains only invalid characters",
+                });
+                return;
+            }
+            // For pair-based authentication, we don't need to call gun.user().create()
+            // because the pair already contains the cryptographic credentials
+            // We just need to validate that the pair is valid and return success
+            console.log(`User created successfully with pair for: ${sanitizedUsername}`);
+            resolve({ success: true, userPub: pair.pub });
+        });
     }
     async runPostAuthOnAuthResult(username, userPub, authResult) {
         // Setting up user profile after authentication
@@ -96152,32 +96609,6 @@ class GunInstance {
         }
     }
     /**
-     * Hashes text with Gun.SEA
-     * @param text Text to hash
-     * @returns Promise that resolves with the hashed text
-     */
-    async hashText(text) {
-        return this.crypto.hashText(text);
-    }
-    /**
-     * Encrypts data with Gun.SEA
-     * @param data Data to encrypt
-     * @param key Encryption key
-     * @returns Promise that resolves with the encrypted data
-     */
-    async encrypt(data, key) {
-        return this.crypto.encrypt(data, key);
-    }
-    /**
-     * Decrypts data with Gun.SEA
-     * @param encryptedData Encrypted data
-     * @param key Decryption key
-     * @returns Promise that resolves with the decrypted data
-     */
-    async decrypt(encryptedData, key) {
-        return this.crypto.decrypt(encryptedData, key);
-    }
-    /**
      * Saves user data at the specified path
      * @param path Path to save the data (supports nested paths like "test/data/marco")
      * @param data Data to save
@@ -96522,6 +96953,156 @@ class GunInstance {
             .replace(/[^a-zA-Z0-9._-]/g, "") // Only allow alphanumeric, dots, underscores, and hyphens
             .replace(/^[^a-zA-Z]/, "") // Must start with a letter
             .substring(0, 50); // Limit length
+    }
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    async changeUsername(newUsername) {
+        try {
+            // Check if user is authenticated
+            if (!this.isLoggedIn()) {
+                return { success: false, error: "User not authenticated" };
+            }
+            const currentUser = this.getCurrentUser();
+            if (!currentUser || !currentUser.pub) {
+                return { success: false, error: "No authenticated user found" };
+            }
+            const userPub = currentUser.pub;
+            // Validate new username
+            if (!newUsername ||
+                typeof newUsername !== "string" ||
+                newUsername.trim().length === 0) {
+                return { success: false, error: "New username cannot be empty" };
+            }
+            // Sanitize new username
+            const sanitizedNewUsername = this.sanitizeUsername(newUsername);
+            if (sanitizedNewUsername.length === 0) {
+                return {
+                    success: false,
+                    error: "New username contains only invalid characters",
+                };
+            }
+            // Validate username format (alphanumeric and some special chars only)
+            if (!/^[a-zA-Z0-9._-]+$/.test(sanitizedNewUsername)) {
+                return {
+                    success: false,
+                    error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
+                };
+            }
+            // Check if new username is already in use by another user
+            const existingUserCheck = await this.checkUsernameExists(sanitizedNewUsername);
+            if (existingUserCheck && existingUserCheck.pub !== userPub) {
+                return {
+                    success: false,
+                    error: `Username '${sanitizedNewUsername}' is already in use by another user`,
+                };
+            }
+            // Get current user data to find old username
+            const currentUserData = await new Promise((resolve) => {
+                this.gun.get(userPub).once((data) => {
+                    resolve(data);
+                });
+            });
+            const oldUsername = currentUserData?.username || "unknown";
+            // If the new username is the same as the old one, no need to change
+            if (oldUsername === sanitizedNewUsername) {
+                return {
+                    success: true,
+                    oldUsername,
+                    newUsername: sanitizedNewUsername,
+                };
+            }
+            // Remove old username mapping if it exists
+            if (oldUsername && oldUsername !== "unknown") {
+                try {
+                    await new Promise((resolve, reject) => {
+                        this.node
+                            .get("usernames")
+                            .get(oldUsername)
+                            .put(null, (ack) => {
+                            if (ack.err) {
+                                console.warn(`Warning: Could not remove old username mapping: ${ack.err}`);
+                            }
+                            resolve();
+                        });
+                    });
+                }
+                catch (error) {
+                    console.warn(`Warning: Error removing old username mapping: ${error}`);
+                    // Continue anyway, don't fail the operation
+                }
+            }
+            // Create new username mapping
+            try {
+                await new Promise((resolve, reject) => {
+                    this.node
+                        .get("usernames")
+                        .get(sanitizedNewUsername)
+                        .put(userPub, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(`Failed to create new username mapping: ${ack.err}`));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Failed to create new username mapping: ${error}`,
+                };
+            }
+            // Update user metadata with new username
+            try {
+                await new Promise((resolve, reject) => {
+                    this.gun
+                        .get(userPub)
+                        .put({ username: sanitizedNewUsername }, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(`Failed to update user metadata: ${ack.err}`));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+            }
+            catch (error) {
+                // If metadata update fails, try to revert the username mapping
+                try {
+                    await new Promise((resolve) => {
+                        this.node
+                            .get("usernames")
+                            .get(sanitizedNewUsername)
+                            .put(null, () => resolve());
+                    });
+                }
+                catch (revertError) {
+                    console.error(`Failed to revert username mapping after metadata update failure: ${revertError}`);
+                }
+                return {
+                    success: false,
+                    error: `Failed to update user metadata: ${error}`,
+                };
+            }
+            console.log(`Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`);
+            return {
+                success: true,
+                oldUsername,
+                newUsername: sanitizedNewUsername,
+            };
+        }
+        catch (error) {
+            console.error(`Error changing username: ${error}`);
+            return {
+                success: false,
+                error: `Username change failed: ${error}`,
+            };
+        }
     }
 }
 exports.GunInstance = GunInstance;
@@ -97018,6 +97599,16 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
+        // Polyfill console for environments where it might be missing
+        if (typeof console === "undefined") {
+            __webpack_require__.g.console = {
+                log: () => { },
+                warn: () => { },
+                error: () => { },
+                info: () => { },
+                debug: () => { },
+            };
+        }
         this.config = config;
         this.storage = new storage_1.ShogunStorage();
         this.eventEmitter = new events_1.ShogunEventEmitter();
@@ -97044,7 +97635,9 @@ class ShogunCore {
             }
         }
         catch (error) {
-            console.error("Error creating Gun instance:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error creating Gun instance:", error);
+            }
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
@@ -97053,14 +97646,18 @@ class ShogunCore {
             this.setupGunEventForwarding();
         }
         catch (error) {
-            console.error("Error initializing GunInstance:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing GunInstance:", error);
+            }
             throw new Error(`Failed to initialize GunInstance: ${error}`);
         }
         try {
             this._user = this._gun.user().recall({ sessionStorage: true });
         }
         catch (error) {
-            console.error("Error initializing Gun user:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing Gun user:", error);
+            }
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
         this._gun.on("auth", (user) => {
@@ -97074,7 +97671,9 @@ class ShogunCore {
         this.registerBuiltinPlugins(config);
         // Initialize async components
         this.initialize().catch((error) => {
-            console.warn("Error during async initialization:", error);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Error during async initialization:", error);
+            }
         });
     }
     /**
@@ -97090,7 +97689,9 @@ class ShogunCore {
             });
         }
         catch (error) {
-            console.error("Error during Shogun Core initialization:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error during Shogun Core initialization:", error);
+            }
             throw error;
         }
     }
@@ -97107,6 +97708,16 @@ class ShogunCore {
      */
     get user() {
         return this._user;
+    }
+    /**
+     * Gets the current user information
+     * @returns Current user object or null
+     */
+    getCurrentUser() {
+        if (!this.db) {
+            return null;
+        }
+        return this.db.getCurrentUser();
     }
     /**
      * Setup event forwarding from GunInstance to main event emitter
@@ -97139,7 +97750,9 @@ class ShogunCore {
         try {
             // Register OAuth plugin if configuration is provided
             if (config.oauth) {
-                console.warn("OAuth plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("OAuth plugin will be registered with provided configuration");
+                }
                 const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 if (typeof oauthPlugin.configure === "function") {
                     oauthPlugin.configure(config.oauth);
@@ -97148,7 +97761,9 @@ class ShogunCore {
             }
             // Register WebAuthn plugin if configuration is provided
             if (config.webauthn) {
-                console.warn("WebAuthn plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("WebAuthn plugin will be registered with provided configuration");
+                }
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 if (typeof webauthnPlugin.configure === "function") {
                     webauthnPlugin.configure(config.webauthn);
@@ -97157,7 +97772,9 @@ class ShogunCore {
             }
             // Register Web3 plugin if configuration is provided
             if (config.web3) {
-                console.warn("Web3 plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Web3 plugin will be registered with provided configuration");
+                }
                 const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 if (typeof web3Plugin.configure === "function") {
                     web3Plugin.configure(config.web3);
@@ -97166,7 +97783,9 @@ class ShogunCore {
             }
             // Register Nostr plugin if configuration is provided
             if (config.nostr) {
-                console.warn("Nostr plugin will be registered with provided configuration");
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Nostr plugin will be registered with provided configuration");
+                }
                 const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 if (typeof nostrPlugin.configure === "function") {
                     nostrPlugin.configure(config.nostr);
@@ -97175,7 +97794,9 @@ class ShogunCore {
             }
         }
         catch (error) {
-            console.error("Error registering builtin plugins:", error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error registering builtin plugins:", error);
+            }
         }
     }
     /**
@@ -97200,11 +97821,15 @@ class ShogunCore {
     registerPlugin(plugin) {
         try {
             if (!plugin.name) {
-                console.error("Plugin registration failed: Plugin must have a name");
+                if (typeof console !== "undefined" && console.error) {
+                    console.error("Plugin registration failed: Plugin must have a name");
+                }
                 return;
             }
             if (this.plugins.has(plugin.name)) {
-                console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                }
                 return;
             }
             // Initialize plugin with core instance
@@ -97217,7 +97842,9 @@ class ShogunCore {
             });
         }
         catch (error) {
-            console.error(`Error registering plugin "${plugin.name}":`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error registering plugin "${plugin.name}":`, error);
+            }
         }
     }
     /**
@@ -97228,7 +97855,9 @@ class ShogunCore {
         try {
             const plugin = this.plugins.get(name);
             if (!plugin) {
-                console.warn(`Plugin "${name}" not found for unregistration`);
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${name}" not found for unregistration`);
+                }
                 return false;
             }
             // Destroy plugin if it has a destroy method
@@ -97237,7 +97866,9 @@ class ShogunCore {
                     plugin.destroy();
                 }
                 catch (destroyError) {
-                    console.error(`Error destroying plugin "${name}":`, destroyError);
+                    if (typeof console !== "undefined" && console.error) {
+                        console.error(`Error destroying plugin "${name}":`, destroyError);
+                    }
                 }
             }
             this.plugins.delete(name);
@@ -97247,7 +97878,9 @@ class ShogunCore {
             return true;
         }
         catch (error) {
-            console.error(`Error unregistering plugin "${name}":`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error unregistering plugin "${name}":`, error);
+            }
             return false;
         }
     }
@@ -97259,12 +97892,16 @@ class ShogunCore {
      */
     getPlugin(name) {
         if (!name || typeof name !== "string") {
-            console.warn("Invalid plugin name provided to getPlugin");
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Invalid plugin name provided to getPlugin");
+            }
             return undefined;
         }
         const plugin = this.plugins.get(name);
         if (!plugin) {
-            console.warn(`Plugin "${name}" not found`);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn(`Plugin "${name}" not found`);
+            }
             return undefined;
         }
         return plugin;
@@ -97381,7 +98018,9 @@ class ShogunCore {
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 failed.push({ name: pluginName, error: errorMessage });
-                console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
+                if (typeof console !== "undefined" && console.error) {
+                    console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
+                }
             }
         });
         return { success, failed };
@@ -97658,7 +98297,9 @@ class ShogunCore {
             return result;
         }
         catch (error) {
-            console.error(`Error during registration for user ${username}:`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error during registration for user ${username}:`, error);
+            }
             this.eventEmitter.emit("debug", {
                 action: "signup_error",
                 error: error instanceof Error ? error.message : String(error),
@@ -97757,7 +98398,9 @@ class ShogunCore {
             return result.success;
         }
         catch (error) {
-            console.error(`Error updating user alias:`, error);
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error updating user alias:`, error);
+            }
             return false;
         }
     }
@@ -97769,8 +98412,12 @@ class ShogunCore {
             this.storage.setItem("userCredentials", JSON.stringify(credentials));
         }
         catch (error) {
-            console.warn("Failed to save credentials to storage");
-            console.error(`Error saving credentials:`, error);
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Failed to save credentials to storage");
+            }
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error saving credentials:`, error);
+            }
         }
     }
     // esporta la coppia utente come json
@@ -97789,6 +98436,53 @@ class ShogunCore {
     }
     getIsLoggedIn() {
         return !!(this.user && this.user.is);
+    }
+    /**
+     * Changes the username for the currently authenticated user
+     * @param newUsername New username to set
+     * @returns Promise resolving to the operation result
+     */
+    async changeUsername(newUsername) {
+        try {
+            if (!this.db) {
+                throw new Error("Database not initialized");
+            }
+            const result = await this.db.changeUsername(newUsername);
+            if (result.success) {
+                this.eventEmitter.emit("auth:username_changed", {
+                    oldUsername: result.oldUsername,
+                    newUsername: result.newUsername,
+                    userPub: this.getCurrentUser()?.pub,
+                });
+                this.eventEmitter.emit("debug", {
+                    action: "username_changed",
+                    oldUsername: result.oldUsername,
+                    newUsername: result.newUsername,
+                });
+            }
+            else {
+                this.eventEmitter.emit("debug", {
+                    action: "username_change_failed",
+                    error: result.error,
+                    newUsername,
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error changing username to ${newUsername}:`, error);
+            }
+            this.eventEmitter.emit("debug", {
+                action: "username_change_error",
+                error: error instanceof Error ? error.message : String(error),
+                newUsername,
+            });
+            return {
+                success: false,
+                error: `Username change failed: ${error instanceof Error ? error.message : String(error)}`,
+            };
+        }
     }
 }
 exports.ShogunCore = ShogunCore;
@@ -102757,7 +103451,15 @@ class ShogunStorage {
      */
     getItem(key) {
         const value = this.store.get(key);
-        return value !== undefined ? JSON.stringify(value) : null;
+        if (value === undefined) {
+            return null;
+        }
+        // If the stored value is already a string, return it directly.
+        // This handles the case where a non-JSON string was set.
+        if (typeof value === "string") {
+            return value;
+        }
+        return JSON.stringify(value);
     }
     /**
      * Stores an item in both memory and localStorage if available
@@ -103149,8 +103851,10 @@ class ErrorHandler {
                 }
             }
         }
-        // If we got here, all retries failed
-        throw this.handle(errorType, errorCode, `Operation failed after ${maxRetries} attempts`, lastError);
+        // If we got here, all retries failed.
+        // Create the error, then throw a new Error instance for better compatibility with test runners.
+        const shogunError = this.handle(errorType, errorCode, `Operation failed after ${maxRetries} attempts`, lastError);
+        throw new Error(shogunError.message);
     }
     /**
      * Clear all stored errors
