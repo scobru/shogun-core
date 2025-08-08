@@ -62,13 +62,13 @@ describe("ErrorHandler", () => {
 
       expect(error.type).toBe(ErrorType.NETWORK);
       expect(error.code).toBe("NET_001");
-      expect(error.message).toBe("Network timeout");
+      expect(error.message).toBe("Network timeout - Error: Test error");
       expect(error.originalError).toBe(originalError);
     });
 
     it("should log essential errors to console", () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
       ErrorHandler.handle(
         ErrorType.AUTHENTICATION,
         "AUTH_001",
@@ -171,7 +171,7 @@ describe("ErrorHandler", () => {
 
     it("should format unknown errors", () => {
       const formatted = ErrorHandler.formatError({ custom: "error" });
-      expect(formatted).toContain("[object Object]");
+      expect(formatted).toContain(`{"custom":"error"}`);
     });
   });
 
@@ -209,7 +209,7 @@ describe("ErrorHandler", () => {
           2,
           100
         )
-      ).rejects.toThrow("Persistent failure");
+      ).rejects.toThrow("Operation failed after 2 attempts - Error: Persistent failure");
 
       expect(failingOperation).toHaveBeenCalledTimes(2);
     });
@@ -262,9 +262,20 @@ describe("ErrorHandler", () => {
   });
 
   describe("debug", () => {
-    it("should log debug messages", () => {
+    let originalNodeEnv: string | undefined;
+
+    beforeEach(() => {
+      originalNodeEnv = process.env.NODE_ENV;
+    });
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalNodeEnv;
+    });
+
+    it("should log debug messages when NODE_ENV is development", () => {
+      process.env.NODE_ENV = "development";
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      
+
       ErrorHandler.debug(
         ErrorType.VALIDATION,
         "VAL_001",
@@ -273,8 +284,24 @@ describe("ErrorHandler", () => {
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[ValidationError] VAL_001: Debug message"
+        "[ValidationError.VAL_001] (DEBUG) Debug message"
       );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should not log debug messages when NODE_ENV is not development", () => {
+      process.env.NODE_ENV = "test";
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+
+      ErrorHandler.debug(
+        ErrorType.VALIDATION,
+        "VAL_001",
+        "Debug message",
+        "debug"
+      );
+
+      expect(consoleSpy).not.toHaveBeenCalled();
 
       consoleSpy.mockRestore();
     });

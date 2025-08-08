@@ -1,40 +1,62 @@
 import { ShogunCore, ShogunSDKConfig } from "../../index";
 
 // Mock delle dipendenze esterne
-jest.mock("../../gundb", () => ({
-  Gun: jest.fn(() => ({
-    user: jest.fn(() => ({
-      create: jest.fn(),
-      auth: jest.fn(),
-      leave: jest.fn(),
-      recall: jest.fn(),
-      get: jest.fn(),
-      put: jest.fn(),
+jest.mock("../../gundb", () => {
+  const originalGundb = jest.requireActual("../../gundb");
+
+  return {
+    ...originalGundb,
+    Gun: jest.fn(() => ({
+      user: jest.fn(() => ({
+        create: jest.fn(),
+        auth: jest.fn(),
+        leave: jest.fn(),
+        recall: jest.fn(),
+        get: jest.fn(),
+        put: jest.fn(),
+        on: jest.fn(),
+        once: jest.fn(),
+        off: jest.fn(),
+      })),
+      get: jest.fn(() => ({
+        map: jest.fn(),
+        once: jest.fn(),
+        put: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+      })),
       on: jest.fn(),
       once: jest.fn(),
       off: jest.fn(),
     })),
-    get: jest.fn(() => ({
-      map: jest.fn(),
-      once: jest.fn(),
-      put: jest.fn(),
+    GunInstance: jest.fn().mockImplementation(() => ({
+      gun: {
+        user: jest.fn(() => ({
+          recall: jest.fn(),
+        })),
+        on: jest.fn(),
+      },
       on: jest.fn(),
-      off: jest.fn(),
+      isLoggedIn: jest.fn().mockReturnValue(false),
+      logout: jest.fn(),
+      login: jest.fn(),
+      loginWithPair: jest.fn(),
+      signUp: jest.fn(),
+      updateUserAlias: jest.fn(),
+      clearGunStorage: jest.fn(),
+      initialize: jest.fn(),
     })),
-    on: jest.fn(),
-    once: jest.fn(),
-    off: jest.fn(),
-  })),
-  SEA: {
-    pair: jest.fn(),
-    sign: jest.fn(),
-    verify: jest.fn(),
-    encrypt: jest.fn(),
-    decrypt: jest.fn(),
-    secret: jest.fn(),
-  },
-  restrictedPut: jest.fn(),
-}));
+    SEA: {
+      pair: jest.fn(),
+      sign: jest.fn(),
+      verify: jest.fn(),
+      encrypt: jest.fn(),
+      decrypt: jest.fn(),
+      secret: jest.fn(),
+    },
+    restrictedPut: jest.fn(),
+  };
+});
 
 describe("ShogunCore Integration Tests", () => {
   let config: ShogunSDKConfig;

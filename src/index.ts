@@ -84,6 +84,17 @@ export class ShogunCore implements IShogunCore {
    * and plugin system.
    */
   constructor(config: ShogunSDKConfig) {
+    // Polyfill console for environments where it might be missing
+    if (typeof console === "undefined") {
+      (global as any).console = {
+        log: () => {},
+        warn: () => {},
+        error: () => {},
+        info: () => {},
+        debug: () => {},
+      };
+    }
+
     this.config = config;
     this.storage = new ShogunStorage();
     this.eventEmitter = new ShogunEventEmitter();
@@ -111,7 +122,9 @@ export class ShogunCore implements IShogunCore {
         });
       }
     } catch (error) {
-      console.error("Error creating Gun instance:", error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error creating Gun instance:", error);
+      }
       throw new Error(`Failed to create Gun instance: ${error}`);
     }
 
@@ -120,14 +133,18 @@ export class ShogunCore implements IShogunCore {
       this._gun = this.db.gun;
       this.setupGunEventForwarding();
     } catch (error) {
-      console.error("Error initializing GunInstance:", error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error initializing GunInstance:", error);
+      }
       throw new Error(`Failed to initialize GunInstance: ${error}`);
     }
 
     try {
       this._user = this._gun.user().recall({ sessionStorage: true });
     } catch (error) {
-      console.error("Error initializing Gun user:", error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error initializing Gun user:", error);
+      }
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
@@ -144,7 +161,9 @@ export class ShogunCore implements IShogunCore {
 
     // Initialize async components
     this.initialize().catch((error: any) => {
-      console.warn("Error during async initialization:", error);
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("Error during async initialization:", error);
+      }
     });
   }
 
@@ -160,7 +179,9 @@ export class ShogunCore implements IShogunCore {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error("Error during Shogun Core initialization:", error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error during Shogun Core initialization:", error);
+      }
       throw error;
     }
   }
@@ -215,9 +236,11 @@ export class ShogunCore implements IShogunCore {
     try {
       // Register OAuth plugin if configuration is provided
       if (config.oauth) {
-        console.warn(
-          "OAuth plugin will be registered with provided configuration",
-        );
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "OAuth plugin will be registered with provided configuration",
+          );
+        }
 
         const oauthPlugin = new OAuthPlugin();
         if (typeof (oauthPlugin as any).configure === "function") {
@@ -228,9 +251,11 @@ export class ShogunCore implements IShogunCore {
 
       // Register WebAuthn plugin if configuration is provided
       if (config.webauthn) {
-        console.warn(
-          "WebAuthn plugin will be registered with provided configuration",
-        );
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "WebAuthn plugin will be registered with provided configuration",
+          );
+        }
 
         const webauthnPlugin = new WebauthnPlugin();
         if (typeof (webauthnPlugin as any).configure === "function") {
@@ -241,9 +266,11 @@ export class ShogunCore implements IShogunCore {
 
       // Register Web3 plugin if configuration is provided
       if (config.web3) {
-        console.warn(
-          "Web3 plugin will be registered with provided configuration",
-        );
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "Web3 plugin will be registered with provided configuration",
+          );
+        }
 
         const web3Plugin = new Web3ConnectorPlugin();
         if (typeof (web3Plugin as any).configure === "function") {
@@ -254,9 +281,11 @@ export class ShogunCore implements IShogunCore {
 
       // Register Nostr plugin if configuration is provided
       if (config.nostr) {
-        console.warn(
-          "Nostr plugin will be registered with provided configuration",
-        );
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "Nostr plugin will be registered with provided configuration",
+          );
+        }
 
         const nostrPlugin = new NostrConnectorPlugin();
         if (typeof (nostrPlugin as any).configure === "function") {
@@ -265,7 +294,9 @@ export class ShogunCore implements IShogunCore {
         this.registerPlugin(nostrPlugin);
       }
     } catch (error) {
-      console.error("Error registering builtin plugins:", error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error registering builtin plugins:", error);
+      }
     }
   }
 
@@ -293,14 +324,18 @@ export class ShogunCore implements IShogunCore {
   private registerPlugin(plugin: ShogunPlugin): void {
     try {
       if (!plugin.name) {
-        console.error("Plugin registration failed: Plugin must have a name");
+        if (typeof console !== "undefined" && console.error) {
+          console.error("Plugin registration failed: Plugin must have a name");
+        }
         return;
       }
 
       if (this.plugins.has(plugin.name)) {
-        console.warn(
-          `Plugin "${plugin.name}" is already registered. Skipping.`,
-        );
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            `Plugin "${plugin.name}" is already registered. Skipping.`,
+          );
+        }
         return;
       }
 
@@ -315,7 +350,9 @@ export class ShogunCore implements IShogunCore {
         category: plugin._category || "unknown",
       });
     } catch (error) {
-      console.error(`Error registering plugin "${plugin.name}":`, error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error registering plugin "${plugin.name}":`, error);
+      }
     }
   }
 
@@ -328,7 +365,9 @@ export class ShogunCore implements IShogunCore {
       const plugin = this.plugins.get(name);
 
       if (!plugin) {
-        console.warn(`Plugin "${name}" not found for unregistration`);
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(`Plugin "${name}" not found for unregistration`);
+        }
         return false;
       }
 
@@ -337,7 +376,9 @@ export class ShogunCore implements IShogunCore {
         try {
           (plugin as any).destroy();
         } catch (destroyError) {
-          console.error(`Error destroying plugin "${name}":`, destroyError);
+          if (typeof console !== "undefined" && console.error) {
+            console.error(`Error destroying plugin "${name}":`, destroyError);
+          }
         }
       }
 
@@ -349,7 +390,9 @@ export class ShogunCore implements IShogunCore {
 
       return true;
     } catch (error) {
-      console.error(`Error unregistering plugin "${name}":`, error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error unregistering plugin "${name}":`, error);
+      }
       return false;
     }
   }
@@ -362,13 +405,17 @@ export class ShogunCore implements IShogunCore {
    */
   getPlugin<T = ShogunPlugin>(name: string): T | undefined {
     if (!name || typeof name !== "string") {
-      console.warn("Invalid plugin name provided to getPlugin");
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("Invalid plugin name provided to getPlugin");
+      }
       return undefined;
     }
 
     const plugin = this.plugins.get(name);
     if (!plugin) {
-      console.warn(`Plugin "${name}" not found`);
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn(`Plugin "${name}" not found`);
+      }
       return undefined;
     }
 
@@ -522,10 +569,12 @@ export class ShogunCore implements IShogunCore {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         failed.push({ name: pluginName, error: errorMessage });
-        console.error(
-          `[ShogunCore] Failed to reinitialize plugin ${pluginName}:`,
-          error,
-        );
+        if (typeof console !== "undefined" && console.error) {
+          console.error(
+            `[ShogunCore] Failed to reinitialize plugin ${pluginName}:`,
+            error,
+          );
+        }
       }
     });
 
@@ -893,7 +942,9 @@ export class ShogunCore implements IShogunCore {
 
       return result;
     } catch (error) {
-      console.error(`Error during registration for user ${username}:`, error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error during registration for user ${username}:`, error);
+      }
 
       this.eventEmitter.emit("debug", {
         action: "signup_error",
@@ -1022,7 +1073,9 @@ export class ShogunCore implements IShogunCore {
       const result = await this.db.updateUserAlias(newAlias);
       return result.success;
     } catch (error) {
-      console.error(`Error updating user alias:`, error);
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error updating user alias:`, error);
+      }
       return false;
     }
   }
@@ -1034,8 +1087,12 @@ export class ShogunCore implements IShogunCore {
     try {
       this.storage.setItem("userCredentials", JSON.stringify(credentials));
     } catch (error) {
-      console.warn("Failed to save credentials to storage");
-      console.error(`Error saving credentials:`, error);
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("Failed to save credentials to storage");
+      }
+      if (typeof console !== "undefined" && console.error) {
+        console.error(`Error saving credentials:`, error);
+      }
     }
   }
 

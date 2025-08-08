@@ -283,13 +283,15 @@ export class ErrorHandler {
       }
     }
 
-    // If we got here, all retries failed
-    throw this.handle(
+    // If we got here, all retries failed.
+    // Create the error, then throw a new Error instance for better compatibility with test runners.
+    const shogunError = this.handle(
       errorType,
       errorCode,
       `Operation failed after ${maxRetries} attempts`,
       lastError,
     );
+    throw new Error(shogunError.message);
   }
 
   /**

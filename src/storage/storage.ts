@@ -96,7 +96,15 @@ export class ShogunStorage {
    */
   getItem(key: string): string | null {
     const value = this.store.get(key);
-    return value !== undefined ? JSON.stringify(value) : null;
+    if (value === undefined) {
+      return null;
+    }
+    // If the stored value is already a string, return it directly.
+    // This handles the case where a non-JSON string was set.
+    if (typeof value === "string") {
+      return value;
+    }
+    return JSON.stringify(value);
   }
 
   /**

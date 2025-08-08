@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { ShogunCore, ShogunSDKConfig } from "../../index";
 
 describe("Browser Compatibility Tests", () => {
