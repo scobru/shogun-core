@@ -96,4 +96,4 @@ export declare function unsafeHash(safe: {
  * @returns Parsed object or default value
  */
 export declare function safeJSONParse(input: string, def?: {}): any;
-export declare function randomUUID(): void;
+export declare function randomUUID(): string;

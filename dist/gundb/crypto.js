@@ -19,6 +19,7 @@ exports.unsafeHash = unsafeHash;
 exports.safeJSONParse = safeJSONParse;
 exports.randomUUID = randomUUID;
 const gun_1 = require("gun");
+const uuid_1 = require("uuid");
 /**
  * Checks if a string is a valid GunDB hash
  * @param str - String to check
@@ -195,5 +196,20 @@ function safeJSONParse(input, def = {}) {
     }
 }
 function randomUUID() {
-    throw new Error("Function not implemented.");
+    const c = globalThis?.crypto;
+    if (c?.randomUUID)
+        return c.randomUUID();
+    try {
+        if (c?.getRandomValues) {
+            const bytes = new Uint8Array(16);
+            c.getRandomValues(bytes);
+            bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+            bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC4122
+            const toHex = (n) => n.toString(16).padStart(2, "0");
+            const b = Array.from(bytes).map(toHex).join("");
+            return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
+        }
+    }
+    catch { }
+    return (0, uuid_1.v4)();
 }
