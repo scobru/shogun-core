@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.6.17-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v1.7.0-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 
@@ -20,7 +20,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
 - ✅ **Type Consistency**: Unified return types across all authentication methods
 
-## Recent Updates (v1.6.15)
+## Recent Updates (v1.7.0)
 
 ### ✅ **Type System Fixes**
 
@@ -153,7 +153,7 @@ interface SignUpResult {
   isNewUser?: boolean;
   authMethod?: AuthMethod; // ✅ ADDED
   sessionToken?: string; // ✅ ADDED
-  sea?: SEAPair; // SEA pair for session persistence
+  sea?: { pub: string; priv: string; epub: string; epriv: string }; // SEA pair for session persistence
   // OAuth flow support - ✅ ADDED
   redirectUrl?: string;
   pendingAuth?: boolean;
@@ -466,7 +466,8 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 #### Authentication
 
 - `login(username: string, password: string): Promise<AuthResult>` - Authenticate with username/password
-- `signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>` - Create new user account
+- `loginWithPair(pair: ISEAPair): Promise<AuthResult>` - Authenticate directly with a GunDB SEA pair
+- `signUp(username: string, password: string, email?: string, pair?: ISEAPair | null): Promise<SignUpResult>` - Create new user account
 - `logout(): void` - Logout current user
 - `isLoggedIn(): boolean` - Check if user is authenticated
 
@@ -564,10 +565,7 @@ shogun.on("auth:signup", (data) => {
   console.log("New user signed up:", data.username);
 });
 
-// Listen for wallet creation (Bitcoin and Ethereum wallets derived from user keys)
-shogun.on("wallet:created", (data) => {
-  console.log("Wallet created:", data.address);
-});
+// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
 
 // Listen for errors
 shogun.on("error", (error) => {
@@ -577,24 +575,7 @@ shogun.on("error", (error) => {
 
 ## Cryptographic Wallets
 
-Shogun Core automatically derives Bitcoin and Ethereum wallets from user authentication keys:
-
-```typescript
-// After successful authentication, wallets are available
-if (shogun.wallets) {
-  console.log("Bitcoin wallet:", {
-    address: shogun.wallets.secp256k1Bitcoin.address,
-    publicKey: shogun.wallets.secp256k1Bitcoin.publicKey,
-    // privateKey is available but should be handled securely
-  });
-
-  console.log("Ethereum wallet:", {
-    address: shogun.wallets.secp256k1Ethereum.address,
-    publicKey: shogun.wallets.secp256k1Ethereum.publicKey,
-    // privateKey is available but should be handled securely
-  });
-}
-```
+Nota: la derivazione automatica dei wallet e l'evento `wallet:created` sono sperimentali e non garantiti in v1.7.0.
 
 ## Error Handling
 

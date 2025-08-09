@@ -6,7 +6,7 @@ Shogun Core is a TypeScript SDK for building decentralized applications (dApps) 
 
 ## Recent Improvements
 
-### ✅ **Type Consistency Fixes (v1.6.15+)**
+### ✅ **Type Consistency Fixes (v1.7.0)**
 
 - **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
 - **Type Safety**: Fixed TypeScript inconsistencies across all plugins
@@ -117,8 +117,17 @@ class ShogunCore implements IShogunCore {
   async initialize(): Promise<void>;
 
   // Authentication Methods - ✅ FIXED TYPES
-  async login(username: string, password: string, pair?: ISEAPair): Promise<AuthResult>;
-  async signUp(username: string, password: string, email?: string, pair?: ISEAPair): Promise<SignUpResult>;
+  async login(
+    username: string,
+    password: string,
+    pair?: ISEAPair | null
+  ): Promise<AuthResult>;
+  async signUp(
+    username: string,
+    password: string,
+    email?: string,
+    pair?: ISEAPair | null
+  ): Promise<SignUpResult>;
   async loginWithPair(pair: ISEAPair): Promise<AuthResult>;
   logout(): void;
   isLoggedIn(): boolean;
@@ -133,7 +142,10 @@ class ShogunCore implements IShogunCore {
   // Event System - Type Safe
   on<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this;
   off<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this;
-  emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K]): boolean;
+  emit<K extends keyof ShogunEventMap>(
+    eventName: K,
+    data?: ShogunEventMap[K]
+  ): boolean;
 
   // Utility Methods
   exportPair(): string;
@@ -158,14 +170,24 @@ class GunInstance {
   async initialize(appScope?: string): Promise<void>;
 
   // Authentication - ✅ FIXED TYPES
-  async login(username: string, password: string, pair?: ISEAPair): Promise<AuthResult>;
-  async signUp(username: string, password: string, pair?: ISEAPair): Promise<SignUpResult>;
+  async login(
+    username: string,
+    password: string,
+    pair?: ISEAPair
+  ): Promise<AuthResult>;
+  async signUp(
+    username: string,
+    password: string,
+    pair?: ISEAPair
+  ): Promise<SignUpResult>;
   logout(): void;
   isLoggedIn(): boolean;
 
   // User Management
   async checkUsernameExists(username: string): Promise<any>;
-  async updateUserAlias(newAlias: string): Promise<{ success: boolean; error?: string }>;
+  async updateUserAlias(
+    newAlias: string
+  ): Promise<{ success: boolean; error?: string }>;
   restoreSession(): { success: boolean; userPub?: string; error?: string };
 
   // Data Operations
@@ -180,12 +202,28 @@ class GunInstance {
   async hashText(text: string): Promise<string>;
   async encrypt(data: any, key: string): Promise<string>;
   async decrypt(encryptedData: string, key: string): Promise<any>;
-  async derive(password: string | number, extra?: string[], options?: DeriveOptions): Promise<any>;
+  async derive(
+    password: string | number,
+    extra?: string[],
+    options?: DeriveOptions
+  ): Promise<any>;
 
   // Frozen Space (Immutable Data)
-  async createFrozenSpace(data: any, options?: any): Promise<{ hash: string; fullPath: string; data: any }>;
-  async getFrozenSpace(hash: string, namespace?: string, path?: string): Promise<any>;
-  async verifyFrozenSpace(data: any, hash: string, namespace?: string, path?: string): Promise<any>;
+  async createFrozenSpace(
+    data: any,
+    options?: any
+  ): Promise<{ hash: string; fullPath: string; data: any }>;
+  async getFrozenSpace(
+    hash: string,
+    namespace?: string,
+    path?: string
+  ): Promise<any>;
+  async verifyFrozenSpace(
+    data: any,
+    hash: string,
+    namespace?: string,
+    path?: string
+  ): Promise<any>;
 
   // Peer Management
   addPeer(peer: string): void;
@@ -210,23 +248,25 @@ class GunInstance {
 interface AuthResult {
   success: boolean;
   error?: string;
-  userPub?: string;           // User's public key in GunDB
-  username?: string;          // Username or identifier
-  sessionToken?: string;      // Session token if applicable
-  authMethod?: AuthMethod;    // Authentication method used
-  sea?: {                     // GunDB SEA pair for session persistence
+  userPub?: string; // User's public key in GunDB
+  username?: string; // Username or identifier
+  sessionToken?: string; // Session token if applicable
+  authMethod?: AuthMethod; // Authentication method used
+  sea?: {
+    // GunDB SEA pair for session persistence
     pub: string;
     priv: string;
     epub: string;
     epriv: string;
   };
   // OAuth-specific properties
-  redirectUrl?: string;       // OAuth redirect URL
-  pendingAuth?: boolean;      // Indicates pending OAuth flow
-  message?: string;          // Status message
-  provider?: string;         // OAuth provider name
-  isNewUser?: boolean;       // True if this was a registration
-  user?: {                   // OAuth user data
+  redirectUrl?: string; // OAuth redirect URL
+  pendingAuth?: boolean; // Indicates pending OAuth flow
+  message?: string; // Status message
+  provider?: string; // OAuth provider name
+  isNewUser?: boolean; // True if this was a registration
+  user?: {
+    // OAuth user data
     userPub?: string;
     username?: string;
     email?: string;
@@ -255,7 +295,7 @@ interface SignUpResult {
   isNewUser?: boolean;
   authMethod?: AuthMethod;
   sessionToken?: string;
-  sea?: SEAPair;
+  sea?: { pub: string; priv: string; epub: string; epriv: string };
   // OAuth flow support - ✅ ADDED
   redirectUrl?: string;
   pendingAuth?: boolean;
@@ -264,7 +304,14 @@ interface SignUpResult {
 }
 
 // Supported authentication methods
-type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
+type AuthMethod =
+  | "password"
+  | "webauthn"
+  | "web3"
+  | "nostr"
+  | "oauth"
+  | "bitcoin"
+  | "pair";
 ```
 
 ### 1. WebAuthn Plugin API - ✅ FIXED TYPES
@@ -282,36 +329,87 @@ class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
   isSupported(): boolean;
 
   // WebAuthn-specific Methods
-  async generateCredentials(username: string, existingCredential?: WebAuthnCredentials, isLogin?: boolean): Promise<WebAuthnUniformCredentials>;
-  async createAccount(username: string, credentials: WebAuthnCredentials | null, isNewDevice?: boolean): Promise<CredentialResult>;
-  async authenticateUser(username: string, salt: string | null, options?: any): Promise<CredentialResult>;
+  async generateCredentials(
+    username: string,
+    existingCredential?: WebAuthnCredentials,
+    isLogin?: boolean
+  ): Promise<WebAuthnUniformCredentials>;
+  async createAccount(
+    username: string,
+    credentials: WebAuthnCredentials | null,
+    isNewDevice?: boolean
+  ): Promise<CredentialResult>;
+  async authenticateUser(
+    username: string,
+    salt: string | null,
+    options?: any
+  ): Promise<CredentialResult>;
   abortAuthentication(): void;
-  async removeDevice(username: string, credentialId: string, credentials: WebAuthnCredentials): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
+  async removeDevice(
+    username: string,
+    credentialId: string,
+    credentials: WebAuthnCredentials
+  ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
 
   // Oneshot Signing API
-  async createSigningCredential(username: string): Promise<WebAuthnSigningCredential>;
-  createAuthenticator(credentialId: string): (data: any) => Promise<AuthenticatorAssertionResponse>;
-  async createDerivedKeyPair(credentialId: string, username: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(data: any, credentialId: string, username: string, extra?: string[]): Promise<string>;
-  async createGunUserFromSigningCredential(credentialId: string, username: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+  async createSigningCredential(
+    username: string
+  ): Promise<WebAuthnSigningCredential>;
+  createAuthenticator(
+    credentialId: string
+  ): (data: any) => Promise<AuthenticatorAssertionResponse>;
+  async createDerivedKeyPair(
+    credentialId: string,
+    username: string,
+    extra?: string[]
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(
+    data: any,
+    credentialId: string,
+    username: string,
+    extra?: string[]
+  ): Promise<string>;
+  async createGunUserFromSigningCredential(
+    credentialId: string,
+    username: string
+  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
 
   // Credential Management
-  getSigningCredential(credentialId: string): WebAuthnSigningCredential | undefined;
+  getSigningCredential(
+    credentialId: string
+  ): WebAuthnSigningCredential | undefined;
   listSigningCredentials(): WebAuthnSigningCredential[];
   removeSigningCredential(credentialId: string): boolean;
   getGunUserPubFromSigningCredential(credentialId: string): string | undefined;
   getHashedCredentialId(credentialId: string): string | undefined;
 
   // Consistency Verification
-  async verifyConsistency(credentialId: string, username: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
-  async setupConsistentOneshotSigning(username: string): Promise<{ credential: WebAuthnSigningCredential; authenticator: Function; gunUser: any; pub: string; hashedCredentialId: string }>;
+  async verifyConsistency(
+    credentialId: string,
+    username: string,
+    expectedUserPub?: string
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }>;
+  async setupConsistentOneshotSigning(username: string): Promise<{
+    credential: WebAuthnSigningCredential;
+    authenticator: Function;
+    gunUser: any;
+    pub: string;
+    hashedCredentialId: string;
+  }>;
 }
 ```
 
 ### 2. Web3 Plugin API - ✅ FIXED TYPES
 
 ```typescript
-class Web3ConnectorPlugin extends BasePlugin implements Web3ConectorPluginInterface {
+class Web3ConnectorPlugin
+  extends BasePlugin
+  implements Web3ConectorPluginInterface
+{
   name = "web3";
   version = "1.0.0";
 
@@ -333,11 +431,22 @@ class Web3ConnectorPlugin extends BasePlugin implements Web3ConectorPluginInterf
   cleanup(): void;
 
   // Oneshot Signing API
-  async createSigningCredential(address: string): Promise<Web3SigningCredential>;
+  async createSigningCredential(
+    address: string
+  ): Promise<Web3SigningCredential>;
   createAuthenticator(address: string): (data: any) => Promise<string>;
-  async createDerivedKeyPair(address: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
-  async createGunUserFromSigningCredential(address: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+  async createDerivedKeyPair(
+    address: string,
+    extra?: string[]
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(
+    data: any,
+    address: string,
+    extra?: string[]
+  ): Promise<string>;
+  async createGunUserFromSigningCredential(
+    address: string
+  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
 
   // Credential Management
   getSigningCredential(address: string): Web3SigningCredential | undefined;
@@ -347,15 +456,31 @@ class Web3ConnectorPlugin extends BasePlugin implements Web3ConectorPluginInterf
   getPassword(address: string): string | undefined;
 
   // Consistency Verification
-  async verifyConsistency(address: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
-  async setupConsistentOneshotSigning(address: string): Promise<{ credential: Web3SigningCredential; authenticator: Function; gunUser: any; username: string; password: string }>;
+  async verifyConsistency(
+    address: string,
+    expectedUserPub?: string
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }>;
+  async setupConsistentOneshotSigning(address: string): Promise<{
+    credential: Web3SigningCredential;
+    authenticator: Function;
+    gunUser: any;
+    username: string;
+    password: string;
+  }>;
 }
 ```
 
 ### 3. Nostr Plugin API - ✅ FIXED TYPES
 
 ```typescript
-class NostrConnectorPlugin extends BasePlugin implements NostrConnectorPluginInterface {
+class NostrConnectorPlugin
+  extends BasePlugin
+  implements NostrConnectorPluginInterface
+{
   name = "nostr";
   version = "1.0.0";
 
@@ -372,21 +497,42 @@ class NostrConnectorPlugin extends BasePlugin implements NostrConnectorPluginInt
   isAlbyAvailable(): boolean;
   isNostrExtensionAvailable(): boolean;
   async connectNostrWallet(): Promise<ConnectionResult>;
-  async connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+  async connectBitcoinWallet(
+    type?: "alby" | "nostr" | "manual"
+  ): Promise<ConnectionResult>;
 
   // Credential and Signature Management
-  async generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
-  async verifySignature(message: string, signature: string, address: string): Promise<boolean>;
+  async generateCredentials(
+    address: string,
+    signature: string,
+    message: string
+  ): Promise<NostrConnectorCredentials>;
+  async verifySignature(
+    message: string,
+    signature: string,
+    address: string
+  ): Promise<boolean>;
   async generatePassword(signature: string): Promise<string>;
   clearSignatureCache(address?: string): void;
   cleanup(): void;
 
   // Oneshot Signing API
-  async createSigningCredential(address: string): Promise<NostrSigningCredential>;
+  async createSigningCredential(
+    address: string
+  ): Promise<NostrSigningCredential>;
   createAuthenticator(address: string): (data: any) => Promise<string>;
-  async createDerivedKeyPair(address: string, extra?: string[]): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
-  async createGunUserFromSigningCredential(address: string): Promise<{ success: boolean; userPub?: string; error?: string }>;
+  async createDerivedKeyPair(
+    address: string,
+    extra?: string[]
+  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
+  async signWithDerivedKeys(
+    data: any,
+    address: string,
+    extra?: string[]
+  ): Promise<string>;
+  async createGunUserFromSigningCredential(
+    address: string
+  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
 
   // Credential Management
   getSigningCredential(address: string): NostrSigningCredential | undefined;
@@ -396,8 +542,21 @@ class NostrConnectorPlugin extends BasePlugin implements NostrConnectorPluginInt
   getPassword(address: string): string | undefined;
 
   // Consistency Verification
-  async verifyConsistency(address: string, expectedUserPub?: string): Promise<{ consistent: boolean; actualUserPub?: string; expectedUserPub?: string }>;
-  async setupConsistentOneshotSigning(address: string): Promise<{ credential: NostrSigningCredential; authenticator: Function; gunUser: any; username: string; password: string }>;
+  async verifyConsistency(
+    address: string,
+    expectedUserPub?: string
+  ): Promise<{
+    consistent: boolean;
+    actualUserPub?: string;
+    expectedUserPub?: string;
+  }>;
+  async setupConsistentOneshotSigning(address: string): Promise<{
+    credential: NostrSigningCredential;
+    authenticator: Function;
+    gunUser: any;
+    username: string;
+    password: string;
+  }>;
 }
 ```
 
@@ -416,19 +575,37 @@ class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   isSupported(): boolean;
   getAvailableProviders(): OAuthProvider[];
   async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
-  async completeOAuth(provider: OAuthProvider, authCode: string, state?: string): Promise<OAuthConnectionResult>;
-  async handleOAuthCallback(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>; // ✅ CORRECT - Callback completes auth
+  async completeOAuth(
+    provider: OAuthProvider,
+    authCode: string,
+    state?: string
+  ): Promise<OAuthConnectionResult>;
+  async handleOAuthCallback(
+    provider: OAuthProvider,
+    authCode: string,
+    state: string
+  ): Promise<AuthResult>; // ✅ CORRECT - Callback completes auth
 
   // Credential and User Management
-  async generateCredentials(userInfo: OAuthUserInfo, provider: OAuthProvider): Promise<OAuthCredentials>;
-  getCachedUserInfo(userId: string, provider: OAuthProvider): OAuthUserInfo | null;
+  async generateCredentials(
+    userInfo: OAuthUserInfo,
+    provider: OAuthProvider
+  ): Promise<OAuthCredentials>;
+  getCachedUserInfo(
+    userId: string,
+    provider: OAuthProvider
+  ): OAuthUserInfo | null;
   clearUserCache(userId?: string, provider?: OAuthProvider): void;
 
   // Configuration
   configure(config: Partial<OAuthConfig>): void;
 
   // Legacy Methods (Deprecated)
-  async handleSimpleOAuth(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
+  async handleSimpleOAuth(
+    provider: OAuthProvider,
+    authCode: string,
+    state: string
+  ): Promise<AuthResult>;
 }
 ```
 
@@ -480,13 +657,13 @@ const web3Plugin = shogun.getPlugin<Web3ConnectorPlugin>("web3");
 
 if (web3Plugin && web3Plugin.isAvailable()) {
   const connectionResult = await web3Plugin.connectMetaMask();
-  
+
   if (connectionResult.success) {
     const address = connectionResult.address!;
-    
+
     // Login - Returns AuthResult ✅
     const loginResult: AuthResult = await web3Plugin.login(address);
-    
+
     // Register - Returns SignUpResult ✅
     const signUpResult: SignUpResult = await web3Plugin.signUp(address);
   }
@@ -504,12 +681,14 @@ if (oauthPlugin && oauthPlugin.isSupported()) {
   if (signUpResult.success && signUpResult.redirectUrl) {
     window.location.href = signUpResult.redirectUrl; // Redirect to Google
   }
-  
+
   // Handle callback - Returns AuthResult ✅
   const callbackResult: AuthResult = await oauthPlugin.handleOAuthCallback(
-    "google", authCode, state
+    "google",
+    authCode,
+    state
   );
-  
+
   if (callbackResult.success && callbackResult.user) {
     console.log("OAuth user:", callbackResult.user.email);
   }
@@ -521,64 +700,70 @@ if (oauthPlugin && oauthPlugin.isSupported()) {
 ### React Hook for OAuth
 
 ```typescript
-import { useCallback } from 'react';
+import { useCallback } from "react";
 
 export const useOAuth = (protocol) => {
-  const loginWithOAuth = useCallback(async (provider = 'google') => {
-    if (!protocol) {
-      throw new Error("Protocol not available");
-    }
-    
-    try {
-      // Returns AuthResult ✅
-      const result: AuthResult = await protocol.loginWithOAuth(provider);
-      
-      if (result.success && result.redirectUrl) {
-        // The protocol handles the redirect
-        console.log("OAuth login initiated, redirecting...");
-        return result;
-      } else if (result.success) {
-        // Direct login completed
-        console.log("OAuth login completed directly");
-        return result;
-      } else {
-        throw new Error(result.error || "OAuth login failed");
+  const loginWithOAuth = useCallback(
+    async (provider = "google") => {
+      if (!protocol) {
+        throw new Error("Protocol not available");
       }
-    } catch (error) {
-      console.error("OAuth login error:", error);
-      throw error;
-    }
-  }, [protocol]);
 
-  const registerWithOAuth = useCallback(async (provider = 'google') => {
-    if (!protocol) {
-      throw new Error("Protocol not available");
-    }
-    
-    try {
-      // Returns SignUpResult ✅
-      const result: SignUpResult = await protocol.registerWithOAuth(provider);
-      
-      if (result.success && result.redirectUrl) {
-        // The protocol handles the redirect
-        console.log("OAuth registration initiated, redirecting...");
-        return result;
-      } else if (result.success) {
-        // Direct registration completed
-        console.log("OAuth registration completed directly");
-        return result;
-      } else {
-        throw new Error(result.error || "OAuth registration failed");
+      try {
+        // Returns AuthResult ✅
+        const result: AuthResult = await protocol.loginWithOAuth(provider);
+
+        if (result.success && result.redirectUrl) {
+          // The protocol handles the redirect
+          console.log("OAuth login initiated, redirecting...");
+          return result;
+        } else if (result.success) {
+          // Direct login completed
+          console.log("OAuth login completed directly");
+          return result;
+        } else {
+          throw new Error(result.error || "OAuth login failed");
+        }
+      } catch (error) {
+        console.error("OAuth login error:", error);
+        throw error;
       }
-    } catch (error) {
-      console.error("OAuth registration error:", error);
-      throw error;
-    }
-  }, [protocol]);
+    },
+    [protocol]
+  );
+
+  const registerWithOAuth = useCallback(
+    async (provider = "google") => {
+      if (!protocol) {
+        throw new Error("Protocol not available");
+      }
+
+      try {
+        // Returns SignUpResult ✅
+        const result: SignUpResult = await protocol.registerWithOAuth(provider);
+
+        if (result.success && result.redirectUrl) {
+          // The protocol handles the redirect
+          console.log("OAuth registration initiated, redirecting...");
+          return result;
+        } else if (result.success) {
+          // Direct registration completed
+          console.log("OAuth registration completed directly");
+          return result;
+        } else {
+          throw new Error(result.error || "OAuth registration failed");
+        }
+      } catch (error) {
+        console.error("OAuth registration error:", error);
+        throw error;
+      }
+    },
+    [protocol]
+  );
 
   return {
     loginWithOAuth,
-    registerWithOAuth
+    registerWithOAuth,
   };
 };
 ```
@@ -604,10 +789,7 @@ shogun.on("auth:signup", (data) => {
   console.log("Method:", data.method);
 });
 
-// Listen for wallet creation (automatic derivation)
-shogun.on("wallet:created", (data) => {
-  console.log("Wallet created:", data.address);
-});
+// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
 
 // Listen for GunDB operations
 shogun.on("gun:put", (data) => {
@@ -637,7 +819,7 @@ if (shogun.wallets) {
     publicKey: shogun.wallets.secp256k1Bitcoin.publicKey,
     // privateKey is available but should be handled securely
   });
-  
+
   console.log("Ethereum wallet:", {
     address: shogun.wallets.secp256k1Ethereum.address,
     publicKey: shogun.wallets.secp256k1Ethereum.publicKey,
@@ -645,10 +827,7 @@ if (shogun.wallets) {
   });
 }
 
-// Listen for wallet creation events
-shogun.on("wallet:created", (data) => {
-  console.log("New wallet derived:", data.address, data.path);
-});
+// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
 ```
 
 ## OAuth Security Features
@@ -708,12 +887,12 @@ export class CustomAuthPlugin extends BasePlugin {
   // ✅ MUST RETURN AuthResult
   async login(identifier: string): Promise<AuthResult> {
     const core = this.assertInitialized();
-    
+
     // Custom authentication logic
     // Generate credentials, verify identity, etc.
-    
+
     const result = await core.login(username, "", keypair);
-    
+
     if (result.success) {
       core.emit("auth:login", {
         userPub: result.userPub,
@@ -721,7 +900,7 @@ export class CustomAuthPlugin extends BasePlugin {
         method: "custom",
       });
     }
-    
+
     return result;
   }
 
@@ -729,10 +908,10 @@ export class CustomAuthPlugin extends BasePlugin {
   async signUp(identifier: string): Promise<SignUpResult> {
     // Custom registration logic
     const core = this.assertInitialized();
-    
+
     // Custom signup logic
     const result = await core.signUp(username, "", "", keypair);
-    
+
     return result;
   }
 
