@@ -3,7 +3,7 @@ const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = {
-  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  mode: process.env.NODE_ENV === "production" ? "production" : "development",
   entry: "./src/index.ts",
   output: {
     path: path.resolve(__dirname, "dist/browser"),
@@ -20,11 +20,11 @@ module.exports = {
     extensions: [".ts", ".js", ".json"],
     alias: {
       // Explicit aliases for Gun.js modules
-      "gun$": path.resolve(__dirname, "node_modules/gun/gun.js"),
+      gun$: path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
       "gun/lib/then": path.resolve(__dirname, "node_modules/gun/lib/then.js"),
-      "gun": path.resolve(__dirname, "node_modules/gun"),
+      gun: path.resolve(__dirname, "node_modules/gun"),
     },
     fallback: {
       crypto: require.resolve("crypto-browserify"),
@@ -62,27 +62,23 @@ module.exports = {
         test: /node_modules\/gun\/(gun\.js|sea\.js)$/,
         use: [
           {
-            loader: 'babel-loader',
+            loader: "babel-loader",
             options: {
-              presets: ['@babel/preset-env'],
+              presets: ["@babel/preset-env"],
               plugins: [
-                '@babel/plugin-transform-modules-commonjs',
-                '@babel/plugin-proposal-optional-chaining'
-              ]
-            }
-          }
-        ]
-      }
+                "@babel/plugin-transform-modules-commonjs",
+                "@babel/plugin-proposal-optional-chaining",
+              ],
+            },
+          },
+        ],
+      },
     ],
   },
   plugins: [
     new webpack.ProvidePlugin({
       Buffer: ["buffer", "Buffer"],
       process: "process/browser",
-    }),
-    new webpack.DefinePlugin({
-      "crypto.randomUUID": 
-        'function() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0, v = c == "x" ? r : (r & 0x3 | 0x8); return v.toString(16); })}',
     }),
     // Ignore specific Gun.js warnings
     new webpack.IgnorePlugin({
@@ -93,25 +89,25 @@ module.exports = {
     new webpack.optimize.ModuleConcatenationPlugin(),
   ],
   optimization: {
-    minimize: process.env.NODE_ENV === 'production',
+    minimize: process.env.NODE_ENV === "production",
     minimizer: [
       new TerserPlugin({
         terserOptions: {
           compress: {
-            drop_console: process.env.NODE_ENV === 'production',
+            drop_console: process.env.NODE_ENV === "production",
             drop_debugger: true,
           },
         },
       }),
     ],
     splitChunks: {
-      chunks: 'async',
+      chunks: "async",
       minSize: 20000,
       maxSize: 200000,
       minChunks: 1,
       maxAsyncRequests: 30,
       maxInitialRequests: 30,
-      automaticNameDelimiter: '~',
+      automaticNameDelimiter: "~",
       enforceSizeThreshold: 50000,
       cacheGroups: {
         defaultVendors: {
@@ -123,17 +119,17 @@ module.exports = {
           minChunks: 2,
           priority: -20,
           reuseExistingChunk: true,
-        }
-      }
-    }
+        },
+      },
+    },
   },
   performance: {
-    maxEntrypointSize: 1000000,  // Increased to 1MB
-    maxAssetSize: 1000000,       // Increased to 1MB
-    hints: 'warning'
+    maxEntrypointSize: 1000000, // Increased to 1MB
+    maxAssetSize: 1000000, // Increased to 1MB
+    hints: "warning",
   },
   // Add source map for better debugging
-  devtool: 'source-map',
+  devtool: "source-map",
   stats: {
     warningsFilter: [
       /the request of a dependency is an expression/,
