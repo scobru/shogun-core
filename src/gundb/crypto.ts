@@ -6,6 +6,7 @@
 
 import { ISEAPair } from "gun";
 import { SEA } from "gun";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Checks if a string is a valid GunDB hash
@@ -37,7 +38,7 @@ export async function encrypt(data: any, key: string): Promise<string> {
  */
 export async function decrypt(
   encryptedData: string,
-  key: string,
+  key: string
 ): Promise<string | any> {
   if (!SEA || !SEA.decrypt) {
     throw new Error("SEA is not available");
@@ -55,7 +56,7 @@ export async function decrypt(
 export async function encFor(
   data: any,
   sender: ISEAPair,
-  receiver: { epub: string },
+  receiver: { epub: string }
 ) {
   const secret = (await SEA.secret(receiver.epub, sender)) as string;
   const encryptedData = await SEA.encrypt(data, secret);
@@ -72,7 +73,7 @@ export async function encFor(
 export async function decFrom(
   data: any,
   sender: { epub: string },
-  receiver: ISEAPair,
+  receiver: ISEAPair
 ) {
   const secret = (await SEA.secret(sender.epub, receiver)) as string;
   const decryptedData = await SEA.decrypt(data, secret);
@@ -208,5 +209,18 @@ export function safeJSONParse(input: string, def = {}) {
 }
 
 export function randomUUID() {
-  throw new Error("Function not implemented.");
+  const c = (globalThis as any)?.crypto as Crypto | undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  try {
+    if (c?.getRandomValues) {
+      const bytes = new Uint8Array(16);
+      c.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC4122
+      const toHex = (n: number) => n.toString(16).padStart(2, "0");
+      const b = Array.from(bytes).map(toHex).join("");
+      return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
+    }
+  } catch {}
+  return uuidv4();
 }
