@@ -679,18 +679,60 @@ This project includes a comprehensive test suite that covers:
 
 ## Running Tests
 
+You can eseguire i test sia dalla root del monorepo sia entrando nella cartella `shogun-core`.
+
+Inside `shogun-core/` directory:
+
 ```bash
-# Run all tests
-npm test
+# Install deps
+yarn install
 
-# Run tests in watch mode
-npm run test:watch
+# Tutti i test (una sola esecuzione) con coverage
+yarn test:ci
 
-# Run tests with coverage
-npm run test:coverage
+# Watch mode
+yarn test:watch
 
-# Run tests in CI mode
-npm run test:ci
+# Coverage (report HTML in coverage/lcov-report/index.html)
+yarn coverage
+
+# Solo i test dei plugin
+yarn test src/__tests__/plugins
+
+# Evita conflitti di config Jest (se servisse)
+yarn jest --ci --coverage --watchAll=false --config jest.config.js
+```
+
+From repository root (senza cambiare directory):
+
+```bash
+# Install deps
+yarn --cwd shogun-core install
+
+# Tutti i test con coverage (CI‑like)
+yarn --cwd shogun-core test:ci
+
+# Solo plugin tests
+yarn --cwd shogun-core test src/__tests__/plugins
+
+# Coverage
+yarn --cwd shogun-core coverage
+
+# Watch mode
+yarn --cwd shogun-core test:watch
+
+# Se compaiono più configurazioni Jest, specifica esplicitamente il config file
+yarn --cwd shogun-core jest --ci --coverage --watchAll=false --config jest.config.js
+```
+
+CI & QA scripts:
+
+```bash
+# Mutation testing (Stryker) – più lento, richiede devDeps installate
+yarn --cwd shogun-core mutation
+
+# SAST (Semgrep) – richiede semgrep installato (es. `pip install semgrep`)
+yarn --cwd shogun-core sast
 ```
 
 ## Test Coverage

@@ -38,7 +38,7 @@ export async function encrypt(data: any, key: string): Promise<string> {
  */
 export async function decrypt(
   encryptedData: string,
-  key: string
+  key: string,
 ): Promise<string | any> {
   if (!SEA || !SEA.decrypt) {
     throw new Error("SEA is not available");
@@ -56,7 +56,7 @@ export async function decrypt(
 export async function encFor(
   data: any,
   sender: ISEAPair,
-  receiver: { epub: string }
+  receiver: { epub: string },
 ) {
   const secret = (await SEA.secret(receiver.epub, sender)) as string;
   const encryptedData = await SEA.encrypt(data, secret);
@@ -73,7 +73,7 @@ export async function encFor(
 export async function decFrom(
   data: any,
   sender: { epub: string },
-  receiver: ISEAPair
+  receiver: ISEAPair,
 ) {
   const secret = (await SEA.secret(sender.epub, receiver)) as string;
   const decryptedData = await SEA.decrypt(data, secret);
