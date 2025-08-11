@@ -207,6 +207,10 @@ export class NostrConnectorPlugin
     address: string,
   ): Promise<NostrSigningCredential> {
     try {
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.createSigningCredential === "function") {
+        return await conn.createSigningCredential(address);
+      }
       return await this.assertSigner().createSigningCredential(address);
     } catch (error: any) {
       console.error(
@@ -221,6 +225,10 @@ export class NostrConnectorPlugin
    */
   createAuthenticator(address: string): (data: any) => Promise<string> {
     try {
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.createAuthenticator === "function") {
+        return conn.createAuthenticator(address);
+      }
       return this.assertSigner().createAuthenticator(address);
     } catch (error: any) {
       console.error(`Error creating Nostr authenticator: ${error.message}`);
@@ -236,6 +244,10 @@ export class NostrConnectorPlugin
     extra?: string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.createDerivedKeyPair === "function") {
+        return await conn.createDerivedKeyPair(address, extra);
+      }
       return await this.assertSigner().createDerivedKeyPair(address, extra);
     } catch (error: any) {
       console.error(`Error creating derived key pair: ${error.message}`);
@@ -252,11 +264,11 @@ export class NostrConnectorPlugin
     extra?: string[],
   ): Promise<string> {
     try {
-      return await this.assertSigner().signWithDerivedKeys(
-        data,
-        address,
-        extra,
-      );
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.signWithDerivedKeys === "function") {
+        return await conn.signWithDerivedKeys(data, address, extra);
+      }
+      return await this.assertSigner().signWithDerivedKeys(data, address, extra);
     } catch (error: any) {
       console.error(`Error signing with derived keys: ${error.message}`);
       throw error;
@@ -267,6 +279,10 @@ export class NostrConnectorPlugin
    * Get signing credential by address
    */
   getSigningCredential(address: string): NostrSigningCredential | undefined {
+    const conn = this.assertBitcoinConnector() as any;
+    if (typeof conn.getSigningCredential === "function") {
+      return conn.getSigningCredential(address);
+    }
     return this.assertSigner().getCredential(address);
   }
 
@@ -274,6 +290,10 @@ export class NostrConnectorPlugin
    * List all signing credentials
    */
   listSigningCredentials(): NostrSigningCredential[] {
+    const conn = this.assertBitcoinConnector() as any;
+    if (typeof conn.listSigningCredentials === "function") {
+      return conn.listSigningCredentials();
+    }
     return this.assertSigner().listCredentials();
   }
 
@@ -281,6 +301,10 @@ export class NostrConnectorPlugin
    * Remove a signing credential
    */
   removeSigningCredential(address: string): boolean {
+    const conn = this.assertBitcoinConnector() as any;
+    if (typeof conn.removeSigningCredential === "function") {
+      return conn.removeSigningCredential(address);
+    }
     return this.assertSigner().removeCredential(address);
   }
 
@@ -294,6 +318,10 @@ export class NostrConnectorPlugin
     address: string,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.createGunUserFromSigningCredential === "function") {
+        return await conn.createGunUserFromSigningCredential(address);
+      }
       const core = this.assertInitialized();
       return await this.assertSigner().createGunUser(address, core.gun);
     } catch (error: any) {
@@ -308,6 +336,10 @@ export class NostrConnectorPlugin
    * Get the Gun user public key for a signing credential
    */
   getGunUserPubFromSigningCredential(address: string): string | undefined {
+    const conn = this.assertBitcoinConnector() as any;
+    if (typeof conn.getGunUserPubFromSigningCredential === "function") {
+      return conn.getGunUserPubFromSigningCredential(address);
+    }
     return this.assertSigner().getGunUserPub(address);
   }
 
@@ -315,6 +347,10 @@ export class NostrConnectorPlugin
    * Get the password (for consistency checking)
    */
   getPassword(address: string): string | undefined {
+    const conn = this.assertBitcoinConnector() as any;
+    if (typeof conn.getPassword === "function") {
+      return conn.getPassword(address);
+    }
     return this.assertSigner().getPassword(address);
   }
 
@@ -331,10 +367,11 @@ export class NostrConnectorPlugin
     expectedUserPub?: string;
   }> {
     try {
-      return await this.assertSigner().verifyConsistency(
-        address,
-        expectedUserPub,
-      );
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.verifyConsistency === "function") {
+        return await conn.verifyConsistency(address, expectedUserPub);
+      }
+      return await this.assertSigner().verifyConsistency(address, expectedUserPub);
     } catch (error: any) {
       console.error(`Error verifying Nostr consistency: ${error.message}`);
       return { consistent: false };
@@ -353,22 +390,14 @@ export class NostrConnectorPlugin
     password: string;
   }> {
     try {
-      // 1. Create signing credential (with consistent password generation)
+      const conn = this.assertBitcoinConnector() as any;
+      if (typeof conn.setupConsistentOneshotSigning === "function") {
+        return await conn.setupConsistentOneshotSigning(address);
+      }
       const credential = await this.createSigningCredential(address);
-
-      // 2. Create authenticator
       const authenticator = this.createAuthenticator(address);
-
-      // 3. Create Gun user (same as normal approach)
       const gunUser = await this.createGunUserFromSigningCredential(address);
-
-      return {
-        credential,
-        authenticator,
-        gunUser,
-        username: credential.username,
-        password: credential.password,
-      };
+      return { credential, authenticator, gunUser, username: (credential as any).username, password: (credential as any).password } as any;
     } catch (error: any) {
       console.error(
         `Error setting up consistent Nostr oneshot signing: ${error.message}`,

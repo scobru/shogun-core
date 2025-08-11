@@ -10,7 +10,7 @@ export type { WebauthnPluginInterface } from "./webauthn/types";
 // Ethereum plugin exports
 export { Web3Connector } from "./web3/web3Connector";
 export { Web3ConnectorPlugin } from "./web3/web3ConnectorPlugin";
-export type { Web3ConectorPluginInterface } from "./web3/types";
+export type { Web3ConnectorPluginInterface } from "./web3/types";
 
 // Bitcoin plugin exports
 export { NostrConnector } from "./nostr/nostrConnector";

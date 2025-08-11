@@ -46,7 +46,13 @@ export class EventEmitter<
       try {
         listener(data);
       } catch (error) {
-        console.error(`Error in event listener for ${String(event)}:`, error);
+        // Ensure error is properly formatted for console.error
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error(
+          `Error in event listener for ${String(event)}:`,
+          errorMessage
+        );
       }
     });
 

@@ -29,6 +29,7 @@ export default async function (
       : pwd
     : crypto.getRandomValues(new Uint8Array(32));
 
+  // Mix extra into password bytes to ensure different results for different inputs
   const extras = extra
     ? (Array.isArray(extra) ? extra : [extra]).map((e) =>
         normalizeString(e.toString()),
@@ -50,8 +51,8 @@ export default async function (
   // Mantieni comportamento esistente (P-256) come default
   const {
     includeP256 = true,
-    includeSecp256k1Bitcoin = false,
-    includeSecp256k1Ethereum = false,
+    includeSecp256k1Bitcoin = true,
+    includeSecp256k1Ethereum = true,
   } = options;
 
   if (includeP256) {

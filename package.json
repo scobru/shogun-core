@@ -90,6 +90,9 @@
     "@stryker-mutator/typescript-checker": "^8.3.1"
   }
   ,
+  "engines": {
+    "node": ">=18"
+  },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",

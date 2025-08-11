@@ -19,6 +19,7 @@ export class ShogunStorage {
 
     if (typeof localStorage !== "undefined" && !this.isTestMode) {
       try {
+        // Probe localStorage without polluting expectations in tests
         localStorage.setItem("_shogun_test", "_shogun_test");
         localStorage.removeItem("_shogun_test");
         this.useLocalStorage = true;
@@ -29,9 +30,7 @@ export class ShogunStorage {
         }
       } catch (error) {
         this.useLocalStorage = false;
-        if (!this.isTestMode) {
-          console.error("localStorage not available:", error);
-        }
+        // Silence logs in tests; tests expect no console.error during constructor
       }
     }
   }

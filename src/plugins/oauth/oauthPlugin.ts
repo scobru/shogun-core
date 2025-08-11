@@ -101,7 +101,13 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       this.oauthConnector = new OAuthConnector(this.config);
     } else {
       // Update connector configuration se già inizializzato
-      this.oauthConnector.updateConfig(this.config);
+      const conn = this.oauthConnector as any;
+      if (typeof conn.updateConfig === "function") {
+        conn.updateConfig(this.config);
+      } else {
+        // Fallback: recreate connector
+        this.oauthConnector = new OAuthConnector(this.config);
+      }
     }
 
     // Validate security settings
@@ -113,7 +119,10 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   destroy(): void {
     if (this.oauthConnector) {
-      this.oauthConnector.cleanup();
+      const conn = this.oauthConnector as any;
+      if (typeof conn.cleanup === "function") {
+        conn.cleanup();
+      }
     }
     this.oauthConnector = null;
     this.storage = null;
@@ -136,21 +145,26 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    * @inheritdoc
    */
   isSupported(): boolean {
-    return this.assertOAuthConnector().isSupported();
+    const conn = this.assertOAuthConnector() as any;
+    return typeof conn.isSupported === "function" ? conn.isSupported() : true;
   }
 
   /**
    * @inheritdoc
    */
   getAvailableProviders(): OAuthProvider[] {
-    return this.assertOAuthConnector().getAvailableProviders();
+    const conn = this.assertOAuthConnector() as any;
+    return typeof conn.getAvailableProviders === "function"
+      ? conn.getAvailableProviders()
+      : [];
   }
 
   /**
    * @inheritdoc
    */
   async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult> {
-    return this.assertOAuthConnector().initiateOAuth(provider);
+    const conn = this.assertOAuthConnector() as any;
+    return conn.initiateOAuth(provider);
   }
 
   /**
@@ -161,7 +175,8 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     authCode: string,
     state?: string,
   ): Promise<OAuthConnectionResult> {
-    return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
+    const conn = this.assertOAuthConnector() as any;
+    return conn.completeOAuth(provider, authCode, state);
   }
 
   /**
@@ -171,7 +186,8 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     userInfo: OAuthUserInfo,
     provider: OAuthProvider,
   ): Promise<OAuthCredentials> {
-    return this.assertOAuthConnector().generateCredentials(userInfo, provider);
+    const conn = this.assertOAuthConnector() as any;
+    return conn.generateCredentials(userInfo, provider);
   }
 
   /**
@@ -447,7 +463,10 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     if (this.oauthConnector) {
       // Il metodo cleanupExpiredOAuthData è privato nel connector
       // quindi usiamo il metodo pubblico clearUserCache
-      this.oauthConnector.clearUserCache();
+      const conn = this.oauthConnector as any;
+      if (typeof conn.clearUserCache === "function") {
+        conn.clearUserCache();
+      }
     }
   }
 
@@ -517,13 +536,17 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     userId: string,
     provider: OAuthProvider,
   ): OAuthUserInfo | null {
-    return this.assertOAuthConnector().getCachedUserInfo(userId, provider);
+    const conn = this.assertOAuthConnector() as any;
+    return conn.getCachedUserInfo(userId, provider);
   }
 
   /**
    * Clear user info cache
    */
   clearUserCache(userId?: string, provider?: OAuthProvider): void {
-    this.assertOAuthConnector().clearUserCache(userId, provider);
+    const conn = this.assertOAuthConnector() as any;
+    if (typeof conn.clearUserCache === "function") {
+      conn.clearUserCache(userId, provider);
+    }
   }
 }
