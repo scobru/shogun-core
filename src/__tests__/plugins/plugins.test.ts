@@ -240,7 +240,17 @@ describe("Plugin system and plugin functionality", () => {
     // In ambiente Node non esiste window, quindi non supportato
     // L'inizializzazione non deve lanciare errori e isSupported deve essere false
     const webauthn = core.getPlugin<any>(CorePlugins.WebAuthn)!;
-    expect(webauthn.isSupported()).toBe(false);
+    
+    // Rimuovi temporaneamente il mock di window per questo test
+    const originalWindow = global.window;
+    delete (global as any).window;
+    
+    try {
+      expect(webauthn.isSupported()).toBe(false);
+    } finally {
+      // Ripristina il mock
+      (global as any).window = originalWindow;
+    }
   });
 
   it("unregister destroys plugin and removes it", async () => {

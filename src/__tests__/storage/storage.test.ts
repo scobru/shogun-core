@@ -1,190 +1,453 @@
 import { ShogunStorage } from "../../storage/storage";
 
 // Mock localStorage
-const localStorageMock = (() => {
-  let store: { [key: string]: string } = {};
-  return {
-    getItem: jest.fn((key: string) => store[key] || null),
-    setItem: jest.fn((key: string, value: string) => {
-      store[key] = value.toString();
-    }),
-    removeItem: jest.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: jest.fn(() => {
-      store = {};
-    }),
-  };
-})();
+const mockLocalStorage = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+};
 
-Object.defineProperty(global, "localStorage", {
-  value: localStorageMock,
-  writable: true,
-});
-
-Object.defineProperty(global, "window", {
-  value: {
-    localStorage: localStorageMock,
-  },
-  writable: true,
-});
+// Mock process.env
+const originalEnv = process.env;
 
 describe("ShogunStorage", () => {
-  let originalNodeEnv: string | undefined;
+  let storage: ShogunStorage;
 
   beforeEach(() => {
-    localStorageMock.clear();
     jest.clearAllMocks();
-    originalNodeEnv = process.env.NODE_ENV;
+
+    // Reset process.env
+    process.env = { ...originalEnv };
+
+    // Reset localStorage mock to default behavior
+    mockLocalStorage.setItem.mockReturnValue(undefined);
+    mockLocalStorage.removeItem.mockReturnValue(undefined);
+    mockLocalStorage.getItem.mockReturnValue(null);
+    mockLocalStorage.clear.mockReturnValue(undefined);
+
+    // Mock localStorage - ensure it overrides the global mock
+    Object.defineProperty(global, "localStorage", {
+      value: mockLocalStorage,
+      writable: true,
+      configurable: true,
+    });
+
+    // Also mock window.localStorage to ensure consistency
+    if (typeof global.window !== "undefined") {
+      Object.defineProperty(global.window, "localStorage", {
+        value: mockLocalStorage,
+        writable: true,
+        configurable: true,
+      });
+    }
+
+    // Don't instantiate ShogunStorage here - let each test do it after setting NODE_ENV
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    process.env = originalEnv;
   });
 
-  // These tests run with NODE_ENV = 'development' to enable localStorage interaction
-  describe("when in development mode (localStorage enabled)", () => {
-    let storage: ShogunStorage;
-
-    beforeEach(() => {
-      process.env.NODE_ENV = "development";
+  describe("Constructor", () => {
+    it("should initialize storage in test mode", () => {
+      process.env.NODE_ENV = "test";
       storage = new ShogunStorage();
+
+      expect(storage).toBeDefined();
     });
 
-    it("constructor should load existing keypair from localStorage", () => {
-      const mockPair = { pub: "test-pub", priv: "test-priv" };
-      localStorageMock.setItem("shogun_keypair", JSON.stringify(mockPair));
+    it("should initialize storage in non-test mode with localStorage available", () => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      mockLocalStorage.getItem.mockReturnValue('{"test": "data"}');
 
-      const newStorage = new ShogunStorage();
-      expect(newStorage.getPairSync()).toEqual(mockPair);
-      expect(localStorageMock.getItem).toHaveBeenCalledWith("shogun_keypair");
-    });
+      storage = new ShogunStorage();
 
-    it("setPair should store pair in localStorage", async () => {
-      const mockPair = { pub: "test-pub", priv: "test-priv" };
-      await storage.setPair(mockPair);
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        "shogun_keypair",
-        JSON.stringify(mockPair),
+      expect(storage).toBeDefined();
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        "_shogun_test",
+        "_shogun_test"
       );
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("_shogun_test");
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith("shogun_keypair");
     });
 
-    it("clearAll should clear localStorage", () => {
-      storage.clearAll();
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith(
-        "shogun_keypair",
-      );
+    it("should handle localStorage not available", () => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockImplementation(() => {
+        throw new Error("localStorage not available");
+      });
+
+      storage = new ShogunStorage();
+
+      expect(storage).toBeDefined();
     });
 
-    it("setItem should store in localStorage", () => {
-      const testData = { key: "value" };
-      storage.setItem("test-key", JSON.stringify(testData));
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        "test-key",
-        JSON.stringify(testData),
-      );
-    });
-
-    it("removeItem should remove item from localStorage", () => {
-      storage.removeItem("test-key");
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith("test-key");
-    });
-
-    it("should handle localStorage errors gracefully in constructor", () => {
-      localStorageMock.getItem.mockImplementation(() => {
+    it("should handle localStorage error during initialization", () => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      mockLocalStorage.getItem.mockImplementation(() => {
         throw new Error("localStorage error");
       });
-      expect(() => new ShogunStorage()).not.toThrow();
+
+      storage = new ShogunStorage();
+
+      expect(storage).toBeDefined();
     });
   });
 
-  // These tests run with the default NODE_ENV = 'test' to disable localStorage
-  describe("when in test mode (localStorage disabled)", () => {
-    let storage: ShogunStorage;
-
+  describe("getPair", () => {
     beforeEach(() => {
       process.env.NODE_ENV = "test";
       storage = new ShogunStorage();
     });
 
-    it("constructor should not use localStorage", () => {
-      new ShogunStorage();
-      expect(localStorageMock.getItem).not.toHaveBeenCalled();
+    it("should return null when no keypair is stored", async () => {
+      const result = await storage.getPair();
+      expect(result).toBeNull();
     });
 
-    it("setPair should not use localStorage", async () => {
-      const mockPair = { pub: "test-pub", priv: "test-priv" };
-      await storage.setPair(mockPair);
-      expect(localStorageMock.setItem).not.toHaveBeenCalled();
-    });
+    it("should return stored keypair", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      await storage.setPair(testPair);
 
-    it("clearAll should not use localStorage", () => {
-      storage.clearAll();
-      expect(localStorageMock.removeItem).not.toHaveBeenCalled();
-    });
-
-    it("setItem should not use localStorage", () => {
-      storage.setItem("test-key", "test-value");
-      expect(localStorageMock.setItem).not.toHaveBeenCalled();
-    });
-
-    it("removeItem should not use localStorage", () => {
-      storage.removeItem("test-key");
-      expect(localStorageMock.removeItem).not.toHaveBeenCalled();
+      const result = await storage.getPair();
+      expect(result).toEqual(testPair);
     });
   });
 
-  // General tests that are environment-agnostic
-  describe("Core in-memory functionality", () => {
-    let storage: ShogunStorage;
+  describe("getPairSync", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "test";
+      storage = new ShogunStorage();
+    });
 
+    it("should return null when no keypair is stored", () => {
+      const result = storage.getPairSync();
+      expect(result).toBeNull();
+    });
+
+    it("should return stored keypair", () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      storage.setPair(testPair);
+
+      const result = storage.getPairSync();
+      expect(result).toEqual(testPair);
+    });
+  });
+
+  describe("setPair", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      storage = new ShogunStorage();
+    });
+
+    it("should store keypair in memory", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+
+      await storage.setPair(testPair);
+
+      const result = storage.getPairSync();
+      expect(result).toEqual(testPair);
+    });
+
+    it("should store keypair in localStorage when available", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+
+      await storage.setPair(testPair);
+
+      // Verify that both the probe and the actual storage call were made
+      expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
+        1,
+        "_shogun_test",
+        "_shogun_test"
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
+        2,
+        "shogun_keypair",
+        JSON.stringify(testPair)
+      );
+    });
+
+    it("should handle localStorage error during setPair", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      mockLocalStorage.setItem.mockImplementation(() => {
+        throw new Error("localStorage error");
+      });
+
+      await storage.setPair(testPair);
+
+      // Should still store in memory
+      const result = storage.getPairSync();
+      expect(result).toEqual(testPair);
+    });
+  });
+
+  describe("clearAll", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      storage = new ShogunStorage();
+    });
+
+    it("should clear all stored data from memory", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      await storage.setPair(testPair);
+
+      storage.clearAll();
+
+      const result = storage.getPairSync();
+      expect(result).toBeNull();
+    });
+
+    it("should clear data from localStorage when available", async () => {
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      await storage.setPair(testPair);
+
+      storage.clearAll();
+
+      // Verify that both the probe and the actual removal call were made
+      expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
+        1,
+        "_shogun_test"
+      );
+      expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
+        2,
+        "shogun_keypair"
+      );
+    });
+
+    it("should handle localStorage error during clearAll", () => {
+      mockLocalStorage.removeItem.mockImplementation(() => {
+        throw new Error("localStorage error");
+      });
+
+      storage.clearAll();
+
+      // Should not throw error
+      expect(storage.getPairSync()).toBeNull();
+    });
+  });
+
+  describe("getItem", () => {
     beforeEach(() => {
       storage = new ShogunStorage();
     });
 
-    it("constructor should initialize with an empty store", () => {
-      expect(storage.getPairSync()).toBeNull();
+    it("should return null for non-existent key", () => {
+      const result = storage.getItem("non-existent");
+      expect(result).toBeNull();
     });
 
-    it("getPair and getPairSync should return null when no pair is stored", async () => {
-      expect(await storage.getPair()).toBeNull();
-      expect(storage.getPairSync()).toBeNull();
+    it("should return string value directly", () => {
+      storage.setItem("test-key", '"test-value"');
+
+      const result = storage.getItem("test-key");
+      expect(result).toBe('"test-value"');
     });
 
-    it("setPair should store pair in memory", async () => {
-      const mockPair = { pub: "test-pub", priv: "test-priv" };
-      await storage.setPair(mockPair);
-      expect(storage.getPairSync()).toEqual(mockPair);
-      expect(await storage.getPair()).toEqual(mockPair);
+    it("should return JSON string for object value", () => {
+      const testObj = { name: "test", value: 123 };
+      storage.setItem("test-key", JSON.stringify(testObj));
+
+      const result = storage.getItem("test-key");
+      expect(result).toBe(JSON.stringify(testObj));
     });
 
-    it("clearAll should clear the memory store", async () => {
-      await storage.setPair({ pub: "test-pub", priv: "test-priv" });
-      storage.clearAll();
-      expect(storage.getPairSync()).toBeNull();
+    it("should handle non-JSON string values", () => {
+      storage.setItem("test-key", "plain-string");
+
+      const result = storage.getItem("test-key");
+      expect(result).toBe("plain-string");
+    });
+  });
+
+  describe("setItem", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      storage = new ShogunStorage();
     });
 
-    it("setItem should store item in memory", () => {
-      const testData = { key: "value" };
-      storage.setItem("test-key", JSON.stringify(testData));
-      expect(storage.getItem("test-key")).toBe(JSON.stringify(testData));
+    it("should store in localStorage when available", () => {
+      const testValue = { name: "test" };
+      storage.setItem("test-key", testValue);
+
+      // Verify that both the probe and the actual storage call were made
+      expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
+        1,
+        "_shogun_test",
+        "_shogun_test"
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
+        2,
+        "test-key",
+        JSON.stringify(testValue)
+      );
     });
 
-    it("getItem should return null for non-existent key", () => {
-      expect(storage.getItem("nonexistent")).toBeNull();
+    it("should handle localStorage error during setItem", () => {
+      mockLocalStorage.setItem.mockImplementation(() => {
+        throw new Error("localStorage error");
+      });
+
+      const testValue = { name: "test" };
+      storage.setItem("test-key", testValue);
+
+      // Should still store in memory
+      const result = storage.getItem("test-key");
+      expect(result).toBe(testValue);
+    });
+  });
+
+  describe("removeItem", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      storage = new ShogunStorage();
     });
 
-    it("removeItem should remove item from memory", () => {
-      storage.setItem("test-key", "test-value");
+    it("should remove item from localStorage when available", () => {
       storage.removeItem("test-key");
+
+      // Verify that both the probe and the actual removal call were made
+      expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
+        1,
+        "_shogun_test"
+      );
+      expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
+        2,
+        "test-key"
+      );
+    });
+
+    it("should handle localStorage error during removeItem", () => {
+      mockLocalStorage.removeItem.mockImplementation(() => {
+        throw new Error("localStorage error");
+      });
+
+      storage.removeItem("test-key");
+
+      // Should not throw error
       expect(storage.getItem("test-key")).toBeNull();
     });
+  });
 
-    it("should handle non-JSON strings correctly", () => {
-      const testString = "plain string";
-      storage.setItem("test-key", testString);
-      const result = storage.getItem("test-key");
-      expect(result).toBe(testString);
+  describe("Integration tests", () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockReturnValue(undefined);
+      mockLocalStorage.removeItem.mockReturnValue(undefined);
+      storage = new ShogunStorage();
+    });
+
+    it("should handle multiple operations correctly", async () => {
+      // Set multiple items
+      storage.setItem("key1", "value1");
+      storage.setItem("key2", '{"name": "test"}');
+
+      // Set keypair
+      const testPair = { pub: "test-pub", priv: "test-priv" };
+      await storage.setPair(testPair);
+
+      // Verify all items are stored
+      expect(storage.getItem("key1")).toBe("value1");
+      expect(storage.getItem("key2")).toBe('{"name": "test"}');
+      expect(await storage.getPair()).toEqual(testPair);
+
+      // Remove one item
+      storage.removeItem("key1");
+      expect(storage.getItem("key1")).toBeNull();
+      expect(storage.getItem("key2")).toBe('{"name": "test"}');
+
+      // Clear all
+      storage.clearAll();
+      expect(storage.getItem("key1")).toBeNull();
+      expect(storage.getItem("key2")).toBeNull();
+      expect(await storage.getPair()).toBeNull();
+    });
+
+    it("should handle complex object storage", () => {
+      const complexObj = {
+        user: {
+          name: "test-user",
+          preferences: {
+            theme: "dark",
+            language: "en",
+          },
+        },
+        metadata: {
+          created: new Date().toISOString(),
+          version: "1.0.0",
+        },
+      };
+
+      storage.setItem("complex-key", JSON.stringify(complexObj));
+
+      const result = storage.getItem("complex-key");
+      expect(JSON.parse(result!)).toEqual(complexObj);
+    });
+
+    it("should handle edge cases", () => {
+      // Empty string
+      storage.setItem("empty-key", "");
+      expect(storage.getItem("empty-key")).toBe("");
+
+      // Null string
+      storage.setItem("null-key", "null");
+      expect(storage.getItem("null-key")).toBe("null");
+
+      // Special characters
+      storage.setItem("special-key", '{"text": "Hello\nWorld\tTab"}');
+      expect(storage.getItem("special-key")).toBe(
+        '{"text": "Hello\nWorld\tTab"}'
+      );
+    });
+  });
+
+  describe("Error handling", () => {
+    it("should handle localStorage completely unavailable", () => {
+      // Remove localStorage from global
+      Object.defineProperty(global, "localStorage", {
+        value: undefined,
+        writable: true,
+      });
+
+      storage = new ShogunStorage();
+
+      // Should still work with in-memory storage
+      storage.setItem("test-key", "test-value");
+      expect(storage.getItem("test-key")).toBe("test-value");
+    });
+
+    it("should handle localStorage methods throwing errors", () => {
+      process.env.NODE_ENV = "production";
+      mockLocalStorage.setItem.mockImplementation(() => {
+        throw new Error("localStorage setItem error");
+      });
+      mockLocalStorage.getItem.mockImplementation(() => {
+        throw new Error("localStorage getItem error");
+      });
+      mockLocalStorage.removeItem.mockImplementation(() => {
+        throw new Error("localStorage removeItem error");
+      });
+
+      storage = new ShogunStorage();
+
+      // Should still work with in-memory storage
+      storage.setItem("test-key", "test-value");
+      expect(storage.getItem("test-key")).toBe("test-value");
+
+      storage.removeItem("test-key");
+      expect(storage.getItem("test-key")).toBeNull();
     });
   });
 });

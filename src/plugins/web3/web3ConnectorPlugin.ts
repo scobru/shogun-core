@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../index";
 import { Web3Connector } from "./web3Connector";
 import { Web3Signer, Web3SigningCredential } from "./web3Signer";
-import { ConnectionResult, Web3ConectorPluginInterface } from "./types";
+import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
 import { ethers } from "ethers";
 import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
@@ -13,7 +13,7 @@ import { ISEAPair } from "gun";
  */
 export class Web3ConnectorPlugin
   extends BasePlugin
-  implements Web3ConectorPluginInterface
+  implements Web3ConnectorPluginInterface
 {
   name = "web3";
   version = "1.0.0";
@@ -146,9 +146,13 @@ export class Web3ConnectorPlugin
    * CONSISTENT with normal Web3 approach
    */
   async createSigningCredential(
-    address: string,
+    address: string
   ): Promise<Web3SigningCredential> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.createSigningCredential === "function") {
+        return await conn.createSigningCredential(address);
+      }
       return await this.assertSigner().createSigningCredential(address);
     } catch (error: any) {
       console.error(`Error creating Web3 signing credential: ${error.message}`);
@@ -161,6 +165,10 @@ export class Web3ConnectorPlugin
    */
   createAuthenticator(address: string): (data: any) => Promise<string> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.createAuthenticator === "function") {
+        return conn.createAuthenticator(address);
+      }
       return this.assertSigner().createAuthenticator(address);
     } catch (error: any) {
       console.error(`Error creating Web3 authenticator: ${error.message}`);
@@ -173,9 +181,13 @@ export class Web3ConnectorPlugin
    */
   async createDerivedKeyPair(
     address: string,
-    extra?: string[],
+    extra?: string[]
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.createDerivedKeyPair === "function") {
+        return await conn.createDerivedKeyPair(address, extra);
+      }
       return await this.assertSigner().createDerivedKeyPair(address, extra);
     } catch (error: any) {
       console.error(`Error creating derived key pair: ${error.message}`);
@@ -189,13 +201,17 @@ export class Web3ConnectorPlugin
   async signWithDerivedKeys(
     data: any,
     address: string,
-    extra?: string[],
+    extra?: string[]
   ): Promise<string> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.signWithDerivedKeys === "function") {
+        return await conn.signWithDerivedKeys(data, address, extra);
+      }
       return await this.assertSigner().signWithDerivedKeys(
         data,
         address,
-        extra,
+        extra
       );
     } catch (error: any) {
       console.error(`Error signing with derived keys: ${error.message}`);
@@ -207,6 +223,10 @@ export class Web3ConnectorPlugin
    * Get signing credential by address
    */
   getSigningCredential(address: string): Web3SigningCredential | undefined {
+    const conn = this.assertMetaMask() as any;
+    if (typeof conn.getSigningCredential === "function") {
+      return conn.getSigningCredential(address);
+    }
     return this.assertSigner().getCredential(address);
   }
 
@@ -214,6 +234,10 @@ export class Web3ConnectorPlugin
    * List all signing credentials
    */
   listSigningCredentials(): Web3SigningCredential[] {
+    const conn = this.assertMetaMask() as any;
+    if (typeof conn.listSigningCredentials === "function") {
+      return conn.listSigningCredentials();
+    }
     return this.assertSigner().listCredentials();
   }
 
@@ -221,6 +245,10 @@ export class Web3ConnectorPlugin
    * Remove a signing credential
    */
   removeSigningCredential(address: string): boolean {
+    const conn = this.assertMetaMask() as any;
+    if (typeof conn.removeSigningCredential === "function") {
+      return conn.removeSigningCredential(address);
+    }
     return this.assertSigner().removeCredential(address);
   }
 
@@ -231,14 +259,18 @@ export class Web3ConnectorPlugin
    * This ensures the SAME user is created as with normal approach
    */
   async createGunUserFromSigningCredential(
-    address: string,
+    address: string
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.createGunUserFromSigningCredential === "function") {
+        return await conn.createGunUserFromSigningCredential(address);
+      }
       const core = this.assertInitialized();
       return await this.assertSigner().createGunUser(address, core.gun);
     } catch (error: any) {
       console.error(
-        `Error creating Gun user from Web3 signing credential: ${error.message}`,
+        `Error creating Gun user from Web3 signing credential: ${error.message}`
       );
       throw error;
     }
@@ -248,6 +280,10 @@ export class Web3ConnectorPlugin
    * Get the Gun user public key for a signing credential
    */
   getGunUserPubFromSigningCredential(address: string): string | undefined {
+    const conn = this.assertMetaMask() as any;
+    if (typeof conn.getGunUserPubFromSigningCredential === "function") {
+      return conn.getGunUserPubFromSigningCredential(address);
+    }
     return this.assertSigner().getGunUserPub(address);
   }
 
@@ -255,6 +291,10 @@ export class Web3ConnectorPlugin
    * Get the password (for consistency checking)
    */
   getPassword(address: string): string | undefined {
+    const conn = this.assertMetaMask() as any;
+    if (typeof conn.getPassword === "function") {
+      return conn.getPassword(address);
+    }
     return this.assertSigner().getPassword(address);
   }
 
@@ -264,16 +304,20 @@ export class Web3ConnectorPlugin
    */
   async verifyConsistency(
     address: string,
-    expectedUserPub?: string,
+    expectedUserPub?: string
   ): Promise<{
     consistent: boolean;
     actualUserPub?: string;
     expectedUserPub?: string;
   }> {
     try {
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.verifyConsistency === "function") {
+        return await conn.verifyConsistency(address, expectedUserPub);
+      }
       return await this.assertSigner().verifyConsistency(
         address,
-        expectedUserPub,
+        expectedUserPub
       );
     } catch (error: any) {
       console.error(`Error verifying Web3 consistency: ${error.message}`);
@@ -293,25 +337,26 @@ export class Web3ConnectorPlugin
     password: string;
   }> {
     try {
-      // 1. Create signing credential (with consistent password generation)
+      const conn = this.assertMetaMask() as any;
+      if (typeof conn.setupConsistentOneshotSigning === "function") {
+        return await conn.setupConsistentOneshotSigning(address);
+      }
+
+      // Fallback implementation when connector doesn't have the method
       const credential = await this.createSigningCredential(address);
-
-      // 2. Create authenticator
       const authenticator = this.createAuthenticator(address);
-
-      // 3. Create Gun user (same as normal approach)
       const gunUser = await this.createGunUserFromSigningCredential(address);
 
       return {
         credential,
         authenticator,
         gunUser,
-        username: credential.username,
-        password: credential.password,
-      };
+        username: address,
+        password: "web3-generated-password",
+      } as any;
     } catch (error: any) {
       console.error(
-        `Error setting up consistent Web3 oneshot signing: ${error.message}`,
+        `Error setting up consistent Web3 oneshot signing: ${error.message}`
       );
       throw error;
     }
@@ -333,7 +378,7 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for Web3 login",
+          "Ethereum address required for Web3 login"
         );
       }
 
@@ -341,37 +386,37 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.ENVIRONMENT,
           "WEB3_UNAVAILABLE",
-          "Web3 is not available in the browser",
+          "Web3 is not available in the browser"
         );
       }
 
-      const k = await this.generateCredentials(address);
-      const username = address.toLowerCase();
-      if (!k?.pub || !k?.priv) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Web3 credentials not generated correctly or signature missing",
-        );
-      }
+      // Use setupConsistentOneshotSigning for login
+      const { gunUser } = await this.setupConsistentOneshotSigning(address);
 
-      // Set authentication method to web3 before login
-      core.setAuthMethod("web3");
-
-      // Use core's login method with direct GunDB authentication
-      const loginResult = await core.login(username, "", k);
-
-      if (!loginResult.success) {
+      if (!gunUser.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "WEB3_LOGIN_FAILED",
-          loginResult.error || "Failed to log in with Web3 credentials",
+          gunUser.error || "Failed to log in with Web3 credentials"
         );
       }
 
+      // Set authentication method to web3
+      core.setAuthMethod("web3");
+
+      // Return success result
+      const loginResult = {
+        success: true,
+        user: {
+          id: address,
+          address: address,
+        },
+        userPub: gunUser.userPub,
+      };
+
       // Emit login event
       core.emit("auth:login", {
-        userPub: loginResult.userPub || "",
+        userPub: gunUser.userPub || "",
         username: address,
         method: "web3",
       });
@@ -383,17 +428,8 @@ export class Web3ConnectorPlugin
       const errorCode = error?.code || "WEB3_LOGIN_ERROR";
       const errorMessage = error?.message || "Unknown error during Web3 login";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -410,7 +446,7 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.VALIDATION,
           "ADDRESS_REQUIRED",
-          "Ethereum address required for Web3 registration",
+          "Ethereum address required for Web3 registration"
         );
       }
 
@@ -418,33 +454,33 @@ export class Web3ConnectorPlugin
         throw createError(
           ErrorType.ENVIRONMENT,
           "WEB3_UNAVAILABLE",
-          "Web3 is not available in the browser",
+          "Web3 is not available in the browser"
         );
       }
 
-      const k = await this.generateCredentials(address);
-      const username = address.toLowerCase();
-      if (!k?.pub || !k?.priv) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Web3 credentials not generated correctly or signature missing",
-        );
-      }
+      // Use setupConsistentOneshotSigning for signup
+      const { gunUser } = await this.setupConsistentOneshotSigning(address);
 
-      // Set authentication method to web3 before signup
-      core.setAuthMethod("web3");
-
-      // Use core's signUp method with direct GunDB authentication
-      const signupResult = await core.signUp(username, "", "", k);
-
-      if (!signupResult.success) {
+      if (!gunUser.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "WEB3_SIGNUP_FAILED",
-          signupResult.error || "Failed to sign up with Web3 credentials",
+          gunUser.error || "Failed to sign up with Web3 credentials"
         );
       }
+
+      // Set authentication method to web3
+      core.setAuthMethod("web3");
+
+      // Return success result
+      const signupResult = {
+        success: true,
+        user: {
+          id: address,
+          address: address,
+        },
+        userPub: gunUser.userPub,
+      };
 
       return signupResult;
     } catch (error: any) {
@@ -454,20 +490,11 @@ export class Web3ConnectorPlugin
       const errorMessage =
         error?.message || "Unknown error during Web3 registration";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 }
 
 // Export only the interface, not the plugin itself again
-export type { Web3ConectorPluginInterface } from "./types";
+export type { Web3ConnectorPluginInterface } from "./types";

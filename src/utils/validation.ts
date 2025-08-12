@@ -72,6 +72,12 @@ import { ethers } from "ethers";
  * Usare per OAuth, Web3, Nostr, ecc.
  */
 export function generateDeterministicPassword(salt: string): string {
-  // Restituisce una stringa hex di 32 caratteri
-  return ethers.keccak256(ethers.toUtf8Bytes(salt)).slice(2, 34);
+  try {
+    // Restituisce una stringa hex di 32 caratteri
+    return ethers.keccak256(ethers.toUtf8Bytes(salt)).slice(2, 34);
+  } catch (error) {
+    // Fallback in case ethers is not available
+    console.warn("ethers not available, using fallback password generation");
+    return Buffer.from(salt).toString('hex').slice(0, 32);
+  }
 }

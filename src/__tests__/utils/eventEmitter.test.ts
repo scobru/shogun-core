@@ -1,250 +1,378 @@
-import { EventEmitter } from "../../utils/eventEmitter";
+import { EventEmitter, EventType, Listener } from '../../utils/eventEmitter';
 
-describe("EventEmitter", () => {
+describe('EventEmitter', () => {
   let emitter: EventEmitter;
 
   beforeEach(() => {
     emitter = new EventEmitter();
   });
 
-  describe("on", () => {
-    it("should register event listeners", () => {
-      const listener = jest.fn();
-      emitter.on("test-event", listener);
-
-      emitter.emit("test-event", { data: "test" });
-
-      expect(listener).toHaveBeenCalledWith({ data: "test" });
+  describe('Constructor', () => {
+    it('should create EventEmitter instance', () => {
+      expect(emitter).toBeInstanceOf(EventEmitter);
     });
 
-    it("should register multiple listeners for same event", () => {
-      const listener1 = jest.fn();
-      const listener2 = jest.fn();
-
-      emitter.on("test-event", listener1);
-      emitter.on("test-event", listener2);
-
-      emitter.emit("test-event", { data: "test" });
-
-      expect(listener1).toHaveBeenCalledWith({ data: "test" });
-      expect(listener2).toHaveBeenCalledWith({ data: "test" });
-    });
-
-    it("should handle events without data", () => {
-      const listener = jest.fn();
-      emitter.on("test-event", listener);
-
-      emitter.emit("test-event");
-
-      expect(listener).toHaveBeenCalledWith(undefined);
+    it('should initialize with empty events map', () => {
+      const newEmitter = new EventEmitter();
+      expect(newEmitter).toBeInstanceOf(EventEmitter);
     });
   });
 
-  describe("emit", () => {
-    it("should return false for non-existent events", () => {
-      const result = emitter.emit("non-existent");
-      expect(result).toBe(false);
+  describe('on', () => {
+    it('should register event listener', () => {
+      const listener = jest.fn();
+      emitter.on('test-event', listener);
+
+      expect(listener).not.toHaveBeenCalled();
     });
 
-    it("should return true for existing events", () => {
-      const listener = jest.fn();
-      emitter.on("test-event", listener);
+    it('should register multiple listeners for same event', () => {
+      const listener1 = jest.fn();
+      const listener2 = jest.fn();
 
-      const result = emitter.emit("test-event", { data: "test" });
+      emitter.on('test-event', listener1);
+      emitter.on('test-event', listener2);
+
+      emitter.emit('test-event', 'test-data');
+
+      expect(listener1).toHaveBeenCalledWith('test-data');
+      expect(listener2).toHaveBeenCalledWith('test-data');
+    });
+
+    it('should register listeners for different events', () => {
+      const listener1 = jest.fn();
+      const listener2 = jest.fn();
+
+      emitter.on('event1', listener1);
+      emitter.on('event2', listener2);
+
+      emitter.emit('event1', 'data1');
+      emitter.emit('event2', 'data2');
+
+      expect(listener1).toHaveBeenCalledWith('data1');
+      expect(listener2).toHaveBeenCalledWith('data2');
+    });
+
+    it('should handle symbol events', () => {
+      const symbol = Symbol('test-event');
+      const listener = jest.fn();
+
+      emitter.on(symbol, listener);
+      emitter.emit(symbol, 'test-data');
+
+      expect(listener).toHaveBeenCalledWith('test-data');
+    });
+  });
+
+  describe('emit', () => {
+    it('should emit event to registered listeners', () => {
+      const listener = jest.fn();
+      emitter.on('test-event', listener);
+
+      emitter.emit('test-event', 'test-data');
+
+      expect(listener).toHaveBeenCalledWith('test-data');
+    });
+
+    it('should return true when event has listeners', () => {
+      const listener = jest.fn();
+      emitter.on('test-event', listener);
+
+      const result = emitter.emit('test-event', 'test-data');
 
       expect(result).toBe(true);
     });
 
-    it("should handle listener errors gracefully", () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const listener = jest.fn().mockImplementation(() => {
-        throw new Error("Listener error");
+    it('should return false when event has no listeners', () => {
+      const result = emitter.emit('non-existent-event', 'test-data');
+
+      expect(result).toBe(false);
+    });
+
+    it('should emit event without data', () => {
+      const listener = jest.fn();
+      emitter.on('test-event', listener);
+
+      emitter.emit('test-event');
+
+      expect(listener).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should handle listener errors gracefully', () => {
+      const errorListener = jest.fn().mockImplementation(() => {
+        throw new Error('Listener error');
       });
+      const normalListener = jest.fn();
 
-      emitter.on("test-event", listener);
+      emitter.on('test-event', errorListener);
+      emitter.on('test-event', normalListener);
 
-      // Should not throw
-      expect(() => emitter.emit("test-event")).not.toThrow();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      emitter.emit('test-event', 'test-data');
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Error in event listener for test-event:",
-        expect.any(Error),
+        'Error in event listener for test-event:',
+        expect.any(Error)
       );
+      expect(normalListener).toHaveBeenCalledWith('test-data');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle multiple listeners with errors', () => {
+      const errorListener = jest.fn().mockImplementation(() => {
+        throw new Error('Listener error');
+      });
+      const normalListener1 = jest.fn();
+      const normalListener2 = jest.fn();
+
+      emitter.on('test-event', errorListener);
+      emitter.on('test-event', normalListener1);
+      emitter.on('test-event', normalListener2);
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      emitter.emit('test-event', 'test-data');
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error in event listener for test-event:',
+        expect.any(Error)
+      );
+      expect(normalListener1).toHaveBeenCalledWith('test-data');
+      expect(normalListener2).toHaveBeenCalledWith('test-data');
 
       consoleSpy.mockRestore();
     });
   });
 
-  describe("off", () => {
-    it("should remove specific listener", () => {
+  describe('off', () => {
+    it('should remove specific listener', () => {
       const listener1 = jest.fn();
       const listener2 = jest.fn();
 
-      emitter.on("test-event", listener1);
-      emitter.on("test-event", listener2);
+      emitter.on('test-event', listener1);
+      emitter.on('test-event', listener2);
 
-      emitter.off("test-event", listener1);
-
-      emitter.emit("test-event", { data: "test" });
+      emitter.off('test-event', listener1);
+      emitter.emit('test-event', 'test-data');
 
       expect(listener1).not.toHaveBeenCalled();
-      expect(listener2).toHaveBeenCalledWith({ data: "test" });
+      expect(listener2).toHaveBeenCalledWith('test-data');
     });
 
-    it("should remove event when no listeners remain", () => {
+    it('should remove listener and clean up empty event', () => {
       const listener = jest.fn();
-      emitter.on("test-event", listener);
+      emitter.on('test-event', listener);
 
-      emitter.off("test-event", listener);
+      emitter.off('test-event', listener);
+      const result = emitter.emit('test-event', 'test-data');
 
-      const result = emitter.emit("test-event");
       expect(result).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
     });
 
-    it("should handle removing non-existent listener", () => {
+    it('should handle removing non-existent listener', () => {
       const listener = jest.fn();
       const nonExistentListener = jest.fn();
 
-      emitter.on("test-event", listener);
-      emitter.off("test-event", nonExistentListener);
+      emitter.on('test-event', listener);
+      emitter.off('test-event', nonExistentListener);
+      emitter.emit('test-event', 'test-data');
 
-      emitter.emit("test-event");
-
-      expect(listener).toHaveBeenCalled();
+      expect(listener).toHaveBeenCalledWith('test-data');
     });
 
-    it("should handle removing listener from non-existent event", () => {
+    it('should handle removing listener from non-existent event', () => {
       const listener = jest.fn();
 
-      // Should not throw
-      expect(() => emitter.off("non-existent", listener)).not.toThrow();
+      expect(() => emitter.off('non-existent-event', listener)).not.toThrow();
+    });
+
+    it('should handle removing same listener multiple times', () => {
+      const listener = jest.fn();
+      emitter.on('test-event', listener);
+
+      emitter.off('test-event', listener);
+      emitter.off('test-event', listener);
+
+      const result = emitter.emit('test-event', 'test-data');
+
+      expect(result).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 
-  describe("once", () => {
-    it("should call listener only once", () => {
+  describe('once', () => {
+    it('should register one-time listener', () => {
       const listener = jest.fn();
-      emitter.once("test-event", listener);
+      emitter.once('test-event', listener);
 
-      emitter.emit("test-event", { data: "first" });
-      emitter.emit("test-event", { data: "second" });
+      emitter.emit('test-event', 'test-data');
+      emitter.emit('test-event', 'test-data-2');
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith({ data: "first" });
+      expect(listener).toHaveBeenCalledWith('test-data');
     });
 
-    it("should remove listener after first call", () => {
+    it('should remove listener after first emission', () => {
       const listener = jest.fn();
-      emitter.once("test-event", listener);
+      emitter.once('test-event', listener);
 
-      emitter.emit("test-event");
-      emitter.emit("test-event");
+      emitter.emit('test-event', 'test-data');
+      const result = emitter.emit('test-event', 'test-data-2');
 
+      expect(result).toBe(false);
       expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should work with multiple once listeners', () => {
+      const listener1 = jest.fn();
+      const listener2 = jest.fn();
+
+      emitter.once('test-event', listener1);
+      emitter.once('test-event', listener2);
+
+      emitter.emit('test-event', 'test-data');
+
+      expect(listener1).toHaveBeenCalledWith('test-data');
+      // The second listener should not be called because once listeners are removed after first emission
+      expect(listener2).not.toHaveBeenCalled();
     });
   });
 
-  describe("removeAllListeners", () => {
-    it("should remove all listeners for specific event", () => {
+  describe('removeAllListeners', () => {
+    it('should remove all listeners for specific event', () => {
       const listener1 = jest.fn();
       const listener2 = jest.fn();
 
-      emitter.on("event1", listener1);
-      emitter.on("event2", listener2);
+      emitter.on('event1', listener1);
+      emitter.on('event1', listener2);
+      emitter.on('event2', jest.fn());
 
-      emitter.removeAllListeners("event1");
-
-      emitter.emit("event1");
-      emitter.emit("event2");
-
-      expect(listener1).not.toHaveBeenCalled();
-      expect(listener2).toHaveBeenCalled();
-    });
-
-    it("should remove all listeners when no event specified", () => {
-      const listener1 = jest.fn();
-      const listener2 = jest.fn();
-
-      emitter.on("event1", listener1);
-      emitter.on("event2", listener2);
-
-      emitter.removeAllListeners();
-
-      emitter.emit("event1");
-      emitter.emit("event2");
+      emitter.removeAllListeners('event1');
+      emitter.emit('event1', 'test-data');
+      emitter.emit('event2', 'test-data');
 
       expect(listener1).not.toHaveBeenCalled();
       expect(listener2).not.toHaveBeenCalled();
     });
 
-    it("should handle removing listeners from non-existent event", () => {
-      // Should not throw
-      expect(() => emitter.removeAllListeners("non-existent")).not.toThrow();
-    });
-  });
-
-  describe("symbol events", () => {
-    it("should handle symbol events", () => {
-      const symbol = Symbol("test-event");
-      const listener = jest.fn();
-
-      emitter.on(symbol, listener);
-      emitter.emit(symbol, { data: "test" });
-
-      expect(listener).toHaveBeenCalledWith({ data: "test" });
-    });
-
-    it("should handle symbol events in removeAllListeners", () => {
-      const symbol = Symbol("test-event");
-      const listener = jest.fn();
-
-      emitter.on(symbol, listener);
-      emitter.removeAllListeners(symbol);
-
-      emitter.emit(symbol);
-
-      expect(listener).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("multiple events", () => {
-    it("should handle multiple different events", () => {
+    it('should remove all listeners when no event specified', () => {
       const listener1 = jest.fn();
       const listener2 = jest.fn();
 
-      emitter.on("event1", listener1);
-      emitter.on("event2", listener2);
+      emitter.on('event1', listener1);
+      emitter.on('event2', listener2);
 
-      emitter.emit("event1", { data: "data1" });
-      emitter.emit("event2", { data: "data2" });
+      emitter.removeAllListeners();
+      emitter.emit('event1', 'test-data');
+      emitter.emit('event2', 'test-data');
 
-      expect(listener1).toHaveBeenCalledWith({ data: "data1" });
-      expect(listener2).toHaveBeenCalledWith({ data: "data2" });
+      expect(listener1).not.toHaveBeenCalled();
+      expect(listener2).not.toHaveBeenCalled();
+    });
+
+    it('should handle removing listeners from non-existent event', () => {
+      expect(() => emitter.removeAllListeners('non-existent-event')).not.toThrow();
+    });
+
+    it('should handle removing all listeners when no events exist', () => {
+      expect(() => emitter.removeAllListeners()).not.toThrow();
     });
   });
 
-  describe("event data types", () => {
-    it("should handle various data types", () => {
-      const listener = jest.fn();
-      emitter.on("test-event", listener);
+  describe('Integration tests', () => {
+    it('should handle complex event scenarios', () => {
+      const results: string[] = [];
+      const listener1 = (data: unknown) => results.push(`listener1: ${data}`);
+      const listener2 = (data: unknown) => results.push(`listener2: ${data}`);
+      const onceListener = (data: unknown) => results.push(`once: ${data}`);
 
-      const testData = [
-        "string",
-        123,
-        { object: "data" },
-        [1, 2, 3],
-        null,
-        undefined,
-      ];
+      // Register listeners
+      emitter.on('test-event', listener1);
+      emitter.on('test-event', listener2);
+      emitter.once('test-event', onceListener);
 
-      testData.forEach((data) => {
-        emitter.emit("test-event", data);
-      });
+      // Emit multiple times
+      emitter.emit('test-event', 'first');
+      emitter.emit('test-event', 'second');
 
-      expect(listener).toHaveBeenCalledTimes(testData.length);
-      testData.forEach((data, index) => {
-        expect(listener).toHaveBeenNthCalledWith(index + 1, data);
-      });
+      expect(results).toEqual([
+        'listener1: first',
+        'listener2: first',
+        'once: first',
+        'listener1: second',
+        'listener2: second',
+      ]);
+    });
+
+    it('should handle event cleanup', () => {
+      const listener1 = jest.fn();
+      const listener2 = jest.fn();
+
+      emitter.on('event1', listener1);
+      emitter.on('event2', listener2);
+
+      // Remove specific listener
+      emitter.off('event1', listener1);
+      emitter.emit('event1', 'data1');
+      emitter.emit('event2', 'data2');
+
+      expect(listener1).not.toHaveBeenCalled();
+      expect(listener2).toHaveBeenCalledWith('data2');
+
+      // Remove all listeners
+      emitter.removeAllListeners();
+      emitter.emit('event2', 'data3');
+
+      expect(listener2).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle mixed event types', () => {
+      const stringListener = jest.fn();
+      const symbolListener = jest.fn();
+      const symbol = Symbol('test-symbol');
+
+      emitter.on('string-event', stringListener);
+      emitter.on(symbol, symbolListener);
+
+      emitter.emit('string-event', 'string-data');
+      emitter.emit(symbol, 'symbol-data');
+
+      expect(stringListener).toHaveBeenCalledWith('string-data');
+      expect(symbolListener).toHaveBeenCalledWith('symbol-data');
+    });
+  });
+
+  describe('Type definitions', () => {
+    it('should work with generic event types', () => {
+      interface TestEvents {
+        'user-login': { userId: string; timestamp: number };
+        'user-logout': { userId: string };
+      }
+
+      const typedEmitter = new EventEmitter<TestEvents>();
+      const loginListener = jest.fn();
+      const logoutListener = jest.fn();
+
+      typedEmitter.on('user-login', loginListener);
+      typedEmitter.on('user-logout', logoutListener);
+
+      typedEmitter.emit('user-login', { userId: '123', timestamp: Date.now() });
+      typedEmitter.emit('user-logout', { userId: '123' });
+
+      expect(loginListener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: '123',
+          timestamp: expect.any(Number),
+        })
+      );
+      expect(logoutListener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: '123',
+        })
+      );
     });
   });
 });
