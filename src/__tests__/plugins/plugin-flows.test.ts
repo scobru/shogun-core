@@ -13,7 +13,9 @@ jest.mock("../../gundb", () => {
       user: jest.fn(() => ({
         recall: jest.fn(() => ({
           put: jest.fn(),
-          _: { sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" } },
+          _: {
+            sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          },
         })),
         create: jest.fn(),
         auth: jest.fn(),
@@ -38,7 +40,10 @@ jest.mock("../../gundb", () => {
     GunInstance: jest.fn().mockImplementation(() => ({
       gun: {
         user: jest.fn(() => ({
-          recall: jest.fn(() => ({ put: jest.fn(), _: { sea: { pub: "pub" } } })),
+          recall: jest.fn(() => ({
+            put: jest.fn(),
+            _: { sea: { pub: "pub" } },
+          })),
         })),
         on: jest.fn(),
       },
@@ -71,23 +76,43 @@ jest.mock("../../plugins/oauth/oauthConnector", () => {
     OAuthConnector: class MockOAuthConnector {
       private cfg: any;
       private cache: Record<string, any> = {};
-      constructor(cfg?: any) { this.cfg = cfg || {}; }
-      updateConfig(cfg: any) { this.cfg = { ...this.cfg, ...cfg }; }
-      isSupported() { return true; }
-      getAvailableProviders() { return ["google", "github"]; }
+      constructor(cfg?: any) {
+        this.cfg = cfg || {};
+      }
+      updateConfig(cfg: any) {
+        this.cfg = { ...this.cfg, ...cfg };
+      }
+      isSupported() {
+        return true;
+      }
+      getAvailableProviders() {
+        return ["google", "github"];
+      }
       async initiateOAuth(provider: string) {
         return { success: true, authUrl: `https://auth.example/${provider}` };
       }
       async completeOAuth(provider: string, code: string, state?: string) {
-        const userInfo = { id: "123", email: "user@example.com", name: "Test User", picture: "https://example.com/pic.png" };
+        const userInfo = {
+          id: "123",
+          email: "user@example.com",
+          name: "Test User",
+          picture: "https://example.com/pic.png",
+        };
         this.cache[`${provider}:123`] = userInfo;
         return { success: true, userInfo };
       }
       async generateCredentials(userInfo: any, provider: string) {
-        return { username: `${provider}:${userInfo.email}`, key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" } };
+        return {
+          username: `${provider}:${userInfo.email}`,
+          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+        };
       }
-      getCachedUserInfo(userId: string, provider: string) { return this.cache[`${provider}:${userId}`] || null; }
-      clearUserCache() { this.cache = {}; }
+      getCachedUserInfo(userId: string, provider: string) {
+        return this.cache[`${provider}:${userId}`] || null;
+      }
+      clearUserCache() {
+        this.cache = {};
+      }
       cleanup() {}
     },
   };
@@ -97,15 +122,44 @@ jest.mock("../../plugins/oauth/oauthConnector", () => {
 jest.mock("../../plugins/web3/web3Connector", () => {
   return {
     Web3Connector: class MockWeb3Connector {
-      isAvailable() { return true; }
-      async connectMetaMask() { return { success: true, address: "0xabc" }; }
-      async generateCredentials(_address: string) { return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" }; }
+      isAvailable() {
+        return true;
+      }
+      async connectMetaMask() {
+        return { success: true, address: "0xabc" };
+      }
+      async generateCredentials(_address: string) {
+        return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" };
+      }
       cleanup() {}
       setCustomProvider() {}
-      async getSigner() { return {} as any; }
-      async getProvider() { return {} as any; }
-      async generatePassword(_signature: string) { return "password"; }
-      async verifySignature(_message: string, _signature: string) { return "0xabc"; }
+      async getSigner() {
+        return {} as any;
+      }
+      async getProvider() {
+        return {} as any;
+      }
+      async generatePassword(_signature: string) {
+        return "password";
+      }
+      async verifySignature(_message: string, _signature: string) {
+        return "0xabc";
+      }
+      async login(_address: string) {
+        return { success: true, userPub: "pub" };
+      }
+      async signUp(_address: string) {
+        return { success: true, userPub: "pub" };
+      }
+      async setupConsistentOneshotSigning(_address: string) {
+        return {
+          credential: { id: "id", pub: "pub" },
+          authenticator: async (_data: any) => "signature",
+          gunUser: { success: true, userPub: "pub" },
+          username: _address,
+          password: "password",
+        };
+      }
     },
   };
 });
@@ -114,17 +168,43 @@ jest.mock("../../plugins/web3/web3Connector", () => {
 jest.mock("../../plugins/nostr/nostrConnector", () => {
   return {
     MESSAGE_TO_SIGN: "Please sign to authenticate",
-    deriveNostrKeys: async () => ({ pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" }),
+    deriveNostrKeys: async () => ({
+      pub: "pub",
+      priv: "priv",
+      epub: "epub",
+      epriv: "epriv",
+    }),
     NostrConnector: class MockNostrConnector {
-      isAvailable() { return true; }
-      isNostrExtensionAvailable() { return true; }
-      async connectWallet(_type: string) { return { success: true, address: "npub123" }; }
-      async requestSignature(_address: string, _message: string) { return "signature"; }
-      async generateCredentials(address: string, signature: string, message: string) {
-        return { username: address, key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" }, message, signature };
+      isAvailable() {
+        return true;
       }
-      verifySignature() { return true; }
-      generatePassword() { return "password"; }
+      isNostrExtensionAvailable() {
+        return true;
+      }
+      async connectWallet(_type: string) {
+        return { success: true, address: "npub123" };
+      }
+      async requestSignature(_address: string, _message: string) {
+        return "signature";
+      }
+      async generateCredentials(
+        address: string,
+        signature: string,
+        message: string
+      ) {
+        return {
+          username: address,
+          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          message,
+          signature,
+        };
+      }
+      verifySignature() {
+        return true;
+      }
+      generatePassword() {
+        return "password";
+      }
       cleanup() {}
       clearSignatureCache() {}
     },
@@ -136,12 +216,25 @@ jest.mock("../../plugins/webauthn/webauthn", () => {
   return {
     Webauthn: class MockWebauthn {
       constructor(_gun: any) {}
-      isSupported() { return true; }
-      async generateCredentials(_username: string) { return { success: true, key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" } }; }
-      async createAccount() { return { success: true }; }
-      async authenticateUser() { return { success: true }; }
+      isSupported() {
+        return true;
+      }
+      async generateCredentials(_username: string) {
+        return {
+          success: true,
+          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+        };
+      }
+      async createAccount() {
+        return { success: true };
+      }
+      async authenticateUser() {
+        return { success: true };
+      }
       abortAuthentication() {}
-      async removeDevice() { return { success: true, updatedCredentials: {} as any }; }
+      async removeDevice() {
+        return { success: true, updatedCredentials: {} as any };
+      }
     },
   };
 });
@@ -150,17 +243,43 @@ jest.mock("../../plugins/webauthn/webauthnSigner", () => {
   return {
     WebAuthnSigner: class MockWebAuthnSigner {
       constructor(_webauthn: any) {}
-      async createSigningCredential(_username: string) { return { id: "id", pub: "pub", hashedCredentialId: "hid" } as any; }
-      createAuthenticator(_id: string) { return async (_data: any) => ({} as any); }
-      async createDerivedKeyPair() { return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" }; }
-      async signWithDerivedKeys() { return "signature"; }
-      getCredential() { return undefined; }
-      listCredentials() { return []; }
-      removeCredential() { return true; }
-      async createGunUser() { return { success: true, userPub: "pub" }; }
-      getGunUserPub() { return "pub"; }
-      getHashedCredentialId() { return "hid"; }
-      async verifyConsistency() { return { consistent: true, actualUserPub: "pub", expectedUserPub: "pub" }; }
+      async createSigningCredential(_username: string) {
+        return { id: "id", pub: "pub", hashedCredentialId: "hid" } as any;
+      }
+      createAuthenticator(_id: string) {
+        return async (_data: any) => ({}) as any;
+      }
+      async createDerivedKeyPair() {
+        return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" };
+      }
+      async signWithDerivedKeys() {
+        return "signature";
+      }
+      getCredential() {
+        return undefined;
+      }
+      listCredentials() {
+        return [];
+      }
+      removeCredential() {
+        return true;
+      }
+      async createGunUser() {
+        return { success: true, userPub: "pub" };
+      }
+      getGunUserPub() {
+        return "pub";
+      }
+      getHashedCredentialId() {
+        return "hid";
+      }
+      async verifyConsistency() {
+        return {
+          consistent: true,
+          actualUserPub: "pub",
+          expectedUserPub: "pub",
+        };
+      }
     },
   };
 });
@@ -173,7 +292,10 @@ describe("Plugin end-to-end flows", () => {
 
   beforeEach(() => {
     config = {
-      oauth: { enabled: true, providers: { google: { clientId: "id", usePKCE: true } } },
+      oauth: {
+        enabled: true,
+        providers: { google: { clientId: "id", usePKCE: true } },
+      },
       webauthn: { enabled: true },
       web3: { enabled: true },
       nostr: { enabled: true },
@@ -192,7 +314,11 @@ describe("Plugin end-to-end flows", () => {
 
   it("OAuth handleOAuthCallback completes login and enriches user", async () => {
     const oauth = core.getPlugin<OAuthPlugin>(CorePlugins.OAuth)!;
-    const res = await oauth.handleOAuthCallback("google" as any, "code", "state");
+    const res = await oauth.handleOAuthCallback(
+      "google" as any,
+      "code",
+      "state"
+    );
     expect(res.success).toBe(true);
     expect(res.user?.oauth?.provider).toBe("google");
   });
@@ -235,7 +361,9 @@ describe("Plugin end-to-end flows", () => {
     expect(signupSpy).toHaveBeenCalled();
     const methods = signupSpy.mock.calls.map((c: any[]) => c[0]?.method);
     // Core può emettere "web3" (per pair), il plugin emette "bitcoin": accetta uno dei due
-    expect(methods.some((m: string) => m === "bitcoin" || m === "web3")).toBe(true);
+    expect(methods.some((m: string) => m === "bitcoin" || m === "web3")).toBe(
+      true
+    );
   });
 
   it("WebAuthn login succeeds with browser support mocked", async () => {

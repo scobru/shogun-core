@@ -54,13 +54,27 @@ describe("Web3ConnectorPlugin", () => {
     mockSigner = {
       sign: jest.fn(),
       verify: jest.fn(),
+      createSigningCredential: jest.fn(),
+      createAuthenticator: jest.fn(),
+      createDerivedKeyPair: jest.fn(),
+      signWithDerivedKeys: jest.fn(),
+      getSigningCredential: jest.fn(),
+      listSigningCredentials: jest.fn(),
+      removeSigningCredential: jest.fn(),
+      createGunUserFromSigningCredential: jest.fn(),
+      getGunUserPubFromSigningCredential: jest.fn(),
+      getPassword: jest.fn(),
+      verifyConsistency: jest.fn(),
     } as any;
 
     MockWeb3Connector.mockImplementation(() => mockConnector);
     MockWeb3Signer.mockImplementation(() => mockSigner);
 
     mockCore = {
-      // Add minimal mock properties as needed
+      authenticate: jest.fn(),
+      signUp: jest.fn(),
+      setAuthMethod: jest.fn(),
+      emit: jest.fn(),
     } as any;
 
     plugin = new Web3ConnectorPlugin();
@@ -642,8 +656,10 @@ describe("Web3ConnectorPlugin", () => {
           id: "0x1234567890123456789012345678901234567890",
           address: "0x1234567890123456789012345678901234567890",
         },
+        userPub: "gun_pub_123",
       };
 
+      // Mock the setupConsistentOneshotSigning method directly
       jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
         credential: {
           address: "0x1234567890123456789012345678901234567890",
@@ -655,9 +671,8 @@ describe("Web3ConnectorPlugin", () => {
         password: "generated_password",
       });
 
-      plugin["core"] = {
-        authenticate: jest.fn().mockResolvedValue(mockAuthResult),
-      } as any;
+      // Mock isAvailable to return true
+      jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
 
       const result = await plugin.login(
         "0x1234567890123456789012345678901234567890"
@@ -703,8 +718,10 @@ describe("Web3ConnectorPlugin", () => {
           id: "0x1234567890123456789012345678901234567890",
           address: "0x1234567890123456789012345678901234567890",
         },
+        userPub: "gun_pub_123",
       };
 
+      // Mock the setupConsistentOneshotSigning method directly
       jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
         credential: {
           address: "0x1234567890123456789012345678901234567890",
@@ -716,9 +733,8 @@ describe("Web3ConnectorPlugin", () => {
         password: "generated_password",
       });
 
-      plugin["core"] = {
-        signUp: jest.fn().mockResolvedValue(mockSignUpResult),
-      } as any;
+      // Mock isAvailable to return true
+      jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
 
       const result = await plugin.signUp(
         "0x1234567890123456789012345678901234567890"

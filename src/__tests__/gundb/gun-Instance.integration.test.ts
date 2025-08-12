@@ -1,4 +1,5 @@
 import { GunInstance } from "../../gundb/gun-Instance";
+import Gun from "gun/gun";
 
 // Mock solo le dipendenze esterne, non Gun stesso
 jest.mock("../../storage/storage", () => ({
@@ -39,20 +40,21 @@ Object.defineProperty(global, "sessionStorage", {
 
 describe("GunInstance Integration Tests", () => {
   let gunInstance: GunInstance;
+  let gun: any;
 
   beforeEach(() => {
-    // Usa una configurazione minimale per i test con Gun reale
-    const config = {
-      peers: [], // Nessun peer per test isolati
-      localStorage: false, // Disabilita localStorage per test
-      axe: false, // Disabilita axe per test
-      multicast: false, // Disabilita multicast per test
-      radisk: false, // Disabilita radisk per test
-      rindexed: false, // Disabilita rindexed per test
-      webrtc: false, // Disabilita webrtc per test
-    };
+    // Create a real Gun instance with minimal configuration for testing
+    gun = Gun({
+      peers: [], // No peers for isolated tests
+      localStorage: false, // Disable localStorage for tests
+      axe: false, // Disable axe for tests
+      multicast: false, // Disable multicast for tests
+      radisk: true, // Enable radisk for tests
+      rindexed: true, // Enable rindexed for tests
+      webrtc: true, // Enable webrtc for tests
+    });
 
-    gunInstance = new GunInstance(config);
+    gunInstance = new GunInstance(gun);
   });
 
   afterEach(() => {
@@ -76,17 +78,17 @@ describe("GunInstance Integration Tests", () => {
     });
 
     it("should create GunInstance with custom peers", () => {
-      const configWithPeers = {
-        peers: ["http://localhost:8080/gun"],
+      const gunWithPeers = Gun({
+        peers: [""],
         localStorage: false,
         axe: false,
         multicast: false,
-        radisk: false,
+        radisk: true,
         rindexed: false,
         webrtc: false,
-      };
+      });
 
-      const instanceWithPeers = new GunInstance(configWithPeers);
+      const instanceWithPeers = new GunInstance(gunWithPeers);
       expect(instanceWithPeers).toBeDefined();
       expect(instanceWithPeers.gun).toBeDefined();
     });
@@ -125,17 +127,17 @@ describe("GunInstance Integration Tests", () => {
   describe("Peer Management Integration", () => {
     it("should add and remove peers", () => {
       const peer = "http://localhost:8080/gun";
-      
+
       // Test adding peer
       expect(() => {
         gunInstance.addPeer(peer);
       }).not.toThrow();
-      
+
       // Test removing peer
       expect(() => {
         gunInstance.removePeer(peer);
       }).not.toThrow();
-      
+
       // Verifica che le operazioni non lancino errori
       expect(gunInstance.gun).toBeDefined();
     });
@@ -146,7 +148,7 @@ describe("GunInstance Integration Tests", () => {
       expect(() => {
         gunInstance.recall();
       }).not.toThrow();
-      
+
       // Verifica che l'operazione non lanci errori
       expect(gunInstance.user).toBeDefined();
     });

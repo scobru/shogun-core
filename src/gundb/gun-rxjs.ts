@@ -42,7 +42,18 @@ export class GunRxJS {
    */
   observe<T>(path: string | any): Observable<T> {
     return new Observable<T>((subscriber) => {
-      const node = typeof path === "string" ? this.gun.get(path) : path;
+      let node: any;
+      if (Array.isArray(path)) {
+        // Support array paths by chaining get calls
+        node = this.gun.get(path[0]);
+        for (let i = 1; i < path.length; i++) {
+          node = node.get(path[i]);
+        }
+      } else if (typeof path === "string") {
+        node = this.gun.get(path);
+      } else {
+        node = path;
+      }
 
       // Subscribe to changes
       const unsub = node.on((data: T, key: string) => {
@@ -70,7 +81,7 @@ export class GunRxJS {
     }).pipe(
       distinctUntilChanged((prev, curr) => {
         return JSON.stringify(prev) === JSON.stringify(curr);
-      }),
+      })
     );
   }
 
@@ -82,9 +93,15 @@ export class GunRxJS {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean,
+    matchFn?: (data: any) => boolean
   ): Observable<T[]> {
     return new Observable<T[]>((subscriber) => {
+      if (!path) {
+        subscriber.next([]);
+        subscriber.complete();
+        return;
+      }
+
       const node = typeof path === "string" ? this.gun.get(path) : path;
       const results: Record<string, T> = {};
 
@@ -123,11 +140,43 @@ export class GunRxJS {
    * @param data - Data to put
    * @returns Observable that completes when the put is acknowledged
    */
-  put<T>(path: string | any, data: T): Observable<T> {
-    const node = typeof path === "string" ? this.gun.get(path) : path;
-
+  put<T>(path: string | any, data?: T): Observable<T> {
     return new Observable<T>((subscriber) => {
-      node.put(data, (ack: any) => {
+      const performPut = (target: any, value: T) => {
+        target.put(value, (ack: any) => {
+          if (ack.err) {
+            subscriber.error(new Error(ack.err));
+          } else {
+            subscriber.next(value);
+            subscriber.complete();
+          }
+        });
+      };
+
+      if (typeof path === "string" || Array.isArray(path)) {
+        // Path-based put
+        let node: any;
+        if (Array.isArray(path)) {
+          node = this.gun.get(path[0]);
+          for (let i = 1; i < path.length; i++) node = node.get(path[i]);
+        } else {
+          node = this.gun.get(path);
+        }
+        performPut(node, data as T);
+      } else {
+        // Root-level put
+        performPut(this.gun, path as T);
+      }
+    });
+  }
+
+  /**
+   * Backward-compatible overload that accepts optional callback like tests expect
+   */
+  putCompat<T>(data: T, callback?: (ack: any) => void): Observable<T> {
+    return new Observable<T>((subscriber) => {
+      this.gun.put(data, (ack: any) => {
+        if (callback) callback(ack);
         if (ack.err) {
           subscriber.error(new Error(ack.err));
         } else {
@@ -144,11 +193,38 @@ export class GunRxJS {
    * @param data - Data to set
    * @returns Observable that completes when the set is acknowledged
    */
-  set<T>(path: string | any, data: T): Observable<T> {
-    const node = typeof path === "string" ? this.gun.get(path) : path;
-
+  set<T>(path: string | any, data?: T): Observable<T> {
     return new Observable<T>((subscriber) => {
-      node.set(data, (ack: any) => {
+      const performSet = (target: any, value: T) => {
+        target.set(value, (ack: any) => {
+          if (ack.err) {
+            subscriber.error(new Error(ack.err));
+          } else {
+            subscriber.next(value);
+            subscriber.complete();
+          }
+        });
+      };
+
+      if (typeof path === "string" || Array.isArray(path)) {
+        let node: any;
+        if (Array.isArray(path)) {
+          node = this.gun.get(path[0]);
+          for (let i = 1; i < path.length; i++) node = node.get(path[i]);
+        } else {
+          node = this.gun.get(path);
+        }
+        performSet(node, data as T);
+      } else {
+        performSet(this.gun, path as T);
+      }
+    });
+  }
+
+  setCompat<T>(data: T, callback?: (ack: any) => void): Observable<T> {
+    return new Observable<T>((subscriber) => {
+      this.gun.set(data, (ack: any) => {
+        if (callback) callback(ack);
         if (ack.err) {
           subscriber.error(new Error(ack.err));
         } else {
@@ -164,8 +240,15 @@ export class GunRxJS {
    * @param path - Path to get data from
    * @returns Observable that emits the data once
    */
-  once<T>(path: string | any): Observable<T> {
-    const node = typeof path === "string" ? this.gun.get(path) : path;
+  once<T>(path?: string | any): Observable<T> {
+    let node: any;
+    if (typeof path === "string") {
+      node = this.gun.get(path);
+    } else if (path) {
+      node = path;
+    } else {
+      node = this.gun;
+    }
 
     return new Observable<T>((subscriber) => {
       node.once((data: T) => {
@@ -191,7 +274,7 @@ export class GunRxJS {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R,
+    computeFn: (...values: T[]) => R
   ): Observable<R> {
     // Convert all sources to observables
     const observables = sources.map((source) => {
@@ -244,19 +327,95 @@ export class GunRxJS {
    * @param data - Data to put
    * @returns Observable that completes when the put is acknowledged
    */
-  userPut<T>(path: string, data: T): Observable<T> {
+  userPut<T>(
+    dataOrPath: string | T,
+    maybeData?: T,
+    callback?: (ack: any) => void
+  ): Observable<T> {
     return new Observable<T>((subscriber) => {
-      this.gun
-        .user()
-        .get(path)
-        .put(data, (ack: any) => {
+      const user = this.gun.user();
+      if (typeof dataOrPath === "string") {
+        user.get(dataOrPath).put(maybeData as T, (ack: any) => {
+          if (callback) callback(ack);
           if (ack.err) {
             subscriber.error(new Error(ack.err));
           } else {
-            subscriber.next(data);
+            subscriber.next(maybeData as T);
             subscriber.complete();
           }
         });
+      } else {
+        user.put(dataOrPath as T, (ack: any) => {
+          if (callback) callback(ack);
+          if (ack.err) {
+            subscriber.error(new Error(ack.err));
+          } else {
+            subscriber.next(dataOrPath as T);
+            subscriber.complete();
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * User set data and return an Observable (for authenticated users)
+   * @param dataOrPath - Data to set or path where to set the data
+   * @param maybeData - Data to set (if first parameter is path)
+   * @param callback - Optional callback function
+   * @returns Observable that completes when the set is acknowledged
+   */
+  userSet<T>(
+    dataOrPath: string | T,
+    maybeData?: T,
+    callback?: (ack: any) => void
+  ): Observable<T> {
+    return new Observable<T>((subscriber) => {
+      const user = this.gun.user();
+      if (typeof dataOrPath === "string") {
+        user.get(dataOrPath).set(maybeData as T, (ack: any) => {
+          if (callback) callback(ack);
+          if (ack.err) {
+            subscriber.error(new Error(ack.err));
+          } else {
+            subscriber.next(maybeData as T);
+            subscriber.complete();
+          }
+        });
+      } else {
+        user.set(dataOrPath as T, (ack: any) => {
+          if (callback) callback(ack);
+          if (ack.err) {
+            subscriber.error(new Error(ack.err));
+          } else {
+            subscriber.next(dataOrPath as T);
+            subscriber.complete();
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * User once data and return an Observable (for authenticated users)
+   * @param path - Optional path to get data from
+   * @param callback - Optional callback function
+   * @returns Observable that emits the data once
+   */
+  userOnce<T>(path?: string, callback?: (ack: any) => void): Observable<T> {
+    return new Observable<T>((subscriber) => {
+      const user = this.gun.user();
+      const target = path ? user.get(path) : user;
+
+      target.once((data: T, ack: any) => {
+        if (callback) callback(ack);
+        if (ack && ack.err) {
+          subscriber.error(new Error(ack.err));
+        } else {
+          subscriber.next(data);
+          subscriber.complete();
+        }
+      });
     });
   }
 
@@ -274,8 +433,11 @@ export class GunRxJS {
    * @param path - Path to observe in user space
    * @returns Observable that emits whenever the user data changes
    */
-  observeUser<T>(path: string): Observable<T> {
-    return this.observe<T>(this.gun.user().get(path));
+  observeUser<T>(path?: string): Observable<T> {
+    if (path) {
+      return this.observe<T>(this.gun.user().get(path));
+    }
+    return this.observe<T>(this.gun.user().get("~"));
   }
 
   /**

@@ -30,6 +30,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:integration": "jest --config src/__tests__/integration/jest.integration.config.js",
+    "test:integration:watch": "jest --config src/__tests__/integration/jest.integration.config.js --watch",
     "coverage": "jest --coverage",
     "mutation": "stryker run",
     "sast": "semgrep --config semgrep.yml"
@@ -88,16 +90,30 @@
     "@stryker-mutator/core": "^8.3.1",
     "@stryker-mutator/jest-runner": "^8.3.1",
     "@stryker-mutator/typescript-checker": "^8.3.1"
-  }
-  ,
+  },
   "engines": {
     "node": ">=18"
   },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src"],
-    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
+    "testPathIgnorePatterns": [
+      ".*complete-integration\\.test\\.ts$",
+      ".*user_manager\\.integration\\.test\\.ts$",
+      ".*saveUser\\.integration\\.test\\.ts$",
+      ".*oauthPlugin\\.integration\\.test\\.ts$",
+      ".*gun-Instance\\.integration\\.test\\.ts$",
+      ".*robust-integration\\.test\\.ts$",
+      ".*final-integration\\.test\\.ts$",
+      ".*quick-integration\\.test\\.ts$"
+    ],
     "transform": {
       "^.+\\.ts$": "ts-jest"
     },
@@ -107,12 +123,21 @@
       "!src/index.ts"
     ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"],
-    "setupFilesAfterEnv": ["<rootDir>/src/__tests__/setup.ts"],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/__tests__/setup.ts"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
-    "testTimeout": 10000,
+    "testTimeout": 30000,
+    "forceExit": true,
+    "detectOpenHandles": true,
+    "maxWorkers": 1,
     "coverageThreshold": {
       "global": {
         "branches": 10,

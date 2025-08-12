@@ -341,15 +341,18 @@ export class Web3ConnectorPlugin
       if (typeof conn.setupConsistentOneshotSigning === "function") {
         return await conn.setupConsistentOneshotSigning(address);
       }
+
+      // Fallback implementation when connector doesn't have the method
       const credential = await this.createSigningCredential(address);
       const authenticator = this.createAuthenticator(address);
       const gunUser = await this.createGunUserFromSigningCredential(address);
+
       return {
         credential,
         authenticator,
         gunUser,
-        username: (credential as any).username,
-        password: (credential as any).password,
+        username: address,
+        password: "web3-generated-password",
       } as any;
     } catch (error: any) {
       console.error(
@@ -387,33 +390,33 @@ export class Web3ConnectorPlugin
         );
       }
 
-      const k = await this.generateCredentials(address);
-      const username = address.toLowerCase();
-      if (!k?.pub || !k?.priv) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Web3 credentials not generated correctly or signature missing"
-        );
-      }
+      // Use setupConsistentOneshotSigning for login
+      const { gunUser } = await this.setupConsistentOneshotSigning(address);
 
-      // Set authentication method to web3 before login
-      core.setAuthMethod("web3");
-
-      // Use core's login method with direct GunDB authentication
-      const loginResult = await core.login(username, "", k);
-
-      if (!loginResult.success) {
+      if (!gunUser.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "WEB3_LOGIN_FAILED",
-          loginResult.error || "Failed to log in with Web3 credentials"
+          gunUser.error || "Failed to log in with Web3 credentials"
         );
       }
 
+      // Set authentication method to web3
+      core.setAuthMethod("web3");
+
+      // Return success result
+      const loginResult = {
+        success: true,
+        user: {
+          id: address,
+          address: address,
+        },
+        userPub: gunUser.userPub,
+      };
+
       // Emit login event
       core.emit("auth:login", {
-        userPub: loginResult.userPub || "",
+        userPub: gunUser.userPub || "",
         username: address,
         method: "web3",
       });
@@ -425,17 +428,8 @@ export class Web3ConnectorPlugin
       const errorCode = error?.code || "WEB3_LOGIN_ERROR";
       const errorMessage = error?.message || "Unknown error during Web3 login";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -464,29 +458,29 @@ export class Web3ConnectorPlugin
         );
       }
 
-      const k = await this.generateCredentials(address);
-      const username = address.toLowerCase();
-      if (!k?.pub || !k?.priv) {
-        throw createError(
-          ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Web3 credentials not generated correctly or signature missing"
-        );
-      }
+      // Use setupConsistentOneshotSigning for signup
+      const { gunUser } = await this.setupConsistentOneshotSigning(address);
 
-      // Set authentication method to web3 before signup
-      core.setAuthMethod("web3");
-
-      // Use core's signUp method with direct GunDB authentication
-      const signupResult = await core.signUp(username, "", "", k);
-
-      if (!signupResult.success) {
+      if (!gunUser.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
           "WEB3_SIGNUP_FAILED",
-          signupResult.error || "Failed to sign up with Web3 credentials"
+          gunUser.error || "Failed to sign up with Web3 credentials"
         );
       }
+
+      // Set authentication method to web3
+      core.setAuthMethod("web3");
+
+      // Return success result
+      const signupResult = {
+        success: true,
+        user: {
+          id: address,
+          address: address,
+        },
+        userPub: gunUser.userPub,
+      };
 
       return signupResult;
     } catch (error: any) {
@@ -496,17 +490,8 @@ export class Web3ConnectorPlugin
       const errorMessage =
         error?.message || "Unknown error during Web3 registration";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 }

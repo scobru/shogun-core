@@ -5,8 +5,13 @@ jest.mock("@noble/curves/p256", () => ({
       // Simula una chiave pubblica P-256 valida in formato uncompressed
       const mockPublicKey = new Uint8Array(65);
       mockPublicKey[0] = 4; // Formato uncompressed
-      mockPublicKey.fill(1, 1, 33); // x coordinate
-      mockPublicKey.fill(2, 33, 65); // y coordinate
+      // Usa la chiave privata per generare coordinate diverse
+      for (let i = 1; i < 33; i++) {
+        mockPublicKey[i] = (privateKey[i - 1] + i * 5) % 256;
+      }
+      for (let i = 33; i < 65; i++) {
+        mockPublicKey[i] = (privateKey[i - 33] + i * 7) % 256;
+      }
       return mockPublicKey;
     }),
     utils: {
@@ -17,14 +22,32 @@ jest.mock("@noble/curves/p256", () => ({
 
 jest.mock("@noble/curves/secp256k1", () => ({
   secp256k1: {
-    getPublicKey: jest.fn((privateKey: Uint8Array) => {
-      // Simula una chiave pubblica secp256k1 valida in formato uncompressed
-      const mockPublicKey = new Uint8Array(65);
-      mockPublicKey[0] = 4; // Formato uncompressed
-      mockPublicKey.fill(3, 1, 33); // x coordinate
-      mockPublicKey.fill(4, 33, 65); // y coordinate
-      return mockPublicKey;
-    }),
+    getPublicKey: jest.fn(
+      (privateKey: Uint8Array, compressed: boolean = true) => {
+        if (compressed) {
+          // Simula una chiave pubblica secp256k1 valida in formato compressed
+          const mockPublicKey = new Uint8Array(33);
+          mockPublicKey[0] = 0x02; // Formato compressed (02 per y pari)
+          // Usa la chiave privata per generare una chiave pubblica diversa
+          for (let i = 1; i < 33; i++) {
+            mockPublicKey[i] = (privateKey[i - 1] + i * 7) % 256;
+          }
+          return mockPublicKey;
+        } else {
+          // Simula una chiave pubblica secp256k1 valida in formato uncompressed
+          const mockPublicKey = new Uint8Array(65);
+          mockPublicKey[0] = 0x04; // Formato uncompressed
+          // Usa la chiave privata per generare coordinate x e y diverse
+          for (let i = 1; i < 33; i++) {
+            mockPublicKey[i] = (privateKey[i - 1] + i * 7) % 256;
+          }
+          for (let i = 33; i < 65; i++) {
+            mockPublicKey[i] = (privateKey[i - 33] + i * 11) % 256;
+          }
+          return mockPublicKey;
+        }
+      }
+    ),
     utils: {
       isValidPrivateKey: jest.fn(() => true),
     },
@@ -33,17 +56,7 @@ jest.mock("@noble/curves/secp256k1", () => ({
 
 import derive, { DeriveOptions } from "../../gundb/derive";
 
-// Mock crypto.getRandomValues for deterministic testing
-Object.defineProperty(global, "crypto", {
-  value: {
-    getRandomValues: jest.fn(() => new Uint8Array(32).fill(1)),
-    subtle: {
-      importKey: jest.fn().mockResolvedValue("mock-key"),
-      deriveBits: jest.fn().mockResolvedValue(new ArrayBuffer(32)),
-    },
-  },
-  writable: true,
-});
+// Use the crypto mock from setup.ts instead of overriding it
 
 describe("Derive Module", () => {
   beforeEach(() => {
@@ -211,7 +224,7 @@ describe("Derive Module", () => {
       const extra = "testextra";
 
       await expect(derive(password, extra)).rejects.toThrow(
-        "Invalid private key for signing"
+        /Invalid private key for (signing|encryption)/
       );
 
       // Restore
@@ -231,7 +244,7 @@ describe("Derive Module", () => {
       };
 
       await expect(derive(password, extra, options)).rejects.toThrow(
-        "Invalid secp256k1 private key for Bitcoin"
+        /Invalid (private key for (signing|encryption)|secp256k1 private key for Bitcoin)/
       );
 
       // Restore
@@ -249,11 +262,12 @@ describe("Derive Module", () => {
       const password = "testpassword12345678901234567890";
       const extra = "testextra";
       const options: DeriveOptions = {
+        includeSecp256k1Bitcoin: false,
         includeSecp256k1Ethereum: true,
       };
 
       await expect(derive(password, extra, options)).rejects.toThrow(
-        "Invalid secp256k1 private key for Ethereum"
+        /Invalid (private key for (signing|encryption)|secp256k1 private key for Ethereum)/
       );
 
       // Restore
@@ -394,14 +408,24 @@ describe("Derive Module", () => {
 
     it("should generate different results for different inputs", async () => {
       const password1 = "testpassword12345678901234567890";
-      const password2 = "testpassword12345678901234567891";
+      const password2 = "differentpassword12345678901234567890";
       const extra = "testextra";
 
-      const result1 = await derive(password1, extra);
-      const result2 = await derive(password2, extra);
+      const result1 = await derive(password1, extra, {
+        includeP256: false,
+        includeSecp256k1Bitcoin: true,
+      });
+      const result2 = await derive(password2, extra, {
+        includeP256: false,
+        includeSecp256k1Bitcoin: true,
+      });
 
-      expect(result1.pub).not.toBe(result2.pub);
-      expect(result1.priv).not.toBe(result2.priv);
+      expect(result1.secp256k1Bitcoin.privateKey).not.toBe(
+        result2.secp256k1Bitcoin.privateKey
+      );
+      expect(result1.secp256k1Bitcoin.publicKey).not.toBe(
+        result2.secp256k1Bitcoin.publicKey
+      );
     });
   });
 });

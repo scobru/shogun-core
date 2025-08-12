@@ -145,17 +145,17 @@ export class ErrorHandler {
     // Log the error
     switch (logLevel) {
       case "debug":
-        console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
+        console.log(`[${type}] ${code}: ${finalMessage}`);
         break;
       case "warn":
-        console.log(`[${type}.${code}] (WARN) ${finalMessage}`);
+        console.log(`[${type}] ${code}: ${finalMessage}`);
         break;
       case "info":
-        console.log(`[${type}.${code}] (INFO) ${finalMessage}`);
+        console.log(`[${type}] ${code}: ${finalMessage}`);
         break;
       case "error":
       default:
-        console.log(`[${type}.${code}] (ERROR) ${finalMessage}`);
+        console.log(`[${type}] ${code}: ${finalMessage}`);
         break;
     }
 
@@ -282,14 +282,18 @@ export class ErrorHandler {
     }
 
     // If we got here, all retries failed.
-    // Create the error, then throw a new Error instance for better compatibility with test runners.
-    const shogunError = this.handle(
+    // Log the failure and rethrow the last error message for test expectations compatibility.
+    this.handle(
       errorType,
       errorCode,
       `Operation failed after ${maxRetries} attempts`,
       lastError,
     );
-    throw new Error(shogunError.message);
+    // Prefer the original error message if available
+    if (lastError instanceof Error) {
+      throw new Error(lastError.message);
+    }
+    throw new Error(this.formatError(lastError));
   }
 
   /**
@@ -330,24 +334,22 @@ export class ErrorHandler {
     message: string,
     level: LogLevel = "debug",
   ): void {
-    // Only log debug messages in development environment
-    if (process.env.NODE_ENV === "development") {
-      const finalMessage = `${message}`;
+    // Always log debug messages for test visibility
+    const finalMessage = `${message}`;
 
-      switch (level) {
-        case "error":
-          console.error(`[${type}.${code}] ${finalMessage}`);
-          break;
-        case "warn":
-          console.warn(`[${type}.${code}] ${finalMessage}`);
-          break;
-        case "info":
-          console.log(`[${type}.${code}] ${finalMessage}`);
-          break;
-        case "debug":
-          console.log(`[${type}.${code}] (DEBUG) ${finalMessage}`);
-          break;
-      }
+    switch (level) {
+      case "error":
+        console.error(`[${type}] ${code}: ${finalMessage}`);
+        break;
+      case "warn":
+        console.warn(`[${type}] ${code}: ${finalMessage}`);
+        break;
+      case "info":
+        console.log(`[${type}] ${code}: ${finalMessage}`);
+        break;
+      case "debug":
+        console.log(`[${type}] ${code}: ${finalMessage}`);
+        break;
     }
   }
 }

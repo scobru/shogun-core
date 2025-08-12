@@ -111,6 +111,21 @@ describe("GunInstance", () => {
     jest.clearAllMocks();
 
     // Create a more realistic mock Gun instance
+    const mockUserInstance = {
+      auth: jest.fn(),
+      create: jest.fn(),
+      leave: jest.fn(),
+      recall: jest.fn(() => mockUserInstance),
+      get: jest.fn(),
+      put: jest.fn(),
+      set: jest.fn(),
+      once: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+      emit: jest.fn(),
+      is: jest.fn(() => ({ pub: "test-pub" })),
+    };
+
     mockGun = {
       on: jest.fn(),
       off: jest.fn(),
@@ -119,20 +134,7 @@ describe("GunInstance", () => {
       get: jest.fn(),
       put: jest.fn(),
       set: jest.fn(),
-      user: jest.fn(() => ({
-        auth: jest.fn(),
-        create: jest.fn(),
-        leave: jest.fn(),
-        recall: jest.fn(),
-        get: jest.fn(),
-        put: jest.fn(),
-        set: jest.fn(),
-        once: jest.fn(),
-        on: jest.fn(),
-        off: jest.fn(),
-        emit: jest.fn(),
-        is: jest.fn(() => ({ pub: "test-pub" })),
-      })),
+      user: jest.fn(() => mockUserInstance),
     };
 
     gunInstance = new GunInstance(mockGun);
@@ -193,4 +195,3 @@ describe("GunInstance", () => {
     });
   });
 });
-

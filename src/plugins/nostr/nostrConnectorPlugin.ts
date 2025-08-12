@@ -505,17 +505,8 @@ export class NostrConnectorPlugin
       const errorMessage =
         error?.message || "Unknown error during Bitcoin wallet login";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -628,17 +619,8 @@ export class NostrConnectorPlugin
       const errorMessage =
         error?.message || "Unknown error during Bitcoin wallet signup";
 
-      const handledError = ErrorHandler.handle(
-        errorType,
-        errorCode,
-        errorMessage,
-        error,
-      );
-
-      return {
-        success: false,
-        error: handledError.message,
-      };
+      ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+      return { success: false, error: errorMessage };
     }
   }
 
