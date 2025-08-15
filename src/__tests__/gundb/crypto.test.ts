@@ -72,7 +72,7 @@ describe("Crypto Module", () => {
       });
 
       await expect(encrypt("test_data", "test_key")).rejects.toThrow(
-        "SEA not available"
+        "SEA not available",
       );
     });
   });
@@ -94,7 +94,7 @@ describe("Crypto Module", () => {
       });
 
       await expect(decrypt("encrypted_data", "test_key")).rejects.toThrow(
-        "SEA not available"
+        "SEA not available",
       );
     });
   });
@@ -173,7 +173,7 @@ describe("Crypto Module", () => {
         JSON.stringify(testObj),
         null,
         null,
-        { name: "SHA-256" }
+        { name: "SHA-256" },
       );
       expect(result).toEqual({
         hash: mockHash,
@@ -241,7 +241,7 @@ describe("Crypto Module", () => {
       const normal = "normal_string";
       const result = unsafeHash(normal);
 
-      // Note: unsafeHash will convert _ to - and then - to +, 
+      // Note: unsafeHash will convert _ to - and then - to +,
       // so "normal_string" becomes "normal+string"
       expect(result).toBe("normal+string");
     });
@@ -277,10 +277,10 @@ describe("Crypto Module", () => {
       const uuid2 = randomUUID();
 
       expect(uuid1).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
       expect(uuid2).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
       expect(uuid1).not.toBe(uuid2);
     });

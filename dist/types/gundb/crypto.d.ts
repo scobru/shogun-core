@@ -33,7 +33,7 @@ export declare function decrypt(encryptedData: string, key: string): Promise<str
  */
 export declare function encFor(data: any, sender: ISEAPair, receiver: {
     epub: string;
-}): Promise<string>;
+}): Promise<any>;
 /**
  * Decrypts data from a sender using receiver's private key
  * @param data - Data to decrypt
@@ -49,14 +49,14 @@ export declare function decFrom(data: any, sender: {
  * @param text - Text to hash
  * @returns Promise resolving to hash string
  */
-export declare function hashText(text: string): Promise<string | undefined>;
+export declare function hashText(text: string): Promise<any>;
 /**
  * Creates a hash of an object by stringifying it first
  * @param obj - Object to hash
  * @returns Promise resolving to hash and original stringified data
  */
 export declare function hashObj(obj: any): Promise<{
-    hash: string | undefined;
+    hash: any;
     hashed: string;
 }>;
 /**
@@ -65,35 +65,31 @@ export declare function hashObj(obj: any): Promise<{
  * @param pair - Key pair
  * @returns Promise resolving to shared secret
  */
-export declare function secret(epub: string, pair: ISEAPair): Promise<string | undefined>;
+export declare function secret(epub: string, pair: ISEAPair): Promise<string>;
 /**
  * Creates a short hash using PBKDF2
  * @param text - Text to hash
  * @param salt - Salt for hashing
  * @returns Promise resolving to hex-encoded hash
  */
-export declare function getShortHash(text: string, salt: string): Promise<string | undefined>;
+export declare function getShortHash(text: string, salt?: string): Promise<any>;
 /**
  * Converts unsafe characters in hash to URL-safe versions
  * @param unsafe - String containing unsafe characters
  * @returns URL-safe string with encoded characters
  */
-export declare function safeHash(unsafe: {
-    replace: (arg0: RegExp, arg1: (c: any) => "-" | "." | "_" | undefined) => any;
-}): any;
+export declare function safeHash(unsafe: string): any;
 /**
  * Converts URL-safe characters back to original hash characters
  * @param safe - URL-safe string
  * @returns Original string with decoded characters
  */
-export declare function unsafeHash(safe: {
-    replace: (arg0: RegExp, arg1: (c: any) => "=" | "+" | "/" | undefined) => any;
-}): any;
+export declare function unsafeHash(safe: string): any;
 /**
  * Safely parses JSON with fallback to default value
  * @param input - String to parse as JSON
  * @param def - Default value if parsing fails
  * @returns Parsed object or default value
  */
-export declare function safeJSONParse(input: string, def?: {}): any;
+export declare function safeJSONParse(input: any, def?: any): any;
 export declare function randomUUID(): string;

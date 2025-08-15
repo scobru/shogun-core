@@ -190,7 +190,7 @@ jest.mock("../../plugins/nostr/nostrConnector", () => {
       async generateCredentials(
         address: string,
         signature: string,
-        message: string
+        message: string,
       ) {
         return {
           username: address,
@@ -317,7 +317,7 @@ describe("Plugin end-to-end flows", () => {
     const res = await oauth.handleOAuthCallback(
       "google" as any,
       "code",
-      "state"
+      "state",
     );
     expect(res.success).toBe(true);
     expect(res.user?.oauth?.provider).toBe("google");
@@ -362,7 +362,7 @@ describe("Plugin end-to-end flows", () => {
     const methods = signupSpy.mock.calls.map((c: any[]) => c[0]?.method);
     // Core può emettere "web3" (per pair), il plugin emette "bitcoin": accetta uno dei due
     expect(methods.some((m: string) => m === "bitcoin" || m === "web3")).toBe(
-      true
+      true,
     );
   });
 

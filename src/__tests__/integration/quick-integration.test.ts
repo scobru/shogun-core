@@ -31,17 +31,26 @@ describe("Quick Integration Tests - User Manager", () => {
       console.log("Testing credential validation...");
 
       // Test valid credentials
-      const validValidation = shogunCore.db.validateSignupCredentials(testUsername, testPassword);
+      const validValidation = shogunCore.db.validateSignupCredentials(
+        testUsername,
+        testPassword,
+      );
       expect(validValidation.valid).toBe(true);
       expect(validValidation.error).toBeUndefined();
 
       // Test invalid username
-      const invalidUsernameValidation = shogunCore.db.validateSignupCredentials("", testPassword);
+      const invalidUsernameValidation = shogunCore.db.validateSignupCredentials(
+        "",
+        testPassword,
+      );
       expect(invalidUsernameValidation.valid).toBe(false);
       expect(invalidUsernameValidation.error).toBeDefined();
 
       // Test weak password
-      const weakPasswordValidation = shogunCore.db.validateSignupCredentials(testUsername, "123");
+      const weakPasswordValidation = shogunCore.db.validateSignupCredentials(
+        testUsername,
+        "123",
+      );
       expect(weakPasswordValidation.valid).toBe(false);
       expect(weakPasswordValidation.error).toBeDefined();
 
@@ -52,17 +61,26 @@ describe("Quick Integration Tests - User Manager", () => {
       console.log("Testing rate limiting...");
 
       // Test first signup attempt
-      const signupRateLimit = shogunCore.db.checkRateLimit(testUsername, "signup");
+      const signupRateLimit = shogunCore.db.checkRateLimit(
+        testUsername,
+        "signup",
+      );
       expect(signupRateLimit.allowed).toBe(true);
       expect(signupRateLimit.error).toBeUndefined();
 
       // Test first login attempt
-      const loginRateLimit = shogunCore.db.checkRateLimit(testUsername, "login");
+      const loginRateLimit = shogunCore.db.checkRateLimit(
+        testUsername,
+        "login",
+      );
       expect(loginRateLimit.allowed).toBe(true);
       expect(loginRateLimit.error).toBeUndefined();
 
       // Test with different username
-      const differentUserRateLimit = shogunCore.db.checkRateLimit(testUsername + "_2", "signup");
+      const differentUserRateLimit = shogunCore.db.checkRateLimit(
+        testUsername + "_2",
+        "signup",
+      );
       expect(differentUserRateLimit.allowed).toBe(true);
       expect(differentUserRateLimit.error).toBeUndefined();
 
@@ -76,7 +94,7 @@ describe("Quick Integration Tests - User Manager", () => {
         "TestPass123!@#",
         "MySecureP@ssw0rd",
         "Complex!Password#2024",
-        "Str0ng!P@ssw0rd$"
+        "Str0ng!P@ssw0rd$",
       ];
 
       const weakPasswords = [
@@ -89,14 +107,20 @@ describe("Quick Integration Tests - User Manager", () => {
       ];
 
       // Test strong passwords
-      strongPasswords.forEach(password => {
-        const validation = shogunCore.db.validateSignupCredentials(testUsername, password);
+      strongPasswords.forEach((password) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          testUsername,
+          password,
+        );
         expect(validation.valid).toBe(true);
       });
 
       // Test weak passwords
-      weakPasswords.forEach(password => {
-        const validation = shogunCore.db.validateSignupCredentials(testUsername, password);
+      weakPasswords.forEach((password) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          testUsername,
+          password,
+        );
         expect(validation.valid).toBe(false);
         expect(validation.error).toBeDefined();
       });
@@ -113,7 +137,7 @@ describe("Quick Integration Tests - User Manager", () => {
         "test.user",
         "test-user",
         "TestUser123",
-        "user_123"
+        "user_123",
       ];
 
       const invalidUsernames = [
@@ -125,14 +149,20 @@ describe("Quick Integration Tests - User Manager", () => {
       ];
 
       // Test valid usernames
-      validUsernames.forEach(username => {
-        const validation = shogunCore.db.validateSignupCredentials(username, testPassword);
+      validUsernames.forEach((username) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          username,
+          testPassword,
+        );
         expect(validation.valid).toBe(true);
       });
 
       // Test invalid usernames
-      invalidUsernames.forEach(username => {
-        const validation = shogunCore.db.validateSignupCredentials(username, testPassword);
+      invalidUsernames.forEach((username) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          username,
+          testPassword,
+        );
         expect(validation.valid).toBe(false);
         expect(validation.error).toBeDefined();
       });
@@ -159,12 +189,15 @@ describe("Quick Integration Tests - User Manager", () => {
     it("should verify that the checkRateLimit bug is fixed", () => {
       console.log("Verifying checkRateLimit bug fix...");
 
-      const rateLimitResult = shogunCore.db.checkRateLimit(testUsername, "signup");
-      
+      const rateLimitResult = shogunCore.db.checkRateLimit(
+        testUsername,
+        "signup",
+      );
+
       // Verify it returns an object with 'allowed' property (not a boolean)
-      expect(typeof rateLimitResult).toBe('object');
-      expect(rateLimitResult).toHaveProperty('allowed');
-      expect(typeof rateLimitResult.allowed).toBe('boolean');
+      expect(typeof rateLimitResult).toBe("object");
+      expect(rateLimitResult).toHaveProperty("allowed");
+      expect(typeof rateLimitResult.allowed).toBe("boolean");
       expect(rateLimitResult.allowed).toBe(true);
 
       console.log("✅ checkRateLimit bug fix verified");
@@ -173,8 +206,11 @@ describe("Quick Integration Tests - User Manager", () => {
     it("should verify that validateSignupCredentials works correctly", () => {
       console.log("Verifying validateSignupCredentials...");
 
-      const validationResult = shogunCore.db.validateSignupCredentials(testUsername, testPassword);
-      
+      const validationResult = shogunCore.db.validateSignupCredentials(
+        testUsername,
+        testPassword,
+      );
+
       // Verify it returns valid result
       expect(validationResult.valid).toBe(true);
       expect(validationResult.error).toBeUndefined();

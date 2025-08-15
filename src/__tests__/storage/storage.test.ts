@@ -68,7 +68,7 @@ describe("ShogunStorage", () => {
       expect(storage).toBeDefined();
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         "_shogun_test",
-        "_shogun_test"
+        "_shogun_test",
       );
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("_shogun_test");
       expect(mockLocalStorage.getItem).toHaveBeenCalledWith("shogun_keypair");
@@ -165,12 +165,12 @@ describe("ShogunStorage", () => {
       expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
         1,
         "_shogun_test",
-        "_shogun_test"
+        "_shogun_test",
       );
       expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
         2,
         "shogun_keypair",
-        JSON.stringify(testPair)
+        JSON.stringify(testPair),
       );
     });
 
@@ -215,11 +215,11 @@ describe("ShogunStorage", () => {
       // Verify that both the probe and the actual removal call were made
       expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
         1,
-        "_shogun_test"
+        "_shogun_test",
       );
       expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
         2,
-        "shogun_keypair"
+        "shogun_keypair",
       );
     });
 
@@ -284,12 +284,12 @@ describe("ShogunStorage", () => {
       expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
         1,
         "_shogun_test",
-        "_shogun_test"
+        "_shogun_test",
       );
       expect(mockLocalStorage.setItem).toHaveBeenNthCalledWith(
         2,
         "test-key",
-        JSON.stringify(testValue)
+        JSON.stringify(testValue),
       );
     });
 
@@ -321,11 +321,11 @@ describe("ShogunStorage", () => {
       // Verify that both the probe and the actual removal call were made
       expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
         1,
-        "_shogun_test"
+        "_shogun_test",
       );
       expect(mockLocalStorage.removeItem).toHaveBeenNthCalledWith(
         2,
-        "test-key"
+        "test-key",
       );
     });
 
@@ -408,7 +408,7 @@ describe("ShogunStorage", () => {
       // Special characters
       storage.setItem("special-key", '{"text": "Hello\nWorld\tTab"}');
       expect(storage.getItem("special-key")).toBe(
-        '{"text": "Hello\nWorld\tTab"}'
+        '{"text": "Hello\nWorld\tTab"}',
       );
     });
   });

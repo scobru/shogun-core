@@ -297,7 +297,7 @@ describe("GunRxJS", () => {
 
       const result = gunRxJS.match(
         data,
-        (item) => item.name === matchData.name
+        (item) => item.name === matchData.name,
       );
       expect(Observable).toHaveBeenCalled();
       expect(result).toBeDefined();

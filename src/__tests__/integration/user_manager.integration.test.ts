@@ -30,7 +30,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
   beforeEach(() => {
     // Creiamo una nuova istanza di Gun per ogni test
     gun = createTestGunInstance();
-    
+
     config = {
       appToken: "test-integration-token",
       oauth: { enabled: false },
@@ -62,9 +62,12 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
 
       // Verifichiamo che l'utente sia stato salvato su GunDB
       const userData = await new Promise((resolve) => {
-        gun.get('users').get(username).once((data: any) => {
-          resolve(data);
-        });
+        gun
+          .get("users")
+          .get(username)
+          .once((data: any) => {
+            resolve(data);
+          });
       });
 
       expect(userData).toBeDefined();
@@ -91,7 +94,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       const weakPassword = "weak";
 
       const result = await shogunCore.signUp(username, weakPassword);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("Password must contain");
     });
@@ -111,7 +114,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
 
       // Test del login
       const loginResult = await shogunCore.login(username, password);
-      
+
       expect(loginResult.success).toBe(true);
       expect(loginResult.username).toBe(username);
       expect(loginResult.userPub).toBe(signUpResult.userPub);
@@ -130,7 +133,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
 
       // Test del login con password sbagliata
       const loginResult = await shogunCore.login(username, wrongPassword);
-      
+
       expect(loginResult.success).toBe(false);
       expect(loginResult.error).toBeDefined();
     });
@@ -152,23 +155,31 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
           email: "test@example.com",
           preferences: {
             theme: "dark",
-            language: "it"
-          }
-        }
+            language: "it",
+          },
+        },
       };
 
       // Salviamo i dati usando GunDB direttamente
       await new Promise((resolve) => {
-        gun.get('users').get(username).get('profile').put(testData.profile, (ack: any) => {
-          resolve(ack);
-        });
+        gun
+          .get("users")
+          .get(username)
+          .get("profile")
+          .put(testData.profile, (ack: any) => {
+            resolve(ack);
+          });
       });
 
       // Recuperiamo i dati salvati
       const savedData = await new Promise((resolve) => {
-        gun.get('users').get(username).get('profile').once((data: any) => {
-          resolve(data);
-        });
+        gun
+          .get("users")
+          .get(username)
+          .get("profile")
+          .once((data: any) => {
+            resolve(data);
+          });
       });
 
       expect(savedData).toEqual(testData.profile);

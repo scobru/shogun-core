@@ -62,7 +62,7 @@ export async function encrypt(data: any, key: string): Promise<string> {
  */
 export async function decrypt(
   encryptedData: string,
-  key: string
+  key: string,
 ): Promise<string | any> {
   const sea = getSEA();
   if (!sea || !sea.decrypt) {
@@ -89,7 +89,7 @@ export async function decrypt(
 export async function encFor(
   data: any,
   sender: ISEAPair,
-  receiver: { epub: string }
+  receiver: { epub: string },
 ) {
   const sea = getSEA();
   if (!sea || !sea.secret || !sea.encrypt) {
@@ -114,7 +114,7 @@ export async function encFor(
 export async function decFrom(
   data: any,
   sender: { epub: string },
-  receiver: ISEAPair
+  receiver: ISEAPair,
 ) {
   const sea = getSEA();
   if (!sea || !sea.secret || !sea.decrypt) {
@@ -231,7 +231,7 @@ export function unsafeHash(safe: string) {
 
   // Replace encoded characters back to original
   result = result.replace(/_/g, "-").replace(/\./g, "=");
-  
+
   // Replace '-' with '+' (this was the original '+' that was encoded as '-')
   result = result.replace(/-/g, "+");
 

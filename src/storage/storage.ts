@@ -45,7 +45,10 @@ export class ShogunStorage {
       } catch (error) {
         this.useLocalStorage = false;
         // Silence logs in tests; tests expect no console.error during constructor
-        console.log("ShogunStorage: localStorage error:", error.message);
+        console.log(
+          "ShogunStorage: localStorage error:",
+          (error as Error).message,
+        );
       }
     } else {
       console.log("ShogunStorage: localStorage is undefined");
@@ -131,7 +134,7 @@ export class ShogunStorage {
       try {
         localStorage.setItem(
           key,
-          typeof value === "string" ? value : JSON.stringify(value)
+          typeof value === "string" ? value : JSON.stringify(value),
         );
       } catch (error) {
         if (!this.isTestMode) {

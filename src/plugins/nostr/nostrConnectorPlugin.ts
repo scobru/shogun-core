@@ -268,7 +268,11 @@ export class NostrConnectorPlugin
       if (typeof conn.signWithDerivedKeys === "function") {
         return await conn.signWithDerivedKeys(data, address, extra);
       }
-      return await this.assertSigner().signWithDerivedKeys(data, address, extra);
+      return await this.assertSigner().signWithDerivedKeys(
+        data,
+        address,
+        extra,
+      );
     } catch (error: any) {
       console.error(`Error signing with derived keys: ${error.message}`);
       throw error;
@@ -371,7 +375,10 @@ export class NostrConnectorPlugin
       if (typeof conn.verifyConsistency === "function") {
         return await conn.verifyConsistency(address, expectedUserPub);
       }
-      return await this.assertSigner().verifyConsistency(address, expectedUserPub);
+      return await this.assertSigner().verifyConsistency(
+        address,
+        expectedUserPub,
+      );
     } catch (error: any) {
       console.error(`Error verifying Nostr consistency: ${error.message}`);
       return { consistent: false };
@@ -397,7 +404,13 @@ export class NostrConnectorPlugin
       const credential = await this.createSigningCredential(address);
       const authenticator = this.createAuthenticator(address);
       const gunUser = await this.createGunUserFromSigningCredential(address);
-      return { credential, authenticator, gunUser, username: (credential as any).username, password: (credential as any).password } as any;
+      return {
+        credential,
+        authenticator,
+        gunUser,
+        username: (credential as any).username,
+        password: (credential as any).password,
+      } as any;
     } catch (error: any) {
       console.error(
         `Error setting up consistent Nostr oneshot signing: ${error.message}`,

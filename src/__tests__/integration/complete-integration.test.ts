@@ -68,7 +68,10 @@ describe("Complete Integration Tests - User Manager", () => {
       expect(signUpResult.success).toBe(true);
 
       // Then try to authenticate with wrong password
-      const loginResult = await shogunCore.login(testUsername, "WrongPassword123!@#");
+      const loginResult = await shogunCore.login(
+        testUsername,
+        "WrongPassword123!@#",
+      );
 
       expect(loginResult.success).toBe(false);
       expect(loginResult.error).toBeDefined();
@@ -84,11 +87,14 @@ describe("Complete Integration Tests - User Manager", () => {
         "TestPass123!@#",
         "MySecureP@ssw0rd",
         "Complex!Password#2024",
-        "Str0ng!P@ssw0rd$"
+        "Str0ng!P@ssw0rd$",
       ];
 
-      strongPasswords.forEach(password => {
-        const validation = shogunCore.db.validateSignupCredentials(testUsername, password);
+      strongPasswords.forEach((password) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          testUsername,
+          password,
+        );
         expect(validation.valid).toBe(true);
         expect(validation.error).toBeUndefined();
       });
@@ -106,8 +112,11 @@ describe("Complete Integration Tests - User Manager", () => {
         "pass@word", // No uppercase or numbers
       ];
 
-      weakPasswords.forEach(password => {
-        const validation = shogunCore.db.validateSignupCredentials(testUsername, password);
+      weakPasswords.forEach((password) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          testUsername,
+          password,
+        );
         expect(validation.valid).toBe(false);
         expect(validation.error).toBeDefined();
       });
@@ -122,7 +131,7 @@ describe("Complete Integration Tests - User Manager", () => {
         "test.user",
         "test-user",
         "TestUser123",
-        "user_123"
+        "user_123",
       ];
 
       const invalidUsernames = [
@@ -133,13 +142,19 @@ describe("Complete Integration Tests - User Manager", () => {
         "test\\user", // Invalid character
       ];
 
-      validUsernames.forEach(username => {
-        const validation = shogunCore.db.validateSignupCredentials(username, testPassword);
+      validUsernames.forEach((username) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          username,
+          testPassword,
+        );
         expect(validation.valid).toBe(true);
       });
 
-      invalidUsernames.forEach(username => {
-        const validation = shogunCore.db.validateSignupCredentials(username, testPassword);
+      invalidUsernames.forEach((username) => {
+        const validation = shogunCore.db.validateSignupCredentials(
+          username,
+          testPassword,
+        );
         expect(validation.valid).toBe(false);
         expect(validation.error).toBeDefined();
       });
@@ -150,13 +165,19 @@ describe("Complete Integration Tests - User Manager", () => {
 
   describe("Rate Limiting", () => {
     it("should allow first signup attempt", () => {
-      const rateLimitCheck = shogunCore.db.checkRateLimit(testUsername, "signup");
+      const rateLimitCheck = shogunCore.db.checkRateLimit(
+        testUsername,
+        "signup",
+      );
       expect(rateLimitCheck.allowed).toBe(true);
       expect(rateLimitCheck.error).toBeUndefined();
     });
 
     it("should allow first login attempt", () => {
-      const rateLimitCheck = shogunCore.db.checkRateLimit(testUsername, "login");
+      const rateLimitCheck = shogunCore.db.checkRateLimit(
+        testUsername,
+        "login",
+      );
       expect(rateLimitCheck.allowed).toBe(true);
       expect(rateLimitCheck.error).toBeUndefined();
     });
@@ -189,7 +210,7 @@ describe("Complete Integration Tests - User Manager", () => {
       // Get user public key
       const userPub = shogunCore.db.getUserPub();
       expect(userPub).toBeDefined();
-      expect(typeof userPub).toBe('string');
+      expect(typeof userPub).toBe("string");
       expect(userPub.length).toBeGreaterThan(0);
 
       console.log("✅ User public key retrieval successful");

@@ -46,7 +46,9 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             ...DEFAULT_CONFIG,
             ...config,
             rpId: config?.rpId ??
-                (typeof window !== "undefined"
+                (typeof window !== "undefined" &&
+                    window.location &&
+                    window.location.hostname
                     ? window.location.hostname.split(":")[0]
                     : "localhost"),
         };

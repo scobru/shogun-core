@@ -155,7 +155,7 @@ describe("GunInstance", () => {
 
     it("should handle constructor errors gracefully", () => {
       expect(() => new GunInstance(null as any)).toThrow(
-        "Gun instance is required but was not provided"
+        "Gun instance is required but was not provided",
       );
     });
   });

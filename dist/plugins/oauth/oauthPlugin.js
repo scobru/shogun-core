@@ -70,14 +70,26 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @param config - Configuration options for OAuth
      */
     configure(config) {
-        this.config = { ...this.config, ...config };
+        // Deep merge provider maps to preserve both existing and new providers
+        const mergedProviders = {
+            ...(this.config.providers || {}),
+            ...(config?.providers || {}),
+        };
+        this.config = { ...this.config, ...config, providers: mergedProviders };
         // Inizializza il connector se non è già stato fatto
         if (!this.oauthConnector) {
             this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
         }
         else {
             // Update connector configuration se già inizializzato
-            this.oauthConnector.updateConfig(this.config);
+            const conn = this.oauthConnector;
+            if (typeof conn.updateConfig === "function") {
+                conn.updateConfig(this.config);
+            }
+            else {
+                // Fallback: recreate connector
+                this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
+            }
         }
         // Validate security settings
         this.validateOAuthSecurity();
@@ -87,7 +99,10 @@ class OAuthPlugin extends base_1.BasePlugin {
      */
     destroy() {
         if (this.oauthConnector) {
-            this.oauthConnector.cleanup();
+            const conn = this.oauthConnector;
+            if (typeof conn.cleanup === "function") {
+                conn.cleanup();
+            }
         }
         this.oauthConnector = null;
         this.storage = null;
@@ -108,31 +123,50 @@ class OAuthPlugin extends base_1.BasePlugin {
      * @inheritdoc
      */
     isSupported() {
-        return this.assertOAuthConnector().isSupported();
+        try {
+            const conn = this.assertOAuthConnector();
+            return typeof conn.isSupported === "function" ? conn.isSupported() : true;
+        }
+        catch {
+            // If connector is not available, return false
+            return false;
+        }
     }
     /**
      * @inheritdoc
      */
     getAvailableProviders() {
-        return this.assertOAuthConnector().getAvailableProviders();
+        try {
+            const conn = this.assertOAuthConnector();
+            return typeof conn.getAvailableProviders === "function"
+                ? conn.getAvailableProviders()
+                : [];
+        }
+        catch {
+            // If connector is not available, return empty array
+            return [];
+        }
     }
     /**
      * @inheritdoc
      */
     async initiateOAuth(provider) {
-        return this.assertOAuthConnector().initiateOAuth(provider);
+        const conn = this.assertOAuthConnector();
+        return conn.initiateOAuth(provider);
     }
     /**
      * @inheritdoc
      */
     async completeOAuth(provider, authCode, state) {
-        return this.assertOAuthConnector().completeOAuth(provider, authCode, state);
+        const conn = this.assertOAuthConnector();
+        return conn.completeOAuth(provider, authCode, state);
     }
     /**
      * @inheritdoc
      */
     async generateCredentials(userInfo, provider) {
-        return this.assertOAuthConnector().generateCredentials(userInfo, provider);
+        const conn = this.assertOAuthConnector();
+        return conn.generateCredentials(userInfo, provider);
     }
     /**
      * Login with OAuth
@@ -179,11 +213,8 @@ class OAuthPlugin extends base_1.BasePlugin {
             const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "OAUTH_LOGIN_ERROR";
             const errorMessage = error?.message || "Unknown error during OAuth login";
-            const handledError = errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
-            return {
-                success: false,
-                error: handledError.message,
-            };
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            return { success: false, error: errorMessage };
         }
     }
     /**
@@ -228,11 +259,8 @@ class OAuthPlugin extends base_1.BasePlugin {
             const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "OAUTH_SIGNUP_ERROR";
             const errorMessage = error?.message || "Unknown error during OAuth signup";
-            const handledError = errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
-            return {
-                success: false,
-                error: handledError.message,
-            };
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            return { success: false, error: errorMessage };
         }
     }
     /**
@@ -322,7 +350,10 @@ class OAuthPlugin extends base_1.BasePlugin {
         if (this.oauthConnector) {
             // Il metodo cleanupExpiredOAuthData è privato nel connector
             // quindi usiamo il metodo pubblico clearUserCache
-            this.oauthConnector.clearUserCache();
+            const conn = this.oauthConnector;
+            if (typeof conn.clearUserCache === "function") {
+                conn.clearUserCache();
+            }
         }
     }
     /**
@@ -376,13 +407,20 @@ class OAuthPlugin extends base_1.BasePlugin {
      * Get cached user info for a user
      */
     getCachedUserInfo(userId, provider) {
-        return this.assertOAuthConnector().getCachedUserInfo(userId, provider);
+        const key = `oauth_user_${provider}_${userId}`;
+        const storage = this.storage;
+        if (storage?.get) {
+            return storage.get(key) ?? null;
+        }
+        return null;
     }
     /**
      * Clear user info cache
      */
     clearUserCache(userId, provider) {
-        this.assertOAuthConnector().clearUserCache(userId, provider);
+        const key = userId && provider ? `oauth_user_${provider}_${userId}` : "oauth_user_";
+        const storage = this.storage;
+        storage?.remove?.(key);
     }
 }
 exports.OAuthPlugin = OAuthPlugin;

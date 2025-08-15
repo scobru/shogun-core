@@ -34,7 +34,7 @@ export class WebauthnPlugin
     // Verifica se siamo in ambiente browser
     if (typeof window === "undefined") {
       console.warn(
-        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment"
+        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment",
       );
       return;
     }
@@ -42,7 +42,7 @@ export class WebauthnPlugin
     // Verifica se WebAuthn è supportato
     if (!this.isSupported()) {
       console.warn(
-        "[webauthnPlugin] WebAuthn not supported in this environment"
+        "[webauthnPlugin] WebAuthn not supported in this environment",
       );
       return;
     }
@@ -52,7 +52,7 @@ export class WebauthnPlugin
     this.signer = new WebAuthnSigner(this.webauthn);
 
     console.log(
-      "[webauthnPlugin] WebAuthn plugin initialized with signer support"
+      "[webauthnPlugin] WebAuthn plugin initialized with signer support",
     );
   }
 
@@ -123,12 +123,12 @@ export class WebauthnPlugin
   async generateCredentials(
     username: string,
     existingCredential?: WebAuthnCredentials | null,
-    isLogin: boolean = false
+    isLogin: boolean = false,
   ): Promise<WebAuthnUniformCredentials> {
     return this.assertWebauthn().generateCredentials(
       username,
       existingCredential,
-      isLogin
+      isLogin,
     ) as Promise<WebAuthnUniformCredentials>;
   }
 
@@ -138,12 +138,12 @@ export class WebauthnPlugin
   async createAccount(
     username: string,
     credentials: WebAuthnCredentials | null,
-    isNewDevice: boolean = false
+    isNewDevice: boolean = false,
   ): Promise<CredentialResult> {
     return this.assertWebauthn().createAccount(
       username,
       credentials,
-      isNewDevice
+      isNewDevice,
     );
   }
 
@@ -153,7 +153,7 @@ export class WebauthnPlugin
   async authenticateUser(
     username: string,
     salt: string | null,
-    options?: any
+    options?: any,
   ): Promise<CredentialResult> {
     return this.assertWebauthn().authenticateUser(username, salt, options);
   }
@@ -171,12 +171,12 @@ export class WebauthnPlugin
   async removeDevice(
     username: string,
     credentialId: string,
-    credentials: WebAuthnCredentials
+    credentials: WebAuthnCredentials,
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }> {
     return this.assertWebauthn().removeDevice(
       username,
       credentialId,
-      credentials
+      credentials,
     );
   }
 
@@ -184,7 +184,7 @@ export class WebauthnPlugin
    * @inheritdoc
    */
   async createSigningCredential(
-    username: string
+    username: string,
   ): Promise<WebAuthnSigningCredential> {
     try {
       // Delegate to underlying WebAuthn module (tests mock these methods)
@@ -204,7 +204,7 @@ export class WebauthnPlugin
    * @inheritdoc
    */
   createAuthenticator(
-    credentialId: string
+    credentialId: string,
   ): (data: any) => Promise<AuthenticatorAssertionResponse> {
     try {
       const wa = this.assertWebauthn() as any;
@@ -224,7 +224,7 @@ export class WebauthnPlugin
   async createDerivedKeyPair(
     credentialId: string,
     username: string,
-    extra?: string[]
+    extra?: string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
       const wa = this.assertWebauthn() as any;
@@ -234,7 +234,7 @@ export class WebauthnPlugin
       return await this.assertSigner().createDerivedKeyPair(
         credentialId,
         username,
-        extra
+        extra,
       );
     } catch (error: any) {
       console.error(`Error creating derived key pair: ${error.message}`);
@@ -249,7 +249,7 @@ export class WebauthnPlugin
     data: any,
     credentialId: string,
     username: string,
-    extra?: string[]
+    extra?: string[],
   ): Promise<string> {
     try {
       const wa = this.assertWebauthn() as any;
@@ -258,14 +258,14 @@ export class WebauthnPlugin
           data,
           credentialId,
           username,
-          extra
+          extra,
         );
       }
       return await this.assertSigner().signWithDerivedKeys(
         data,
         credentialId,
         username,
-        extra
+        extra,
       );
     } catch (error: any) {
       console.error(`Error signing with derived keys: ${error.message}`);
@@ -277,7 +277,7 @@ export class WebauthnPlugin
    * @inheritdoc
    */
   getSigningCredential(
-    credentialId: string
+    credentialId: string,
   ): WebAuthnSigningCredential | undefined {
     const wa = this.assertWebauthn() as any;
     if (typeof wa.getSigningCredential === "function") {
@@ -316,25 +316,25 @@ export class WebauthnPlugin
    */
   async createGunUserFromSigningCredential(
     credentialId: string,
-    username: string
+    username: string,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
       const wa = this.assertWebauthn() as any;
       if (typeof wa.createGunUserFromSigningCredential === "function") {
         return await wa.createGunUserFromSigningCredential(
           credentialId,
-          username
+          username,
         );
       }
       const core = this.assertInitialized();
       return await this.assertSigner().createGunUser(
         credentialId,
         username,
-        core.gun
+        core.gun,
       );
     } catch (error: any) {
       console.error(
-        `Error creating Gun user from signing credential: ${error.message}`
+        `Error creating Gun user from signing credential: ${error.message}`,
       );
       throw error;
     }
@@ -369,7 +369,7 @@ export class WebauthnPlugin
   async verifyConsistency(
     credentialId: string,
     username: string,
-    expectedUserPub?: string
+    expectedUserPub?: string,
   ): Promise<{
     consistent: boolean;
     actualUserPub?: string;
@@ -381,13 +381,13 @@ export class WebauthnPlugin
         return await wa.verifyConsistency(
           credentialId,
           username,
-          expectedUserPub
+          expectedUserPub,
         );
       }
       return await this.assertSigner().verifyConsistency(
         credentialId,
         username,
-        expectedUserPub
+        expectedUserPub,
       );
     } catch (error: any) {
       console.error(`Error verifying consistency: ${error.message}`);
@@ -416,7 +416,7 @@ export class WebauthnPlugin
       const authenticator = this.createAuthenticator((credential as any).id);
       const gunUser = await this.createGunUserFromSigningCredential(
         (credential as any).id,
-        username
+        username,
       );
       return {
         credential,
@@ -427,7 +427,7 @@ export class WebauthnPlugin
       } as any;
     } catch (error: any) {
       console.error(
-        `Error setting up consistent oneshot signing: ${error.message}`
+        `Error setting up consistent oneshot signing: ${error.message}`,
       );
       throw error;
     }
@@ -455,7 +455,7 @@ export class WebauthnPlugin
 
       // Prefer the oneshot consistent signing flow (tests mock this)
       const { authenticator, pub } = (await this.setupConsistentOneshotSigning(
-        username
+        username,
       )) as any;
 
       // If core has an authenticate method (tests), use it
@@ -478,7 +478,7 @@ export class WebauthnPlugin
         ErrorType.WEBAUTHN,
         "WEBAUTHN_LOGIN_ERROR",
         error.message || "Error during WebAuthn login",
-        error
+        error,
       );
       return {
         success: false,
@@ -509,7 +509,7 @@ export class WebauthnPlugin
 
       // Prefer the oneshot consistent signing flow (tests mock this)
       const { authenticator, pub } = (await this.setupConsistentOneshotSigning(
-        username
+        username,
       )) as any;
 
       if ((core as any).signUp) {
@@ -522,7 +522,7 @@ export class WebauthnPlugin
         await this.generateCredentials(username, null, false);
       if (!credentials?.success) {
         throw new Error(
-          credentials?.error || "Unable to generate WebAuthn credentials"
+          credentials?.error || "Unable to generate WebAuthn credentials",
         );
       }
       core.setAuthMethod("webauthn");
@@ -533,7 +533,7 @@ export class WebauthnPlugin
         ErrorType.WEBAUTHN,
         "WEBAUTHN_SIGNUP_ERROR",
         error.message || "Error during WebAuthn registration",
-        error
+        error,
       );
       return {
         success: false,

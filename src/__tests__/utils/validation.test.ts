@@ -1,7 +1,7 @@
 // Mock ethers
 const mockKeccak256 = jest.fn(
   (input) =>
-    "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 );
 const mockToUtf8Bytes = jest.fn((input) => new Uint8Array([1, 2, 3, 4, 5]));
 
@@ -317,17 +317,21 @@ describe("Validation Module", () => {
           id: null,
           email: null,
           name: null,
-        } as any)
+        } as any),
       ).toBe("github_user");
 
       // Empty strings
       expect(
-        generateUsernameFromIdentity("discord", { id: "", email: "", name: "" })
+        generateUsernameFromIdentity("discord", {
+          id: "",
+          email: "",
+          name: "",
+        }),
       ).toBe("discord_user");
 
       // Whitespace only
       expect(generateUsernameFromIdentity("twitter", { name: "   " })).toBe(
-        "twitter__"
+        "twitter__",
       );
     });
 
@@ -366,12 +370,16 @@ describe("Validation Module", () => {
     it("should generate different passwords for different salts", () => {
       const salt1 = "salt1";
       const salt2 = "salt2";
-      
+
       // Mock different return values for different salts
       mockKeccak256
-        .mockReturnValueOnce("0x1111111111111111111111111111111111111111111111111111111111111111")
-        .mockReturnValueOnce("0x2222222222222222222222222222222222222222222222222222222222222222");
-      
+        .mockReturnValueOnce(
+          "0x1111111111111111111111111111111111111111111111111111111111111111",
+        )
+        .mockReturnValueOnce(
+          "0x2222222222222222222222222222222222222222222222222222222222222222",
+        );
+
       const result1 = generateDeterministicPassword(salt1);
       const result2 = generateDeterministicPassword(salt2);
 
@@ -381,22 +389,22 @@ describe("Validation Module", () => {
     it("should handle various salt types", () => {
       // Empty string
       expect(generateDeterministicPassword("")).toBe(
-        "1234567890abcdef1234567890abcdef"
+        "1234567890abcdef1234567890abcdef",
       );
 
       // Long string
       expect(generateDeterministicPassword("a".repeat(1000))).toBe(
-        "1234567890abcdef1234567890abcdef"
+        "1234567890abcdef1234567890abcdef",
       );
 
       // Special characters
       expect(generateDeterministicPassword("!@#$%^&*()")).toBe(
-        "1234567890abcdef1234567890abcdef"
+        "1234567890abcdef1234567890abcdef",
       );
 
       // Unicode
       expect(generateDeterministicPassword("café")).toBe(
-        "1234567890abcdef1234567890abcdef"
+        "1234567890abcdef1234567890abcdef",
       );
     });
 
@@ -404,13 +412,15 @@ describe("Validation Module", () => {
       generateDeterministicPassword("test-salt");
 
       expect(mockToUtf8Bytes).toHaveBeenCalledWith("test-salt");
-      expect(mockKeccak256).toHaveBeenCalledWith(new Uint8Array([1, 2, 3, 4, 5]));
+      expect(mockKeccak256).toHaveBeenCalledWith(
+        new Uint8Array([1, 2, 3, 4, 5]),
+      );
     });
 
     it("should slice the result correctly", () => {
       // Mock keccak256 to return a known value
       mockKeccak256.mockReturnValue(
-        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       );
 
       const result = generateDeterministicPassword("test");
@@ -445,7 +455,7 @@ describe("Validation Module", () => {
 
       // Generate deterministic password
       const password = generateDeterministicPassword(
-        `${provider}_${userInfo.id}`
+        `${provider}_${userInfo.id}`,
       );
       expect(password).toBe("1234567890abcdef1234567890abcdef");
     });
@@ -463,7 +473,7 @@ describe("Validation Module", () => {
 
       // Generate password
       const password = generateDeterministicPassword(
-        `${provider}_${userInfo.id}`
+        `${provider}_${userInfo.id}`,
       );
       expect(password).toBe("1234567890abcdef1234567890abcdef");
     });
@@ -477,7 +487,7 @@ describe("Validation Module", () => {
       // Generate username
       const username = generateUsernameFromIdentity(provider, userInfo);
       expect(username).toBe(
-        "nostr_npub1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        "nostr_npub1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       );
 
       // Validate username (should be false because too long)
@@ -485,7 +495,7 @@ describe("Validation Module", () => {
 
       // Generate password
       const password = generateDeterministicPassword(
-        `${provider}_${userInfo.id}`
+        `${provider}_${userInfo.id}`,
       );
       expect(password).toBe("1234567890abcdef1234567890abcdef");
     });

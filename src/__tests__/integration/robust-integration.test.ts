@@ -49,14 +49,14 @@ describe("Robust Integration Tests - User Manager", () => {
       // Test valid credentials
       const validResult = shogunCore.db.validateSignupCredentials(
         testUsername,
-        strongPassword
+        strongPassword,
       );
       expect(validResult.valid).toBe(true);
 
       // Test weak password
       const weakResult = shogunCore.db.validateSignupCredentials(
         testUsername,
-        weakPassword
+        weakPassword,
       );
       expect(weakResult.valid).toBe(false);
       expect(weakResult.error).toContain("password");
@@ -64,7 +64,7 @@ describe("Robust Integration Tests - User Manager", () => {
       // Test empty username
       const emptyUsernameResult = shogunCore.db.validateSignupCredentials(
         "",
-        strongPassword
+        strongPassword,
       );
       expect(emptyUsernameResult.valid).toBe(false);
       expect(emptyUsernameResult.error).toContain("username");
@@ -168,7 +168,7 @@ describe("Robust Integration Tests - User Manager", () => {
       // Test that validateSignupCredentials works correctly
       const validationResult = shogunCore.db.validateSignupCredentials(
         "testuser",
-        "TestPass123!@#"
+        "TestPass123!@#",
       );
 
       expect(validationResult).toHaveProperty("valid");
@@ -176,7 +176,7 @@ describe("Robust Integration Tests - User Manager", () => {
       expect(validationResult.valid).toBe(true);
 
       console.log(
-        "✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly"
+        "✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly",
       );
     });
   });

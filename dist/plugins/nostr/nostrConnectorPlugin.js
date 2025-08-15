@@ -150,6 +150,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async createSigningCredential(address) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.createSigningCredential === "function") {
+                return await conn.createSigningCredential(address);
+            }
             return await this.assertSigner().createSigningCredential(address);
         }
         catch (error) {
@@ -162,6 +166,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     createAuthenticator(address) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.createAuthenticator === "function") {
+                return conn.createAuthenticator(address);
+            }
             return this.assertSigner().createAuthenticator(address);
         }
         catch (error) {
@@ -174,6 +182,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async createDerivedKeyPair(address, extra) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.createDerivedKeyPair === "function") {
+                return await conn.createDerivedKeyPair(address, extra);
+            }
             return await this.assertSigner().createDerivedKeyPair(address, extra);
         }
         catch (error) {
@@ -186,6 +198,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async signWithDerivedKeys(data, address, extra) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.signWithDerivedKeys === "function") {
+                return await conn.signWithDerivedKeys(data, address, extra);
+            }
             return await this.assertSigner().signWithDerivedKeys(data, address, extra);
         }
         catch (error) {
@@ -197,18 +213,30 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * Get signing credential by address
      */
     getSigningCredential(address) {
+        const conn = this.assertBitcoinConnector();
+        if (typeof conn.getSigningCredential === "function") {
+            return conn.getSigningCredential(address);
+        }
         return this.assertSigner().getCredential(address);
     }
     /**
      * List all signing credentials
      */
     listSigningCredentials() {
+        const conn = this.assertBitcoinConnector();
+        if (typeof conn.listSigningCredentials === "function") {
+            return conn.listSigningCredentials();
+        }
         return this.assertSigner().listCredentials();
     }
     /**
      * Remove a signing credential
      */
     removeSigningCredential(address) {
+        const conn = this.assertBitcoinConnector();
+        if (typeof conn.removeSigningCredential === "function") {
+            return conn.removeSigningCredential(address);
+        }
         return this.assertSigner().removeCredential(address);
     }
     // === CONSISTENCY METHODS ===
@@ -218,6 +246,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async createGunUserFromSigningCredential(address) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.createGunUserFromSigningCredential === "function") {
+                return await conn.createGunUserFromSigningCredential(address);
+            }
             const core = this.assertInitialized();
             return await this.assertSigner().createGunUser(address, core.gun);
         }
@@ -230,12 +262,20 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      * Get the Gun user public key for a signing credential
      */
     getGunUserPubFromSigningCredential(address) {
+        const conn = this.assertBitcoinConnector();
+        if (typeof conn.getGunUserPubFromSigningCredential === "function") {
+            return conn.getGunUserPubFromSigningCredential(address);
+        }
         return this.assertSigner().getGunUserPub(address);
     }
     /**
      * Get the password (for consistency checking)
      */
     getPassword(address) {
+        const conn = this.assertBitcoinConnector();
+        if (typeof conn.getPassword === "function") {
+            return conn.getPassword(address);
+        }
         return this.assertSigner().getPassword(address);
     }
     /**
@@ -244,6 +284,10 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async verifyConsistency(address, expectedUserPub) {
         try {
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.verifyConsistency === "function") {
+                return await conn.verifyConsistency(address, expectedUserPub);
+            }
             return await this.assertSigner().verifyConsistency(address, expectedUserPub);
         }
         catch (error) {
@@ -257,11 +301,12 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     async setupConsistentOneshotSigning(address) {
         try {
-            // 1. Create signing credential (with consistent password generation)
+            const conn = this.assertBitcoinConnector();
+            if (typeof conn.setupConsistentOneshotSigning === "function") {
+                return await conn.setupConsistentOneshotSigning(address);
+            }
             const credential = await this.createSigningCredential(address);
-            // 2. Create authenticator
             const authenticator = this.createAuthenticator(address);
-            // 3. Create Gun user (same as normal approach)
             const gunUser = await this.createGunUserFromSigningCredential(address);
             return {
                 credential,
@@ -328,11 +373,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "BITCOIN_LOGIN_ERROR";
             const errorMessage = error?.message || "Unknown error during Bitcoin wallet login";
-            const handledError = errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
-            return {
-                success: false,
-                error: handledError.message,
-            };
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            return { success: false, error: errorMessage };
         }
     }
     /**
@@ -402,11 +444,8 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
             const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "BITCOIN_SIGNUP_ERROR";
             const errorMessage = error?.message || "Unknown error during Bitcoin wallet signup";
-            const handledError = errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
-            return {
-                success: false,
-                error: handledError.message,
-            };
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            return { success: false, error: errorMessage };
         }
     }
     /**

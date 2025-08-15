@@ -116,7 +116,7 @@ describe("OAuthPlugin", () => {
               clientId: "github-client-id",
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -154,7 +154,7 @@ describe("OAuthPlugin", () => {
               clientId: "github-client-id",
             }),
           }),
-        })
+        }),
       );
     });
   });
@@ -242,7 +242,7 @@ describe("OAuthPlugin", () => {
       expect(mockConnector.completeOAuth).toHaveBeenCalledWith(
         "google",
         "auth-code",
-        "state"
+        "state",
       );
       expect(result).toEqual(mockResult);
     });
@@ -271,7 +271,7 @@ describe("OAuthPlugin", () => {
 
       expect(mockConnector.generateCredentials).toHaveBeenCalledWith(
         userInfo,
-        "google"
+        "google",
       );
       expect(result).toEqual(mockCredentials);
     });
@@ -371,7 +371,7 @@ describe("OAuthPlugin", () => {
       const result = await plugin.handleOAuthCallback(
         "google",
         "auth-code",
-        "state"
+        "state",
       );
 
       // The actual result will have additional properties, so we check for the core success
@@ -418,7 +418,7 @@ describe("OAuthPlugin", () => {
       plugin.clearUserCache("user123", "google");
 
       expect(mockStorage.remove).toHaveBeenCalledWith(
-        "oauth_user_google_user123"
+        "oauth_user_google_user123",
       );
     });
 
@@ -446,7 +446,7 @@ describe("OAuthPlugin", () => {
       customPlugin.initialize(mockCore);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("non ha PKCE abilitato")
+        expect.stringContaining("non ha PKCE abilitato"),
       );
 
       consoleSpy.mockRestore();

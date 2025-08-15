@@ -33,15 +33,15 @@ export declare class ShogunStorage {
     /**
      * Gets an item from storage
      * @param key - The key to retrieve
-     * @returns The stored value as a string, or null if not found
+     * @returns The stored value, or null if not found
      */
-    getItem(key: string): string | null;
+    getItem(key: string): any;
     /**
      * Stores an item in both memory and localStorage if available
      * @param key - The key to store under
      * @param value - The value to store (must be JSON stringifiable)
      */
-    setItem(key: string, value: string): void;
+    setItem(key: string, value: any): void;
     /**
      * Removes an item from both memory and localStorage if available
      * @param key - The key to remove

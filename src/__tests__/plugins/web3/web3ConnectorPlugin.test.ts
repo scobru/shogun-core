@@ -653,8 +653,8 @@ describe("Web3ConnectorPlugin", () => {
       const mockAuthResult = {
         success: true,
         user: {
-          id: "0x1234567890123456789012345678901234567890",
-          address: "0x1234567890123456789012345678901234567890",
+          userPub: "gun_pub_123",
+          username: "0x1234567890123456789012345678901234567890",
         },
         userPub: "gun_pub_123",
       };
@@ -715,8 +715,8 @@ describe("Web3ConnectorPlugin", () => {
       const mockSignUpResult = {
         success: true,
         user: {
-          id: "0x1234567890123456789012345678901234567890",
-          address: "0x1234567890123456789012345678901234567890",
+          userPub: "gun_pub_123",
+          username: "0x1234567890123456789012345678901234567890",
         },
         userPub: "gun_pub_123",
       };

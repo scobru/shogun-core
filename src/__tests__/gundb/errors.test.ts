@@ -60,7 +60,7 @@ describe("Error Classes", () => {
 
     it("should create InvalidCredentials with custom message", () => {
       const error = new InvalidCredentials(
-        "Custom invalid credentials message"
+        "Custom invalid credentials message",
       );
 
       expect(error.name).toBe("InvalidCredentials");

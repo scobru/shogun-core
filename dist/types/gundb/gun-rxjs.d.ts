@@ -41,20 +41,25 @@ export declare class GunRxJS {
      * @param data - Data to put
      * @returns Observable that completes when the put is acknowledged
      */
-    put<T>(path: string | any, data: T): Observable<T>;
+    put<T>(path: string | any, data?: T): Observable<T>;
+    /**
+     * Backward-compatible overload that accepts optional callback like tests expect
+     */
+    putCompat<T extends Partial<any> & Record<string, any>>(data: T, callback?: (ack: any) => void): Observable<T>;
     /**
      * Set data on a node and return an Observable
      * @param path - Path to the collection
      * @param data - Data to set
      * @returns Observable that completes when the set is acknowledged
      */
-    set<T>(path: string | any, data: T): Observable<T>;
+    set<T>(path: string | any, data?: T): Observable<T>;
+    setCompat<T>(data: T, callback?: (ack: any) => void): Observable<T>;
     /**
      * Get data once and return as Observable
      * @param path - Path to get data from
      * @returns Observable that emits the data once
      */
-    once<T>(path: string | any): Observable<T>;
+    once<T>(path?: string | any): Observable<T>;
     /**
      * Compute derived values from gun data
      * @param sources - Array of paths or observables to compute from
@@ -68,7 +73,22 @@ export declare class GunRxJS {
      * @param data - Data to put
      * @returns Observable that completes when the put is acknowledged
      */
-    userPut<T>(path: string, data: T): Observable<T>;
+    userPut<T extends Partial<any> & Record<string, any>>(dataOrPath: string | T, maybeData?: T, callback?: (ack: any) => void): Observable<T>;
+    /**
+     * User set data and return an Observable (for authenticated users)
+     * @param dataOrPath - Data to set or path where to set the data
+     * @param maybeData - Data to set (if first parameter is path)
+     * @param callback - Optional callback function
+     * @returns Observable that completes when the set is acknowledged
+     */
+    userSet<T extends Partial<any> & Record<string, any>>(dataOrPath: string | T, maybeData?: T, callback?: (ack: any) => void): Observable<T>;
+    /**
+     * User once data and return an Observable (for authenticated users)
+     * @param path - Optional path to get data from
+     * @param callback - Optional callback function
+     * @returns Observable that emits the data once
+     */
+    userOnce<T>(path?: string, callback?: (ack: any) => void): Observable<T>;
     /**
      * Get user data
      * @param path - Path to get data from
@@ -80,7 +100,7 @@ export declare class GunRxJS {
      * @param path - Path to observe in user space
      * @returns Observable that emits whenever the user data changes
      */
-    observeUser<T>(path: string): Observable<T>;
+    observeUser<T>(path?: string): Observable<T>;
     /**
      * Remove Gun metadata from an object
      * @param obj - Object to clean
