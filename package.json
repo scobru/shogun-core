@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -32,9 +32,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false",
     "test:integration": "jest --config src/__tests__/integration/jest.integration.config.js",
     "test:integration:watch": "jest --config src/__tests__/integration/jest.integration.config.js --watch",
-    "coverage": "jest --coverage",
-    "mutation": "stryker run",
-    "sast": "semgrep --config semgrep.yml"
+    "coverage": "jest --coverage"
   },
   "keywords": [
     "gun",
@@ -86,10 +84,7 @@
     "typescript": "^5.3.3",
     "util": "^0.12.5",
     "webpack": "^5.90.3",
-    "webpack-cli": "^5.1.4",
-    "@stryker-mutator/core": "^8.3.1",
-    "@stryker-mutator/jest-runner": "^8.3.1",
-    "@stryker-mutator/typescript-checker": "^8.3.1"
+    "webpack-cli": "^5.1.4"
   },
   "engines": {
     "node": ">=18"
