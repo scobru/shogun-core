@@ -103892,6 +103892,7 @@ class NostrSigner {
     /**
      * Creates a Gun user from Nostr credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(address, gunInstance) {
         const credential = this.credentials.get(address.toLowerCase());
@@ -103899,16 +103900,14 @@ class NostrSigner {
             throw new Error(`Credential for address ${address} not found`);
         }
         try {
-            // Use the SAME approach as normal Nostr
+            // FIX: Use derived pair for GunDB authentication instead of username/password
+            const derivedPair = await this.createDerivedKeyPair(address);
             return new Promise((resolve) => {
-                gunInstance
-                    .user()
-                    .create(credential.username, credential.password, (ack) => {
+                // Use the derived pair directly for GunDB auth
+                gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
                         // Try to login if user already exists
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -103923,9 +103922,7 @@ class NostrSigner {
                     }
                     else {
                         // User created, now login
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -106234,7 +106231,9 @@ class Web3Signer {
             const signature = await this.requestSignature(validAddress);
             // Generate credentials using the SAME logic as normal approach
             const username = `${validAddress.toLowerCase()}`;
-            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${signature}:${validAddress.toLowerCase()}`));
+            // FIX: Use only address for password generation to ensure consistency
+            // The signature changes each time, causing different passwords for same user
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
             const signingCredential = {
                 address: validAddress,
                 signature,
@@ -106327,6 +106326,7 @@ class Web3Signer {
     /**
      * Creates a Gun user from Web3 credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(address, gunInstance) {
         const credential = this.credentials.get(address.toLowerCase());
@@ -106334,16 +106334,14 @@ class Web3Signer {
             throw new Error(`Credential for address ${address} not found`);
         }
         try {
-            // Use the SAME approach as normal Web3
+            // FIX: Use derived pair for GunDB authentication instead of username/password
+            const derivedPair = await this.createDerivedKeyPair(address);
             return new Promise((resolve) => {
-                gunInstance
-                    .user()
-                    .create(credential.username, credential.password, (ack) => {
+                // Use the derived pair directly for GunDB auth
+                gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
                         // Try to login if user already exists
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -106358,9 +106356,7 @@ class Web3Signer {
                     }
                     else {
                         // User created, now login
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -107564,6 +107560,7 @@ class WebAuthnSigner {
     /**
      * Creates a Gun user from WebAuthn credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(credentialId, username, gunInstance) {
         const credential = this.credentials.get(credentialId);
@@ -107571,16 +107568,14 @@ class WebAuthnSigner {
             throw new Error(`Credential ${credentialId} not found`);
         }
         try {
-            // Use the SAME approach as normal WebAuthn
+            // FIX: Use derived pair for GunDB authentication instead of username/password
+            const derivedPair = await this.createDerivedKeyPair(credentialId, username);
             return new Promise((resolve) => {
-                gunInstance
-                    .user()
-                    .create(username, credential.hashedCredentialId, (ack) => {
+                // Use the derived pair directly for GunDB auth
+                gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
                         // Try to login if user already exists
-                        gunInstance
-                            .user()
-                            .auth(username, credential.hashedCredentialId, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -107595,9 +107590,7 @@ class WebAuthnSigner {
                     }
                     else {
                         // User created, now login
-                        gunInstance
-                            .user()
-                            .auth(username, credential.hashedCredentialId, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }

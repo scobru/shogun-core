@@ -48,6 +48,7 @@ export declare class Web3Signer {
     /**
      * Creates a Gun user from Web3 credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     createGunUser(address: string, gunInstance: any): Promise<{
         success: boolean;

@@ -238,6 +238,7 @@ export class NostrSigner {
   /**
    * Creates a Gun user from Nostr credential
    * This ensures the SAME user is created as with normal approach
+   * FIX: Use derived pair instead of username/password for GunDB auth
    */
   async createGunUser(
     address: string,
@@ -249,51 +250,40 @@ export class NostrSigner {
     }
 
     try {
-      // Use the SAME approach as normal Nostr
+      // FIX: Use derived pair for GunDB authentication instead of username/password
+      const derivedPair = await this.createDerivedKeyPair(address);
+
       return new Promise((resolve) => {
-        gunInstance
-          .user()
-          .create(credential.username, credential.password, (ack: any) => {
-            if (ack.err) {
-              // Try to login if user already exists
-              gunInstance
-                .user()
-                .auth(
-                  credential.username,
-                  credential.password,
-                  (authAck: any) => {
-                    if (authAck.err) {
-                      resolve({ success: false, error: authAck.err });
-                    } else {
-                      const userPub = authAck.pub;
-                      // Update credential with Gun user pub
-                      credential.gunUserPub = userPub;
-                      this.credentials.set(address.toLowerCase(), credential);
-                      resolve({ success: true, userPub });
-                    }
-                  },
-                );
-            } else {
-              // User created, now login
-              gunInstance
-                .user()
-                .auth(
-                  credential.username,
-                  credential.password,
-                  (authAck: any) => {
-                    if (authAck.err) {
-                      resolve({ success: false, error: authAck.err });
-                    } else {
-                      const userPub = authAck.pub;
-                      // Update credential with Gun user pub
-                      credential.gunUserPub = userPub;
-                      this.credentials.set(address.toLowerCase(), credential);
-                      resolve({ success: true, userPub });
-                    }
-                  },
-                );
-            }
-          });
+        // Use the derived pair directly for GunDB auth
+        gunInstance.user().create(derivedPair, (ack: any) => {
+          if (ack.err) {
+            // Try to login if user already exists
+            gunInstance.user().auth(derivedPair, (authAck: any) => {
+              if (authAck.err) {
+                resolve({ success: false, error: authAck.err });
+              } else {
+                const userPub = authAck.pub;
+                // Update credential with Gun user pub
+                credential.gunUserPub = userPub;
+                this.credentials.set(address.toLowerCase(), credential);
+                resolve({ success: true, userPub });
+              }
+            });
+          } else {
+            // User created, now login
+            gunInstance.user().auth(derivedPair, (authAck: any) => {
+              if (authAck.err) {
+                resolve({ success: false, error: authAck.err });
+              } else {
+                const userPub = authAck.pub;
+                // Update credential with Gun user pub
+                credential.gunUserPub = userPub;
+                this.credentials.set(address.toLowerCase(), credential);
+                resolve({ success: true, userPub });
+              }
+            });
+          }
+        });
       });
     } catch (error: any) {
       console.error("Error creating Gun user:", error);

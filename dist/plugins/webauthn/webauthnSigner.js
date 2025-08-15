@@ -175,6 +175,7 @@ class WebAuthnSigner {
     /**
      * Creates a Gun user from WebAuthn credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(credentialId, username, gunInstance) {
         const credential = this.credentials.get(credentialId);
@@ -182,16 +183,14 @@ class WebAuthnSigner {
             throw new Error(`Credential ${credentialId} not found`);
         }
         try {
-            // Use the SAME approach as normal WebAuthn
+            // FIX: Use derived pair for GunDB authentication instead of username/password
+            const derivedPair = await this.createDerivedKeyPair(credentialId, username);
             return new Promise((resolve) => {
-                gunInstance
-                    .user()
-                    .create(username, credential.hashedCredentialId, (ack) => {
+                // Use the derived pair directly for GunDB auth
+                gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
                         // Try to login if user already exists
-                        gunInstance
-                            .user()
-                            .auth(username, credential.hashedCredentialId, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -206,9 +205,7 @@ class WebAuthnSigner {
                     }
                     else {
                         // User created, now login
-                        gunInstance
-                            .user()
-                            .auth(username, credential.hashedCredentialId, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }

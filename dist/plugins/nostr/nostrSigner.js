@@ -187,6 +187,7 @@ class NostrSigner {
     /**
      * Creates a Gun user from Nostr credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(address, gunInstance) {
         const credential = this.credentials.get(address.toLowerCase());
@@ -194,16 +195,14 @@ class NostrSigner {
             throw new Error(`Credential for address ${address} not found`);
         }
         try {
-            // Use the SAME approach as normal Nostr
+            // FIX: Use derived pair for GunDB authentication instead of username/password
+            const derivedPair = await this.createDerivedKeyPair(address);
             return new Promise((resolve) => {
-                gunInstance
-                    .user()
-                    .create(credential.username, credential.password, (ack) => {
+                // Use the derived pair directly for GunDB auth
+                gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
                         // Try to login if user already exists
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }
@@ -218,9 +217,7 @@ class NostrSigner {
                     }
                     else {
                         // User created, now login
-                        gunInstance
-                            .user()
-                            .auth(credential.username, credential.password, (authAck) => {
+                        gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
                                 resolve({ success: false, error: authAck.err });
                             }

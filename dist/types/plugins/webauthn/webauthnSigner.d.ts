@@ -45,6 +45,7 @@ export declare class WebAuthnSigner {
     /**
      * Creates a Gun user from WebAuthn credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     createGunUser(credentialId: string, username: string, gunInstance: any): Promise<{
         success: boolean;
