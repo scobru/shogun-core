@@ -102,14 +102,52 @@ class Web3Signer {
      * CONSISTENT with normal approach: uses password as seed
      */
     async createDerivedKeyPair(address, extra) {
-        const credential = this.credentials.get(address.toLowerCase());
-        if (!credential) {
-            throw new Error(`Credential for address ${address} not found`);
-        }
+        // Use the deterministic approach instead of stored credentials
+        return this.createDerivedKeyPairFromAddress(address, extra);
+    }
+    /**
+     * Authenticate with existing pair (for login)
+     * This generates the deterministic pair from address and authenticates with GunDB
+     * GunDB will recognize the user because the pair is deterministic
+     */
+    async authenticateWithExistingPair(address, gunInstance) {
         try {
-            // CONSISTENCY: Use the same approach as normal Web3
-            // Use password as seed (same as normal approach)
-            const derivedKeys = await (0, derive_1.default)(credential.password, // This is the key consistency point!
+            console.log(`🔧 Web3Signer - authenticating with deterministic pair for address:`, address);
+            // Generate the deterministic pair directly from address (no need for stored credentials)
+            const derivedPair = await this.createDerivedKeyPairFromAddress(address);
+            console.log(`🔧 Web3Signer - deterministic pair created, attempting auth with GunDB`);
+            return new Promise((resolve) => {
+                // Authenticate directly with GunDB using the deterministic pair
+                gunInstance.user().auth(derivedPair, (authAck) => {
+                    if (authAck.err) {
+                        console.log(`🔧 Web3Signer - auth failed:`, authAck.err);
+                        resolve({ success: false, error: authAck.err });
+                    }
+                    else {
+                        const userPub = authAck.pub;
+                        console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                        resolve({ success: true, userPub });
+                    }
+                });
+            });
+        }
+        catch (error) {
+            console.error("Error authenticating with deterministic pair:", error);
+            return { success: false, error: error.message };
+        }
+    }
+    /**
+     * Creates a derived key pair directly from address (deterministic)
+     * This ensures the same pair is generated every time for the same address
+     */
+    async createDerivedKeyPairFromAddress(address, extra) {
+        try {
+            // Generate deterministic password from address (same as createSigningCredential)
+            const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
+            console.log(`🔧 Web3Signer - generating deterministic pair for address:`, validAddress);
+            // Use the same derive function as normal approach
+            const derivedKeys = await (0, derive_1.default)(password, // Deterministic password from address
             extra, { includeP256: true });
             return {
                 pub: derivedKeys.pub,
@@ -119,7 +157,7 @@ class Web3Signer {
             };
         }
         catch (error) {
-            console.error("Error deriving keys from Web3 credential:", error);
+            console.error("Error creating derived key pair from address:", error);
             throw error;
         }
     }
@@ -129,42 +167,39 @@ class Web3Signer {
      * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(address, gunInstance) {
-        const credential = this.credentials.get(address.toLowerCase());
-        if (!credential) {
-            throw new Error(`Credential for address ${address} not found`);
-        }
         try {
-            // FIX: Use derived pair for GunDB authentication instead of username/password
-            const derivedPair = await this.createDerivedKeyPair(address);
+            console.log(`🔧 Web3Signer - creating Gun user with deterministic pair for address:`, address);
+            // Generate the deterministic pair directly from address
+            const derivedPair = await this.createDerivedKeyPairFromAddress(address);
             return new Promise((resolve) => {
                 // Use the derived pair directly for GunDB auth
                 gunInstance.user().create(derivedPair, (ack) => {
                     if (ack.err) {
+                        console.log(`🔧 Web3Signer - user creation failed, trying auth:`, ack.err);
                         // Try to login if user already exists
                         gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
+                                console.log(`🔧 Web3Signer - auth also failed:`, authAck.err);
                                 resolve({ success: false, error: authAck.err });
                             }
                             else {
                                 const userPub = authAck.pub;
-                                // Update credential with Gun user pub
-                                credential.gunUserPub = userPub;
-                                this.credentials.set(address.toLowerCase(), credential);
+                                console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
                                 resolve({ success: true, userPub });
                             }
                         });
                     }
                     else {
+                        console.log(`🔧 Web3Signer - user created successfully, now logging in`);
                         // User created, now login
                         gunInstance.user().auth(derivedPair, (authAck) => {
                             if (authAck.err) {
+                                console.log(`🔧 Web3Signer - login after creation failed:`, authAck.err);
                                 resolve({ success: false, error: authAck.err });
                             }
                             else {
                                 const userPub = authAck.pub;
-                                // Update credential with Gun user pub
-                                credential.gunUserPub = userPub;
-                                this.credentials.set(address.toLowerCase(), credential);
+                                console.log(`🔧 Web3Signer - login successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
                                 resolve({ success: true, userPub });
                             }
                         });
@@ -211,32 +246,51 @@ class Web3Signer {
      * Get the Gun user public key for a credential
      * This allows checking if the same user would be created
      */
-    getGunUserPub(address) {
-        const credential = this.credentials.get(address.toLowerCase());
-        return credential?.gunUserPub;
+    async getGunUserPub(address) {
+        try {
+            // Generate the deterministic pair and return the public key
+            const derivedPair = await this.createDerivedKeyPairFromAddress(address);
+            return derivedPair.pub;
+        }
+        catch (error) {
+            console.error("Error getting Gun user pub:", error);
+            return undefined;
+        }
     }
     /**
      * Get the password (for consistency checking)
      */
     getPassword(address) {
-        const credential = this.credentials.get(address.toLowerCase());
-        return credential?.password;
+        try {
+            // Generate deterministic password from address (same as createSigningCredential)
+            const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
+            return password;
+        }
+        catch (error) {
+            console.error("Error getting password:", error);
+            return undefined;
+        }
     }
     /**
      * Check if this credential would create the same Gun user as normal approach
      */
     async verifyConsistency(address, expectedUserPub) {
-        const credential = this.credentials.get(address.toLowerCase());
-        if (!credential) {
+        try {
+            // Generate the deterministic pair
+            const derivedKeys = await this.createDerivedKeyPairFromAddress(address);
+            return {
+                consistent: expectedUserPub
+                    ? derivedKeys.pub === expectedUserPub
+                    : true,
+                actualUserPub: derivedKeys.pub,
+                expectedUserPub,
+            };
+        }
+        catch (error) {
+            console.error("Error verifying consistency:", error);
             return { consistent: false };
         }
-        // The derived keys should be the same as normal approach
-        const derivedKeys = await this.createDerivedKeyPair(address);
-        return {
-            consistent: expectedUserPub ? derivedKeys.pub === expectedUserPub : true,
-            actualUserPub: derivedKeys.pub,
-            expectedUserPub,
-        };
     }
     /**
      * Get credential by address

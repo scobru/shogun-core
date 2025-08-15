@@ -114,7 +114,7 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
     /**
      * Get the Gun user public key for a signing credential
      */
-    getGunUserPubFromSigningCredential(address: string): string | undefined;
+    getGunUserPubFromSigningCredential(address: string): Promise<string | undefined>;
     /**
      * Get the password (for consistency checking)
      */
