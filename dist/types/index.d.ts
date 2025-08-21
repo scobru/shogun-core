@@ -326,26 +326,9 @@ export declare class ShogunCore implements IShogunCore {
      */
     getAuthMethod(): AuthMethod | undefined;
     /**
-     * Clears all Gun-related data from local and session storage
-     * This is useful for debugging and testing purposes
-     */
-    clearAllStorageData(): void;
-    /**
-     * Updates the user's alias (username) in Gun and saves the updated credentials
-     * @param newAlias New alias/username to set
-     * @returns Promise resolving to update result
-     */
-    updateUserAlias(newAlias: string): Promise<boolean>;
-    /**
      * Saves the current user credentials to storage
      */
     saveCredentials(credentials: any): Promise<void>;
-    /**
-     * Esporta la coppia di chiavi dell'utente corrente come stringa JSON.
-     * Utile per backup o migrazione dell'account.
-     * @returns {string} La coppia SEA serializzata in formato JSON, oppure stringa vuota se non disponibile.
-     */
-    exportPair(): string;
     getIsLoggedIn(): boolean;
     /**
      * Changes the username for the currently authenticated user

@@ -267,28 +267,31 @@ describe("ShogunCore Integration Tests", () => {
     });
   });
 
-  describe("Storage Operations", () => {
-    beforeEach(() => {
-      shogunCore = new ShogunCore(config);
-    });
+  // TODO: Storage Operations tests removed - methods have been removed from ShogunCore
+  // describe("Storage Operations", () => {
+  //   beforeEach(() => {
+  //     shogunCore = new ShogunCore(config);
+  //   });
 
-    it("should clear all storage data", () => {
-      expect(() => {
-        shogunCore.clearAllStorageData();
-      }).not.toThrow();
-    });
+  //   // TODO: clearAllStorageData method has been removed from ShogunCore
+  //   // it("should clear all storage data", () => {
+  //   //   expect(() => {
+  //   //     shogunCore.clearAllStorageData();
+  //   //   }).not.toThrow();
+  //   // });
 
-    it("should save and export credentials", () => {
-      const credentials = { username: "test", password: "test" };
+  //   // TODO: saveCredentials and exportPair methods have been removed from ShogunCore
+  //   // it("should save and export credentials", () => {
+  //   //   const credentials = { username: "test", password: "test" };
 
-      expect(() => {
-        shogunCore.saveCredentials(credentials);
-      }).not.toThrow();
+  //   //   expect(() => {
+  //   //     shogunCore.saveCredentials(credentials);
+  //   //   }).not.toThrow();
 
-      const exported = shogunCore.exportPair();
-      expect(typeof exported).toBe("string");
-    });
-  });
+  //   //   const exported = shogunCore.exportPair();
+  //   //   expect(typeof exported).toBe("string");
+  //   // });
+  // });
 
   describe("User Operations", () => {
     beforeEach(() => {
@@ -306,10 +309,11 @@ describe("ShogunCore Integration Tests", () => {
       expect(errors.length).toBeLessThanOrEqual(5);
     });
 
-    it("should update user alias", async () => {
-      const result = await shogunCore.updateUserAlias("new-alias");
-      expect(typeof result).toBe("boolean");
-    });
+    // TODO: updateUserAlias method has been removed from ShogunCore
+    // it("should update user alias", async () => {
+    //   const result = await shogunCore.updateUserAlias("new-alias");
+    //   expect(typeof result).toBe("boolean");
+    // });
   });
 
   describe("Configuration Validation", () => {

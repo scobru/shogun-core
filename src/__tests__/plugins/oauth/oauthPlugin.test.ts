@@ -380,54 +380,56 @@ describe("OAuthPlugin", () => {
     });
   });
 
-  describe("getCachedUserInfo", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-    });
+  // TODO: getCachedUserInfo method has been removed from OAuthPlugin
+  // describe("getCachedUserInfo", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //   });
 
-    it("should return cached user info", () => {
-      const mockUserInfo = {
-        id: "user123",
-        email: "test@example.com",
-        name: "Test User",
-      };
+  //   it("should return cached user info", () => {
+  //     const mockUserInfo = {
+  //       id: "user123",
+  //       email: "test@example.com",
+  //       name: "Test User",
+  //     };
 
-      mockStorage.get.mockReturnValue(mockUserInfo);
+  //     mockStorage.get.mockReturnValue(mockUserInfo);
 
-      const result = plugin.getCachedUserInfo("user123", "google");
+  //     const result = plugin.getCachedUserInfo("user123", "google");
 
-      expect(mockStorage.get).toHaveBeenCalledWith("oauth_user_google_user123");
-      expect(result).toEqual(mockUserInfo);
-    });
+  //     expect(mockStorage.get).toHaveBeenCalledWith("oauth_user_google_user123");
+  //     expect(result).toEqual(mockUserInfo);
+  //   });
 
-    it("should return null when no cached info exists", () => {
-      mockStorage.get.mockReturnValue(null);
+  //   it("should return null when no cached info exists", () => {
+  //     mockStorage.get.mockReturnValue(null);
 
-      const result = plugin.getCachedUserInfo("user123", "google");
+  //     const result = plugin.getCachedUserInfo("user123", "google");
 
-      expect(result).toBeNull();
-    });
-  });
+  //     expect(result).toBeNull();
+  //   });
+  // });
 
-  describe("clearUserCache", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-    });
+  // TODO: clearUserCache method has been removed from OAuthPlugin
+  // describe("clearUserCache", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //   });
 
-    it("should clear specific user cache", () => {
-      plugin.clearUserCache("user123", "google");
+  //   it("should clear specific user cache", () => {
+  //     plugin.clearUserCache("user123", "google");
 
-      expect(mockStorage.remove).toHaveBeenCalledWith(
-        "oauth_user_google_user123",
-      );
-    });
+  //     expect(mockStorage.remove).toHaveBeenCalledWith(
+  //       "oauth_user_google_user123",
+  //     );
+  //   });
 
-    it("should clear all cache when no parameters provided", () => {
-      plugin.clearUserCache();
+  //   it("should clear all cache when no parameters provided", () => {
+  //     plugin.clearUserCache();
 
-      expect(mockStorage.remove).toHaveBeenCalledWith("oauth_user_");
-    });
-  });
+  //     expect(mockStorage.remove).toHaveBeenCalledWith("oauth_user_");
+  //   });
+  // });
 
   describe("security validation", () => {
     it("should warn when PKCE is not enabled", () => {

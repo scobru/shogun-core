@@ -64,13 +64,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
         return this.assertBitcoinConnector().isAvailable();
     }
     /**
-     * Check if Alby extension is available
-     * Note: Alby is deprecated in favor of Nostr
-     */
-    isAlbyAvailable() {
-        return this.isNostrExtensionAvailable();
-    }
-    /**
      * Check if Nostr extension is available
      */
     isNostrExtensionAvailable() {
@@ -123,13 +116,6 @@ class NostrConnectorPlugin extends base_1.BasePlugin {
      */
     cleanup() {
         this.assertBitcoinConnector().cleanup();
-    }
-    /**
-     * Clear signature cache for better user recovery
-     * @param address - Optional specific address to clear, or clear all if not provided
-     */
-    clearSignatureCache(address) {
-        this.assertBitcoinConnector().clearSignatureCache(address);
     }
     /**
      * @inheritdoc

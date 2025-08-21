@@ -116,16 +116,4 @@ export declare class ErrorHandler {
      * Clear all stored errors
      */
     static clearErrors(): void;
-    /**
-     * Get error statistics
-     */
-    static getErrorStats(): {
-        total: number;
-        byType: Record<string, number>;
-        byCode: Record<string, number>;
-    };
-    /**
-     * Debug helper - logs messages only in development
-     */
-    static debug(type: ErrorType, code: string, message: string, level?: LogLevel): void;
 }

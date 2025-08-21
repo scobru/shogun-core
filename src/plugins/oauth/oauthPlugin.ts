@@ -513,41 +513,4 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     // Return the original signup error for other failures
     return signupResult;
   }
-
-  /**
-   * Alias for handleOAuthCallback for backward compatibility
-   * @deprecated Use handleOAuthCallback instead
-   */
-  async handleSimpleOAuth(
-    provider: OAuthProvider,
-    authCode: string,
-    state: string,
-  ): Promise<AuthResult> {
-    return this.handleOAuthCallback(provider, authCode, state);
-  }
-
-  /**
-   * Get cached user info for a user
-   */
-  getCachedUserInfo(
-    userId: string,
-    provider: OAuthProvider,
-  ): OAuthUserInfo | null {
-    const key = `oauth_user_${provider}_${userId}`;
-    const storage = this.storage as any;
-    if (storage?.get) {
-      return storage.get(key) ?? null;
-    }
-    return null;
-  }
-
-  /**
-   * Clear user info cache
-   */
-  clearUserCache(userId?: string, provider?: OAuthProvider): void {
-    const key =
-      userId && provider ? `oauth_user_${provider}_${userId}` : "oauth_user_";
-    const storage = this.storage as any;
-    storage?.remove?.(key);
-  }
 }

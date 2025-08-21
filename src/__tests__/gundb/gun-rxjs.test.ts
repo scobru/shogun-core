@@ -103,6 +103,13 @@ describe("GunRxJS", () => {
       }),
       on: jest.fn(),
       off: jest.fn(),
+      map: jest.fn(() => ({
+        on: jest.fn((callback) => {
+          if (callback) callback({ test: "data" }, "test-key");
+          return { off: jest.fn() };
+        }),
+        off: jest.fn(),
+      })),
     } as any;
 
     gunRxJS = new GunRxJS(mockGun);
@@ -291,22 +298,19 @@ describe("GunRxJS", () => {
   });
 
   describe("match", () => {
-    it.skip("should create match observable", () => {
-      const data = { name: "test", age: 25 };
+    it("should create match observable", () => {
       const matchData = { name: "test" };
 
       const result = gunRxJS.match(
-        data,
-        (item) => item.name === matchData.name,
+        "test-path",
+        (item) => item.name === matchData.name
       );
       expect(Observable).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 
-    it.skip("should create match observable without filter", () => {
-      const data = { name: "test", age: 25 };
-
-      const result = gunRxJS.match(data);
+    it("should create match observable without filter", () => {
+      const result = gunRxJS.match("test-path");
       expect(Observable).toHaveBeenCalled();
       expect(result).toBeDefined();
     });

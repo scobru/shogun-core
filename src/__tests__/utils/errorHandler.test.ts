@@ -401,80 +401,82 @@ describe("ErrorHandler", () => {
     });
   });
 
-  describe("ErrorHandler.getErrorStats", () => {
-    it("should return error statistics", () => {
-      const error1 = createError(
-        ErrorType.AUTHENTICATION,
-        "AUTH_001",
-        "Error 1",
-      );
-      const error2 = createError(
-        ErrorType.AUTHENTICATION,
-        "AUTH_002",
-        "Error 2",
-      );
-      const error3 = createError(ErrorType.VALIDATION, "VAL_001", "Error 3");
+  // TODO: getErrorStats method has been removed from ErrorHandler
+  // describe("ErrorHandler.getErrorStats", () => {
+  //   it("should return error statistics", () => {
+  //     const error1 = createError(
+  //       ErrorType.AUTHENTICATION,
+  //       "AUTH_001",
+  //       "Error 1",
+  //     );
+  //     const error2 = createError(
+  //       ErrorType.AUTHENTICATION,
+  //       "AUTH_002",
+  //       "Error 2",
+  //     );
+  //     const error3 = createError(ErrorType.VALIDATION, "VAL_001", "Error 3");
 
-      ErrorHandler.handleError(error1);
-      ErrorHandler.handleError(error2);
-      ErrorHandler.handleError(error3);
+  //     ErrorHandler.handleError(error1);
+  //     ErrorHandler.handleError(error2);
+  //     ErrorHandler.handleError(error3);
 
-      const stats = ErrorHandler.getErrorStats();
+  //     const stats = ErrorHandler.getErrorStats();
 
-      expect(stats.total).toBe(3);
-      expect(stats.byType[ErrorType.AUTHENTICATION]).toBe(2);
-      expect(stats.byType[ErrorType.VALIDATION]).toBe(1);
-      expect(stats.byCode["AUTH_001"]).toBe(1);
-      expect(stats.byCode["AUTH_002"]).toBe(1);
-      expect(stats.byCode["VAL_001"]).toBe(1);
-    });
+  //     expect(stats.total).toBe(3);
+  //     expect(stats.byType[ErrorType.AUTHENTICATION]).toBe(2);
+  //     expect(stats.byType[ErrorType.VALIDATION]).toBe(1);
+  //     expect(stats.byCode["AUTH_001"]).toBe(1);
+  //     expect(stats.byCode["AUTH_002"]).toBe(1);
+  //     expect(stats.byCode["VAL_001"]).toBe(1);
+  //   });
 
-    it("should return empty stats when no errors", () => {
-      const stats = ErrorHandler.getErrorStats();
+  //   it("should return empty stats when no errors", () => {
+  //     const stats = ErrorHandler.getErrorStats();
 
-      expect(stats.total).toBe(0);
-      expect(Object.keys(stats.byType)).toHaveLength(0);
-      expect(Object.keys(stats.byCode)).toHaveLength(0);
-    });
-  });
+  //     expect(stats.total).toBe(0);
+  //     expect(Object.keys(stats.byType)).toHaveLength(0);
+  //     expect(Object.keys(stats.byCode)).toHaveLength(0);
+  //   });
+  // });
 
-  describe("ErrorHandler.debug", () => {
-    it("should log debug messages", () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+  // TODO: debug method has been removed from ErrorHandler
+  // describe("ErrorHandler.debug", () => {
+  //   it("should log debug messages", () => {
+  //     const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
-      ErrorHandler.debug(
-        ErrorType.AUTHENTICATION,
-        "AUTH_001",
-        "Debug message",
-        "debug",
-      );
+  //     ErrorHandler.debug(
+  //       ErrorType.AUTHENTICATION,
+  //       "AUTH_001",
+  //       "Debug message",
+  //       "debug",
+  //     );
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "[AuthenticationError] AUTH_001: Debug message",
-        ),
-      );
+  //     expect(consoleSpy).toHaveBeenCalledWith(
+  //       expect.stringContaining(
+  //         "[AuthenticationError] AUTH_001: Debug message",
+  //       ),
+  //     );
 
-      consoleSpy.mockRestore();
-    });
+  //     consoleSpy.mockRestore();
+  //   });
 
-    it("should handle different log levels", () => {
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+  //   it("should handle different log levels", () => {
+  //     const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
 
-      ErrorHandler.debug(
-        ErrorType.VALIDATION,
-        "VAL_001",
-        "Warning message",
-        "warn",
-      );
+  //     ErrorHandler.debug(
+  //       ErrorType.VALIDATION,
+  //       "VAL_001",
+  //       "Warning message",
+  //       "warn",
+  //     );
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[ValidationError] VAL_001: Warning message"),
-      );
+  //     expect(consoleSpy).toHaveBeenCalledWith(
+  //       expect.stringContaining("[ValidationError] VAL_001: Warning message"),
+  //     );
 
-      consoleSpy.mockRestore();
-    });
-  });
+  //     consoleSpy.mockRestore();
+  //   });
+  // });
 
   describe("ErrorType enum", () => {
     it("should have all expected error types", () => {

@@ -134,20 +134,21 @@ describe("NostrConnectorPlugin", () => {
     });
   });
 
-  describe("isAlbyAvailable", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-    });
+  // TODO: isAlbyAvailable method has been removed from NostrConnectorPlugin
+  // describe("isAlbyAvailable", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //   });
 
-    it("should return Nostr extension availability", () => {
-      mockConnector.isNostrExtensionAvailable.mockReturnValue(true);
+  //   it("should return Nostr extension availability", () => {
+  //     mockConnector.isNostrExtensionAvailable.mockReturnValue(true);
 
-      const result = plugin.isAlbyAvailable();
+  //     const result = plugin.isAlbyAvailable();
 
-      expect(result).toBe(true);
-      expect(mockConnector.isNostrExtensionAvailable).toHaveBeenCalled();
-    });
-  });
+  //     expect(result).toBe(true);
+  //     expect(mockConnector.isNostrExtensionAvailable).toHaveBeenCalled();
+  //   });
+  // });
 
   describe("isNostrExtensionAvailable", () => {
     beforeEach(() => {
@@ -281,26 +282,27 @@ describe("NostrConnectorPlugin", () => {
     });
   });
 
-  describe("clearSignatureCache", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-      // Ensure clearSignatureCache is properly mocked
-      mockConnector.clearSignatureCache = jest.fn();
-    });
+  // TODO: clearSignatureCache method has been removed from NostrConnectorPlugin
+  // describe("clearSignatureCache", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //     // Ensure clearSignatureCache is properly mocked
+  //     mockConnector.clearSignatureCache = jest.fn();
+  //   });
 
-    it("should clear signature cache for specific address", () => {
-      plugin.clearSignatureCache("npub123");
+  //   it("should clear signature cache for specific address", () => {
+  //     plugin.clearSignatureCache("npub123");
 
-      expect(mockConnector.clearSignatureCache).toHaveBeenCalledWith("npub123");
-    });
+  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalledWith("npub123");
+  //   });
 
-    it("should clear all signature cache when no address provided", () => {
-      plugin.clearSignatureCache();
+  //   it("should clear all signature cache when no address provided", () => {
+  //     plugin.clearSignatureCache();
 
-      // Check that the method was called, but don't specify arguments since it might be called with undefined
-      expect(mockConnector.clearSignatureCache).toHaveBeenCalled();
-    });
-  });
+  //     // Check that the method was called, but don't specify arguments since it might be called with undefined
+  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalled();
+  //   });
+  // });
 
   describe("verifySignature", () => {
     beforeEach(() => {

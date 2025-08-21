@@ -513,12 +513,12 @@ describe("Web3ConnectorPlugin", () => {
       plugin.initialize(mockCore);
     });
 
-    it("should return Gun user public key", () => {
-      mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
+    it("should return Gun user public key", async () => {
+      mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
         "gun_pub_123",
       );
 
-      const result = plugin.getGunUserPubFromSigningCredential(
+      const result = await plugin.getGunUserPubFromSigningCredential(
         "0x1234567890123456789012345678901234567890",
       );
 
@@ -528,12 +528,12 @@ describe("Web3ConnectorPlugin", () => {
       ).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
     });
 
-    it("should return undefined if not found", () => {
-      mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
+    it("should return undefined if not found", async () => {
+      mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
         undefined,
       );
 
-      const result = plugin.getGunUserPubFromSigningCredential(
+      const result = await plugin.getGunUserPubFromSigningCredential(
         "0x1234567890123456789012345678901234567890",
       );
 

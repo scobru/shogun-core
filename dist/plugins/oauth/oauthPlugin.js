@@ -396,31 +396,5 @@ class OAuthPlugin extends base_1.BasePlugin {
         // Return the original signup error for other failures
         return signupResult;
     }
-    /**
-     * Alias for handleOAuthCallback for backward compatibility
-     * @deprecated Use handleOAuthCallback instead
-     */
-    async handleSimpleOAuth(provider, authCode, state) {
-        return this.handleOAuthCallback(provider, authCode, state);
-    }
-    /**
-     * Get cached user info for a user
-     */
-    getCachedUserInfo(userId, provider) {
-        const key = `oauth_user_${provider}_${userId}`;
-        const storage = this.storage;
-        if (storage?.get) {
-            return storage.get(key) ?? null;
-        }
-        return null;
-    }
-    /**
-     * Clear user info cache
-     */
-    clearUserCache(userId, provider) {
-        const key = userId && provider ? `oauth_user_${provider}_${userId}` : "oauth_user_";
-        const storage = this.storage;
-        storage?.remove?.(key);
-    }
 }
 exports.OAuthPlugin = OAuthPlugin;

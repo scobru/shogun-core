@@ -242,41 +242,5 @@ class ErrorHandler {
     static clearErrors() {
         this.errors = [];
     }
-    /**
-     * Get error statistics
-     */
-    static getErrorStats() {
-        const stats = {
-            total: this.errors.length,
-            byType: {},
-            byCode: {},
-        };
-        for (const error of this.errors) {
-            stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
-            stats.byCode[error.code] = (stats.byCode[error.code] || 0) + 1;
-        }
-        return stats;
-    }
-    /**
-     * Debug helper - logs messages only in development
-     */
-    static debug(type, code, message, level = "debug") {
-        // Always log debug messages for test visibility
-        const finalMessage = `${message}`;
-        switch (level) {
-            case "error":
-                console.error(`[${type}] ${code}: ${finalMessage}`);
-                break;
-            case "warn":
-                console.warn(`[${type}] ${code}: ${finalMessage}`);
-                break;
-            case "info":
-                console.log(`[${type}] ${code}: ${finalMessage}`);
-                break;
-            case "debug":
-                console.log(`[${type}] ${code}: ${finalMessage}`);
-                break;
-        }
-    }
 }
 exports.ErrorHandler = ErrorHandler;
