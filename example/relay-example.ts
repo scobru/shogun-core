@@ -183,10 +183,4 @@ export async function runExamples(): Promise<void> {
   console.log("Examples completed");
 }
 
-// Export the examples for use in other files
-export {
-  basicRelayExample,
-  productionRelayExample,
-  customRelayExample,
-  multipleRelaysExample,
-};
+// The functions are already exported individually above

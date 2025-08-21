@@ -242,10 +242,10 @@ export class Relay {
           this.status.startTime = new Date();
 
           this.log(
-            `GunDB Relay Server started on ${this.config.host}:${this.config.port}`
+            `GunDB Relay Server started on ${this.config.host}:${this.config.port}`,
           );
           this.log(
-            `Super peer mode: ${this.config.super ? "enabled" : "disabled"}`
+            `Super peer mode: ${this.config.super ? "enabled" : "disabled"}`,
           );
           this.log(`Faith mode: ${this.config.faith ? "enabled" : "disabled"}`);
 

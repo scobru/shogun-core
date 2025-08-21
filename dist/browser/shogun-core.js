@@ -64247,6 +64247,108 @@ module.exports = EVP_BytesToKey
 
 /***/ }),
 
+/***/ "./node_modules/gun/axe.js":
+/*!*********************************!*\
+  !*** ./node_modules/gun/axe.js ***!
+  \*********************************/
+/***/ (() => {
+
+;(function(){
+
+	var sT = setTimeout || {}, u;
+  if(typeof window !== ''+u){ sT.window = window }
+	var AXE = (sT.window||'').AXE || function(){};
+  if(AXE.window = sT.window){ AXE.window.AXE = AXE }
+
+	var Gun = (AXE.window||'').GUN || require('./gun');
+	(Gun.AXE = AXE).GUN = AXE.Gun = Gun;
+
+  //if(!Gun.window){ try{ require('./lib/axe') }catch(e){} }
+  if(!Gun.window){ require('./lib/axe') }
+
+	Gun.on('opt', function(at){ start(at) ; this.to.next(at) }); // make sure to call the "next" middleware adapter.
+
+	function start(root){
+		if(root.axe){ return }
+		var opt = root.opt, peers = opt.peers;
+		if(false === opt.axe){ return }
+		if(!Gun.window){ return } // handled by ^ lib/axe.js
+		var w = Gun.window, lS = w.localStorage || opt.localStorage || {}, loc = w.location || opt.location || {}, nav = w.navigator || opt.navigator || {};
+		var axe = root.axe = {}, tmp, id;
+		var mesh = opt.mesh = opt.mesh || Gun.Mesh(root); // DAM!
+
+		tmp = peers[id = loc.origin + '/gun'] = peers[id] || {};
+		tmp.id = tmp.url = id; tmp.retry = tmp.retry || 0;
+		tmp = peers[id = 'http://localhost:8765/gun'] = peers[id] || {};
+		tmp.id = tmp.url = id; tmp.retry = tmp.retry || 0;
+		Gun.log.once("AXE", "AXE enabled: Trying to find network via (1) local peer (2) last used peers (3) a URL parameter, and last (4) hard coded peers.");
+		Gun.log.once("AXEWarn", "Warning: AXE is in alpha, use only for testing!");
+		var last = lS.peers || ''; if(last){ last += ' ' }
+		last += ((loc.search||'').split('peers=')[1]||'').split('&')[0];
+
+		root.on('bye', function(peer){
+			this.to.next(peer);
+			if(!peer.url){ return } // ignore WebRTC disconnects for now.
+			if(!nav.onLine){ peer.retry = 1 }
+			if(peer.retry){ return }
+			if(axe.fall){ delete axe.fall[peer.url || peer.id] }
+			(function next(){
+				if(!axe.fall){ setTimeout(next, 9); return } // not found yet
+				var fall = Object.keys(axe.fall||''), one = fall[(Math.random()*fall.length) >> 0];
+				if(!fall.length){ lS.peers = ''; one = 'https://gunjs.herokuapp.com/gun' } // out of peers
+				if(peers[one]){ next(); return } // already choose
+				mesh.hi(one);
+			}());
+		});
+
+		root.on('hi', function(peer){ // TEMPORARY! Try to connect all peers.
+			this.to.next(peer);
+			if(!peer.url){ return } // ignore WebRTC disconnects for now.
+			return; // DO NOT COMMIT THIS FEATURE YET! KEEP TESTING NETWORK PERFORMANCE FIRST!
+			// removed by dead control flow
+{}
+		});
+
+		function found(text){
+
+			axe.fall = {};
+			((text||'').match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/ig)||[]).forEach(function(url){
+				axe.fall[url] = {url: url, id: url, retry: 0}; // RETRY
+			});
+			
+			return;
+
+			// TODO: Finish porting below? Maybe not.
+
+			// removed by dead control flow
+{}
+			// removed by dead control flow
+{}
+			// removed by dead control flow
+{}
+
+			// removed by dead control flow
+{ var mesh; } // DAM!
+			// removed by dead control flow
+{}
+		}
+
+		if(last){ found(last); return }
+		try{ fetch(((loc.search||'').split('axe=')[1]||'').split('&')[0] || loc.axe || 'https://raw.githubusercontent.com/wiki/amark/gun/volunteer.dht.md').then(function(res){
+	  	return res.text()
+	  }).then(function(text){
+	  	found(lS.peers = text);
+	  }).catch(function(){
+	  	found(); // nothing
+	  })}catch(e){found()}
+	}
+
+	var empty = {}, yes = true;
+  try{ if(typeof module != ''+u){ module.exports = AXE } }catch(e){}
+}());
+
+/***/ }),
+
 /***/ "./node_modules/gun/gun.js":
 /*!*********************************!*\
   !*** ./node_modules/gun/gun.js ***!
@@ -68159,6 +68261,114 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 
 /***/ }),
 
+/***/ "./node_modules/gun/lib/multicast.js":
+/*!*******************************************!*\
+  !*** ./node_modules/gun/lib/multicast.js ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+/* provided dependency */ var Buffer = __webpack_require__(/*! buffer */ "./node_modules/buffer/index.js")["Buffer"];
+var Gun = (typeof window !== "undefined")? window.Gun : require('../gun');
+
+Gun.on('create', function(root){
+	this.to.next(root);
+	var opt = root.opt;
+  if(false === opt.multicast){ return }
+  if((typeof process !== "undefined") && 'false' === ''+(process.env||{}).MULTICAST){ return }
+	//if(true !== opt.multicast){ return } // disable multicast by default for now.
+
+  var udp = opt.multicast = opt.multicast || {};
+  udp.address = udp.address || '233.255.255.255';
+  udp.pack = udp.pack || 50000; // UDP messages limited to 65KB.
+  udp.port  = udp.port || 8765;
+
+  var noop = function(){}, u;
+  var pid = '2'+Math.random().toString().slice(-8);
+  var mesh = opt.mesh = opt.mesh || Gun.Mesh(root);
+  var dgram;
+
+  try{ dgram = require("dgram") }catch(e){ return }
+  var socket = dgram.createSocket({type: "udp4", reuseAddr: true});
+  socket.bind({port: udp.port, exclusive: true}, function(){
+    socket.setBroadcast(true);
+    socket.setMulticastTTL(128);
+  });
+
+  socket.on("listening", function(){
+    try { socket.addMembership(udp.address) }catch(e){ console.error(e); return; }
+    udp.peer = {id: udp.address + ':' + udp.port, wire: socket};
+
+    udp.peer.say = function(raw){
+      var buf = Buffer.from(raw, 'utf8');
+      if(udp.pack <= buf.length){ // message too big!!!
+        return;
+      }
+      socket.send(buf, 0, buf.length, udp.port, udp.address, noop);
+    }
+    //opt.mesh.hi(udp.peer);
+
+    Gun.log.once('multi', 'Multicast on '+udp.peer.id);
+    return; // below code only needed for when WebSocket connections desired!
+    // removed by dead control flow
+{}
+  });
+
+  socket.on("message", function(raw, info) { try {
+    if(!raw){ return }
+    raw = raw.toString('utf8');
+    if('2'===raw[0]){ return check(raw, info) }
+    opt.mesh.hear(raw, udp.peer);
+
+    return; // below code only needed for when WebSocket connections desired!
+    // removed by dead control flow
+{ var message; }
+    // removed by dead control flow
+{}
+
+    // removed by dead control flow
+{} // ignore self
+
+    // removed by dead control flow
+{ var url; }
+    // removed by dead control flow
+{}
+
+    //console.log('discovered', url, message, info);
+    // removed by dead control flow
+{}
+
+  } catch(e){
+    //console.log('multicast error', e, raw);
+    return;
+  } });
+
+  function say(msg){
+    this.to.next(msg);
+    if(!udp.peer){ return }
+    mesh.say(msg, udp.peer);
+  }
+
+  function check(id, info){ var tmp;
+    if(!udp.peer){ return }
+    if(!id){
+      id = check.id = check.id || Buffer.from(pid, 'utf8');
+      socket.send(id, 0, id.length, udp.port, udp.address, noop);
+      return;
+    }
+    if((tmp = root.stats) && (tmp = tmp.gap) && info){ (tmp.near || (tmp.near = {}))[info.address] = info.port || 1 } // STATS!
+    if(check.on || id === pid){ return }
+    root.on('out', check.on = say); // TODO: MULTICAST NEEDS TO BE CHECKED FOR NEW CODE SYSTEM!!!!!!!!!! // TODO: This approach seems interferes with other relays, below does not but...
+    //opt.mesh.hi(udp.peer); //  IS THIS CORRECT?
+  }
+
+  setInterval(check, 1000 * 1);
+
+});
+
+
+/***/ }),
+
 /***/ "./node_modules/gun/lib/radisk.js":
 /*!****************************************!*\
   !*** ./node_modules/gun/lib/radisk.js ***!
@@ -68774,6 +68984,104 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 
 /***/ }),
 
+/***/ "./node_modules/gun/lib/rfs.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/lib/rfs.js ***!
+  \*************************************/
+/***/ (() => {
+
+function Store(opt){
+	opt = opt || {};
+	opt.log = opt.log || console.log;
+	opt.file = String(opt.file || 'radata');
+	var fs = require('fs'), u;
+
+	var store = function Store(){};
+	if(Store[opt.file]){
+		console.log("Warning: reusing same fs store and options as 1st.");
+		return Store[opt.file];
+	}
+	Store[opt.file] = store;
+	var puts = {};
+
+	// TODO!!! ADD ZLIB INFLATE / DEFLATE COMPRESSION!
+	store.put = function(file, data, cb){
+		var random = Math.random().toString(36).slice(-3);
+		puts[file] = {id: random, data: data};
+		var tmp = opt.file+'-'+file+'-'+random+'.tmp';
+		fs.writeFile(tmp, data, function(err, ok){
+			if(err){
+				if(random === (puts[file]||'').id){ delete puts[file] }
+				return cb(err);
+			}
+			move(tmp, opt.file+'/'+file, function(err, ok){
+				if(random === (puts[file]||'').id){ delete puts[file] }
+				cb(err, ok || !err);
+			});
+		});
+	};
+	store.get = function(file, cb){ var tmp; // this took 3s+?
+		if(tmp = puts[file]){ cb(u, tmp.data); return }
+		fs.readFile(opt.file+'/'+file, function(err, data){
+			if(err){
+				if('ENOENT' === (err.code||'').toUpperCase()){
+					return cb();
+				}
+				opt.log("ERROR:", err);
+			}
+			cb(err, data);
+		});
+	};
+
+	if(!fs.existsSync(opt.file)){ fs.mkdirSync(opt.file) }
+
+	function move(oldPath, newPath, cb) {
+		fs.rename(oldPath, newPath, function (err) {
+			if (err) {
+				if (err.code === 'EXDEV') {
+					var readStream = fs.createReadStream(oldPath);
+					var writeStream = fs.createWriteStream(newPath);
+
+					readStream.on('error', cb);
+					writeStream.on('error', cb);
+
+					readStream.on('close', function () {
+						fs.unlink(oldPath, cb);
+					});
+
+					readStream.pipe(writeStream);
+				} else {
+					cb(err);
+				}
+			} else {
+				cb();
+			}
+		});
+	};
+
+	store.list = function(cb, match, params, cbs){
+		var dir = fs.readdirSync(opt.file);
+		dir.forEach(function(file){
+			cb(file);
+		})
+		cb();
+	};
+	
+	return store;
+}
+
+var Gun = (typeof window !== "undefined")? window.Gun : require('../gun');
+Gun.on('create', function(root){
+	this.to.next(root);
+	var opt = root.opt;
+	if(opt.rfs === false){ return }
+	opt.store = opt.store || (!Gun.window && Store(opt));
+});
+
+module.exports = Store;
+
+/***/ }),
+
 /***/ "./node_modules/gun/lib/rindexed.js":
 /*!******************************************!*\
   !*** ./node_modules/gun/lib/rindexed.js ***!
@@ -68859,6 +69167,288 @@ if (navigator.storage && navigator.storage.estimate) {
   }catch(e){}
 
 }());
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/rs3.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/lib/rs3.js ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+var Gun = require('../gun');
+var Radisk = require('./radisk');
+var fs = require('fs');
+var Radix = Radisk.Radix;
+var u, AWS;
+
+Gun.on('create', function(root){
+	this.to.next(root);
+	var opt = root.opt;
+	if(!opt.s3 && !process.env.AWS_S3_BUCKET){ return }
+	//opt.batch = opt.batch || (1000 * 10);
+	//opt.until = opt.until || (1000 * 3); // ignoring these now, cause perf > cost
+	//opt.chunk = opt.chunk || (1024 * 1024 * 10); // 10MB // when cost only cents
+
+	try{AWS = require('aws-sdk');
+	}catch(e){
+		console.log("Please `npm install aws-sdk` or add it to your package.json !");
+		AWS_SDK_NOT_INSTALLED;
+	}
+
+	var opts = opt.s3 || (opt.s3 = {});
+	opts.bucket = opts.bucket || process.env.AWS_S3_BUCKET;
+	opts.region = opts.region || process.env.AWS_REGION || "us-east-1";
+	opts.accessKeyId = opts.key = opts.key || opts.accessKeyId || process.env.AWS_ACCESS_KEY_ID;
+	opts.secretAccessKey = opts.secret = opts.secret || opts.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
+
+	if(opt.fakes3 = opt.fakes3 || process.env.fakes3){
+		opts.endpoint = opt.fakes3;
+		opts.sslEnabled = false;
+		opts.bucket = opts.bucket.replace('.','p');
+	}
+
+	opts.config = new AWS.Config(opts);
+	opts.s3 = opts.s3 || new AWS.S3(opts.config);
+
+	opt.store = Object.keys(opts.s3).length === 0 ? opt.store : Store(opt);
+});
+
+function Store(opt){
+	opt = opt || {};
+	opt.file = String(opt.file || 'radata');
+	var opts = opt.s3, s3 = opts.s3;
+	var c = {p: {}, g: {}, l: {}};
+	
+	var store = function Store(){};
+	if(Store[opt.file]){
+		console.log("Warning: reusing same S3 store and options as 1st.");
+		return Store[opt.file];
+	}
+	Store[opt.file] = store;
+
+	store.put = function(file, data, cb){
+		var params = {Bucket: opts.bucket, Key: file, Body: data};
+		//console.log("RS3 PUT ---->", (data||"").slice(0,20));
+		c.p[file] = data;
+		delete c.g[file];//Gun.obj.del(c.g, file);
+		delete c.l[1];//Gun.obj.del(c.l, 1);
+    s3.putObject(params, function(err, ok){
+    	delete c.p[file];
+    	cb(err, 's3');
+    });
+	};
+	store.get = function(file, cb){ var tmp;
+		if(tmp = c.p[file]){ cb(u, tmp); return }
+		if(tmp = c.g[file]){ tmp.push(cb); return }
+		var cbs = c.g[file] = [cb];
+		var params = {Bucket: opts.bucket, Key: file||''};
+		//console.log("RS3 GET ---->", file);
+		s3.getObject(params, function got(err, ack){
+			if(err && 'NoSuchKey' === err.code){ err = u }
+			//console.log("RS3 GOT <----", err, file, cbs.length, ((ack||{}).Body||'').length);//.toString().slice(0,20));
+			delete c.g[file];//Gun.obj.del(c.g, file);
+			var data, data = (ack||'').Body;
+			//console.log(1, process.memoryUsage().heapUsed);
+			var i = 0, cba; while(cba = cbs[i++]){ cba && cba(err, data) }//Gun.obj.map(cbs, cbe);
+		});
+	};
+	store.list = function(cb, match, params, cbs){
+		if(!cbs){
+			if(c.l[1]){ return c.l[1].push(cb) }
+			cbs = c.l[1] = [cb];
+		}
+		params = params || {Bucket: opts.bucket};
+		//console.log("RS3 LIST --->");
+		s3.listObjectsV2(params, function(err, data){
+			//console.log("RS3 LIST <---", err, data, cbs.length);
+			if(err){ return Gun.log(err, err.stack) }
+			var IT = data.IsTruncated, cbe = function(cb){
+				if(cb.end){ return }
+				if(Gun.obj.map(data.Contents, function(content){
+					return cb(content.Key);
+				})){ cb.end = true; return }
+				if(IT){ return }
+				// Stream interface requires a final call to know when to be done.
+				cb.end = true; cb();
+			}
+			// Gun.obj.map(cbs, cbe); // lets see if fixes heroku
+			if(!IT){ delete c.l[1]; return }
+	    params.ContinuationToken = data.NextContinuationToken;
+	  	store.list(cb, match, params, cbs);
+    });
+	};
+	//store.list(function(){ return true });
+	if(false !== opt.rfs){ require('./rfsmix')(opt, store) } // ugly, but gotta move fast for now.
+	return store;
+}
+
+module.exports = Store;
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/serve.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/lib/serve.js ***!
+  \***************************************/
+/***/ (() => {
+
+var __dirname = "/";
+var fs = require('fs');
+var path = require('path');
+var dot = /\.\.+/g;
+var slash = /\/\/+/g;
+
+function CDN(dir){
+	return function(req, res){
+		req.url = (req.url||'').replace(dot,'').replace(slash,'/');
+		if(serve(req, res)){ return } // filters GUN requests!
+		if (req.url.slice(-3) === '.js') {
+			res.writeHead(200, {'Content-Type': 'text/javascript'});
+		}
+		fs.createReadStream(path.join(dir, req.url)).on('error',function(tmp){ // static files!
+			fs.readFile(path.join(dir, 'index.html'), function(err, tmp){
+				try{ res.writeHead(200, {'Content-Type': 'text/html'});
+				res.end(tmp+''); }catch(e){} // or default to index
+		})}).pipe(res); // stream
+	}
+}
+
+function serve(req, res, next){ var tmp;
+	if(typeof req === 'string'){
+		return CDN(req);
+	}
+	if(!req || !res){ return false }
+	next = next || serve;
+	if(!req.url){ return next() }
+	if(res.setHeader){ res.setHeader('Access-Control-Allow-Origin', '*') }
+	if(0 <= req.url.indexOf('gun.js')){
+		res.writeHead(200, {'Content-Type': 'text/javascript'});
+		res.end(serve.js = serve.js || require('fs').readFileSync(__dirname + '/../gun.js'));
+		return true;
+	}
+	if(0 <= req.url.indexOf('gun/')){
+		var path = __dirname + '/../' + req.url.split('/').slice(2).join('/');
+		if('/' === path.slice(-1)){
+			fs.readdir(path, function(err, dir){ res.end((dir || (err && 404))+'') });
+			return true;
+		}
+		var S = +new Date;
+		var rs = fs.createReadStream(path);
+		rs.on('open', function(){ console.STAT && console.STAT(S, +new Date - S, 'serve file open'); rs.pipe(res) });
+		rs.on('error', function(err){ res.end(404+'') });
+		rs.on('end', function(){ console.STAT && console.STAT(S, +new Date - S, 'serve file end') });
+		return true;
+	}
+	if((tmp = req.socket) && (tmp = tmp.server) && (tmp = tmp.route)){ var url;
+		if(tmp = tmp[(((req.url||'').slice(1)).split('/')[0]||'').split('.')[0]]){
+			try{ return tmp(req, res, next) }catch(e){ console.log(req.url+' crashed with '+e) }
+		}
+	}
+	return next();
+}
+
+module.exports = serve;
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/stats.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/lib/stats.js ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+var __dirname = "/";
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+var Gun = (typeof window !== "undefined")? window.Gun : require('../gun');
+
+Gun.on('opt', function(root){
+	this.to.next(root);
+	if(root.once){ return }
+	if(typeof process === 'undefined'){ return }
+	if(typeof require === 'undefined'){ return }
+	if(false === root.opt.stats){ return }
+	var path = require('path') || {};
+	var file = root.opt.file ? path.resolve(root.opt.file).split(path.sep).slice(-1)[0] : 'radata';
+	var noop = function(){};
+	var os = require('os') || {};
+	var fs = require('fs') || {};
+	fs.existsSync = fs.existsSync || path.existsSync;
+	if(!fs.existsSync){ return }
+	if(!process){ return }
+	process.uptime = process.uptime || noop;
+	process.cpuUsage = process.cpuUsage || noop;
+	process.memoryUsage = process.memoryUsage || noop;
+	os.totalmem = os.totalmem || noop;
+	os.freemem = os.freemem || noop;
+	os.loadavg = os.loadavg || noop;
+	os.cpus = os.cpus || noop;
+	var S = +new Date, W;
+	var obj_ify = function(o){try{o = JSON.parse(o)}catch(e){o={}};return o;}
+	setTimeout(function(){
+		root.stats = obj_ify((fs.existsSync(__dirname+'/../stats.'+file) && fs.readFileSync(__dirname+'/../stats.'+file).toString())) || {};
+		root.stats.up = root.stats.up || {};
+		root.stats.up.start = root.stats.up.start || +(new Date);
+		root.stats.up.count = (root.stats.up.count || 0) + 1;
+		root.stats.stay = root.stats.stay || {};
+		root.stats.over = +new Date;
+	},1);
+	setInterval(function(){
+		if(!root.stats){ root.stats = {} }
+		if(W){ return }
+		var stats = root.stats, tmp;
+		stats.over = -(S - (S = +new Date));
+		(stats.up||{}).time = process.uptime();
+		stats.memory = process.memoryUsage() || {};
+		stats.memory.totalmem = os.totalmem();
+		stats.memory.freemem = os.freemem();
+		stats.cpu = process.cpuUsage() || {};
+		stats.cpu.loadavg = os.loadavg();
+		stats.cpu.stack = (((setTimeout||'').turn||'').s||'').length;
+		stats.peers = {};
+
+		stats.peers.count = console.STAT.peers || Object.keys(root.opt.peers||{}).length; // TODO: .keys( is slow
+		stats.node = {};
+		stats.node.count = Object.keys(root.graph||{}).length; // TODO: .keys( is slow
+		stats.all = all;
+		stats.sites = console.STAT.sites;
+		all = {}; // will this cause missing stats?
+		var dam = root.opt.mesh;
+		if(dam){
+			stats.dam = {'in': {count: dam.hear.c, done: dam.hear.d}, 'out': {count: dam.say.c, done: dam.say.d}};
+			dam.hear.c = dam.hear.d = dam.say.c = dam.say.d = 0; // reset
+			stats.peers.time = dam.bye.time || 0;
+		}
+		var rad = root.opt.store; rad = rad && rad.stats;
+		if(rad){
+			stats.rad = rad;
+			root.opt.store.stats = {get:{time:{}, count:0}, put: {time:{}, count:0}}; // reset
+		}
+		JSON.stringifyAsync(stats, function(err, raw){ if(err){ return } W = true;
+			fs.writeFile(__dirname+'/../stats.'+file, raw, function(err){ W = false; err && console.log(console.STAT.err = err); console.STAT && console.STAT(S, +new Date - S, 'stats stash') });
+		});
+
+		//exec("top -b -n 1", function(err, out){ out && fs.writeFile(__dirname+'/../stats.top.'+file, out, noop) }); // was it really seriously actually this?
+	//}, 1000 * 15);
+	}, 1000 * 5);
+});
+
+var exec = require("child_process").exec, noop = function(){};
+require('./yson');
+
+var log = Gun.log, all = {}, max = 1000;
+console.STAT = function(a,b,c,d){
+	if('number' == typeof a && 'number' == typeof b && 'string' == typeof c){
+		var tmp = (all[c] || (all[c] = []));
+		if(max < tmp.push([a,b])){ all[c] = [] } // reset
+		//return;
+	}
+	if(!console.LOG || log.off){ return a }
+	return log.apply(Gun, arguments);
+}
 
 /***/ }),
 
@@ -69172,6 +69762,99 @@ Gun.chain.then = function(cb) {
 		}
 	});
 }());
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/wire.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/lib/wire.js ***!
+  \**************************************/
+/***/ (() => {
+
+var Gun = require('../gun');
+
+/*
+	An Ad-Hoc Mesh-Network Daisy-Chain
+	should work even if humans are
+	communicating with each other blind.
+
+	To prevent infinite broadcast loops,
+	we use a deduplication process
+	based on the message's identifier.
+	This is currently implemented in core.
+
+	However, because this still creates a
+	N*2 (where N is the number of connections)
+	flood, it is not scalable for traditional
+	services that have a hub network topology.
+
+	Does this mean we have to abandon mesh
+	algorithms? No, we can simply layer more
+	efficient optimizations in based on constraints.
+	If these constraints exist, it automatically
+	upgrades, but if not, it falls back to the
+	brute-force mesh based robust algorithm.
+	A simple example is to limit peer connections
+	and rely upon daisy chaining to relay messages.
+
+	Another example, is if peers are willing to
+	identify themselves, then we can improve the
+	efficiency of the network by having each peer
+	include the names of peers it is connected in
+	each message. Then each subsequent peer will
+	not relay it to them, since it is unnecessary.
+	This should create N (where N is the number of
+	peers) messages (or possibly N+ if there is a
+	common peer of uncommon peers that receives it
+	and relays at exact latency timings), which is
+	optimal.
+
+	Since computer networks aren't actually blind,
+	we will implement the above method to improve
+	the performance of the ad-hoc mesh network.
+
+	But why not have every message contain the
+	whole history of peers that it relayed through?
+	Because in sufficiently large enough networks,
+	with extensive daisy chaining, this will cause
+	the message to become prohibitively slow and
+	increase indefinitely in size.
+
+*/
+
+Gun.on('opt', function(root){
+	var opt = root.opt;
+	if(false === opt.ws || opt.once){
+		this.to.next(root);
+		return;
+	}	
+
+	var url = require('url');
+	opt.mesh = opt.mesh || Gun.Mesh(root);
+	opt.WebSocket = opt.WebSocket || require('ws');
+	var ws = opt.ws = opt.ws || {};
+	ws.path = ws.path || '/gun';
+	// if we DO need an HTTP server, then choose ws specific one or GUN default one.
+	if(!ws.noServer){
+		ws.server = ws.server || opt.web;
+		if(!ws.server){ this.to.next(root); return } // ugh, bug fix for @jamierez & unstoppable ryan.
+	}
+	ws.web = ws.web || new opt.WebSocket.Server(ws); // we still need a WS server.
+	ws.web.on('connection', function(wire, req){ var peer;
+		wire.headers = wire.headers || (req||'').headers || '';
+		console.STAT && ((console.STAT.sites || (console.STAT.sites = {}))[wire.headers.origin] = 1);
+		opt.mesh.hi(peer = {wire: wire});
+		wire.on('message', function(msg){
+			opt.mesh.hear(msg.data || msg, peer);
+		});
+		wire.on('close', function(){
+			opt.mesh.bye(peer);
+		});
+		wire.on('error', function(e){});
+		setTimeout(function heart(){ if(!opt.peers[peer.id]){ return } try{ wire.send("[]") }catch(e){} ;setTimeout(heart, 1000 * 20) }, 1000 * 20); // Some systems, like Heroku, require heartbeats to not time out. // TODO: Make this configurable? // TODO: PERF: Find better approach than try/timeouts?
+	});
+	this.to.next(root);
+});
 
 /***/ }),
 
@@ -97953,6 +98636,25 @@ exports.createContext = Script.createContext = function (context) {
 
 /***/ }),
 
+/***/ "./node_modules/ws/browser.js":
+/*!************************************!*\
+  !*** ./node_modules/ws/browser.js ***!
+  \************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = function () {
+  throw new Error(
+    'ws does not work in the browser. Browser clients must use the native ' +
+      'WebSocket object'
+  );
+};
+
+
+/***/ }),
+
 /***/ "./src/gundb/crypto.ts":
 /*!*****************************!*\
   !*** ./src/gundb/crypto.ts ***!
@@ -101597,6 +102299,313 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 // Export the main class
 __exportStar(__webpack_require__(/*! ./gun-Instance */ "./src/gundb/gun-Instance.ts"), exports);
+// Export the relay class
+__exportStar(__webpack_require__(/*! ./relay */ "./src/gundb/relay.ts"), exports);
+
+
+/***/ }),
+
+/***/ "./src/gundb/relay.ts":
+/*!****************************!*\
+  !*** ./src/gundb/relay.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/**
+ * GunDB Relay Server Class
+ * Instantiates and manages a GunDB relay server with configurable options
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RelayPresets = exports.Relay = void 0;
+exports.createRelay = createRelay;
+// Gun modules will be loaded dynamically when needed
+let Gun;
+let gunModulesLoaded = false;
+/**
+ * Loads Gun modules dynamically to avoid issues during testing
+ */
+function loadGunModules() {
+    if (gunModulesLoaded)
+        return;
+    try {
+        Gun = __webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js");
+        __webpack_require__(/*! gun/lib/yson */ "./node_modules/gun/lib/yson.js");
+        __webpack_require__(/*! gun/lib/serve */ "./node_modules/gun/lib/serve.js");
+        __webpack_require__(/*! gun/lib/store */ "./node_modules/gun/lib/store.js");
+        __webpack_require__(/*! gun/lib/rfs */ "./node_modules/gun/lib/rfs.js");
+        __webpack_require__(/*! gun/lib/rs3 */ "./node_modules/gun/lib/rs3.js");
+        __webpack_require__(/*! gun/lib/wire */ "./node_modules/gun/lib/wire.js");
+        __webpack_require__(/*! gun/lib/multicast */ "./node_modules/gun/lib/multicast.js");
+        __webpack_require__(/*! gun/lib/stats */ "./node_modules/gun/lib/stats.js");
+        // Optional modules - wrapped in try-catch for compatibility
+        try {
+            __webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js");
+        }
+        catch (e) {
+            // SEA not available
+        }
+        try {
+            __webpack_require__(/*! gun/axe */ "./node_modules/gun/axe.js");
+        }
+        catch (e) {
+            // Axe not available
+        }
+        gunModulesLoaded = true;
+    }
+    catch (error) {
+        // In test environment, don't throw error, just log it
+        if (false) // removed by dead control flow
+{}
+        else {
+            throw new Error(`Failed to load Gun modules: ${error}`);
+        }
+    }
+}
+/**
+ * GunDB Relay Server Class
+ *
+ * This class creates and manages a GunDB relay server that can:
+ * - Serve as a peer for other GunDB instances
+ * - Store and relay data between connected peers
+ * - Provide persistence and caching
+ * - Handle authentication and encryption
+ */
+class Relay {
+    gun;
+    server;
+    config;
+    status;
+    log;
+    /**
+     * Creates a new GunDB relay server instance
+     * @param config Configuration options for the relay server
+     */
+    constructor(config = {}) {
+        // Load Gun modules when the class is instantiated
+        loadGunModules();
+        this.config = {
+            port: 8765,
+            host: "0.0.0.0",
+            super: false,
+            faith: false,
+            enableFileStorage: false,
+            enableEviction: false,
+            ...config,
+        };
+        this.status = {
+            running: false,
+            peers: 0,
+        };
+        this.log = this.config.log || console.log;
+        // Initialize Gun instance with relay configuration
+        try {
+            this.gun = Gun({
+                file: this.config.enableFileStorage ? "data" : false,
+                web: this.createServer(),
+                multicast: false, // Disable multicast for relay servers
+                ...this.config.gunOptions,
+            });
+        }
+        catch (error) {
+            // In test environment, create a minimal mock
+            if (false) // removed by dead control flow
+{}
+            else {
+                throw error;
+            }
+        }
+        // Configure Gun options
+        this.gun.on("opt", (root) => {
+            if (this.config.super !== undefined) {
+                root.opt.super = this.config.super;
+            }
+            if (this.config.faith !== undefined) {
+                root.opt.faith = this.config.faith;
+            }
+            root.opt.log = root.opt.log || this.log;
+            // Continue the chain
+            if (root.to && root.to.next) {
+                root.to.next(root);
+            }
+        });
+        // Track peer connections
+        this.gun.on("hi", () => {
+            this.status.peers++;
+            this.log(`Peer connected. Total peers: ${this.status.peers}`);
+        });
+        this.gun.on("bye", () => {
+            this.status.peers = Math.max(0, this.status.peers - 1);
+            this.log(`Peer disconnected. Total peers: ${this.status.peers}`);
+        });
+    }
+    /**
+     * Creates the HTTP/WebSocket server for the relay
+     * @returns Server instance
+     */
+    createServer() {
+        try {
+            const server = Object(function webpackMissingModule() { var e = new Error("Cannot find module 'http'"); e.code = 'MODULE_NOT_FOUND'; throw e; }())();
+            // Configure WebSocket server
+            if (this.config.ws) {
+                const WebSocketServer = (__webpack_require__(/*! ws */ "./node_modules/ws/browser.js").Server);
+                const wss = new WebSocketServer({ server });
+                wss.on("connection", (ws) => {
+                    this.log("WebSocket connection established");
+                });
+            }
+            // Configure HTTP server
+            if (this.config.http) {
+                Object.assign(server, this.config.http);
+            }
+            this.server = server;
+            return server;
+        }
+        catch (error) {
+            // In test environment, create a minimal mock server
+            if (false) // removed by dead control flow
+{}
+            else {
+                throw error;
+            }
+        }
+    }
+    /**
+     * Starts the relay server
+     * @returns Promise that resolves when the server is started
+     */
+    async start() {
+        return new Promise((resolve, reject) => {
+            try {
+                this.server.listen(this.config.port, this.config.host, () => {
+                    this.status.running = true;
+                    this.status.port = this.config.port;
+                    this.status.host = this.config.host;
+                    this.status.startTime = new Date();
+                    this.log(`GunDB Relay Server started on ${this.config.host}:${this.config.port}`);
+                    this.log(`Super peer mode: ${this.config.super ? "enabled" : "disabled"}`);
+                    this.log(`Faith mode: ${this.config.faith ? "enabled" : "disabled"}`);
+                    resolve();
+                });
+                this.server.on("error", (error) => {
+                    this.log("Server error:", error);
+                    reject(error);
+                });
+            }
+            catch (error) {
+                reject(error);
+            }
+        });
+    }
+    /**
+     * Stops the relay server
+     * @returns Promise that resolves when the server is stopped
+     */
+    async stop() {
+        return new Promise((resolve) => {
+            if (this.server && this.status.running) {
+                this.server.close(() => {
+                    this.status.running = false;
+                    this.log("GunDB Relay Server stopped");
+                    resolve();
+                });
+            }
+            else {
+                resolve();
+            }
+        });
+    }
+    /**
+     * Gets the current status of the relay server
+     * @returns Current relay status
+     */
+    getStatus() {
+        return { ...this.status };
+    }
+    /**
+     * Gets the Gun instance
+     * @returns Gun instance
+     */
+    getGun() {
+        return this.gun;
+    }
+    /**
+     * Gets the server instance
+     * @returns Server instance
+     */
+    getServer() {
+        return this.server;
+    }
+    /**
+     * Updates the relay configuration
+     * @param newConfig New configuration options
+     */
+    updateConfig(newConfig) {
+        this.config = { ...this.config, ...newConfig };
+        this.log("Relay configuration updated");
+    }
+    /**
+     * Gets the relay URL
+     * @returns Relay URL string
+     */
+    getRelayUrl() {
+        const protocol = this.config.ws ? "wss" : "http";
+        return `${protocol}://${this.config.host}:${this.config.port}/gun`;
+    }
+    /**
+     * Checks if the relay is healthy
+     * @returns Promise that resolves to true if healthy
+     */
+    async healthCheck() {
+        try {
+            return this.status.running && this.server.listening;
+        }
+        catch (error) {
+            return false;
+        }
+    }
+}
+exports.Relay = Relay;
+/**
+ * Factory function to create a relay server with default configuration
+ * @param config Optional configuration overrides
+ * @returns Relay instance
+ */
+function createRelay(config = {}) {
+    return new Relay(config);
+}
+/**
+ * Default relay configurations for common use cases
+ */
+exports.RelayPresets = {
+    /** Development relay with basic configuration */
+    development: {
+        port: 8765,
+        host: "localhost",
+        super: false,
+        faith: false,
+        enableFileStorage: true,
+    },
+    /** Production relay with enhanced configuration */
+    production: {
+        port: 8765,
+        host: "0.0.0.0",
+        super: true,
+        faith: true,
+        enableFileStorage: true,
+        enableEviction: true,
+    },
+    /** Test relay with minimal configuration */
+    test: {
+        port: 8766,
+        host: "localhost",
+        super: false,
+        faith: false,
+        enableFileStorage: false,
+    },
+};
+exports["default"] = Relay;
 
 
 /***/ }),
@@ -101722,7 +102731,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShogunCore = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = exports.RelayPresets = exports.createRelay = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
 const events_1 = __webpack_require__(/*! ./types/events */ "./src/types/events.ts");
 const errorHandler_1 = __webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts");
 const storage_1 = __webpack_require__(/*! ./storage/storage */ "./src/storage/storage.ts");
@@ -101739,6 +102748,9 @@ Object.defineProperty(exports, "GunRxJS", ({ enumerable: true, get: function () 
 Object.defineProperty(exports, "crypto", ({ enumerable: true, get: function () { return gundb_1.crypto; } }));
 Object.defineProperty(exports, "derive", ({ enumerable: true, get: function () { return gundb_1.derive; } }));
 Object.defineProperty(exports, "GunErrors", ({ enumerable: true, get: function () { return gundb_1.GunErrors; } }));
+Object.defineProperty(exports, "Relay", ({ enumerable: true, get: function () { return gundb_1.Relay; } }));
+Object.defineProperty(exports, "createRelay", ({ enumerable: true, get: function () { return gundb_1.createRelay; } }));
+Object.defineProperty(exports, "RelayPresets", ({ enumerable: true, get: function () { return gundb_1.RelayPresets; } }));
 __exportStar(__webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts"), exports);
 __exportStar(__webpack_require__(/*! ./plugins */ "./src/plugins/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./types/shogun */ "./src/types/shogun.ts"), exports);
@@ -101804,8 +102816,8 @@ class ShogunCore {
             else {
                 this._gun = (0, gundb_1.Gun)({
                     peers: config.peers || [],
-                    radisk: false,
-                    localStorage: false,
+                    radisk: config.radisk || false,
+                    localStorage: config.localStorage || false,
                 });
             }
         }

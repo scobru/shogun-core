@@ -47,7 +47,18 @@ export type {
   DeriveOptions,
 };
 
-export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance, Relay, createRelay, RelayPresets };
+export {
+  SEA,
+  Gun,
+  GunRxJS,
+  crypto,
+  derive,
+  GunErrors,
+  GunInstance,
+  Relay,
+  createRelay,
+  RelayPresets,
+};
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
