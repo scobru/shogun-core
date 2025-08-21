@@ -32,6 +32,9 @@ import {
   crypto,
   derive,
   GunErrors,
+  Relay,
+  createRelay,
+  RelayPresets,
 } from "./gundb";
 import { ISEAPair } from "gun";
 import { LogLevel } from "./types/common";
@@ -44,7 +47,7 @@ export type {
   DeriveOptions,
 };
 
-export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance };
+export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance, Relay, createRelay, RelayPresets };
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
@@ -117,8 +120,8 @@ export class ShogunCore implements IShogunCore {
       } else {
         this._gun = Gun({
           peers: config.peers || [],
-          radisk: false,
-          localStorage: false,
+          radisk: config.radisk || false,
+          localStorage: config.localStorage || false,
         });
       }
     } catch (error) {
