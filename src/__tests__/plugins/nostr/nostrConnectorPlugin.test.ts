@@ -129,25 +129,26 @@ describe("NostrConnectorPlugin", () => {
       const uninitializedPlugin = new NostrConnectorPlugin();
 
       expect(() => uninitializedPlugin.isAvailable()).toThrow(
-        "Plugin nostr not initialized"
+        "Plugin nostr not initialized",
       );
     });
   });
 
-  describe("isAlbyAvailable", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-    });
+  // TODO: isAlbyAvailable method has been removed from NostrConnectorPlugin
+  // describe("isAlbyAvailable", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //   });
 
-    it("should return Nostr extension availability", () => {
-      mockConnector.isNostrExtensionAvailable.mockReturnValue(true);
+  //   it("should return Nostr extension availability", () => {
+  //     mockConnector.isNostrExtensionAvailable.mockReturnValue(true);
 
-      const result = plugin.isAlbyAvailable();
+  //     const result = plugin.isAlbyAvailable();
 
-      expect(result).toBe(true);
-      expect(mockConnector.isNostrExtensionAvailable).toHaveBeenCalled();
-    });
-  });
+  //     expect(result).toBe(true);
+  //     expect(mockConnector.isNostrExtensionAvailable).toHaveBeenCalled();
+  //   });
+  // });
 
   describe("isNostrExtensionAvailable", () => {
     beforeEach(() => {
@@ -257,14 +258,14 @@ describe("NostrConnectorPlugin", () => {
       const result = await plugin.generateCredentials(
         "npub123",
         "sig123",
-        "message"
+        "message",
       );
 
       expect(result).toEqual(mockCredentials);
       expect(mockConnector.generateCredentials).toHaveBeenCalledWith(
         "npub123",
         "sig123",
-        "message"
+        "message",
       );
     });
   });
@@ -281,26 +282,27 @@ describe("NostrConnectorPlugin", () => {
     });
   });
 
-  describe("clearSignatureCache", () => {
-    beforeEach(() => {
-      plugin.initialize(mockCore);
-      // Ensure clearSignatureCache is properly mocked
-      mockConnector.clearSignatureCache = jest.fn();
-    });
+  // TODO: clearSignatureCache method has been removed from NostrConnectorPlugin
+  // describe("clearSignatureCache", () => {
+  //   beforeEach(() => {
+  //     plugin.initialize(mockCore);
+  //     // Ensure clearSignatureCache is properly mocked
+  //     mockConnector.clearSignatureCache = jest.fn();
+  //   });
 
-    it("should clear signature cache for specific address", () => {
-      plugin.clearSignatureCache("npub123");
+  //   it("should clear signature cache for specific address", () => {
+  //     plugin.clearSignatureCache("npub123");
 
-      expect(mockConnector.clearSignatureCache).toHaveBeenCalledWith("npub123");
-    });
+  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalledWith("npub123");
+  //   });
 
-    it("should clear all signature cache when no address provided", () => {
-      plugin.clearSignatureCache();
+  //   it("should clear all signature cache when no address provided", () => {
+  //     plugin.clearSignatureCache();
 
-      // Check that the method was called, but don't specify arguments since it might be called with undefined
-      expect(mockConnector.clearSignatureCache).toHaveBeenCalled();
-    });
-  });
+  //     // Check that the method was called, but don't specify arguments since it might be called with undefined
+  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalled();
+  //   });
+  // });
 
   describe("verifySignature", () => {
     beforeEach(() => {
@@ -313,14 +315,14 @@ describe("NostrConnectorPlugin", () => {
       const result = await plugin.verifySignature(
         "message",
         "signature",
-        "npub123"
+        "npub123",
       );
 
       expect(result).toBe(true);
       expect(mockConnector.verifySignature).toHaveBeenCalledWith(
         "message",
         "signature",
-        "npub123"
+        "npub123",
       );
     });
 
@@ -330,7 +332,7 @@ describe("NostrConnectorPlugin", () => {
       const result = await plugin.verifySignature(
         "message",
         "invalid",
-        "npub123"
+        "npub123",
       );
 
       expect(result).toBe(false);
@@ -349,7 +351,7 @@ describe("NostrConnectorPlugin", () => {
 
       expect(result).toBe("generated_password");
       expect(mockConnector.generatePassword).toHaveBeenCalledWith(
-        "signature123"
+        "signature123",
       );
     });
   });
@@ -372,7 +374,7 @@ describe("NostrConnectorPlugin", () => {
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.createSigningCredential).toHaveBeenCalledWith(
-        "npub123"
+        "npub123",
       );
     });
   });
@@ -416,7 +418,7 @@ describe("NostrConnectorPlugin", () => {
       expect(result).toEqual(mockKeyPair);
       expect(mockConnector.createDerivedKeyPair).toHaveBeenCalledWith(
         "npub123",
-        ["extra1", "extra2"]
+        ["extra1", "extra2"],
       );
     });
   });
@@ -432,14 +434,14 @@ describe("NostrConnectorPlugin", () => {
       const result = await plugin.signWithDerivedKeys(
         { data: "test" },
         "npub123",
-        ["extra"]
+        ["extra"],
       );
 
       expect(result).toBe("signed_data");
       expect(mockConnector.signWithDerivedKeys).toHaveBeenCalledWith(
         { data: "test" },
         "npub123",
-        ["extra"]
+        ["extra"],
       );
     });
   });
@@ -461,7 +463,7 @@ describe("NostrConnectorPlugin", () => {
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.getSigningCredential).toHaveBeenCalledWith(
-        "npub123"
+        "npub123",
       );
     });
 
@@ -506,7 +508,7 @@ describe("NostrConnectorPlugin", () => {
 
       expect(result).toBe(true);
       expect(mockConnector.removeSigningCredential).toHaveBeenCalledWith(
-        "npub123"
+        "npub123",
       );
     });
 
@@ -531,14 +533,14 @@ describe("NostrConnectorPlugin", () => {
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential("npub123");
 
       expect(result).toEqual(mockResult);
       expect(
-        mockConnector.createGunUserFromSigningCredential
+        mockConnector.createGunUserFromSigningCredential,
       ).toHaveBeenCalledWith("npub123");
     });
 
@@ -549,7 +551,7 @@ describe("NostrConnectorPlugin", () => {
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential("npub123");
@@ -565,20 +567,20 @@ describe("NostrConnectorPlugin", () => {
 
     it("should return Gun user public key", () => {
       mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
-        "gun_pub_123"
+        "gun_pub_123",
       );
 
       const result = plugin.getGunUserPubFromSigningCredential("npub123");
 
       expect(result).toBe("gun_pub_123");
       expect(
-        mockConnector.getGunUserPubFromSigningCredential
+        mockConnector.getGunUserPubFromSigningCredential,
       ).toHaveBeenCalledWith("npub123");
     });
 
     it("should return undefined if not found", () => {
       mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
-        undefined
+        undefined,
       );
 
       const result = plugin.getGunUserPubFromSigningCredential("npub123");
@@ -629,7 +631,7 @@ describe("NostrConnectorPlugin", () => {
       expect(result).toEqual(mockResult);
       expect(mockConnector.verifyConsistency).toHaveBeenCalledWith(
         "npub123",
-        "gun_pub_123"
+        "gun_pub_123",
       );
     });
 
@@ -668,7 +670,7 @@ describe("NostrConnectorPlugin", () => {
 
       expect(result).toEqual(mockResult);
       expect(mockConnector.setupConsistentOneshotSigning).toHaveBeenCalledWith(
-        "npub123"
+        "npub123",
       );
     });
   });

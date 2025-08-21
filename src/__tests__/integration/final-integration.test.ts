@@ -36,16 +36,25 @@ describe("Final Integration Tests - User Manager", () => {
       const weakPassword = "123";
 
       // Test valid credentials
-      const validResult = shogunCore.db.validateSignupCredentials(testUsername, strongPassword);
+      const validResult = shogunCore.db.validateSignupCredentials(
+        testUsername,
+        strongPassword,
+      );
       expect(validResult.valid).toBe(true);
 
       // Test weak password
-      const weakResult = shogunCore.db.validateSignupCredentials(testUsername, weakPassword);
+      const weakResult = shogunCore.db.validateSignupCredentials(
+        testUsername,
+        weakPassword,
+      );
       expect(weakResult.valid).toBe(false);
       expect(weakResult.error).toContain("password");
 
       // Test empty username
-      const emptyUsernameResult = shogunCore.db.validateSignupCredentials("", strongPassword);
+      const emptyUsernameResult = shogunCore.db.validateSignupCredentials(
+        "",
+        strongPassword,
+      );
       expect(emptyUsernameResult.valid).toBe(false);
       expect(emptyUsernameResult.error).toContain("username");
     });
@@ -56,7 +65,8 @@ describe("Final Integration Tests - User Manager", () => {
       const mediumPassword = "testpass";
 
       // Test strong password
-      const strongResult = shogunCore.db.validatePasswordStrength(strongPassword);
+      const strongResult =
+        shogunCore.db.validatePasswordStrength(strongPassword);
       expect(strongResult.valid).toBe(true);
 
       // Test weak password
@@ -64,13 +74,14 @@ describe("Final Integration Tests - User Manager", () => {
       expect(weakResult.valid).toBe(false);
 
       // Test medium password (should fail due to strict requirements)
-      const mediumResult = shogunCore.db.validatePasswordStrength(mediumPassword);
+      const mediumResult =
+        shogunCore.db.validatePasswordStrength(mediumPassword);
       expect(mediumResult.valid).toBe(false);
     });
 
     it("should check rate limiting correctly", () => {
       const testUsername = "rate_test_" + Date.now();
-      
+
       // First check should be allowed
       const firstCheck = shogunCore.db.checkRateLimit(testUsername);
       expect(firstCheck.allowed).toBe(true);
@@ -82,9 +93,10 @@ describe("Final Integration Tests - User Manager", () => {
 
     it("should check username existence correctly", async () => {
       const testUsername = "existence_test_" + Date.now();
-      
+
       // Username should not exist initially
-      const existsResult = await shogunCore.db.checkUsernameExists(testUsername);
+      const existsResult =
+        await shogunCore.db.checkUsernameExists(testUsername);
       expect(existsResult.exists).toBe(false);
     });
   });

@@ -416,14 +416,14 @@ describe("Shogun Types", () => {
       expect(wallets.secp256k1Bitcoin.privateKey).toBe("bitcoin-private-key");
       expect(wallets.secp256k1Bitcoin.publicKey).toBe("bitcoin-public-key");
       expect(wallets.secp256k1Bitcoin.address).toBe(
-        "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
       );
 
       expect(wallets.secp256k1Ethereum).toBeDefined();
       expect(wallets.secp256k1Ethereum.privateKey).toBe("ethereum-private-key");
       expect(wallets.secp256k1Ethereum.publicKey).toBe("ethereum-public-key");
       expect(wallets.secp256k1Ethereum.address).toBe(
-        "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6"
+        "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
       );
     });
   });

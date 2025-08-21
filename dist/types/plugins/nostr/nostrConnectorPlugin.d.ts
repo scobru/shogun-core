@@ -36,11 +36,6 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      */
     isAvailable(): boolean;
     /**
-     * Check if Alby extension is available
-     * Note: Alby is deprecated in favor of Nostr
-     */
-    isAlbyAvailable(): boolean;
-    /**
      * Check if Nostr extension is available
      */
     isNostrExtensionAvailable(): boolean;
@@ -61,11 +56,6 @@ export declare class NostrConnectorPlugin extends BasePlugin implements NostrCon
      * @inheritdoc
      */
     cleanup(): void;
-    /**
-     * Clear signature cache for better user recovery
-     * @param address - Optional specific address to clear, or clear all if not provided
-     */
-    clearSignatureCache(address?: string): void;
     /**
      * @inheritdoc
      */

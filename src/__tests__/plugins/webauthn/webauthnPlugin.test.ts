@@ -17,7 +17,9 @@ const MockWebAuthnSigner = WebAuthnSigner as jest.MockedClass<
 // Mock window object
 const mockWindow = {
   PublicKeyCredential: {
-    isUserVerifyingPlatformAuthenticatorAvailable: jest.fn().mockResolvedValue(true),
+    isUserVerifyingPlatformAuthenticatorAvailable: jest
+      .fn()
+      .mockResolvedValue(true),
   },
 };
 
@@ -82,7 +84,7 @@ describe("WebauthnPlugin", () => {
     } as any;
 
     plugin = new WebauthnPlugin();
-    
+
     // Initialize the plugin after mocks are set up
     plugin.initialize(mockCore);
   });
@@ -163,13 +165,13 @@ describe("WebauthnPlugin", () => {
       });
 
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-      
+
       // Create a fresh plugin instance for this test
       const freshPlugin = new WebauthnPlugin();
       freshPlugin.initialize(mockCore);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment"
+        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment",
       );
       // Reset the mock call count since we're testing a fresh instance
       MockWebauthn.mockClear();
@@ -185,13 +187,13 @@ describe("WebauthnPlugin", () => {
       });
 
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-      
+
       // Create a fresh plugin instance for this test
       const freshPlugin = new WebauthnPlugin();
       freshPlugin.initialize(mockCore);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[webauthnPlugin] WebAuthn not supported in this environment"
+        "[webauthnPlugin] WebAuthn not supported in this environment",
       );
       // Reset the mock call count since we're testing a fresh instance
       MockWebauthn.mockClear();
@@ -222,7 +224,7 @@ describe("WebauthnPlugin", () => {
       expect(plugin["webauthn"]).toBeNull();
       expect(plugin["signer"]).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[webauthnPlugin] WebAuthn plugin destroyed"
+        "[webauthnPlugin] WebAuthn plugin destroyed",
       );
 
       consoleSpy.mockRestore();
@@ -259,7 +261,7 @@ describe("WebauthnPlugin", () => {
       expect(mockWebauthn.generateCredentials).toHaveBeenCalledWith(
         "testuser",
         undefined,
-        false
+        false,
       );
     });
 
@@ -279,14 +281,14 @@ describe("WebauthnPlugin", () => {
       const result = await plugin.generateCredentials(
         "testuser",
         existingCredential,
-        true
+        true,
       );
 
       expect(result).toEqual(mockCredentials);
       expect(mockWebauthn.generateCredentials).toHaveBeenCalledWith(
         "testuser",
         existingCredential,
-        true
+        true,
       );
     });
   });
@@ -312,7 +314,7 @@ describe("WebauthnPlugin", () => {
       expect(mockWebauthn.createAccount).toHaveBeenCalledWith(
         "testuser",
         credentials,
-        false
+        false,
       );
     });
   });
@@ -337,7 +339,7 @@ describe("WebauthnPlugin", () => {
       expect(mockWebauthn.authenticateUser).toHaveBeenCalledWith(
         "testuser",
         "salt123",
-        undefined
+        undefined,
       );
     });
   });
@@ -373,14 +375,14 @@ describe("WebauthnPlugin", () => {
       const result = await plugin.removeDevice(
         "testuser",
         "credential_id_123",
-        credentials
+        credentials,
       );
 
       expect(result).toEqual(mockResult);
       expect(mockWebauthn.removeDevice).toHaveBeenCalledWith(
         "testuser",
         "credential_id_123",
-        credentials
+        credentials,
       );
     });
   });
@@ -413,7 +415,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toEqual(mockCredential);
       expect(mockWebauthn.createSigningCredential).toHaveBeenCalledWith(
-        "testuser"
+        "testuser",
       );
     });
   });
@@ -441,7 +443,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toBe(mockAuthenticator);
       expect(mockWebauthn.createAuthenticator).toHaveBeenCalledWith(
-        "credential_id_123"
+        "credential_id_123",
       );
     });
   });
@@ -474,14 +476,14 @@ describe("WebauthnPlugin", () => {
       const result = await plugin.createDerivedKeyPair(
         "credential_id_123",
         "testuser",
-        ["extra1", "extra2"]
+        ["extra1", "extra2"],
       );
 
       expect(result).toEqual(mockKeyPair);
       expect(mockWebauthn.createDerivedKeyPair).toHaveBeenCalledWith(
         "credential_id_123",
         "testuser",
-        ["extra1", "extra2"]
+        ["extra1", "extra2"],
       );
     });
   });
@@ -508,7 +510,7 @@ describe("WebauthnPlugin", () => {
         { data: "test" },
         "credential_id_123",
         "testuser",
-        ["extra"]
+        ["extra"],
       );
 
       expect(result).toBe("signed_data");
@@ -516,7 +518,7 @@ describe("WebauthnPlugin", () => {
         { data: "test" },
         "credential_id_123",
         "testuser",
-        ["extra"]
+        ["extra"],
       );
     });
   });
@@ -549,7 +551,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toEqual(mockCredential);
       expect(mockWebauthn.getSigningCredential).toHaveBeenCalledWith(
-        "credential_id_123"
+        "credential_id_123",
       );
     });
 
@@ -622,7 +624,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toBe(true);
       expect(mockWebauthn.removeSigningCredential).toHaveBeenCalledWith(
-        "credential_id_123"
+        "credential_id_123",
       );
     });
 
@@ -657,17 +659,17 @@ describe("WebauthnPlugin", () => {
       };
 
       mockWebauthn.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
         "credential_id_123",
-        "testuser"
+        "testuser",
       );
 
       expect(result).toEqual(mockResult);
       expect(
-        mockWebauthn.createGunUserFromSigningCredential
+        mockWebauthn.createGunUserFromSigningCredential,
       ).toHaveBeenCalledWith("credential_id_123", "testuser");
     });
 
@@ -678,12 +680,12 @@ describe("WebauthnPlugin", () => {
       };
 
       mockWebauthn.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
         "credential_id_123",
-        "testuser"
+        "testuser",
       );
 
       expect(result).toEqual(mockResult);
@@ -707,7 +709,7 @@ describe("WebauthnPlugin", () => {
 
     it("should return Gun user public key", () => {
       mockWebauthn.getGunUserPubFromSigningCredential.mockReturnValue(
-        "gun_pub_123"
+        "gun_pub_123",
       );
 
       const result =
@@ -715,13 +717,13 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toBe("gun_pub_123");
       expect(
-        mockWebauthn.getGunUserPubFromSigningCredential
+        mockWebauthn.getGunUserPubFromSigningCredential,
       ).toHaveBeenCalledWith("credential_id_123");
     });
 
     it("should return undefined if not found", () => {
       mockWebauthn.getGunUserPubFromSigningCredential.mockReturnValue(
-        undefined
+        undefined,
       );
 
       const result =
@@ -753,7 +755,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toBe("hashed_id_123");
       expect(mockWebauthn.getHashedCredentialId).toHaveBeenCalledWith(
-        "credential_id_123"
+        "credential_id_123",
       );
     });
 
@@ -793,14 +795,14 @@ describe("WebauthnPlugin", () => {
       const result = await plugin.verifyConsistency(
         "credential_id_123",
         "testuser",
-        "gun_pub_123"
+        "gun_pub_123",
       );
 
       expect(result).toEqual(mockResult);
       expect(mockWebauthn.verifyConsistency).toHaveBeenCalledWith(
         "credential_id_123",
         "testuser",
-        "gun_pub_123"
+        "gun_pub_123",
       );
     });
 
@@ -816,7 +818,7 @@ describe("WebauthnPlugin", () => {
       const result = await plugin.verifyConsistency(
         "credential_id_123",
         "testuser",
-        "gun_pub_456"
+        "gun_pub_456",
       );
 
       expect(result.consistent).toBe(false);
@@ -857,7 +859,7 @@ describe("WebauthnPlugin", () => {
 
       expect(result).toEqual(mockResult);
       expect(mockWebauthn.setupConsistentOneshotSigning).toHaveBeenCalledWith(
-        "testuser"
+        "testuser",
       );
     });
   });

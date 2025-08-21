@@ -78,6 +78,6 @@ export function generateDeterministicPassword(salt: string): string {
   } catch (error) {
     // Fallback in case ethers is not available
     console.warn("ethers not available, using fallback password generation");
-    return Buffer.from(salt).toString('hex').slice(0, 32);
+    return Buffer.from(salt).toString("hex").slice(0, 32);
   }
 }

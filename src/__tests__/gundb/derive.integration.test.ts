@@ -48,7 +48,7 @@ jest.mock("@noble/curves/secp256k1", () => ({
           }
           return mockPublicKey;
         }
-      }
+      },
     ),
     utils: {
       isValidPrivateKey: jest.fn(() => true),
@@ -206,7 +206,7 @@ describe("Derive Integration Tests", () => {
       const extra = "";
 
       await expect(derive(password, extra)).rejects.toThrow(
-        "Insufficient input entropy"
+        "Insufficient input entropy",
       );
     });
 
@@ -218,7 +218,7 @@ describe("Derive Integration Tests", () => {
       const extra = "testextra";
 
       await expect(derive(password, extra)).rejects.toThrow(
-        /Invalid private key for (signing|encryption)/
+        /Invalid private key for (signing|encryption)/,
       );
 
       // Restore
@@ -238,7 +238,7 @@ describe("Derive Integration Tests", () => {
       };
 
       await expect(derive(password, extra, options)).rejects.toThrow(
-        /Invalid (private key for (signing|encryption)|secp256k1 private key for Bitcoin)/
+        /Invalid (private key for (signing|encryption)|secp256k1 private key for Bitcoin)/,
       );
 
       // Restore
@@ -261,7 +261,7 @@ describe("Derive Integration Tests", () => {
       };
 
       await expect(derive(password, extra, options)).rejects.toThrow(
-        /Invalid (private key for (signing|encryption)|secp256k1 private key for Ethereum)/
+        /Invalid (private key for (signing|encryption)|secp256k1 private key for Ethereum)/,
       );
 
       // Restore
@@ -300,7 +300,7 @@ describe("Derive Integration Tests", () => {
       expect(result.secp256k1Bitcoin.publicKey).toMatch(/^[0-9a-f]{66}$/); // Compressed
       // Bitcoin address should be base58
       expect(result.secp256k1Bitcoin.address).toMatch(
-        /^[1-9A-HJ-NP-Za-km-z]{26,35}$/
+        /^[1-9A-HJ-NP-Za-km-z]{26,35}$/,
       );
     });
 
@@ -341,11 +341,21 @@ describe("Derive Integration Tests", () => {
       const password2 = "differentpassword12345678901234567890";
       const extra = "testextra";
 
-      const result1 = await derive(password1, extra, { includeP256: false, includeSecp256k1Bitcoin: true });
-      const result2 = await derive(password2, extra, { includeP256: false, includeSecp256k1Bitcoin: true });
+      const result1 = await derive(password1, extra, {
+        includeP256: false,
+        includeSecp256k1Bitcoin: true,
+      });
+      const result2 = await derive(password2, extra, {
+        includeP256: false,
+        includeSecp256k1Bitcoin: true,
+      });
 
-      expect(result1.secp256k1Bitcoin.privateKey).not.toBe(result2.secp256k1Bitcoin.privateKey);
-      expect(result1.secp256k1Bitcoin.publicKey).not.toBe(result2.secp256k1Bitcoin.publicKey);
+      expect(result1.secp256k1Bitcoin.privateKey).not.toBe(
+        result2.secp256k1Bitcoin.privateKey,
+      );
+      expect(result1.secp256k1Bitcoin.publicKey).not.toBe(
+        result2.secp256k1Bitcoin.publicKey,
+      );
     });
   });
 

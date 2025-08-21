@@ -865,7 +865,7 @@ class GunInstance {
     /**
      * Resets rate limiting for successful authentication
      */
-    resetRateLimit(username, operation) {
+    resetRateLimitForUser(username, operation) {
         const key = `${operation}:${username.toLowerCase()}`;
         this.rateLimitStorage.delete(key);
     }
@@ -1120,7 +1120,7 @@ class GunInstance {
             // Set the user instance
             this.user = this.gun.user();
             // Reset rate limiting on successful signup
-            this.resetRateLimit(username, "signup");
+            this.resetRateLimitForUser(username, "signup");
             // Run post-authentication tasks
             try {
                 console.log(`Running post-auth setup with userPub: ${authResult.userPub}`);
@@ -1567,7 +1567,7 @@ class GunInstance {
                 };
             }
             // Reset rate limiting on successful login
-            this.resetRateLimit(username, "login");
+            this.resetRateLimitForUser(username, "login");
             // Pass the userPub to runPostAuthOnAuthResult
             try {
                 await this.runPostAuthOnAuthResult(username, userPub, {
@@ -1716,7 +1716,7 @@ class GunInstance {
      * @param securityAnswers Array of answers to security questions
      * @returns Promise resolving with the operation result
      */
-    async setPasswordHint(username, password, hint, securityQuestions, securityAnswers) {
+    async setPasswordHintWithSecurity(username, password, hint, securityQuestions, securityAnswers) {
         // Setting password hint for
         // Verify that the user is authenticated with password
         const loginResult = await this.login(username, password);
@@ -2344,15 +2344,21 @@ class GunInstance {
             // Update user metadata with new username
             try {
                 await new Promise((resolve, reject) => {
-                    this.gun
-                        .get(userPub)
-                        .put({ username: sanitizedNewUsername }, (ack) => {
-                        if (ack.err) {
-                            reject(new Error(`Failed to update user metadata: ${ack.err}`));
-                        }
-                        else {
-                            resolve();
-                        }
+                    // Prima ottieni i dati esistenti dell'utente
+                    this.gun.get(userPub).once((existingData) => {
+                        // Mantieni tutti i dati esistenti e aggiorna solo il username
+                        const updatedData = {
+                            ...existingData,
+                            username: sanitizedNewUsername,
+                        };
+                        this.gun.get(userPub).put(updatedData, (ack) => {
+                            if (ack.err) {
+                                reject(new Error(`Failed to update user metadata: ${ack.err}`));
+                            }
+                            else {
+                                resolve();
+                            }
+                        });
                     });
                 });
             }
@@ -2388,6 +2394,130 @@ class GunInstance {
                 error: `Username change failed: ${error}`,
             };
         }
+    }
+    /**
+     * Recall user session
+     */
+    recall() {
+        if (this.user) {
+            this.user.recall({ sessionStorage: true });
+        }
+    }
+    /**
+     * Leave user session
+     */
+    leave() {
+        if (this.user) {
+            this.user.leave();
+        }
+    }
+    /**
+     * Set username for the current user
+     */
+    setUsername(username) {
+        if (this.user) {
+            try {
+                this.user.get("alias").put(username);
+            }
+            catch (error) {
+                // Handle case where user.get returns undefined
+                console.warn("Could not set username:", error);
+            }
+        }
+    }
+    /**
+     * Get username for the current user
+     */
+    getUsername() {
+        if (this.user) {
+            const alias = this.user.is?.alias;
+            return typeof alias === "string" ? alias : null;
+        }
+        return null;
+    }
+    /**
+     * Set user data
+     */
+    setUserData(data) {
+        if (this.user) {
+            this.user.put(data);
+        }
+    }
+    /**
+     * Set password hint
+     */
+    setPasswordHint(hint) {
+        if (this.user) {
+            try {
+                this.user.get("passwordHint").put(hint);
+            }
+            catch (error) {
+                // Handle case where user.get returns undefined
+                console.warn("Could not set password hint:", error);
+            }
+        }
+    }
+    /**
+     * Get password hint
+     */
+    getPasswordHint() {
+        if (this.user) {
+            // Access passwordHint from user data, not from is object
+            return this.user.passwordHint || null;
+        }
+        return null;
+    }
+    /**
+     * Save session to storage
+     */
+    saveSession(session) {
+        if (this.user) {
+            this.user.recall({ sessionStorage: true });
+        }
+    }
+    /**
+     * Load session from storage
+     */
+    loadSession() {
+        if (this.user) {
+            return this.user.recall({ sessionStorage: true });
+        }
+        return null;
+    }
+    /**
+     * Clear session
+     */
+    clearSession() {
+        if (this.user) {
+            this.user.leave();
+        }
+    }
+    /**
+     * Get app scope
+     */
+    getAppScope() {
+        return this.node?._?.soul || "shogun";
+    }
+    /**
+     * Get user public key
+     */
+    getUserPub() {
+        if (this.user) {
+            return this.user.is?.pub || null;
+        }
+        return null;
+    }
+    /**
+     * Check if user is authenticated
+     */
+    isAuthenticated() {
+        return this.user?.is?.pub ? true : false;
+    }
+    /**
+     * Reset rate limit
+     */
+    resetRateLimit() {
+        this.rateLimitStorage.clear();
     }
 }
 exports.GunInstance = GunInstance;

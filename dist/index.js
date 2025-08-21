@@ -845,33 +845,6 @@ class ShogunCore {
         return this.currentAuthMethod;
     }
     /**
-     * Clears all Gun-related data from local and session storage
-     * This is useful for debugging and testing purposes
-     */
-    clearAllStorageData() {
-        this.db.clearGunStorage();
-    }
-    /**
-     * Updates the user's alias (username) in Gun and saves the updated credentials
-     * @param newAlias New alias/username to set
-     * @returns Promise resolving to update result
-     */
-    async updateUserAlias(newAlias) {
-        try {
-            if (!this.db) {
-                return false;
-            }
-            const result = await this.db.updateUserAlias(newAlias);
-            return result.success;
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error(`Error updating user alias:`, error);
-            }
-            return false;
-        }
-    }
-    /**
      * Saves the current user credentials to storage
      */
     async saveCredentials(credentials) {
@@ -886,20 +859,6 @@ class ShogunCore {
                 console.error(`Error saving credentials:`, error);
             }
         }
-    }
-    // esporta la coppia utente come json
-    /**
-     * Esporta la coppia di chiavi dell'utente corrente come stringa JSON.
-     * Utile per backup o migrazione dell'account.
-     * @returns {string} La coppia SEA serializzata in formato JSON, oppure stringa vuota se non disponibile.
-     */
-    exportPair() {
-        if (!this.user ||
-            !this.user._ ||
-            typeof this.user._.sea === "undefined") {
-            return "";
-        }
-        return JSON.stringify(this.user._.sea);
     }
     getIsLoggedIn() {
         return !!(this.user && this.user.is);

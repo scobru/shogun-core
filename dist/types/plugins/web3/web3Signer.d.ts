@@ -46,8 +46,29 @@ export declare class Web3Signer {
         epriv: string;
     }>;
     /**
+     * Authenticate with existing pair (for login)
+     * This generates the deterministic pair from address and authenticates with GunDB
+     * GunDB will recognize the user because the pair is deterministic
+     */
+    authenticateWithExistingPair(address: string, gunInstance: any): Promise<{
+        success: boolean;
+        userPub?: string;
+        error?: string;
+    }>;
+    /**
+     * Creates a derived key pair directly from address (deterministic)
+     * This ensures the same pair is generated every time for the same address
+     */
+    createDerivedKeyPairFromAddress(address: string, extra?: string[]): Promise<{
+        pub: string;
+        priv: string;
+        epub: string;
+        epriv: string;
+    }>;
+    /**
      * Creates a Gun user from Web3 credential
      * This ensures the SAME user is created as with normal approach
+     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     createGunUser(address: string, gunInstance: any): Promise<{
         success: boolean;
@@ -64,7 +85,7 @@ export declare class Web3Signer {
      * Get the Gun user public key for a credential
      * This allows checking if the same user would be created
      */
-    getGunUserPub(address: string): string | undefined;
+    getGunUserPub(address: string): Promise<string | undefined>;
     /**
      * Get the password (for consistency checking)
      */

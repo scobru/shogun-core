@@ -88,17 +88,4 @@ export declare class OAuthPlugin extends BasePlugin implements OAuthPluginInterf
      * Private helper to login or sign up a user
      */
     private _loginOrSignUp;
-    /**
-     * Alias for handleOAuthCallback for backward compatibility
-     * @deprecated Use handleOAuthCallback instead
-     */
-    handleSimpleOAuth(provider: OAuthProvider, authCode: string, state: string): Promise<AuthResult>;
-    /**
-     * Get cached user info for a user
-     */
-    getCachedUserInfo(userId: string, provider: OAuthProvider): OAuthUserInfo | null;
-    /**
-     * Clear user info cache
-     */
-    clearUserCache(userId?: string, provider?: OAuthProvider): void;
 }

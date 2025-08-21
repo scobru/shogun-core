@@ -113,7 +113,7 @@ describe("BasePlugin", () => {
 
       // The error should be thrown and not caught by the parent's try-catch
       expect(() => errorPlugin.destroy()).toThrow(
-        "Test error during destruction"
+        "Test error during destruction",
       );
 
       // The console.error should not be called because the error is thrown after super.destroy()
@@ -144,7 +144,7 @@ describe("BasePlugin", () => {
       expect(plugin.core).toBeNull();
 
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized"
+        "Plugin test-plugin not initialized",
       );
     });
 
@@ -153,7 +153,7 @@ describe("BasePlugin", () => {
       plugin.core = null;
 
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized"
+        "Plugin test-plugin not initialized",
       );
     });
   });
@@ -227,7 +227,7 @@ describe("BasePlugin", () => {
 
       // Should throw after destruction
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized"
+        "Plugin test-plugin not initialized",
       );
     });
   });

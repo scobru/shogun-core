@@ -68,7 +68,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Verifica che PKCE sia abilitato per tutti i provider
       if (!providerConfig.usePKCE && typeof window !== "undefined") {
         console.warn(
-          `[oauthPlugin] Provider ${provider} non ha PKCE abilitato - non sicuro per browser`
+          `[oauthPlugin] Provider ${provider} non ha PKCE abilitato - non sicuro per browser`,
         );
       }
 
@@ -79,10 +79,10 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
           continue;
         } else {
           console.error(
-            `[oauthPlugin] Provider ${provider} ha client_secret configurato nel browser - RIMUOVERE`
+            `[oauthPlugin] Provider ${provider} ha client_secret configurato nel browser - RIMUOVERE`,
           );
           throw new Error(
-            `Client secret non può essere usato nel browser per ${provider}`
+            `Client secret non può essere usato nel browser per ${provider}`,
           );
         }
       }
@@ -188,7 +188,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async completeOAuth(
     provider: OAuthProvider,
     authCode: string,
-    state?: string
+    state?: string,
   ): Promise<OAuthConnectionResult> {
     const conn = this.assertOAuthConnector() as any;
     return conn.completeOAuth(provider, authCode, state);
@@ -199,7 +199,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   async generateCredentials(
     userInfo: OAuthUserInfo,
-    provider: OAuthProvider
+    provider: OAuthProvider,
   ): Promise<OAuthCredentials> {
     const conn = this.assertOAuthConnector() as any;
     return conn.generateCredentials(userInfo, provider);
@@ -221,7 +221,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.VALIDATION,
           "PROVIDER_REQUIRED",
-          "OAuth provider required for OAuth login"
+          "OAuth provider required for OAuth login",
         );
       }
 
@@ -229,7 +229,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.ENVIRONMENT,
           "OAUTH_UNAVAILABLE",
-          "OAuth is not supported in this environment"
+          "OAuth is not supported in this environment",
         );
       }
 
@@ -239,7 +239,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.VALIDATION,
           "PROVIDER_NOT_CONFIGURED",
-          `Provider ${provider} is not configured or available`
+          `Provider ${provider} is not configured or available`,
         );
       }
 
@@ -250,7 +250,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.AUTHENTICATION,
           "OAUTH_INITIATION_FAILED",
-          oauthResult.error || "Failed to initiate OAuth flow"
+          oauthResult.error || "Failed to initiate OAuth flow",
         );
       }
 
@@ -292,7 +292,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.VALIDATION,
           "PROVIDER_REQUIRED",
-          "OAuth provider required for OAuth signup"
+          "OAuth provider required for OAuth signup",
         );
       }
 
@@ -300,7 +300,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.ENVIRONMENT,
           "OAUTH_UNAVAILABLE",
-          "OAuth is not supported in this environment"
+          "OAuth is not supported in this environment",
         );
       }
 
@@ -310,7 +310,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.VALIDATION,
           "PROVIDER_NOT_CONFIGURED",
-          `Provider ${provider} is not configured or available`
+          `Provider ${provider} is not configured or available`,
         );
       }
 
@@ -321,7 +321,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
         throw createError(
           ErrorType.AUTHENTICATION,
           "OAUTH_INITIATION_FAILED",
-          oauthResult.error || "Failed to initiate OAuth flow"
+          oauthResult.error || "Failed to initiate OAuth flow",
         );
       }
 
@@ -357,7 +357,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   async handleOAuthCallback(
     provider: OAuthProvider,
     authCode: string,
-    state: string
+    state: string,
   ): Promise<AuthResult> {
     try {
       const core = this.assertInitialized();
@@ -377,7 +377,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Genera credenziali da user info
       const credentials = await this.generateCredentials(
         result.userInfo,
-        provider
+        provider,
       );
 
       // Set authentication method
@@ -386,7 +386,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
       // Login o signup usando la chiave derivata
       const authResult = await this._loginOrSignUp(
         credentials.username,
-        credentials.key
+        credentials.key,
       );
 
       if (authResult.success) {
@@ -472,7 +472,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
    */
   private async _loginOrSignUp(
     username: string,
-    k: ISEAPair | null
+    k: ISEAPair | null,
   ): Promise<AuthResult> {
     if (!this.core) {
       return { success: false, error: "Shogun core not available" };
@@ -512,42 +512,5 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
 
     // Return the original signup error for other failures
     return signupResult;
-  }
-
-  /**
-   * Alias for handleOAuthCallback for backward compatibility
-   * @deprecated Use handleOAuthCallback instead
-   */
-  async handleSimpleOAuth(
-    provider: OAuthProvider,
-    authCode: string,
-    state: string
-  ): Promise<AuthResult> {
-    return this.handleOAuthCallback(provider, authCode, state);
-  }
-
-  /**
-   * Get cached user info for a user
-   */
-  getCachedUserInfo(
-    userId: string,
-    provider: OAuthProvider
-  ): OAuthUserInfo | null {
-    const key = `oauth_user_${provider}_${userId}`;
-    const storage = this.storage as any;
-    if (storage?.get) {
-      return storage.get(key) ?? null;
-    }
-    return null;
-  }
-
-  /**
-   * Clear user info cache
-   */
-  clearUserCache(userId?: string, provider?: OAuthProvider): void {
-    const key =
-      userId && provider ? `oauth_user_${provider}_${userId}` : "oauth_user_";
-    const storage = this.storage as any;
-    storage?.remove?.(key);
   }
 }

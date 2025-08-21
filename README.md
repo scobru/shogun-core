@@ -20,6 +20,17 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
 - ✅ **Type Consistency**: Unified return types across all authentication methods
 
+## Recent Updates (v1.7.5)
+
+### ✅ **Code Cleanup and Optimization**
+
+- **Removed Deprecated Functions**: Eliminated `handleSimpleOAuth` and Alby support
+- **Simplified API**: Removed redundant `updateUserAlias` (use `changeUsername` instead)
+- **Debug Functions Cleanup**: Removed debug-only functions like `clearAllStorageData`, `exportPair`
+- **Error Handler Optimization**: Removed debug statistics and debug helper functions
+- **Cache Management**: Removed optional cache functions for cleaner API
+- **Bundle Size Reduction**: Estimated 15-20% reduction in bundle size
+
 ## Recent Updates (v1.7.0)
 
 ### ✅ **Type System Fixes**

@@ -105,7 +105,7 @@ describe("OAuthPlugin Integration Tests", () => {
 
       expect(plugin["config"].clientId).toBe("new-client-id");
       expect(plugin["config"].redirectUri).toBe(
-        "http://localhost:3000/new-callback"
+        "http://localhost:3000/new-callback",
       );
     });
 
@@ -245,7 +245,7 @@ describe("OAuthPlugin Integration Tests", () => {
       customPlugin.initialize(mockCore);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("non ha PKCE abilitato")
+        expect.stringContaining("non ha PKCE abilitato"),
       );
 
       consoleSpy.mockRestore();

@@ -13,7 +13,7 @@ export interface DeriveOptions {
 export default async function (
   pwd: any,
   extra: any,
-  options: DeriveOptions = {}
+  options: DeriveOptions = {},
 ): Promise<{
   pub: string;
   priv: string;
@@ -32,7 +32,7 @@ export default async function (
   // Mix extra into password bytes to ensure different results for different inputs
   const extras = extra
     ? (Array.isArray(extra) ? extra : [extra]).map((e) =>
-        normalizeString(e.toString())
+        normalizeString(e.toString()),
       )
     : [];
   const extraBuf = TEXT_ENCODER.encode(extras.join("|"));
@@ -75,7 +75,7 @@ export default async function (
           pub: keyBufferToJwk(publicKey),
           priv: arrayBufToBase64UrlEncode(privateKey),
         };
-      })
+      }),
     );
 
     // Chiavi P-256 esistenti
@@ -145,7 +145,7 @@ function normalizeString(str: string) {
 async function stretchKey(
   input: BufferSource,
   salt: Uint8Array,
-  iterations = 300_000
+  iterations = 300_000,
 ) {
   try {
     const baseKey = await crypto.subtle.importKey(
@@ -153,7 +153,7 @@ async function stretchKey(
       input,
       { name: "PBKDF2" },
       false,
-      ["deriveBits"]
+      ["deriveBits"],
     );
     const keyBits = await crypto.subtle.deriveBits(
       {
@@ -163,7 +163,7 @@ async function stretchKey(
         hash: "SHA-256",
       },
       baseKey,
-      256
+      256,
     );
     const keyBytes = new Uint8Array(keyBits);
 
@@ -178,7 +178,7 @@ async function stretchKey(
 
 function generateFallbackKey(
   input: BufferSource,
-  salt: Uint8Array
+  salt: Uint8Array,
 ): Uint8Array {
   // Simple deterministic key generation as fallback
   const key = new Uint8Array(32);

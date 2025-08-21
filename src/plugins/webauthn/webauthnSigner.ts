@@ -219,6 +219,7 @@ export class WebAuthnSigner {
   /**
    * Creates a Gun user from WebAuthn credential
    * This ensures the SAME user is created as with normal approach
+   * FIX: Use derived pair instead of username/password for GunDB auth
    */
   async createGunUser(
     credentialId: string,
@@ -231,51 +232,43 @@ export class WebAuthnSigner {
     }
 
     try {
-      // Use the SAME approach as normal WebAuthn
+      // FIX: Use derived pair for GunDB authentication instead of username/password
+      const derivedPair = await this.createDerivedKeyPair(
+        credentialId,
+        username,
+      );
+
       return new Promise((resolve) => {
-        gunInstance
-          .user()
-          .create(username, credential.hashedCredentialId, (ack: any) => {
-            if (ack.err) {
-              // Try to login if user already exists
-              gunInstance
-                .user()
-                .auth(
-                  username,
-                  credential.hashedCredentialId,
-                  (authAck: any) => {
-                    if (authAck.err) {
-                      resolve({ success: false, error: authAck.err });
-                    } else {
-                      const userPub = authAck.pub;
-                      // Update credential with Gun user pub
-                      credential.gunUserPub = userPub;
-                      this.credentials.set(credentialId, credential);
-                      resolve({ success: true, userPub });
-                    }
-                  },
-                );
-            } else {
-              // User created, now login
-              gunInstance
-                .user()
-                .auth(
-                  username,
-                  credential.hashedCredentialId,
-                  (authAck: any) => {
-                    if (authAck.err) {
-                      resolve({ success: false, error: authAck.err });
-                    } else {
-                      const userPub = authAck.pub;
-                      // Update credential with Gun user pub
-                      credential.gunUserPub = userPub;
-                      this.credentials.set(credentialId, credential);
-                      resolve({ success: true, userPub });
-                    }
-                  },
-                );
-            }
-          });
+        // Use the derived pair directly for GunDB auth
+        gunInstance.user().create(derivedPair, (ack: any) => {
+          if (ack.err) {
+            // Try to login if user already exists
+            gunInstance.user().auth(derivedPair, (authAck: any) => {
+              if (authAck.err) {
+                resolve({ success: false, error: authAck.err });
+              } else {
+                const userPub = authAck.pub;
+                // Update credential with Gun user pub
+                credential.gunUserPub = userPub;
+                this.credentials.set(credentialId, credential);
+                resolve({ success: true, userPub });
+              }
+            });
+          } else {
+            // User created, now login
+            gunInstance.user().auth(derivedPair, (authAck: any) => {
+              if (authAck.err) {
+                resolve({ success: false, error: authAck.err });
+              } else {
+                const userPub = authAck.pub;
+                // Update credential with Gun user pub
+                credential.gunUserPub = userPub;
+                this.credentials.set(credentialId, credential);
+                resolve({ success: true, userPub });
+              }
+            });
+          }
+        });
       });
     } catch (error: any) {
       console.error("Error creating Gun user:", error);

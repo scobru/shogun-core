@@ -47,7 +47,7 @@ export interface Web3Config extends BaseConfig {
 /**
  * Interfaccia per il plugin MetaMask
  */
-export interface Web3ConectorPluginInterface {
+export interface Web3ConnectorPluginInterface {
     /**
      * Verifica se MetaMask è disponibile nel browser
      * @returns true se MetaMask è disponibile, false altrimenti

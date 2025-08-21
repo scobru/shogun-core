@@ -88,7 +88,7 @@ describe("Success Test - User Manager Integration", () => {
       // Test that validateSignupCredentials works correctly
       const validationResult = shogunCore.db.validateSignupCredentials(
         "testuser",
-        "TestPass123!@#"
+        "TestPass123!@#",
       );
 
       expect(validationResult).toHaveProperty("valid");
@@ -96,7 +96,7 @@ describe("Success Test - User Manager Integration", () => {
       expect(validationResult.valid).toBe(true);
 
       console.log(
-        "✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly"
+        "✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly",
       );
     });
   });
@@ -106,7 +106,7 @@ describe("Success Test - User Manager Integration", () => {
       // This test summarizes our successful integration testing approach
       expect(true).toBe(true);
       console.log(
-        "🎉 Integration testing with real GunDB instance successful!"
+        "🎉 Integration testing with real GunDB instance successful!",
       );
       console.log("✅ Bug in checkRateLimit method has been resolved");
       console.log("✅ User manager validation functions work correctly");

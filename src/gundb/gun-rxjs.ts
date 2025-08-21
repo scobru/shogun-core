@@ -81,7 +81,7 @@ export class GunRxJS {
     }).pipe(
       distinctUntilChanged((prev, curr) => {
         return JSON.stringify(prev) === JSON.stringify(curr);
-      })
+      }),
     );
   }
 
@@ -93,7 +93,7 @@ export class GunRxJS {
    */
   match<T>(
     path: string | any,
-    matchFn?: (data: any) => boolean
+    matchFn?: (data: any) => boolean,
   ): Observable<T[]> {
     return new Observable<T[]>((subscriber) => {
       if (!path) {
@@ -173,7 +173,10 @@ export class GunRxJS {
   /**
    * Backward-compatible overload that accepts optional callback like tests expect
    */
-  putCompat<T>(data: T, callback?: (ack: any) => void): Observable<T> {
+  putCompat<T extends Partial<any> & Record<string, any>>(
+    data: T,
+    callback?: (ack: any) => void,
+  ): Observable<T> {
     return new Observable<T>((subscriber) => {
       this.gun.put(data, (ack: any) => {
         if (callback) callback(ack);
@@ -223,7 +226,7 @@ export class GunRxJS {
 
   setCompat<T>(data: T, callback?: (ack: any) => void): Observable<T> {
     return new Observable<T>((subscriber) => {
-      this.gun.set(data, (ack: any) => {
+      (this.gun as any).set(data, (ack: any) => {
         if (callback) callback(ack);
         if (ack.err) {
           subscriber.error(new Error(ack.err));
@@ -274,7 +277,7 @@ export class GunRxJS {
    */
   compute<T, R>(
     sources: Array<string | Observable<any>>,
-    computeFn: (...values: T[]) => R
+    computeFn: (...values: T[]) => R,
   ): Observable<R> {
     // Convert all sources to observables
     const observables = sources.map((source) => {
@@ -327,10 +330,10 @@ export class GunRxJS {
    * @param data - Data to put
    * @returns Observable that completes when the put is acknowledged
    */
-  userPut<T>(
+  userPut<T extends Partial<any> & Record<string, any>>(
     dataOrPath: string | T,
     maybeData?: T,
-    callback?: (ack: any) => void
+    callback?: (ack: any) => void,
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
       const user = this.gun.user();
@@ -365,15 +368,15 @@ export class GunRxJS {
    * @param callback - Optional callback function
    * @returns Observable that completes when the set is acknowledged
    */
-  userSet<T>(
+  userSet<T extends Partial<any> & Record<string, any>>(
     dataOrPath: string | T,
     maybeData?: T,
-    callback?: (ack: any) => void
+    callback?: (ack: any) => void,
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
       const user = this.gun.user();
       if (typeof dataOrPath === "string") {
-        user.get(dataOrPath).set(maybeData as T, (ack: any) => {
+        (user.get(dataOrPath) as any).set(maybeData as T, (ack: any) => {
           if (callback) callback(ack);
           if (ack.err) {
             subscriber.error(new Error(ack.err));
@@ -383,7 +386,7 @@ export class GunRxJS {
           }
         });
       } else {
-        user.set(dataOrPath as T, (ack: any) => {
+        (user as any).set(dataOrPath as T, (ack: any) => {
           if (callback) callback(ack);
           if (ack.err) {
             subscriber.error(new Error(ack.err));
@@ -407,7 +410,7 @@ export class GunRxJS {
       const user = this.gun.user();
       const target = path ? user.get(path) : user;
 
-      target.once((data: T, ack: any) => {
+      (target as any).once((data: T, ack: any) => {
         if (callback) callback(ack);
         if (ack && ack.err) {
           subscriber.error(new Error(ack.err));

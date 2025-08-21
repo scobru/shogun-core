@@ -5,7 +5,7 @@ export { WebauthnPlugin } from "./webauthn/webauthnPlugin";
 export type { WebauthnPluginInterface } from "./webauthn/types";
 export { Web3Connector } from "./web3/web3Connector";
 export { Web3ConnectorPlugin } from "./web3/web3ConnectorPlugin";
-export type { Web3ConectorPluginInterface } from "./web3/types";
+export type { Web3ConnectorPluginInterface } from "./web3/types";
 export { NostrConnector } from "./nostr/nostrConnector";
 export { NostrConnectorPlugin } from "./nostr/nostrConnectorPlugin";
 export type { NostrConnectorPluginInterface, NostrConnectorCredentials, NostrConnectorKeyPair, NostrConnectorConfig, AlbyProvider, NostrProvider, } from "./nostr/types";

@@ -136,10 +136,10 @@ describe("Crypto Integration Tests", () => {
 
       it("should handle various special characters", () => {
         expect(safeHash("test+string/with=special")).toBe(
-          "test-string_with.special"
+          "test-string_with.special",
         );
         expect(safeHash("test@string#with$special")).toBe(
-          "test@string#with$special"
+          "test@string#with$special",
         );
       });
     });
@@ -181,7 +181,7 @@ describe("Crypto Integration Tests", () => {
 
         expect(typeof result).toBe("string");
         expect(result).toMatch(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
         );
       });
 
@@ -213,7 +213,7 @@ describe("Crypto Integration Tests", () => {
         });
 
         await expect(encrypt("test", "key")).rejects.toThrow(
-          "SEA not available"
+          "SEA not available",
         );
       });
     });
@@ -236,7 +236,7 @@ describe("Crypto Integration Tests", () => {
         });
 
         await expect(decrypt("test", "key")).rejects.toThrow(
-          "SEA not available"
+          "SEA not available",
         );
       });
     });
@@ -285,7 +285,7 @@ describe("Crypto Integration Tests", () => {
         });
 
         await expect(hashText("test", "salt")).rejects.toThrow(
-          "SEA not available"
+          "SEA not available",
         );
       });
     });
@@ -316,7 +316,9 @@ describe("Crypto Integration Tests", () => {
       const originalData = "secret-message";
       const key = "encryption-key";
 
-      await expect(encrypt(originalData, key)).rejects.toThrow("SEA encryption failed: SEA not available");
+      await expect(encrypt(originalData, key)).rejects.toThrow(
+        "SEA encryption failed: SEA not available",
+      );
     });
 
     it("should handle object hashing when SEA is not available", async () => {
@@ -351,7 +353,7 @@ describe("Crypto Integration Tests", () => {
       // 4. Generate UUID
       const uuid = randomUUID();
       expect(uuid).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
     });
   });

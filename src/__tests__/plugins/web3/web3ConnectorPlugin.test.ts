@@ -131,7 +131,7 @@ describe("Web3ConnectorPlugin", () => {
       const uninitializedPlugin = new Web3ConnectorPlugin();
 
       expect(() => uninitializedPlugin.isAvailable()).toThrow(
-        "Plugin web3 not initialized"
+        "Plugin web3 not initialized",
       );
     });
   });
@@ -186,12 +186,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.generateCredentials.mockResolvedValue(mockCredentials);
 
       const result = await plugin.generateCredentials(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockCredentials);
       expect(mockConnector.generateCredentials).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
   });
@@ -206,7 +206,7 @@ describe("Web3ConnectorPlugin", () => {
 
       expect(mockConnector.setCustomProvider).toHaveBeenCalledWith(
         "https://rpc.example.com",
-        "private_key_123"
+        "private_key_123",
       );
     });
   });
@@ -255,7 +255,7 @@ describe("Web3ConnectorPlugin", () => {
 
       expect(result).toBe("generated_password");
       expect(mockConnector.generatePassword).toHaveBeenCalledWith(
-        "signature123"
+        "signature123",
       );
     });
   });
@@ -267,7 +267,7 @@ describe("Web3ConnectorPlugin", () => {
 
     it("should verify signature and return address", async () => {
       mockConnector.verifySignature.mockResolvedValue(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       const result = await plugin.verifySignature("message", "signature");
@@ -275,7 +275,7 @@ describe("Web3ConnectorPlugin", () => {
       expect(result).toBe("0x1234567890123456789012345678901234567890");
       expect(mockConnector.verifySignature).toHaveBeenCalledWith(
         "message",
-        "signature"
+        "signature",
       );
     });
   });
@@ -295,12 +295,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.createSigningCredential.mockResolvedValue(mockCredential);
 
       const result = await plugin.createSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.createSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
   });
@@ -315,12 +315,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.createAuthenticator.mockReturnValue(mockAuthenticator);
 
       const result = plugin.createAuthenticator(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBe(mockAuthenticator);
       expect(mockConnector.createAuthenticator).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
   });
@@ -342,13 +342,13 @@ describe("Web3ConnectorPlugin", () => {
 
       const result = await plugin.createDerivedKeyPair(
         "0x1234567890123456789012345678901234567890",
-        ["extra1", "extra2"]
+        ["extra1", "extra2"],
       );
 
       expect(result).toEqual(mockKeyPair);
       expect(mockConnector.createDerivedKeyPair).toHaveBeenCalledWith(
         "0x1234567890123456789012345678901234567890",
-        ["extra1", "extra2"]
+        ["extra1", "extra2"],
       );
     });
   });
@@ -364,14 +364,14 @@ describe("Web3ConnectorPlugin", () => {
       const result = await plugin.signWithDerivedKeys(
         { data: "test" },
         "0x1234567890123456789012345678901234567890",
-        ["extra"]
+        ["extra"],
       );
 
       expect(result).toBe("signed_data");
       expect(mockConnector.signWithDerivedKeys).toHaveBeenCalledWith(
         { data: "test" },
         "0x1234567890123456789012345678901234567890",
-        ["extra"]
+        ["extra"],
       );
     });
   });
@@ -390,12 +390,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.getSigningCredential.mockReturnValue(mockCredential);
 
       const result = plugin.getSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.getSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
 
@@ -403,7 +403,7 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.getSigningCredential.mockReturnValue(undefined);
 
       const result = plugin.getSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBeUndefined();
@@ -445,12 +445,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.removeSigningCredential.mockReturnValue(true);
 
       const result = plugin.removeSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBe(true);
       expect(mockConnector.removeSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
 
@@ -458,7 +458,7 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.removeSigningCredential.mockReturnValue(false);
 
       const result = plugin.removeSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBe(false);
@@ -477,16 +477,16 @@ describe("Web3ConnectorPlugin", () => {
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockResult);
       expect(
-        mockConnector.createGunUserFromSigningCredential
+        mockConnector.createGunUserFromSigningCredential,
       ).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
     });
 
@@ -497,11 +497,11 @@ describe("Web3ConnectorPlugin", () => {
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
-        mockResult
+        mockResult,
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockResult);
@@ -513,28 +513,28 @@ describe("Web3ConnectorPlugin", () => {
       plugin.initialize(mockCore);
     });
 
-    it("should return Gun user public key", () => {
-      mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
-        "gun_pub_123"
+    it("should return Gun user public key", async () => {
+      mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
+        "gun_pub_123",
       );
 
-      const result = plugin.getGunUserPubFromSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+      const result = await plugin.getGunUserPubFromSigningCredential(
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBe("gun_pub_123");
       expect(
-        mockConnector.getGunUserPubFromSigningCredential
+        mockConnector.getGunUserPubFromSigningCredential,
       ).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
     });
 
-    it("should return undefined if not found", () => {
-      mockConnector.getGunUserPubFromSigningCredential.mockReturnValue(
-        undefined
+    it("should return undefined if not found", async () => {
+      mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
+        undefined,
       );
 
-      const result = plugin.getGunUserPubFromSigningCredential(
-        "0x1234567890123456789012345678901234567890"
+      const result = await plugin.getGunUserPubFromSigningCredential(
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBeUndefined();
@@ -550,12 +550,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.getPassword.mockReturnValue("stored_password");
 
       const result = plugin.getPassword(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBe("stored_password");
       expect(mockConnector.getPassword).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
 
@@ -563,7 +563,7 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.getPassword.mockReturnValue(undefined);
 
       const result = plugin.getPassword(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toBeUndefined();
@@ -586,13 +586,13 @@ describe("Web3ConnectorPlugin", () => {
 
       const result = await plugin.verifyConsistency(
         "0x1234567890123456789012345678901234567890",
-        "gun_pub_123"
+        "gun_pub_123",
       );
 
       expect(result).toEqual(mockResult);
       expect(mockConnector.verifyConsistency).toHaveBeenCalledWith(
         "0x1234567890123456789012345678901234567890",
-        "gun_pub_123"
+        "gun_pub_123",
       );
     });
 
@@ -607,7 +607,7 @@ describe("Web3ConnectorPlugin", () => {
 
       const result = await plugin.verifyConsistency(
         "0x1234567890123456789012345678901234567890",
-        "gun_pub_456"
+        "gun_pub_456",
       );
 
       expect(result.consistent).toBe(false);
@@ -634,12 +634,12 @@ describe("Web3ConnectorPlugin", () => {
       mockConnector.setupConsistentOneshotSigning.mockResolvedValue(mockResult);
 
       const result = await plugin.setupConsistentOneshotSigning(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockResult);
       expect(mockConnector.setupConsistentOneshotSigning).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
     });
   });
@@ -653,8 +653,8 @@ describe("Web3ConnectorPlugin", () => {
       const mockAuthResult = {
         success: true,
         user: {
-          id: "0x1234567890123456789012345678901234567890",
-          address: "0x1234567890123456789012345678901234567890",
+          userPub: "gun_pub_123",
+          username: "0x1234567890123456789012345678901234567890",
         },
         userPub: "gun_pub_123",
       };
@@ -675,7 +675,7 @@ describe("Web3ConnectorPlugin", () => {
       jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
 
       const result = await plugin.login(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockAuthResult);
@@ -699,7 +699,7 @@ describe("Web3ConnectorPlugin", () => {
       });
 
       const result = await plugin.login(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result.success).toBe(false);
@@ -715,8 +715,8 @@ describe("Web3ConnectorPlugin", () => {
       const mockSignUpResult = {
         success: true,
         user: {
-          id: "0x1234567890123456789012345678901234567890",
-          address: "0x1234567890123456789012345678901234567890",
+          userPub: "gun_pub_123",
+          username: "0x1234567890123456789012345678901234567890",
         },
         userPub: "gun_pub_123",
       };
@@ -737,7 +737,7 @@ describe("Web3ConnectorPlugin", () => {
       jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
 
       const result = await plugin.signUp(
-        "0x1234567890123456789012345678901234567890"
+        "0x1234567890123456789012345678901234567890",
       );
 
       expect(result).toEqual(mockSignUpResult);

@@ -191,6 +191,8 @@ export interface ShogunSDKConfig {
   authToken?: string;
   scope?: string;
   peers?: string[];
+  localStorage?: boolean;
+  radisk?: boolean;
   webauthn?: WebauthnConfig;
   web3?: {
     enabled?: boolean;

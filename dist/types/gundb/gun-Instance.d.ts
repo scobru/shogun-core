@@ -211,11 +211,14 @@ declare class GunInstance {
     /**
      * Checks rate limiting for login attempts
      */
-    private checkRateLimit;
+    checkRateLimit(username: string, operation: "login" | "signup"): {
+        allowed: boolean;
+        error?: string;
+    };
     /**
      * Resets rate limiting for successful authentication
      */
-    private resetRateLimit;
+    private resetRateLimitForUser;
     /**
      * Validates signup credentials with enhanced security
      */
@@ -310,7 +313,7 @@ declare class GunInstance {
      * @param securityAnswers Array of answers to security questions
      * @returns Promise resolving with the operation result
      */
-    setPasswordHint(username: string, password: string, hint: string, securityQuestions: string[], securityAnswers: string[]): Promise<{
+    setPasswordHintWithSecurity(username: string, password: string, hint: string, securityQuestions: string[], securityAnswers: string[]): Promise<{
         success: boolean;
         error?: string;
     }>;
@@ -493,6 +496,62 @@ declare class GunInstance {
         oldUsername?: string;
         newUsername?: string;
     }>;
+    /**
+     * Recall user session
+     */
+    recall(): void;
+    /**
+     * Leave user session
+     */
+    leave(): void;
+    /**
+     * Set username for the current user
+     */
+    setUsername(username: string): void;
+    /**
+     * Get username for the current user
+     */
+    getUsername(): string | null;
+    /**
+     * Set user data
+     */
+    setUserData(data: any): void;
+    /**
+     * Set password hint
+     */
+    setPasswordHint(hint: string): void;
+    /**
+     * Get password hint
+     */
+    getPasswordHint(): string | null;
+    /**
+     * Save session to storage
+     */
+    saveSession(session: any): void;
+    /**
+     * Load session from storage
+     */
+    loadSession(): any;
+    /**
+     * Clear session
+     */
+    clearSession(): void;
+    /**
+     * Get app scope
+     */
+    getAppScope(): string;
+    /**
+     * Get user public key
+     */
+    getUserPub(): string | null;
+    /**
+     * Check if user is authenticated
+     */
+    isAuthenticated(): boolean;
+    /**
+     * Reset rate limit
+     */
+    resetRateLimit(): void;
 }
 export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, };
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
