@@ -1,9 +1,16 @@
 /**
  * GunDB Relay Server Class
  * Instantiates and manages a GunDB relay server with configurable options
+ *
+ * Note: This module is primarily for Node.js environments.
+ * In browser environments, relay functionality is limited.
  */
 
 import type { IGunInstance } from "gun/types";
+
+// Check if we're in a Node.js environment
+const isNode =
+  typeof process !== "undefined" && process.versions && process.versions.node;
 
 // Gun modules will be loaded dynamically when needed
 let Gun: any;
@@ -12,29 +19,33 @@ let gunModulesLoaded = false;
 /**
  * Loads Gun modules dynamically to avoid issues during testing
  */
-function loadGunModules(): void {
+async function loadGunModules(): Promise<void> {
   if (gunModulesLoaded) return;
 
   try {
-    Gun = require("gun/gun");
-    require("gun/lib/yson");
-    require("gun/lib/serve");
-    require("gun/lib/store");
-    require("gun/lib/rfs");
-    require("gun/lib/rs3");
-    require("gun/lib/wire");
-    require("gun/lib/multicast");
-    require("gun/lib/stats");
+    // Use dynamic imports for ES modules
+    const gunModule = await import("gun/gun");
+    Gun = gunModule.default || gunModule;
+
+    // Import other modules dynamically
+    await import("gun/lib/yson");
+    await import("gun/lib/serve");
+    await import("gun/lib/store");
+    await import("gun/lib/rfs");
+    await import("gun/lib/rs3");
+    await import("gun/lib/wire");
+    await import("gun/lib/multicast");
+    await import("gun/lib/stats");
 
     // Optional modules - wrapped in try-catch for compatibility
     try {
-      require("gun/sea");
+      await import("gun/sea");
     } catch (e) {
       // SEA not available
     }
 
     try {
-      require("gun/axe");
+      await import("gun/axe");
     } catch (e) {
       // Axe not available
     }
@@ -52,6 +63,41 @@ function loadGunModules(): void {
     } else {
       throw new Error(`Failed to load Gun modules: ${error}`);
     }
+  }
+}
+
+/**
+ * Creates a server instance - only in Node.js environments
+ */
+async function createNodeServer(config: any): Promise<any> {
+  if (!isNode) {
+    return null;
+  }
+
+  try {
+    const http = await import("http");
+    const server = http.createServer();
+
+    // Configure WebSocket server
+    if (config.ws) {
+      const ws = await import("ws");
+      const WebSocketServer = ws.Server;
+      const wss = new WebSocketServer({ server });
+
+      wss.on("connection", (ws: any) => {
+        console.log("WebSocket connection established");
+      });
+    }
+
+    // Configure HTTP server
+    if (config.http) {
+      Object.assign(server, config.http);
+    }
+
+    return server;
+  } catch (error) {
+    console.error("Failed to create Node.js server:", error);
+    return null;
   }
 }
 
@@ -107,21 +153,24 @@ export interface RelayStatus {
  * - Store and relay data between connected peers
  * - Provide persistence and caching
  * - Handle authentication and encryption
+ *
+ * Note: This class is primarily designed for Node.js environments.
+ * In browser environments, most functionality will be limited.
  */
 export class Relay {
-  private gun: IGunInstance<any>;
+  private gun!: IGunInstance<any>;
   private server: any;
   private config: RelayConfig;
   private status: RelayStatus;
   private log: (message: string, ...args: any[]) => void;
+  private _isNodeEnvironment: boolean;
 
   /**
    * Creates a new GunDB relay server instance
    * @param config Configuration options for the relay server
    */
   constructor(config: RelayConfig = {}) {
-    // Load Gun modules when the class is instantiated
-    loadGunModules();
+    this._isNodeEnvironment = Boolean(isNode);
 
     this.config = {
       port: 8765,
@@ -141,12 +190,63 @@ export class Relay {
     this.log = this.config.log || console.log;
 
     // Initialize Gun instance with relay configuration
+    this.initializeGun();
+  }
+
+  /**
+   * Initialize Gun instance asynchronously
+   */
+  private async initializeGun(): Promise<void> {
     try {
+      // Load Gun modules when the class is instantiated
+      await loadGunModules();
+
+      // In browser environment, create a minimal Gun instance
+      if (!this._isNodeEnvironment) {
+        this.gun = Gun({
+          multicast: false,
+          ...this.config.gunOptions,
+        });
+        this.log(
+          "Relay initialized in browser mode - server functionality disabled",
+        );
+        return;
+      }
+
+      // Create server only in Node.js environment
+      this.server = await createNodeServer(this.config);
+
       this.gun = Gun({
         file: this.config.enableFileStorage ? "data" : false,
-        web: this.createServer(),
+        web: this.server,
         multicast: false, // Disable multicast for relay servers
         ...this.config.gunOptions,
+      });
+
+      // Configure Gun options
+      (this.gun as any).on("opt", (root: any) => {
+        if (this.config.super !== undefined) {
+          root.opt.super = this.config.super;
+        }
+        if (this.config.faith !== undefined) {
+          root.opt.faith = this.config.faith;
+        }
+        root.opt.log = root.opt.log || this.log;
+        // Continue the chain
+        if (root.to && root.to.next) {
+          root.to.next(root);
+        }
+      });
+
+      // Track peer connections
+      (this.gun as any).on("hi", () => {
+        this.status.peers++;
+        this.log(`Peer connected. Total peers: ${this.status.peers}`);
+      });
+
+      (this.gun as any).on("bye", () => {
+        this.status.peers = Math.max(0, this.status.peers - 1);
+        this.log(`Peer disconnected. Total peers: ${this.status.peers}`);
       });
     } catch (error) {
       // In test environment, create a minimal mock
@@ -158,74 +258,6 @@ export class Relay {
         throw error;
       }
     }
-
-    // Configure Gun options
-    (this.gun as any).on("opt", (root: any) => {
-      if (this.config.super !== undefined) {
-        root.opt.super = this.config.super;
-      }
-      if (this.config.faith !== undefined) {
-        root.opt.faith = this.config.faith;
-      }
-      root.opt.log = root.opt.log || this.log;
-      // Continue the chain
-      if (root.to && root.to.next) {
-        root.to.next(root);
-      }
-    });
-
-    // Track peer connections
-    (this.gun as any).on("hi", () => {
-      this.status.peers++;
-      this.log(`Peer connected. Total peers: ${this.status.peers}`);
-    });
-
-    (this.gun as any).on("bye", () => {
-      this.status.peers = Math.max(0, this.status.peers - 1);
-      this.log(`Peer disconnected. Total peers: ${this.status.peers}`);
-    });
-  }
-
-  /**
-   * Creates the HTTP/WebSocket server for the relay
-   * @returns Server instance
-   */
-  private createServer(): any {
-    try {
-      const server = require("http").createServer();
-
-      // Configure WebSocket server
-      if (this.config.ws) {
-        const WebSocketServer = require("ws").Server;
-        const wss = new WebSocketServer({ server });
-
-        wss.on("connection", (ws: any) => {
-          this.log("WebSocket connection established");
-        });
-      }
-
-      // Configure HTTP server
-      if (this.config.http) {
-        Object.assign(server, this.config.http);
-      }
-
-      this.server = server;
-      return server;
-    } catch (error) {
-      // In test environment, create a minimal mock server
-      if (process.env.NODE_ENV === "test") {
-        const mockServer = {
-          listen: () => {},
-          close: () => {},
-          on: () => {},
-          listening: true,
-        };
-        this.server = mockServer;
-        return mockServer;
-      } else {
-        throw error;
-      }
-    }
   }
 
   /**
@@ -233,8 +265,19 @@ export class Relay {
    * @returns Promise that resolves when the server is started
    */
   public async start(): Promise<void> {
+    // In browser environment, just log and return
+    if (!this._isNodeEnvironment) {
+      this.log("Relay server cannot be started in browser environment");
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       try {
+        if (!this.server) {
+          reject(new Error("Server not initialized"));
+          return;
+        }
+
         this.server.listen(this.config.port, this.config.host, () => {
           this.status.running = true;
           this.status.port = this.config.port;
@@ -267,6 +310,12 @@ export class Relay {
    * @returns Promise that resolves when the server is stopped
    */
   public async stop(): Promise<void> {
+    // In browser environment, just log and return
+    if (!this._isNodeEnvironment) {
+      this.log("Relay server cannot be stopped in browser environment");
+      return;
+    }
+
     return new Promise((resolve) => {
       if (this.server && this.status.running) {
         this.server.close(() => {
@@ -328,10 +377,22 @@ export class Relay {
    */
   public async healthCheck(): Promise<boolean> {
     try {
-      return this.status.running && this.server.listening;
+      // In browser environment, return false
+      if (!this._isNodeEnvironment) {
+        return false;
+      }
+      return this.status.running && this.server && this.server.listening;
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * Checks if the relay is running in a Node.js environment
+   * @returns True if running in Node.js
+   */
+  public isNodeEnvironment(): boolean {
+    return this._isNodeEnvironment;
   }
 }
 

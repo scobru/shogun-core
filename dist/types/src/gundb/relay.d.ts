@@ -1,6 +1,9 @@
 /**
  * GunDB Relay Server Class
  * Instantiates and manages a GunDB relay server with configurable options
+ *
+ * Note: This module is primarily for Node.js environments.
+ * In browser environments, relay functionality is limited.
  */
 import type { IGunInstance } from "gun/types";
 /**
@@ -53,6 +56,9 @@ export interface RelayStatus {
  * - Store and relay data between connected peers
  * - Provide persistence and caching
  * - Handle authentication and encryption
+ *
+ * Note: This class is primarily designed for Node.js environments.
+ * In browser environments, most functionality will be limited.
  */
 export declare class Relay {
     private gun;
@@ -60,16 +66,16 @@ export declare class Relay {
     private config;
     private status;
     private log;
+    private _isNodeEnvironment;
     /**
      * Creates a new GunDB relay server instance
      * @param config Configuration options for the relay server
      */
     constructor(config?: RelayConfig);
     /**
-     * Creates the HTTP/WebSocket server for the relay
-     * @returns Server instance
+     * Initialize Gun instance asynchronously
      */
-    private createServer;
+    private initializeGun;
     /**
      * Starts the relay server
      * @returns Promise that resolves when the server is started
@@ -110,6 +116,11 @@ export declare class Relay {
      * @returns Promise that resolves to true if healthy
      */
     healthCheck(): Promise<boolean>;
+    /**
+     * Checks if the relay is running in a Node.js environment
+     * @returns True if running in Node.js
+     */
+    isNodeEnvironment(): boolean;
 }
 /**
  * Factory function to create a relay server with default configuration

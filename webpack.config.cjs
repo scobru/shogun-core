@@ -37,6 +37,16 @@ module.exports = {
       assert: require.resolve("assert/"),
       constants: require.resolve("constants-browserify"),
       gun: path.resolve(__dirname, "node_modules/gun/gun.js"),
+      // Add Node.js core modules that should be ignored in browser builds
+      http: false,
+      https: false,
+      fs: false,
+      net: false,
+      tls: false,
+      child_process: false,
+      ws: false,
+      // Add fallback for neo4j (used by cypher-query)
+      "neo4j/lib/GraphDatabase": false,
     },
   },
   module: {
@@ -83,6 +93,11 @@ module.exports = {
     // Ignore specific Gun.js warnings
     new webpack.IgnorePlugin({
       resourceRegExp: /gun\/(sea|lib)$/,
+      contextRegExp: /node_modules/,
+    }),
+    // Ignore Node.js modules that are not available in browser
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^(http|https|fs|net|tls|child_process|ws)$/,
       contextRegExp: /node_modules/,
     }),
     // Add module concatenation plugin for better tree-shaking
