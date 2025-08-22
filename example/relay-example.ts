@@ -3,7 +3,7 @@
  * This file demonstrates how to create and manage GunDB relay servers
  */
 
-import { Relay, createRelay, RelayPresets } from "../src/gundb/relay";
+import { Relay, createRelay, RelayPresets } from "../src/";
 
 /**
  * Basic relay server example
@@ -12,7 +12,7 @@ export async function basicRelayExample(): Promise<void> {
   console.log("Starting basic relay server...");
 
   // Create a basic relay server
-  const relay = new Relay({
+  const relay = createRelay({
     port: 8765,
     host: "localhost",
     super: false,
@@ -73,7 +73,7 @@ export async function productionRelayExample(): Promise<void> {
 export async function customRelayExample(): Promise<void> {
   console.log("Starting custom relay server with WebSocket...");
 
-  const relay = new Relay({
+  const relay = createRelay({
     port: 8766,
     host: "0.0.0.0",
     super: true,
@@ -117,11 +117,11 @@ export async function customRelayExample(): Promise<void> {
 export async function multipleRelaysExample(): Promise<void> {
   console.log("Starting multiple relay servers...");
 
-  const relays: Relay[] = [];
+  const relays: ReturnType<typeof createRelay>[] = [];
 
   // Create multiple relay servers on different ports
   for (let i = 0; i < 3; i++) {
-    const relay = new Relay({
+    const relay = createRelay({
       port: 8765 + i,
       host: "localhost",
       super: i === 0, // First relay is super peer
