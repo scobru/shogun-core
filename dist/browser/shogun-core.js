@@ -102300,8 +102300,13 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RelayPresets = exports.createRelay = void 0;
 // Export the main class
 __exportStar(__webpack_require__(/*! ./gun-Instance */ "./src/gundb/gun-Instance.ts"), exports);
+// Export relay components (excluding Relay class which is already exported)
+var relay_1 = __webpack_require__(/*! ./relay */ "./src/gundb/relay.ts");
+Object.defineProperty(exports, "createRelay", ({ enumerable: true, get: function () { return relay_1.createRelay; } }));
+Object.defineProperty(exports, "RelayPresets", ({ enumerable: true, get: function () { return relay_1.RelayPresets; } }));
 
 
 /***/ }),
@@ -102820,7 +102825,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShogunCore = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = exports.RelayPresets = exports.createRelay = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
 const events_1 = __webpack_require__(/*! ./types/events */ "./src/types/events.ts");
 const errorHandler_1 = __webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts");
 const storage_1 = __webpack_require__(/*! ./storage/storage */ "./src/storage/storage.ts");
@@ -102838,6 +102843,8 @@ Object.defineProperty(exports, "crypto", ({ enumerable: true, get: function () {
 Object.defineProperty(exports, "derive", ({ enumerable: true, get: function () { return gundb_1.derive; } }));
 Object.defineProperty(exports, "GunErrors", ({ enumerable: true, get: function () { return gundb_1.GunErrors; } }));
 Object.defineProperty(exports, "Relay", ({ enumerable: true, get: function () { return gundb_1.Relay; } }));
+Object.defineProperty(exports, "createRelay", ({ enumerable: true, get: function () { return gundb_1.createRelay; } }));
+Object.defineProperty(exports, "RelayPresets", ({ enumerable: true, get: function () { return gundb_1.RelayPresets; } }));
 __exportStar(__webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts"), exports);
 __exportStar(__webpack_require__(/*! ./plugins */ "./src/plugins/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./types/shogun */ "./src/types/shogun.ts"), exports);

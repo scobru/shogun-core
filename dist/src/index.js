@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = exports.RelayPresets = exports.createRelay = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
 const events_1 = require("./types/events");
 const errorHandler_1 = require("./utils/errorHandler");
 const storage_1 = require("./storage/storage");
@@ -32,6 +32,8 @@ Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { 
 Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return gundb_1.derive; } });
 Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return gundb_1.GunErrors; } });
 Object.defineProperty(exports, "Relay", { enumerable: true, get: function () { return gundb_1.Relay; } });
+Object.defineProperty(exports, "createRelay", { enumerable: true, get: function () { return gundb_1.createRelay; } });
+Object.defineProperty(exports, "RelayPresets", { enumerable: true, get: function () { return gundb_1.RelayPresets; } });
 __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./plugins"), exports);
 __exportStar(require("./types/shogun"), exports);

@@ -33,6 +33,8 @@ import {
   derive,
   GunErrors,
   Relay,
+  createRelay,
+  RelayPresets,
 } from "./gundb";
 import { ISEAPair } from "gun";
 
@@ -44,7 +46,18 @@ export type {
   DeriveOptions,
 };
 
-export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance, Relay };
+export {
+  SEA,
+  Gun,
+  GunRxJS,
+  crypto,
+  derive,
+  GunErrors,
+  GunInstance,
+  Relay,
+  createRelay,
+  RelayPresets,
+};
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
