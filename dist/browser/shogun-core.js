@@ -99330,7 +99330,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
+exports.Relay = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
 const gun_1 = __importDefault(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js"));
 exports.Gun = gun_1.default;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
@@ -99353,6 +99353,9 @@ const GunErrors = __importStar(__webpack_require__(/*! ./errors */ "./src/gundb/
 exports.GunErrors = GunErrors;
 const crypto = __importStar(__webpack_require__(/*! ./crypto */ "./src/gundb/crypto.ts"));
 exports.crypto = crypto;
+// Export the relay class
+const Relay = __importStar(__webpack_require__(/*! ./relay */ "./src/gundb/relay.ts"));
+exports.Relay = Relay;
 /**
  * Configuration constants for timeouts and security
  */
@@ -102299,8 +102302,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 // Export the main class
 __exportStar(__webpack_require__(/*! ./gun-Instance */ "./src/gundb/gun-Instance.ts"), exports);
-// Export the relay class
-__exportStar(__webpack_require__(/*! ./relay */ "./src/gundb/relay.ts"), exports);
 
 
 /***/ }),
@@ -102819,7 +102820,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShogunCore = exports.RelayPresets = exports.createRelay = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = exports.Relay = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
 const events_1 = __webpack_require__(/*! ./types/events */ "./src/types/events.ts");
 const errorHandler_1 = __webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts");
 const storage_1 = __webpack_require__(/*! ./storage/storage */ "./src/storage/storage.ts");
@@ -102837,8 +102838,6 @@ Object.defineProperty(exports, "crypto", ({ enumerable: true, get: function () {
 Object.defineProperty(exports, "derive", ({ enumerable: true, get: function () { return gundb_1.derive; } }));
 Object.defineProperty(exports, "GunErrors", ({ enumerable: true, get: function () { return gundb_1.GunErrors; } }));
 Object.defineProperty(exports, "Relay", ({ enumerable: true, get: function () { return gundb_1.Relay; } }));
-Object.defineProperty(exports, "createRelay", ({ enumerable: true, get: function () { return gundb_1.createRelay; } }));
-Object.defineProperty(exports, "RelayPresets", ({ enumerable: true, get: function () { return gundb_1.RelayPresets; } }));
 __exportStar(__webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts"), exports);
 __exportStar(__webpack_require__(/*! ./plugins */ "./src/plugins/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./types/shogun */ "./src/types/shogun.ts"), exports);

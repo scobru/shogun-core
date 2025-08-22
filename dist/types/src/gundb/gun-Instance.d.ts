@@ -21,6 +21,7 @@ import { GunDataEventData, GunPeerEventData } from "../types/events";
 import { GunRxJS } from "./gun-rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
+import * as Relay from "./relay";
 declare class GunInstance {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
@@ -553,7 +554,7 @@ declare class GunInstance {
      */
     resetRateLimit(): void;
 }
-export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, };
+export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, Relay, };
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };
 export type { DeriveOptions };

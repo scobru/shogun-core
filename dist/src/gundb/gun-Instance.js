@@ -42,7 +42,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
+exports.Relay = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
 const gun_1 = __importDefault(require("gun/gun"));
 exports.Gun = gun_1.default;
 const sea_1 = __importDefault(require("gun/sea"));
@@ -65,6 +65,9 @@ const GunErrors = __importStar(require("./errors"));
 exports.GunErrors = GunErrors;
 const crypto = __importStar(require("./crypto"));
 exports.crypto = crypto;
+// Export the relay class
+const Relay = __importStar(require("./relay"));
+exports.Relay = Relay;
 /**
  * Configuration constants for timeouts and security
  */

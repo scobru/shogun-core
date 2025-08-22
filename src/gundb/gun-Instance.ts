@@ -45,6 +45,9 @@ import { GunRxJS } from "./gun-rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 
+// Export the relay class
+import * as Relay from "./relay";
+
 /**
  * Interface for username lookup results
  */
@@ -3045,6 +3048,7 @@ export {
   GunErrors,
   derive,
   restrictedPut,
+  Relay,
 };
 
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";

@@ -33,11 +33,8 @@ import {
   derive,
   GunErrors,
   Relay,
-  createRelay,
-  RelayPresets,
 } from "./gundb";
 import { ISEAPair } from "gun";
-import { LogLevel } from "./types/common";
 
 export type {
   IGunUserInstance,
@@ -47,18 +44,7 @@ export type {
   DeriveOptions,
 };
 
-export {
-  SEA,
-  Gun,
-  GunRxJS,
-  crypto,
-  derive,
-  GunErrors,
-  GunInstance,
-  Relay,
-  createRelay,
-  RelayPresets,
-};
+export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance, Relay };
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./types/shogun";
