@@ -1,18 +1,18 @@
 {
   "name": "shogun-core",
-  "version": "1.8.1",
+  "version": "1.8.5",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js",
       "browser": "./dist/browser/shogun-core.js",
-      "default": "./dist/index.js",
-      "node": "./dist/index.js"
+      "default": "./dist/src/index.js",
+      "node": "./dist/src/index.js"
     }
   },
   "files": [
