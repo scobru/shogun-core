@@ -6,7 +6,7 @@
  */
 import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
 import type { AuthResult, SignUpResult } from "../types/shogun";
-import Gun from "gun/gun";
+declare const Gun: any;
 import SEA from "gun/sea";
 import "gun/lib/then.js";
 import "gun/lib/radisk.js";
@@ -21,7 +21,6 @@ import { GunDataEventData, GunPeerEventData } from "../types/events";
 import { GunRxJS } from "./gun-rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
-import * as Relay from "./relay";
 declare class GunInstance {
     gun: IGunInstance<any>;
     user: IGunUserInstance<any> | null;
@@ -554,7 +553,8 @@ declare class GunInstance {
      */
     resetRateLimit(): void;
 }
-export { GunInstance, SEA, Gun, GunRxJS, crypto, GunErrors, derive, restrictedPut, Relay, };
+export { GunInstance, SEA, GunRxJS, crypto, GunErrors, derive, restrictedPut };
+export default Gun;
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };
 export type { DeriveOptions };

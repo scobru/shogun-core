@@ -1,5 +1,5 @@
 import { BasePlugin } from "../base";
-import { ShogunCore } from "../../index";
+import { ShogunCore } from "../../core";
 import { OAuthPluginInterface, OAuthConfig, OAuthProvider, OAuthConnectionResult, OAuthCredentials, OAuthUserInfo } from "./types";
 import { AuthResult, SignUpResult } from "../../types/shogun";
 /**

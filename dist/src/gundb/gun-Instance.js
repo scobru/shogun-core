@@ -42,9 +42,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Relay = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = exports.GunInstance = void 0;
-const gun_1 = __importDefault(require("gun/gun"));
-exports.Gun = gun_1.default;
+exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = void 0;
+// Import Gun - will be handled by webpack externals
+const gun_1 = __importDefault(require("gun"));
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
 require("gun/lib/then.js");
@@ -65,9 +65,6 @@ const GunErrors = __importStar(require("./errors"));
 exports.GunErrors = GunErrors;
 const crypto = __importStar(require("./crypto"));
 exports.crypto = crypto;
-// Export the relay class
-const Relay = __importStar(require("./relay"));
-exports.Relay = Relay;
 /**
  * Configuration constants for timeouts and security
  */
@@ -2524,3 +2521,4 @@ class GunInstance {
     }
 }
 exports.GunInstance = GunInstance;
+exports.default = gun_1.default;

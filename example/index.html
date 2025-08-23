@@ -1,23 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>ShogunCore Vanilla Test</title>
   <style>
-    body { font-family: monospace; background: #f8f8f8; color: #222; padding: 2em; }
-    pre { background: #fff; border: 1px solid #ccc; padding: 1em; }
-    .ok { color: green; }
-    .fail { color: red; }
+    body {
+      font-family: monospace;
+      background: #f8f8f8;
+      color: #222;
+      padding: 2em;
+    }
+
+    pre {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 1em;
+    }
+
+    .ok {
+      color: green;
+    }
+
+    .fail {
+      color: red;
+    }
   </style>
 </head>
+
 <body>
   <h1>ShogunCore Vanilla Test</h1>
   <pre id="output">Loading...</pre>
-  <script src="https://cdn.jsdelivr.net/npm/shogun-core@1.5.7/dist/browser/shogun-core.js"></script>
+  <!-- Load Gun.js first -->
+  <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.1240/gun.js"></script>
+  <script src="../dist/browser/shogun-core.js"></script>
   <script>
     function log(msg, cls) {
       const el = document.getElementById('output');
-      el.innerHTML += `<div class="${cls||''}">${msg}</div>`;
+      el.innerHTML += `<div class="${cls || ''}">${msg}</div>`;
     }
     document.getElementById('output').textContent = '';
 
@@ -43,7 +63,5 @@
     }
   </script>
 </body>
+
 </html>
-
-
-

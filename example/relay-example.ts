@@ -3,7 +3,7 @@
  * This file demonstrates how to create and manage GunDB relay servers
  */
 
-import { Relay, createRelay, RelayPresets } from "../src/";
+import { createRelay, RelayPresets } from "../src/index";
 
 /**
  * Basic relay server example

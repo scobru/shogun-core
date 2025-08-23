@@ -1,5 +1,5 @@
 import { BasePlugin } from "../base";
-import { ShogunCore } from "../../index";
+import { ShogunCore } from "../../core";
 import { Web3SigningCredential } from "./web3Signer";
 import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
 import { ethers } from "ethers";

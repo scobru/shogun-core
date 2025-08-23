@@ -16,6 +16,10 @@ module.exports = {
     // Add clean webpack plugin configuration
     clean: true,
   },
+  externals: {
+    gun: "Gun",
+  },
+
   resolve: {
     extensions: [".ts", ".js", ".json"],
     alias: {
@@ -102,6 +106,14 @@ module.exports = {
     }),
     // Add module concatenation plugin for better tree-shaking
     new webpack.optimize.ModuleConcatenationPlugin(),
+    // Define Gun as a global variable
+    new webpack.DefinePlugin({
+      "typeof window": '"object"',
+    }),
+    // Provide Gun as a global
+    new webpack.ProvidePlugin({
+      Gun: "gun",
+    }),
   ],
   optimization: {
     minimize: process.env.NODE_ENV === "production",

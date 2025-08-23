@@ -9,14 +9,14 @@ exports.productionRelayExample = productionRelayExample;
 exports.customRelayExample = customRelayExample;
 exports.multipleRelaysExample = multipleRelaysExample;
 exports.runExamples = runExamples;
-const src_1 = require("../src/");
+const index_1 = require("../src/index");
 /**
  * Basic relay server example
  */
 async function basicRelayExample() {
     console.log("Starting basic relay server...");
     // Create a basic relay server
-    const relay = (0, src_1.createRelay)({
+    const relay = (0, index_1.createRelay)({
         port: 8765,
         host: "localhost",
         super: false,
@@ -44,7 +44,7 @@ async function basicRelayExample() {
 async function productionRelayExample() {
     console.log("Starting production relay server...");
     // Create a production relay server using presets
-    const relay = (0, src_1.createRelay)(src_1.RelayPresets.production);
+    const relay = (0, index_1.createRelay)(index_1.RelayPresets.production);
     try {
         await relay.start();
         console.log(`Production relay server started at: ${relay.getRelayUrl()}`);
@@ -68,7 +68,7 @@ async function productionRelayExample() {
  */
 async function customRelayExample() {
     console.log("Starting custom relay server with WebSocket...");
-    const relay = (0, src_1.createRelay)({
+    const relay = (0, index_1.createRelay)({
         port: 8766,
         host: "0.0.0.0",
         super: true,
@@ -111,7 +111,7 @@ async function multipleRelaysExample() {
     const relays = [];
     // Create multiple relay servers on different ports
     for (let i = 0; i < 3; i++) {
-        const relay = (0, src_1.createRelay)({
+        const relay = (0, index_1.createRelay)({
             port: 8765 + i,
             host: "localhost",
             super: i === 0, // First relay is super peer
