@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory();
+		module.exports = factory(require("Gun"));
 	else if(typeof define === 'function' && define.amd)
-		define([], factory);
+		define(["Gun"], factory);
 	else if(typeof exports === 'object')
-		exports["ShogunCore"] = factory();
+		exports["ShogunCore"] = factory(require("Gun"));
 	else
-		root["ShogunCore"] = factory();
-})(this, () => {
+		root["ShogunCore"] = factory(root["Gun"]);
+})(this, (__WEBPACK_EXTERNAL_MODULE_gun__) => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -64353,9 +64353,10 @@ module.exports = EVP_BytesToKey
 /*!*********************************!*\
   !*** ./node_modules/gun/gun.js ***!
   \*********************************/
-/***/ (() => {
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
+/* provided dependency */ var Gun = __webpack_require__(/*! gun */ "gun");
 
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -99594,7 +99595,7 @@ exports.safeHash = safeHash;
 exports.unsafeHash = unsafeHash;
 exports.safeJSONParse = safeJSONParse;
 exports.randomUUID = randomUUID;
-const gun_1 = __webpack_require__(/*! gun */ "./node_modules/gun/gun.js");
+const gun_1 = __webpack_require__(/*! gun */ "gun");
 const uuid_1 = __webpack_require__(/*! uuid */ "./node_modules/uuid/dist/cjs-browser/index.js");
 // Helper function to get SEA safely
 function getSEA() {
@@ -100244,7 +100245,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = void 0;
 // Import Gun - will be handled by webpack externals
-const Gun =  true && window.Gun ? window.Gun : __webpack_require__(/*! gun */ "./node_modules/gun/gun.js");
+const Gun =  true && window.Gun ? window.Gun : __webpack_require__(/*! gun */ "gun");
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
 __webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
@@ -109628,6 +109629,17 @@ function generateDeterministicPassword(salt) {
 /***/ (() => {
 
 /* (ignored) */
+
+/***/ }),
+
+/***/ "gun":
+/*!**********************!*\
+  !*** external "Gun" ***!
+  \**********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = __WEBPACK_EXTERNAL_MODULE_gun__;
 
 /***/ })
 

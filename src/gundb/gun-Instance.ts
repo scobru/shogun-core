@@ -124,25 +124,25 @@ class GunInstance {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`
+        `Gun instance must be an object, received: ${typeof gun}`,
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
       );
     }
 
@@ -193,7 +193,7 @@ class GunInstance {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -215,7 +215,7 @@ class GunInstance {
     path: string,
     data?: GunData,
     success: boolean = true,
-    error?: string
+    error?: string,
   ): void {
     const eventData: GunDataEventData = {
       path,
@@ -233,7 +233,7 @@ class GunInstance {
    */
   private emitPeerEvent(
     action: "add" | "remove" | "connect" | "disconnect",
-    peer: string
+    peer: string,
   ): void {
     const eventData: GunPeerEventData = {
       peer,
@@ -429,7 +429,7 @@ class GunInstance {
         }
 
         console.log(
-          `Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`
+          `Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`,
         );
       }
     } catch (error) {
@@ -937,7 +937,7 @@ class GunInstance {
    */
   public checkRateLimit(
     username: string,
-    operation: "login" | "signup"
+    operation: "login" | "signup",
   ): { allowed: boolean; error?: string } {
     const key = `${operation}:${username.toLowerCase()}`;
     const now = Date.now();
@@ -995,7 +995,7 @@ class GunInstance {
    */
   private resetRateLimitForUser(
     username: string,
-    operation: "login" | "signup"
+    operation: "login" | "signup",
   ): void {
     const key = `${operation}:${username.toLowerCase()}`;
     this.rateLimitStorage.delete(key);
@@ -1007,7 +1007,7 @@ class GunInstance {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
     // Check rate limiting first
     const rateLimitCheck = this.checkRateLimit(username, "signup");
@@ -1047,7 +1047,7 @@ class GunInstance {
   private async checkUserExistence(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<UserExistenceResult> {
     return new Promise<UserExistenceResult>((resolve) => {
       if (pair) {
@@ -1075,7 +1075,7 @@ class GunInstance {
    */
   private async createNewUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1122,7 +1122,7 @@ class GunInstance {
             ) {
               console.error(
                 "User creation successful but no userPub returned:",
-                ack
+                ack,
               );
               resolve({
                 success: false,
@@ -1134,7 +1134,7 @@ class GunInstance {
             }
           }
         });
-      }
+      },
     );
   }
 
@@ -1144,7 +1144,7 @@ class GunInstance {
   private async authenticateNewUser(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1195,7 +1195,7 @@ class GunInstance {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found"
+                    "Authentication successful but no userPub found",
                   );
                   resolve({
                     success: false,
@@ -1220,17 +1220,17 @@ class GunInstance {
                 const userPub =
                   ack.pub || this.gun.user().is?.pub || ack.user?.pub;
                 console.log(
-                  `Extracted userPub after password auth: ${userPub}`
+                  `Extracted userPub after password auth: ${userPub}`,
                 );
                 console.log(
                   `User object after password auth:`,
-                  this.gun.user()
+                  this.gun.user(),
                 );
                 console.log(`User.is after password auth:`, this.gun.user().is);
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found"
+                    "Authentication successful but no userPub found",
                   );
                   resolve({
                     success: false,
@@ -1243,7 +1243,7 @@ class GunInstance {
             }
           });
         }
-      }
+      },
     );
   }
 
@@ -1257,14 +1257,14 @@ class GunInstance {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     try {
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
         username,
         password,
-        pair
+        pair,
       );
       if (!validation.valid) {
         return { success: false, error: validation.error };
@@ -1300,7 +1300,7 @@ class GunInstance {
       const authResult = await this.authenticateNewUser(
         username,
         password,
-        pair
+        pair,
       );
 
       if (!authResult.success) {
@@ -1315,7 +1315,7 @@ class GunInstance {
       ) {
         console.error(
           "Authentication successful but no valid userPub returned:",
-          authResult
+          authResult,
         );
         return {
           success: false,
@@ -1332,12 +1332,12 @@ class GunInstance {
       // Run post-authentication tasks
       try {
         console.log(
-          `Running post-auth setup with userPub: ${authResult.userPub}`
+          `Running post-auth setup with userPub: ${authResult.userPub}`,
         );
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
-          authResult
+          authResult,
         );
 
         // Return the post-auth result which includes the complete user data
@@ -1371,7 +1371,7 @@ class GunInstance {
    */
   private async createNewUserWithPair(
     username: string,
-    pair: ISEAPair
+    pair: ISEAPair,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1404,17 +1404,17 @@ class GunInstance {
         // because the pair already contains the cryptographic credentials
         // We just need to validate that the pair is valid and return success
         console.log(
-          `User created successfully with pair for: ${sanitizedUsername}`
+          `User created successfully with pair for: ${sanitizedUsername}`,
         );
         resolve({ success: true, userPub: pair.pub });
-      }
+      },
     );
   }
 
   private async runPostAuthOnAuthResult(
     username: string,
     userPub: string,
-    authResult: any
+    authResult: any,
   ): Promise<SignUpResult> {
     // Setting up user profile after authentication
 
@@ -1454,7 +1454,7 @@ class GunInstance {
       }
 
       console.log(
-        `Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`
+        `Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`,
       );
 
       const existingUser = await new Promise((resolve) => {
@@ -1565,7 +1565,7 @@ class GunInstance {
    * Strategy 1: Frozen space scan for immutable data
    */
   private async lookupInFrozenSpace(
-    normalizedUsername: string
+    normalizedUsername: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       let found = false;
@@ -1599,7 +1599,7 @@ class GunInstance {
    */
   private async lookupDirectMapping(
     normalizedUsername: string,
-    frozenKey: string
+    frozenKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       this.node
@@ -1625,7 +1625,7 @@ class GunInstance {
    */
   private async lookupAlternateKey(
     normalizedUsername: string,
-    alternateKey: string
+    alternateKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       this.node
@@ -1652,7 +1652,7 @@ class GunInstance {
   private async lookupComprehensiveScan(
     normalizedUsername: string,
     frozenKey: string,
-    alternateKey: string
+    alternateKey: string,
   ): Promise<UsernameLookupResult | null> {
     return new Promise((resolve) => {
       let found = false;
@@ -1683,7 +1683,7 @@ class GunInstance {
   private createLookupStrategies(
     normalizedUsername: string,
     frozenKey: string,
-    alternateKey: string
+    alternateKey: string,
   ): Array<() => Promise<UsernameLookupResult | null>> {
     return [
       () => this.lookupInFrozenSpace(normalizedUsername),
@@ -1693,7 +1693,7 @@ class GunInstance {
         this.lookupComprehensiveScan(
           normalizedUsername,
           frozenKey,
-          alternateKey
+          alternateKey,
         ),
     ];
   }
@@ -1703,7 +1703,7 @@ class GunInstance {
    */
   private async processLookupResult(
     result: UsernameLookupResult,
-    normalizedUsername: string
+    normalizedUsername: string,
   ): Promise<any> {
     // If we found a pub, try to fetch user data
     if (typeof result.pub === "string" && result.pub) {
@@ -1750,7 +1750,7 @@ class GunInstance {
       const lookupStrategies = this.createLookupStrategies(
         normalizedUsername,
         frozenKey,
-        alternateKey
+        alternateKey,
       );
 
       // Sequential strategy execution with timeout
@@ -1761,8 +1761,8 @@ class GunInstance {
             new Promise<null>((_, reject) =>
               setTimeout(
                 () => reject(new Error("Lookup timeout")),
-                CONFIG.TIMEOUTS.STRATEGY_TIMEOUT
-              )
+                CONFIG.TIMEOUTS.STRATEGY_TIMEOUT,
+              ),
             ),
           ]);
 
@@ -1786,7 +1786,7 @@ class GunInstance {
   private async performAuthentication(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
@@ -1813,7 +1813,7 @@ class GunInstance {
             }
           });
         }
-      }
+      },
     );
   }
 
@@ -1843,7 +1843,7 @@ class GunInstance {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     try {
       // Check rate limiting first
@@ -1855,7 +1855,7 @@ class GunInstance {
       const loginResult = await this.performAuthentication(
         username,
         password,
-        pair
+        pair,
       );
 
       if (!loginResult.success) {
@@ -1871,7 +1871,7 @@ class GunInstance {
       const userPub = this.gun.user().is?.pub;
 
       console.log(
-        `Login authentication successful, extracted userPub: ${userPub}`
+        `Login authentication successful, extracted userPub: ${userPub}`,
       );
       console.log(`User object:`, this.gun.user());
       console.log(`User.is:`, this.gun.user().is);
@@ -1923,7 +1923,7 @@ class GunInstance {
    * @returns Promise resolving to update result
    */
   async updateUserAlias(
-    newAlias: string
+    newAlias: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Updating user alias to
@@ -1970,7 +1970,7 @@ class GunInstance {
 
       const encryptedData = await SEA.encrypt(
         JSON.stringify(data),
-        encryptionKey
+        encryptionKey,
       );
       if (!encryptedData) {
         throw new Error("Failed to encrypt session data");
@@ -2039,7 +2039,7 @@ class GunInstance {
             // Fallback to unencrypted storage (less secure)
             sessionStorage.setItem(
               "gunSessionData",
-              JSON.stringify(sessionInfo)
+              JSON.stringify(sessionInfo),
             );
           });
       }
@@ -2062,7 +2062,7 @@ class GunInstance {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     // Setting password hint for
 
@@ -2136,7 +2136,7 @@ class GunInstance {
             if (ack.err) {
               console.error(
                 "Error saving security data to public graph:",
-                ack.err
+                ack.err,
               );
               reject(new Error(ack.err));
             } else {
@@ -2161,7 +2161,7 @@ class GunInstance {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     // Attempting password recovery for
 
@@ -2270,7 +2270,7 @@ class GunInstance {
           `user/${path}`,
           data,
           false,
-          "User not authenticated"
+          "User not authenticated",
         );
         reject(new Error("User not authenticated"));
         return;
@@ -2330,7 +2330,7 @@ class GunInstance {
               (actualData: any) => {
                 this.emitDataEvent("gun:get", `user/${path}`, actualData, true);
                 resolve(actualData);
-              }
+              },
             );
           } else {
             // Dati diretti, restituisci così come sono
@@ -2359,7 +2359,7 @@ class GunInstance {
   async derive(
     password: string | number,
     extra?: string | string[],
-    options?: DeriveOptions
+    options?: DeriveOptions,
   ): Promise<{
     p256?: { pub: string; priv: string; epub: string; epriv: string };
     secp256k1Bitcoin?: { pub: string; priv: string; address: string };
@@ -2423,7 +2423,7 @@ class GunInstance {
         error instanceof Error
           ? error.message
           : "Failed to derive cryptographic keys",
-        error
+        error,
       );
 
       throw error;
@@ -2438,7 +2438,7 @@ class GunInstance {
    */
   async deriveP256(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     const result = await this.derive(password, extra, { includeP256: true });
     return result.p256!;
@@ -2452,7 +2452,7 @@ class GunInstance {
    */
   async deriveBitcoin(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; address: string }> {
     const result = await this.derive(password, extra, {
       includeSecp256k1Bitcoin: true,
@@ -2468,7 +2468,7 @@ class GunInstance {
    */
   async deriveEthereum(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{ pub: string; priv: string; address: string }> {
     const result = await this.derive(password, extra, {
       includeSecp256k1Ethereum: true,
@@ -2484,7 +2484,7 @@ class GunInstance {
    */
   async deriveAll(
     password: string | number,
-    extra?: string | string[]
+    extra?: string | string[],
   ): Promise<{
     p256: { pub: string; priv: string; epub: string; epriv: string };
     secp256k1Bitcoin: { pub: string; priv: string; address: string };
@@ -2510,7 +2510,7 @@ class GunInstance {
     options?: {
       description?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): any {
     return {
       data: data,
@@ -2524,7 +2524,7 @@ class GunInstance {
    * Generates hash for frozen data
    */
   private async generateFrozenDataHash(
-    frozenData: any
+    frozenData: any,
   ): Promise<string | null> {
     const dataString = JSON.stringify(frozenData);
     const hash = await SEA.work(dataString, null, null, {
@@ -2542,7 +2542,7 @@ class GunInstance {
     options?: {
       namespace?: string;
       path?: string;
-    }
+    },
   ): string {
     const namespace = options?.namespace || "default";
     const customPath = options?.path || "";
@@ -2558,7 +2558,7 @@ class GunInstance {
   private async storeFrozenData(
     frozenData: any,
     fullPath: string,
-    hash: string
+    hash: string,
   ): Promise<{ hash: string; fullPath: string; data: any }> {
     return new Promise((resolve, reject) => {
       const targetNode = this.navigateToPath(this.gun, fullPath);
@@ -2590,7 +2590,7 @@ class GunInstance {
       path?: string;
       description?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<{ hash: string; fullPath: string; data: any }> {
     return new Promise(async (resolve, reject) => {
       try {
@@ -2627,7 +2627,7 @@ class GunInstance {
   async getFrozenSpace(
     hash: string,
     namespace: string = "default",
-    path?: string
+    path?: string,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       // Costruisci il percorso completo
@@ -2660,7 +2660,7 @@ class GunInstance {
     data: any,
     hash: string,
     namespace: string = "default",
-    path?: string
+    path?: string,
   ): Promise<{ verified: boolean; frozenData?: any; error?: string }> {
     try {
       // Genera hash dei dati forniti
@@ -2804,7 +2804,7 @@ class GunInstance {
               .put(null, (ack: any) => {
                 if (ack.err) {
                   console.warn(
-                    `Warning: Could not remove old username mapping: ${ack.err}`
+                    `Warning: Could not remove old username mapping: ${ack.err}`,
                   );
                 }
                 resolve();
@@ -2812,7 +2812,7 @@ class GunInstance {
           });
         } catch (error) {
           console.warn(
-            `Warning: Error removing old username mapping: ${error}`
+            `Warning: Error removing old username mapping: ${error}`,
           );
           // Continue anyway, don't fail the operation
         }
@@ -2827,7 +2827,9 @@ class GunInstance {
             .put(userPub, (ack: any) => {
               if (ack.err) {
                 reject(
-                  new Error(`Failed to create new username mapping: ${ack.err}`)
+                  new Error(
+                    `Failed to create new username mapping: ${ack.err}`,
+                  ),
                 );
               } else {
                 resolve();
@@ -2872,7 +2874,7 @@ class GunInstance {
           });
         } catch (revertError) {
           console.error(
-            `Failed to revert username mapping after metadata update failure: ${revertError}`
+            `Failed to revert username mapping after metadata update failure: ${revertError}`,
           );
         }
 
@@ -2883,7 +2885,7 @@ class GunInstance {
       }
 
       console.log(
-        `Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`
+        `Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`,
       );
 
       return {
