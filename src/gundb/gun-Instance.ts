@@ -21,7 +21,9 @@ import type { AuthResult, SignUpResult } from "../types/shogun";
 
 // Import Gun - will be handled by webpack externals
 const Gun =
-  typeof window !== "undefined" && window.Gun ? window.Gun : require("gun");
+  typeof window !== "undefined" && (window as any).Gun
+    ? (window as any).Gun
+    : import("gun/gun");
 import SEA from "gun/sea";
 import "gun/lib/then.js";
 import "gun/lib/radisk.js";

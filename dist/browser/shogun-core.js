@@ -100245,7 +100245,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = void 0;
 // Import Gun - will be handled by webpack externals
-const Gun =  true && window.Gun ? window.Gun : __webpack_require__(/*! gun */ "gun");
+const Gun =  true && window.Gun
+    ? window.Gun
+    : Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js")));
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
 __webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
