@@ -4,14 +4,8 @@ import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
-import { Gun, SEA, IGunUserInstance, IGunInstance, GunInstance, DeriveOptions, GunDataEventData, GunPeerEventData, GunRxJS, crypto, derive, GunErrors } from "./gundb";
+import { IGunUserInstance, IGunInstance, GunInstance, GunRxJS } from "./gundb";
 import { ISEAPair } from "gun";
-export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
-export { SEA, Gun, GunRxJS, crypto, derive, GunErrors, GunInstance };
-export * from "./utils/errorHandler";
-export * from "./plugins";
-export * from "./types/shogun";
-export type * from "./types/plugin";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -342,7 +336,6 @@ export declare class ShogunCore implements IShogunCore {
         newUsername?: string;
     }>;
 }
-export default ShogunCore;
 declare global {
     interface Window {
         initShogun: (config: ShogunSDKConfig) => ShogunCore;
@@ -350,3 +343,4 @@ declare global {
         ShogunCoreClass: typeof ShogunCore;
     }
 }
+export default ShogunCore;

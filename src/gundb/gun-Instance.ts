@@ -16,9 +16,12 @@ import type {
   EventListener,
   GunOperationResult,
 } from "./types";
+
 import type { AuthResult, SignUpResult } from "../types/shogun";
 
-import Gun from "gun/gun";
+// Import Gun - will be handled by webpack externals
+const Gun =
+  typeof window !== "undefined" && window.Gun ? window.Gun : require("gun");
 import SEA from "gun/sea";
 import "gun/lib/then.js";
 import "gun/lib/radisk.js";
@@ -45,7 +48,7 @@ import { GunRxJS } from "./gun-rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 
-/**
+/*
  * Interface for username lookup results
  */
 interface UsernameLookupResult {
@@ -3036,16 +3039,9 @@ class GunInstance {
   }
 }
 
-export {
-  GunInstance,
-  SEA,
-  Gun,
-  GunRxJS,
-  crypto,
-  GunErrors,
-  derive,
-  restrictedPut,
-};
+export { GunInstance, SEA, GunRxJS, crypto, GunErrors, derive, restrictedPut };
+
+export default Gun;
 
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };

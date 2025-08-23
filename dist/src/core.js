@@ -1,20 +1,9 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.Gun = exports.SEA = void 0;
+exports.ShogunCore = void 0;
 const events_1 = require("./types/events");
 const errorHandler_1 = require("./utils/errorHandler");
 const storage_1 = require("./storage/storage");
@@ -24,16 +13,8 @@ const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
 const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
 const gundb_1 = require("./gundb");
-Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return gundb_1.Gun; } });
-Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return gundb_1.SEA; } });
-Object.defineProperty(exports, "GunInstance", { enumerable: true, get: function () { return gundb_1.GunInstance; } });
-Object.defineProperty(exports, "GunRxJS", { enumerable: true, get: function () { return gundb_1.GunRxJS; } });
-Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { return gundb_1.crypto; } });
-Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return gundb_1.derive; } });
-Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return gundb_1.GunErrors; } });
-__exportStar(require("./utils/errorHandler"), exports);
-__exportStar(require("./plugins"), exports);
-__exportStar(require("./types/shogun"), exports);
+// Import Gun as default export
+const gun_Instance_1 = __importDefault(require("./gundb/gun-Instance"));
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -87,17 +68,17 @@ class ShogunCore {
             });
         });
         if (config.authToken) {
-            (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
+            (0, gundb_1.restrictedPut)(gun_Instance_1.default, config.authToken);
         }
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
             }
             else {
-                this._gun = (0, gundb_1.Gun)({
+                this._gun = (0, gun_Instance_1.default)({
                     peers: config.peers || [],
-                    radisk: false,
-                    localStorage: false,
+                    radisk: config.radisk || false,
+                    localStorage: config.localStorage || false,
                 });
             }
         }
@@ -912,7 +893,6 @@ class ShogunCore {
     }
 }
 exports.ShogunCore = ShogunCore;
-exports.default = ShogunCore;
 if (typeof window !== "undefined") {
     window.ShogunCoreClass = ShogunCore;
 }
@@ -923,3 +903,4 @@ if (typeof window !== "undefined") {
         return instance;
     };
 }
+exports.default = ShogunCore;

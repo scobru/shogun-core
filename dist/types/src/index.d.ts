@@ -1,0 +1,14 @@
+import { ShogunCore } from "./core";
+import { Relay, RelayConfig, RelayPresets, RelayStatus, createRelay } from "./gundb/relay";
+import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/gun-Instance";
+import { SEA, GunRxJS, crypto, derive, GunErrors, GunInstance } from "./gundb/gun-Instance";
+import Gun from "./gundb/gun-Instance";
+export * from "./utils/errorHandler";
+export * from "./plugins";
+export * from "./types/shogun";
+export type * from "./types/plugin";
+export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
+export { SEA, GunRxJS, crypto, derive, GunErrors, GunInstance };
+export { Gun };
+export { ShogunCore, Relay, createRelay, RelayPresets };
+export type { RelayConfig, RelayStatus };

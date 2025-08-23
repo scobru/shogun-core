@@ -1,5 +1,5 @@
 import { BasePlugin } from "../base";
-import { ShogunCore } from "../../index";
+import { ShogunCore } from "../../core";
 import { Webauthn } from "./webauthn";
 import { WebAuthnSigner, WebAuthnSigningCredential } from "./webauthnSigner";
 import {

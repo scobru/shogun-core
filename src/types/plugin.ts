@@ -1,4 +1,4 @@
-import { ShogunCore } from "../index";
+import { ShogunCore } from "../core";
 import { PluginCategory } from "./shogun";
 
 /**

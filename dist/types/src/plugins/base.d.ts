@@ -1,4 +1,4 @@
-import { ShogunCore } from "../index";
+import { ShogunCore } from "../core";
 import { ShogunPlugin } from "../types/plugin";
 import { PluginCategory } from "../types/shogun";
 import { EventEmitter } from "../utils/eventEmitter";

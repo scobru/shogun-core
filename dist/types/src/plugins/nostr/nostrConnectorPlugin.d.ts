@@ -1,18 +1,17 @@
 import { BasePlugin } from "../base";
-import { ShogunCore } from "../../index";
-import { Web3SigningCredential } from "./web3Signer";
-import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
-import { ethers } from "ethers";
+import { ShogunCore } from "../../core";
+import { NostrSigningCredential } from "./nostrSigner";
+import { NostrConnectorCredentials, ConnectionResult, NostrConnectorPluginInterface } from "./types";
 import { AuthResult, SignUpResult } from "../../types/shogun";
-import { ISEAPair } from "gun";
 /**
- * Plugin per la gestione delle funzionalità Web3 in ShogunCore
+ * Plugin for managing Bitcoin wallet functionality in ShogunCore
+ * Supports Alby, Nostr extensions, or direct key management
  */
-export declare class Web3ConnectorPlugin extends BasePlugin implements Web3ConnectorPluginInterface {
+export declare class NostrConnectorPlugin extends BasePlugin implements NostrConnectorPluginInterface {
     name: string;
     version: string;
     description: string;
-    private Web3;
+    private bitcoinConnector;
     private signer;
     /**
      * @inheritdoc
@@ -23,10 +22,10 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
      */
     destroy(): void;
     /**
-     * Assicura che il modulo Web3 sia inizializzato
+     * Ensure that the Bitcoin wallet module is initialized
      * @private
      */
-    private assertMetaMask;
+    private assertBitcoinConnector;
     /**
      * Assicura che il signer sia inizializzato
      * @private
@@ -37,13 +36,22 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
      */
     isAvailable(): boolean;
     /**
-     * @inheritdoc
+     * Check if Nostr extension is available
      */
-    connectMetaMask(): Promise<ConnectionResult>;
+    isNostrExtensionAvailable(): boolean;
+    /**
+     * Connect to Nostr wallet automatically
+     * This is a convenience method for easy wallet connection
+     */
+    connectNostrWallet(): Promise<ConnectionResult>;
     /**
      * @inheritdoc
      */
-    generateCredentials(address: string): Promise<ISEAPair>;
+    connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+    /**
+     * @inheritdoc
+     */
+    generateCredentials(address: string, signature: string, message: string): Promise<NostrConnectorCredentials>;
     /**
      * @inheritdoc
      */
@@ -51,34 +59,22 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
     /**
      * @inheritdoc
      */
-    setCustomProvider(rpcUrl: string, privateKey: string): void;
-    /**
-     * @inheritdoc
-     */
-    getSigner(): Promise<ethers.Signer>;
-    /**
-     * @inheritdoc
-     */
-    getProvider(): Promise<ethers.JsonRpcProvider | ethers.BrowserProvider>;
+    verifySignature(message: string, signature: string, address: string): Promise<boolean>;
     /**
      * @inheritdoc
      */
     generatePassword(signature: string): Promise<string>;
     /**
-     * @inheritdoc
+     * Creates a new Nostr signing credential
+     * CONSISTENT with normal Nostr approach
      */
-    verifySignature(message: string, signature: string): Promise<string>;
+    createSigningCredential(address: string): Promise<NostrSigningCredential>;
     /**
-     * Creates a new Web3 signing credential
-     * CONSISTENT with normal Web3 approach
-     */
-    createSigningCredential(address: string): Promise<Web3SigningCredential>;
-    /**
-     * Creates an authenticator function for Web3 signing
+     * Creates an authenticator function for Nostr signing
      */
     createAuthenticator(address: string): (data: any) => Promise<string>;
     /**
-     * Creates a derived key pair from Web3 credential
+     * Creates a derived key pair from Nostr credential
      */
     createDerivedKeyPair(address: string, extra?: string[]): Promise<{
         pub: string;
@@ -87,23 +83,23 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
         epriv: string;
     }>;
     /**
-     * Signs data with derived keys after Web3 verification
+     * Signs data with derived keys after Nostr verification
      */
     signWithDerivedKeys(data: any, address: string, extra?: string[]): Promise<string>;
     /**
      * Get signing credential by address
      */
-    getSigningCredential(address: string): Web3SigningCredential | undefined;
+    getSigningCredential(address: string): NostrSigningCredential | undefined;
     /**
      * List all signing credentials
      */
-    listSigningCredentials(): Web3SigningCredential[];
+    listSigningCredentials(): NostrSigningCredential[];
     /**
      * Remove a signing credential
      */
     removeSigningCredential(address: string): boolean;
     /**
-     * Creates a Gun user from Web3 signing credential
+     * Creates a Gun user from Nostr signing credential
      * This ensures the SAME user is created as with normal approach
      */
     createGunUserFromSigningCredential(address: string): Promise<{
@@ -114,7 +110,7 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
     /**
      * Get the Gun user public key for a signing credential
      */
-    getGunUserPubFromSigningCredential(address: string): Promise<string | undefined>;
+    getGunUserPubFromSigningCredential(address: string): string | undefined;
     /**
      * Get the password (for consistency checking)
      */
@@ -133,7 +129,7 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
      * This is the recommended method for oneshot signing with full consistency
      */
     setupConsistentOneshotSigning(address: string): Promise<{
-        credential: Web3SigningCredential;
+        credential: NostrSigningCredential;
         authenticator: (data: any) => Promise<string>;
         gunUser: {
             success: boolean;
@@ -144,17 +140,24 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
         password: string;
     }>;
     /**
-     * Login con Web3
-     * @param address - Indirizzo Ethereum
-     * @returns {Promise<AuthResult>} Risultato dell'autenticazione
-     * @description Autentica l'utente usando le credenziali del wallet Web3 dopo la verifica della firma
+     * Login with Bitcoin wallet
+     * @param address - Bitcoin address
+     * @returns {Promise<AuthResult>} Authentication result
+     * @description Authenticates the user using Bitcoin wallet credentials after signature verification
      */
     login(address: string): Promise<AuthResult>;
     /**
-     * Register new user with Web3 wallet
-     * @param address - Ethereum address
+     * Register new user with Nostr wallet
+     * @param address - Nostr address
      * @returns {Promise<SignUpResult>} Registration result
      */
     signUp(address: string): Promise<SignUpResult>;
+    /**
+     * Convenience method that matches the interface pattern
+     */
+    loginWithBitcoinWallet(address: string): Promise<AuthResult>;
+    /**
+     * Convenience method that matches the interface pattern
+     */
+    signUpWithBitcoinWallet(address: string): Promise<AuthResult>;
 }
-export type { Web3ConnectorPluginInterface } from "./types";
