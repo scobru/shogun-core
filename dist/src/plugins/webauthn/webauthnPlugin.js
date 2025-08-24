@@ -66,6 +66,21 @@ class WebauthnPlugin extends base_1.BasePlugin {
         return this.signer;
     }
     /**
+     * Genera un pair SEA dalle credenziali WebAuthn
+     * @private
+     */
+    async generatePairFromCredentials(credentials) {
+        try {
+            // Use the signer to create a derived key pair from the WebAuthn credentials
+            const pair = await this.assertSigner().createDerivedKeyPair(credentials.credentialId, credentials.username);
+            return pair;
+        }
+        catch (error) {
+            console.error("Error generating pair from WebAuthn credentials:", error);
+            return null;
+        }
+    }
+    /**
      * @inheritdoc
      */
     isSupported() {
@@ -366,7 +381,13 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 throw new Error(credentials?.error || "Unable to generate WebAuthn credentials");
             }
             core.setAuthMethod("webauthn");
-            return await core.signUp(username, "", "", credentials.key);
+            // Convert WebAuthn credentials to SEA pair
+            const pair = await this.generatePairFromCredentials(credentials);
+            if (!pair) {
+                throw new Error("Failed to generate SEA pair from WebAuthn credentials");
+            }
+            // Use pair-based authentication instead of password
+            return await core.signUp(username, "", "", pair);
         }
         catch (error) {
             console.error(`Error during WebAuthn registration: ${error}`);

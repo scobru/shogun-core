@@ -44,9 +44,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = void 0;
 // Import Gun - will be handled by webpack externals
+const gun_1 = __importDefault(require("gun/gun"));
 const Gun = typeof window !== "undefined" && window.Gun
     ? window.Gun
-    : Promise.resolve().then(() => __importStar(require("gun/gun")));
+    : gun_1.default;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
 require("gun/lib/then.js");

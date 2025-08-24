@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { AuthResult, SignUpResult } from "../../types/shogun";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+import { ISEAPair } from "gun";
 
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -88,6 +89,27 @@ export class WebauthnPlugin
       throw new Error("WebAuthn signer not initialized");
     }
     return this.signer;
+  }
+
+  /**
+   * Genera un pair SEA dalle credenziali WebAuthn
+   * @private
+   */
+  private async generatePairFromCredentials(
+    credentials: WebAuthnUniformCredentials,
+  ): Promise<ISEAPair | null> {
+    try {
+      // Use the signer to create a derived key pair from the WebAuthn credentials
+      const pair = await this.assertSigner().createDerivedKeyPair(
+        credentials.credentialId,
+        credentials.username,
+      );
+
+      return pair;
+    } catch (error) {
+      console.error("Error generating pair from WebAuthn credentials:", error);
+      return null;
+    }
   }
 
   /**
@@ -526,7 +548,17 @@ export class WebauthnPlugin
         );
       }
       core.setAuthMethod("webauthn");
-      return await core.signUp(username, "", "", credentials.key);
+
+      // Convert WebAuthn credentials to SEA pair
+      const pair = await this.generatePairFromCredentials(credentials);
+      if (!pair) {
+        throw new Error(
+          "Failed to generate SEA pair from WebAuthn credentials",
+        );
+      }
+
+      // Use pair-based authentication instead of password
+      return await core.signUp(username, "", "", pair);
     } catch (error: any) {
       console.error(`Error during WebAuthn registration: ${error}`);
       ErrorHandler.handle(

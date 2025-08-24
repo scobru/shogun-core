@@ -31,6 +31,11 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      */
     private assertSigner;
     /**
+     * Genera un pair SEA dalle credenziali WebAuthn
+     * @private
+     */
+    private generatePairFromCredentials;
+    /**
      * @inheritdoc
      */
     isSupported(): boolean;
