@@ -3,7 +3,7 @@ import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import {
   IShogunCore,
-  ShogunSDKConfig,
+  ShogunCoreConfig,
   AuthResult,
   SignUpResult,
   PluginCategory,
@@ -47,7 +47,7 @@ export class ShogunCore implements IShogunCore {
   public db: GunInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
-  public config: ShogunSDKConfig;
+  public config: ShogunCoreConfig;
   public rx!: GunRxJS;
 
   private _gun!: IGunInstance<any>;
@@ -64,7 +64,7 @@ export class ShogunCore implements IShogunCore {
    * Initializes all required components including storage, event emitter, GunInstance connection,
    * and plugin system.
    */
-  constructor(config: ShogunSDKConfig) {
+  constructor(config: ShogunCoreConfig) {
     // Polyfill console for environments where it might be missing
     if (typeof console === "undefined") {
       (global as any).console = {
@@ -224,7 +224,7 @@ export class ShogunCore implements IShogunCore {
    * Register built-in plugins based on configuration
    * @private
    */
-  private registerBuiltinPlugins(config: ShogunSDKConfig): void {
+  private registerBuiltinPlugins(config: ShogunCoreConfig): void {
     try {
       // Register OAuth plugin if configuration is provided
       if (config.oauth) {
@@ -1123,7 +1123,7 @@ export class ShogunCore implements IShogunCore {
 
 declare global {
   interface Window {
-    initShogun: (config: ShogunSDKConfig) => ShogunCore;
+    initShogun: (config: ShogunCoreConfig) => ShogunCore;
     ShogunCore: ShogunCore;
     ShogunCoreClass: typeof ShogunCore;
   }
@@ -1134,7 +1134,7 @@ if (typeof window !== "undefined") {
 }
 
 if (typeof window !== "undefined") {
-  window.initShogun = (config: ShogunSDKConfig): ShogunCore => {
+  window.initShogun = (config: ShogunCoreConfig): ShogunCore => {
     const instance = new ShogunCore(config);
     window.ShogunCore = instance;
     return instance;
