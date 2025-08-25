@@ -6,6 +6,13 @@ Shogun Core is a TypeScript SDK for building decentralized applications (dApps) 
 
 ## Recent Improvements
 
+### ✅ **API Cleanup and Optimization (v1.9.4)**
+
+- **Removed Deprecated Functions**: Eliminated `updateUserAlias` (use `changeUsername` instead), `handleSimpleOAuth`, `clearAllStorageData`, `exportPair`
+- **Simplified API**: Streamlined core methods for better maintainability
+- **Enhanced Type Safety**: Improved TypeScript definitions and error handling
+- **Performance Improvements**: Optimized plugin system and event handling
+
 ### ✅ **Type Consistency Fixes (v1.7.0)**
 
 - **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
@@ -108,12 +115,12 @@ class ShogunCore implements IShogunCore {
   public db: GunInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
-  public config: ShogunSDKConfig;
+  public config: ShogunCoreConfig;
   public rx: GunRxJS;
   public wallets?: Wallets;
 
   // Constructor & Initialization
-  constructor(config: ShogunSDKConfig);
+  constructor(config: ShogunCoreConfig);
   async initialize(): Promise<void>;
 
   // Authentication Methods - ✅ FIXED TYPES
@@ -789,7 +796,7 @@ shogun.on("auth:signup", (data) => {
   console.log("Method:", data.method);
 });
 
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
+// Note: The `wallet:created` event is defined in types but not currently emitted by the core
 
 // Listen for GunDB operations
 shogun.on("gun:put", (data) => {
@@ -827,7 +834,7 @@ if (shogun.wallets) {
   });
 }
 
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
+// Note: The `wallet:created` event is defined in types but not currently emitted by the core
 ```
 
 ## OAuth Security Features

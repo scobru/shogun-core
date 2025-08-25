@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive API documentation for Shogun Core v1.7.0 with unified type system and consistent authentication interfaces.
+Comprehensive API documentation for Shogun Core v1.9.4 with unified type system and consistent authentication interfaces.
 
 ## Core Components
 
@@ -291,9 +291,7 @@ class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
     actualUserPub?: string;
     expectedUserPub?: string;
   }>;
-  async setupConsistentOneshotSigning(
-    username: string
-  ): Promise<{
+  async setupConsistentOneshotSigning(username: string): Promise<{
     credential: WebAuthnSigningCredential;
     authenticator: Function;
     gunUser: any;
@@ -371,9 +369,7 @@ class Web3ConnectorPlugin
     actualUserPub?: string;
     expectedUserPub?: string;
   }>;
-  async setupConsistentOneshotSigning(
-    address: string
-  ): Promise<{
+  async setupConsistentOneshotSigning(address: string): Promise<{
     credential: Web3SigningCredential;
     authenticator: Function;
     gunUser: any;
@@ -466,9 +462,7 @@ class NostrConnectorPlugin
     actualUserPub?: string;
     expectedUserPub?: string;
   }>;
-  async setupConsistentOneshotSigning(
-    address: string
-  ): Promise<{
+  async setupConsistentOneshotSigning(address: string): Promise<{
     credential: NostrSigningCredential;
     authenticator: Function;
     gunUser: any;
@@ -671,7 +665,7 @@ interface WalletEventData {
 ### Configuration Types
 
 ```typescript
-interface ShogunSDKConfig {
+interface ShogunCoreConfig {
   gunInstance?: IGunInstance<any>;
   authToken?: string;
   scope?: string;

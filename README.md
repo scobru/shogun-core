@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.7.0-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v1.9.4-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 
@@ -20,16 +20,14 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
 - ✅ **Type Consistency**: Unified return types across all authentication methods
 
-## Recent Updates (v1.7.5)
+## Recent Updates (v1.9.4)
 
-### ✅ **Code Cleanup and Optimization**
+### ✅ **API Cleanup and Optimization**
 
-- **Removed Deprecated Functions**: Eliminated `handleSimpleOAuth` and Alby support
-- **Simplified API**: Removed redundant `updateUserAlias` (use `changeUsername` instead)
-- **Debug Functions Cleanup**: Removed debug-only functions like `clearAllStorageData`, `exportPair`
-- **Error Handler Optimization**: Removed debug statistics and debug helper functions
-- **Cache Management**: Removed optional cache functions for cleaner API
-- **Bundle Size Reduction**: Estimated 15-20% reduction in bundle size
+- **Removed Deprecated Functions**: Eliminated `updateUserAlias` (use `changeUsername` instead), `handleSimpleOAuth`, `clearAllStorageData`, `exportPair`
+- **Simplified API**: Streamlined core methods for better maintainability
+- **Enhanced Type Safety**: Improved TypeScript definitions and error handling
+- **Performance Improvements**: Optimized plugin system and event handling
 
 ## Recent Updates (v1.7.0)
 
@@ -89,10 +87,11 @@ const shogun = new ShogunCore({
   oauth: {
     enabled: true,
     usePKCE: true, // Recommended for SPAs
+    allowUnsafeClientSecret: true, // Required for Google OAuth
     providers: {
       google: {
         clientId: "YOUR_GOOGLE_CLIENT_ID",
-        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // For server-side flow
+        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // Required for Google even with PKCE
         redirectUri: "http://localhost:3000/auth/callback",
         scope: ["openid", "email", "profile"],
       },
@@ -498,7 +497,7 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 ### Configuration Options
 
 ```typescript
-interface ShogunSDKConfig {
+interface ShogunCoreConfig {
   peers?: string[]; // GunDB peer URLs
   scope?: string; // Application scope
   authToken?: string; // GunDB super peer secret
@@ -522,6 +521,7 @@ interface ShogunSDKConfig {
   oauth?: {
     enabled?: boolean;
     usePKCE?: boolean;
+    allowUnsafeClientSecret?: boolean;
     providers?: Record<string, any>;
   };
 
@@ -544,7 +544,11 @@ interface ShogunEventMap {
   "auth:login": AuthEventData; // User logged in
   "auth:logout": void; // User logged out
   "auth:signup": AuthEventData; // New user registered
-  "wallet:created": WalletEventData; // Wallet derived from user keys
+  "auth:username_changed": {
+    oldUsername?: string;
+    newUsername?: string;
+    userPub?: string;
+  }; // Username changed
   "gun:put": GunDataEventData; // Data written to GunDB
   "gun:get": GunDataEventData; // Data read from GunDB
   "gun:set": GunDataEventData; // Data updated in GunDB
@@ -576,7 +580,7 @@ shogun.on("auth:signup", (data) => {
   console.log("New user signed up:", data.username);
 });
 
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
+// Note: The `wallet:created` event is defined in types but not currently emitted by the core
 
 // Listen for errors
 shogun.on("error", (error) => {
@@ -586,7 +590,7 @@ shogun.on("error", (error) => {
 
 ## Cryptographic Wallets
 
-Nota: la derivazione automatica dei wallet e l'evento `wallet:created` sono sperimentali e non garantiti in v1.7.0.
+Note: Automatic wallet derivation and the `wallet:created` event are experimental and not guaranteed in the current version.
 
 ## Error Handling
 
