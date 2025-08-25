@@ -18,6 +18,8 @@ module.exports = {
   },
   externals: {
     gun: "Gun",
+    "gun/gun": "Gun",
+    "gun/sea": "Gun.SEA",
   },
 
   resolve: {

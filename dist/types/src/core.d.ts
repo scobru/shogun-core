@@ -1,7 +1,7 @@
 import { ShogunEventMap } from "./types/events";
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunSDKConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
+import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
 import { IGunUserInstance, IGunInstance, GunInstance, GunRxJS } from "./gundb";
@@ -22,7 +22,7 @@ export declare class ShogunCore implements IShogunCore {
     db: GunInstance;
     storage: ShogunStorage;
     provider?: ethers.Provider;
-    config: ShogunSDKConfig;
+    config: ShogunCoreConfig;
     rx: GunRxJS;
     private _gun;
     private _user;
@@ -37,7 +37,7 @@ export declare class ShogunCore implements IShogunCore {
      * Initializes all required components including storage, event emitter, GunInstance connection,
      * and plugin system.
      */
-    constructor(config: ShogunSDKConfig);
+    constructor(config: ShogunCoreConfig);
     /**
      * Initialize the Shogun SDK asynchronously
      * This method handles initialization tasks that require async operations
@@ -338,7 +338,7 @@ export declare class ShogunCore implements IShogunCore {
 }
 declare global {
     interface Window {
-        initShogun: (config: ShogunSDKConfig) => ShogunCore;
+        initShogun: (config: ShogunCoreConfig) => ShogunCore;
         ShogunCore: ShogunCore;
         ShogunCoreClass: typeof ShogunCore;
     }

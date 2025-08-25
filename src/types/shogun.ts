@@ -132,7 +132,7 @@ export interface IShogunCore extends PluginManager {
   db: GunInstance;
   rx: GunRxJS; // RxJS integration
   storage: ShogunStorage;
-  config: ShogunSDKConfig;
+  config: ShogunCoreConfig;
   provider?: ethers.Provider;
   signer?: ethers.Signer;
   // Event emitter methods
@@ -186,7 +186,7 @@ export interface WebauthnConfig {
 /**
  * Shogun SDK configuration
  */
-export interface ShogunSDKConfig {
+export interface ShogunCoreConfig {
   gunInstance?: IGunInstance<any>;
   authToken?: string;
   scope?: string;
