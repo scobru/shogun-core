@@ -1218,7 +1218,12 @@ class GunInstance {
             }
             console.log(`Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`);
             const existingUser = await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.warn(`⚠️ Timeout getting user data for ${userPub} - proceeding with null`);
+                    resolve(null);
+                }, 5000); // 5 second timeout
                 this.gun.get(userPub).once((data) => {
+                    clearTimeout(timeout);
                     resolve(data);
                 });
             });
@@ -1226,9 +1231,14 @@ class GunInstance {
             if (!existingUser) {
                 try {
                     await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            console.warn(`⚠️ Timeout saving user metadata for ${userPub} - continuing`);
+                            resolve({ ok: 0 }); // Resolve with mock success to continue
+                        }, 5000); // 5 second timeout
                         this.gun
                             .get(userPub)
                             .put({ username: sanitizedUsername }, (ack) => {
+                            clearTimeout(timeout);
                             if (ack.err) {
                                 console.error(`Error saving user metadata: ${ack.err}`);
                                 reject(ack.err);
@@ -1247,10 +1257,15 @@ class GunInstance {
                 // Create username mapping
                 try {
                     await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            console.warn(`⚠️ Timeout creating username mapping for ${sanitizedUsername} - continuing`);
+                            resolve({ ok: 0 }); // Resolve with mock success to continue
+                        }, 5000); // 5 second timeout
                         this.node
                             .get("usernames")
                             .get(sanitizedUsername)
                             .put(userPub, (ack) => {
+                            clearTimeout(timeout);
                             if (ack.err) {
                                 reject(ack.err);
                             }
@@ -1268,7 +1283,12 @@ class GunInstance {
                 // Add user to users collection
                 try {
                     await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            console.warn(`⚠️ Timeout adding user to collection for ${userPub} - continuing`);
+                            resolve({ ok: 0 }); // Resolve with mock success to continue
+                        }, 5000); // 5 second timeout
                         this.node.get("users").set(this.gun.get(userPub), (ack) => {
+                            clearTimeout(timeout);
                             if (ack.err) {
                                 reject(ack.err);
                             }
