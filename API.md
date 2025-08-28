@@ -80,7 +80,7 @@ class ShogunCore implements IShogunCore {
 
 ### GunInstance (gun-Instance.ts)
 
-Database layer providing GunDB integration with enhanced security and rate limiting.
+Database layer providing GunDB integration with core authentication and data operations.
 
 ```typescript
 class GunInstance {
@@ -95,7 +95,7 @@ class GunInstance {
   constructor(gun: IGunInstance<any>, appScope?: string);
   async initialize(appScope?: string): Promise<void>;
 
-  // Authentication API - ✅ FIXED TYPES
+  // Authentication API - ✅ SIMPLIFIED & FIXED TYPES
   async login(
     username: string,
     password: string,
@@ -110,13 +110,6 @@ class GunInstance {
   isLoggedIn(): boolean;
   restoreSession(): { success: boolean; userPub?: string; error?: string };
 
-  // User Management
-  async checkUsernameExists(username: string): Promise<any>;
-  async updateUserAlias(
-    newAlias: string
-  ): Promise<{ success: boolean; error?: string }>;
-  clearGunStorage(): void;
-
   // Data Operations
   get(path: string): any;
   async getData(path: string): Promise<GunData>;
@@ -130,56 +123,8 @@ class GunInstance {
   async hashText(text: string): Promise<string>;
   async encrypt(data: any, key: string): Promise<string>;
   async decrypt(encryptedData: string, key: string): Promise<any>;
-  async derive(
-    password: string | number,
-    extra?: string | string[],
-    options?: DeriveOptions
-  ): Promise<any>;
-  async deriveP256(
-    password: string | number,
-    extra?: string | string[]
-  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async deriveBitcoin(
-    password: string | number,
-    extra?: string | string[]
-  ): Promise<{ pub: string; priv: string; address: string }>;
-  async deriveEthereum(
-    password: string | number,
-    extra?: string | string[]
-  ): Promise<{ pub: string; priv: string; address: string }>;
 
-  // Frozen Space (Immutable Data Storage)
-  async createFrozenSpace(
-    data: any,
-    options?: {
-      namespace?: string;
-      path?: string;
-      description?: string;
-      metadata?: Record<string, any>;
-    }
-  ): Promise<{ hash: string; fullPath: string; data: any }>;
-  async getFrozenSpace(
-    hash: string,
-    namespace?: string,
-    path?: string
-  ): Promise<any>;
-  async verifyFrozenSpace(
-    data: any,
-    hash: string,
-    namespace?: string,
-    path?: string
-  ): Promise<{ verified: boolean; frozenData?: any; error?: string }>;
-
-  // Peer Management
-  addPeer(peer: string): void;
-  removePeer(peer: string): void;
-  getCurrentPeers(): string[];
-  getAllConfiguredPeers(): string[];
-  resetPeers(newPeers?: string[]): void;
-  reconnectToPeer(peer: string): void;
-  getPeerInfo(): { [peer: string]: { connected: boolean; status: string } };
-
-  // Password Recovery
+  // Password Recovery System
   async setPasswordHint(
     username: string,
     password: string,
@@ -192,12 +137,18 @@ class GunInstance {
     securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }>;
 
+  // Peer Management
+  addPeer(peer: string): void;
+  removePeer(peer: string): void;
+  getCurrentPeers(): string[];
+  getAllConfiguredPeers(): string[];
+  resetPeers(newPeers?: string[]): void;
+
   // Utilities
   getGun(): IGunInstance<any>;
   getCurrentUser(): UserInfo | null;
   getUser(): GunUser;
   rx(): GunRxJS;
-  async testConnectivity(): Promise<any>;
 
   // Event System
   on(event: string | symbol, listener: EventListener): void;
@@ -206,6 +157,8 @@ class GunInstance {
   emit(event: string | symbol, data?: EventData): boolean;
 }
 ```
+
+````
 
 ## Plugin APIs
 
@@ -303,7 +256,7 @@ class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
   initialize(core: ShogunCore): void;
   destroy(): void;
 }
-```
+````
 
 ### Web3 Plugin (web3ConnectorPlugin.ts)
 
@@ -634,15 +587,6 @@ interface ShogunEventMap {
   "auth:login": AuthEventData;
   "auth:logout": void;
   "auth:signup": AuthEventData;
-  // Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
-  "gun:put": GunDataEventData;
-  "gun:get": GunDataEventData;
-  "gun:set": GunDataEventData;
-  "gun:remove": GunDataEventData;
-  "gun:peer:add": GunPeerEventData;
-  "gun:peer:remove": GunPeerEventData;
-  "gun:peer:connect": GunPeerEventData;
-  "gun:peer:disconnect": GunPeerEventData;
   "plugin:registered": { name: string; version?: string; category?: string };
   "plugin:unregistered": { name: string };
   debug: { action: string; [key: string]: any };
@@ -736,8 +680,12 @@ shogun.on("auth:login", (data: AuthEventData) => {
   console.log(`User ${data.username} logged in via ${data.method}`);
 });
 
-shogun.on("wallet:created", (data: WalletEventData) => {
-  console.log(`Wallet created: ${data.address}`);
+shogun.on("auth:logout", () => {
+  console.log("User logged out");
+});
+
+shogun.on("auth:signup", (data: AuthEventData) => {
+  console.log(`New user signed up: ${data.username}`);
 });
 
 shogun.on("error", (error: ErrorEventData) => {
@@ -756,19 +704,24 @@ const data = await shogun.db.get("path/to/data");
 await shogun.db.putUserData("preferences", { theme: "dark" });
 const prefs = await shogun.db.getUserData("preferences");
 
-// Immutable data (Frozen Space)
-const { hash } = await shogun.db.createFrozenSpace({ important: "data" });
-const frozenData = await shogun.db.getFrozenSpace(hash);
+// Password recovery
+await shogun.db.setPasswordHint(
+  "username",
+  "password",
+  "My favorite color",
+  ["What is your favorite color?"],
+  ["blue"]
+);
 ```
 
 ## Security Features
 
-- **Rate Limiting**: Built-in protection against brute force attacks
-- **Enhanced Password Validation**: Configurable strength requirements
+- **Password Recovery System**: Secure password hints with security questions
 - **Session Encryption**: Secure session data storage
 - **PKCE OAuth Flow**: Protection against authorization code interception
 - **Type Safety**: Compile-time validation of API usage
 - **Event-driven Architecture**: Real-time monitoring and debugging
+- **Simplified Architecture**: Reduced attack surface through feature removal
 
 ## Error Handling
 

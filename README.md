@@ -17,17 +17,20 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
 - 📡 **Event System**: Typed event system for monitoring authentication and data changes
-- 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
+- 🔑 **Password Recovery**: Secure password hint system with security questions
 - ✅ **Type Consistency**: Unified return types across all authentication methods
+- 🚀 **Simplified Architecture**: Focused on core functionality with reduced complexity
 
-## Recent Updates (v1.9.4)
+## Recent Updates (v1.9.5)
 
-### ✅ **API Cleanup and Optimization**
+### ✅ **Major API Simplification**
 
-- **Removed Deprecated Functions**: Eliminated `updateUserAlias` (use `changeUsername` instead), `handleSimpleOAuth`, `clearAllStorageData`, `exportPair`
-- **Simplified API**: Streamlined core methods for better maintainability
-- **Enhanced Type Safety**: Improved TypeScript definitions and error handling
-- **Performance Improvements**: Optimized plugin system and event handling
+- **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
+- **Simplified Architecture**: Removed cryptographic key derivation functions and advanced peer management
+- **Streamlined Event System**: Removed complex event emission for data and peer operations
+- **Enhanced Core Focus**: Maintained password hint system while removing advanced features
+- **Improved Maintainability**: Reduced codebase complexity by ~400-500 lines
+- **Better Performance**: Simplified operations with reduced overhead
 
 ## Recent Updates (v1.7.0)
 
@@ -436,8 +439,8 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
     <script src="https://cdn.jsdelivr.net/npm/shogun-core/dist/browser/shogun-core.js"></script>
 
     <script>
-      // The script exposes a global `initShogun` function
-      const shogun = initShogun({
+      // Access the global Shogun Core function
+      const shogunCore = window.SHOGUN_CORE({
         peers: ["https://gun-manhattan.herokuapp.com/gun"],
         scope: "my-browser-app",
         web3: { enabled: true },
@@ -448,11 +451,11 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
         },
       });
 
-      console.log("Shogun Core initialized in browser!", shogun);
+      console.log("Shogun Core initialized in browser!", shogunCore);
 
       async function connectWallet() {
-        if (shogun.hasPlugin("web3")) {
-          const web3Plugin = shogun.getPlugin("web3");
+        if (shogunCore.hasPlugin("web3")) {
+          const web3Plugin = shogunCore.getPlugin("web3");
           try {
             const provider = await web3Plugin.getProvider();
             const signer = provider.getSigner();
@@ -580,17 +583,35 @@ shogun.on("auth:signup", (data) => {
   console.log("New user signed up:", data.username);
 });
 
-// Note: The `wallet:created` event is defined in types but not currently emitted by the core
-
 // Listen for errors
 shogun.on("error", (error) => {
   console.error("Shogun error:", error.message);
 });
 ```
 
-## Cryptographic Wallets
+## Password Recovery System
 
-Note: Automatic wallet derivation and the `wallet:created` event are experimental and not guaranteed in the current version.
+Shogun Core includes a secure password recovery system using security questions:
+
+```typescript
+// Set password hint with security questions
+await shogun.db.setPasswordHint(
+  "username",
+  "password",
+  "My favorite color",
+  ["What is your favorite color?", "What was your first pet's name?"],
+  ["blue", "fluffy"]
+);
+
+// Recover password using security answers
+const result = await shogun.db.forgotPassword("username", ["blue", "fluffy"]);
+
+if (result.success) {
+  console.log("Password hint:", result.hint);
+}
+```
+
+Note: The cryptographic wallet derivation feature has been removed in v1.9.5 to simplify the architecture.
 
 ## Error Handling
 
@@ -642,7 +663,6 @@ This project includes a comprehensive test suite that covers:
 ### Unit Tests
 
 - **Validation Utils** (`src/__tests__/utils/validation.test.ts`)
-
   - Username validation
   - Email validation
   - OAuth provider validation
@@ -650,14 +670,12 @@ This project includes a comprehensive test suite that covers:
   - Deterministic password generation
 
 - **Error Handler** (`src/__tests__/utils/errorHandler.test.ts`)
-
   - Error creation and handling
   - Error statistics and logging
   - Retry logic
   - External logger integration
 
 - **Event Emitter** (`src/__tests__/utils/eventEmitter.test.ts`)
-
   - Event registration and emission
   - Listener management
   - Error handling in listeners

@@ -188,10 +188,5 @@ describe("GunInstance", () => {
     });
   });
 
-  describe("Storage Operations", () => {
-    it("should handle storage operations without errors", () => {
-      // Test that storage operations don't throw errors
-      expect(() => gunInstance.clearGunStorage()).not.toThrow();
-    });
-  });
+
 });

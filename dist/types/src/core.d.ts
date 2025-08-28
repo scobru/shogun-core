@@ -324,23 +324,11 @@ export declare class ShogunCore implements IShogunCore {
      */
     saveCredentials(credentials: any): Promise<void>;
     getIsLoggedIn(): boolean;
-    /**
-     * Changes the username for the currently authenticated user
-     * @param newUsername New username to set
-     * @returns Promise resolving to the operation result
-     */
-    changeUsername(newUsername: string): Promise<{
-        success: boolean;
-        error?: string;
-        oldUsername?: string;
-        newUsername?: string;
-    }>;
 }
 declare global {
     interface Window {
-        initShogun: (config: ShogunCoreConfig) => ShogunCore;
-        ShogunCore: ShogunCore;
-        ShogunCoreClass: typeof ShogunCore;
+        SHOGUN_CORE: (config: ShogunCoreConfig) => ShogunCore;
+        SHOGUN_CORE_CLASS: typeof ShogunCore;
     }
 }
 export default ShogunCore;

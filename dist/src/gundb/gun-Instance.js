@@ -42,12 +42,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = void 0;
-// Import Gun - will be handled by webpack externals
+exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = exports.Gun = void 0;
+// Import Gun - will be bundled internally
 const gun_1 = __importDefault(require("gun/gun"));
-const Gun = typeof window !== "undefined" && window.Gun
-    ? window.Gun
-    : gun_1.default;
+const Gun = gun_1.default;
+exports.Gun = Gun;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
 require("gun/lib/then.js");
@@ -73,25 +72,14 @@ exports.crypto = crypto;
  */
 const CONFIG = {
     TIMEOUTS: {
-        LOOKUP_FROZEN_SPACE: 2000,
-        LOOKUP_DIRECT_MAPPING: 1500,
-        LOOKUP_ALTERNATE_KEY: 1500,
-        LOOKUP_COMPREHENSIVE: 1500,
         USER_DATA_OPERATION: 5000,
-        STRATEGY_TIMEOUT: 3000,
-    },
-    RATE_LIMITING: {
-        MAX_LOGIN_ATTEMPTS: 5,
-        LOGIN_COOLDOWN_MS: 300000, // 5 minutes
-        MAX_SIGNUP_ATTEMPTS: 3,
-        SIGNUP_COOLDOWN_MS: 600000, // 10 minutes
     },
     PASSWORD: {
-        MIN_LENGTH: 12,
-        REQUIRE_UPPERCASE: true,
-        REQUIRE_LOWERCASE: true,
-        REQUIRE_NUMBERS: true,
-        REQUIRE_SPECIAL_CHARS: true,
+        MIN_LENGTH: 8,
+        REQUIRE_UPPERCASE: false,
+        REQUIRE_LOWERCASE: false,
+        REQUIRE_NUMBERS: false,
+        REQUIRE_SPECIAL_CHARS: false,
     },
 };
 class GunInstance {
@@ -102,8 +90,6 @@ class GunInstance {
     node;
     onAuthCallbacks = [];
     eventEmitter;
-    // Rate limiting storage
-    rateLimitStorage = new Map();
     // Integrated modules
     _rxjs;
     constructor(gun, appScope = "shogun") {
@@ -167,70 +153,11 @@ class GunInstance {
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
     /**
-     * Emits a Gun data event
-     * @private
-     */
-    emitDataEvent(eventType, path, data, success = true, error) {
-        const eventData = {
-            path,
-            data,
-            success,
-            error,
-            timestamp: Date.now(),
-        };
-        this.eventEmitter.emit(eventType, eventData);
-    }
-    /**
-     * Emits a Gun peer event
-     * @private
-     */
-    emitPeerEvent(action, peer) {
-        const eventData = {
-            peer,
-            action,
-            timestamp: Date.now(),
-        };
-        this.eventEmitter.emit(`gun:peer:${action}`, eventData);
-    }
-    /**
-     * Adds an event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    on(event, listener) {
-        this.eventEmitter.on(event, listener);
-    }
-    /**
-     * Removes an event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    off(event, listener) {
-        this.eventEmitter.off(event, listener);
-    }
-    /**
-     * Adds a one-time event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    once(event, listener) {
-        this.eventEmitter.once(event, listener);
-    }
-    /**
-     * Emits an event
-     * @param event Event name
-     * @param data Event data
-     */
-    emit(event, data) {
-        return this.eventEmitter.emit(event, data);
-    }
-    /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add
      */
     addPeer(peer) {
         this.gun.opt({ peers: [peer] });
-        this.emitPeerEvent("add", peer);
         console.log(`Added new peer: ${peer}`);
     }
     /**
@@ -249,7 +176,6 @@ class GunInstance {
                 if (peerConnection && typeof peerConnection.close === "function") {
                     peerConnection.close();
                 }
-                this.emitPeerEvent("remove", peer);
                 console.log(`Removed peer: ${peer}`);
             }
             else {
@@ -457,8 +383,6 @@ class GunInstance {
     async getData(path) {
         return new Promise((resolve) => {
             this.navigateToPath(this.gun, path).once((data) => {
-                // Emit event for the operation
-                this.emitDataEvent("gun:get", path, data, true);
                 resolve(data);
             });
         });
@@ -475,8 +399,6 @@ class GunInstance {
                 const result = ack.err
                     ? { success: false, error: ack.err }
                     : { success: true };
-                // Emit event for the operation
-                this.emitDataEvent("gun:put", path, data, !ack.err, ack.err);
                 resolve(result);
             });
         });
@@ -493,8 +415,6 @@ class GunInstance {
                 const result = ack.err
                     ? { success: false, error: ack.err }
                     : { success: true };
-                // Emit event for the operation
-                this.emitDataEvent("gun:set", path, data, !ack.err, ack.err);
                 resolve(result);
             });
         });
@@ -510,8 +430,6 @@ class GunInstance {
                 const result = ack.err
                     ? { success: false, error: ack.err }
                     : { success: true };
-                // Emit event for the operation
-                this.emitDataEvent("gun:remove", path, null, !ack.err, ack.err);
                 resolve(result);
             });
         });
@@ -613,7 +531,6 @@ class GunInstance {
             }
             catch (error) {
                 console.error(`Error restoring session: ${error}`);
-                this.clearGunStorage();
                 return {
                     success: false,
                     error: `Session restoration failed: ${error}`,
@@ -669,117 +586,6 @@ class GunInstance {
         }
     }
     /**
-     * Debug method: Clears all Gun-related data from local and session storage
-     * This is useful for debugging and testing purposes
-     * @warning This will completely reset the user's local Gun data
-     */
-    clearGunStorage() {
-        try {
-            // Clearing all Gun-related storage data...
-            // Clear localStorage
-            if (typeof localStorage !== "undefined") {
-                try {
-                    const keysToRemove = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && key.startsWith("gun/")) {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    keysToRemove.forEach((key) => localStorage.removeItem(key));
-                    // Cleared items from localStorage
-                }
-                catch (error) {
-                    console.error("Error clearing localStorage:", error);
-                }
-            }
-            // Clear sessionStorage
-            if (typeof sessionStorage !== "undefined") {
-                try {
-                    sessionStorage.removeItem("gunSessionData");
-                    // Session storage cleared
-                }
-                catch (error) {
-                    console.error("Error clearing sessionStorage:", error);
-                }
-            }
-            // Clear current user
-            if (this.user) {
-                try {
-                    this.user.leave();
-                    this.user = null;
-                    // User logged out
-                }
-                catch (logoutError) {
-                    console.error("Error during logout:", logoutError);
-                }
-            }
-            // All Gun-related storage data cleared
-        }
-        catch (error) {
-            console.error("Error clearing storage data:", error);
-        }
-    }
-    /**
-     * Debug method: Tests Gun connectivity and returns status information
-     * This is useful for debugging connection issues
-     */
-    async testConnectivity() {
-        try {
-            // Testing Gun connectivity...
-            const testNode = this.gun.get("test_connectivity");
-            const testValue = `test_${Date.now()}`;
-            // Test write operation
-            let writeResult = false;
-            try {
-                await new Promise((resolve, reject) => {
-                    testNode.put(testValue, (ack) => {
-                        if (ack.err) {
-                            reject(ack.err);
-                        }
-                        else {
-                            resolve(ack);
-                        }
-                    });
-                });
-                writeResult = true;
-            }
-            catch (writeError) {
-                console.error("Write test failed:", writeError);
-            }
-            // Test read operation
-            let readResult = false;
-            try {
-                const result = await new Promise((resolve, reject) => {
-                    testNode.once((data) => {
-                        if (data === testValue) {
-                            resolve(data);
-                        }
-                        else {
-                            reject("Data mismatch");
-                        }
-                    });
-                });
-                readResult = true;
-            }
-            catch (readError) {
-                console.error("Read test failed:", readError);
-            }
-            const result = {
-                writeTest: writeResult,
-                readTest: readResult,
-                peers: this.getCurrentPeers(),
-                timestamp: new Date().toISOString(),
-            };
-            // Connectivity test completed
-            return result;
-        }
-        catch (error) {
-            console.error("Error testing connectivity:", error);
-            return { error: error, timestamp: new Date().toISOString() };
-        }
-    }
-    /**
      * Accesses the RxJS module for reactive programming
      * @returns GunRxJS instance
      */
@@ -822,65 +628,9 @@ class GunInstance {
         return { valid: true };
     }
     /**
-     * Checks rate limiting for login attempts
-     */
-    checkRateLimit(username, operation) {
-        const key = `${operation}:${username.toLowerCase()}`;
-        const now = Date.now();
-        const entry = this.rateLimitStorage.get(key);
-        const maxAttempts = operation === "login"
-            ? CONFIG.RATE_LIMITING.MAX_LOGIN_ATTEMPTS
-            : CONFIG.RATE_LIMITING.MAX_SIGNUP_ATTEMPTS;
-        const cooldownMs = operation === "login"
-            ? CONFIG.RATE_LIMITING.LOGIN_COOLDOWN_MS
-            : CONFIG.RATE_LIMITING.SIGNUP_COOLDOWN_MS;
-        if (!entry) {
-            this.rateLimitStorage.set(key, { attempts: 1, lastAttempt: now });
-            return { allowed: true };
-        }
-        // Check if still in cooldown
-        if (entry.cooldownUntil && now < entry.cooldownUntil) {
-            const remainingTime = Math.ceil((entry.cooldownUntil - now) / 60000);
-            return {
-                allowed: false,
-                error: `Too many attempts. Please try again in ${remainingTime} minutes.`,
-            };
-        }
-        // Reset if cooldown period has passed
-        if (entry.cooldownUntil && now >= entry.cooldownUntil) {
-            this.rateLimitStorage.set(key, { attempts: 1, lastAttempt: now });
-            return { allowed: true };
-        }
-        // Increment attempts
-        entry.attempts++;
-        entry.lastAttempt = now;
-        if (entry.attempts > maxAttempts) {
-            entry.cooldownUntil = now + cooldownMs;
-            const cooldownMinutes = Math.ceil(cooldownMs / 60000);
-            return {
-                allowed: false,
-                error: `Too many ${operation} attempts. Please try again in ${cooldownMinutes} minutes.`,
-            };
-        }
-        this.rateLimitStorage.set(key, entry);
-        return { allowed: true };
-    }
-    /**
-     * Resets rate limiting for successful authentication
-     */
-    resetRateLimitForUser(username, operation) {
-        const key = `${operation}:${username.toLowerCase()}`;
-        this.rateLimitStorage.delete(key);
-    }
-    /**
      * Validates signup credentials with enhanced security
      */
     validateSignupCredentials(username, password, pair) {
-        // Check rate limiting first
-        const rateLimitCheck = this.checkRateLimit(username, "signup");
-        if (!rateLimitCheck.allowed) {
-            return { valid: false, error: rateLimitCheck.error };
-        }
         // Validate username
         if (!username || username.length < 1) {
             return {
@@ -947,16 +697,16 @@ class GunInstance {
                 resolve({ success: false, error: "Invalid password provided" });
                 return;
             }
-            // Sanitize username
-            const sanitizedUsername = this.sanitizeUsername(username);
-            if (sanitizedUsername.length === 0) {
+            // Normalize username
+            const normalizedUsername = username.trim().toLowerCase();
+            if (normalizedUsername.length === 0) {
                 resolve({
                     success: false,
-                    error: "Username contains only invalid characters",
+                    error: "Username cannot be empty",
                 });
                 return;
             }
-            this.gun.user().create(sanitizedUsername, password, (ack) => {
+            this.gun.user().create(normalizedUsername, password, (ack) => {
                 if (ack.err) {
                     console.error(`User creation error: ${ack.err}`);
                     resolve({ success: false, error: ack.err });
@@ -999,12 +749,12 @@ class GunInstance {
                 resolve({ success: false, error: "Invalid password provided" });
                 return;
             }
-            // Sanitize username to match what was used in creation
-            const sanitizedUsername = this.sanitizeUsername(username);
-            if (sanitizedUsername.length === 0) {
+            // Normalize username to match what was used in creation
+            const normalizedUsername = username.trim().toLowerCase();
+            if (normalizedUsername.length === 0) {
                 resolve({
                     success: false,
-                    error: "Username contains only invalid characters",
+                    error: "Username cannot be empty",
                 });
                 return;
             }
@@ -1038,7 +788,7 @@ class GunInstance {
                 });
             }
             else {
-                this.gun.user().auth(sanitizedUsername, password, (ack) => {
+                this.gun.user().auth(normalizedUsername, password, (ack) => {
                     console.log(`Password authentication after creation result:`, ack);
                     if (ack.err) {
                         console.error(`Authentication after creation failed: ${ack.err}`);
@@ -1082,14 +832,6 @@ class GunInstance {
             if (!validation.valid) {
                 return { success: false, error: validation.error };
             }
-            // First, check if username already exists without authentication
-            const existingUserCheck = await this.checkUsernameExists(username);
-            if (existingUserCheck) {
-                return {
-                    success: false,
-                    error: `Username '${username}' already exists. Please choose a different username or try logging in instead.`,
-                };
-            }
             // Create new user - use different method based on authentication type
             let createResult;
             if (pair) {
@@ -1122,8 +864,6 @@ class GunInstance {
             }
             // Set the user instance
             this.user = this.gun.user();
-            // Reset rate limiting on successful signup
-            this.resetRateLimitForUser(username, "signup");
             // Run post-authentication tasks
             try {
                 console.log(`Running post-auth setup with userPub: ${authResult.userPub}`);
@@ -1171,19 +911,19 @@ class GunInstance {
                 resolve({ success: false, error: "Invalid pair provided" });
                 return;
             }
-            // Sanitize username
-            const sanitizedUsername = this.sanitizeUsername(username);
-            if (sanitizedUsername.length === 0) {
+            // Normalize username
+            const normalizedUsername = username.trim().toLowerCase();
+            if (normalizedUsername.length === 0) {
                 resolve({
                     success: false,
-                    error: "Username contains only invalid characters",
+                    error: "Username cannot be empty",
                 });
                 return;
             }
             // For pair-based authentication, we don't need to call gun.user().create()
             // because the pair already contains the cryptographic credentials
             // We just need to validate that the pair is valid and return success
-            console.log(`User created successfully with pair for: ${sanitizedUsername}`);
+            console.log(`User created successfully with pair for: ${normalizedUsername}`);
             resolve({ success: true, userPub: pair.pub });
         });
     }
@@ -1211,12 +951,12 @@ class GunInstance {
                 console.error("Invalid userPub format:", userPub);
                 throw new Error("Invalid userPub format");
             }
-            // Sanitize username to prevent path issues
-            const sanitizedUsername = this.sanitizeUsername(username);
-            if (sanitizedUsername.length === 0) {
-                throw new Error("Username contains only invalid characters");
+            // Normalize username to prevent path issues
+            const normalizedUsername = username.trim().toLowerCase();
+            if (normalizedUsername.length === 0) {
+                throw new Error("Username cannot be empty");
             }
-            console.log(`Setting up user profile for ${sanitizedUsername} with userPub: ${userPub}`);
+            console.log(`Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`);
             const existingUser = await new Promise((resolve) => {
                 const timeout = setTimeout(() => {
                     console.warn(`⚠️ Timeout getting user data for ${userPub} - proceeding with null`);
@@ -1237,7 +977,7 @@ class GunInstance {
                         }, 5000); // 5 second timeout
                         this.gun
                             .get(userPub)
-                            .put({ username: sanitizedUsername }, (ack) => {
+                            .put({ username: normalizedUsername }, (ack) => {
                             clearTimeout(timeout);
                             if (ack.err) {
                                 console.error(`Error saving user metadata: ${ack.err}`);
@@ -1258,12 +998,12 @@ class GunInstance {
                 try {
                     await new Promise((resolve, reject) => {
                         const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout creating username mapping for ${sanitizedUsername} - continuing`);
+                            console.warn(`⚠️ Timeout creating username mapping for ${normalizedUsername} - continuing`);
                             resolve({ ok: 0 }); // Resolve with mock success to continue
                         }, 5000); // 5 second timeout
                         this.node
                             .get("usernames")
-                            .get(sanitizedUsername)
+                            .get(normalizedUsername)
                             .put(userPub, (ack) => {
                             clearTimeout(timeout);
                             if (ack.err) {
@@ -1307,7 +1047,7 @@ class GunInstance {
             return {
                 success: true,
                 userPub: userPub,
-                username: sanitizedUsername,
+                username: normalizedUsername,
                 isNewUser: !existingUser || !existingUser.username,
                 // Get the SEA pair from the user object
                 sea: this.gun.user()?._?.sea
@@ -1326,188 +1066,6 @@ class GunInstance {
                 success: false,
                 error: `Post-authentication setup failed: ${error}`,
             };
-        }
-    }
-    /**
-     * Normalizes username for consistent lookup
-     */
-    normalizeUsername(username) {
-        const normalizedUsername = username.trim().toLowerCase();
-        const frozenKey = `#${normalizedUsername}`;
-        const alternateKey = normalizedUsername;
-        return { normalizedUsername, frozenKey, alternateKey };
-    }
-    /**
-     * Strategy 1: Frozen space scan for immutable data
-     */
-    async lookupInFrozenSpace(normalizedUsername) {
-        return new Promise((resolve) => {
-            let found = false;
-            this.node
-                .get("usernames")
-                .map()
-                .once((mappingData, hash) => {
-                if (mappingData &&
-                    mappingData.username === normalizedUsername &&
-                    !found) {
-                    found = true;
-                    resolve({
-                        ...mappingData,
-                        hash,
-                        source: "frozen_space",
-                        immutable: true,
-                    });
-                }
-            });
-            setTimeout(() => {
-                if (!found)
-                    resolve(null);
-            }, CONFIG.TIMEOUTS.LOOKUP_FROZEN_SPACE);
-        });
-    }
-    /**
-     * Strategy 2: Direct frozen mapping lookup
-     */
-    async lookupDirectMapping(normalizedUsername, frozenKey) {
-        return new Promise((resolve) => {
-            this.node
-                .get("usernames")
-                .get(frozenKey)
-                .once((data) => {
-                if (data) {
-                    resolve({
-                        pub: data,
-                        username: normalizedUsername,
-                        source: "direct_mapping",
-                        immutable: false,
-                    });
-                }
-                else {
-                    resolve(null);
-                }
-            });
-        });
-    }
-    /**
-     * Strategy 3: Alternate key lookup
-     */
-    async lookupAlternateKey(normalizedUsername, alternateKey) {
-        return new Promise((resolve) => {
-            this.node
-                .get("usernames")
-                .get(alternateKey)
-                .once((data) => {
-                if (data) {
-                    resolve({
-                        pub: data,
-                        username: normalizedUsername,
-                        source: "alternate_key",
-                        immutable: false,
-                    });
-                }
-                else {
-                    resolve(null);
-                }
-            });
-        });
-    }
-    /**
-     * Strategy 4: Comprehensive scan fallback
-     */
-    async lookupComprehensiveScan(normalizedUsername, frozenKey, alternateKey) {
-        return new Promise((resolve) => {
-            let found = false;
-            this.node
-                .get("usernames")
-                .map()
-                .once((data, key) => {
-                if ((key === frozenKey || key === alternateKey) && data && !found) {
-                    found = true;
-                    resolve({
-                        pub: data,
-                        username: normalizedUsername,
-                        source: "comprehensive_scan",
-                        immutable: false,
-                    });
-                }
-            });
-            setTimeout(() => {
-                if (!found)
-                    resolve(null);
-            }, CONFIG.TIMEOUTS.LOOKUP_COMPREHENSIVE);
-        });
-    }
-    /**
-     * Creates lookup strategies array
-     */
-    createLookupStrategies(normalizedUsername, frozenKey, alternateKey) {
-        return [
-            () => this.lookupInFrozenSpace(normalizedUsername),
-            () => this.lookupDirectMapping(normalizedUsername, frozenKey),
-            () => this.lookupAlternateKey(normalizedUsername, alternateKey),
-            () => this.lookupComprehensiveScan(normalizedUsername, frozenKey, alternateKey),
-        ];
-    }
-    /**
-     * Processes lookup result to get complete user data
-     */
-    async processLookupResult(result, normalizedUsername) {
-        // If we found a pub, try to fetch user data
-        if (typeof result.pub === "string" && result.pub) {
-            const pubKey = result.pub;
-            const userData = await new Promise((resolve) => {
-                this.node.get(pubKey).once((data) => {
-                    resolve(data || null);
-                });
-            });
-            // Always return an object with pub and username if possible
-            if (userData && userData.username) {
-                return {
-                    ...userData,
-                    source: result.source,
-                    immutable: result.immutable,
-                    hash: result.hash,
-                };
-            }
-            return {
-                pub: result.pub,
-                username: normalizedUsername,
-                source: result.source,
-                immutable: result.immutable,
-                hash: result.hash,
-            };
-        }
-        // If result is already a complete object (from frozen space)
-        if (result.userPub && result.username) {
-            return result;
-        }
-        return result;
-    }
-    async checkUsernameExists(username) {
-        try {
-            // Normalize username to handle variations
-            const { normalizedUsername, frozenKey, alternateKey } = this.normalizeUsername(username);
-            // Create multiple lookup strategies with frozen space priority
-            const lookupStrategies = this.createLookupStrategies(normalizedUsername, frozenKey, alternateKey);
-            // Sequential strategy execution with timeout
-            for (const strategy of lookupStrategies) {
-                try {
-                    const result = await Promise.race([
-                        strategy(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error("Lookup timeout")), CONFIG.TIMEOUTS.STRATEGY_TIMEOUT)),
-                    ]);
-                    if (result) {
-                        return await this.processLookupResult(result, normalizedUsername);
-                    }
-                }
-                catch (error) {
-                    // Silent for timeout or network errors
-                }
-            }
-            return null;
-        }
-        catch (error) {
-            return null;
         }
     }
     /**
@@ -1565,11 +1123,6 @@ class GunInstance {
     }
     async login(username, password, pair) {
         try {
-            // Check rate limiting first
-            const rateLimitCheck = this.checkRateLimit(username, "login");
-            if (!rateLimitCheck.allowed) {
-                return { success: false, error: rateLimitCheck.error };
-            }
             const loginResult = await this.performAuthentication(username, password, pair);
             if (!loginResult.success) {
                 return {
@@ -1589,8 +1142,6 @@ class GunInstance {
                     error: "Authentication failed: No user pub returned.",
                 };
             }
-            // Reset rate limiting on successful login
-            this.resetRateLimitForUser(username, "login");
             // Pass the userPub to runPostAuthOnAuthResult
             try {
                 await this.runPostAuthOnAuthResult(username, userPub, {
@@ -1618,35 +1169,6 @@ class GunInstance {
         }
         catch (error) {
             console.error(`Exception during login for ${username}: ${error}`);
-            return { success: false, error: String(error) };
-        }
-    }
-    /**
-     * Updates the user's alias (username) in Gun and saves the updated credentials
-     * @param newAlias New alias/username to set
-     * @returns Promise resolving to update result
-     */
-    async updateUserAlias(newAlias) {
-        try {
-            // Updating user alias to
-            if (!this.user) {
-                return { success: false, error: "User not authenticated" };
-            }
-            await new Promise((resolve, reject) => {
-                this.user.get("alias").put(newAlias, (ack) => {
-                    if (ack.err) {
-                        reject(ack.err);
-                    }
-                    else {
-                        resolve(ack);
-                    }
-                });
-            });
-            // User alias updated successfully to
-            return { success: true };
-        }
-        catch (error) {
-            console.error(`Error updating user alias:`, error);
             return { success: false, error: String(error) };
         }
     }
@@ -1832,17 +1354,19 @@ class GunInstance {
     async forgotPassword(username, securityAnswers) {
         // Attempting password recovery for
         try {
-            // Find the user's data
-            let userData = await this.checkUsernameExists(username);
-            // Patch: if userData is a string, treat as pub
-            if (typeof userData === "string") {
-                userData = { pub: userData, username };
-            }
-            if (!userData || !userData.pub) {
+            // Find the user's data using direct lookup
+            const normalizedUsername = username.trim().toLowerCase();
+            const userPub = await new Promise((resolve) => {
+                this.node
+                    .get("usernames")
+                    .get(normalizedUsername)
+                    .once((data) => {
+                    resolve(data || null);
+                });
+            });
+            if (!userPub) {
                 return { success: false, error: "User not found" };
             }
-            // Extract the public key from user data
-            const userPub = userData.pub;
             // console.log(`Found user public key for password recovery: ${userPub}`);
             // Access the user's security data directly from their public key node
             const securityData = await new Promise((resolve) => {
@@ -1926,17 +1450,14 @@ class GunInstance {
         return new Promise((resolve, reject) => {
             const user = this.gun.user();
             if (!user.is) {
-                this.emitDataEvent("gun:put", `user/${path}`, data, false, "User not authenticated");
                 reject(new Error("User not authenticated"));
                 return;
             }
             this.navigateToPath(user, path).put(data, (ack) => {
                 if (ack.err) {
-                    this.emitDataEvent("gun:put", `user/${path}`, data, false, ack.err);
                     reject(new Error(ack.err));
                 }
                 else {
-                    this.emitDataEvent("gun:put", `user/${path}`, data, true);
                     resolve(ack);
                 }
             });
@@ -1952,21 +1473,18 @@ class GunInstance {
             // Validazione del path
             if (!path || typeof path !== "string") {
                 const error = "Path must be a non-empty string";
-                this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
                 reject(new Error(error));
                 return;
             }
             const user = this.gun.user();
             if (!user.is) {
                 const error = "User not authenticated";
-                this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
                 reject(new Error(error));
                 return;
             }
             // Timeout per evitare attese infinite
             const timeout = setTimeout(() => {
                 const error = "Operation timeout";
-                this.emitDataEvent("gun:get", `user/${path}`, null, false, error);
                 reject(new Error(error));
             }, CONFIG.TIMEOUTS.USER_DATA_OPERATION); // 10 secondi di timeout
             try {
@@ -1977,13 +1495,11 @@ class GunInstance {
                         // È un riferimento GunDB, carica i dati effettivi
                         const referencePath = data["#"];
                         this.navigateToPath(this.gun, referencePath).once((actualData) => {
-                            this.emitDataEvent("gun:get", `user/${path}`, actualData, true);
                             resolve(actualData);
                         });
                     }
                     else {
                         // Dati diretti, restituisci così come sono
-                        this.emitDataEvent("gun:get", `user/${path}`, data, true);
                         resolve(data);
                     }
                 });
@@ -1991,432 +1507,43 @@ class GunInstance {
             catch (error) {
                 clearTimeout(timeout);
                 const errorMsg = error instanceof Error ? error.message : "Unknown error";
-                this.emitDataEvent("gun:get", `user/${path}`, null, false, errorMsg);
                 reject(error);
             }
         });
     }
-    /**
-     * Derive cryptographic keys from password and optional extras
-     * Supports multiple key derivation algorithms: P-256, secp256k1 (Bitcoin), secp256k1 (Ethereum)
-     * @param password - Password or seed for key derivation
-     * @param extra - Additional entropy (string or array of strings)
-     * @param options - Derivation options to specify which key types to generate
-     * @returns Promise resolving to derived keys object
-     */
-    async derive(password, extra, options) {
-        try {
-            // Deriving cryptographic keys with options
-            // Call the derive function with the provided parameters
-            const derivedKeys = await (0, derive_1.default)(password, extra, options);
-            // Map the returned keys to the expected format
-            const result = {};
-            // Map P-256 keys (already in correct format)
-            if (derivedKeys.pub &&
-                derivedKeys.priv &&
-                derivedKeys.epub &&
-                derivedKeys.epriv) {
-                result.p256 = {
-                    pub: derivedKeys.pub,
-                    priv: derivedKeys.priv,
-                    epub: derivedKeys.epub,
-                    epriv: derivedKeys.epriv,
-                };
-            }
-            // Map Bitcoin keys (privateKey -> priv, publicKey -> pub)
-            if (derivedKeys.secp256k1Bitcoin) {
-                result.secp256k1Bitcoin = {
-                    pub: derivedKeys.secp256k1Bitcoin.publicKey,
-                    priv: derivedKeys.secp256k1Bitcoin.privateKey,
-                    address: derivedKeys.secp256k1Bitcoin.address,
-                };
-            }
-            // Map Ethereum keys (privateKey -> priv, publicKey -> pub)
-            if (derivedKeys.secp256k1Ethereum) {
-                result.secp256k1Ethereum = {
-                    pub: derivedKeys.secp256k1Ethereum.publicKey,
-                    priv: derivedKeys.secp256k1Ethereum.privateKey,
-                    address: derivedKeys.secp256k1Ethereum.address,
-                };
-            }
-            // Key derivation completed successfully
-            return result;
-        }
-        catch (error) {
-            console.error("Error during key derivation:", error);
-            // Use centralized error handler
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "KEY_DERIVATION_FAILED", error instanceof Error
-                ? error.message
-                : "Failed to derive cryptographic keys", error);
-            throw error;
-        }
-    }
-    /**
-     * Derive P-256 keys (default Gun.SEA behavior)
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to P-256 keys
-     */
-    async deriveP256(password, extra) {
-        const result = await this.derive(password, extra, { includeP256: true });
-        return result.p256;
-    }
-    /**
-     * Derive Bitcoin secp256k1 keys with P2PKH address
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to Bitcoin keys and address
-     */
-    async deriveBitcoin(password, extra) {
-        const result = await this.derive(password, extra, {
-            includeSecp256k1Bitcoin: true,
-        });
-        return result.secp256k1Bitcoin;
-    }
-    /**
-     * Derive Ethereum secp256k1 keys with Keccak256 address
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to Ethereum keys and address
-     */
-    async deriveEthereum(password, extra) {
-        const result = await this.derive(password, extra, {
-            includeSecp256k1Ethereum: true,
-        });
-        return result.secp256k1Ethereum;
-    }
-    /**
-     * Derive all supported key types
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to all key types
-     */
-    async deriveAll(password, extra) {
-        const result = await this.derive(password, extra, {
-            includeP256: true,
-            includeSecp256k1Bitcoin: true,
-            includeSecp256k1Ethereum: true,
-        });
-        return {
-            p256: result.p256,
-            secp256k1Bitcoin: result.secp256k1Bitcoin,
-            secp256k1Ethereum: result.secp256k1Ethereum,
-        };
-    }
-    /**
-     * Prepares data for freezing with metadata
-     */
-    prepareFrozenData(data, options) {
-        return {
-            data: data,
-            timestamp: Date.now(),
-            description: options?.description || "",
-            metadata: options?.metadata || {},
-        };
-    }
-    /**
-     * Generates hash for frozen data
-     */
-    async generateFrozenDataHash(frozenData) {
-        const dataString = JSON.stringify(frozenData);
-        const hash = await sea_1.default.work(dataString, null, null, {
-            name: "SHA-256",
-        });
-        return hash ? hash : null;
-    }
-    /**
-     * Builds the full path for frozen data
-     */
-    buildFrozenPath(hash, options) {
-        const namespace = options?.namespace || "default";
-        const customPath = options?.path || "";
-        return customPath
-            ? `${namespace}/${customPath}/${hash}`
-            : `${namespace}/${hash}`;
-    }
-    /**
-     * Stores frozen data in Gun
-     */
-    async storeFrozenData(frozenData, fullPath, hash) {
-        return new Promise((resolve, reject) => {
-            const targetNode = this.navigateToPath(this.gun, fullPath);
-            targetNode.put(frozenData, (ack) => {
-                if (ack.err) {
-                    reject(new Error(`Failed to create frozen space: ${ack.err}`));
-                }
-                else {
-                    resolve({
-                        hash: hash,
-                        fullPath: fullPath,
-                        data: frozenData,
-                    });
-                }
-            });
-        });
-    }
-    /**
-     * Creates a frozen space entry for immutable data
-     * @param data Data to freeze
-     * @param options Optional configuration
-     * @returns Promise resolving to the frozen data hash
-     */
-    async createFrozenSpace(data, options) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                // Prepare the data to freeze
-                const frozenData = this.prepareFrozenData(data, options);
-                // Generate hash for the data
-                const hash = await this.generateFrozenDataHash(frozenData);
-                if (!hash) {
-                    reject(new Error("Failed to generate hash for frozen data"));
-                    return;
-                }
-                // Build the full path
-                const fullPath = this.buildFrozenPath(hash, options);
-                // Store the frozen data
-                const result = await this.storeFrozenData(frozenData, fullPath, hash);
-                resolve(result);
-            }
-            catch (error) {
-                reject(new Error(`Error creating frozen space: ${error}`));
-            }
-        });
-    }
-    /**
-     * Retrieves data from frozen space
-     * @param hash Hash of the frozen data
-     * @param namespace Optional namespace
-     * @param path Optional custom path
-     * @returns Promise resolving to the frozen data
-     */
-    async getFrozenSpace(hash, namespace = "default", path) {
-        return new Promise((resolve, reject) => {
-            // Costruisci il percorso completo
-            const fullPath = path
-                ? `${namespace}/${path}/${hash}`
-                : `${namespace}/${hash}`;
-            // Usa navigateToPath per gestire correttamente i percorsi con /
-            const targetNode = this.navigateToPath(this.gun, fullPath);
-            targetNode.once((data) => {
-                if (!data) {
-                    reject(new Error(`Frozen data not found: ${fullPath}`));
-                }
-                else {
-                    resolve(data);
-                }
-            });
-        });
-    }
-    /**
-     * Verifies if data matches a frozen space entry
-     * @param data Data to verify
-     * @param hash Expected hash
-     * @param namespace Optional namespace
-     * @param path Optional custom path
-     * @returns Promise resolving to verification result
-     */
-    async verifyFrozenSpace(data, hash, namespace = "default", path) {
-        try {
-            // Genera hash dei dati forniti
-            const dataString = JSON.stringify(data);
-            const generatedHash = await sea_1.default.work(dataString, null, null, {
-                name: "SHA-256",
-            });
-            if (!generatedHash) {
-                return { verified: false, error: "Failed to generate hash" };
-            }
-            // Confronta gli hash
-            if (generatedHash !== hash) {
-                return { verified: false, error: "Hash mismatch" };
-            }
-            // Verifica che esista nel frozen space
-            const frozenData = await this.getFrozenSpace(hash, namespace, path);
-            return {
-                verified: true,
-                frozenData: frozenData,
-            };
-        }
-        catch (error) {
-            return {
-                verified: false,
-                error: `Verification failed: ${error}`,
-            };
-        }
-    }
     // Errors
     static Errors = GunErrors;
     /**
-     * Sanitizes username to prevent path construction issues
-     * @param username Raw username
-     * @returns Sanitized username
+     * Adds an event listener
+     * @param event Event name
+     * @param listener Event listener function
      */
-    sanitizeUsername(username) {
-        if (!username || typeof username !== "string") {
-            return "";
-        }
-        return username
-            .trim()
-            .toLowerCase()
-            .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-            .replace(/[^a-zA-Z0-9._-]/g, "") // Only allow alphanumeric, dots, underscores, and hyphens
-            .replace(/^[^a-zA-Z]/, "") // Must start with a letter
-            .substring(0, 50); // Limit length
+    on(event, listener) {
+        this.eventEmitter.on(event, listener);
     }
     /**
-     * Changes the username for the currently authenticated user
-     * @param newUsername New username to set
-     * @returns Promise resolving to the operation result
+     * Removes an event listener
+     * @param event Event name
+     * @param listener Event listener function
      */
-    async changeUsername(newUsername) {
-        try {
-            // Check if user is authenticated
-            if (!this.isLoggedIn()) {
-                return { success: false, error: "User not authenticated" };
-            }
-            const currentUser = this.getCurrentUser();
-            if (!currentUser || !currentUser.pub) {
-                return { success: false, error: "No authenticated user found" };
-            }
-            const userPub = currentUser.pub;
-            // Validate new username
-            if (!newUsername ||
-                typeof newUsername !== "string" ||
-                newUsername.trim().length === 0) {
-                return { success: false, error: "New username cannot be empty" };
-            }
-            // Sanitize new username
-            const sanitizedNewUsername = this.sanitizeUsername(newUsername);
-            if (sanitizedNewUsername.length === 0) {
-                return {
-                    success: false,
-                    error: "New username contains only invalid characters",
-                };
-            }
-            // Validate username format (alphanumeric and some special chars only)
-            if (!/^[a-zA-Z0-9._-]+$/.test(sanitizedNewUsername)) {
-                return {
-                    success: false,
-                    error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
-                };
-            }
-            // Check if new username is already in use by another user
-            const existingUserCheck = await this.checkUsernameExists(sanitizedNewUsername);
-            if (existingUserCheck && existingUserCheck.pub !== userPub) {
-                return {
-                    success: false,
-                    error: `Username '${sanitizedNewUsername}' is already in use by another user`,
-                };
-            }
-            // Get current user data to find old username
-            const currentUserData = await new Promise((resolve) => {
-                this.gun.get(userPub).once((data) => {
-                    resolve(data);
-                });
-            });
-            const oldUsername = currentUserData?.username || "unknown";
-            // If the new username is the same as the old one, no need to change
-            if (oldUsername === sanitizedNewUsername) {
-                return {
-                    success: true,
-                    oldUsername,
-                    newUsername: sanitizedNewUsername,
-                };
-            }
-            // Remove old username mapping if it exists
-            if (oldUsername && oldUsername !== "unknown") {
-                try {
-                    await new Promise((resolve, reject) => {
-                        this.node
-                            .get("usernames")
-                            .get(oldUsername)
-                            .put(null, (ack) => {
-                            if (ack.err) {
-                                console.warn(`Warning: Could not remove old username mapping: ${ack.err}`);
-                            }
-                            resolve();
-                        });
-                    });
-                }
-                catch (error) {
-                    console.warn(`Warning: Error removing old username mapping: ${error}`);
-                    // Continue anyway, don't fail the operation
-                }
-            }
-            // Create new username mapping
-            try {
-                await new Promise((resolve, reject) => {
-                    this.node
-                        .get("usernames")
-                        .get(sanitizedNewUsername)
-                        .put(userPub, (ack) => {
-                        if (ack.err) {
-                            reject(new Error(`Failed to create new username mapping: ${ack.err}`));
-                        }
-                        else {
-                            resolve();
-                        }
-                    });
-                });
-            }
-            catch (error) {
-                return {
-                    success: false,
-                    error: `Failed to create new username mapping: ${error}`,
-                };
-            }
-            // Update user metadata with new username
-            try {
-                await new Promise((resolve, reject) => {
-                    // Prima ottieni i dati esistenti dell'utente
-                    this.gun.get(userPub).once((existingData) => {
-                        // Mantieni tutti i dati esistenti e aggiorna solo il username
-                        const updatedData = {
-                            ...existingData,
-                            username: sanitizedNewUsername,
-                        };
-                        this.gun.get(userPub).put(updatedData, (ack) => {
-                            if (ack.err) {
-                                reject(new Error(`Failed to update user metadata: ${ack.err}`));
-                            }
-                            else {
-                                resolve();
-                            }
-                        });
-                    });
-                });
-            }
-            catch (error) {
-                // If metadata update fails, try to revert the username mapping
-                try {
-                    await new Promise((resolve) => {
-                        this.node
-                            .get("usernames")
-                            .get(sanitizedNewUsername)
-                            .put(null, () => resolve());
-                    });
-                }
-                catch (revertError) {
-                    console.error(`Failed to revert username mapping after metadata update failure: ${revertError}`);
-                }
-                return {
-                    success: false,
-                    error: `Failed to update user metadata: ${error}`,
-                };
-            }
-            console.log(`Username changed successfully from '${oldUsername}' to '${sanitizedNewUsername}' for user ${userPub}`);
-            return {
-                success: true,
-                oldUsername,
-                newUsername: sanitizedNewUsername,
-            };
-        }
-        catch (error) {
-            console.error(`Error changing username: ${error}`);
-            return {
-                success: false,
-                error: `Username change failed: ${error}`,
-            };
-        }
+    off(event, listener) {
+        this.eventEmitter.off(event, listener);
+    }
+    /**
+     * Adds a one-time event listener
+     * @param event Event name
+     * @param listener Event listener function
+     */
+    once(event, listener) {
+        this.eventEmitter.once(event, listener);
+    }
+    /**
+     * Emits an event
+     * @param event Event name
+     * @param data Event data
+     */
+    emit(event, data) {
+        return this.eventEmitter.emit(event, data);
     }
     /**
      * Recall user session
@@ -2433,30 +1560,6 @@ class GunInstance {
         if (this.user) {
             this.user.leave();
         }
-    }
-    /**
-     * Set username for the current user
-     */
-    setUsername(username) {
-        if (this.user) {
-            try {
-                this.user.get("alias").put(username);
-            }
-            catch (error) {
-                // Handle case where user.get returns undefined
-                console.warn("Could not set username:", error);
-            }
-        }
-    }
-    /**
-     * Get username for the current user
-     */
-    getUsername() {
-        if (this.user) {
-            const alias = this.user.is?.alias;
-            return typeof alias === "string" ? alias : null;
-        }
-        return null;
     }
     /**
      * Set user data
@@ -2536,12 +1639,10 @@ class GunInstance {
     isAuthenticated() {
         return this.user?.is?.pub ? true : false;
     }
-    /**
-     * Reset rate limit
-     */
-    resetRateLimit() {
-        this.rateLimitStorage.clear();
-    }
 }
 exports.GunInstance = GunInstance;
+const createGun = (config) => {
+    return new Gun(config);
+};
+exports.createGun = createGun;
 exports.default = Gun;
