@@ -4,14 +4,6 @@ import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./types/plugin";
-import "gun/sea";
-import "gun/lib/then.js";
-import "gun/lib/radisk.js";
-import "gun/lib/radix.js";
-import "gun/lib/store.js";
-import "gun/lib/rindexed.js";
-import "gun/lib/webrtc.js";
-import "gun/lib/yson.js";
 import { IGunUserInstance, IGunInstance, GunInstance, GunRxJS } from "./gundb";
 import { ISEAPair } from "gun";
 /**

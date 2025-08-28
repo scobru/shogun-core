@@ -99776,13 +99776,10 @@ module.exports = function () {
 /*!*********************!*\
   !*** ./src/core.ts ***!
   \*********************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ShogunCore = void 0;
 const events_1 = __webpack_require__(/*! ./types/events */ "./src/types/events.ts");
@@ -99793,15 +99790,6 @@ const webauthnPlugin_1 = __webpack_require__(/*! ./plugins/webauthn/webauthnPlug
 const web3ConnectorPlugin_1 = __webpack_require__(/*! ./plugins/web3/web3ConnectorPlugin */ "./src/plugins/web3/web3ConnectorPlugin.ts");
 const nostrConnectorPlugin_1 = __webpack_require__(/*! ./plugins/nostr/nostrConnectorPlugin */ "./src/plugins/nostr/nostrConnectorPlugin.ts");
 const oauthPlugin_1 = __webpack_require__(/*! ./plugins/oauth/oauthPlugin */ "./src/plugins/oauth/oauthPlugin.ts");
-const gun_1 = __importDefault(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js"));
-__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js");
-__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
-__webpack_require__(/*! gun/lib/radisk.js */ "./node_modules/gun/lib/radisk.js");
-__webpack_require__(/*! gun/lib/radix.js */ "./node_modules/gun/lib/radix.js");
-__webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
-__webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
-__webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
-__webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
 const gundb_1 = __webpack_require__(/*! ./gundb */ "./src/gundb/index.ts");
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -99856,23 +99844,17 @@ class ShogunCore {
             });
         });
         if (config.authToken) {
-            (0, gundb_1.restrictedPut)(gun_1.default, config.authToken);
+            (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
         }
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
             }
             else {
-                this._gun = (0, gun_1.default)({
+                this._gun = (0, gundb_1.createGun)({
                     peers: config.peers || [],
                     radisk: config.radisk || false,
                     localStorage: config.localStorage || false,
-                    wire: true,
-                    webrtc: true,
-                    store: true,
-                    rindexed: true,
-                    yson: true,
-                    then: true,
                 });
             }
         }
@@ -101343,9 +101325,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = exports.Gun = void 0;
 // Import Gun - will be bundled internally
 const gun_1 = __importDefault(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js"));
-exports.Gun = gun_1.default;
+const Gun = gun_1.default;
+exports.Gun = Gun;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
+__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
+__webpack_require__(/*! gun/lib/radix.js */ "./node_modules/gun/lib/radix.js");
+__webpack_require__(/*! gun/lib/radisk.js */ "./node_modules/gun/lib/radisk.js");
+__webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
+__webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
+__webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
+__webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
 const restricted_put_1 = __webpack_require__(/*! ./restricted-put */ "./src/gundb/restricted-put.ts");
 Object.defineProperty(exports, "restrictedPut", ({ enumerable: true, get: function () { return restricted_put_1.restrictedPut; } }));
 const derive_1 = __importDefault(__webpack_require__(/*! ./derive */ "./src/gundb/derive.ts"));
@@ -102934,10 +102924,10 @@ class GunInstance {
 }
 exports.GunInstance = GunInstance;
 const createGun = (config) => {
-    return new gun_1.default(config);
+    return new Gun(config);
 };
 exports.createGun = createGun;
-exports["default"] = gun_1.default;
+exports["default"] = Gun;
 
 
 /***/ }),

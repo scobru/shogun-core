@@ -18,16 +18,6 @@ import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
 
-import Gun from "gun/gun";
-import "gun/sea";
-import "gun/lib/then.js";
-import "gun/lib/radisk.js";
-import "gun/lib/radix.js";
-import "gun/lib/store.js";
-import "gun/lib/rindexed.js";
-import "gun/lib/webrtc.js";
-import "gun/lib/yson.js";
-
 import {
   restrictedPut,
   IGunUserInstance,
@@ -35,6 +25,7 @@ import {
   GunInstance,
   GunRxJS,
   createGun,
+  Gun,
   derive,
 } from "./gundb";
 
@@ -105,16 +96,10 @@ export class ShogunCore implements IShogunCore {
       if (config.gunInstance) {
         this._gun = config.gunInstance;
       } else {
-        this._gun = Gun({
+        this._gun = createGun({
           peers: config.peers || [],
           radisk: config.radisk || false,
           localStorage: config.localStorage || false,
-          wire: true,
-          webrtc: true,
-          store: true,
-          rindexed: true,
-          yson: true,
-          then: true,
         });
       }
     } catch (error) {

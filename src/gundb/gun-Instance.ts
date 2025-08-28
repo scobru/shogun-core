@@ -20,8 +20,16 @@ import type {
 import type { AuthResult, SignUpResult } from "../types/shogun";
 
 // Import Gun - will be bundled internally
-import Gun from "gun/gun";
+import GunModule from "gun/gun";
+const Gun = GunModule;
 import SEA from "gun/sea";
+import "gun/lib/then.js";
+import "gun/lib/radix.js";
+import "gun/lib/radisk.js";
+import "gun/lib/store.js";
+import "gun/lib/rindexed.js";
+import "gun/lib/webrtc.js";
+import "gun/lib/yson.js";
 
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
