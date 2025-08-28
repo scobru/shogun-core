@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShogunCore = void 0;
 const events_1 = require("./types/events");
@@ -9,6 +12,15 @@ const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
 const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
+const gun_1 = __importDefault(require("gun/gun"));
+require("gun/sea");
+require("gun/lib/then.js");
+require("gun/lib/radisk.js");
+require("gun/lib/radix.js");
+require("gun/lib/store.js");
+require("gun/lib/rindexed.js");
+require("gun/lib/webrtc.js");
+require("gun/lib/yson.js");
 const gundb_1 = require("./gundb");
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -63,17 +75,23 @@ class ShogunCore {
             });
         });
         if (config.authToken) {
-            (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
+            (0, gundb_1.restrictedPut)(gun_1.default, config.authToken);
         }
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
             }
             else {
-                this._gun = (0, gundb_1.createGun)({
+                this._gun = (0, gun_1.default)({
                     peers: config.peers || [],
                     radisk: config.radisk || false,
                     localStorage: config.localStorage || false,
+                    wire: true,
+                    webrtc: true,
+                    store: true,
+                    rindexed: true,
+                    yson: true,
+                    then: true,
                 });
             }
         }

@@ -45,17 +45,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = exports.Gun = void 0;
 // Import Gun - will be bundled internally
 const gun_1 = __importDefault(require("gun/gun"));
-const Gun = gun_1.default;
-exports.Gun = Gun;
+exports.Gun = gun_1.default;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
-require("gun/lib/then.js");
-require("gun/lib/radisk.js");
-require("gun/lib/radix.js");
-require("gun/lib/store.js");
-require("gun/lib/rindexed.js");
-require("gun/lib/webrtc.js");
-require("gun/lib/yson.js");
 const restricted_put_1 = require("./restricted-put");
 Object.defineProperty(exports, "restrictedPut", { enumerable: true, get: function () { return restricted_put_1.restrictedPut; } });
 const derive_1 = __importDefault(require("./derive"));
@@ -1643,7 +1635,7 @@ class GunInstance {
 }
 exports.GunInstance = GunInstance;
 const createGun = (config) => {
-    return new Gun(config);
+    return new gun_1.default(config);
 };
 exports.createGun = createGun;
-exports.default = Gun;
+exports.default = gun_1.default;
