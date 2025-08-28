@@ -187,6 +187,4 @@ describe("GunInstance", () => {
       expect(() => gunInstance.isLoggedIn()).not.toThrow();
     });
   });
-
-
 });

@@ -26,6 +26,7 @@ import {
   GunRxJS,
   createGun,
   Gun,
+  derive,
 } from "./gundb";
 
 import { ISEAPair } from "gun";
@@ -136,6 +137,17 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
+    // ascolta gun se user è loggato crei i wallets
+    this._gun.on("auth", async (user) => {
+      if (!user) return;
+      const priv = (user as any)._?.sea?.epriv;
+      const pub = (user as any)._?.sea?.epub;
+      this.wallets = await derive(priv, pub, {
+        includeSecp256k1Bitcoin: true,
+        includeSecp256k1Ethereum: true,
+      });
+    });
+
     this.rx = new GunRxJS(this._gun);
     this.registerBuiltinPlugins(config);
 
@@ -154,6 +166,7 @@ export class ShogunCore implements IShogunCore {
   async initialize(): Promise<void> {
     try {
       await this.db.initialize();
+
       this.eventEmitter.emit("debug", {
         action: "core_initialized",
         timestamp: Date.now(),
@@ -229,7 +242,7 @@ export class ShogunCore implements IShogunCore {
       if (config.oauth) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "OAuth plugin will be registered with provided configuration"
+            "OAuth plugin will be registered with provided configuration",
           );
         }
 
@@ -244,7 +257,7 @@ export class ShogunCore implements IShogunCore {
       if (config.webauthn) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "WebAuthn plugin will be registered with provided configuration"
+            "WebAuthn plugin will be registered with provided configuration",
           );
         }
 
@@ -259,7 +272,7 @@ export class ShogunCore implements IShogunCore {
       if (config.web3) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "Web3 plugin will be registered with provided configuration"
+            "Web3 plugin will be registered with provided configuration",
           );
         }
 
@@ -274,7 +287,7 @@ export class ShogunCore implements IShogunCore {
       if (config.nostr) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "Nostr plugin will be registered with provided configuration"
+            "Nostr plugin will be registered with provided configuration",
           );
         }
 
@@ -324,7 +337,7 @@ export class ShogunCore implements IShogunCore {
       if (this.plugins.has(plugin.name)) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            `Plugin "${plugin.name}" is already registered. Skipping.`
+            `Plugin "${plugin.name}" is already registered. Skipping.`,
           );
         }
         return;
@@ -499,7 +512,7 @@ export class ShogunCore implements IShogunCore {
     const status = this.getPluginsInitializationStatus();
     const totalPlugins = Object.keys(status).length;
     const initializedPlugins = Object.values(status).filter(
-      (s) => s.initialized
+      (s) => s.initialized,
     ).length;
     const failedPlugins = Object.entries(status)
       .filter(([_, s]) => !s.initialized)
@@ -563,7 +576,7 @@ export class ShogunCore implements IShogunCore {
         if (typeof console !== "undefined" && console.error) {
           console.error(
             `[ShogunCore] Failed to reinitialize plugin ${pluginName}:`,
-            error
+            error,
           );
         }
       }
@@ -715,14 +728,14 @@ export class ShogunCore implements IShogunCore {
         return {
           login: async (
             username: string,
-            password: string
+            password: string,
           ): Promise<AuthResult> => {
             return await this.login(username, password);
           },
           signUp: async (
             username: string,
             password: string,
-            confirm?: string
+            confirm?: string,
           ): Promise<SignUpResult> => {
             return await this.signUp(username, password, confirm);
           },
@@ -774,7 +787,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGOUT_FAILED",
         error instanceof Error ? error.message : "Error during logout",
-        error
+        error,
       );
     }
   }
@@ -790,7 +803,7 @@ export class ShogunCore implements IShogunCore {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     try {
       if (!this.currentAuthMethod) {
@@ -823,7 +836,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "LOGIN_FAILED",
         error.message ?? "Unknown error during login",
-        error
+        error,
       );
 
       return {
@@ -875,7 +888,7 @@ export class ShogunCore implements IShogunCore {
         ErrorType.AUTHENTICATION,
         "PAIR_LOGIN_FAILED",
         error.message ?? "Unknown error during pair login",
-        error
+        error,
       );
 
       return {
@@ -899,7 +912,7 @@ export class ShogunCore implements IShogunCore {
     username: string,
     password: string = "",
     email: string = "",
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     try {
       if (!this.db) {
@@ -961,7 +974,7 @@ export class ShogunCore implements IShogunCore {
    */
   emit<K extends keyof ShogunEventMap>(
     eventName: K,
-    data?: ShogunEventMap[K] extends void ? never : ShogunEventMap[K]
+    data?: ShogunEventMap[K] extends void ? never : ShogunEventMap[K],
   ): boolean {
     return this.eventEmitter.emit(eventName, data);
   }
@@ -976,7 +989,7 @@ export class ShogunCore implements IShogunCore {
     eventName: K,
     listener: ShogunEventMap[K] extends void
       ? () => void
-      : (data: ShogunEventMap[K]) => void
+      : (data: ShogunEventMap[K]) => void,
   ): this {
     this.eventEmitter.on(eventName, listener as any);
     return this;
@@ -992,7 +1005,7 @@ export class ShogunCore implements IShogunCore {
     eventName: K,
     listener: ShogunEventMap[K] extends void
       ? () => void
-      : (data: ShogunEventMap[K]) => void
+      : (data: ShogunEventMap[K]) => void,
   ): this {
     this.eventEmitter.once(eventName, listener as any);
     return this;
@@ -1008,7 +1021,7 @@ export class ShogunCore implements IShogunCore {
     eventName: K,
     listener: ShogunEventMap[K] extends void
       ? () => void
-      : (data: ShogunEventMap[K]) => void
+      : (data: ShogunEventMap[K]) => void,
   ): this {
     this.eventEmitter.off(eventName, listener as any);
     return this;

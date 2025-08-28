@@ -20,8 +20,6 @@ describe("Success Test - User Manager Integration", () => {
       expect(typeof shogunCore.signUp).toBe("function");
       expect(typeof shogunCore.login).toBe("function");
     });
-
-
   });
 
   describe("Error Handling Tests", () => {
@@ -45,8 +43,6 @@ describe("Success Test - User Manager Integration", () => {
       expect(typeof result.error).toBe("string");
     });
   });
-
-
 
   describe("Integration Summary", () => {
     it("should demonstrate successful integration testing", () => {

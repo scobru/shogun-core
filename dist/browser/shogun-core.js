@@ -99891,6 +99891,17 @@ class ShogunCore {
                 method: "password",
             });
         });
+        // ascolta gun se user è loggato crei i wallets
+        this._gun.on("auth", async (user) => {
+            if (!user)
+                return;
+            const priv = user._?.sea?.epriv;
+            const pub = user._?.sea?.epub;
+            this.wallets = await (0, gundb_1.derive)(priv, pub, {
+                includeSecp256k1Bitcoin: true,
+                includeSecp256k1Ethereum: true,
+            });
+        });
         this.rx = new gundb_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         // Initialize async components
@@ -101320,6 +101331,7 @@ const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules
 exports.SEA = sea_1.default;
 __webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
 __webpack_require__(/*! gun/lib/radisk.js */ "./node_modules/gun/lib/radisk.js");
+__webpack_require__(/*! gun/lib/radix.js */ "./node_modules/gun/lib/radix.js");
 __webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
 __webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
 __webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
@@ -103485,6 +103497,8 @@ async function loadGunModules() {
         await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/wire */ "./node_modules/gun/lib/wire.js")));
         await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/multicast */ "./node_modules/gun/lib/multicast.js")));
         await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/stats */ "./node_modules/gun/lib/stats.js")));
+        await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/radix */ "./node_modules/gun/lib/radix.js")));
+        await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/radisk */ "./node_modules/gun/lib/radisk.js")));
         // Optional modules - wrapped in try-catch for compatibility
         try {
             await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js")));

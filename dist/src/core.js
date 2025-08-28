@@ -110,6 +110,17 @@ class ShogunCore {
                 method: "password",
             });
         });
+        // ascolta gun se user è loggato crei i wallets
+        this._gun.on("auth", async (user) => {
+            if (!user)
+                return;
+            const priv = user._?.sea?.epriv;
+            const pub = user._?.sea?.epub;
+            this.wallets = await (0, gundb_1.derive)(priv, pub, {
+                includeSecp256k1Bitcoin: true,
+                includeSecp256k1Ethereum: true,
+            });
+        });
         this.rx = new gundb_1.GunRxJS(this._gun);
         this.registerBuiltinPlugins(config);
         // Initialize async components
