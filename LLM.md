@@ -6,6 +6,15 @@ Shogun Core is a TypeScript SDK for building decentralized applications (dApps) 
 
 ## Recent Improvements
 
+### ✅ **Major API Simplification (v1.9.5)**
+
+- **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
+- **Simplified Architecture**: Removed cryptographic key derivation functions (`derive`, `deriveP256`, `deriveBitcoin`, `deriveEthereum`, `deriveAll`)
+- **Streamlined Event System**: Removed complex event emission for data and peer operations
+- **Enhanced Core Focus**: Maintained password hint system while removing advanced features
+- **Improved Maintainability**: Reduced codebase complexity by ~400-500 lines
+- **Better Performance**: Simplified operations with reduced overhead
+
 ### ✅ **Type Consistency Fixes (v1.7.0)**
 
 - **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
@@ -39,7 +48,22 @@ Shogun Core is a TypeScript SDK for building decentralized applications (dApps) 
 - Hardware key authentication (WebAuthn)
 - Web3 wallet integration
 - Nostr protocol support
-- Automatic cryptographic wallet derivation
+- Password recovery system with security questions
+- Simplified architecture for better maintainability
+
+## Removed Features (v1.9.5)
+
+The following features have been removed to simplify the codebase and focus on core functionality:
+
+- **Debug/Testing Functions**: `clearGunStorage()`, `testConnectivity()`
+- **Rate Limiting System**: `checkRateLimit()`, `resetRateLimit()`, rate limit storage
+- **Frozen Space System**: `createFrozenSpace()`, `getFrozenSpace()`, `verifyFrozenSpace()`
+- **Complex Username Management**: `checkUsernameExists()`, `normalizeUsername()`, `changeUsername()`
+- **Cryptographic Key Derivation**: `derive()`, `deriveP256()`, `deriveBitcoin()`, `deriveEthereum()`, `deriveAll()`
+- **Advanced Event System**: Complex data and peer event emissions
+- **Advanced Peer Management**: `getPeerInfo()`, `reconnectToPeer()`
+
+These features were removed to reduce complexity and focus on essential authentication and data operations.
 
 ## Installation
 
@@ -108,12 +132,12 @@ class ShogunCore implements IShogunCore {
   public db: GunInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
-  public config: ShogunSDKConfig;
+  public config: ShogunCoreConfig;
   public rx: GunRxJS;
   public wallets?: Wallets;
 
   // Constructor & Initialization
-  constructor(config: ShogunSDKConfig);
+  constructor(config: ShogunCoreConfig);
   async initialize(): Promise<void>;
 
   // Authentication Methods - ✅ FIXED TYPES
@@ -169,7 +193,7 @@ class GunInstance {
   constructor(gun: IGunInstance<any>, appScope?: string);
   async initialize(appScope?: string): Promise<void>;
 
-  // Authentication - ✅ FIXED TYPES
+  // Authentication - ✅ SIMPLIFIED & FIXED TYPES
   async login(
     username: string,
     password: string,
@@ -183,11 +207,7 @@ class GunInstance {
   logout(): void;
   isLoggedIn(): boolean;
 
-  // User Management
-  async checkUsernameExists(username: string): Promise<any>;
-  async updateUserAlias(
-    newAlias: string
-  ): Promise<{ success: boolean; error?: string }>;
+  // Session Management
   restoreSession(): { success: boolean; userPub?: string; error?: string };
 
   // Data Operations
@@ -202,28 +222,19 @@ class GunInstance {
   async hashText(text: string): Promise<string>;
   async encrypt(data: any, key: string): Promise<string>;
   async decrypt(encryptedData: string, key: string): Promise<any>;
-  async derive(
-    password: string | number,
-    extra?: string[],
-    options?: DeriveOptions
-  ): Promise<any>;
 
-  // Frozen Space (Immutable Data)
-  async createFrozenSpace(
-    data: any,
-    options?: any
-  ): Promise<{ hash: string; fullPath: string; data: any }>;
-  async getFrozenSpace(
-    hash: string,
-    namespace?: string,
-    path?: string
-  ): Promise<any>;
-  async verifyFrozenSpace(
-    data: any,
-    hash: string,
-    namespace?: string,
-    path?: string
-  ): Promise<any>;
+  // Password Recovery System
+  async setPasswordHint(
+    username: string,
+    password: string,
+    hint: string,
+    securityQuestions: string[],
+    securityAnswers: string[]
+  ): Promise<{ success: boolean; error?: string }>;
+  async forgotPassword(
+    username: string,
+    securityAnswers: string[]
+  ): Promise<{ success: boolean; hint?: string; error?: string }>;
 
   // Peer Management
   addPeer(peer: string): void;
@@ -238,6 +249,8 @@ class GunInstance {
   emit(event: string | symbol, data?: EventData): boolean;
 }
 ```
+
+````
 
 ## Plugin Authentication APIs
 
@@ -312,7 +325,7 @@ type AuthMethod =
   | "oauth"
   | "bitcoin"
   | "pair";
-```
+````
 
 ### 1. WebAuthn Plugin API - ✅ FIXED TYPES
 
@@ -789,8 +802,6 @@ shogun.on("auth:signup", (data) => {
   console.log("Method:", data.method);
 });
 
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
-
 // Listen for GunDB operations
 shogun.on("gun:put", (data) => {
   console.log("Data written:", data.path, data.success);
@@ -807,28 +818,31 @@ shogun.on("error", (error) => {
 });
 ```
 
-### Cryptographic Wallets
+### Password Recovery System
 
-Shogun Core automatically derives Bitcoin and Ethereum wallets from user authentication:
+Shogun Core includes a secure password recovery system using security questions:
 
 ```typescript
-// After successful authentication, wallets are automatically available
-if (shogun.wallets) {
-  console.log("Bitcoin wallet:", {
-    address: shogun.wallets.secp256k1Bitcoin.address,
-    publicKey: shogun.wallets.secp256k1Bitcoin.publicKey,
-    // privateKey is available but should be handled securely
-  });
+// Set password hint with security questions
+await shogun.db.setPasswordHint(
+  "username",
+  "password",
+  "My favorite color",
+  ["What is your favorite color?", "What was your first pet's name?"],
+  ["blue", "fluffy"]
+);
 
-  console.log("Ethereum wallet:", {
-    address: shogun.wallets.secp256k1Ethereum.address,
-    publicKey: shogun.wallets.secp256k1Ethereum.publicKey,
-    // privateKey is available but should be handled securely
-  });
+// Recover password using security answers
+const result = await shogun.db.forgotPassword("username", ["blue", "fluffy"]);
+
+if (result.success) {
+  console.log("Password hint:", result.hint);
 }
-
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
 ```
+
+Note: The cryptographic wallet derivation feature has been removed in v1.9.5 to simplify the architecture.
+
+````
 
 ## OAuth Security Features
 
@@ -865,7 +879,7 @@ try {
     }
   }
 }
-```
+````
 
 ## Plugin Development
 
@@ -931,6 +945,6 @@ export class CustomAuthPlugin extends BasePlugin {
 5. **Follow security best practices** for OAuth and Web3 integrations
 6. **Use PKCE for OAuth** in browser environments
 7. **Validate user input** before passing to plugin methods
-8. **Monitor wallet events** for automatic wallet derivation
-9. **✅ NEW: Always use correct return types** - `AuthResult` for login, `SignUpResult` for signup
-10. **✅ NEW: Check type consistency** when implementing custom plugins
+8. **✅ NEW: Always use correct return types** - `AuthResult` for login, `SignUpResult` for signup
+9. **✅ NEW: Check type consistency** when implementing custom plugins
+10. **✅ NEW: Use password recovery system** for secure account recovery

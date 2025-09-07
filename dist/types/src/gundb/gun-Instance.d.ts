@@ -6,9 +6,10 @@
  */
 import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
 import type { AuthResult, SignUpResult } from "../types/shogun";
-declare const Gun: any;
+declare const Gun: import("gun/types").IGun;
 import SEA from "gun/sea";
 import "gun/lib/then.js";
+import "gun/lib/radix.js";
 import "gun/lib/radisk.js";
 import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
@@ -29,7 +30,6 @@ declare class GunInstance {
     node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
     private readonly onAuthCallbacks;
     private readonly eventEmitter;
-    private readonly rateLimitStorage;
     private _rxjs?;
     constructor(gun: IGunInstance<any>, appScope?: string);
     /**
@@ -39,40 +39,6 @@ declare class GunInstance {
     initialize(appScope?: string): Promise<void>;
     private subscribeToAuthEvents;
     private notifyAuthListeners;
-    /**
-     * Emits a Gun data event
-     * @private
-     */
-    private emitDataEvent;
-    /**
-     * Emits a Gun peer event
-     * @private
-     */
-    private emitPeerEvent;
-    /**
-     * Adds an event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    on(event: string | symbol, listener: EventListener): void;
-    /**
-     * Removes an event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    off(event: string | symbol, listener: EventListener): void;
-    /**
-     * Adds a one-time event listener
-     * @param event Event name
-     * @param listener Event listener function
-     */
-    once(event: string | symbol, listener: EventListener): void;
-    /**
-     * Emits an event
-     * @param event Event name
-     * @param data Event data
-     */
-    emit(event: string | symbol, data?: EventData): boolean;
     /**
      * Adds a new peer to the network
      * @param peer URL of the peer to add
@@ -189,17 +155,6 @@ declare class GunInstance {
     };
     logout(): void;
     /**
-     * Debug method: Clears all Gun-related data from local and session storage
-     * This is useful for debugging and testing purposes
-     * @warning This will completely reset the user's local Gun data
-     */
-    clearGunStorage(): void;
-    /**
-     * Debug method: Tests Gun connectivity and returns status information
-     * This is useful for debugging connection issues
-     */
-    testConnectivity(): Promise<any>;
-    /**
      * Accesses the RxJS module for reactive programming
      * @returns GunRxJS instance
      */
@@ -208,17 +163,6 @@ declare class GunInstance {
      * Validates password strength according to security requirements
      */
     private validatePasswordStrength;
-    /**
-     * Checks rate limiting for login attempts
-     */
-    checkRateLimit(username: string, operation: "login" | "signup"): {
-        allowed: boolean;
-        error?: string;
-    };
-    /**
-     * Resets rate limiting for successful authentication
-     */
-    private resetRateLimitForUser;
     /**
      * Validates signup credentials with enhanced security
      */
@@ -249,35 +193,6 @@ declare class GunInstance {
     private createNewUserWithPair;
     private runPostAuthOnAuthResult;
     /**
-     * Normalizes username for consistent lookup
-     */
-    private normalizeUsername;
-    /**
-     * Strategy 1: Frozen space scan for immutable data
-     */
-    private lookupInFrozenSpace;
-    /**
-     * Strategy 2: Direct frozen mapping lookup
-     */
-    private lookupDirectMapping;
-    /**
-     * Strategy 3: Alternate key lookup
-     */
-    private lookupAlternateKey;
-    /**
-     * Strategy 4: Comprehensive scan fallback
-     */
-    private lookupComprehensiveScan;
-    /**
-     * Creates lookup strategies array
-     */
-    private createLookupStrategies;
-    /**
-     * Processes lookup result to get complete user data
-     */
-    private processLookupResult;
-    checkUsernameExists(username: string): Promise<any>;
-    /**
      * Performs authentication with Gun
      */
     private performAuthentication;
@@ -286,15 +201,6 @@ declare class GunInstance {
      */
     private buildLoginResult;
     login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
-    /**
-     * Updates the user's alias (username) in Gun and saves the updated credentials
-     * @param newAlias New alias/username to set
-     * @returns Promise resolving to update result
-     */
-    updateUserAlias(newAlias: string): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
     /**
      * Encrypts session data before storage
      */
@@ -341,161 +247,31 @@ declare class GunInstance {
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
-    /**
-     * Derive cryptographic keys from password and optional extras
-     * Supports multiple key derivation algorithms: P-256, secp256k1 (Bitcoin), secp256k1 (Ethereum)
-     * @param password - Password or seed for key derivation
-     * @param extra - Additional entropy (string or array of strings)
-     * @param options - Derivation options to specify which key types to generate
-     * @returns Promise resolving to derived keys object
-     */
-    derive(password: string | number, extra?: string | string[], options?: DeriveOptions): Promise<{
-        p256?: {
-            pub: string;
-            priv: string;
-            epub: string;
-            epriv: string;
-        };
-        secp256k1Bitcoin?: {
-            pub: string;
-            priv: string;
-            address: string;
-        };
-        secp256k1Ethereum?: {
-            pub: string;
-            priv: string;
-            address: string;
-        };
-    }>;
-    /**
-     * Derive P-256 keys (default Gun.SEA behavior)
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to P-256 keys
-     */
-    deriveP256(password: string | number, extra?: string | string[]): Promise<{
-        pub: string;
-        priv: string;
-        epub: string;
-        epriv: string;
-    }>;
-    /**
-     * Derive Bitcoin secp256k1 keys with P2PKH address
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to Bitcoin keys and address
-     */
-    deriveBitcoin(password: string | number, extra?: string | string[]): Promise<{
-        pub: string;
-        priv: string;
-        address: string;
-    }>;
-    /**
-     * Derive Ethereum secp256k1 keys with Keccak256 address
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to Ethereum keys and address
-     */
-    deriveEthereum(password: string | number, extra?: string | string[]): Promise<{
-        pub: string;
-        priv: string;
-        address: string;
-    }>;
-    /**
-     * Derive all supported key types
-     * @param password - Password for key derivation
-     * @param extra - Additional entropy
-     * @returns Promise resolving to all key types
-     */
-    deriveAll(password: string | number, extra?: string | string[]): Promise<{
-        p256: {
-            pub: string;
-            priv: string;
-            epub: string;
-            epriv: string;
-        };
-        secp256k1Bitcoin: {
-            pub: string;
-            priv: string;
-            address: string;
-        };
-        secp256k1Ethereum: {
-            pub: string;
-            priv: string;
-            address: string;
-        };
-    }>;
-    /**
-     * Prepares data for freezing with metadata
-     */
-    private prepareFrozenData;
-    /**
-     * Generates hash for frozen data
-     */
-    private generateFrozenDataHash;
-    /**
-     * Builds the full path for frozen data
-     */
-    private buildFrozenPath;
-    /**
-     * Stores frozen data in Gun
-     */
-    private storeFrozenData;
-    /**
-     * Creates a frozen space entry for immutable data
-     * @param data Data to freeze
-     * @param options Optional configuration
-     * @returns Promise resolving to the frozen data hash
-     */
-    createFrozenSpace(data: any, options?: {
-        namespace?: string;
-        path?: string;
-        description?: string;
-        metadata?: Record<string, any>;
-    }): Promise<{
-        hash: string;
-        fullPath: string;
-        data: any;
-    }>;
-    /**
-     * Retrieves data from frozen space
-     * @param hash Hash of the frozen data
-     * @param namespace Optional namespace
-     * @param path Optional custom path
-     * @returns Promise resolving to the frozen data
-     */
-    getFrozenSpace(hash: string, namespace?: string, path?: string): Promise<any>;
-    /**
-     * Verifies if data matches a frozen space entry
-     * @param data Data to verify
-     * @param hash Expected hash
-     * @param namespace Optional namespace
-     * @param path Optional custom path
-     * @returns Promise resolving to verification result
-     */
-    verifyFrozenSpace(data: any, hash: string, namespace?: string, path?: string): Promise<{
-        verified: boolean;
-        frozenData?: any;
-        error?: string;
-    }>;
     static Errors: typeof GunErrors;
     /**
-     * Sanitizes username to prevent path construction issues
-     * @param username Raw username
-     * @returns Sanitized username
+     * Adds an event listener
+     * @param event Event name
+     * @param listener Event listener function
      */
-    private sanitizeUsername;
+    on(event: string | symbol, listener: EventListener): void;
     /**
-     * Changes the username for the currently authenticated user
-     * @param newUsername New username to set
-     * @returns Promise resolving to the operation result
+     * Removes an event listener
+     * @param event Event name
+     * @param listener Event listener function
      */
-    changeUsername(newUsername: string): Promise<{
-        success: boolean;
-        error?: string;
-        oldUsername?: string;
-        newUsername?: string;
-    }>;
+    off(event: string | symbol, listener: EventListener): void;
+    /**
+     * Adds a one-time event listener
+     * @param event Event name
+     * @param listener Event listener function
+     */
+    once(event: string | symbol, listener: EventListener): void;
+    /**
+     * Emits an event
+     * @param event Event name
+     * @param data Event data
+     */
+    emit(event: string | symbol, data?: EventData): boolean;
     /**
      * Recall user session
      */
@@ -504,14 +280,6 @@ declare class GunInstance {
      * Leave user session
      */
     leave(): void;
-    /**
-     * Set username for the current user
-     */
-    setUsername(username: string): void;
-    /**
-     * Get username for the current user
-     */
-    getUsername(): string | null;
     /**
      * Set user data
      */
@@ -548,12 +316,9 @@ declare class GunInstance {
      * Check if user is authenticated
      */
     isAuthenticated(): boolean;
-    /**
-     * Reset rate limit
-     */
-    resetRateLimit(): void;
 }
-export { GunInstance, SEA, GunRxJS, crypto, GunErrors, derive, restrictedPut };
+declare const createGun: (config: any) => IGunInstance<any>;
+export { Gun, GunInstance, SEA, GunRxJS, crypto, GunErrors, derive, restrictedPut, createGun, };
 export default Gun;
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };

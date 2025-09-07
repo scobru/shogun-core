@@ -36,6 +36,8 @@ async function loadGunModules(): Promise<void> {
     await import("gun/lib/wire");
     await import("gun/lib/multicast");
     await import("gun/lib/stats");
+    await import("gun/lib/radix");
+    await import("gun/lib/radisk");
 
     // Optional modules - wrapped in try-catch for compatibility
     try {

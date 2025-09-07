@@ -66,6 +66,8 @@ async function loadGunModules() {
         await Promise.resolve().then(() => __importStar(require("gun/lib/wire")));
         await Promise.resolve().then(() => __importStar(require("gun/lib/multicast")));
         await Promise.resolve().then(() => __importStar(require("gun/lib/stats")));
+        await Promise.resolve().then(() => __importStar(require("gun/lib/radix")));
+        await Promise.resolve().then(() => __importStar(require("gun/lib/radisk")));
         // Optional modules - wrapped in try-catch for compatibility
         try {
             await Promise.resolve().then(() => __importStar(require("gun/sea")));

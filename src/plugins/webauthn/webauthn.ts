@@ -197,7 +197,7 @@ export class Webauthn extends EventEmitter {
       );
 
       try {
-        const challenge = this.generateChallenge(username);
+        const challenge = this.generateChallenge(username) as BufferSource;
         const assertionOptions: PublicKeyCredentialRequestOptions = {
           challenge,
           allowCredentials: [],

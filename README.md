@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.7.0-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v1.9.4-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 
@@ -17,19 +17,20 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
 - 📡 **Event System**: Typed event system for monitoring authentication and data changes
-- 🔑 **Cryptographic Wallets**: Automatic derivation of Bitcoin and Ethereum wallets from user keys
+- 🔑 **Password Recovery**: Secure password hint system with security questions
 - ✅ **Type Consistency**: Unified return types across all authentication methods
+- 🚀 **Simplified Architecture**: Focused on core functionality with reduced complexity
 
-## Recent Updates (v1.7.5)
+## Recent Updates (v1.9.5)
 
-### ✅ **Code Cleanup and Optimization**
+### ✅ **Major API Simplification**
 
-- **Removed Deprecated Functions**: Eliminated `handleSimpleOAuth` and Alby support
-- **Simplified API**: Removed redundant `updateUserAlias` (use `changeUsername` instead)
-- **Debug Functions Cleanup**: Removed debug-only functions like `clearAllStorageData`, `exportPair`
-- **Error Handler Optimization**: Removed debug statistics and debug helper functions
-- **Cache Management**: Removed optional cache functions for cleaner API
-- **Bundle Size Reduction**: Estimated 15-20% reduction in bundle size
+- **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
+- **Simplified Architecture**: Removed cryptographic key derivation functions and advanced peer management
+- **Streamlined Event System**: Removed complex event emission for data and peer operations
+- **Enhanced Core Focus**: Maintained password hint system while removing advanced features
+- **Improved Maintainability**: Reduced codebase complexity by ~400-500 lines
+- **Better Performance**: Simplified operations with reduced overhead
 
 ## Recent Updates (v1.7.0)
 
@@ -89,10 +90,11 @@ const shogun = new ShogunCore({
   oauth: {
     enabled: true,
     usePKCE: true, // Recommended for SPAs
+    allowUnsafeClientSecret: true, // Required for Google OAuth
     providers: {
       google: {
         clientId: "YOUR_GOOGLE_CLIENT_ID",
-        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // For server-side flow
+        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // Required for Google even with PKCE
         redirectUri: "http://localhost:3000/auth/callback",
         scope: ["openid", "email", "profile"],
       },
@@ -437,8 +439,8 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
     <script src="https://cdn.jsdelivr.net/npm/shogun-core/dist/browser/shogun-core.js"></script>
 
     <script>
-      // The script exposes a global `initShogun` function
-      const shogun = initShogun({
+      // Access the global Shogun Core function
+      const shogunCore = window.SHOGUN_CORE({
         peers: ["https://gun-manhattan.herokuapp.com/gun"],
         scope: "my-browser-app",
         web3: { enabled: true },
@@ -449,11 +451,11 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
         },
       });
 
-      console.log("Shogun Core initialized in browser!", shogun);
+      console.log("Shogun Core initialized in browser!", shogunCore);
 
       async function connectWallet() {
-        if (shogun.hasPlugin("web3")) {
-          const web3Plugin = shogun.getPlugin("web3");
+        if (shogunCore.hasPlugin("web3")) {
+          const web3Plugin = shogunCore.getPlugin("web3");
           try {
             const provider = await web3Plugin.getProvider();
             const signer = provider.getSigner();
@@ -498,7 +500,7 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 ### Configuration Options
 
 ```typescript
-interface ShogunSDKConfig {
+interface ShogunCoreConfig {
   peers?: string[]; // GunDB peer URLs
   scope?: string; // Application scope
   authToken?: string; // GunDB super peer secret
@@ -522,6 +524,7 @@ interface ShogunSDKConfig {
   oauth?: {
     enabled?: boolean;
     usePKCE?: boolean;
+    allowUnsafeClientSecret?: boolean;
     providers?: Record<string, any>;
   };
 
@@ -544,7 +547,11 @@ interface ShogunEventMap {
   "auth:login": AuthEventData; // User logged in
   "auth:logout": void; // User logged out
   "auth:signup": AuthEventData; // New user registered
-  "wallet:created": WalletEventData; // Wallet derived from user keys
+  "auth:username_changed": {
+    oldUsername?: string;
+    newUsername?: string;
+    userPub?: string;
+  }; // Username changed
   "gun:put": GunDataEventData; // Data written to GunDB
   "gun:get": GunDataEventData; // Data read from GunDB
   "gun:set": GunDataEventData; // Data updated in GunDB
@@ -576,17 +583,35 @@ shogun.on("auth:signup", (data) => {
   console.log("New user signed up:", data.username);
 });
 
-// Nota: in v1.7.0 l'evento `wallet:created` non è emesso dal core
-
 // Listen for errors
 shogun.on("error", (error) => {
   console.error("Shogun error:", error.message);
 });
 ```
 
-## Cryptographic Wallets
+## Password Recovery System
 
-Nota: la derivazione automatica dei wallet e l'evento `wallet:created` sono sperimentali e non garantiti in v1.7.0.
+Shogun Core includes a secure password recovery system using security questions:
+
+```typescript
+// Set password hint with security questions
+await shogun.db.setPasswordHint(
+  "username",
+  "password",
+  "My favorite color",
+  ["What is your favorite color?", "What was your first pet's name?"],
+  ["blue", "fluffy"]
+);
+
+// Recover password using security answers
+const result = await shogun.db.forgotPassword("username", ["blue", "fluffy"]);
+
+if (result.success) {
+  console.log("Password hint:", result.hint);
+}
+```
+
+Note: The cryptographic wallet derivation feature has been removed in v1.9.5 to simplify the architecture.
 
 ## Error Handling
 
@@ -638,7 +663,6 @@ This project includes a comprehensive test suite that covers:
 ### Unit Tests
 
 - **Validation Utils** (`src/__tests__/utils/validation.test.ts`)
-
   - Username validation
   - Email validation
   - OAuth provider validation
@@ -646,14 +670,12 @@ This project includes a comprehensive test suite that covers:
   - Deterministic password generation
 
 - **Error Handler** (`src/__tests__/utils/errorHandler.test.ts`)
-
   - Error creation and handling
   - Error statistics and logging
   - Retry logic
   - External logger integration
 
 - **Event Emitter** (`src/__tests__/utils/eventEmitter.test.ts`)
-
   - Event registration and emission
   - Listener management
   - Error handling in listeners

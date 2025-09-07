@@ -159,12 +159,6 @@ export interface IShogunCore extends PluginManager {
 
   // User management methods
   getCurrentUser(): { pub: string; user?: any } | null;
-  changeUsername(newUsername: string): Promise<{
-    success: boolean;
-    error?: string;
-    oldUsername?: string;
-    newUsername?: string;
-  }>;
 
   // Utility methods
   logout(): void;

@@ -16,10 +16,11 @@ module.exports = {
     // Add clean webpack plugin configuration
     clean: true,
   },
+  // Remove Gun from externals to bundle it internally
   externals: {
-    gun: "Gun",
-    "gun/gun": "Gun",
-    "gun/sea": "Gun.SEA",
+    // gun: "Gun", // Commented out to bundle Gun internally
+    // "gun/gun": "Gun", // Commented out to bundle Gun internally
+    // "gun/sea": "Gun.SEA", // Commented out to bundle Gun internally
   },
 
   resolve: {
@@ -96,11 +97,11 @@ module.exports = {
       Buffer: ["buffer", "Buffer"],
       process: "process/browser",
     }),
-    // Ignore specific Gun.js warnings
-    new webpack.IgnorePlugin({
-      resourceRegExp: /gun\/(sea|lib)$/,
-      contextRegExp: /node_modules/,
-    }),
+    // Remove the IgnorePlugin for Gun since we want to bundle it
+    // new webpack.IgnorePlugin({
+    //   resourceRegExp: /gun\/(sea|lib)$/,
+    //   contextRegExp: /node_modules/,
+    // }),
     // Ignore Node.js modules that are not available in browser
     new webpack.IgnorePlugin({
       resourceRegExp: /^(http|https|fs|net|tls|child_process|ws)$/,
@@ -112,10 +113,10 @@ module.exports = {
     new webpack.DefinePlugin({
       "typeof window": '"object"',
     }),
-    // Provide Gun as a global
-    new webpack.ProvidePlugin({
-      Gun: "gun",
-    }),
+    // Remove the ProvidePlugin for Gun since we're bundling it
+    // new webpack.ProvidePlugin({
+    //   Gun: "gun",
+    // }),
   ],
   optimization: {
     minimize: process.env.NODE_ENV === "production",

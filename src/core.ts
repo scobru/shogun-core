@@ -24,10 +24,10 @@ import {
   IGunInstance,
   GunInstance,
   GunRxJS,
+  createGun,
+  Gun,
+  derive,
 } from "./gundb";
-
-// Import Gun as default export
-import Gun from "./gundb/gun-Instance";
 
 import { ISEAPair } from "gun";
 
@@ -96,7 +96,7 @@ export class ShogunCore implements IShogunCore {
       if (config.gunInstance) {
         this._gun = config.gunInstance;
       } else {
-        this._gun = Gun({
+        this._gun = createGun({
           peers: config.peers || [],
           radisk: config.radisk || false,
           localStorage: config.localStorage || false,
@@ -137,6 +137,17 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
+    // ascolta gun se user è loggato crei i wallets
+    this._gun.on("auth", async (user) => {
+      if (!user) return;
+      const priv = (user as any)._?.sea?.epriv;
+      const pub = (user as any)._?.sea?.epub;
+      this.wallets = await derive(priv, pub, {
+        includeSecp256k1Bitcoin: true,
+        includeSecp256k1Ethereum: true,
+      });
+    });
+
     this.rx = new GunRxJS(this._gun);
     this.registerBuiltinPlugins(config);
 
@@ -155,6 +166,7 @@ export class ShogunCore implements IShogunCore {
   async initialize(): Promise<void> {
     try {
       await this.db.initialize();
+
       this.eventEmitter.emit("debug", {
         action: "core_initialized",
         timestamp: Date.now(),
@@ -1062,83 +1074,24 @@ export class ShogunCore implements IShogunCore {
   public getIsLoggedIn(): boolean {
     return !!(this.user && this.user.is);
   }
-
-  /**
-   * Changes the username for the currently authenticated user
-   * @param newUsername New username to set
-   * @returns Promise resolving to the operation result
-   */
-  async changeUsername(newUsername: string): Promise<{
-    success: boolean;
-    error?: string;
-    oldUsername?: string;
-    newUsername?: string;
-  }> {
-    try {
-      if (!this.db) {
-        throw new Error("Database not initialized");
-      }
-
-      const result = await this.db.changeUsername(newUsername);
-
-      if (result.success) {
-        this.eventEmitter.emit("auth:username_changed", {
-          oldUsername: result.oldUsername,
-          newUsername: result.newUsername,
-          userPub: this.getCurrentUser()?.pub,
-        });
-
-        this.eventEmitter.emit("debug", {
-          action: "username_changed",
-          oldUsername: result.oldUsername,
-          newUsername: result.newUsername,
-        });
-      } else {
-        this.eventEmitter.emit("debug", {
-          action: "username_change_failed",
-          error: result.error,
-          newUsername,
-        });
-      }
-
-      return result;
-    } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
-        console.error(`Error changing username to ${newUsername}:`, error);
-      }
-
-      this.eventEmitter.emit("debug", {
-        action: "username_change_error",
-        error: error instanceof Error ? error.message : String(error),
-        newUsername,
-      });
-
-      return {
-        success: false,
-        error: `Username change failed: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
 }
 
 declare global {
   interface Window {
-    initShogun: (config: ShogunCoreConfig) => ShogunCore;
-    ShogunCore: ShogunCore;
-    ShogunCoreClass: typeof ShogunCore;
+    SHOGUN_CORE: (config: ShogunCoreConfig) => ShogunCore;
+    SHOGUN_CORE_CLASS: typeof ShogunCore;
   }
 }
 
 if (typeof window !== "undefined") {
-  window.ShogunCoreClass = ShogunCore;
+  window.SHOGUN_CORE_CLASS = ShogunCore;
 }
 
 if (typeof window !== "undefined") {
-  window.initShogun = (config: ShogunCoreConfig): ShogunCore => {
-    const instance = new ShogunCore(config);
-    window.ShogunCore = instance;
-    return instance;
+  window.SHOGUN_CORE = (config: ShogunCoreConfig): ShogunCore => {
+    return new ShogunCore(config);
   };
+  window.SHOGUN_CORE_CLASS = ShogunCore;
 }
 
 export default ShogunCore;

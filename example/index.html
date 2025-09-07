@@ -41,25 +41,28 @@
     }
     document.getElementById('output').textContent = '';
 
-    if (typeof window.initShogun === 'function') {
-      log('✓ <b>initShogun</b> found on window', 'ok');
+    if (window.SHOGUN_CORE) {
+      log('✓ <b>ShogunCore</b> found on window', 'ok');
       const config = {
         appToken: "12345678",
         oauth: { enabled: false },
         peers: [],
       };
       try {
-        const shogun = window.initShogun(config);
+        const shogun = window.SHOGUN_CORE(config);
+
+        shogun.initialize();
+        console.log(shogun);
+
         log('✓ <b>ShogunCore</b> instance created', 'ok');
         log('typeof shogun.getPlugin: ' + typeof shogun.getPlugin, 'ok');
-        log('shogun instanceof window.ShogunCoreClass: ' + (shogun instanceof window.ShogunCoreClass), 'ok');
         log('ShogunCore keys: ' + Object.keys(shogun).join(', '), 'ok');
       } catch (e) {
         log('✗ Error creating ShogunCore: ' + e.message, 'fail');
         console.error(e);
       }
     } else {
-      log('✗ <b>initShogun</b> NOT found on window', 'fail');
+      log('✗ <b>ShogunCore</b> NOT found on window', 'fail');
     }
   </script>
 </body>
