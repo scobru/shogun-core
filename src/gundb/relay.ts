@@ -13,7 +13,7 @@ const isNode =
   typeof process !== "undefined" && process.versions && process.versions.node;
 
 // Gun modules will be loaded dynamically when needed
-let Gun: any;
+let Gun: IGunInstance<any>;
 let gunModulesLoaded = false;
 
 /**
@@ -23,33 +23,62 @@ async function loadGunModules(): Promise<void> {
   if (gunModulesLoaded) return;
 
   try {
-    // Use dynamic imports for ES modules
-    const gunModule = await import("gun/gun");
-    Gun = gunModule.default || gunModule;
+    // For browser environments, load only the modules that are browser-safe.
+    // Webpack 5 no longer polyfills Node core modules, and some Gun server-side
+    // libs (like wire/rs3) depend on them. To avoid bundling those, we only
+    // import browser-safe parts here. For Node, we use a runtime require via
+    // eval to prevent webpack from statically analyzing those imports.
 
-    // Import other modules dynamically
-    await import("gun/lib/yson");
-    await import("gun/lib/serve");
-    await import("gun/lib/store");
-    await import("gun/lib/rfs");
-    await import("gun/lib/rs3");
-    await import("gun/lib/wire");
-    await import("gun/lib/multicast");
-    await import("gun/lib/stats");
-    await import("gun/lib/radix");
-    await import("gun/lib/radisk");
-
-    // Optional modules - wrapped in try-catch for compatibility
-    try {
-      await import("gun/sea");
-    } catch (e) {
-      // SEA not available
+    if (!isNode) {
+      const gunModule = await import("gun/gun");
+      Gun = (gunModule as any).default || gunModule;
+      await import("gun/lib/yson");
+      gunModulesLoaded = true;
+      return;
     }
 
-    try {
-      await import("gun/axe");
-    } catch (e) {
-      // Axe not available
+    // Node.js environment: prefer require, but use eval to avoid webpack
+    // from resolving server-only modules in web builds.
+    const req = (() => {
+      try {
+        // eslint-disable-next-line no-eval
+        return eval("require");
+      } catch {
+        return null;
+      }
+    })();
+
+    if (req) {
+      Gun = req("gun/gun");
+      // Best-effort load of server-side helpers; ignore if unavailable
+      const nodeOnlyLibs = [
+        "gun/lib/yson",
+        "gun/lib/serve",
+        "gun/lib/store",
+        "gun/lib/rfs",
+        "gun/lib/rs3",
+        "gun/lib/wire",
+        "gun/lib/multicast",
+        "gun/lib/stats",
+        "gun/lib/radix",
+        "gun/lib/radisk",
+      ];
+      for (const lib of nodeOnlyLibs) {
+        try {
+          req(lib);
+        } catch (_) {}
+      }
+      try {
+        req("gun/sea");
+      } catch (_) {}
+      try {
+        req("gun/axe");
+      } catch (_) {}
+    } else {
+      // Fallback in rare cases where require isn't available
+      const gunModule = await import("gun/gun");
+      Gun = (gunModule as any).default || gunModule;
+      await import("gun/lib/yson");
     }
 
     gunModulesLoaded = true;
