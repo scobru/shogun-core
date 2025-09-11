@@ -72,6 +72,36 @@ export interface GunPeerEventData {
 }
 
 /**
+ * Interface representing Holster data operation event data
+ * @interface HolsterDataEventData
+ * @property {string} path - The path where the operation occurred
+ * @property {any} [data] - The data involved in the operation
+ * @property {boolean} success - Whether the operation was successful
+ * @property {string} [error] - Error message if operation failed
+ * @property {number} timestamp - Timestamp of the operation
+ */
+export interface HolsterDataEventData {
+  path: string;
+  data?: any;
+  success: boolean;
+  error?: string;
+  timestamp: number;
+}
+
+/**
+ * Interface representing Holster peer event data
+ * @interface HolsterPeerEventData
+ * @property {string} peer - The peer URL
+ * @property {string} action - The action performed (add, remove, connect, disconnect)
+ * @property {number} timestamp - Timestamp of the event
+ */
+export interface HolsterPeerEventData {
+  peer: string;
+  action: "add" | "remove" | "connect" | "disconnect";
+  timestamp: number;
+}
+
+/**
  * Type defining all available Shogun event listeners
  */
 export type ShogunEventMap = {
@@ -92,6 +122,14 @@ export type ShogunEventMap = {
   "gun:peer:remove": GunPeerEventData;
   "gun:peer:connect": GunPeerEventData;
   "gun:peer:disconnect": GunPeerEventData;
+  "holster:put": HolsterDataEventData;
+  "holster:get": HolsterDataEventData;
+  "holster:set": HolsterDataEventData;
+  "holster:remove": HolsterDataEventData;
+  "holster:peer:add": HolsterPeerEventData;
+  "holster:peer:remove": HolsterPeerEventData;
+  "holster:peer:connect": HolsterPeerEventData;
+  "holster:peer:disconnect": HolsterPeerEventData;
   "plugin:registered": { name: string; version?: string; category?: string };
   "plugin:unregistered": { name: string };
   debug: { action: string; [key: string]: any };

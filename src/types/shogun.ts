@@ -133,8 +133,8 @@ export interface SignUpResult {
 
 export interface IShogunCore extends PluginManager {
   gun: IGunInstance<any>;
-  db: GunInstance;
-  rx: GunRxJS; // RxJS integration
+  db: any; // GunInstance | HolsterInstance;
+  rx: any; // GunRxJS | HolsterRxJS;
   storage: ShogunStorage;
   config: ShogunCoreConfig;
   provider?: ethers.Provider;
@@ -185,6 +185,7 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
+  backend?: "gundb" | "holster";
   gunInstance?: IGunInstance<any>;
   authToken?: string;
   scope?: string;

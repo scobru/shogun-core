@@ -19,15 +19,24 @@ import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
 import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
 
 import {
-  restrictedPut,
+  restrictedPut as restrictedPutGun,
   IGunUserInstance,
   IGunInstance,
   GunInstance,
   GunRxJS,
   createGun,
   Gun,
-  derive,
+  derive as deriveGun,
 } from "./gundb";
+
+import {
+  restrictedPut as restrictedPutHolster,
+  HolsterInstance,
+  HolsterRxJS,
+  createHolster,
+  Holster,
+  derive as deriveHolster,
+} from "./holster";
 
 import { ISEAPair } from "gun";
 
@@ -44,13 +53,13 @@ import { ISEAPair } from "gun";
  */
 export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "^1.6.6";
-  public db: GunInstance;
+  public db: GunInstance | HolsterInstance;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
   public config: ShogunCoreConfig;
-  public rx!: GunRxJS;
+  public rx!: GunRxJS | HolsterRxJS;
 
-  private _gun!: IGunInstance<any>;
+  private _gun!: IGunInstance<any> | any;
   private _user: IGunUserInstance<any> | null = null;
   private readonly eventEmitter: ShogunEventEmitter;
   private readonly plugins: Map<string, ShogunPlugin> = new Map();
@@ -88,36 +97,68 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    if (config.authToken) {
-      restrictedPut(Gun, config.authToken);
-    }
+    if (config.backend === "holster") {
+        if (config.authToken) {
+            restrictedPutHolster(Holster, config.authToken);
+        }
 
-    try {
-      if (config.gunInstance) {
-        this._gun = config.gunInstance;
-      } else {
-        this._gun = createGun({
-          peers: config.peers || [],
-          radisk: config.radisk || false,
-          localStorage: config.localStorage || false,
-        });
-      }
-    } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
-        console.error("Error creating Gun instance:", error);
-      }
-      throw new Error(`Failed to create Gun instance: ${error}`);
-    }
+        try {
+            if (config.gunInstance) { // gunInstance is the holster instance here
+                this._gun = config.gunInstance;
+            } else {
+                this._gun = createHolster({
+                    peers: config.peers || [],
+                });
+            }
+        } catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error creating Holster instance:", error);
+            }
+            throw new Error(`Failed to create Holster instance: ${error}`);
+        }
 
-    try {
-      this.db = new GunInstance(this._gun, config.scope || "");
-      this._gun = this.db.gun;
-      this.setupGunEventForwarding();
-    } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
-        console.error("Error initializing GunInstance:", error);
-      }
-      throw new Error(`Failed to initialize GunInstance: ${error}`);
+        try {
+            this.db = new HolsterInstance(this._gun, config.scope || "");
+            this._gun = this.db.holster;
+            this.setupHolsterEventForwarding();
+        } catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing HolsterInstance:", error);
+            }
+            throw new Error(`Failed to initialize HolsterInstance: ${error}`);
+        }
+    } else {
+        if (config.authToken) {
+            restrictedPutGun(Gun, config.authToken);
+        }
+
+        try {
+            if (config.gunInstance) {
+                this._gun = config.gunInstance;
+            } else {
+                this._gun = createGun({
+                    peers: config.peers || [],
+                    radisk: config.radisk || false,
+                    localStorage: config.localStorage || false,
+                });
+            }
+        } catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error creating Gun instance:", error);
+            }
+            throw new Error(`Failed to create Gun instance: ${error}`);
+        }
+
+        try {
+            this.db = new GunInstance(this._gun, config.scope || "");
+            this._gun = this.db.gun;
+            this.setupGunEventForwarding();
+        } catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing GunInstance:", error);
+            }
+            throw new Error(`Failed to initialize GunInstance: ${error}`);
+        }
     }
 
     try {
@@ -142,13 +183,24 @@ export class ShogunCore implements IShogunCore {
       if (!user) return;
       const priv = (user as any)._?.sea?.epriv;
       const pub = (user as any)._?.sea?.epub;
-      this.wallets = await derive(priv, pub, {
-        includeSecp256k1Bitcoin: true,
-        includeSecp256k1Ethereum: true,
-      });
+      if (this.config.backend === "holster") {
+        this.wallets = await deriveHolster(this.db.sea, priv, pub, {
+            includeSecp256k1Bitcoin: true,
+            includeSecp256k1Ethereum: true,
+        });
+      } else {
+        this.wallets = await deriveGun(priv, pub, {
+            includeSecp256k1Bitcoin: true,
+            includeSecp256k1Ethereum: true,
+        });
+      }
     });
 
-    this.rx = new GunRxJS(this._gun);
+    if (this.config.backend === "holster") {
+        this.rx = new HolsterRxJS(this._gun);
+    } else {
+        this.rx = new GunRxJS(this._gun);
+    }
     this.registerBuiltinPlugins(config);
 
     // Initialize async components
@@ -183,7 +235,7 @@ export class ShogunCore implements IShogunCore {
    * Access to the Gun instance
    * @returns The Gun instance
    */
-  get gun(): IGunInstance<any> {
+  get gun(): any {
     return this._gun;
   }
 
@@ -191,7 +243,7 @@ export class ShogunCore implements IShogunCore {
    * Access to the current user
    * @returns The current Gun user instance
    */
-  get user(): IGunUserInstance<any> | null {
+  get user(): any | null {
     return this._user;
   }
 
@@ -223,6 +275,28 @@ export class ShogunCore implements IShogunCore {
       "gun:peer:remove",
       "gun:peer:connect",
       "gun:peer:disconnect",
+    ] as const;
+
+    peerEvents.forEach((eventName) => {
+      this.db.on(eventName, (data: any) => {
+        this.eventEmitter.emit(eventName, data);
+      });
+    });
+  }
+
+  private setupHolsterEventForwarding(): void {
+    const holsterEvents = ["holster:put", "holster:get", "holster:set", "holster:remove"] as const;
+    holsterEvents.forEach((eventName) => {
+      this.db.on(eventName, (data: any) => {
+        this.eventEmitter.emit(eventName, data);
+      });
+    });
+
+    const peerEvents = [
+      "holster:peer:add",
+      "holster:peer:remove",
+      "holster:peer:connect",
+      "holster:peer:disconnect",
     ] as const;
 
     peerEvents.forEach((eventName) => {
@@ -803,7 +877,7 @@ export class ShogunCore implements IShogunCore {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: any | null,
   ): Promise<AuthResult> {
     try {
       if (!this.currentAuthMethod) {
@@ -853,7 +927,7 @@ export class ShogunCore implements IShogunCore {
    * @description Authenticates user using a GunDB pair directly.
    * Emits login event on success.
    */
-  async loginWithPair(pair: ISEAPair): Promise<AuthResult> {
+  async loginWithPair(pair: any): Promise<AuthResult> {
     try {
       if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
         return {
@@ -912,7 +986,7 @@ export class ShogunCore implements IShogunCore {
     username: string,
     password: string = "",
     email: string = "",
-    pair?: ISEAPair | null,
+    pair?: any | null,
   ): Promise<SignUpResult> {
     try {
       if (!this.db) {

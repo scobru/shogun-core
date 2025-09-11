@@ -17,16 +17,25 @@ import {
 } from "./gundb/gun-Instance";
 
 import {
-  SEA,
+  SEA as GunSEA,
   GunRxJS,
-  crypto,
-  derive,
+  crypto as gunCrypto,
+  derive as deriveGun,
   GunErrors,
   GunInstance,
 } from "./gundb/gun-Instance";
 
+import {
+    HolsterInstance,
+    HolsterRxJS,
+    crypto as holsterCrypto,
+    derive as deriveHolster,
+    HolsterErrors,
+} from "./holster";
+
 // Import Gun as default export
 import Gun from "./gundb/gun-Instance";
+import Holster from "./holster";
 
 export * from "./utils/errorHandler";
 export * from "./plugins";
@@ -40,8 +49,9 @@ export type {
   DeriveOptions,
 };
 
-export { SEA, GunRxJS, crypto, derive, GunErrors, GunInstance };
-export { Gun };
+export { GunSEA, GunRxJS, gunCrypto, deriveGun, GunErrors, GunInstance };
+export { HolsterInstance, HolsterRxJS, holsterCrypto, deriveHolster, HolsterErrors };
+export { Gun, Holster };
 export { ShogunCore, Relay, createRelay, RelayPresets };
 
 export type { RelayConfig, RelayStatus };
