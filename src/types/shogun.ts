@@ -20,6 +20,10 @@ export enum PluginCategory {
   Identity = "identity",
   /** Other utility plugins */
   Utility = "utility",
+  /** Messages plugins */
+  Messages = "messages",
+  /** Messaging plugins */
+  Other = "other",
 }
 
 /**

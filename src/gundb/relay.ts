@@ -13,7 +13,7 @@ const isNode =
   typeof process !== "undefined" && process.versions && process.versions.node;
 
 // Gun modules will be loaded dynamically when needed
-let Gun: IGunInstance<any>;
+let Gun: any;
 let gunModulesLoaded = false;
 
 /**
@@ -83,17 +83,7 @@ async function loadGunModules(): Promise<void> {
 
     gunModulesLoaded = true;
   } catch (error) {
-    // In test environment, don't throw error, just log it
-    if (process.env.NODE_ENV === "test") {
-      console.warn(`Gun modules not available in test environment: ${error}`);
-      // Create a minimal mock Gun for testing
-      Gun = () => ({
-        on: () => {},
-      });
-      gunModulesLoaded = true;
-    } else {
-      throw new Error(`Failed to load Gun modules: ${error}`);
-    }
+    throw new Error(`Failed to load Gun modules: ${error}`);
   }
 }
 

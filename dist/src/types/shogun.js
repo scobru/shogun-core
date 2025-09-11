@@ -16,6 +16,10 @@ var PluginCategory;
     PluginCategory["Identity"] = "identity";
     /** Other utility plugins */
     PluginCategory["Utility"] = "utility";
+    /** Messages plugins */
+    PluginCategory["Messages"] = "messages";
+    /** Messaging plugins */
+    PluginCategory["Other"] = "other";
 })(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
  * Standard names for built-in plugins

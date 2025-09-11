@@ -2,7 +2,17 @@
 
 ## Overview
 
-Comprehensive API documentation for Shogun Core v1.9.4 with unified type system and consistent authentication interfaces.
+Comprehensive API documentation for Shogun Core with unified type system and consistent authentication interfaces.
+
+### Recent Improvements
+
+- Type consistency across all plugins: unified `AuthResult` and `SignUpResult`
+- Typed event system with `ShogunEventMap` for safer listeners
+- OAuth hardening: PKCE support, improved Google flow, richer user profile
+- Simplified public surface area to focus on core auth + GunDB storage
+- Password recovery via security questions retained and documented
+
+Note: This file is the single source of truth for Shogun Core docs. The former `LLM.md` has been merged here for consistency and maintenance.
 
 ## Core Components
 
@@ -737,3 +747,47 @@ try {
   }
 }
 ```
+
+## Frontend Integration
+
+### React Hook for OAuth
+
+```typescript
+import { useCallback } from "react";
+
+export const useOAuth = (protocol) => {
+  const loginWithOAuth = useCallback(
+    async (provider = "google") => {
+      if (!protocol) throw new Error("Protocol not available");
+      const result: AuthResult = await protocol.loginWithOAuth(provider);
+      if (result.success && result.redirectUrl) return result; // redirect phase
+      if (result.success) return result; // direct completion
+      throw new Error(result.error || "OAuth login failed");
+    },
+    [protocol],
+  );
+
+  const registerWithOAuth = useCallback(
+    async (provider = "google") => {
+      if (!protocol) throw new Error("Protocol not available");
+      const result: SignUpResult = await protocol.registerWithOAuth(provider);
+      if (result.success && result.redirectUrl) return result; // redirect phase
+      if (result.success) return result; // direct completion
+      throw new Error(result.error || "OAuth registration failed");
+    },
+    [protocol],
+  );
+
+  return { loginWithOAuth, registerWithOAuth };
+};
+```
+
+## Best Practices
+
+1. Always check plugin availability before use
+2. Handle errors with typed `ErrorType` categories
+3. Prefer typed events (`ShogunEventMap`) for listeners
+4. Clean up plugin resources via `destroy()` when unmounting
+5. Enforce PKCE for OAuth in browsers; validate redirect URIs and state
+6. Validate inputs (username, provider) before calling plugin APIs
+7. Return `AuthResult` for login and `SignUpResult` for signup from plugins

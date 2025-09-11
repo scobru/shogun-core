@@ -116,18 +116,7 @@ async function loadGunModules() {
         gunModulesLoaded = true;
     }
     catch (error) {
-        // In test environment, don't throw error, just log it
-        if (process.env.NODE_ENV === "test") {
-            console.warn(`Gun modules not available in test environment: ${error}`);
-            // Create a minimal mock Gun for testing
-            Gun = () => ({
-                on: () => { },
-            });
-            gunModulesLoaded = true;
-        }
-        else {
-            throw new Error(`Failed to load Gun modules: ${error}`);
-        }
+        throw new Error(`Failed to load Gun modules: ${error}`);
     }
 }
 /**

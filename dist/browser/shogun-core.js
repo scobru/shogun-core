@@ -102016,12 +102016,7 @@ async function loadGunModules() {
         gunModulesLoaded = true;
     }
     catch (error) {
-        // In test environment, don't throw error, just log it
-        if (false) // removed by dead control flow
-{}
-        else {
-            throw new Error(`Failed to load Gun modules: ${error}`);
-        }
+        throw new Error(`Failed to load Gun modules: ${error}`);
     }
 }
 /**
@@ -107812,6 +107807,10 @@ var PluginCategory;
     PluginCategory["Identity"] = "identity";
     /** Other utility plugins */
     PluginCategory["Utility"] = "utility";
+    /** Messages plugins */
+    PluginCategory["Messages"] = "messages";
+    /** Messaging plugins */
+    PluginCategory["Other"] = "other";
 })(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
 /**
  * Standard names for built-in plugins

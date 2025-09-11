@@ -18,7 +18,11 @@ export declare enum PluginCategory {
     /** Decentralized identity plugins */
     Identity = "identity",
     /** Other utility plugins */
-    Utility = "utility"
+    Utility = "utility",
+    /** Messages plugins */
+    Messages = "messages",
+    /** Messaging plugins */
+    Other = "other"
 }
 /**
  * Standard names for built-in plugins
