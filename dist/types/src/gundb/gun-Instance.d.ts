@@ -15,6 +15,8 @@ import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
 import "gun/lib/webrtc.js";
 import "gun/lib/yson.js";
+import "gun/lib/wire.js";
+import "gun/axe.js";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 import type { IGunUserInstance, IGunInstance, IGunChain, ISEAPair } from "gun/types";

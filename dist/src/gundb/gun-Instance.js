@@ -56,6 +56,8 @@ require("gun/lib/store.js");
 require("gun/lib/rindexed.js");
 require("gun/lib/webrtc.js");
 require("gun/lib/yson.js");
+require("gun/lib/wire.js");
+require("gun/axe.js");
 const restricted_put_1 = require("./restricted-put");
 Object.defineProperty(exports, "restrictedPut", { enumerable: true, get: function () { return restricted_put_1.restrictedPut; } });
 const derive_1 = __importDefault(require("./derive"));
