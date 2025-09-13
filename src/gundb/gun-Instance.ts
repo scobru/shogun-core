@@ -19,21 +19,22 @@ import type {
 
 import type { AuthResult, SignUpResult } from "../types/shogun";
 
-// Import Gun - will be bundled internally
 import GunModule from "gun/gun";
+
 const Gun = GunModule;
+
 import SEA from "gun/sea";
-import "gun/lib/then.js";
+
 import "gun/lib/radix.js";
 import "gun/lib/radisk.js";
-import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
+import "gun/lib/store.js";
+import "gun/lib/wire.js";
 import "gun/lib/webrtc.js";
 import "gun/lib/yson.js";
-import "gun/lib/wire.js";
-import "gun/axe.js";
 
 import { restrictedPut } from "./restricted-put";
+
 import derive, { DeriveOptions } from "./derive";
 
 import type {
@@ -114,15 +115,10 @@ class GunInstance {
     }
 
     this.gun = gun;
-
     this.user = this.gun.user().recall({ sessionStorage: true });
-
     this.subscribeToAuthEvents();
-
     this.crypto = crypto;
-
     this.sea = SEA;
-
     this.node = null as unknown as IGunChain<
       any,
       IGunInstance<any>,
@@ -138,13 +134,14 @@ class GunInstance {
   async initialize(appScope: string = "shogun"): Promise<void> {
     try {
       const sessionResult = this.restoreSession();
-
       this.node = this.gun.get(appScope);
 
       if (sessionResult.success) {
         // Session automatically restored
+        console.log("Session automatically restored");
       } else {
         // No previous session to restore
+        console.log("No previous session to restore");
       }
     } catch (error) {
       console.error("Error during automatic session restoration:", error);

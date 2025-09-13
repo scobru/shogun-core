@@ -92,7 +92,6 @@ async function loadGunModules() {
                 "gun/lib/radix",
                 "gun/lib/radisk",
                 "gun/lib/webrtc",
-                "gun/axe",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {
