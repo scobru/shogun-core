@@ -33,6 +33,10 @@ async function loadGunModules(): Promise<void> {
       const gunModule = await import("gun/gun");
       Gun = (gunModule as any).default || gunModule;
       await import("gun/lib/yson");
+      await import("gun/lib/webrtc");
+      await import("gun/lib/radisk");
+      await import("gun/lib/radix");
+      await import("gun/lib/rindexed");
       gunModulesLoaded = true;
       return;
     }
@@ -55,13 +59,12 @@ async function loadGunModules(): Promise<void> {
         "gun/lib/yson",
         "gun/lib/serve",
         "gun/lib/store",
-        "gun/lib/rfs",
-        "gun/lib/rs3",
-        "gun/lib/wire",
-        "gun/lib/multicast",
-        "gun/lib/stats",
         "gun/lib/radix",
         "gun/lib/radisk",
+        "gun/lib/rfs",
+        "gun/lib/rs3",
+        "gun/lib/multicast",
+        "gun/lib/stats",
         "gun/lib/webrtc",
       ];
       for (const lib of nodeOnlyLibs) {

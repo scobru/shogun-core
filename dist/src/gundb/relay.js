@@ -63,6 +63,10 @@ async function loadGunModules() {
             const gunModule = await Promise.resolve().then(() => __importStar(require("gun/gun")));
             Gun = gunModule.default || gunModule;
             await Promise.resolve().then(() => __importStar(require("gun/lib/yson")));
+            await Promise.resolve().then(() => __importStar(require("gun/lib/webrtc")));
+            await Promise.resolve().then(() => __importStar(require("gun/lib/radisk")));
+            await Promise.resolve().then(() => __importStar(require("gun/lib/radix")));
+            await Promise.resolve().then(() => __importStar(require("gun/lib/rindexed")));
             gunModulesLoaded = true;
             return;
         }
@@ -84,13 +88,12 @@ async function loadGunModules() {
                 "gun/lib/yson",
                 "gun/lib/serve",
                 "gun/lib/store",
-                "gun/lib/rfs",
-                "gun/lib/rs3",
-                "gun/lib/wire",
-                "gun/lib/multicast",
-                "gun/lib/stats",
                 "gun/lib/radix",
                 "gun/lib/radisk",
+                "gun/lib/rfs",
+                "gun/lib/rs3",
+                "gun/lib/multicast",
+                "gun/lib/stats",
                 "gun/lib/webrtc",
             ];
             for (const lib of nodeOnlyLibs) {
