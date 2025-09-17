@@ -67,12 +67,11 @@ async function loadGunModules() {
             Gun = req("gun/gun");
             // Best-effort load of server-side helpers; ignore if unavailable
             const nodeOnlyLibs = [
-                "gun/src/map.js",
                 "gun/lib/yson",
                 "gun/lib/serve",
                 "gun/lib/store",
-                "gun/lib/radix2",
-                "gun/lib/radisk2",
+                "gun/lib/radix",
+                "gun/lib/radisk",
                 "gun/lib/rfs",
                 "gun/lib/rs3",
                 "gun/lib/multicast",
@@ -86,6 +85,8 @@ async function loadGunModules() {
                 "gun/lib/open",
                 "gun/lib/bye",
                 "gun/lib/shim",
+                "gun/lib/les",
+                "gun/lib/evict",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {

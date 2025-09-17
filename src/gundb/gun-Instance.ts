@@ -24,11 +24,9 @@ import GunModule from "gun/gun";
 const Gun = GunModule;
 import SEA from "gun/sea";
 
-import "gun/src/map.js";
-
 // Storage Modules
-import "gun/lib/radix2.js";
-import "gun/lib/radisk2.js";
+import "gun/lib/radix.js";
+import "gun/lib/radisk.js";
 import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
 import "gun/lib/rfs.js";
@@ -47,6 +45,10 @@ import "gun/lib/then.js";
 import "gun/lib/open.js";
 import "gun/lib/bye.js";
 import "gun/lib/shim.js";
+
+// Garbage Collection
+import "gun/lib/les.js";
+import "gun/lib/evict.js";
 
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
