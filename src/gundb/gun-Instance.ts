@@ -41,6 +41,7 @@ import "gun/lib/yson.js";
 // Utility Modules
 import "gun/lib/erase.js";
 import "gun/lib/unset.js";
+import "gun/lib/forget.js";
 import "gun/lib/then.js";
 import "gun/lib/open.js";
 import "gun/lib/bye.js";

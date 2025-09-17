@@ -63,6 +63,7 @@ require("gun/lib/yson.js");
 // Utility Modules
 require("gun/lib/erase.js");
 require("gun/lib/unset.js");
+require("gun/lib/forget.js");
 require("gun/lib/then.js");
 require("gun/lib/open.js");
 require("gun/lib/bye.js");

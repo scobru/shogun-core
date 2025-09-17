@@ -87,6 +87,7 @@ async function loadGunModules() {
                 "gun/lib/shim",
                 "gun/lib/les",
                 "gun/lib/evict",
+                "gun/lib/forget",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {

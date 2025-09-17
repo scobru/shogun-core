@@ -68419,6 +68419,36 @@ Gun.on('opt', function(root){
 
 /***/ }),
 
+/***/ "./node_modules/gun/lib/forget.js":
+/*!****************************************!*\
+  !*** ./node_modules/gun/lib/forget.js ***!
+  \****************************************/
+/***/ (() => {
+
+;(function(){
+	var Gun = ( true)? window.Gun : 0;
+
+	Gun.on('opt', function(root){
+		once(root);
+		this.to.next(root);
+	});
+
+	function once(root){
+		if(root.once){ return }
+		var forget = root.opt.forget = root.opt.forget || {};
+		root.on('put', function(msg){
+			Gun.graph.is(msg.put, function(node, soul){
+				if(!Gun.obj.has(forget, soul)){ return }
+				delete msg.put[soul];
+			});
+			this.to.next(msg);
+		});
+	}
+
+}());
+
+/***/ }),
+
 /***/ "./node_modules/gun/lib/les.js":
 /*!*************************************!*\
   !*** ./node_modules/gun/lib/les.js ***!
@@ -100786,6 +100816,7 @@ __webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
 // Utility Modules
 __webpack_require__(/*! gun/lib/erase.js */ "./node_modules/gun/lib/erase.js");
 __webpack_require__(/*! gun/lib/unset.js */ "./node_modules/gun/lib/unset.js");
+__webpack_require__(/*! gun/lib/forget.js */ "./node_modules/gun/lib/forget.js");
 __webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
 __webpack_require__(/*! gun/lib/open.js */ "./node_modules/gun/lib/open.js");
 __webpack_require__(/*! gun/lib/bye.js */ "./node_modules/gun/lib/bye.js");
@@ -102975,6 +103006,7 @@ async function loadGunModules() {
                 "gun/lib/shim",
                 "gun/lib/les",
                 "gun/lib/evict",
+                "gun/lib/forget",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {
