@@ -68684,114 +68684,6 @@ Gun.on('opt', function(root){
 
 /***/ }),
 
-/***/ "./node_modules/gun/lib/multicast.js":
-/*!*******************************************!*\
-  !*** ./node_modules/gun/lib/multicast.js ***!
-  \*******************************************/
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
-/* provided dependency */ var Buffer = __webpack_require__(/*! buffer */ "./node_modules/buffer/index.js")["Buffer"];
-var Gun = ( true)? window.Gun : 0;
-
-Gun.on('create', function(root){
-	this.to.next(root);
-	var opt = root.opt;
-  if(false === opt.multicast){ return }
-  if((typeof process !== "undefined") && 'false' === ''+(process.env||{}).MULTICAST){ return }
-	//if(true !== opt.multicast){ return } // disable multicast by default for now.
-
-  var udp = opt.multicast = opt.multicast || {};
-  udp.address = udp.address || '233.255.255.255';
-  udp.pack = udp.pack || 50000; // UDP messages limited to 65KB.
-  udp.port  = udp.port || 8765;
-
-  var noop = function(){}, u;
-  var pid = '2'+Math.random().toString().slice(-8);
-  var mesh = opt.mesh = opt.mesh || Gun.Mesh(root);
-  var dgram;
-
-  try{ dgram = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'dgram'"); e.code = 'MODULE_NOT_FOUND'; throw e; }())) }catch(e){ return }
-  var socket = dgram.createSocket({type: "udp4", reuseAddr: true});
-  socket.bind({port: udp.port, exclusive: true}, function(){
-    socket.setBroadcast(true);
-    socket.setMulticastTTL(128);
-  });
-
-  socket.on("listening", function(){
-    try { socket.addMembership(udp.address) }catch(e){ console.error(e); return; }
-    udp.peer = {id: udp.address + ':' + udp.port, wire: socket};
-
-    udp.peer.say = function(raw){
-      var buf = Buffer.from(raw, 'utf8');
-      if(udp.pack <= buf.length){ // message too big!!!
-        return;
-      }
-      socket.send(buf, 0, buf.length, udp.port, udp.address, noop);
-    }
-    //opt.mesh.hi(udp.peer);
-
-    Gun.log.once('multi', 'Multicast on '+udp.peer.id);
-    return; // below code only needed for when WebSocket connections desired!
-    // removed by dead control flow
-
-  });
-
-  socket.on("message", function(raw, info) { try {
-    if(!raw){ return }
-    raw = raw.toString('utf8');
-    if('2'===raw[0]){ return check(raw, info) }
-    opt.mesh.hear(raw, udp.peer);
-
-    return; // below code only needed for when WebSocket connections desired!
-    // removed by dead control flow
- var message; 
-    // removed by dead control flow
-
-
-    // removed by dead control flow
- // ignore self
-
-    // removed by dead control flow
- var url; 
-    // removed by dead control flow
-
-
-    //console.log('discovered', url, message, info);
-    // removed by dead control flow
-
-
-  } catch(e){
-    //console.log('multicast error', e, raw);
-    return;
-  } });
-
-  function say(msg){
-    this.to.next(msg);
-    if(!udp.peer){ return }
-    mesh.say(msg, udp.peer);
-  }
-
-  function check(id, info){ var tmp;
-    if(!udp.peer){ return }
-    if(!id){
-      id = check.id = check.id || Buffer.from(pid, 'utf8');
-      socket.send(id, 0, id.length, udp.port, udp.address, noop);
-      return;
-    }
-    if((tmp = root.stats) && (tmp = tmp.gap) && info){ (tmp.near || (tmp.near = {}))[info.address] = info.port || 1 } // STATS!
-    if(check.on || id === pid){ return }
-    root.on('out', check.on = say); // TODO: MULTICAST NEEDS TO BE CHECKED FOR NEW CODE SYSTEM!!!!!!!!!! // TODO: This approach seems interferes with other relays, below does not but...
-    //opt.mesh.hi(udp.peer); //  IS THIS CORRECT?
-  }
-
-  setInterval(check, 1000 * 1);
-
-});
-
-
-/***/ }),
-
 /***/ "./node_modules/gun/lib/open.js":
 /*!**************************************!*\
   !*** ./node_modules/gun/lib/open.js ***!
@@ -100809,7 +100701,6 @@ __webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
 __webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
 __webpack_require__(/*! gun/lib/rfs.js */ "./node_modules/gun/lib/rfs.js");
 // Networking
-__webpack_require__(/*! gun/lib/multicast.js */ "./node_modules/gun/lib/multicast.js");
 __webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
 // Serialization
 __webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
@@ -102993,7 +102884,6 @@ async function loadGunModules() {
                 "gun/lib/radisk",
                 "gun/lib/rfs",
                 "gun/lib/rs3",
-                "gun/lib/multicast",
                 "gun/lib/stats",
                 "gun/lib/webrtc",
                 "gun/lib/erase",

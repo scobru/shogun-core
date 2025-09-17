@@ -74,7 +74,6 @@ async function loadGunModules() {
                 "gun/lib/radisk",
                 "gun/lib/rfs",
                 "gun/lib/rs3",
-                "gun/lib/multicast",
                 "gun/lib/stats",
                 "gun/lib/webrtc",
                 "gun/lib/erase",

@@ -13,7 +13,6 @@ import "gun/lib/radisk.js";
 import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
 import "gun/lib/rfs.js";
-import "gun/lib/multicast.js";
 import "gun/lib/webrtc.js";
 import "gun/lib/yson.js";
 import "gun/lib/erase.js";

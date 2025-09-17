@@ -56,7 +56,6 @@ require("gun/lib/store.js");
 require("gun/lib/rindexed.js");
 require("gun/lib/rfs.js");
 // Networking
-require("gun/lib/multicast.js");
 require("gun/lib/webrtc.js");
 // Serialization
 require("gun/lib/yson.js");
