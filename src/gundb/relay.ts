@@ -23,26 +23,6 @@ async function loadGunModules(): Promise<void> {
   if (gunModulesLoaded) return;
 
   try {
-    // For browser environments, load only the modules that are browser-safe.
-    // Webpack 5 no longer polyfills Node core modules, and some Gun server-side
-    // libs (like wire/rs3) depend on them. To avoid bundling those, we only
-    // import browser-safe parts here. For Node, we use a runtime require via
-    // eval to prevent webpack from statically analyzing those imports.
-
-    if (!isNode) {
-      const gunModule = await import("gun/gun");
-      Gun = (gunModule as any).default || gunModule;
-      await import("gun/lib/yson");
-      await import("gun/lib/webrtc");
-      await import("gun/lib/radisk");
-      await import("gun/lib/radix");
-      await import("gun/lib/rindexed");
-      gunModulesLoaded = true;
-      return;
-    }
-
-    // Node.js environment: prefer require, but use eval to avoid webpack
-    // from resolving server-only modules in web builds.
     const req = (() => {
       try {
         // eslint-disable-next-line no-eval
@@ -59,13 +39,21 @@ async function loadGunModules(): Promise<void> {
         "gun/lib/yson",
         "gun/lib/serve",
         "gun/lib/store",
-        "gun/lib/radix",
-        "gun/lib/radisk",
+        "gun/lib/radix2",
+        "gun/lib/radisk2",
         "gun/lib/rfs",
         "gun/lib/rs3",
         "gun/lib/multicast",
         "gun/lib/stats",
         "gun/lib/webrtc",
+        "gun/lib/erase",
+        "gun/lib/unset",
+        "gun/lib/wire",
+        "gun/lib/verify",
+        "gun/lib/then",
+        "gun/lib/open",
+        "gun/lib/bye",
+        "gun/lib/shim",
       ];
       for (const lib of nodeOnlyLibs) {
         try {

@@ -65866,11 +65866,229 @@ module.exports = webpackEmptyContext;
 	})(USE, './onto');
 
 	;USE(function(module){
+		// TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
+		// Book is a replacement for JS objects, maps, dictionaries.
+		var sT = setTimeout, B = sT.Book || (sT.Book = function(text){
+			var b = function book(word, is){
+				var has = b.all[word], p;
+				if(is === undefined){ return (has && has.is) || b.get(has || word) }
+				if(has){
+					if(p = has.page){
+						p.size += size(is) - size(has.is);
+						p.text = '';
+					}
+					has.text = '';
+					has.is = is;
+					return b;
+				}
+				//b.all[word] = {is: word}; return b;
+				return b.set(word, is);
+			};
+			// TODO: if from text, preserve the separator symbol.
+			b.list = [{from: text, size: (text||'').length, substring: sub, toString: to, book: b, get: b, read: list}];
+			b.page = page;
+			b.set = set;
+			b.get = get;
+			b.all = {};
+			return b;
+		}), PAGE = 2**12;
+
+		function page(word){
+			var b = this, l = b.list, i = spot(word, l, b.parse), p = l[i];
+			if('string' == typeof p){ l[i] = p = {size: -1, first: b.parse? b.parse(p) : p, substring: sub, toString: to, book: b, get: b, read: list} } // TODO: test, how do we arrive at this condition again?
+			//p.i = i;
+			return p;
+			// TODO: BUG! What if we get the page, it turns out to be too big & split, we must then RE get the page!
+		}
+		function get(word){
+			if(!word){ return }
+			if(undefined !== word.is){ return word.is } // JS falsey values!
+			var b = this, has = b.all[word];
+			if(has){ return has.is }
+			// get does an exact match, so we would have found it already, unless parseless page:
+			var page = b.page(word), l, has, a, i;
+			if(!page || !page.from){ return } // no parseless data
+			return got(word, page);
+		}
+		function got(word, page){
+			var b = page.book, l, has, a, i;
+			if(l = from(page)){ has = l[got.i = i = spot(word, l, B.decode)]; } // TODO: POTENTIAL BUG! This assumes that each word on a page uses the same serializer/formatter/structure. // TOOD: BUG!!! Not actually, but if we want to do non-exact radix-like closest-word lookups on a page, we need to check limbo & potentially sort first.
+			// parseless may return -1 from actual value, so we may need to test both. // TODO: Double check? I think this is correct.
+			if(has && word == has.word){ return (b.all[word] = has).is }
+			if('string' != typeof has){ has = l[got.i = i+=1] }
+			if(has && word == has.word){ return (b.all[word] = has).is }
+			a = slot(has) // Escape!
+			if(word != B.decode(a[0])){
+				has = l[got.i = i+=1]; // edge case bug?
+				a = slot(has); // edge case bug?
+				if(word != B.decode(a[0])){ return }
+			}
+			has = l[i] = b.all[word] = {word: ''+word, is: B.decode(a[1]), page: page, substring: subt, toString: tot}; // TODO: convert to a JS value!!! Maybe index! TODO: BUG word needs a page!!!! TODO: Check for other types!!!
+			return has.is;
+		}
+
+		function spot(word, sorted, parse){ parse = parse || spot.no || (spot.no = function(t){ return t }); // TODO: BUG???? Why is there substring()||0 ? // TODO: PERF!!! .toString() is +33% faster, can we combine it with the export?
+			var L = sorted, min = 0, page, found, l = (word=''+word).length, max = L.length, i = max/2;
+			while(((word < (page = (parse(L[i=i>>0])||'').substring())) || ((parse(L[i+1])||'').substring() <= word)) && i != min){ // L[i] <= word < L[i+1]
+				i += (page <= word)? (max - (min = i))/2 : -((max = i) - min)/2;
+			}
+			return i;
+		}
+
+		function from(a, t, l){
+			if('string' != typeof a.from){ return a.from }
+			//(l = a.from = (t = a.from||'').substring(1, t.length-1).split(t[0])); // slot
+			(l = a.from = slot(t = t||a.from||''));
+			return l;
+		}
+		function list(each){ each = each || function(x){return x} 
+			var i = 0, l = sort(this), w, r = [], p = this.book.parse || function(){};
+			//while(w = l[i++]){ r.push(each(slot(w)[1], p(w)||w, this)) }
+			while(w = l[i++]){ r.push(each(this.get(w = w.word||p(w)||w), w, this)) } // TODO: BUG! PERF?
+			return r;
+		}
+
+		function set(word, is){
+			// TODO: Perf on random write is decent, but short keys or seq seems significantly slower.
+			var b = this, has = b.all[word];
+			if(has){ return b(word, is) } // updates to in-memory items will always match exactly.
+			var page = b.page(word=''+word), tmp; // before we assume this is an insert tho, we need to check
+			if(page && page.from){ // if it could be an update to an existing word from parseless.
+				b.get(word);
+				if(b.all[word]){ return b(word, is) }
+			}
+			// MUST be an insert:
+			has = b.all[word] = {word: word, is: is, page: page, substring: subt, toString: tot};
+			page.first = (page.first < word)? page.first : word;
+			if(!page.limbo){ (page.limbo = []) }
+			page.limbo.push(has);
+			b(word, is);
+			page.size += size(word) + size(is);
+			if((b.PAGE || PAGE) < page.size){ split(page, b) }
+			return b;
+		}
+
+		function split(p, b){ // TODO: use closest hash instead of half.
+			//console.time();
+			//var S = performance.now();
+			var L = sort(p), l = L.length, i = l/2 >> 0, j = i, half = L[j], tmp;
+			//console.timeEnd();
+			var next = {first: half.substring(), size: 0, substring: sub, toString: to, book: b, get: b, read: list}, f = next.from = [];
+			while(tmp = L[i++]){
+				f.push(tmp);
+				next.size += (tmp.is||'').length||1;
+				tmp.page = next;
+			}
+			p.from = p.from.slice(0, j);
+			p.size -= next.size;
+			b.list.splice(spot(next.first, b.list)+1, 0, next); // TODO: BUG! Make sure next.first is decoded text. // TODO: BUG! spot may need parse too?
+			//console.timeEnd();
+			if(b.split){ b.split(next, p) }
+			//console.log(S = (performance.now() - S), 'split');
+			//console.BIG = console.BIG > S? console.BIG : S;
+		}
+
+		function slot(t){ return heal((t=t||'').substring(1, t.length-1).split(t[0]), t[0]) } B.slot = slot; // TODO: check first=last & pass `s`.
+		function heal(l, s){ var i, e;
+			if(0 > (i = l.indexOf(''))){ return l } // ~700M ops/sec on 4KB of Math.random()s, even faster if escape does exist.
+			if('' == l[0] && 1 == l.length){ return [] } // annoying edge cases! how much does this slow us down?
+			//if((c=i+2+parseInt(l[i+1])) != c){ return [] } // maybe still faster than below?
+			if((e=i+2+parseInt((e=l[i+1]).substring(0, e.indexOf('"'))||e)) != e){ return [] } // NaN check in JS is weird.
+			l[i] = l.slice(i, e).join(s||'|'); // rejoin the escaped value
+			return l.slice(0,i+1).concat(heal(l.slice(e), s)); // merge left with checked right.
+		}
+
+		function size(t){ return (t||'').length||1 } // bits/numbers less size? Bug or feature?
+		function subt(i,j){ return this.word }
+		//function tot(){ return this.text = this.text || "'"+(this.word)+"'"+(this.is)+"'" }
+		function tot(){ var tmp = {};
+			//if((tmp = this.page) && tmp.saving){ delete tmp.book.all[this.word]; } // TODO: BUG! Book can't know about RAD, this was from RAD, so this MIGHT be correct but we need to refactor. Make sure to add tests that will re-trigger this.
+			return this.text = this.text || ":"+B.encode(this.word)+":"+B.encode(this.is)+":";
+			// removed by dead control flow
+
+			// removed by dead control flow
+
+			//return this.text = this.text || "'"+(this.word)+"'"+(this.is)+"'";
+		}
+		function sub(i,j){ return (this.first||this.word||B.decode((from(this)||'')[0]||'')).substring(i,j) }
+		function to(){ return this.text = this.text || text(this) }
+		function text(p){ // PERF: read->[*] : text->"*" no edit waste 1 time perf.
+			if(p.limbo){ sort(p) } // TODO: BUG? Empty page meaning? undef, '', '||'?
+			return ('string' == typeof p.from)? p.from : '|'+(p.from||[]).join('|')+'|';
+		}
+
+		function sort(p, l){
+			var f = p.from = ('string' == typeof p.from)? slot(p.from) : p.from||[];
+			if(!(l = l || p.limbo)){ return f }
+			return mix(p).sort(function(a,b){
+				return (a.word||B.decode(''+a)) < (b.word||B.decode(''+b))? -1:1;
+			});
+		}
+		function mix(p, l){ // TODO: IMPROVE PERFORMANCE!!!! l[j] = i is 5X+ faster than .push(
+			l = l || p.limbo || []; p.limbo = null;
+			var j = 0, i, f = p.from;
+			while(i = l[j++]){
+				if(got(i.word, p)){
+					f[got.i] = i; // TODO: Trick: allow for a GUN'S HAM CRDT hook here.
+				} else {
+					f.push(i); 
+				}
+			}
+			return f;
+		}
+
+		B.encode = function(d, s, u){ s = s || "|"; u = u || String.fromCharCode(32);
+			switch(typeof d){
+				case 'string': // text
+					var i = d.indexOf(s), c = 0;
+					while(i != -1){ c++; i = d.indexOf(s, i+1) }
+					return (c?s+c:'')+ '"' + d;
+				case 'number': return (d < 0)? ''+d : '+'+d;
+				case 'boolean': return d? '+' : '-';
+				case 'object': if(!d){ return ' ' } // TODO: BUG!!! Nested objects don't slot correctly
+					var l = Object.keys(d).sort(), i = 0, t = s, k, v;
+					while(k = l[i++]){ t += u+B.encode(k,s,u)+u+B.encode(d[k],s,u)+u+s }
+					return t;
+			}
+		}
+		B.decode = function(t, s){ s = s || "|";
+			if('string' != typeof t){ return }
+			switch(t){ case ' ': return null; case '-': return false; case '+': return true; }
+			switch(t[0]){
+				case '-': case '+': return parseFloat(t);
+				case '"': return t.slice(1);
+			}
+			return t.slice(t.indexOf('"')+1);
+		}
+
+		B.hash = function(s, c){ // via SO
+			if(typeof s !== 'string'){ return }
+		  c = c || 0; // CPU schedule hashing by
+		  if(!s.length){ return c }
+		  for(var i=0,l=s.length,n; i<l; ++i){
+		    n = s.charCodeAt(i);
+		    c = ((c<<5)-c)+n;
+		    c |= 0;
+		  }
+		  return c;
+		}
+
+		function record(key, val){ return key+B.encode(val)+"%"+key.length }
+		function decord(t){
+			var o = {}, i = t.lastIndexOf("%"), c = parseFloat(t.slice(i+1));
+			o[t.slice(0,c)] = B.decode(t.slice(c,i));
+			return o;
+		}
+
+		try{module.exports=B}catch(e){}
+	})(USE, './book');
+
+	;USE(function(module){
 		// Valid values are a subset of JSON: null, binary, number (!Infinity), text,
 		// or a soul relation. Arrays need special algorithms to handle concurrency,
 		// so they are not supported directly. Use an extension that supports them if
 		// needed but research their problems first.
-		module.exports = function (v) {
+		module.exports = function(v){
 		  // "deletes", nulling out keys.
 		  return v === null ||
 			"string" === typeof v ||
@@ -66230,7 +66448,7 @@ module.exports = webpackEmptyContext;
 					tmp = keys.length;
 					console.STAT && console.STAT(S, -(S - (S = +new Date)), 'got copied some');
 					DBG && (DBG.ga = +new Date);
-					root.on('in', {'@': to, '#': id, put: put, '%': (tmp? (id = text_rand(9)) : u), $: root.$, _: faith, DBG: DBG, FOO: 1});
+					root.on('in', {'@': to, '#': id, put: put, '%': (tmp? (id = text_rand(9)) : u), $: root.$, _: faith, DBG: DBG});
 					console.STAT && console.STAT(S, +new Date - S, 'got in');
 					if(!tmp){ return }
 					setTimeout.turn(go);
@@ -66725,11 +66943,9 @@ module.exports = webpackEmptyContext;
 			//if(!map || !(tmp = map[at]) || !(tmp = tmp.at)){ return }
 			if(tmp = (seen = this.seen || (this.seen = {}))[at]){ return true }
 			seen[at] = true;
-			return;
 			//tmp.echo[cat.id] = {}; // TODO: Warning: This unsubscribes ALL of this chain's listeners from this link, not just the one callback event.
 			//obj.del(map, at); // TODO: Warning: This unsubscribes ALL of this chain's listeners from this link, not just the one callback event.
-			// removed by dead control flow
-
+			return;
 		}
 		var empty = {}, valid = Gun.valid, u;
 	})(USE, './get');
@@ -66891,10 +67107,29 @@ module.exports = webpackEmptyContext;
 		USE('./put');
 		USE('./get');
 		module.exports = Gun;
+	})(USE, './core');
+
+	;USE(function(module){
+		var Gun = USE('./root');
+		USE('./shim');
+		USE('./onto');
+		USE('./book');
+		USE('./valid');
+		USE('./state');
+		USE('./dup');
+		USE('./ask');
+		USE('./core');
+		USE('./on');
+		USE('./map');
+		USE('./set');
+		USE('./mesh');
+		USE('./websocket');
+		USE('./localStorage');
+		module.exports = Gun;
 	})(USE, './index');
 
 	;USE(function(module){
-		var Gun = USE('./index');
+		var Gun = USE('./root');
 		Gun.chain.on = function(tag, arg, eas, as){ // don't rewrite!
 			var gun = this, cat = gun._, root = cat.root, act, off, id, tmp;
 			if(typeof tag === 'string'){
@@ -67030,7 +67265,7 @@ module.exports = webpackEmptyContext;
 	})(USE, './on');
 
 	;USE(function(module){
-		var Gun = USE('./index'), next = Gun.chain.get.next;
+		var Gun = USE('./root'), next = Gun.chain.get.next;
 		Gun.chain.get.next = function(gun, lex){ var tmp;
 			if(!Object.plain(lex)){ return (next||noop)(gun, lex) }
 			if(tmp = ((tmp = lex['#'])||'')['='] || tmp){ return gun.get(tmp) }
@@ -67075,7 +67310,7 @@ module.exports = webpackEmptyContext;
 	})(USE, './map');
 
 	;USE(function(module){
-		var Gun = USE('./index');
+		var Gun = USE('./root');
 		Gun.chain.set = function(item, cb, opt){
 			var gun = this, root = gun.back(-1), soul, tmp;
 			cb = cb || function(){};
@@ -67176,10 +67411,10 @@ module.exports = webpackEmptyContext;
 				if((tmp = msg['><']) && 'string' == typeof tmp){ tmp.slice(0,99).split(',').forEach(function(k){ this[k] = 1 }, (msg._).yo = {}) } // Peers already sent to, do not resend.
 				// DAM ^
 				if(tmp = msg.dam){
+					(dup_track(id)||{}).via = peer;
 					if(tmp = mesh.hear[tmp]){
 						tmp(msg, peer, root);
 					}
-					dup_track(id);
 					return;
 				}
 				if(tmp = msg.ok){ msg._.near = tmp['/'] }
@@ -67453,7 +67688,7 @@ module.exports = webpackEmptyContext;
 	})(USE, './mesh');
 
 	;USE(function(module){
-		var Gun = USE('./index');
+		var Gun = USE('./root');
 		Gun.Mesh = USE('./mesh');
 
 		// TODO: resync upon reconnect online/offline
@@ -67472,10 +67707,10 @@ module.exports = webpackEmptyContext;
 
 			var mesh = opt.mesh = opt.mesh || Gun.Mesh(root);
 
-			var wire = mesh.wire || opt.wire;
+			var wired = mesh.wire || opt.wire;
 			mesh.wire = opt.wire = open;
 			function open(peer){ try{
-				if(!peer || !peer.url){ return wire && wire(peer) }
+				if(!peer || !peer.url){ return wired && wired(peer) }
 				var url = peer.url.replace(/^http/, 'ws');
 				var wire = peer.wire = new opt.WebSocket(url);
 				wire.onclose = function(){
@@ -67552,7 +67787,6 @@ module.exports = webpackEmptyContext;
 			root.on('put', function(msg){
 				this.to.next(msg); // remember to call next middleware adapter
 				var put = msg.put, soul = put['#'], key = put['.'], id = msg['#'], ok = msg.ok||'', tmp; // pull data off wire envelope
-				if (!(root.next || '')[soul]){ return } // fix https://github.com/amark/gun/issues/1377
 				disk[soul] = Gun.state.ify(disk[soul], key, put['>'], put[':'], soul); // merge into disk object
 				if(stop && size > (4999880)){ root.on('in', {'@': id, err: "localStorage max!"}); return; }
 				//if(!msg['@']){ acks.push(id) } // then ack any non-ack write. // TODO: use batch id.
@@ -68037,13 +68271,272 @@ module.exports = webpackEmptyContext;
 	Type.graph = Type.graph || Graph;
 }());
 
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/bye.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/lib/bye.js ***!
+  \*************************************/
+/***/ (() => {
+
+var Gun = ( true)? window.Gun : 0;
+
+Gun.on('create', function(root){
+	this.to.next(root);
+	var mesh = root.opt.mesh;
+	if(!mesh){ return }
+	mesh.hear['bye'] = function(msg, peer){
+		(peer.byes = peer.byes || []).push(msg.bye);
+	}
+	root.on('bye', function(peer){
+		this.to.next(peer);
+		if(!peer.byes){ return }
+		var gun = root.$;
+		Gun.obj.map(peer.byes, function(data){
+			Gun.obj.map(data, function(put, soul){
+				gun.get(soul).put(put);
+			});
+		});
+		peer.byes = [];
+	});
+});
+
+Gun.chain.bye = function(){
+	var gun = this, bye = gun.chain(), root = gun.back(-1), put = bye.put;
+	bye.put = function(data){
+		gun.back(function(at){
+			if(!at.get){ return }
+			var tmp = data;
+			(data = {})[at.get] = tmp;
+		});
+		root.on('out', {bye: data});
+		return gun;
+	}
+	return bye;
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/erase.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/lib/erase.js ***!
+  \***************************************/
+/***/ (() => {
+
+var Gun = ( true)? window.Gun : 0;
+
+Gun.on('opt', function(root){
+	this.to.next(root);
+	if(root.once){ return }
+	root.on('put', function(msg){
+		Gun.graph.is(msg.put, null, function(val, key, node, soul){
+			if(null !== val){ return }
+			// TODO: Refactor this to use `.off()`?
+			var tmp = root.graph[soul];
+			if(tmp){
+				delete tmp[key];
+			}
+			tmp = tmp && tmp._ && tmp._['>'];
+			if(tmp){
+				delete tmp[key];
+			}
+			tmp = root.next;
+			if(tmp && (tmp = tmp[soul]) && (tmp = tmp.put)){
+				delete tmp[key];
+				tmp = tmp._ && tmp._['>'];
+				if(tmp){
+					delete tmp[key];
+				}
+			}
+		});
+		this.to.next(msg);
+	});
+});
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/multicast.js":
+/*!*******************************************!*\
+  !*** ./node_modules/gun/lib/multicast.js ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+/* provided dependency */ var Buffer = __webpack_require__(/*! buffer */ "./node_modules/buffer/index.js")["Buffer"];
+var Gun = ( true)? window.Gun : 0;
+
+Gun.on('create', function(root){
+	this.to.next(root);
+	var opt = root.opt;
+  if(false === opt.multicast){ return }
+  if((typeof process !== "undefined") && 'false' === ''+(process.env||{}).MULTICAST){ return }
+	//if(true !== opt.multicast){ return } // disable multicast by default for now.
+
+  var udp = opt.multicast = opt.multicast || {};
+  udp.address = udp.address || '233.255.255.255';
+  udp.pack = udp.pack || 50000; // UDP messages limited to 65KB.
+  udp.port  = udp.port || 8765;
+
+  var noop = function(){}, u;
+  var pid = '2'+Math.random().toString().slice(-8);
+  var mesh = opt.mesh = opt.mesh || Gun.Mesh(root);
+  var dgram;
+
+  try{ dgram = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'dgram'"); e.code = 'MODULE_NOT_FOUND'; throw e; }())) }catch(e){ return }
+  var socket = dgram.createSocket({type: "udp4", reuseAddr: true});
+  socket.bind({port: udp.port, exclusive: true}, function(){
+    socket.setBroadcast(true);
+    socket.setMulticastTTL(128);
+  });
+
+  socket.on("listening", function(){
+    try { socket.addMembership(udp.address) }catch(e){ console.error(e); return; }
+    udp.peer = {id: udp.address + ':' + udp.port, wire: socket};
+
+    udp.peer.say = function(raw){
+      var buf = Buffer.from(raw, 'utf8');
+      if(udp.pack <= buf.length){ // message too big!!!
+        return;
+      }
+      socket.send(buf, 0, buf.length, udp.port, udp.address, noop);
+    }
+    //opt.mesh.hi(udp.peer);
+
+    Gun.log.once('multi', 'Multicast on '+udp.peer.id);
+    return; // below code only needed for when WebSocket connections desired!
+    // removed by dead control flow
+
+  });
+
+  socket.on("message", function(raw, info) { try {
+    if(!raw){ return }
+    raw = raw.toString('utf8');
+    if('2'===raw[0]){ return check(raw, info) }
+    opt.mesh.hear(raw, udp.peer);
+
+    return; // below code only needed for when WebSocket connections desired!
+    // removed by dead control flow
+ var message; 
+    // removed by dead control flow
+
+
+    // removed by dead control flow
+ // ignore self
+
+    // removed by dead control flow
+ var url; 
+    // removed by dead control flow
+
+
+    //console.log('discovered', url, message, info);
+    // removed by dead control flow
+
+
+  } catch(e){
+    //console.log('multicast error', e, raw);
+    return;
+  } });
+
+  function say(msg){
+    this.to.next(msg);
+    if(!udp.peer){ return }
+    mesh.say(msg, udp.peer);
+  }
+
+  function check(id, info){ var tmp;
+    if(!udp.peer){ return }
+    if(!id){
+      id = check.id = check.id || Buffer.from(pid, 'utf8');
+      socket.send(id, 0, id.length, udp.port, udp.address, noop);
+      return;
+    }
+    if((tmp = root.stats) && (tmp = tmp.gap) && info){ (tmp.near || (tmp.near = {}))[info.address] = info.port || 1 } // STATS!
+    if(check.on || id === pid){ return }
+    root.on('out', check.on = say); // TODO: MULTICAST NEEDS TO BE CHECKED FOR NEW CODE SYSTEM!!!!!!!!!! // TODO: This approach seems interferes with other relays, below does not but...
+    //opt.mesh.hi(udp.peer); //  IS THIS CORRECT?
+  }
+
+  setInterval(check, 1000 * 1);
+
+});
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/open.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/lib/open.js ***!
+  \**************************************/
+/***/ (() => {
+
+var Gun = ( true)? window.Gun : 0;
+
+Gun.chain.open = function(cb, opt, at, depth){ // this is a recursive function, BEWARE!
+	depth = depth || 1;
+	opt = opt || {}; // init top level options.
+	opt.doc = opt.doc || {};
+	opt.ids = opt.ids || {};
+	opt.any = opt.any || cb;
+	opt.meta = opt.meta || false;
+	opt.eve = opt.eve || {off: function(){ // collect all recursive events to unsubscribe to if needed.
+		Object.keys(opt.eve.s).forEach(function(i,e){ // switch to CPU scheduled setTimeout.each?
+			if(e = opt.eve.s[i]){ e.off() }
+		});
+		opt.eve.s = {};
+	}, s:{}}
+	return this.on(function(data, key, ctx, eve){ // subscribe to 1 deeper of data!
+		clearTimeout(opt.to); // do not trigger callback if bunch of changes...
+		opt.to = setTimeout(function(){ // but schedule the callback to fire soon!
+			if(!opt.any){ return }
+			opt.any.call(opt.at.$, opt.doc, opt.key, opt, opt.eve); // call it.
+			if(opt.off){ // check for unsubscribing.
+				opt.eve.off();
+				opt.any = null;
+			}
+		}, opt.wait || 9);
+		opt.at = opt.at || ctx; // opt.at will always be the first context it finds.
+		opt.key = opt.key || key;
+		opt.eve.s[this._.id] = eve; // collect all the events together.
+		if(true === Gun.valid(data)){ // if primitive value...
+			if(!at){
+				opt.doc = data;
+			} else {
+				at[key] = data;
+			}
+			return;
+		}
+		var tmp = this; // else if a sub-object, CPU schedule loop over properties to do recursion.
+		setTimeout.each(Object.keys(data), function(key, val){
+			if('_' === key && !opt.meta){ return }
+			val = data[key];
+			var doc = at || opt.doc, id; // first pass this becomes the root of open, then at is passed below, and will be the parent for each sub-document/object.
+			if(!doc){ return } // if no "parent"
+			if('string' !== typeof (id = Gun.valid(val))){ // if primitive...
+				doc[key] = val;
+				return;
+			}
+			if(opt.ids[id]){ // if we've already seen this sub-object/document
+				doc[key] = opt.ids[id]; // link to itself, our already in-memory one, not a new copy.
+				return;
+			}
+			if(opt.depth <= depth){ // stop recursive open at max depth.
+				doc[key] = doc[key] || val; // show link so app can load it if need.
+				return;
+			} // now open up the recursion of sub-documents!
+			tmp.get(key).open(opt.any, opt, opt.ids[id] = doc[key] = {}, depth+1); // 3rd param is now where we are "at".
+		});
+	})
+}
+
 /***/ }),
 
 /***/ "./node_modules/gun/lib/radisk.js":
 /*!****************************************!*\
   !*** ./node_modules/gun/lib/radisk.js ***!
   \****************************************/
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 ;(function(){
 
@@ -68637,6 +69130,539 @@ module.exports = webpackEmptyContext;
 		}
 	}());
 
+	var Gun = ( true && window.Gun)? window.Gun : __webpack_require__(/*! ../gun */ "./node_modules/gun/gun.js");
+	var Radix = ( true && window.Radix)? window.Radix : __webpack_require__(/*! ./radix */ "./node_modules/gun/lib/radix.js");
+
+	Radisk.Radix = Radix;
+	((name, exports) => {
+		try { module.exports = exports } catch (e) { }
+		if (true) {
+			window[name] = window[name]||exports;
+		}
+	})("Radisk", Radisk);
+
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/radisk2.js":
+/*!*****************************************!*\
+  !*** ./node_modules/gun/lib/radisk2.js ***!
+  \*****************************************/
+/***/ (() => {
+
+;(function(){
+	console.log("RADISK 2!!!!");
+
+	function Radisk(opt){
+
+		opt = opt || {};
+		opt.log = opt.log || console.log;
+		opt.file = String(opt.file || 'radata');
+		var has = (Radisk.has || (Radisk.has = {}))[opt.file];
+		if(has){ return has }
+
+		opt.pack = opt.pack || (opt.memory? (opt.memory * 1000 * 1000) : 1399000000) * 0.3; // max_old_space_size defaults to 1400 MB.
+		opt.until = opt.until || opt.wait || 250;
+		opt.batch = opt.batch || (10 * 1000);
+		opt.chunk = opt.chunk || (1024 * 1024 * 1); // 1MB
+		opt.code = opt.code || {};
+		opt.code.from = opt.code.from || '!';
+		//opt.jsonify = true; // TODO: REMOVE!!!!
+
+		function ename(t){ return encodeURIComponent(t).replace(/\*/g, '%2A') }
+		function atomic(v){ return u !== v && (!v || 'object' != typeof v) }
+		var map = Gun.obj.map;
+		var LOG = false;
+
+		if(!opt.store){
+			return opt.log("ERROR: Radisk needs `opt.store` interface with `{get: fn, put: fn (, list: fn)}`!");
+		}
+		if(!opt.store.put){
+			return opt.log("ERROR: Radisk needs `store.put` interface with `(file, data, cb)`!");
+		}
+		if(!opt.store.get){
+			return opt.log("ERROR: Radisk needs `store.get` interface with `(file, cb)`!");
+		}
+		if(!opt.store.list){
+			//opt.log("WARNING: `store.list` interface might be needed!");
+		}
+
+		/*
+			Any and all storage adapters should...
+			1. Because writing to disk takes time, we should batch data to disk. This improves performance, and reduces potential disk corruption.
+			2. If a batch exceeds a certain number of writes, we should immediately write to disk when physically possible. This caps total performance, but reduces potential loss.
+		*/
+		var r = function(key, val, cb){
+			key = ''+key;
+			if(val instanceof Function){
+				var o = cb || {};
+				cb = val;
+				val = r.batch(key);
+				if(u !== val){
+					cb(u, r.range(val, o), o);
+					if(atomic(val)){ return }
+					// if a node is requested and some of it is cached... the other parts might not be.
+				}
+				if(r.thrash.at){
+					val = r.thrash.at(key);
+					if(u !== val){
+						cb(u, r.range(val, o), o);
+						if(atomic(val)){ cb(u, val, o); return }
+						// if a node is requested and some of it is cached... the other parts might not be.
+					}
+				}
+				return r.read(key, cb, o);
+			}
+			r.batch(key, val);
+			if(cb){ r.batch.acks.push(cb) }
+			if(++r.batch.ed >= opt.batch){ return r.thrash() } // (2)
+			if(r.batch.to){ return }
+			//clearTimeout(r.batch.to); // (1) // THIS LINE IS EVIL! NEVER USE IT! ALSO NEVER DELETE THIS SO WE NEVER MAKE THE SAME MISTAKE AGAIN!
+			r.batch.to = setTimeout(r.thrash, opt.until || 1);
+		}
+
+		r.batch = Radix();
+		r.batch.acks = [];
+		r.batch.ed = 0;
+
+		r.thrash = function(){
+			var thrash = r.thrash;
+			if(thrash.ing){ return thrash.more = true }
+			thrash.more = false;
+			thrash.ing = true;
+			var batch = thrash.at = r.batch, i = 0;
+			clearTimeout(r.batch.to);
+			r.batch = null;
+			r.batch = Radix();
+			r.batch.acks = [];
+			r.batch.ed = 0;
+			//var id = Gun.text.random(2), S = (+new Date); console.log("<<<<<<<<<<<<", id);
+			r.save(batch, function(err, ok){
+				if(++i > 1){ opt.log('RAD ERR: Radisk has callbacked multiple times, please report this as a BUG at github.com/amark/gun/issues ! ' + i); return }
+				if(err){ opt.log('err', err) }
+				//console.log(">>>>>>>>>>>>", id, ((+new Date) - S), batch.acks.length);
+				map(batch.acks, function(cb){ cb(err, ok) });
+				thrash.at = null;
+				thrash.ing = false;
+				if(thrash.more){ thrash() }
+			});
+		}
+
+		/*
+			1. Find the first radix item in memory.
+			2. Use that as the starting index in the directory of files.
+			3. Find the first file that is lexically larger than it,
+			4. Read the previous file to that into memory
+			5. Scan through the in memory radix for all values lexically less than the limit.
+			6. Merge and write all of those to the in-memory file and back to disk.
+			7. If file too large, split. More details needed here.
+		*/
+		r.save = function(rad, cb){
+			var s = function Span(){};
+			s.find = function(tree, key){
+				if(key < s.start){ return }
+				s.start = key;
+				r.list(s.lex);
+				return true;
+			}
+			s.lex = function(file){
+				file = (u === file)? u : decodeURIComponent(file);
+				if(!file || file > s.start){
+					s.mix(s.file || opt.code.from, s.start, s.end = file);
+					return true;
+				}
+				s.file = file;
+			}
+			s.mix = function(file, start, end){
+				s.start = s.end = s.file = u;
+				r.parse(file, function(err, disk){
+					if(err){ return cb(err) }
+					disk = disk || Radix();
+					Radix.map(rad, function(val, key){
+						if(key < start){ return }
+						if(end && end < key){ return s.start = key }
+						// PLUGIN: consider adding HAM as an extra layer of protection
+						disk(key, val); // merge batch[key] -> disk[key]
+					});
+					r.write(file, disk, s.next);
+				});
+			}
+			s.next = function(err, ok){
+				if(s.err = err){ return cb(err) }
+				if(s.start){ return Radix.map(rad, s.find) }
+				cb(err, ok);
+			}
+			Radix.map(rad, s.find);
+		}
+
+		/*
+			Any storage engine at some point will have to do a read in order to write.
+			This is true of even systems that use an append only log, if they support updates.
+			Therefore it is unavoidable that a read will have to happen,
+			the question is just how long you delay it.
+		*/
+		r.write = function(file, rad, cb, o){
+			o = ('object' == typeof o)? o : {force: o};
+			var f = function Fractal(){};
+			f.text = '';
+			f.count = 0;
+			f.file = file;
+			f.each = function(val, key, k, pre){
+				//console.log("RAD:::", JSON.stringify([val, key, k, pre]));
+				if(u !== val){ f.count++ }
+				if(opt.pack <= (val||'').length){ return cb("Record too big!"), true }
+				var enc = Radisk.encode(pre.length) +'#'+ Radisk.encode(k) + (u === val? '' : ':'+ Radisk.encode(val)) +'\n';
+				if((opt.chunk < f.text.length + enc.length) && (1 < f.count) && !o.force){
+					f.text = '';
+					f.limit = Math.ceil(f.count/2);
+					f.count = 0;
+					f.sub = Radix();
+					Radix.map(rad, f.slice);
+					return true;
+				}
+				f.text += enc;
+			}
+			f.write = function(){
+				var tmp = ename(file);
+				var start; LOG && (start = (+new Date)); // comment this out!
+				opt.store.put(tmp, f.text, function(err){
+					LOG && console.log("wrote JSON in", (+new Date) - start); // comment this out!
+					if(err){ return cb(err) }
+					r.list.add(tmp, cb);
+				});
+			}
+			f.slice = function(val, key){
+				if(key < f.file){ return }
+				if(f.limit < (++f.count)){
+					var name = f.file;
+					f.file = key;
+					f.count = 0;
+					r.write(name, f.sub, f.next, o);
+					return true;
+				}
+				f.sub(key, val);
+			}
+			f.next = function(err){
+				if(err){ return cb(err) }
+				f.sub = Radix();
+				if(!Radix.map(rad, f.slice)){
+					r.write(f.file, f.sub, cb, o);
+				}
+			}
+			if(opt.jsonify){ return r.write.jsonify(f, file, rad, cb, o) } // temporary testing idea
+			if(!Radix.map(rad, f.each, true)){ f.write() }
+		}
+
+		r.write.jsonify = function(f, file, rad, cb, o){
+			var raw;
+			var start; LOG && (start = (+new Date)); // comment this out!
+			try{raw = JSON.stringify(rad.$);
+			}catch(e){ return cb("Record too big!") }
+			LOG && console.log("stringified JSON in", (+new Date) - start); // comment this out!
+			if(opt.chunk < raw.length && !o.force){
+				if(Radix.map(rad, f.each, true)){ return }
+			}
+			f.text = raw;
+			f.write();
+		}
+
+		r.range = function(tree, o){
+			if(!tree || !o){ return }
+			if(u === o.start && u === o.end){ return tree }
+			if(atomic(tree)){ return tree }
+			var sub = Radix();
+			Radix.map(tree, function(v,k){
+				sub(k,v);
+			}, o)
+			return sub('');
+		}
+
+		;(function(){
+			var Q = {};
+			r.read = function(key, cb, o){
+				o = o || {};
+				if(RAD && !o.next){ // cache
+					var val = RAD(key);
+					//if(u !== val){
+						//cb(u, val, o);
+						if(atomic(val)){ cb(u, val, o); return }
+						// if a node is requested and some of it is cached... the other parts might not be.
+					//}
+				}
+				o.span = (u !== o.start) || (u !== o.end);
+				var g = function Get(){};
+				g.lex = function(file){ var tmp;
+					file = (u === file)? u : decodeURIComponent(file);
+					tmp = o.next || key || (o.reverse? o.end || '\uffff' : o.start || '');
+					if(!file || (o.reverse? file < tmp : file > tmp)){
+						if(o.next || o.reverse){ g.file = file }
+						if(tmp = Q[g.file]){
+							tmp.push({key: key, ack: cb, file: g.file, opt: o});
+							return true;
+						}
+						Q[g.file] = [{key: key, ack: cb, file: g.file, opt: o}];
+						if(!g.file){
+							g.it(null, u, {});
+							return true; 
+						}
+						r.parse(g.file, g.it);
+						return true;
+					}
+					g.file = file;
+				}
+				g.it = function(err, disk, info){
+					if(g.err = err){ opt.log('err', err) }
+					g.info = info;
+					if(disk){ RAD = g.disk = disk }
+					disk = Q[g.file]; delete Q[g.file];
+					map(disk, g.ack);
+				}
+				g.ack = function(as){
+					if(!as.ack){ return }
+					var tmp = as.key, o = as.opt, info = g.info, rad = g.disk || noop, data = r.range(rad(tmp), o), last = rad.last;
+					o.parsed = (o.parsed || 0) + (info.parsed||0);
+					o.chunks = (o.chunks || 0) + 1;
+					if(!o.some){ o.some = (u !== data) }
+					if(u !== data){ as.ack(g.err, data, o) }
+					else if(!as.file){ !o.some && as.ack(g.err, u, o); return }
+					if(!o.span){
+						if(/*!last || */last === tmp){ !o.some && as.ack(g.err, u, o); return }
+						if(last && last > tmp && 0 != last.indexOf(tmp)){ !o.some && as.ack(g.err, u, o); return }
+					}
+					if(o.some && o.parsed >= o.limit){ return }
+					o.next = as.file;
+					r.read(tmp, as.ack, o);
+				}
+				if(o.reverse){ g.lex.reverse = true }
+				r.list(g.lex);
+			}
+		}());
+
+		;(function(){
+			/*
+				Let us start by assuming we are the only process that is
+				changing the directory or bucket. Not because we do not want
+				to be multi-process/machine, but because we want to experiment
+				with how much performance and scale we can get out of only one.
+				Then we can work on the harder problem of being multi-process.
+			*/
+			var Q = {}, s = String.fromCharCode(31);
+			r.parse = function(file, cb, raw){ var q;
+				if(q = Q[file]){ return q.push(cb) } q = Q[file] = [cb];
+				var p = function Parse(){}, info = {};
+				p.disk = Radix();
+				p.read = function(err, data){ var tmp;
+					delete Q[file];
+					if((p.err = err) || (p.not = !data)){
+						return map(q, p.ack);
+					}
+					if(typeof data !== 'string'){
+						try{
+							if(opt.pack <= data.length){
+								p.err = "Chunk too big!";
+							} else {
+								data = data.toString(); // If it crashes, it crashes here. How!?? We check size first!
+							}
+						}catch(e){ p.err = e }
+						if(p.err){ return map(q, p.ack) }
+					}
+					info.parsed = data.length;
+
+					var start; LOG && (start = (+new Date)); // keep this commented out in production!
+					if(opt.jsonify){ // temporary testing idea
+						try{
+							var json = JSON.parse(data);
+							p.disk.$ = json;
+							LOG && console.log('parsed JSON in', (+new Date) - start); // keep this commented out in production!
+							map(q, p.ack);
+							return;
+						}catch(e){ tmp = e }
+						if('{' === data[0]){
+							p.err = tmp || "JSON error!";
+							return map(q, p.ack);
+						}
+					}
+					var start; LOG && (start = (+new Date)); // keep this commented out in production!
+					var tmp = p.split(data), pre = [], i, k, v, at, ats=[];
+					if(!tmp || 0 !== tmp[1]){
+						p.err = "File '"+file+"' does not have root radix! ";
+						return map(q, p.ack);
+					}
+					while(tmp){
+						k = v = u;
+						i = tmp[1];
+						tmp = p.split(tmp[2])||'';
+						if('#' == tmp[0]){
+							k = tmp[1];
+							pre = pre.slice(0,i);
+							if(i <= pre.length){
+								pre.push(k);
+							}
+						}
+						tmp = p.split(tmp[2])||'';
+						if('\n' == tmp[0]){
+							at = ats[i] || p.disk.at;
+							p.disk(k, u, at);
+							ats[i] = p.disk.at;
+							ats[i+1] = p.disk.at[k] || (p.disk.at[k]={});
+							continue;
+						}
+						if('=' == tmp[0] || ':' == tmp[0]){ v = tmp[1] }
+						if(u !== k && u !== v){
+// 							p.disk(pre.join(''), v)// mark's code
+							at = ats[i];// || p.disk.at;
+							p.disk(k, v, at);
+							ats[i] = p.disk.at;
+							ats[i+1] = p.disk.at[k];
+						}
+						tmp = p.split(tmp[2]);
+					}
+					LOG && console.log('parsed JSON in', (+new Date) - start); // keep this commented out in production!
+					//cb(err, p.disk);
+					map(q, p.ack);
+				};
+				p.split = function(t){
+					if(!t){ return }
+					var l = [], o = {}, i = -1, a = '', b, c;
+					i = t.indexOf(s);
+					if(!t[i]){ return }
+					a = t.slice(0, i);
+					l[0] = a;
+					l[1] = b = Radisk.decode(t.slice(i), o);
+					l[2] = t.slice(i + o.i);
+					return l;
+				}
+				p.ack = function(cb){ 
+					if(!cb){ return }
+					if(p.err || p.not){ return cb(p.err, u, info) }
+					cb(u, p.disk, info);
+				}
+				if(raw){ return p.read(null, raw) }
+				opt.store.get(ename(file), p.read);
+			}
+		}());
+
+		;(function(){
+			var dir, q, f = String.fromCharCode(28), ef = ename(f);
+			r.list = function(cb){
+				if(dir){
+					var tmp = {reverse: (cb.reverse)? 1 : 0};
+					Radix.map(dir, function(val, key){
+						return cb(key);
+					}, tmp) || cb();
+					return;
+				}
+				if(q){ return q.push(cb) } q = [cb];
+				r.parse(f, r.list.init);
+			}
+			r.list.add = function(file, cb){
+				var has = dir(file);
+				if(has || file === ef){
+					return cb(u, 1);
+				}
+				dir(file, true);
+				cb.listed = (cb.listed || 0) + 1;
+				r.write(f, dir, function(err, ok){
+					if(err){ return cb(err) }
+					cb.listed = (cb.listed || 0) - 1;
+					if(cb.listed !== 0){ return }
+					cb(u, 1);
+				}, true);
+			}
+			r.list.init = function(err, disk){
+				if(err){
+					opt.log('list', err);
+					setTimeout(function(){ r.parse(f, r.list.init) }, 1000);
+					return;
+				}
+				if(disk){
+					r.list.drain(disk);
+					return;
+				}
+				if(!opt.store.list){
+					r.list.drain(Radix());
+					return;
+				}
+				// import directory.
+				opt.store.list(function(file){
+					dir = dir || Radix();
+					if(!file){ return r.list.drain(dir) }
+					r.list.add(file, noop);
+				});
+			}
+			r.list.drain = function(rad, tmp){
+				r.list.dir = dir = rad;
+				tmp = q; q = null;
+				Gun.list.map(tmp, function(cb){
+					r.list(cb);
+				});
+			}
+		}());
+
+		var noop = function(){}, RAD, u;
+		Radisk.has[opt.file] = r;
+		return r;
+	}
+
+
+
+	;(function(){
+		var _ = String.fromCharCode(31), u;
+		Radisk.encode = function(d, o, s){ s = s || _;
+			var t = s, tmp;
+			if(typeof d == 'string'){
+				var i = d.indexOf(s);
+				while(i != -1){ t += s; i = d.indexOf(s, i+1) }
+				return t + '"' + d + s;
+			} else
+			if(d && d['#'] && (tmp = Gun.val.link.is(d))){
+				return t + '#' + tmp + t;
+			} else
+			if(Gun.num.is(d)){
+				return t + '+' + (d||0) + t;
+			} else
+			if(null === d){
+				return t + ' ' + t;
+			} else
+			if(true === d){
+				return t + '+' + t;
+			} else
+			if(false === d){
+				return t + '-' + t;
+			}// else
+			//if(binary){}
+		}
+		Radisk.decode = function(t, o, s){ s = s || _;
+			var d = '', i = -1, n = 0, c, p;
+			if(s !== t[0]){ return }
+			while(s === t[++i]){ ++n }
+			p = t[c = n] || true;
+			while(--n >= 0){ i = t.indexOf(s, i+1) }
+			if(i == -1){ i = t.length }
+			d = t.slice(c+1, i);
+			if(o){ o.i = i+1 }
+			if('"' === p){
+				return d;
+			} else
+			if('#' === p){
+				return Gun.val.link.ify(d);
+			} else
+			if('+' === p){
+				if(0 === d.length){
+					return true;
+				}
+				return parseFloat(d);
+			} else
+			if(' ' === p){
+				return null;
+			} else
+			if('-' === p){
+				return false;
+			}
+		}
+	}());
+
 	if(true){
 	  var Gun = window.Gun;
 	  var Radix = window.Radix;
@@ -68648,13 +69674,14 @@ module.exports = webpackEmptyContext;
 
 }());
 
+
 /***/ }),
 
 /***/ "./node_modules/gun/lib/radix.js":
 /*!***************************************!*\
   !*** ./node_modules/gun/lib/radix.js ***!
   \***************************************/
-/***/ (() => {
+/***/ ((module) => {
 
 ;(function(){
 
@@ -68766,16 +69793,124 @@ module.exports = webpackEmptyContext;
 		} catch (e) { console.error(e); }
 	};
 
-	if(true){
-	  window.Radix = Radix;
-	} else // removed by dead control flow
-{}
+	(function(name, exports){
+		if(true){
+			window[name] = window[name]||exports;
+		} 
+		try{ module.exports = exports }catch(e){}
+	})("Radix",Radix);
 	var each = Radix.object = function(o, f, r){
 		for(var k in o){
 			if(!o.hasOwnProperty(k)){ continue }
 			if((r = f(o[k], k)) !== u){ return r }
 		}
 	}, no = {}, u;
+	var _ = String.fromCharCode(24);
+	
+}());
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/radix2.js":
+/*!****************************************!*\
+  !*** ./node_modules/gun/lib/radix2.js ***!
+  \****************************************/
+/***/ (() => {
+
+;(function(){
+
+	function Radix(){
+		var radix = function(key, val, t){
+			key = ''+key;
+			if(!t && u !== val){ 
+				radix.last = (key < radix.last)? radix.last : key;
+				delete (radix.$||{})[_];
+			}
+			t = t || radix.$ || (radix.$ = {});
+			if(!key && Object.keys(t).length){ return t }
+			var i = 0, l = key.length-1, k = key[i], at, tmp;
+			while(!(at = t[k]) && i < l){
+				k += key[++i];
+			}
+			radix.at = t; /// caching to external access.
+			if(!at){
+				if(!map(t, function(r, s){
+					var ii = 0, kk = '';
+					if((s||'').length){ while(s[ii] == key[ii]){
+						kk += s[ii++];
+					} }
+					if(kk){
+						if(u === val){
+							if(ii <= l){ return }
+							return (tmp || (tmp = {}))[s.slice(ii)] = r;
+						}
+						var __ = {};
+						__[s.slice(ii)] = r;
+						ii = key.slice(ii);
+						('' === ii)? (__[''] = val) : ((__[ii] = {})[''] = val);
+						t[kk] = __;
+						delete t[s];
+						return true;
+					}
+				})){
+					if(u === val){ return; }
+					(t[k] || (t[k] = {}))[''] = val;
+				}
+				if(u === val){
+					return tmp;
+				}
+			} else 
+			if(i == l){
+				if(u === val){ return (u === (tmp = at['']))? at : tmp }
+				at[''] = val;
+			} else {
+				if(u !== val){ delete at[_] }
+				return radix(key.slice(++i), val, at || (at = {}));
+			}
+		}
+		return radix;
+	};
+
+	Radix.map = function map(radix, cb, opt, pre){ pre = pre || [];
+		var t = ('function' == typeof radix)? radix.$ || {} : radix;
+		if(!t){ return }
+		var keys = (t[_]||no).sort || (t[_] = function $(){ $.sort = Object.keys(t).sort(); return $ }()).sort;
+		//var keys = Object.keys(t).sort();
+		opt = (true === opt)? {branch: true} : (opt || {});
+		if(opt.reverse){ keys = keys.slice().reverse() }
+		var start = opt.start, end = opt.end;
+		var i = 0, l = keys.length;
+		for(;i < l; i++){ var key = keys[i], tree = t[key], tmp, p, pt;
+			if(!tree || '' === key || _ === key){ continue }
+			p = pre.slice(); p.push(key);
+			pt = p.join('');
+			if(u !== start && pt < (start||'').slice(0,pt.length)){ continue }
+			if(u !== end && (end || '\uffff') < pt){ continue }
+			if(u !== (tmp = tree[''])){
+				tmp = cb(tmp, pt, key, pre);
+				if(u !== tmp){ return tmp }
+			} else
+			if(opt.branch){
+				tmp = cb(u, pt, key, pre);
+				if(u !== tmp){ return tmp }
+			}
+			pre = p;
+			tmp = map(tree, cb, opt, pre);
+			if(u !== tmp){ return tmp }
+			pre.pop();
+		}
+	};
+
+	Object.keys = Object.keys || function(o){ return map(o, function(v,k,t){t(k)}) }
+
+	if(true){
+	  var Gun = window.Gun;
+	  window.Radix = Radix;
+	} else // removed by dead control flow
+{ var Gun; }
+	
+	var map = Gun.obj.map, no = {}, u;
 	var _ = String.fromCharCode(24);
 	
 }());
@@ -68900,47 +70035,15 @@ function Store(opt){
 	return store;
 }
 
-var Gun = ( true)? window.Gun : 0;
+var Gun = ( true && window.Gun) ? window.Gun : __webpack_require__(/*! ../gun */ "./node_modules/gun/gun.js");
 Gun.on('create', function(root){
 	this.to.next(root);
 	var opt = root.opt;
 	if(opt.rfs === false){ return }
-	opt.store = opt.store || (!Gun.window && Store(opt));
+	opt.store = opt.store || ((!Gun.window || opt.rfs === true) && Store(opt));
 });
 
 module.exports = Store;
-
-/***/ }),
-
-/***/ "./node_modules/gun/lib/rfsmix.js":
-/*!****************************************!*\
-  !*** ./node_modules/gun/lib/rfsmix.js ***!
-  \****************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-module.exports = function(opt, store){
-	var rfs = __webpack_require__(/*! ./rfs */ "./node_modules/gun/lib/rfs.js")(opt);
-	var p = store.put;
-	var g = store.get;
-	store.put = function(file, data, cb){
-		var a, b, c = function(err, ok){
-			if(b){ return cb(err || b) }
-			if(a){ return cb(err, ok) }
-			a = true;
-			b = err;
-		}
-		p(file, data, c); // parallel
-		rfs.put(file, data, c); // parallel
-	}
-	store.get = function(file, cb){
-		rfs.get(file, function(err, data){
-			//console.log("rfs3 hijacked", file);
-			if(data){ return cb(err, data) }
-			g(file, cb);
-		});
-	}
-	return store;
-}
 
 /***/ }),
 
@@ -69031,122 +70134,38 @@ if (navigator.storage && navigator.storage.estimate) {
 
 /***/ }),
 
-/***/ "./node_modules/gun/lib/rs3.js":
-/*!*************************************!*\
-  !*** ./node_modules/gun/lib/rs3.js ***!
-  \*************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+/***/ "./node_modules/gun/lib/shim.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/lib/shim.js ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
-/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
-var Gun = __webpack_require__(/*! ../gun */ "./node_modules/gun/gun.js");
-var Radisk = __webpack_require__(/*! ./radisk */ "./node_modules/gun/lib/radisk.js");
-var fs = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'fs'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
-var Radix = Radisk.Radix;
-var u, AWS;
+var Gun = ( true)? window.Gun : 0;
 
-Gun.on('create', function(root){
-	this.to.next(root);
-	var opt = root.opt;
-	if(!opt.s3 && !process.env.AWS_S3_BUCKET){ return }
-	//opt.batch = opt.batch || (1000 * 10);
-	//opt.until = opt.until || (1000 * 3); // ignoring these now, cause perf > cost
-	//opt.chunk = opt.chunk || (1024 * 1024 * 10); // 10MB // when cost only cents
+Gun.chain.open || __webpack_require__(/*! ./open */ "./node_modules/gun/lib/open.js");
 
-	try{AWS = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'aws-sdk'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
-	}catch(e){
-		console.log("Please `npm install aws-sdk` or add it to your package.json !");
-		AWS_SDK_NOT_INSTALLED;
+var _on = Gun.chain.on;
+Gun.chain.on = function(a,b,c){
+	if('value' === a){
+		return this.open(b,c);
 	}
-
-	var opts = opt.s3 || (opt.s3 = {});
-	opts.bucket = opts.bucket || process.env.AWS_S3_BUCKET;
-	opts.region = opts.region || process.env.AWS_REGION || "us-east-1";
-	opts.accessKeyId = opts.key = opts.key || opts.accessKeyId || process.env.AWS_ACCESS_KEY_ID;
-	opts.secretAccessKey = opts.secret = opts.secret || opts.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
-
-	if(opt.fakes3 = opt.fakes3 || process.env.fakes3){
-		opts.endpoint = opt.fakes3;
-		opts.sslEnabled = false;
-		opts.bucket = opts.bucket.replace('.','p');
-	}
-
-	opts.config = new AWS.Config(opts);
-	opts.s3 = opts.s3 || new AWS.S3(opts.config);
-
-	opt.store = Object.keys(opts.s3).length === 0 ? opt.store : Store(opt);
-});
-
-function Store(opt){
-	opt = opt || {};
-	opt.file = String(opt.file || 'radata');
-	var opts = opt.s3, s3 = opts.s3;
-	var c = {p: {}, g: {}, l: {}};
-	
-	var store = function Store(){};
-	if(Store[opt.file]){
-		console.log("Warning: reusing same S3 store and options as 1st.");
-		return Store[opt.file];
-	}
-	Store[opt.file] = store;
-
-	store.put = function(file, data, cb){
-		var params = {Bucket: opts.bucket, Key: file, Body: data};
-		//console.log("RS3 PUT ---->", (data||"").slice(0,20));
-		c.p[file] = data;
-		delete c.g[file];//Gun.obj.del(c.g, file);
-		delete c.l[1];//Gun.obj.del(c.l, 1);
-    s3.putObject(params, function(err, ok){
-    	delete c.p[file];
-    	cb(err, 's3');
-    });
-	};
-	store.get = function(file, cb){ var tmp;
-		if(tmp = c.p[file]){ cb(u, tmp); return }
-		if(tmp = c.g[file]){ tmp.push(cb); return }
-		var cbs = c.g[file] = [cb];
-		var params = {Bucket: opts.bucket, Key: file||''};
-		//console.log("RS3 GET ---->", file);
-		s3.getObject(params, function got(err, ack){
-			if(err && 'NoSuchKey' === err.code){ err = u }
-			//console.log("RS3 GOT <----", err, file, cbs.length, ((ack||{}).Body||'').length);//.toString().slice(0,20));
-			delete c.g[file];//Gun.obj.del(c.g, file);
-			var data, data = (ack||'').Body;
-			//console.log(1, process.memoryUsage().heapUsed);
-			var i = 0, cba; while(cba = cbs[i++]){ cba && cba(err, data) }//Gun.obj.map(cbs, cbe);
-		});
-	};
-	store.list = function(cb, match, params, cbs){
-		if(!cbs){
-			if(c.l[1]){ return c.l[1].push(cb) }
-			cbs = c.l[1] = [cb];
-		}
-		params = params || {Bucket: opts.bucket};
-		//console.log("RS3 LIST --->");
-		s3.listObjectsV2(params, function(err, data){
-			//console.log("RS3 LIST <---", err, data, cbs.length);
-			if(err){ return Gun.log(err, err.stack) }
-			var IT = data.IsTruncated, cbe = function(cb){
-				if(cb.end){ return }
-				if(Gun.obj.map(data.Contents, function(content){
-					return cb(content.Key);
-				})){ cb.end = true; return }
-				if(IT){ return }
-				// Stream interface requires a final call to know when to be done.
-				cb.end = true; cb();
-			}
-			// Gun.obj.map(cbs, cbe); // lets see if fixes heroku
-			if(!IT){ delete c.l[1]; return }
-	    params.ContinuationToken = data.NextContinuationToken;
-	  	store.list(cb, match, params, cbs);
-    });
-	};
-	//store.list(function(){ return true });
-	if(false !== opt.rfs){ __webpack_require__(/*! ./rfsmix */ "./node_modules/gun/lib/rfsmix.js")(opt, store) } // ugly, but gotta move fast for now.
-	return store;
+	return _on.call(this, a,b,c);
 }
 
-module.exports = Store;
-
+Gun.chain.bye || __webpack_require__(/*! ./bye */ "./node_modules/gun/lib/bye.js");
+Gun.chain.onDisconnect = Gun.chain.bye;
+Gun.chain.connected = function(cb){
+	var root = this.back(-1), last;
+	root.on('hi', function(peer){
+		if(!cb){ return }
+		cb(last = true, peer);
+	});
+	root.on('bye', function(peer){
+		if(!cb || last === peer){ return }
+		cb(false, last = peer);
+	});
+	return this;
+}
 
 /***/ }),
 
@@ -69342,6 +70361,27 @@ Gun.chain.then = function(cb) {
 
 /***/ }),
 
+/***/ "./node_modules/gun/lib/unset.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/lib/unset.js ***!
+  \***************************************/
+/***/ (() => {
+
+var Gun = ( true)? window.Gun : 0;
+
+const rel_ = '#';  // '#'
+const node_ = '_';  // '_'
+
+Gun.chain.unset = function(node){
+	if( this && node && node[node_] && node[node_].put && node[node_].put[node_] && node[node_].put[node_][rel_] ){
+		this.put( { [node[node_].put[node_][rel_]]:null} );
+	}
+	return this;
+}
+
+
+/***/ }),
+
 /***/ "./node_modules/gun/lib/webrtc.js":
 /*!****************************************!*\
   !*** ./node_modules/gun/lib/webrtc.js ***!
@@ -69349,12 +70389,12 @@ Gun.chain.then = function(cb) {
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 ;(function(){
-	var Gun = ( true)? window.Gun : 0;
-	Gun.on('opt', function(root){
+	var GUN = ( true)? window.Gun : 0;
+	GUN.on('opt', function(root){
 		this.to.next(root);
 		var opt = root.opt;
 		if(root.once){ return }
-		if(!Gun.Mesh){ return }
+		if(!GUN.Mesh){ return }
 		if(false === opt.RTCPeerConnection){ return }
 
 		var env;
@@ -69371,7 +70411,8 @@ Gun.chain.then = function(cb) {
 		opt.RTCIceCandidate = rtcic;
 		opt.rtc = opt.rtc || {'iceServers': [
       {urls: 'stun:stun.l.google.com:19302'},
-      {urls: "stun:stun.sipgate.net:3478"}/*,
+      {urls: 'stun:stun.cloudflare.com:3478'}/*,
+      {urls: "stun:stun.sipgate.net:3478"},
       {urls: "stun:stun.stunprotocol.org"},
       {urls: "stun:stun.sipgate.net:10000"},
       {urls: "stun:217.10.68.152:10000"},
@@ -69383,44 +70424,69 @@ Gun.chain.then = function(cb) {
     opt.rtc.dataChannel = opt.rtc.dataChannel || {ordered: false, maxRetransmits: 2};
     opt.rtc.sdp = opt.rtc.sdp || {mandatory: {OfferToReceiveAudio: false, OfferToReceiveVideo: false}};
     opt.rtc.max = opt.rtc.max || 55; // is this a magic number? // For Future WebRTC notes: Chrome 500 max limit, however 256 likely - FF "none", webtorrent does 55 per torrent.
-    opt.rtc.room = opt.rtc.room || Gun.window && (location.hash.slice(1) || location.pathname.slice(1));
+    opt.rtc.room = opt.rtc.room || GUN.window && (location.hash.slice(1) || location.pathname.slice(1));
     opt.announce = function(to){
 			opt.rtc.start = +new Date; // handle room logic:
 			root.$.get('/RTC/'+opt.rtc.room+'<?99').get('+').put(opt.pid, function(ack){
 				if(!ack.ok || !ack.ok.rtc){ return }
-				open(ack);
+				plan(ack);
 			}, {acks: opt.rtc.max}).on(function(last,key, msg){
 				if(last === opt.pid || opt.rtc.start > msg.put['>']){ return }
-				open({'#': ''+msg['#'], ok: {rtc: {id: last}}});
+				plan({'#': ''+msg['#'], ok: {rtc: {id: last}}});
 			});
     };
 
-		var mesh = opt.mesh = opt.mesh || Gun.Mesh(root);
+		var mesh = opt.mesh = opt.mesh || GUN.Mesh(root), wired = mesh.wire;
+    mesh.hear['rtc'] = plan;
+		mesh.wire = function(media){ try{ wired && wired(media);
+    	if(!(media instanceof MediaStream)){ return }
+    	(open.media = open.media||{})[media.id] = media;
+    	for(var p in opt.peers){ p = opt.peers[p]||'';
+    		p.addTrack && media.getTracks().forEach(track => {
+			    p.addTrack(track, media);
+			  });
+    		p.createOffer && p.createOffer(function(offer){
+					p.setLocalDescription(offer);
+					mesh.say({'#': root.ask(plan), dam: 'rtc', ok: {rtc: {offer: offer, id: opt.pid}}}, p);
+				}, function(){}, opt.rtc.sdp);
+    	}
+		} catch(e){console.log(e)} }
 		root.on('create', function(at){
 			this.to.next(at);
 			setTimeout(opt.announce, 1);
 		});
 
-		function open(msg){
-			if(this && this.off){ this.off() } // Ignore this, because of ask / ack.
+		function plan(msg){
 			if(!msg.ok){ return }
 			var rtc = msg.ok.rtc, peer, tmp;
 			if(!rtc || !rtc.id || rtc.id === opt.pid){ return }
-			//console.log("webrtc:", JSON.stringify(msg));
+			peer = open(msg, rtc);
+			if(tmp = rtc.candidate){
+				return peer.addIceCandidate(new opt.RTCIceCandidate(tmp));
+			}
 			if(tmp = rtc.answer){
-				if(!(peer = opt.peers[rtc.id] || open[rtc.id]) || peer.remoteSet){ return }
 				tmp.sdp = tmp.sdp.replace(/\\r\\n/g, '\r\n');
 				return peer.setRemoteDescription(peer.remoteSet = new opt.RTCSessionDescription(tmp)); 
 			}
-			if(tmp = rtc.candidate){
-				peer = opt.peers[rtc.id] || open[rtc.id] || open({ok: {rtc: {id: rtc.id}}});
-				return peer.addIceCandidate(new opt.RTCIceCandidate(tmp));
+			if(tmp = rtc.offer){
+				rtc.offer.sdp = rtc.offer.sdp.replace(/\\r\\n/g, '\r\n');
+				peer.setRemoteDescription(new opt.RTCSessionDescription(tmp));
+				return peer.createAnswer(function(answer){
+					peer.setLocalDescription(answer);
+					root.on('out', {'@': msg['#'], ok: {rtc: {answer: answer, id: opt.pid}}});
+				}, function(){}, opt.rtc.sdp);
 			}
-			//if(opt.peers[rtc.id]){ return }
-			if(open[rtc.id]){ return }
+		}
+		function open(msg, rtc, peer){
+			if(peer = opt.peers[rtc.id] || open[rtc.id]){ return peer }
 			(peer = new opt.RTCPeerConnection(opt.rtc)).id = rtc.id;
 			var wire = peer.wire = peer.createDataChannel('dc', opt.rtc.dataChannel);
+			function rtceve(eve){ eve.peer = peer; gun.on('rtc', eve) }
+			peer.$ = gun;
 			open[rtc.id] = peer;
+			peer.ontrack = rtceve;
+			peer.onremovetrack = rtceve;
+			peer.onconnectionstatechange = rtceve;
 			wire.to = setTimeout(function(){delete open[rtc.id]},1000*60);
 			wire.onclose = function(){ mesh.bye(peer) };
 			wire.onerror = function(err){ };
@@ -69430,36 +70496,33 @@ Gun.chain.then = function(cb) {
 			}
 			wire.onmessage = function(msg){
 				if(!msg){ return }
-				//console.log('via rtc');
 				mesh.hear(msg.data || msg, peer);
 			};
-			peer.onicecandidate = function(e){ // source: EasyRTC!
+			peer.onicecandidate = function(e){ rtceve(e);
         if(!e.candidate){ return }
-        root.on('out', {'@': msg['#'], ok: {rtc: {candidate: e.candidate, id: opt.pid}}});
+        root.on('out', {'@': (msg||'')['#'], '#': root.ask(plan), ok: {rtc: {candidate: e.candidate, id: opt.pid}}});
 			}
-			peer.ondatachannel = function(e){
+			peer.ondatachannel = function(e){ rtceve(e);
 				var rc = e.channel;
 				rc.onmessage = wire.onmessage;
 				rc.onopen = wire.onopen;
 				rc.onclose = wire.onclose;
 			}
-			if(tmp = rtc.offer){
-				rtc.offer.sdp = rtc.offer.sdp.replace(/\\r\\n/g, '\r\n')
-				peer.setRemoteDescription(new opt.RTCSessionDescription(tmp)); 
-				peer.createAnswer(function(answer){
-					peer.setLocalDescription(answer);
-					root.on('out', {'@': msg['#'], ok: {rtc: {answer: answer, id: opt.pid}}});
-				}, function(){}, opt.rtc.sdp);
-				return;
+			if(rtc.offer){ return peer }
+			for(var m in open.media){ m = open.media[m];
+				m.getTracks().forEach(track => {
+			    peer.addTrack(track, m);
+			  });
 			}
 			peer.createOffer(function(offer){
 				peer.setLocalDescription(offer);
-				root.on('out', {'@': msg['#'], '#': root.ask(open), ok: {rtc: {offer: offer, id: opt.pid}}});
+				root.on('out', {'@': (msg||'')['#'], '#': root.ask(plan), ok: {rtc: {offer: offer, id: opt.pid}}});
 			}, function(){}, opt.rtc.sdp);
 			return peer;
 		}
 	});
 }());
+
 
 /***/ }),
 
@@ -69763,7 +70826,9 @@ if(typeof JSON != ''+u){
       if(location.protocol.indexOf('s') < 0
       && location.host.indexOf('localhost') < 0
       && ! /^127\.\d+\.\d+\.\d+$/.test(location.hostname)
-      && location.protocol.indexOf('file:') < 0){
+      && location.protocol.indexOf('blob:') < 0
+      && location.protocol.indexOf('file:') < 0
+      && location.origin != 'null'){
         console.warn('HTTPS needed for WebCrypto in SEA, redirecting...');
         location.protocol = 'https:'; // WebCrypto does NOT work without HTTPS!
       }
@@ -70694,7 +71759,8 @@ if(typeof JSON != ''+u){
       var pass = (alias || (pair && !(pair.priv && pair.epriv))) && typeof args[1] === 'string' ? args[1] : null;
       var cb = args.filter(arg => typeof arg === 'function')[0] || null; // cb now can stand anywhere, after alias/pass or pair
       var opt = args && args.length > 1 && typeof args[args.length-1] === 'object' ? args[args.length-1] : {}; // opt is always the last parameter which typeof === 'object' and stands after cb
-      
+      var retries = typeof opt.retries === 'number' ? opt.retries : 9;
+
       var gun = this, cat = (gun._), root = gun.back(-1);
       
       if(cat.ing){
@@ -70703,7 +71769,7 @@ if(typeof JSON != ''+u){
       }
       cat.ing = true;
       
-      var act = {}, u, tries = 9;
+      var act = {}, u;
       act.a = function(data){
         if(!data){ return act.b() }
         if(!data.pub){
@@ -70717,7 +71783,7 @@ if(typeof JSON != ''+u){
         var get = (act.list = (act.list||[]).concat(list||[])).shift();
         if(u === get){
           if(act.name){ return act.err('Your user account is not published for dApps to access, please consider syncing it online, or allowing local access by adding your device as a peer.') }
-          if(alias && tries--){
+          if(alias && retries--){
             root.get('~@'+alias).once(act.a);
             return;
           }
@@ -71113,7 +72179,7 @@ if(typeof JSON != ''+u){
             if (u !== data && u !== data.e && msg.put['>'] && msg.put['>'] > parseFloat(data.e)) return no("Certificate expired.") // certificate expired
             // "data.c" = a list of certificants/certified users
             // "data.w" = lex WRITE permission, in the future, there will be "data.r" which means lex READ permission
-            if (u !== data && data.c && data.w && (data.c === certificant || data.c.indexOf('*' || 0) > -1)) {
+            if (u !== data && data.c && data.w && (data.c === certificant || data.c.indexOf('*') > -1 || data.c.indexOf(certificant) > -1)) {
               // ok, now "certificant" is in the "certificants" list, but is "path" allowed? Check path
               let path = soul.indexOf('/') > -1 ? soul.replace(soul.substring(0, soul.indexOf('/') + 1), '') : ''
               String.match = String.match || Gun.text.match
@@ -100047,15 +101113,24 @@ const Gun = gun_1.default;
 exports.Gun = Gun;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
-__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
-__webpack_require__(/*! gun/lib/radix.js */ "./node_modules/gun/lib/radix.js");
-__webpack_require__(/*! gun/lib/radisk.js */ "./node_modules/gun/lib/radisk.js");
+// Storage Modules
+__webpack_require__(/*! gun/lib/radix2.js */ "./node_modules/gun/lib/radix2.js");
+__webpack_require__(/*! gun/lib/radisk2.js */ "./node_modules/gun/lib/radisk2.js");
 __webpack_require__(/*! gun/lib/store.js */ "./node_modules/gun/lib/store.js");
 __webpack_require__(/*! gun/lib/rindexed.js */ "./node_modules/gun/lib/rindexed.js");
 __webpack_require__(/*! gun/lib/rfs.js */ "./node_modules/gun/lib/rfs.js");
-__webpack_require__(/*! gun/lib/rs3.js */ "./node_modules/gun/lib/rs3.js");
+// Networking
+__webpack_require__(/*! gun/lib/multicast.js */ "./node_modules/gun/lib/multicast.js");
 __webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
+// Serialization
 __webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
+__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
+// Utility Modules
+__webpack_require__(/*! gun/lib/erase.js */ "./node_modules/gun/lib/erase.js");
+__webpack_require__(/*! gun/lib/unset.js */ "./node_modules/gun/lib/unset.js");
+__webpack_require__(/*! gun/lib/open.js */ "./node_modules/gun/lib/open.js");
+__webpack_require__(/*! gun/lib/bye.js */ "./node_modules/gun/lib/bye.js");
+__webpack_require__(/*! gun/lib/shim.js */ "./node_modules/gun/lib/shim.js");
 const restricted_put_1 = __webpack_require__(/*! ./restricted-put */ "./src/gundb/restricted-put.ts");
 Object.defineProperty(exports, "restrictedPut", ({ enumerable: true, get: function () { return restricted_put_1.restrictedPut; } }));
 const derive_1 = __importDefault(__webpack_require__(/*! ./derive */ "./src/gundb/derive.ts"));
@@ -102205,24 +103280,6 @@ async function loadGunModules() {
     if (gunModulesLoaded)
         return;
     try {
-        // For browser environments, load only the modules that are browser-safe.
-        // Webpack 5 no longer polyfills Node core modules, and some Gun server-side
-        // libs (like wire/rs3) depend on them. To avoid bundling those, we only
-        // import browser-safe parts here. For Node, we use a runtime require via
-        // eval to prevent webpack from statically analyzing those imports.
-        if (!isNode) {
-            const gunModule = await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js")));
-            Gun = gunModule.default || gunModule;
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/yson */ "./node_modules/gun/lib/yson.js")));
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/webrtc */ "./node_modules/gun/lib/webrtc.js")));
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/radisk */ "./node_modules/gun/lib/radisk.js")));
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/radix */ "./node_modules/gun/lib/radix.js")));
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/rindexed */ "./node_modules/gun/lib/rindexed.js")));
-            gunModulesLoaded = true;
-            return;
-        }
-        // Node.js environment: prefer require, but use eval to avoid webpack
-        // from resolving server-only modules in web builds.
         const req = (() => {
             try {
                 // eslint-disable-next-line no-eval
@@ -102239,13 +103296,21 @@ async function loadGunModules() {
                 "gun/lib/yson",
                 "gun/lib/serve",
                 "gun/lib/store",
-                "gun/lib/radix",
-                "gun/lib/radisk",
+                "gun/lib/radix2",
+                "gun/lib/radisk2",
                 "gun/lib/rfs",
                 "gun/lib/rs3",
                 "gun/lib/multicast",
                 "gun/lib/stats",
                 "gun/lib/webrtc",
+                "gun/lib/erase",
+                "gun/lib/unset",
+                "gun/lib/wire",
+                "gun/lib/verify",
+                "gun/lib/then",
+                "gun/lib/open",
+                "gun/lib/bye",
+                "gun/lib/shim",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {

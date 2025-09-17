@@ -23,15 +23,30 @@ import type { AuthResult, SignUpResult } from "../types/shogun";
 import GunModule from "gun/gun";
 const Gun = GunModule;
 import SEA from "gun/sea";
-import "gun/lib/then.js";
-import "gun/lib/radix.js";
-import "gun/lib/radisk.js";
+
+// Storage Modules
+import "gun/lib/radix2.js";
+import "gun/lib/radisk2.js";
 import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
 import "gun/lib/rfs.js";
-import "gun/lib/rs3.js";
+
+// Networking
+import "gun/lib/multicast.js";
 import "gun/lib/webrtc.js";
+
+// Serialization
 import "gun/lib/yson.js";
+
+import "gun/lib/then.js";
+
+// Utility Modules
+import "gun/lib/erase.js";
+import "gun/lib/unset.js";
+
+import "gun/lib/open.js";
+import "gun/lib/bye.js";
+import "gun/lib/shim.js";
 
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
