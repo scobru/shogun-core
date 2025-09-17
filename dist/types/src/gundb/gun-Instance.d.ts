@@ -8,6 +8,7 @@ import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener
 import type { AuthResult, SignUpResult } from "../types/shogun";
 declare const Gun: import("gun/types").IGun;
 import SEA from "gun/sea";
+import "gun/src/map.js";
 import "gun/lib/radix2.js";
 import "gun/lib/radisk2.js";
 import "gun/lib/store.js";
@@ -16,9 +17,9 @@ import "gun/lib/rfs.js";
 import "gun/lib/multicast.js";
 import "gun/lib/webrtc.js";
 import "gun/lib/yson.js";
-import "gun/lib/then.js";
 import "gun/lib/erase.js";
 import "gun/lib/unset.js";
+import "gun/lib/then.js";
 import "gun/lib/open.js";
 import "gun/lib/bye.js";
 import "gun/lib/shim.js";

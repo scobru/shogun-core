@@ -36,6 +36,7 @@ async function loadGunModules(): Promise<void> {
       Gun = req("gun/gun");
       // Best-effort load of server-side helpers; ignore if unavailable
       const nodeOnlyLibs = [
+        "gun/src/map.js",
         "gun/lib/yson",
         "gun/lib/serve",
         "gun/lib/store",

@@ -72332,6 +72332,671 @@ if(typeof JSON != ''+u){
 
 /***/ }),
 
+/***/ "./node_modules/gun/src/ask.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/src/ask.js ***!
+  \*************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+;(function(){
+
+// request / response module, for asking and acking messages.
+__webpack_require__(/*! ./onto */ "./node_modules/gun/src/onto.js"); // depends upon onto!
+module.exports = function ask(cb, as){
+	if(!this.on){ return }
+	var lack = (this.opt||{}).lack || 9000;
+	if(!('function' == typeof cb)){
+		if(!cb){ return }
+		var id = cb['#'] || cb, tmp = (this.tag||'')[id];
+		if(!tmp){ return }
+		if(as){
+			tmp = this.on(id, as);
+			clearTimeout(tmp.err);
+			tmp.err = setTimeout(function(){ tmp.off() }, lack);
+		}
+		return true;
+	}
+	var id = (as && as['#']) || random(9);
+	if(!cb){ return id }
+	var to = this.on(id, cb, as);
+	to.err = to.err || setTimeout(function(){ to.off();
+		to.next({err: "Error: No ACK yet.", lack: true});
+	}, lack);
+	return id;
+}
+var random = String.random || function(){ return Math.random().toString(36).slice(2) }
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/dup.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/src/dup.js ***!
+  \*************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+;(function(){
+
+__webpack_require__(/*! ./shim */ "./node_modules/gun/src/shim.js");
+function Dup(opt){
+	var dup = {s:{}}, s = dup.s;
+	opt = opt || {max: 999, age: 1000 * 9};//*/ 1000 * 9 * 3};
+	dup.check = function(id){
+		if(!s[id]){ return false }
+		return dt(id);
+	}
+	var dt = dup.track = function(id){
+		var it = s[id] || (s[id] = {});
+		it.was = dup.now = +new Date;
+		if(!dup.to){ dup.to = setTimeout(dup.drop, opt.age + 9) }
+		if(dt.ed){ dt.ed(id) }
+		return it;
+	}
+	dup.drop = function(age){
+		dup.to = null;
+		dup.now = +new Date;
+		var l = Object.keys(s);
+		console.STAT && console.STAT(dup.now, +new Date - dup.now, 'dup drop keys'); // prev ~20% CPU 7% RAM 300MB // now ~25% CPU 7% RAM 500MB
+		setTimeout.each(l, function(id){ var it = s[id]; // TODO: .keys( is slow?
+			if(it && (age || opt.age) > (dup.now - it.was)){ return }
+			delete s[id];
+		},0,99);
+	}
+	return dup;
+}
+module.exports = Dup;
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/map.js":
+/*!*************************************!*\
+  !*** ./node_modules/gun/src/map.js ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+;(function(){
+
+var Gun = __webpack_require__(/*! ./root */ "./node_modules/gun/src/root.js"), next = Gun.chain.get.next;
+Gun.chain.get.next = function(gun, lex){ var tmp;
+	if(!Object.plain(lex)){ return (next||noop)(gun, lex) }
+	if(tmp = ((tmp = lex['#'])||'')['='] || tmp){ return gun.get(tmp) }
+	(tmp = gun.chain()._).lex = lex; // LEX!
+	gun.on('in', function(eve){
+		if(String.match(eve.get|| (eve.put||'')['.'], lex['.'] || lex['#'] || lex)){
+			tmp.on('in', eve);
+		}
+		this.to.next(eve);
+	});
+	return tmp.$;
+}
+Gun.chain.map = function(cb, opt, t){
+	var gun = this, cat = gun._, lex, chain;
+	if(Object.plain(cb)){ lex = cb['.']? cb : {'.': cb}; cb = u }
+	if(!cb){
+		if(chain = cat.each){ return chain }
+		(cat.each = chain = gun.chain())._.lex = lex || chain._.lex || cat.lex;
+		chain._.nix = gun.back('nix');
+		gun.on('in', map, chain._);
+		return chain;
+	}
+	Gun.log.once("mapfn", "Map functions are experimental, their behavior and API may change moving forward. Please play with it and report bugs and ideas on how to improve it.");
+	chain = gun.chain();
+	gun.map().on(function(data, key, msg, eve){
+		var next = (cb||noop).call(this, data, key, msg, eve);
+		if(u === next){ return }
+		if(data === next){ return chain._.on('in', msg) }
+		if(Gun.is(next)){ return chain._.on('in', next._) }
+		var tmp = {}; Object.keys(msg.put).forEach(function(k){ tmp[k] = msg.put[k] }, tmp); tmp['='] = next; 
+		chain._.on('in', {get: key, put: tmp});
+	});
+	return chain;
+}
+function map(msg){ this.to.next(msg);
+	var cat = this.as, gun = msg.$, at = gun._, put = msg.put, tmp;
+	if(!at.soul && !msg.$$){ return } // this line took hundreds of tries to figure out. It only works if core checks to filter out above chains during link tho. This says "only bother to map on a node" for this layer of the chain. If something is not a node, map should not work.
+	if((tmp = cat.lex) && !String.match(msg.get|| (put||'')['.'], tmp['.'] || tmp['#'] || tmp)){ return }
+	Gun.on.link(msg, cat);
+}
+var noop = function(){}, event = {stun: noop, off: noop}, u;
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/onto.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/src/onto.js ***!
+  \**************************************/
+/***/ ((module) => {
+
+;(function(){
+
+// On event emitter generic javascript utility.
+module.exports = function onto(tag, arg, as){
+	if(!tag){ return {to: onto} }
+	var u, f = 'function' == typeof arg, tag = (this.tag || (this.tag = {}))[tag] || f && (
+		this.tag[tag] = {tag: tag, to: onto._ = { next: function(arg){ var tmp;
+			if(tmp = this.to){ tmp.next(arg) }
+	}}});
+	if(f){
+		var be = {
+			off: onto.off ||
+			(onto.off = function(){
+				if(this.next === onto._.next){ return !0 }
+				if(this === this.the.last){
+					this.the.last = this.back;
+				}
+				this.to.back = this.back;
+				this.next = onto._.next;
+				this.back.to = this.to;
+				if(this.the.last === this.the){
+					delete this.on.tag[this.the.tag];
+				}
+			}),
+			to: onto._,
+			next: arg,
+			the: tag,
+			on: this,
+			as: as,
+		};
+		(be.back = tag.last || tag).to = be;
+		return tag.last = be;
+	}
+	if((tag = tag.to) && u !== arg){ tag.next(arg) }
+	return tag;
+};
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/root.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/src/root.js ***!
+  \**************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+;(function(){
+
+
+function Gun(o){
+	if(o instanceof Gun){ return (this._ = {$: this}).$ }
+	if(!(this instanceof Gun)){ return new Gun(o) }
+	return Gun.create(this._ = {$: this, opt: o});
+}
+
+Gun.is = function($){ return ($ instanceof Gun) || ($ && $._ && ($ === $._.$)) || false }
+
+Gun.version = 0.2020;
+
+Gun.chain = Gun.prototype;
+Gun.chain.toJSON = function(){};
+
+__webpack_require__(/*! ./shim */ "./node_modules/gun/src/shim.js");
+Gun.valid = __webpack_require__(/*! ./valid */ "./node_modules/gun/src/valid.js");
+Gun.state = __webpack_require__(/*! ./state */ "./node_modules/gun/src/state.js");
+Gun.on = __webpack_require__(/*! ./onto */ "./node_modules/gun/src/onto.js");
+Gun.dup = __webpack_require__(/*! ./dup */ "./node_modules/gun/src/dup.js");
+Gun.ask = __webpack_require__(/*! ./ask */ "./node_modules/gun/src/ask.js");
+
+;(function(){
+	Gun.create = function(at){
+		at.root = at.root || at;
+		at.graph = at.graph || {};
+		at.on = at.on || Gun.on;
+		at.ask = at.ask || Gun.ask;
+		at.dup = at.dup || Gun.dup();
+		var gun = at.$.opt(at.opt);
+		if(!at.once){
+			at.on('in', universe, at);
+			at.on('out', universe, at);
+			at.on('put', map, at);
+			Gun.on('create', at);
+			at.on('create', at);
+		}
+		at.once = 1;
+		return gun;
+	}
+	function universe(msg){
+		// TODO: BUG! msg.out = null being set!
+		//if(!F){ var eve = this; setTimeout(function(){ universe.call(eve, msg,1) },Math.random() * 100);return; } // ADD F TO PARAMS!
+		if(!msg){ return }
+		if(msg.out === universe){ this.to.next(msg); return }
+		var eve = this, as = eve.as, at = as.at || as, gun = at.$, dup = at.dup, tmp, DBG = msg.DBG;
+		(tmp = msg['#']) || (tmp = msg['#'] = text_rand(9));
+		if(dup.check(tmp)){ return } dup.track(tmp);
+		tmp = msg._; msg._ = ('function' == typeof tmp)? tmp : function(){};
+		(msg.$ && (msg.$ === (msg.$._||'').$)) || (msg.$ = gun);
+		if(msg['@'] && !msg.put){ ack(msg) }
+		if(!at.ask(msg['@'], msg)){ // is this machine listening for an ack?
+			DBG && (DBG.u = +new Date);
+			if(msg.put){ put(msg); return } else
+			if(msg.get){ Gun.on.get(msg, gun) }
+		}
+		DBG && (DBG.uc = +new Date);
+		eve.to.next(msg);
+		DBG && (DBG.ua = +new Date);
+		if(msg.nts || msg.NTS){ return } // TODO: This shouldn't be in core, but fast way to prevent NTS spread. Delete this line after all peers have upgraded to newer versions.
+		msg.out = universe; at.on('out', msg);
+		DBG && (DBG.ue = +new Date);
+	}
+	function put(msg){
+		if(!msg){ return }
+		var ctx = msg._||'', root = ctx.root = ((ctx.$ = msg.$||'')._||'').root;
+		if(msg['@'] && ctx.faith && !ctx.miss){ // TODO: AXE may split/route based on 'put' what should we do here? Detect @ in AXE? I think we don't have to worry, as DAM will route it on @.
+			msg.out = universe;
+			root.on('out', msg);
+			return;
+		}
+		ctx.latch = root.hatch; ctx.match = root.hatch = [];
+		var put = msg.put;
+		var DBG = ctx.DBG = msg.DBG, S = +new Date; CT = CT || S;
+		if(put['#'] && put['.']){ /*root && root.on('put', msg);*/ return } // TODO: BUG! This needs to call HAM instead.
+		DBG && (DBG.p = S);
+		ctx['#'] = msg['#'];
+		ctx.msg = msg;
+		ctx.all = 0;
+		ctx.stun = 1;
+		var nl = Object.keys(put);//.sort(); // TODO: This is unbounded operation, large graphs will be slower. Write our own CPU scheduled sort? Or somehow do it in below? Keys itself is not O(1) either, create ES5 shim over ?weak map? or custom which is constant.
+		console.STAT && console.STAT(S, ((DBG||ctx).pk = +new Date) - S, 'put sort');
+		var ni = 0, nj, kl, soul, node, states, err, tmp;
+		(function pop(o){
+			if(nj != ni){ nj = ni;
+				if(!(soul = nl[ni])){
+					console.STAT && console.STAT(S, ((DBG||ctx).pd = +new Date) - S, 'put');
+					fire(ctx);
+					return;
+				}
+				if(!(node = put[soul])){ err = ERR+cut(soul)+"no node." } else
+				if(!(tmp = node._)){ err = ERR+cut(soul)+"no meta." } else
+				if(soul !== tmp['#']){ err = ERR+cut(soul)+"soul not same." } else
+				if(!(states = tmp['>'])){ err = ERR+cut(soul)+"no state." }
+				kl = Object.keys(node||{}); // TODO: .keys( is slow
+			}
+			if(err){
+				msg.err = ctx.err = err; // invalid data should error and stun the message.
+				fire(ctx);
+				//console.log("handle error!", err) // handle!
+				return;
+			}
+			var i = 0, key; o = o || 0;
+			while(o++ < 9 && (key = kl[i++])){
+				if('_' === key){ continue }
+				var val = node[key], state = states[key];
+				if(u === state){ err = ERR+cut(key)+"on"+cut(soul)+"no state."; break }
+				if(!valid(val)){ err = ERR+cut(key)+"on"+cut(soul)+"bad "+(typeof val)+cut(val); break }
+				//ctx.all++; //ctx.ack[soul+key] = '';
+				ham(val, key, soul, state, msg);
+				++C; // courtesy count;
+			}
+			if((kl = kl.slice(i)).length){ turn(pop); return }
+			++ni; kl = null; pop(o);
+		}());
+	} Gun.on.put = put;
+	// TODO: MARK!!! clock below, reconnect sync, SEA certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
+	// WASIS BUG! local peer not ack. .off other people: .open
+	function ham(val, key, soul, state, msg){
+		var ctx = msg._||'', root = ctx.root, graph = root.graph, lot, tmp;
+		var vertex = graph[soul] || empty, was = state_is(vertex, key, 1), known = vertex[key];
+		
+		var DBG = ctx.DBG; if(tmp = console.STAT){ if(!graph[soul] || !known){ tmp.has = (tmp.has || 0) + 1 } }
+
+		var now = State(), u;
+		if(state > now){
+			setTimeout(function(){ ham(val, key, soul, state, msg) }, (tmp = state - now) > MD? MD : tmp); // Max Defer 32bit. :(
+			console.STAT && console.STAT(((DBG||ctx).Hf = +new Date), tmp, 'future');
+			return;
+		}
+		if(state < was){ /*old;*/ if(true){ return } } // but some chains have a cache miss that need to re-fire. // TODO: Improve in future. // for AXE this would reduce rebroadcast, but GUN does it on message forwarding. // TURNS OUT CACHE MISS WAS NOT NEEDED FOR NEW CHAINS ANYMORE!!! DANGER DANGER DANGER, ALWAYS RETURN! (or am I missing something?)
+		if(!ctx.faith){ // TODO: BUG? Can this be used for cache miss as well? // Yes this was a bug, need to check cache miss for RAD tests, but should we care about the faith check now? Probably not.
+			if(state === was && (val === known || L(val) <= L(known))){ /*console.log("same");*/ /*same;*/ if(!ctx.miss){ return } } // same
+		}
+		ctx.stun++; // TODO: 'forget' feature in SEA tied to this, bad approach, but hacked in for now. Any changes here must update there.
+		var aid = msg['#']+ctx.all++, id = {toString: function(){ return aid }, _: ctx}; id.toJSON = id.toString; // this *trick* makes it compatible between old & new versions.
+		root.dup.track(id)['#'] = msg['#']; // fixes new OK acks for RPC like RTC.
+		DBG && (DBG.ph = DBG.ph || +new Date);
+		root.on('put', {'#': id, '@': msg['@'], put: {'#': soul, '.': key, ':': val, '>': state}, ok: msg.ok, _: ctx});
+	}
+	function map(msg){
+		var DBG; if(DBG = (msg._||'').DBG){ DBG.pa = +new Date; DBG.pm = DBG.pm || +new Date}
+      	var eve = this, root = eve.as, graph = root.graph, ctx = msg._, put = msg.put, soul = put['#'], key = put['.'], val = put[':'], state = put['>'], id = msg['#'], tmp;
+      	if((tmp = ctx.msg) && (tmp = tmp.put) && (tmp = tmp[soul])){ state_ify(tmp, key, state, val, soul) } // necessary! or else out messages do not get SEA transforms.
+      	//var bytes = ((graph[soul]||'')[key]||'').length||1;
+		graph[soul] = state_ify(graph[soul], key, state, val, soul);
+		if(tmp = (root.next||'')[soul]){
+			//tmp.bytes = (tmp.bytes||0) + ((val||'').length||1) - bytes;
+			//if(tmp.bytes > 2**13){ Gun.log.once('byte-limit', "Note: In the future, GUN peers will enforce a ~4KB query limit. Please see https://gun.eco/docs/Page") }
+			tmp.on('in', msg)
+		}
+		fire(ctx);
+		eve.to.next(msg);
+	}
+	function fire(ctx, msg){ var root;
+		if(ctx.stop){ return }
+		if(!ctx.err && 0 < --ctx.stun){ return } // TODO: 'forget' feature in SEA tied to this, bad approach, but hacked in for now. Any changes here must update there.
+		ctx.stop = 1;
+		if(!(root = ctx.root)){ return }
+		var tmp = ctx.match; tmp.end = 1;
+		if(tmp === root.hatch){ if(!(tmp = ctx.latch) || tmp.end){ delete root.hatch } else { root.hatch = tmp } }
+		ctx.hatch && ctx.hatch(); // TODO: rename/rework how put & this interact.
+		setTimeout.each(ctx.match, function(cb){cb && cb()}); 
+		if(!(msg = ctx.msg) || ctx.err || msg.err){ return }
+		msg.out = universe;
+		ctx.root.on('out', msg);
+
+		CF(); // courtesy check;
+	}
+	function ack(msg){ // aggregate ACKs.
+		var id = msg['@'] || '', ctx, ok, tmp;
+		if(!(ctx = id._)){
+			var dup = (dup = msg.$) && (dup = dup._) && (dup = dup.root) && (dup = dup.dup);
+			if(!(dup = dup.check(id))){ return }
+			msg['@'] = dup['#'] || msg['@']; // This doesn't do anything anymore, backtrack it to something else?
+			return;
+		}
+		ctx.acks = (ctx.acks||0) + 1;
+		if(ctx.err = msg.err){
+			msg['@'] = ctx['#'];
+			fire(ctx); // TODO: BUG? How it skips/stops propagation of msg if any 1 item is error, this would assume a whole batch/resync has same malicious intent.
+		}
+		ctx.ok = msg.ok || ctx.ok;
+		if(!ctx.stop && !ctx.crack){ ctx.crack = ctx.match && ctx.match.push(function(){back(ctx)}) } // handle synchronous acks. NOTE: If a storage peer ACKs synchronously then the PUT loop has not even counted up how many items need to be processed, so ctx.STOP flags this and adds only 1 callback to the end of the PUT loop.
+		back(ctx);
+	}
+	function back(ctx){
+		if(!ctx || !ctx.root){ return }
+		if(ctx.stun || ctx.acks !== ctx.all){ return }
+		ctx.root.on('in', {'@': ctx['#'], err: ctx.err, ok: ctx.err? u : ctx.ok || {'':1}});
+	}
+
+	var ERR = "Error: Invalid graph!";
+	var cut = function(s){ return " '"+(''+s).slice(0,9)+"...' " }
+	var L = JSON.stringify, MD = 2147483647, State = Gun.state;
+	var C = 0, CT, CF = function(){if(C>999 && (C/-(CT - (CT = +new Date))>1)){Gun.window && console.log("Warning: You're syncing 1K+ records a second, faster than DOM can update - consider limiting query.");CF=function(){C=0}}};
+
+}());
+
+;(function(){
+	Gun.on.get = function(msg, gun){
+		var root = gun._, get = msg.get, soul = get['#'], node = root.graph[soul], has = get['.'];
+		var next = root.next || (root.next = {}), at = next[soul];
+
+		// TODO: Azarattum bug, what is in graph is not same as what is in next. Fix!
+
+		// queue concurrent GETs?
+		// TODO: consider tagging original message into dup for DAM.
+		// TODO: ^ above? In chat app, 12 messages resulted in same peer asking for `#user.pub` 12 times. (same with #user GET too, yipes!) // DAM note: This also resulted in 12 replies from 1 peer which all had same ##hash but none of them deduped because each get was different.
+		// TODO: Moving quick hacks fixing these things to axe for now.
+		// TODO: a lot of GET #foo then GET #foo."" happening, why?
+		// TODO: DAM's ## hash check, on same get ACK, producing multiple replies still, maybe JSON vs YSON?
+		// TMP note for now: viMZq1slG was chat LEX query #.
+		/*if(gun !== (tmp = msg.$) && (tmp = (tmp||'')._)){
+			if(tmp.Q){ tmp.Q[msg['#']] = ''; return } // chain does not need to ask for it again.
+			tmp.Q = {};
+		}*/
+		/*if(u === has){
+			if(at.Q){
+				//at.Q[msg['#']] = '';
+				//return;
+			}
+			at.Q = {};
+		}*/
+		var ctx = msg._||{}, DBG = ctx.DBG = msg.DBG;
+		DBG && (DBG.g = +new Date);
+		//console.log("GET:", get, node, has, at);
+		//if(!node && !at){ return root.on('get', msg) }
+		//if(has && node){ // replace 2 below lines to continue dev?
+		if(!node){ return root.on('get', msg) }
+		if(has){
+			if('string' != typeof has || u === node[has]){
+				if(!((at||'').next||'')[has]){ root.on('get', msg); return }
+			}
+			node = state_ify({}, has, state_is(node, has), node[has], soul);
+			// If we have a key in-memory, do we really need to fetch?
+			// Maybe... in case the in-memory key we have is a local write
+			// we still need to trigger a pull/merge from peers.
+		}
+		//Gun.window? Gun.obj.copy(node) : node; // HNPERF: If !browser bump Performance? Is this too dangerous to reference root graph? Copy / shallow copy too expensive for big nodes. Gun.obj.to(node); // 1 layer deep copy // Gun.obj.copy(node); // too slow on big nodes
+		node && ack(msg, node);
+		root.on('get', msg); // send GET to storage adapters.
+	}
+	function ack(msg, node){
+		var S = +new Date, ctx = msg._||{}, DBG = ctx.DBG = msg.DBG;
+		var to = msg['#'], id = text_rand(9), keys = Object.keys(node||'').sort(), soul = ((node||'')._||'')['#'], kl = keys.length, j = 0, root = msg.$._.root, F = (node === root.graph[soul]);
+		console.STAT && console.STAT(S, ((DBG||ctx).gk = +new Date) - S, 'got keys');
+		// PERF: Consider commenting this out to force disk-only reads for perf testing? // TODO: .keys( is slow
+		node && (function go(){
+			S = +new Date;
+			var i = 0, k, put = {}, tmp;
+			while(i < 9 && (k = keys[i++])){
+				state_ify(put, k, state_is(node, k), node[k], soul);
+			}
+			keys = keys.slice(i);
+			(tmp = {})[soul] = put; put = tmp;
+			var faith; if(F){ faith = function(){}; faith.ram = faith.faith = true; } // HNPERF: We're testing performance improvement by skipping going through security again, but this should be audited.
+			tmp = keys.length;
+			console.STAT && console.STAT(S, -(S - (S = +new Date)), 'got copied some');
+			DBG && (DBG.ga = +new Date);
+			root.on('in', {'@': to, '#': id, put: put, '%': (tmp? (id = text_rand(9)) : u), $: root.$, _: faith, DBG: DBG});
+			console.STAT && console.STAT(S, +new Date - S, 'got in');
+			if(!tmp){ return }
+			setTimeout.turn(go);
+		}());
+		if(!node){ root.on('in', {'@': msg['#']}) } // TODO: I don't think I like this, the default lS adapter uses this but "not found" is a sensitive issue, so should probably be handled more carefully/individually.
+	} Gun.on.get.ack = ack;
+}());
+
+;(function(){
+	Gun.chain.opt = function(opt){
+		opt = opt || {};
+		var gun = this, at = gun._, tmp = opt.peers || opt;
+		if(!Object.plain(opt)){ opt = {} }
+		if(!Object.plain(at.opt)){ at.opt = opt }
+		if('string' == typeof tmp){ tmp = [tmp] }
+		if(!Object.plain(at.opt.peers)){ at.opt.peers = {}}
+		if(tmp instanceof Array){
+			opt.peers = {};
+			tmp.forEach(function(url){
+				var p = {}; p.id = p.url = url;
+				opt.peers[url] = at.opt.peers[url] = at.opt.peers[url] || p;
+			})
+		}
+		obj_each(opt, function each(k){ var v = this[k];
+			if((this && this.hasOwnProperty(k)) || 'string' == typeof v || Object.empty(v)){ this[k] = v; return }
+			if(v && v.constructor !== Object && !(v instanceof Array)){ return }
+			obj_each(v, each);
+		});
+		at.opt.from = opt;
+		Gun.on('opt', at);
+		at.opt.uuid = at.opt.uuid || function uuid(l){ return Gun.state().toString(36).replace('.','') + String.random(l||12) }
+		return gun;
+	}
+}());
+
+var obj_each = function(o,f){ Object.keys(o).forEach(f,o) }, text_rand = String.random, turn = setTimeout.turn, valid = Gun.valid, state_is = Gun.state.is, state_ify = Gun.state.ify, u, empty = {}, C;
+
+Gun.log = function(){ return (!Gun.log.off && C.log.apply(C, arguments)), [].slice.call(arguments).join(' ') };
+Gun.log.once = function(w,s,o){ return (o = Gun.log.once)[w] = o[w] || 0, o[w]++ || Gun.log(s) };
+
+if(true){ (window.GUN = window.Gun = Gun).window = window }
+try{ if(typeof MODULE !== "undefined"){ MODULE.exports = Gun } }catch(e){}
+module.exports = Gun;
+
+(Gun.window||{}).console = (Gun.window||{}).console || {log: function(){}};
+(C = console).only = function(i, s){ return (C.only.i && i === C.only.i && C.only.i++) && (C.log.apply(C, arguments) || s) };
+
+;"Please do not remove welcome log unless you are paying for a monthly sponsorship, thanks!";
+Gun.log.once("welcome", "Hello wonderful person! :) Thanks for using GUN, please ask for help on http://chat.gun.eco if anything takes you longer than 5min to figure out!");
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/shim.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/src/shim.js ***!
+  \**************************************/
+/***/ (() => {
+
+;(function(){
+
+// Shim for generic javascript utilities.
+String.random = function(l, c){
+	var s = '';
+	l = l || 24; // you are not going to make a 0 length random number, so no need to check type
+	c = c || '0123456789ABCDEFGHIJKLMNOPQRSTUVWXZabcdefghijklmnopqrstuvwxyz';
+	while(l-- > 0){ s += c.charAt(Math.floor(Math.random() * c.length)) }
+	return s;
+}
+String.match = function(t, o){ var tmp, u;
+	if('string' !== typeof t){ return false }
+	if('string' == typeof o){ o = {'=': o} }
+	o = o || {};
+	tmp = (o['='] || o['*'] || o['>'] || o['<']);
+	if(t === tmp){ return true }
+	if(u !== o['=']){ return false }
+	tmp = (o['*'] || o['>']);
+	if(t.slice(0, (tmp||'').length) === tmp){ return true }
+	if(u !== o['*']){ return false }
+	if(u !== o['>'] && u !== o['<']){
+		return (t >= o['>'] && t <= o['<'])? true : false;
+	}
+	if(u !== o['>'] && t >= o['>']){ return true }
+	if(u !== o['<'] && t <= o['<']){ return true }
+	return false;
+}
+String.hash = function(s, c){ // via SO
+	if(typeof s !== 'string'){ return }
+	    c = c || 0; // CPU schedule hashing by
+	    if(!s.length){ return c }
+	    for(var i=0,l=s.length,n; i<l; ++i){
+	      n = s.charCodeAt(i);
+	      c = ((c<<5)-c)+n;
+	      c |= 0;
+	    }
+	    return c;
+	  }
+var has = Object.prototype.hasOwnProperty;
+Object.plain = function(o){ return o? (o instanceof Object && o.constructor === Object) || Object.prototype.toString.call(o).match(/^\[object (\w+)\]$/)[1] === 'Object' : false }
+Object.empty = function(o, n){
+	for(var k in o){ if(has.call(o, k) && (!n || -1==n.indexOf(k))){ return false } }
+	return true;
+}
+Object.keys = Object.keys || function(o){
+	var l = [];
+	for(var k in o){ if(has.call(o, k)){ l.push(k) } }
+	return l;
+}
+;(function(){
+	var u, sT = setTimeout, l = 0, c = 0
+	, sI = (typeof setImmediate !== ''+u && setImmediate) || (function(c,f){
+		if(typeof MessageChannel == ''+u){ return sT }
+		(c = new MessageChannel()).port1.onmessage = function(e){ ''==e.data && f() }
+		return function(q){ f=q;c.port2.postMessage('') }
+	}()), check = sT.check = sT.check || (typeof performance !== ''+u && performance)
+	|| {now: function(){ return +new Date }};
+	sT.hold = sT.hold || 9; // half a frame benchmarks faster than < 1ms?
+	sT.poll = sT.poll || function(f){
+		if((sT.hold >= (check.now() - l)) && c++ < 3333){ f(); return }
+		sI(function(){ l = check.now(); f() },c=0)
+	}
+}());
+;(function(){ // Too many polls block, this "threads" them in turns over a single thread in time.
+	var sT = setTimeout, t = sT.turn = sT.turn || function(f){ 1 == s.push(f) && p(T) }
+	, s = t.s = [], p = sT.poll, i = 0, f, T = function(){
+		if(f = s[i++]){ f() }
+		if(i == s.length || 99 == i){
+			s = t.s = s.slice(i);
+			i = 0;
+		}
+		if(s.length){ p(T) }
+	}
+}());
+;(function(){
+	var u, sT = setTimeout, T = sT.turn;
+	(sT.each = sT.each || function(l,f,e,S){ S = S || 9; (function t(s,L,r){
+	  if(L = (s = (l||[]).splice(0,S)).length){
+	  	for(var i = 0; i < L; i++){
+	  		if(u !== (r = f(s[i]))){ break }
+	  	}
+	  	if(u === r){ T(t); return }
+	  } e && e(r);
+	}())})();
+}());
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/state.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/src/state.js ***!
+  \***************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+;(function(){
+
+__webpack_require__(/*! ./shim */ "./node_modules/gun/src/shim.js");
+function State(){
+	var t = +new Date;
+	if(last < t){
+		return N = 0, last = t + State.drift;
+	}
+	return last = t + ((N += 1) / D) + State.drift;
+}
+State.drift = 0;
+var NI = -Infinity, N = 0, D = 999, last = NI, u; // WARNING! In the future, on machines that are D times faster than 2016AD machines, you will want to increase D by another several orders of magnitude so the processing speed never out paces the decimal resolution (increasing an integer effects the state accuracy).
+State.is = function(n, k, o){ // convenience function to get the state on a key on a node and return it.
+	var tmp = (k && n && n._ && n._['>']) || o;
+	if(!tmp){ return }
+	return ('number' == typeof (tmp = tmp[k]))? tmp : NI;
+}
+State.ify = function(n, k, s, v, soul){ // put a key's state on a node.
+	(n = n || {})._ = n._ || {}; // safety check or init.
+	if(soul){ n._['#'] = soul } // set a soul if specified.
+	var tmp = n._['>'] || (n._['>'] = {}); // grab the states data.
+	if(u !== k && k !== '_'){
+		if('number' == typeof s){ tmp[k] = s } // add the valid state.
+		if(u !== v){ n[k] = v } // Note: Not its job to check for valid values!
+	}
+	return n;
+}
+module.exports = State;
+	
+}());
+
+/***/ }),
+
+/***/ "./node_modules/gun/src/valid.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/src/valid.js ***!
+  \***************************************/
+/***/ ((module) => {
+
+;(function(){
+
+// Valid values are a subset of JSON: null, binary, number (!Infinity), text,
+// or a soul relation. Arrays need special algorithms to handle concurrency,
+// so they are not supported directly. Use an extension that supports them if
+// needed but research their problems first.
+module.exports = function(v){
+  // "deletes", nulling out keys.
+  return v === null ||
+	"string" === typeof v ||
+	"boolean" === typeof v ||
+	// we want +/- Infinity to be, but JSON does not support it, sad face.
+	// can you guess what v === v checks for? ;)
+	("number" === typeof v && v != Infinity && v != -Infinity && v === v) ||
+	(!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"]);
+}
+	
+}());
+
+/***/ }),
+
 /***/ "./node_modules/has-property-descriptors/index.js":
 /*!********************************************************!*\
   !*** ./node_modules/has-property-descriptors/index.js ***!
@@ -101113,6 +101778,7 @@ const Gun = gun_1.default;
 exports.Gun = Gun;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
+__webpack_require__(/*! gun/src/map.js */ "./node_modules/gun/src/map.js");
 // Storage Modules
 __webpack_require__(/*! gun/lib/radix2.js */ "./node_modules/gun/lib/radix2.js");
 __webpack_require__(/*! gun/lib/radisk2.js */ "./node_modules/gun/lib/radisk2.js");
@@ -101124,10 +101790,10 @@ __webpack_require__(/*! gun/lib/multicast.js */ "./node_modules/gun/lib/multicas
 __webpack_require__(/*! gun/lib/webrtc.js */ "./node_modules/gun/lib/webrtc.js");
 // Serialization
 __webpack_require__(/*! gun/lib/yson.js */ "./node_modules/gun/lib/yson.js");
-__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
 // Utility Modules
 __webpack_require__(/*! gun/lib/erase.js */ "./node_modules/gun/lib/erase.js");
 __webpack_require__(/*! gun/lib/unset.js */ "./node_modules/gun/lib/unset.js");
+__webpack_require__(/*! gun/lib/then.js */ "./node_modules/gun/lib/then.js");
 __webpack_require__(/*! gun/lib/open.js */ "./node_modules/gun/lib/open.js");
 __webpack_require__(/*! gun/lib/bye.js */ "./node_modules/gun/lib/bye.js");
 __webpack_require__(/*! gun/lib/shim.js */ "./node_modules/gun/lib/shim.js");
@@ -103293,6 +103959,7 @@ async function loadGunModules() {
             Gun = req("gun/gun");
             // Best-effort load of server-side helpers; ignore if unavailable
             const nodeOnlyLibs = [
+                "gun/src/map.js",
                 "gun/lib/yson",
                 "gun/lib/serve",
                 "gun/lib/store",

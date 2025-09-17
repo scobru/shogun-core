@@ -24,6 +24,8 @@ import GunModule from "gun/gun";
 const Gun = GunModule;
 import SEA from "gun/sea";
 
+import "gun/src/map.js";
+
 // Storage Modules
 import "gun/lib/radix2.js";
 import "gun/lib/radisk2.js";
@@ -38,12 +40,10 @@ import "gun/lib/webrtc.js";
 // Serialization
 import "gun/lib/yson.js";
 
-import "gun/lib/then.js";
-
 // Utility Modules
 import "gun/lib/erase.js";
 import "gun/lib/unset.js";
-
+import "gun/lib/then.js";
 import "gun/lib/open.js";
 import "gun/lib/bye.js";
 import "gun/lib/shim.js";
