@@ -32,7 +32,6 @@ import "gun/lib/rindexed.js";
 import "gun/lib/rfs.js";
 
 // Networking
-import "gun/lib/multicast.js";
 import "gun/lib/webrtc.js";
 
 // Serialization
