@@ -14,6 +14,8 @@ import "gun/lib/radisk";
 import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
+import "gun/lib/evict";
+import "gun/lib/les";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 import type { IGunUserInstance, IGunInstance, IGunChain, ISEAPair } from "gun/types";

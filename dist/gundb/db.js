@@ -44,17 +44,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.RxJS = exports.SEA = exports.DataBase = exports.Gun = void 0;
 const gun_1 = __importDefault(require("gun/gun"));
-const Gun = gun_1.default;
-exports.Gun = Gun;
+exports.Gun = gun_1.default;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
-// Garbage Collection
 require("gun/lib/then");
 require("gun/lib/radix");
 require("gun/lib/radisk");
 require("gun/lib/store");
 require("gun/lib/rindexed");
 require("gun/lib/webrtc");
+require("gun/lib/evict");
+require("gun/lib/les");
 const restricted_put_1 = require("./restricted-put");
 Object.defineProperty(exports, "restrictedPut", { enumerable: true, get: function () { return restricted_put_1.restrictedPut; } });
 const derive_1 = __importDefault(require("./derive"));
@@ -1642,7 +1642,7 @@ class DataBase {
 }
 exports.DataBase = DataBase;
 const createGun = (config) => {
-    return new Gun(config);
+    return new gun_1.default(config);
 };
 exports.createGun = createGun;
-exports.default = Gun;
+exports.default = gun_1.default;
