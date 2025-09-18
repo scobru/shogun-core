@@ -8,11 +8,7 @@ import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener
 import type { AuthResult, SignUpResult } from "../types/shogun";
 declare const Gun: import("gun/types").IGun;
 import SEA from "gun/sea";
-import "gun/lib/radix.js";
-import "gun/lib/radisk.js";
-import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
-import "gun/lib/rfs.js";
 import "gun/lib/webrtc.js";
 import "gun/lib/yson.js";
 import "gun/lib/erase.js";

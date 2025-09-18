@@ -38,11 +38,6 @@ async function loadGunModules(): Promise<void> {
       const nodeOnlyLibs = [
         "gun/lib/yson",
         "gun/lib/serve",
-        "gun/lib/store",
-        "gun/lib/radix",
-        "gun/lib/radisk",
-        "gun/lib/rfs",
-        "gun/lib/rs3",
         "gun/lib/stats",
         "gun/lib/webrtc",
         "gun/lib/erase",

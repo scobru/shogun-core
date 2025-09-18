@@ -25,11 +25,7 @@ const Gun = GunModule;
 import SEA from "gun/sea";
 
 // Storage Modules
-import "gun/lib/radix.js";
-import "gun/lib/radisk.js";
-import "gun/lib/store.js";
 import "gun/lib/rindexed.js";
-import "gun/lib/rfs.js";
 
 // Networking
 import "gun/lib/webrtc.js";

@@ -50,11 +50,7 @@ exports.Gun = Gun;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
 // Storage Modules
-require("gun/lib/radix.js");
-require("gun/lib/radisk.js");
-require("gun/lib/store.js");
 require("gun/lib/rindexed.js");
-require("gun/lib/rfs.js");
 // Networking
 require("gun/lib/webrtc.js");
 // Serialization

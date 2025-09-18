@@ -54,6 +54,9 @@
         shogun.initialize();
         console.log(shogun);
 
+        window.gun = shogun.gun
+        window.shogun = shogun
+
         log('✓ <b>ShogunCore</b> instance created', 'ok');
         log('typeof shogun.getPlugin: ' + typeof shogun.getPlugin, 'ok');
         log('ShogunCore keys: ' + Object.keys(shogun).join(', '), 'ok');
