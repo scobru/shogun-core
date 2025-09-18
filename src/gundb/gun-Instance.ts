@@ -21,30 +21,19 @@ import type { AuthResult, SignUpResult } from "../types/shogun";
 
 // Import Gun - will be bundled internally
 import GunModule from "gun/gun";
+
 const Gun = GunModule;
 import SEA from "gun/sea";
 
-// Storage Modules
-import "gun/lib/rindexed.js";
-
-// Networking
-import "gun/lib/webrtc.js";
-
-// Serialization
-import "gun/lib/yson.js";
-
-// Utility Modules
-import "gun/lib/erase.js";
-import "gun/lib/unset.js";
-import "gun/lib/forget.js";
-import "gun/lib/then.js";
-import "gun/lib/open.js";
-import "gun/lib/bye.js";
-import "gun/lib/shim.js";
-
 // Garbage Collection
 import "gun/lib/les.js";
-import "gun/lib/evict.js";
+
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
 
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";

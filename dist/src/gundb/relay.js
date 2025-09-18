@@ -71,17 +71,6 @@ async function loadGunModules() {
                 "gun/lib/serve",
                 "gun/lib/stats",
                 "gun/lib/webrtc",
-                "gun/lib/erase",
-                "gun/lib/unset",
-                "gun/lib/wire",
-                "gun/lib/verify",
-                "gun/lib/then",
-                "gun/lib/open",
-                "gun/lib/bye",
-                "gun/lib/shim",
-                "gun/lib/les",
-                "gun/lib/evict",
-                "gun/lib/forget",
             ];
             for (const lib of nodeOnlyLibs) {
                 try {
@@ -93,13 +82,9 @@ async function loadGunModules() {
                 req("gun/sea");
             }
             catch (_) { }
-            try {
-                req("gun/axe");
-            }
-            catch (_) { }
         }
         else {
-            // Fallback in rare cases where require isn't available
+            // Fallback in rare cases whereyarn require isn't available
             const gunModule = await Promise.resolve().then(() => __importStar(require("gun/gun")));
             Gun = gunModule.default || gunModule;
             await Promise.resolve().then(() => __importStar(require("gun/lib/yson")));

@@ -49,23 +49,14 @@ const Gun = gun_1.default;
 exports.Gun = Gun;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
-// Storage Modules
-require("gun/lib/rindexed.js");
-// Networking
-require("gun/lib/webrtc.js");
-// Serialization
-require("gun/lib/yson.js");
-// Utility Modules
-require("gun/lib/erase.js");
-require("gun/lib/unset.js");
-require("gun/lib/forget.js");
-require("gun/lib/then.js");
-require("gun/lib/open.js");
-require("gun/lib/bye.js");
-require("gun/lib/shim.js");
 // Garbage Collection
 require("gun/lib/les.js");
-require("gun/lib/evict.js");
+require("gun/lib/then");
+require("gun/lib/radix");
+require("gun/lib/radisk");
+require("gun/lib/store");
+require("gun/lib/rindexed");
+require("gun/lib/webrtc");
 const restricted_put_1 = require("./restricted-put");
 Object.defineProperty(exports, "restrictedPut", { enumerable: true, get: function () { return restricted_put_1.restrictedPut; } });
 const derive_1 = __importDefault(require("./derive"));
