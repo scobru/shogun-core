@@ -1,0 +1,12 @@
+import { ShogunCore } from "./core";
+import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/db";
+import { SEA, RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import Gun from "./gundb/db";
+export * from "./utils/errorHandler";
+export * from "./plugins";
+export * from "./types/shogun";
+export type * from "./types/plugin";
+export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
+export { SEA, RxJS, crypto, derive, GunErrors, DataBase };
+export { Gun };
+export { ShogunCore };

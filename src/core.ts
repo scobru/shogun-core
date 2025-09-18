@@ -22,8 +22,8 @@ import {
   restrictedPut,
   IGunUserInstance,
   IGunInstance,
-  GunInstance,
-  GunRxJS,
+  DataBase,
+  RxJS,
   createGun,
   Gun,
   derive,
@@ -44,11 +44,11 @@ import { ISEAPair } from "gun";
  */
 export class ShogunCore implements IShogunCore {
   public static readonly API_VERSION = "^1.6.6";
-  public db: GunInstance;
+  public db: DataBase;
   public storage: ShogunStorage;
   public provider?: ethers.Provider;
   public config: ShogunCoreConfig;
-  public rx!: GunRxJS;
+  public rx!: RxJS;
 
   private _gun!: IGunInstance<any>;
   private _user: IGunUserInstance<any> | null = null;
@@ -110,7 +110,7 @@ export class ShogunCore implements IShogunCore {
     }
 
     try {
-      this.db = new GunInstance(this._gun, config.scope || "");
+      this.db = new DataBase(this._gun, config.scope || "");
       this._gun = this.db.gun;
       this.setupGunEventForwarding();
     } catch (error) {
@@ -148,7 +148,7 @@ export class ShogunCore implements IShogunCore {
       });
     });
 
-    this.rx = new GunRxJS(this._gun);
+    this.rx = new RxJS(this._gun);
     this.registerBuiltinPlugins(config);
 
     // Initialize async components

@@ -98487,25 +98487,6 @@ module.exports = function whichTypedArray(value) {
 
 /***/ }),
 
-/***/ "./node_modules/ws/browser.js":
-/*!************************************!*\
-  !*** ./node_modules/ws/browser.js ***!
-  \************************************/
-/***/ ((module) => {
-
-"use strict";
-
-
-module.exports = function () {
-  throw new Error(
-    'ws does not work in the browser. Browser clients must use the native ' +
-      'WebSocket object'
-  );
-};
-
-
-/***/ }),
-
 /***/ "./src/core.ts":
 /*!*********************!*\
   !*** ./src/core.ts ***!
@@ -98599,7 +98580,7 @@ class ShogunCore {
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
-            this.db = new gundb_1.GunInstance(this._gun, config.scope || "");
+            this.db = new gundb_1.DataBase(this._gun, config.scope || "");
             this._gun = this.db.gun;
             this.setupGunEventForwarding();
         }
@@ -98636,7 +98617,7 @@ class ShogunCore {
                 includeSecp256k1Ethereum: true,
             });
         });
-        this.rx = new gundb_1.GunRxJS(this._gun);
+        this.rx = new gundb_1.RxJS(this._gun);
         this.registerBuiltinPlugins(config);
         // Initialize async components
         this.initialize().catch((error) => {
@@ -99675,340 +99656,10 @@ function randomUUID() {
 
 /***/ }),
 
-/***/ "./src/gundb/derive.ts":
-/*!*****************************!*\
-  !*** ./src/gundb/derive.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports["default"] = default_1;
-const p256_1 = __webpack_require__(/*! @noble/curves/p256 */ "./node_modules/@noble/curves/p256.js");
-const secp256k1_1 = __webpack_require__(/*! @noble/curves/secp256k1 */ "./node_modules/@noble/curves/secp256k1.js");
-const sha256_1 = __webpack_require__(/*! @noble/hashes/sha256 */ "./node_modules/@noble/hashes/sha256.js");
-const sha3_1 = __webpack_require__(/*! @noble/hashes/sha3 */ "./node_modules/@noble/hashes/sha3.js");
-const ripemd160_1 = __webpack_require__(/*! @noble/hashes/ripemd160 */ "./node_modules/@noble/hashes/ripemd160.js");
-async function default_1(pwd, extra, options = {}) {
-    const TEXT_ENCODER = new TextEncoder();
-    const pwdBytes = pwd
-        ? typeof pwd === "string"
-            ? TEXT_ENCODER.encode(normalizeString(pwd))
-            : pwd
-        : crypto.getRandomValues(new Uint8Array(32));
-    // Mix extra into password bytes to ensure different results for different inputs
-    const extras = extra
-        ? (Array.isArray(extra) ? extra : [extra]).map((e) => normalizeString(e.toString()))
-        : [];
-    const extraBuf = TEXT_ENCODER.encode(extras.join("|"));
-    const combinedInput = new Uint8Array(pwdBytes.length + extraBuf.length);
-    combinedInput.set(pwdBytes);
-    combinedInput.set(extraBuf, pwdBytes.length);
-    if (combinedInput.length < 16) {
-        throw new Error(`Insufficient input entropy (${combinedInput.length})`);
-    }
-    const version = "v1";
-    const result = {};
-    // Mantieni comportamento esistente (P-256) come default
-    const { includeP256 = true, includeSecp256k1Bitcoin = true, includeSecp256k1Ethereum = true, } = options;
-    if (includeP256) {
-        const salts = [
-            { label: "signing", type: "pub/priv" },
-            { label: "encryption", type: "epub/epriv" },
-        ];
-        const [signingKeys, encryptionKeys] = await Promise.all(salts.map(async ({ label }) => {
-            const salt = TEXT_ENCODER.encode(`${label}-${version}`);
-            const privateKey = await stretchKey(combinedInput, salt);
-            if (!p256_1.p256.utils.isValidPrivateKey(privateKey)) {
-                throw new Error(`Invalid private key for ${label}`);
-            }
-            const publicKey = p256_1.p256.getPublicKey(privateKey, false);
-            return {
-                pub: keyBufferToJwk(publicKey),
-                priv: arrayBufToBase64UrlEncode(privateKey),
-            };
-        }));
-        // Chiavi P-256 esistenti
-        result.pub = signingKeys.pub;
-        result.priv = signingKeys.priv;
-        result.epub = encryptionKeys.pub;
-        result.epriv = encryptionKeys.priv;
-    }
-    // Derivazione Bitcoin P2PKH (secp256k1 + SHA256 + RIPEMD160 + Base58)
-    if (includeSecp256k1Bitcoin) {
-        const bitcoinSalt = TEXT_ENCODER.encode(`secp256k1-bitcoin-${version}`);
-        const bitcoinPrivateKey = await stretchKey(combinedInput, bitcoinSalt);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(bitcoinPrivateKey)) {
-            throw new Error("Invalid secp256k1 private key for Bitcoin");
-        }
-        const bitcoinPublicKey = secp256k1_1.secp256k1.getPublicKey(bitcoinPrivateKey, true); // Compressed
-        result.secp256k1Bitcoin = {
-            privateKey: bytesToHex(bitcoinPrivateKey),
-            publicKey: bytesToHex(bitcoinPublicKey),
-            address: deriveP2PKHAddress(bitcoinPublicKey),
-        };
-    }
-    // Derivazione Ethereum (secp256k1 + Keccak256)
-    if (includeSecp256k1Ethereum) {
-        const ethereumSalt = TEXT_ENCODER.encode(`secp256k1-ethereum-${version}`);
-        const ethereumPrivateKey = await stretchKey(combinedInput, ethereumSalt);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(ethereumPrivateKey)) {
-            throw new Error("Invalid secp256k1 private key for Ethereum");
-        }
-        const ethereumPublicKey = secp256k1_1.secp256k1.getPublicKey(ethereumPrivateKey, false); // Uncompressed
-        result.secp256k1Ethereum = {
-            privateKey: "0x" + bytesToHex(ethereumPrivateKey),
-            publicKey: "0x" + bytesToHex(ethereumPublicKey),
-            address: deriveKeccak256Address(ethereumPublicKey),
-        };
-    }
-    return result;
-}
-function arrayBufToBase64UrlEncode(buf) {
-    return btoa(String.fromCharCode(...buf))
-        .replace(/\//g, "_")
-        .replace(/=/g, "")
-        .replace(/\+/g, "-");
-}
-function keyBufferToJwk(publicKeyBuffer) {
-    if (publicKeyBuffer[0] !== 4)
-        throw new Error("Invalid uncompressed public key format");
-    return [
-        arrayBufToBase64UrlEncode(publicKeyBuffer.slice(1, 33)), // x
-        arrayBufToBase64UrlEncode(publicKeyBuffer.slice(33, 65)), // y
-    ].join(".");
-}
-function normalizeString(str) {
-    return str.normalize("NFC").trim();
-}
-async function stretchKey(input, salt, iterations = 300_000) {
-    try {
-        const baseKey = await crypto.subtle.importKey("raw", input, { name: "PBKDF2" }, false, ["deriveBits"]);
-        const keyBits = await crypto.subtle.deriveBits({
-            name: "PBKDF2",
-            salt: salt,
-            iterations,
-            hash: "SHA-256",
-        }, baseKey, 256);
-        const keyBytes = new Uint8Array(keyBits);
-        // Ensure the key is valid for secp256k1
-        return ensureValidSecp256k1Key(keyBytes);
-    }
-    catch (error) {
-        // Fallback: generate a deterministic key from input and salt
-        const fallbackKey = generateFallbackKey(input, salt);
-        return ensureValidSecp256k1Key(fallbackKey);
-    }
-}
-function generateFallbackKey(input, salt) {
-    // Simple deterministic key generation as fallback
-    const key = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-        key[i] = (i * 7 + salt[i % salt.length]) % 256;
-    }
-    return key;
-}
-function ensureValidSecp256k1Key(keyBytes) {
-    // Ensure the key is not all zeros
-    if (keyBytes.every((byte) => byte === 0)) {
-        keyBytes[0] = 1;
-    }
-    // secp256k1 curve order is approximately 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-    const maxValidKey = new Uint8Array([
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6,
-    ]);
-    // If the key is greater than or equal to the curve order, reduce it
-    let isGreaterOrEqual = true;
-    for (let i = 0; i < 32; i++) {
-        if (keyBytes[i] < maxValidKey[i]) {
-            isGreaterOrEqual = false;
-            break;
-        }
-        else if (keyBytes[i] > maxValidKey[i]) {
-            break;
-        }
-    }
-    if (isGreaterOrEqual) {
-        // Reduce the key by setting it to a safe value
-        keyBytes[31] = 0xe5; // Set to a value less than the curve order
-    }
-    // Additional validation: ensure the key is not too small
-    if (keyBytes.every((byte) => byte === 0) ||
-        keyBytes.every((byte) => byte === 1)) {
-        // Set to a safe default value
-        keyBytes.fill(0);
-        keyBytes[0] = 0x01;
-        keyBytes[31] = 0xff;
-    }
-    return keyBytes;
-}
-function bytesToHex(bytes) {
-    return Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-}
-// Base58 encoding per Bitcoin
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-function base58Encode(bytes) {
-    if (bytes.length === 0)
-        return "";
-    // Count leading zeros
-    let zeros = 0;
-    for (let i = 0; i < bytes.length && bytes[i] === 0; i++) {
-        zeros++;
-    }
-    // Convert to base58
-    const digits = [0];
-    for (let i = zeros; i < bytes.length; i++) {
-        let carry = bytes[i];
-        for (let j = 0; j < digits.length; j++) {
-            carry += digits[j] << 8;
-            digits[j] = carry % 58;
-            carry = (carry / 58) | 0;
-        }
-        while (carry > 0) {
-            digits.push(carry % 58);
-            carry = (carry / 58) | 0;
-        }
-    }
-    // Convert to string
-    let result = "";
-    for (let i = 0; i < zeros; i++) {
-        result += BASE58_ALPHABET[0];
-    }
-    for (let i = digits.length - 1; i >= 0; i--) {
-        result += BASE58_ALPHABET[digits[i]];
-    }
-    return result;
-}
-function deriveP2PKHAddress(publicKey) {
-    // Bitcoin P2PKH address derivation
-    // 1. SHA256 hash del public key
-    const sha256Hash = (0, sha256_1.sha256)(publicKey);
-    // 2. RIPEMD160 hash del risultato
-    const ripemd160Hash = (0, ripemd160_1.ripemd160)(sha256Hash);
-    // 3. Aggiungi version byte (0x00 per mainnet P2PKH)
-    const versionedHash = new Uint8Array(21);
-    versionedHash[0] = 0x00; // Mainnet P2PKH version
-    versionedHash.set(ripemd160Hash, 1);
-    // 4. Double SHA256 per checksum
-    const checksum = (0, sha256_1.sha256)((0, sha256_1.sha256)(versionedHash));
-    // 5. Aggiungi i primi 4 byte del checksum
-    const addressBytes = new Uint8Array(25);
-    addressBytes.set(versionedHash);
-    addressBytes.set(checksum.slice(0, 4), 21);
-    // 6. Base58 encode
-    return base58Encode(addressBytes);
-}
-function deriveKeccak256Address(publicKey) {
-    // Ethereum address derivation usando Keccak256
-    // 1. Rimuovi il prefix byte (0x04) dalla chiave pubblica non compressa
-    const publicKeyWithoutPrefix = publicKey.slice(1);
-    // 2. Calcola Keccak256 hash
-    const hash = (0, sha3_1.keccak_256)(publicKeyWithoutPrefix);
-    // 3. Prendi gli ultimi 20 byte
-    const address = hash.slice(-20);
-    // 4. Aggiungi '0x' prefix e converti in hex
-    return "0x" + bytesToHex(address);
-}
-
-
-/***/ }),
-
-/***/ "./src/gundb/errors.ts":
-/*!*****************************!*\
-  !*** ./src/gundb/errors.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/**
- * Error classes for Gun and Auth
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.NetworkError = exports.MultipleAuthError = exports.TimeoutError = exports.UserExists = exports.InvalidCredentials = exports.AuthError = exports.GunError = void 0;
-/**
- * Base error for Gun
- */
-class GunError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "GunError";
-    }
-}
-exports.GunError = GunError;
-/**
- * Generic authentication error
- */
-class AuthError extends GunError {
-    constructor(message) {
-        super(message);
-        this.name = "AuthError";
-    }
-}
-exports.AuthError = AuthError;
-/**
- * Invalid credentials error
- */
-class InvalidCredentials extends AuthError {
-    constructor(message = "Credenziali non valide") {
-        super(message);
-        this.name = "InvalidCredentials";
-    }
-}
-exports.InvalidCredentials = InvalidCredentials;
-/**
- * User already exists error
- */
-class UserExists extends AuthError {
-    constructor(message = "Utente già esistente") {
-        super(message);
-        this.name = "UserExists";
-    }
-}
-exports.UserExists = UserExists;
-/**
- * Timeout error
- */
-class TimeoutError extends GunError {
-    constructor(message = "Timeout durante l'operazione") {
-        super(message);
-        this.name = "TimeoutError";
-    }
-}
-exports.TimeoutError = TimeoutError;
-/**
- * Multiple authentication error
- */
-class MultipleAuthError extends AuthError {
-    constructor(message = "Autenticazione multipla in corso") {
-        super(message);
-        this.name = "MultipleAuthError";
-    }
-}
-exports.MultipleAuthError = MultipleAuthError;
-/** Base error related to the network. */
-class NetworkError extends GunError {
-}
-exports.NetworkError = NetworkError;
-const withDefaultMessage = (args, defaultMessage) => {
-    if (args.length === 0 || (args.length === 1 && !args[0])) {
-        args = [defaultMessage];
-    }
-    return args;
-};
-
-
-/***/ }),
-
-/***/ "./src/gundb/gun-Instance.ts":
-/*!***********************************!*\
-  !*** ./src/gundb/gun-Instance.ts ***!
-  \***********************************/
+/***/ "./src/gundb/db.ts":
+/*!*************************!*\
+  !*** ./src/gundb/db.ts ***!
+  \*************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -100056,14 +99707,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.GunRxJS = exports.SEA = exports.GunInstance = exports.Gun = void 0;
-// Import Gun - will be bundled internally
+exports.createGun = exports.restrictedPut = exports.derive = exports.GunErrors = exports.crypto = exports.RxJS = exports.SEA = exports.DataBase = exports.Gun = void 0;
 const gun_1 = __importDefault(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js"));
-const Gun = gun_1.default;
-exports.Gun = Gun;
+exports.Gun = gun_1.default;
 const sea_1 = __importDefault(__webpack_require__(/*! gun/sea */ "./node_modules/gun/sea.js"));
 exports.SEA = sea_1.default;
-// Garbage Collection
 __webpack_require__(/*! gun/lib/then */ "./node_modules/gun/lib/then.js");
 __webpack_require__(/*! gun/lib/radix */ "./node_modules/gun/lib/radix.js");
 __webpack_require__(/*! gun/lib/radisk */ "./node_modules/gun/lib/radisk.js");
@@ -100076,8 +99724,8 @@ const derive_1 = __importDefault(__webpack_require__(/*! ./derive */ "./src/gund
 exports.derive = derive_1.default;
 const errorHandler_1 = __webpack_require__(/*! ../utils/errorHandler */ "./src/utils/errorHandler.ts");
 const eventEmitter_1 = __webpack_require__(/*! ../utils/eventEmitter */ "./src/utils/eventEmitter.ts");
-const gun_rxjs_1 = __webpack_require__(/*! ./gun-rxjs */ "./src/gundb/gun-rxjs.ts");
-Object.defineProperty(exports, "GunRxJS", ({ enumerable: true, get: function () { return gun_rxjs_1.GunRxJS; } }));
+const rxjs_1 = __webpack_require__(/*! ./rxjs */ "./src/gundb/rxjs.ts");
+Object.defineProperty(exports, "RxJS", ({ enumerable: true, get: function () { return rxjs_1.RxJS; } }));
 const GunErrors = __importStar(__webpack_require__(/*! ./errors */ "./src/gundb/errors.ts"));
 exports.GunErrors = GunErrors;
 const crypto = __importStar(__webpack_require__(/*! ./crypto */ "./src/gundb/crypto.ts"));
@@ -100097,7 +99745,7 @@ const CONFIG = {
         REQUIRE_SPECIAL_CHARS: false,
     },
 };
-class GunInstance {
+class DataBase {
     gun;
     user = null;
     crypto;
@@ -100607,7 +100255,7 @@ class GunInstance {
      */
     rx() {
         if (!this._rxjs) {
-            this._rxjs = new gun_rxjs_1.GunRxJS(this.gun);
+            this._rxjs = new rxjs_1.RxJS(this.gun);
         }
         return this._rxjs;
     }
@@ -101656,33 +101304,490 @@ class GunInstance {
         return this.user?.is?.pub ? true : false;
     }
 }
-exports.GunInstance = GunInstance;
+exports.DataBase = DataBase;
 const createGun = (config) => {
-    return new Gun(config);
+    return new gun_1.default(config);
 };
 exports.createGun = createGun;
-exports["default"] = Gun;
+exports["default"] = gun_1.default;
 
 
 /***/ }),
 
-/***/ "./src/gundb/gun-rxjs.ts":
-/*!*******************************!*\
-  !*** ./src/gundb/gun-rxjs.ts ***!
-  \*******************************/
+/***/ "./src/gundb/derive.ts":
+/*!*****************************!*\
+  !*** ./src/gundb/derive.ts ***!
+  \*****************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GunRxJS = void 0;
+exports["default"] = default_1;
+const p256_1 = __webpack_require__(/*! @noble/curves/p256 */ "./node_modules/@noble/curves/p256.js");
+const secp256k1_1 = __webpack_require__(/*! @noble/curves/secp256k1 */ "./node_modules/@noble/curves/secp256k1.js");
+const sha256_1 = __webpack_require__(/*! @noble/hashes/sha256 */ "./node_modules/@noble/hashes/sha256.js");
+const sha3_1 = __webpack_require__(/*! @noble/hashes/sha3 */ "./node_modules/@noble/hashes/sha3.js");
+const ripemd160_1 = __webpack_require__(/*! @noble/hashes/ripemd160 */ "./node_modules/@noble/hashes/ripemd160.js");
+async function default_1(pwd, extra, options = {}) {
+    const TEXT_ENCODER = new TextEncoder();
+    const pwdBytes = pwd
+        ? typeof pwd === "string"
+            ? TEXT_ENCODER.encode(normalizeString(pwd))
+            : pwd
+        : crypto.getRandomValues(new Uint8Array(32));
+    // Mix extra into password bytes to ensure different results for different inputs
+    const extras = extra
+        ? (Array.isArray(extra) ? extra : [extra]).map((e) => normalizeString(e.toString()))
+        : [];
+    const extraBuf = TEXT_ENCODER.encode(extras.join("|"));
+    const combinedInput = new Uint8Array(pwdBytes.length + extraBuf.length);
+    combinedInput.set(pwdBytes);
+    combinedInput.set(extraBuf, pwdBytes.length);
+    if (combinedInput.length < 16) {
+        throw new Error(`Insufficient input entropy (${combinedInput.length})`);
+    }
+    const version = "v1";
+    const result = {};
+    // Mantieni comportamento esistente (P-256) come default
+    const { includeP256 = true, includeSecp256k1Bitcoin = true, includeSecp256k1Ethereum = true, } = options;
+    if (includeP256) {
+        const salts = [
+            { label: "signing", type: "pub/priv" },
+            { label: "encryption", type: "epub/epriv" },
+        ];
+        const [signingKeys, encryptionKeys] = await Promise.all(salts.map(async ({ label }) => {
+            const salt = TEXT_ENCODER.encode(`${label}-${version}`);
+            const privateKey = await stretchKey(combinedInput, salt);
+            if (!p256_1.p256.utils.isValidPrivateKey(privateKey)) {
+                throw new Error(`Invalid private key for ${label}`);
+            }
+            const publicKey = p256_1.p256.getPublicKey(privateKey, false);
+            return {
+                pub: keyBufferToJwk(publicKey),
+                priv: arrayBufToBase64UrlEncode(privateKey),
+            };
+        }));
+        // Chiavi P-256 esistenti
+        result.pub = signingKeys.pub;
+        result.priv = signingKeys.priv;
+        result.epub = encryptionKeys.pub;
+        result.epriv = encryptionKeys.priv;
+    }
+    // Derivazione Bitcoin P2PKH (secp256k1 + SHA256 + RIPEMD160 + Base58)
+    if (includeSecp256k1Bitcoin) {
+        const bitcoinSalt = TEXT_ENCODER.encode(`secp256k1-bitcoin-${version}`);
+        const bitcoinPrivateKey = await stretchKey(combinedInput, bitcoinSalt);
+        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(bitcoinPrivateKey)) {
+            throw new Error("Invalid secp256k1 private key for Bitcoin");
+        }
+        const bitcoinPublicKey = secp256k1_1.secp256k1.getPublicKey(bitcoinPrivateKey, true); // Compressed
+        result.secp256k1Bitcoin = {
+            privateKey: bytesToHex(bitcoinPrivateKey),
+            publicKey: bytesToHex(bitcoinPublicKey),
+            address: deriveP2PKHAddress(bitcoinPublicKey),
+        };
+    }
+    // Derivazione Ethereum (secp256k1 + Keccak256)
+    if (includeSecp256k1Ethereum) {
+        const ethereumSalt = TEXT_ENCODER.encode(`secp256k1-ethereum-${version}`);
+        const ethereumPrivateKey = await stretchKey(combinedInput, ethereumSalt);
+        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(ethereumPrivateKey)) {
+            throw new Error("Invalid secp256k1 private key for Ethereum");
+        }
+        const ethereumPublicKey = secp256k1_1.secp256k1.getPublicKey(ethereumPrivateKey, false); // Uncompressed
+        result.secp256k1Ethereum = {
+            privateKey: "0x" + bytesToHex(ethereumPrivateKey),
+            publicKey: "0x" + bytesToHex(ethereumPublicKey),
+            address: deriveKeccak256Address(ethereumPublicKey),
+        };
+    }
+    return result;
+}
+function arrayBufToBase64UrlEncode(buf) {
+    return btoa(String.fromCharCode(...buf))
+        .replace(/\//g, "_")
+        .replace(/=/g, "")
+        .replace(/\+/g, "-");
+}
+function keyBufferToJwk(publicKeyBuffer) {
+    if (publicKeyBuffer[0] !== 4)
+        throw new Error("Invalid uncompressed public key format");
+    return [
+        arrayBufToBase64UrlEncode(publicKeyBuffer.slice(1, 33)), // x
+        arrayBufToBase64UrlEncode(publicKeyBuffer.slice(33, 65)), // y
+    ].join(".");
+}
+function normalizeString(str) {
+    return str.normalize("NFC").trim();
+}
+async function stretchKey(input, salt, iterations = 300_000) {
+    try {
+        const baseKey = await crypto.subtle.importKey("raw", input, { name: "PBKDF2" }, false, ["deriveBits"]);
+        const keyBits = await crypto.subtle.deriveBits({
+            name: "PBKDF2",
+            salt: salt,
+            iterations,
+            hash: "SHA-256",
+        }, baseKey, 256);
+        const keyBytes = new Uint8Array(keyBits);
+        // Ensure the key is valid for secp256k1
+        return ensureValidSecp256k1Key(keyBytes);
+    }
+    catch (error) {
+        // Fallback: generate a deterministic key from input and salt
+        const fallbackKey = generateFallbackKey(input, salt);
+        return ensureValidSecp256k1Key(fallbackKey);
+    }
+}
+function generateFallbackKey(input, salt) {
+    // Simple deterministic key generation as fallback
+    const key = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) {
+        key[i] = (i * 7 + salt[i % salt.length]) % 256;
+    }
+    return key;
+}
+function ensureValidSecp256k1Key(keyBytes) {
+    // Ensure the key is not all zeros
+    if (keyBytes.every((byte) => byte === 0)) {
+        keyBytes[0] = 1;
+    }
+    // secp256k1 curve order is approximately 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+    const maxValidKey = new Uint8Array([
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6,
+    ]);
+    // If the key is greater than or equal to the curve order, reduce it
+    let isGreaterOrEqual = true;
+    for (let i = 0; i < 32; i++) {
+        if (keyBytes[i] < maxValidKey[i]) {
+            isGreaterOrEqual = false;
+            break;
+        }
+        else if (keyBytes[i] > maxValidKey[i]) {
+            break;
+        }
+    }
+    if (isGreaterOrEqual) {
+        // Reduce the key by setting it to a safe value
+        keyBytes[31] = 0xe5; // Set to a value less than the curve order
+    }
+    // Additional validation: ensure the key is not too small
+    if (keyBytes.every((byte) => byte === 0) ||
+        keyBytes.every((byte) => byte === 1)) {
+        // Set to a safe default value
+        keyBytes.fill(0);
+        keyBytes[0] = 0x01;
+        keyBytes[31] = 0xff;
+    }
+    return keyBytes;
+}
+function bytesToHex(bytes) {
+    return Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+// Base58 encoding per Bitcoin
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Encode(bytes) {
+    if (bytes.length === 0)
+        return "";
+    // Count leading zeros
+    let zeros = 0;
+    for (let i = 0; i < bytes.length && bytes[i] === 0; i++) {
+        zeros++;
+    }
+    // Convert to base58
+    const digits = [0];
+    for (let i = zeros; i < bytes.length; i++) {
+        let carry = bytes[i];
+        for (let j = 0; j < digits.length; j++) {
+            carry += digits[j] << 8;
+            digits[j] = carry % 58;
+            carry = (carry / 58) | 0;
+        }
+        while (carry > 0) {
+            digits.push(carry % 58);
+            carry = (carry / 58) | 0;
+        }
+    }
+    // Convert to string
+    let result = "";
+    for (let i = 0; i < zeros; i++) {
+        result += BASE58_ALPHABET[0];
+    }
+    for (let i = digits.length - 1; i >= 0; i--) {
+        result += BASE58_ALPHABET[digits[i]];
+    }
+    return result;
+}
+function deriveP2PKHAddress(publicKey) {
+    // Bitcoin P2PKH address derivation
+    // 1. SHA256 hash del public key
+    const sha256Hash = (0, sha256_1.sha256)(publicKey);
+    // 2. RIPEMD160 hash del risultato
+    const ripemd160Hash = (0, ripemd160_1.ripemd160)(sha256Hash);
+    // 3. Aggiungi version byte (0x00 per mainnet P2PKH)
+    const versionedHash = new Uint8Array(21);
+    versionedHash[0] = 0x00; // Mainnet P2PKH version
+    versionedHash.set(ripemd160Hash, 1);
+    // 4. Double SHA256 per checksum
+    const checksum = (0, sha256_1.sha256)((0, sha256_1.sha256)(versionedHash));
+    // 5. Aggiungi i primi 4 byte del checksum
+    const addressBytes = new Uint8Array(25);
+    addressBytes.set(versionedHash);
+    addressBytes.set(checksum.slice(0, 4), 21);
+    // 6. Base58 encode
+    return base58Encode(addressBytes);
+}
+function deriveKeccak256Address(publicKey) {
+    // Ethereum address derivation usando Keccak256
+    // 1. Rimuovi il prefix byte (0x04) dalla chiave pubblica non compressa
+    const publicKeyWithoutPrefix = publicKey.slice(1);
+    // 2. Calcola Keccak256 hash
+    const hash = (0, sha3_1.keccak_256)(publicKeyWithoutPrefix);
+    // 3. Prendi gli ultimi 20 byte
+    const address = hash.slice(-20);
+    // 4. Aggiungi '0x' prefix e converti in hex
+    return "0x" + bytesToHex(address);
+}
+
+
+/***/ }),
+
+/***/ "./src/gundb/errors.ts":
+/*!*****************************!*\
+  !*** ./src/gundb/errors.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Error classes for Gun and Auth
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NetworkError = exports.MultipleAuthError = exports.TimeoutError = exports.UserExists = exports.InvalidCredentials = exports.AuthError = exports.GunError = void 0;
+/**
+ * Base error for Gun
+ */
+class GunError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "GunError";
+    }
+}
+exports.GunError = GunError;
+/**
+ * Generic authentication error
+ */
+class AuthError extends GunError {
+    constructor(message) {
+        super(message);
+        this.name = "AuthError";
+    }
+}
+exports.AuthError = AuthError;
+/**
+ * Invalid credentials error
+ */
+class InvalidCredentials extends AuthError {
+    constructor(message = "Credenziali non valide") {
+        super(message);
+        this.name = "InvalidCredentials";
+    }
+}
+exports.InvalidCredentials = InvalidCredentials;
+/**
+ * User already exists error
+ */
+class UserExists extends AuthError {
+    constructor(message = "Utente già esistente") {
+        super(message);
+        this.name = "UserExists";
+    }
+}
+exports.UserExists = UserExists;
+/**
+ * Timeout error
+ */
+class TimeoutError extends GunError {
+    constructor(message = "Timeout durante l'operazione") {
+        super(message);
+        this.name = "TimeoutError";
+    }
+}
+exports.TimeoutError = TimeoutError;
+/**
+ * Multiple authentication error
+ */
+class MultipleAuthError extends AuthError {
+    constructor(message = "Autenticazione multipla in corso") {
+        super(message);
+        this.name = "MultipleAuthError";
+    }
+}
+exports.MultipleAuthError = MultipleAuthError;
+/** Base error related to the network. */
+class NetworkError extends GunError {
+}
+exports.NetworkError = NetworkError;
+const withDefaultMessage = (args, defaultMessage) => {
+    if (args.length === 0 || (args.length === 1 && !args[0])) {
+        args = [defaultMessage];
+    }
+    return args;
+};
+
+
+/***/ }),
+
+/***/ "./src/gundb/index.ts":
+/*!****************************!*\
+  !*** ./src/gundb/index.ts ***!
+  \****************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// Export the main class
+__exportStar(__webpack_require__(/*! ./db */ "./src/gundb/db.ts"), exports);
+
+
+/***/ }),
+
+/***/ "./src/gundb/restricted-put.ts":
+/*!*************************************!*\
+  !*** ./src/gundb/restricted-put.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getToken = exports.setToken = exports.restrictedPut = void 0;
+// Functional programming style implementation
+const gunHeaderModule = (Gun) => {
+    // Closure for token state
+    const tokenState = {
+        value: undefined,
+    };
+    // Pure function to create a new token state
+    const setToken = (newToken) => {
+        tokenState.value = newToken;
+        setupTokenMiddleware();
+        return tokenState.value;
+    };
+    // Pure function to retrieve token
+    const getToken = () => tokenState.value;
+    // Function to add token to headers
+    const addTokenToHeaders = (msg) => ({
+        ...msg,
+        headers: {
+            ...msg.headers,
+            token: tokenState.value,
+        },
+    });
+    // Setup middleware
+    const setupTokenMiddleware = () => {
+        Gun.on("opt", function (ctx) {
+            if (ctx.once)
+                return;
+            ctx.on("out", function (msg) {
+                const to = this.to;
+                // Apply pure function to add headers
+                const msgWithHeaders = addTokenToHeaders(msg);
+                //console.log('[PUT HEADERS]', msgWithHeaders)
+                to.next(msgWithHeaders); // pass to next middleware
+            });
+        });
+    };
+    // Initialize middleware
+    setupTokenMiddleware();
+    // Expose public API
+    return {
+        setToken,
+        getToken,
+    };
+};
+// Module instance and exports
+let moduleInstance;
+/**
+ * Initialize the Gun headers module with Gun instance and optional token
+ * @param Gun - Gun instance
+ * @param token - Optional authentication token
+ */
+const restrictedPut = (Gun, token) => {
+    moduleInstance = gunHeaderModule(Gun);
+    if (token) {
+        moduleInstance.setToken(token);
+    }
+};
+exports.restrictedPut = restrictedPut;
+/**
+ * Set the authentication token for Gun requests
+ * @param newToken - Token to set
+ */
+const setToken = (newToken) => {
+    if (!moduleInstance) {
+        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
+    }
+    return moduleInstance.setToken(newToken);
+};
+exports.setToken = setToken;
+/**
+ * Get the current authentication token
+ */
+const getToken = () => {
+    if (!moduleInstance) {
+        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
+    }
+    return moduleInstance.getToken();
+};
+exports.getToken = getToken;
+// Export the functions to global window (if in browser environment)
+if (true) {
+    window.setToken = exports.setToken;
+    window.getToken = exports.getToken;
+}
+
+
+/***/ }),
+
+/***/ "./src/gundb/rxjs.ts":
+/*!***************************!*\
+  !*** ./src/gundb/rxjs.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RxJS = void 0;
 const rxjs_1 = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/dist/cjs/index.js");
 const operators_1 = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/dist/cjs/operators/index.js");
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
  */
-class GunRxJS {
+class RxJS {
     gun;
     user;
     /**
@@ -102121,559 +102226,7 @@ class GunRxJS {
         return cleanObj;
     }
 }
-exports.GunRxJS = GunRxJS;
-
-
-/***/ }),
-
-/***/ "./src/gundb/index.ts":
-/*!****************************!*\
-  !*** ./src/gundb/index.ts ***!
-  \****************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-// Export the main class
-__exportStar(__webpack_require__(/*! ./gun-Instance */ "./src/gundb/gun-Instance.ts"), exports);
-
-
-/***/ }),
-
-/***/ "./src/gundb/relay.ts":
-/*!****************************!*\
-  !*** ./src/gundb/relay.ts ***!
-  \****************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
-
-/**
- * GunDB Relay Server Class
- * Instantiates and manages a GunDB relay server with configurable options
- *
- * Note: This module is primarily for Node.js environments.
- * In browser environments, relay functionality is limited.
- */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RelayPresets = exports.Relay = void 0;
-exports.createRelay = createRelay;
-// Check if we're in a Node.js environment
-const isNode = typeof process !== "undefined" && process.versions && process.versions.node;
-// Gun modules will be loaded dynamically when needed
-let Gun;
-let gunModulesLoaded = false;
-/**
- * Loads Gun modules dynamically to avoid issues during testing
- */
-async function loadGunModules(config) {
-    if (gunModulesLoaded)
-        return;
-    try {
-        const req = (() => {
-            try {
-                // eslint-disable-next-line no-eval
-                return eval("require");
-            }
-            catch {
-                return null;
-            }
-        })();
-        if (req) {
-            Gun = req("gun/gun");
-            // Best-effort load of server-side helpers; ignore if unavailable
-            const nodeOnlyLibs = [
-                "gun/lib/les",
-                "gun/lib/yson",
-                "gun/lib/serve",
-                "gun/lib/stats",
-                "gun/lib/webrtc",
-            ];
-            // Only load evict if explicitly enabled
-            if (config?.enableEviction) {
-                nodeOnlyLibs.push("gun/lib/evict");
-            }
-            for (const lib of nodeOnlyLibs) {
-                try {
-                    req(lib);
-                }
-                catch (_) { }
-            }
-            try {
-                req("gun/sea");
-            }
-            catch (_) { }
-        }
-        else {
-            // Fallback in rare cases whereyarn require isn't available
-            const gunModule = await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/gun */ "./node_modules/gun/gun.js")));
-            Gun = gunModule.default || gunModule;
-            await Promise.resolve().then(() => __importStar(__webpack_require__(/*! gun/lib/yson */ "./node_modules/gun/lib/yson.js")));
-        }
-        gunModulesLoaded = true;
-    }
-    catch (error) {
-        throw new Error(`Failed to load Gun modules: ${error}`);
-    }
-}
-/**
- * Creates a server instance - only in Node.js environments
- */
-async function createNodeServer(config) {
-    if (!isNode) {
-        return null;
-    }
-    try {
-        const http = await Promise.resolve().then(() => __importStar(__webpack_require__(/*! http */ "?b12c")));
-        const server = http.createServer();
-        Gun.serve(server);
-        // Configure WebSocket server
-        if (config.ws) {
-            const ws = await Promise.resolve().then(() => __importStar(__webpack_require__(/*! ws */ "./node_modules/ws/browser.js")));
-            const WebSocketServer = ws.Server;
-            const wss = new WebSocketServer({ server });
-            wss.on("connection", (ws) => {
-                console.log("WebSocket connection established");
-                ws.on("message", (message) => {
-                    // Broadcast message to all connected clients
-                    wss.clients.forEach((client) => {
-                        if (client !== ws && client.readyState === ws.OPEN) {
-                            client.send(message);
-                        }
-                    });
-                });
-                ws.on("close", () => {
-                    console.log("WebSocket connection closed");
-                });
-                ws.on("error", (error) => {
-                    console.error("WebSocket error:", error);
-                });
-            });
-        }
-        // Configure HTTP server
-        if (config.http) {
-            Object.assign(server, config.http);
-        }
-        return server;
-    }
-    catch (error) {
-        console.error("Failed to create Node.js server:", error);
-        return null;
-    }
-}
-/**
- * GunDB Relay Server Class
- *
- * This class creates and manages a GunDB relay server that can:
- * - Serve as a peer for other GunDB instances
- * - Store and relay data between connected peers
- * - Provide persistence and caching
- * - Handle authentication and encryption
- *
- * Note: This class is primarily designed for Node.js environments.
- * In browser environments, most functionality will be limited.
- */
-class Relay {
-    gun;
-    server;
-    config;
-    status;
-    log;
-    _isNodeEnvironment;
-    /**
-     * Creates a new GunDB relay server instance
-     * @param config Configuration options for the relay server
-     */
-    constructor(config = {}) {
-        this._isNodeEnvironment = Boolean(isNode);
-        this.config = {
-            port: 8765,
-            host: "0.0.0.0",
-            super: false,
-            faith: false,
-            enableFileStorage: false,
-            enableEviction: false,
-            ...config,
-        };
-        this.status = {
-            running: false,
-            peers: 0,
-        };
-        this.log = this.config.log || console.log;
-        // Initialize Gun instance with relay configuration
-        this.initializeGun();
-    }
-    /**
-     * Initialize Gun instance asynchronously
-     */
-    async initializeGun() {
-        try {
-            // Load Gun modules when the class is instantiated
-            await loadGunModules(this.config);
-            // In browser environment, create a minimal Gun instance
-            if (!this._isNodeEnvironment) {
-                this.gun = Gun({
-                    multicast: false,
-                    ...this.config.gunOptions,
-                });
-                this.log("Relay initialized in browser mode - server functionality disabled");
-                return;
-            }
-            // Create server only in Node.js environment
-            this.server = await createNodeServer(this.config);
-            this.gun = Gun({
-                file: this.config.enableFileStorage ? "data" : false,
-                web: this.server,
-                multicast: false, // Disable multicast for relay servers
-                radisk: this.config.enableFileStorage, // Enable radisk for persistence
-                localStorage: false, // Disable localStorage in server environment
-                ...this.config.gunOptions,
-            });
-            // Configure Gun options
-            this.gun.on("opt", (root) => {
-                if (this.config.super !== undefined) {
-                    root.opt.super = this.config.super;
-                }
-                if (this.config.faith !== undefined) {
-                    root.opt.faith = this.config.faith;
-                }
-                root.opt.log = root.opt.log || this.log;
-                // Add standard relay configurations
-                root.opt.gc_enable = true;
-                root.opt.gc_info_enable = true;
-                root.opt.wire = true;
-                root.opt.axe = true;
-                // Continue the chain
-                if (root.to && root.to.next) {
-                    root.to.next(root);
-                }
-            });
-            // Track peer connections
-            this.gun.on("hi", () => {
-                this.status.peers++;
-                this.log(`Peer connected. Total peers: ${this.status.peers}`);
-            });
-            this.gun.on("bye", () => {
-                this.status.peers = Math.max(0, this.status.peers - 1);
-                this.log(`Peer disconnected. Total peers: ${this.status.peers}`);
-            });
-        }
-        catch (error) {
-            // In test environment, create a minimal mock
-            if (false) // removed by dead control flow
-{}
-            else {
-                throw error;
-            }
-        }
-    }
-    /**
-     * Starts the relay server
-     * @returns Promise that resolves when the server is started
-     */
-    async start() {
-        // In browser environment, just log and return
-        if (!this._isNodeEnvironment) {
-            this.log("Relay server cannot be started in browser environment");
-            return;
-        }
-        return new Promise((resolve, reject) => {
-            try {
-                if (!this.server) {
-                    reject(new Error("Server not initialized"));
-                    return;
-                }
-                this.server.listen(this.config.port, this.config.host, () => {
-                    this.status.running = true;
-                    this.status.port = this.config.port;
-                    this.status.host = this.config.host;
-                    this.status.startTime = new Date();
-                    this.log(`GunDB Relay Server started on ${this.config.host}:${this.config.port}`);
-                    this.log(`Super peer mode: ${this.config.super ? "enabled" : "disabled"}`);
-                    this.log(`Faith mode: ${this.config.faith ? "enabled" : "disabled"}`);
-                    resolve();
-                });
-                this.server.on("error", (error) => {
-                    this.log("Server error:", error);
-                    reject(error);
-                });
-            }
-            catch (error) {
-                reject(error);
-            }
-        });
-    }
-    /**
-     * Stops the relay server
-     * @returns Promise that resolves when the server is stopped
-     */
-    async stop() {
-        // In browser environment, just log and return
-        if (!this._isNodeEnvironment) {
-            this.log("Relay server cannot be stopped in browser environment");
-            return;
-        }
-        return new Promise((resolve) => {
-            if (this.server && this.status.running) {
-                this.server.close(() => {
-                    this.status.running = false;
-                    this.log("GunDB Relay Server stopped");
-                    resolve();
-                });
-            }
-            else {
-                resolve();
-            }
-        });
-    }
-    /**
-     * Gets the current status of the relay server
-     * @returns Current relay status
-     */
-    getStatus() {
-        return { ...this.status };
-    }
-    /**
-     * Gets the Gun instance
-     * @returns Gun instance
-     */
-    getGun() {
-        return this.gun;
-    }
-    /**
-     * Gets the server instance
-     * @returns Server instance
-     */
-    getServer() {
-        return this.server;
-    }
-    /**
-     * Updates the relay configuration
-     * @param newConfig New configuration options
-     */
-    updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
-        this.log("Relay configuration updated");
-    }
-    /**
-     * Gets the relay URL
-     * @returns Relay URL string
-     */
-    getRelayUrl() {
-        const protocol = this.config.ws ? "wss" : "http";
-        return `${protocol}://${this.config.host}:${this.config.port}/gun`;
-    }
-    /**
-     * Checks if the relay is healthy
-     * @returns Promise that resolves to true if healthy
-     */
-    async healthCheck() {
-        try {
-            // In browser environment, return false
-            if (!this._isNodeEnvironment) {
-                return false;
-            }
-            return this.status.running && this.server && this.server.listening;
-        }
-        catch (error) {
-            return false;
-        }
-    }
-    /**
-     * Checks if the relay is running in a Node.js environment
-     * @returns True if running in Node.js
-     */
-    isNodeEnvironment() {
-        return this._isNodeEnvironment;
-    }
-}
-exports.Relay = Relay;
-/**
- * Factory function to create a relay server with default configuration
- * @param config Optional configuration overrides
- * @returns Relay instance
- */
-function createRelay(config = {}) {
-    return new Relay(config);
-}
-/**
- * Default relay configurations for common use cases
- */
-exports.RelayPresets = {
-    /** Development relay with basic configuration */
-    development: {
-        port: 8765,
-        host: "localhost",
-        super: false,
-        faith: false,
-        enableFileStorage: true,
-    },
-    /** Production relay with enhanced configuration */
-    production: {
-        port: 8765,
-        host: "0.0.0.0",
-        super: true,
-        faith: true,
-        enableFileStorage: true,
-        enableEviction: true,
-    },
-    /** Test relay with minimal configuration */
-    test: {
-        port: 8766,
-        host: "localhost",
-        super: false,
-        faith: false,
-        enableFileStorage: false,
-    },
-};
-exports["default"] = Relay;
-
-
-/***/ }),
-
-/***/ "./src/gundb/restricted-put.ts":
-/*!*************************************!*\
-  !*** ./src/gundb/restricted-put.ts ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getToken = exports.setToken = exports.restrictedPut = void 0;
-// Functional programming style implementation
-const gunHeaderModule = (Gun) => {
-    // Closure for token state
-    const tokenState = {
-        value: undefined,
-    };
-    // Pure function to create a new token state
-    const setToken = (newToken) => {
-        tokenState.value = newToken;
-        setupTokenMiddleware();
-        return tokenState.value;
-    };
-    // Pure function to retrieve token
-    const getToken = () => tokenState.value;
-    // Function to add token to headers
-    const addTokenToHeaders = (msg) => ({
-        ...msg,
-        headers: {
-            ...msg.headers,
-            token: tokenState.value,
-        },
-    });
-    // Setup middleware
-    const setupTokenMiddleware = () => {
-        Gun.on("opt", function (ctx) {
-            if (ctx.once)
-                return;
-            ctx.on("out", function (msg) {
-                const to = this.to;
-                // Apply pure function to add headers
-                const msgWithHeaders = addTokenToHeaders(msg);
-                //console.log('[PUT HEADERS]', msgWithHeaders)
-                to.next(msgWithHeaders); // pass to next middleware
-            });
-        });
-    };
-    // Initialize middleware
-    setupTokenMiddleware();
-    // Expose public API
-    return {
-        setToken,
-        getToken,
-    };
-};
-// Module instance and exports
-let moduleInstance;
-/**
- * Initialize the Gun headers module with Gun instance and optional token
- * @param Gun - Gun instance
- * @param token - Optional authentication token
- */
-const restrictedPut = (Gun, token) => {
-    moduleInstance = gunHeaderModule(Gun);
-    if (token) {
-        moduleInstance.setToken(token);
-    }
-};
-exports.restrictedPut = restrictedPut;
-/**
- * Set the authentication token for Gun requests
- * @param newToken - Token to set
- */
-const setToken = (newToken) => {
-    if (!moduleInstance) {
-        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
-    }
-    return moduleInstance.setToken(newToken);
-};
-exports.setToken = setToken;
-/**
- * Get the current authentication token
- */
-const getToken = () => {
-    if (!moduleInstance) {
-        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
-    }
-    return moduleInstance.getToken();
-};
-exports.getToken = getToken;
-// Export the functions to global window (if in browser environment)
-if (true) {
-    window.setToken = exports.setToken;
-    window.getToken = exports.getToken;
-}
+exports.RxJS = RxJS;
 
 
 /***/ }),
@@ -102704,23 +102257,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RelayPresets = exports.createRelay = exports.Relay = exports.ShogunCore = exports.Gun = exports.GunInstance = exports.GunErrors = exports.derive = exports.crypto = exports.GunRxJS = exports.SEA = void 0;
+exports.ShogunCore = exports.Gun = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.SEA = void 0;
 const core_1 = __webpack_require__(/*! ./core */ "./src/core.ts");
 Object.defineProperty(exports, "ShogunCore", ({ enumerable: true, get: function () { return core_1.ShogunCore; } }));
-const relay_1 = __webpack_require__(/*! ./gundb/relay */ "./src/gundb/relay.ts");
-Object.defineProperty(exports, "Relay", ({ enumerable: true, get: function () { return relay_1.Relay; } }));
-Object.defineProperty(exports, "RelayPresets", ({ enumerable: true, get: function () { return relay_1.RelayPresets; } }));
-Object.defineProperty(exports, "createRelay", ({ enumerable: true, get: function () { return relay_1.createRelay; } }));
-const gun_Instance_1 = __webpack_require__(/*! ./gundb/gun-Instance */ "./src/gundb/gun-Instance.ts");
-Object.defineProperty(exports, "SEA", ({ enumerable: true, get: function () { return gun_Instance_1.SEA; } }));
-Object.defineProperty(exports, "GunRxJS", ({ enumerable: true, get: function () { return gun_Instance_1.GunRxJS; } }));
-Object.defineProperty(exports, "crypto", ({ enumerable: true, get: function () { return gun_Instance_1.crypto; } }));
-Object.defineProperty(exports, "derive", ({ enumerable: true, get: function () { return gun_Instance_1.derive; } }));
-Object.defineProperty(exports, "GunErrors", ({ enumerable: true, get: function () { return gun_Instance_1.GunErrors; } }));
-Object.defineProperty(exports, "GunInstance", ({ enumerable: true, get: function () { return gun_Instance_1.GunInstance; } }));
+const db_1 = __webpack_require__(/*! ./gundb/db */ "./src/gundb/db.ts");
+Object.defineProperty(exports, "SEA", ({ enumerable: true, get: function () { return db_1.SEA; } }));
+Object.defineProperty(exports, "RxJS", ({ enumerable: true, get: function () { return db_1.RxJS; } }));
+Object.defineProperty(exports, "crypto", ({ enumerable: true, get: function () { return db_1.crypto; } }));
+Object.defineProperty(exports, "derive", ({ enumerable: true, get: function () { return db_1.derive; } }));
+Object.defineProperty(exports, "GunErrors", ({ enumerable: true, get: function () { return db_1.GunErrors; } }));
+Object.defineProperty(exports, "DataBase", ({ enumerable: true, get: function () { return db_1.DataBase; } }));
 // Import Gun as default export
-const gun_Instance_2 = __importDefault(__webpack_require__(/*! ./gundb/gun-Instance */ "./src/gundb/gun-Instance.ts"));
-exports.Gun = gun_Instance_2.default;
+const db_2 = __importDefault(__webpack_require__(/*! ./gundb/db */ "./src/gundb/db.ts"));
+exports.Gun = db_2.default;
 __exportStar(__webpack_require__(/*! ./utils/errorHandler */ "./src/utils/errorHandler.ts"), exports);
 __exportStar(__webpack_require__(/*! ./plugins */ "./src/plugins/index.ts"), exports);
 __exportStar(__webpack_require__(/*! ./types/shogun */ "./src/types/shogun.ts"), exports);
@@ -108571,16 +108120,6 @@ function generateDeterministicPassword(salt) {
 /*!************************!*\
   !*** buffer (ignored) ***!
   \************************/
-/***/ (() => {
-
-/* (ignored) */
-
-/***/ }),
-
-/***/ "?b12c":
-/*!**********************!*\
-  !*** http (ignored) ***!
-  \**********************/
 /***/ (() => {
 
 /* (ignored) */
