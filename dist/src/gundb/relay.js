@@ -50,7 +50,7 @@ let gunModulesLoaded = false;
 /**
  * Loads Gun modules dynamically to avoid issues during testing
  */
-async function loadGunModules() {
+async function loadGunModules(config) {
     if (gunModulesLoaded)
         return;
     try {
@@ -67,11 +67,16 @@ async function loadGunModules() {
             Gun = req("gun/gun");
             // Best-effort load of server-side helpers; ignore if unavailable
             const nodeOnlyLibs = [
+                "gun/lib/les",
                 "gun/lib/yson",
                 "gun/lib/serve",
                 "gun/lib/stats",
                 "gun/lib/webrtc",
             ];
+            // Only load evict if explicitly enabled
+            if (config?.enableEviction) {
+                nodeOnlyLibs.push("gun/lib/evict");
+            }
             for (const lib of nodeOnlyLibs) {
                 try {
                     req(lib);
@@ -105,6 +110,7 @@ async function createNodeServer(config) {
     try {
         const http = await Promise.resolve().then(() => __importStar(require("http")));
         const server = http.createServer();
+        Gun.serve(server);
         // Configure WebSocket server
         if (config.ws) {
             const ws = await Promise.resolve().then(() => __importStar(require("ws")));
@@ -112,6 +118,20 @@ async function createNodeServer(config) {
             const wss = new WebSocketServer({ server });
             wss.on("connection", (ws) => {
                 console.log("WebSocket connection established");
+                ws.on("message", (message) => {
+                    // Broadcast message to all connected clients
+                    wss.clients.forEach((client) => {
+                        if (client !== ws && client.readyState === ws.OPEN) {
+                            client.send(message);
+                        }
+                    });
+                });
+                ws.on("close", () => {
+                    console.log("WebSocket connection closed");
+                });
+                ws.on("error", (error) => {
+                    console.error("WebSocket error:", error);
+                });
             });
         }
         // Configure HTTP server
@@ -173,7 +193,7 @@ class Relay {
     async initializeGun() {
         try {
             // Load Gun modules when the class is instantiated
-            await loadGunModules();
+            await loadGunModules(this.config);
             // In browser environment, create a minimal Gun instance
             if (!this._isNodeEnvironment) {
                 this.gun = Gun({
@@ -189,6 +209,8 @@ class Relay {
                 file: this.config.enableFileStorage ? "data" : false,
                 web: this.server,
                 multicast: false, // Disable multicast for relay servers
+                radisk: this.config.enableFileStorage, // Enable radisk for persistence
+                localStorage: false, // Disable localStorage in server environment
                 ...this.config.gunOptions,
             });
             // Configure Gun options
@@ -200,6 +222,11 @@ class Relay {
                     root.opt.faith = this.config.faith;
                 }
                 root.opt.log = root.opt.log || this.log;
+                // Add standard relay configurations
+                root.opt.gc_enable = true;
+                root.opt.gc_info_enable = true;
+                root.opt.wire = true;
+                root.opt.axe = true;
                 // Continue the chain
                 if (root.to && root.to.next) {
                     root.to.next(root);

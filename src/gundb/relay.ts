@@ -19,7 +19,7 @@ let gunModulesLoaded = false;
 /**
  * Loads Gun modules dynamically to avoid issues during testing
  */
-async function loadGunModules(): Promise<void> {
+async function loadGunModules(config?: RelayConfig): Promise<void> {
   if (gunModulesLoaded) return;
 
   try {
@@ -36,11 +36,18 @@ async function loadGunModules(): Promise<void> {
       Gun = req("gun/gun");
       // Best-effort load of server-side helpers; ignore if unavailable
       const nodeOnlyLibs = [
+        "gun/lib/les",
         "gun/lib/yson",
         "gun/lib/serve",
         "gun/lib/stats",
         "gun/lib/webrtc",
       ];
+
+      // Only load evict if explicitly enabled
+      if (config?.enableEviction) {
+        nodeOnlyLibs.push("gun/lib/evict");
+      }
+
       for (const lib of nodeOnlyLibs) {
         try {
           req(lib);
@@ -74,6 +81,8 @@ async function createNodeServer(config: any): Promise<any> {
     const http = await import("http");
     const server = http.createServer();
 
+    Gun.serve(server);
+
     // Configure WebSocket server
     if (config.ws) {
       const ws = await import("ws");
@@ -82,6 +91,23 @@ async function createNodeServer(config: any): Promise<any> {
 
       wss.on("connection", (ws: any) => {
         console.log("WebSocket connection established");
+
+        ws.on("message", (message: any) => {
+          // Broadcast message to all connected clients
+          wss.clients.forEach((client: any) => {
+            if (client !== ws && client.readyState === ws.OPEN) {
+              client.send(message);
+            }
+          });
+        });
+
+        ws.on("close", () => {
+          console.log("WebSocket connection closed");
+        });
+
+        ws.on("error", (error: any) => {
+          console.error("WebSocket error:", error);
+        });
       });
     }
 
@@ -115,7 +141,7 @@ export interface RelayConfig {
   gunOptions?: any;
   /** Enable file storage */
   enableFileStorage?: boolean;
-  /** Enable eviction */
+  /** Enable eviction - automatically removes old data when memory usage is high */
   enableEviction?: boolean;
   /** Custom store configuration */
   store?: any;
@@ -195,7 +221,7 @@ export class Relay {
   private async initializeGun(): Promise<void> {
     try {
       // Load Gun modules when the class is instantiated
-      await loadGunModules();
+      await loadGunModules(this.config);
 
       // In browser environment, create a minimal Gun instance
       if (!this._isNodeEnvironment) {
@@ -216,6 +242,8 @@ export class Relay {
         file: this.config.enableFileStorage ? "data" : false,
         web: this.server,
         multicast: false, // Disable multicast for relay servers
+        radisk: this.config.enableFileStorage, // Enable radisk for persistence
+        localStorage: false, // Disable localStorage in server environment
         ...this.config.gunOptions,
       });
 
@@ -228,6 +256,13 @@ export class Relay {
           root.opt.faith = this.config.faith;
         }
         root.opt.log = root.opt.log || this.log;
+
+        // Add standard relay configurations
+        root.opt.gc_enable = true;
+        root.opt.gc_info_enable = true;
+        root.opt.wire = true;
+        root.opt.axe = true;
+
         // Continue the chain
         if (root.to && root.to.next) {
           root.to.next(root);

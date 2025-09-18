@@ -24,7 +24,7 @@ export interface RelayConfig {
     gunOptions?: any;
     /** Enable file storage */
     enableFileStorage?: boolean;
-    /** Enable eviction */
+    /** Enable eviction - automatically removes old data when memory usage is high */
     enableEviction?: boolean;
     /** Custom store configuration */
     store?: any;

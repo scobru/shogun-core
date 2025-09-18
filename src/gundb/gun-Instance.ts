@@ -23,11 +23,10 @@ import type { AuthResult, SignUpResult } from "../types/shogun";
 import GunModule from "gun/gun";
 
 const Gun = GunModule;
+
 import SEA from "gun/sea";
 
 // Garbage Collection
-import "gun/lib/les.js";
-
 import "gun/lib/then";
 import "gun/lib/radix";
 import "gun/lib/radisk";
@@ -36,6 +35,7 @@ import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 
 import { restrictedPut } from "./restricted-put";
+
 import derive, { DeriveOptions } from "./derive";
 
 import type {

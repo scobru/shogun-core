@@ -50,7 +50,6 @@ exports.Gun = Gun;
 const sea_1 = __importDefault(require("gun/sea"));
 exports.SEA = sea_1.default;
 // Garbage Collection
-require("gun/lib/les.js");
 require("gun/lib/then");
 require("gun/lib/radix");
 require("gun/lib/radisk");
