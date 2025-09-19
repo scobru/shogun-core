@@ -3,8 +3,8 @@ import {
   BaseResult,
   BaseAuthResult,
   BaseCacheEntry,
-} from "../../types/common";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+} from "../../interfaces/common";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 
 /**
  * Result of connection attempt

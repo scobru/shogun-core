@@ -3,7 +3,7 @@ import { ShogunCore } from "../../core";
 import { Web3SigningCredential } from "./web3Signer";
 import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
 import { ethers } from "ethers";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 import { ISEAPair } from "gun";
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore

@@ -1,6 +1,6 @@
 import { ShogunCore } from "../core";
-import { ShogunPlugin } from "../types/plugin";
-import { PluginCategory } from "../types/shogun";
+import { ShogunPlugin } from "../interfaces/plugin";
+import { PluginCategory } from "../interfaces/shogun";
 import { EventEmitter } from "../utils/eventEmitter";
 /**
  * Classe base per tutti i plugin di ShogunCore

@@ -1,11 +1,11 @@
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 import {
   BaseEvent,
   BaseConfig,
   BaseDeviceInfo,
   BaseResult,
   BaseAuthResult,
-} from "../../types/common";
+} from "../../interfaces/common";
 
 /**
  * WebAuthn types definitions

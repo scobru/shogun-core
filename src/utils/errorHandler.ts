@@ -1,4 +1,4 @@
-import { LogLevel } from "../types/common";
+import { LogLevel } from "../interfaces/common";
 
 /**
  * Types of errors that can occur in the application

@@ -43289,7 +43289,7 @@ class EventEmitter {
     }
 }
 
-;// ./src/types/events.ts
+;// ./src/interfaces/events.ts
 
 /**
  * Extended EventEmitter class with typed events for Shogun
@@ -43719,7 +43719,7 @@ class ShogunStorage {
     }
 }
 
-;// ./src/types/shogun.ts
+;// ./src/interfaces/shogun.ts
 /**
  * Standard plugin categories in ShogunCore
  */

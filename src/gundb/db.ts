@@ -17,7 +17,7 @@ import type {
   GunOperationResult,
 } from "./types";
 
-import type { AuthResult, SignUpResult } from "../types/shogun";
+import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 
 import Gun from "gun/gun";
 import SEA from "gun/sea";
@@ -43,7 +43,7 @@ import type {
 
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";
-import { GunDataEventData, GunPeerEventData } from "../types/events";
+import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";

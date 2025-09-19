@@ -9,7 +9,7 @@ import {
   OAuthCredentials,
   OAuthUserInfo,
 } from "./types";
-import { AuthResult, SignUpResult, AuthMethod } from "../../types/shogun";
+import { AuthResult, SignUpResult, AuthMethod } from "../../interfaces/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ShogunStorage } from "../../storage/storage";
 import { ISEAPair } from "gun";

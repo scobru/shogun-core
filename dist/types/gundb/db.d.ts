@@ -5,7 +5,7 @@
  * - Direct authentication through Gun.user()
  */
 import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
-import type { AuthResult, SignUpResult } from "../types/shogun";
+import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
 import "gun/lib/then";
@@ -19,7 +19,7 @@ import "gun/lib/les";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 import type { IGunUserInstance, IGunInstance, IGunChain, ISEAPair } from "gun/types";
-import { GunDataEventData, GunPeerEventData } from "../types/events";
+import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";

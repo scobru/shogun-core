@@ -11,7 +11,7 @@ import {
   ConnectionResult,
   NostrConnectorPluginInterface,
 } from "./types";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 
 /**

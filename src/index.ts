@@ -15,8 +15,8 @@ import Gun from "./gundb/db";
 
 export * from "./utils/errorHandler";
 export * from "./plugins";
-export * from "./types/shogun";
-export type * from "./types/plugin";
+export * from "./interfaces/shogun";
+export type * from "./interfaces/plugin";
 export type {
   IGunUserInstance,
   IGunInstance,

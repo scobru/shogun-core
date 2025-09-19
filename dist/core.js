@@ -1,7 +1,7 @@
-import { ShogunEventEmitter } from "./types/events";
+import { ShogunEventEmitter } from "./interfaces/events";
 import { ErrorHandler, ErrorType } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
-import { CorePlugins, } from "./types/shogun";
+import { CorePlugins, } from "./interfaces/shogun";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";

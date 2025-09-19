@@ -1,9 +1,9 @@
-import { ShogunEventMap } from "./types/events";
+import { ShogunEventMap } from "./interfaces/events";
 import { ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./types/shogun";
+import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./interfaces/shogun";
 import { ethers } from "ethers";
-import { ShogunPlugin } from "./types/plugin";
+import { ShogunPlugin } from "./interfaces/plugin";
 import { IGunUserInstance, IGunInstance, DataBase, RxJS } from "./gundb";
 import { ISEAPair } from "gun";
 /**

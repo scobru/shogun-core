@@ -1,4 +1,4 @@
-import { ShogunEventEmitter, ShogunEventMap } from "./types/events";
+import { ShogunEventEmitter, ShogunEventMap } from "./interfaces/events";
 import { ErrorHandler, ErrorType, ShogunError } from "./utils/errorHandler";
 import { ShogunStorage } from "./storage/storage";
 import {
@@ -10,9 +10,9 @@ import {
   CorePlugins,
   AuthMethod,
   Wallets,
-} from "./types/shogun";
+} from "./interfaces/shogun";
 import { ethers } from "ethers";
-import { ShogunPlugin } from "./types/plugin";
+import { ShogunPlugin } from "./interfaces/plugin";
 import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";

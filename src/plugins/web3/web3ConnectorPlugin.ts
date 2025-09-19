@@ -4,7 +4,7 @@ import { Web3Connector } from "./web3Connector";
 import { Web3Signer, Web3SigningCredential } from "./web3Signer";
 import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
 import { ethers } from "ethers";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 import { ISEAPair } from "gun";
 

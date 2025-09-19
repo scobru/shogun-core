@@ -1,7 +1,7 @@
 import { BasePlugin } from "../base";
 import { ShogunCore } from "../../core";
 import { OAuthPluginInterface, OAuthConfig, OAuthProvider, OAuthConnectionResult, OAuthCredentials, OAuthUserInfo } from "./types";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 /**
  * OAuth Plugin for ShogunCore
  * Provides authentication with external OAuth providers

@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../core";
 import { WebAuthnSigningCredential } from "./webauthnSigner";
 import { WebAuthnCredentials, CredentialResult, WebauthnPluginInterface, WebAuthnUniformCredentials } from "./types";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */

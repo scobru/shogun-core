@@ -2,7 +2,7 @@ import { BasePlugin } from "../base";
 import { ShogunCore } from "../../core";
 import { NostrSigningCredential } from "./nostrSigner";
 import { NostrConnectorCredentials, ConnectionResult, NostrConnectorPluginInterface } from "./types";
-import { AuthResult, SignUpResult } from "../../types/shogun";
+import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
  * Supports Alby, Nostr extensions, or direct key management

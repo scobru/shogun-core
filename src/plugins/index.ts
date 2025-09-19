@@ -1,6 +1,6 @@
 // Base plugin interface and types
 export { BasePlugin } from "./base";
-export type { ShogunPlugin, PluginManager } from "../types/plugin";
+export type { ShogunPlugin, PluginManager } from "../interfaces/plugin";
 
 // WebAuthn plugin exports
 export { Webauthn } from "./webauthn/webauthn";

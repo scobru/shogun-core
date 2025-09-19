@@ -1,5 +1,5 @@
 export { BasePlugin } from "./base";
-export type { ShogunPlugin, PluginManager } from "../types/plugin";
+export type { ShogunPlugin, PluginManager } from "../interfaces/plugin";
 export { Webauthn } from "./webauthn/webauthn";
 export { WebauthnPlugin } from "./webauthn/webauthnPlugin";
 export type { WebauthnPluginInterface } from "./webauthn/types";
