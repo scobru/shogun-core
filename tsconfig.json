@@ -5,9 +5,9 @@
     "outDir": "./dist",
     "isolatedModules": true,
     "target": "es2022", // Target modern JavaScript
-    "module": "CommonJS",
+    "module": "ESNext",
     "lib": ["es2022", "dom"], // Include modern JavaScript and DOM libraries
-    "moduleResolution": "node", // Use Node.js module resolution
+    "moduleResolution": "bundler", // Use Node.js module resolution
     "typeRoots": ["./node_modules/@types"], // Specify type definition directories
     "allowJs": true, // Allow JavaScript files to be included in the project
     "skipLibCheck": true, // Skip type checking of declaration files

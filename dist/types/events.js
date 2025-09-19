@@ -1,13 +1,10 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunEventEmitter = void 0;
-const eventEmitter_1 = require("../utils/eventEmitter");
+import { EventEmitter } from "../utils/eventEmitter";
 /**
  * Extended EventEmitter class with typed events for Shogun
  * @class ShogunEventEmitter
  * @extends EventEmitter
  */
-class ShogunEventEmitter extends eventEmitter_1.EventEmitter {
+export class ShogunEventEmitter extends EventEmitter {
     /**
      * Emit a typed Shogun event
      * @template K - Event key type
@@ -37,4 +34,3 @@ class ShogunEventEmitter extends eventEmitter_1.EventEmitter {
         super.off(event, listener);
     }
 }
-exports.ShogunEventEmitter = ShogunEventEmitter;

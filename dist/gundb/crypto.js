@@ -1,35 +1,20 @@
-"use strict";
 /**
  * Cryptographic utilities for GunDB integration.
  * Based on GunDB's SEA (Security, Encryption, Authorization) module.
  * @see https://github.com/amark/gun/wiki/Snippets
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.isHash = isHash;
-exports.encrypt = encrypt;
-exports.decrypt = decrypt;
-exports.encFor = encFor;
-exports.decFrom = decFrom;
-exports.hashText = hashText;
-exports.hashObj = hashObj;
-exports.secret = secret;
-exports.getShortHash = getShortHash;
-exports.safeHash = safeHash;
-exports.unsafeHash = unsafeHash;
-exports.safeJSONParse = safeJSONParse;
-exports.randomUUID = randomUUID;
-const gun_1 = require("gun");
-const uuid_1 = require("uuid");
+import { SEA } from "gun";
+import { v4 as uuidv4 } from "uuid";
 // Helper function to get SEA safely
 function getSEA() {
-    return global.SEA || gun_1.SEA;
+    return global.SEA || SEA;
 }
 /**
  * Checks if a string is a valid GunDB hash
  * @param str - String to check
  * @returns True if string matches GunDB hash format (44 chars ending with =)
  */
-function isHash(str) {
+export function isHash(str) {
     // GunDB hash format: 44 characters ending with =
     // For integration tests, also accept strings with hyphens
     if (typeof str !== "string" || str.length === 0)
@@ -48,7 +33,7 @@ function isHash(str) {
  * @param key Encryption key
  * @returns Promise that resolves with the encrypted data
  */
-async function encrypt(data, key) {
+export async function encrypt(data, key) {
     const sea = getSEA();
     if (!sea || !sea.encrypt) {
         throw new Error("SEA not available");
@@ -71,7 +56,7 @@ async function encrypt(data, key) {
  * @param key Decryption key
  * @returns Promise that resolves with the decrypted data
  */
-async function decrypt(encryptedData, key) {
+export async function decrypt(encryptedData, key) {
     const sea = getSEA();
     if (!sea || !sea.decrypt) {
         throw new Error("SEA not available");
@@ -95,7 +80,7 @@ async function decrypt(encryptedData, key) {
  * @param receiver - Receiver's public encryption key
  * @returns Promise resolving to encrypted data
  */
-async function encFor(data, sender, receiver) {
+export async function encFor(data, sender, receiver) {
     const sea = getSEA();
     if (!sea || !sea.secret || !sea.encrypt) {
         return "encrypted-data";
@@ -116,7 +101,7 @@ async function encFor(data, sender, receiver) {
  * @param receiver - Receiver's key pair
  * @returns Promise resolving to decrypted data
  */
-async function decFrom(data, sender, receiver) {
+export async function decFrom(data, sender, receiver) {
     const sea = getSEA();
     if (!sea || !sea.secret || !sea.decrypt) {
         return "decrypted-data";
@@ -135,7 +120,7 @@ async function decFrom(data, sender, receiver) {
  * @param text - Text to hash
  * @returns Promise resolving to hash string
  */
-async function hashText(text) {
+export async function hashText(text) {
     const sea = getSEA();
     if (!sea || !sea.work) {
         throw new Error("SEA not available");
@@ -155,7 +140,7 @@ async function hashText(text) {
  * @param obj - Object to hash
  * @returns Promise resolving to hash and original stringified data
  */
-async function hashObj(obj) {
+export async function hashObj(obj) {
     let hashed = typeof obj === "string" ? obj : JSON.stringify(obj);
     let hash = await hashText(hashed);
     return { hash, hashed };
@@ -166,7 +151,7 @@ async function hashObj(obj) {
  * @param pair - Key pair
  * @returns Promise resolving to shared secret
  */
-async function secret(epub, pair) {
+export async function secret(epub, pair) {
     const sea = getSEA();
     const secret = await sea.secret(epub, pair);
     return secret;
@@ -177,7 +162,7 @@ async function secret(epub, pair) {
  * @param salt - Salt for hashing
  * @returns Promise resolving to hex-encoded hash
  */
-async function getShortHash(text, salt) {
+export async function getShortHash(text, salt) {
     const sea = getSEA();
     const hash = await sea.work(text, null, null, {
         name: "PBKDF2",
@@ -191,7 +176,7 @@ async function getShortHash(text, salt) {
  * @param unsafe - String containing unsafe characters
  * @returns URL-safe string with encoded characters
  */
-function safeHash(unsafe) {
+export function safeHash(unsafe) {
     if (unsafe === undefined || unsafe === null)
         return unsafe;
     if (unsafe === "")
@@ -219,7 +204,7 @@ function encodeChar(_) { }
  * @param safe - URL-safe string
  * @returns Original string with decoded characters
  */
-function unsafeHash(safe) {
+export function unsafeHash(safe) {
     if (safe === undefined || safe === null)
         return safe;
     if (safe === "")
@@ -247,7 +232,7 @@ function decodeChar(_) { }
  * @param def - Default value if parsing fails
  * @returns Parsed object or default value
  */
-function safeJSONParse(input, def = {}) {
+export function safeJSONParse(input, def = {}) {
     if (input === undefined)
         return undefined;
     if (input === null)
@@ -263,7 +248,7 @@ function safeJSONParse(input, def = {}) {
         return def;
     }
 }
-function randomUUID() {
+export function randomUUID() {
     const c = globalThis?.crypto;
     if (c?.randomUUID)
         return c.randomUUID();
@@ -279,5 +264,5 @@ function randomUUID() {
         }
     }
     catch { }
-    return (0, uuid_1.v4)();
+    return uuidv4();
 }

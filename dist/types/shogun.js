@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CorePlugins = exports.PluginCategory = void 0;
 /**
  * Standard plugin categories in ShogunCore
  */
-var PluginCategory;
+export var PluginCategory;
 (function (PluginCategory) {
     /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
     PluginCategory["Authentication"] = "authentication";
@@ -20,11 +17,11 @@ var PluginCategory;
     PluginCategory["Messages"] = "messages";
     /** Messaging plugins */
     PluginCategory["Other"] = "other";
-})(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
+})(PluginCategory || (PluginCategory = {}));
 /**
  * Standard names for built-in plugins
  */
-var CorePlugins;
+export var CorePlugins;
 (function (CorePlugins) {
     /** WebAuthn plugin */
     CorePlugins["WebAuthn"] = "webauthn";
@@ -34,4 +31,4 @@ var CorePlugins;
     CorePlugins["Nostr"] = "nostr";
     /** OAuth plugin */
     CorePlugins["OAuth"] = "oauth";
-})(CorePlugins || (exports.CorePlugins = CorePlugins = {}));
+})(CorePlugins || (CorePlugins = {}));

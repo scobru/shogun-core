@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getToken = exports.setToken = exports.restrictedPut = void 0;
 // Functional programming style implementation
 const gunHeaderModule = (Gun) => {
     // Closure for token state
@@ -52,36 +49,33 @@ let moduleInstance;
  * @param Gun - Gun instance
  * @param token - Optional authentication token
  */
-const restrictedPut = (Gun, token) => {
+export const restrictedPut = (Gun, token) => {
     moduleInstance = gunHeaderModule(Gun);
     if (token) {
         moduleInstance.setToken(token);
     }
 };
-exports.restrictedPut = restrictedPut;
 /**
  * Set the authentication token for Gun requests
  * @param newToken - Token to set
  */
-const setToken = (newToken) => {
+export const setToken = (newToken) => {
     if (!moduleInstance) {
         throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
     }
     return moduleInstance.setToken(newToken);
 };
-exports.setToken = setToken;
 /**
  * Get the current authentication token
  */
-const getToken = () => {
+export const getToken = () => {
     if (!moduleInstance) {
         throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
     }
     return moduleInstance.getToken();
 };
-exports.getToken = getToken;
 // Export the functions to global window (if in browser environment)
 if (typeof window !== "undefined") {
-    window.setToken = exports.setToken;
-    window.getToken = exports.getToken;
+    window.setToken = setToken;
+    window.getToken = getToken;
 }

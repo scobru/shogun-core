@@ -1,15 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunCore = void 0;
-const events_1 = require("./types/events");
-const errorHandler_1 = require("./utils/errorHandler");
-const storage_1 = require("./storage/storage");
-const shogun_1 = require("./types/shogun");
-const webauthnPlugin_1 = require("./plugins/webauthn/webauthnPlugin");
-const web3ConnectorPlugin_1 = require("./plugins/web3/web3ConnectorPlugin");
-const nostrConnectorPlugin_1 = require("./plugins/nostr/nostrConnectorPlugin");
-const oauthPlugin_1 = require("./plugins/oauth/oauthPlugin");
-const gundb_1 = require("./gundb");
+import { ShogunEventEmitter } from "./types/events";
+import { ErrorHandler, ErrorType } from "./utils/errorHandler";
+import { ShogunStorage } from "./storage/storage";
+import { CorePlugins, } from "./types/shogun";
+import { WebauthnPlugin } from "./plugins/webauthn/webauthnPlugin";
+import { Web3ConnectorPlugin } from "./plugins/web3/web3ConnectorPlugin";
+import { NostrConnectorPlugin } from "./plugins/nostr/nostrConnectorPlugin";
+import { OAuthPlugin } from "./plugins/oauth/oauthPlugin";
+import { restrictedPut, DataBase, RxJS, createGun, Gun, derive, } from "./gundb";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -21,7 +18,7 @@ const gundb_1 = require("./gundb");
  *
  * @since 2.0.0
  */
-class ShogunCore {
+export class ShogunCore {
     static API_VERSION = "^1.6.6";
     db;
     storage;
@@ -53,9 +50,9 @@ class ShogunCore {
             };
         }
         this.config = config;
-        this.storage = new storage_1.ShogunStorage();
-        this.eventEmitter = new events_1.ShogunEventEmitter();
-        errorHandler_1.ErrorHandler.addListener((error) => {
+        this.storage = new ShogunStorage();
+        this.eventEmitter = new ShogunEventEmitter();
+        ErrorHandler.addListener((error) => {
             this.eventEmitter.emit("error", {
                 action: error.code,
                 message: error.message,
@@ -63,14 +60,14 @@ class ShogunCore {
             });
         });
         if (config.authToken) {
-            (0, gundb_1.restrictedPut)(gundb_1.Gun, config.authToken);
+            restrictedPut(Gun, config.authToken);
         }
         try {
             if (config.gunInstance) {
                 this._gun = config.gunInstance;
             }
             else {
-                this._gun = (0, gundb_1.createGun)({
+                this._gun = createGun({
                     peers: config.peers || [],
                     radisk: config.radisk || false,
                     localStorage: config.localStorage || false,
@@ -84,7 +81,7 @@ class ShogunCore {
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
-            this.db = new gundb_1.DataBase(this._gun, config.scope || "");
+            this.db = new DataBase(this._gun, config.scope || "");
             this._gun = this.db.gun;
             this.setupGunEventForwarding();
         }
@@ -116,12 +113,12 @@ class ShogunCore {
                 return;
             const priv = user._?.sea?.epriv;
             const pub = user._?.sea?.epub;
-            this.wallets = await (0, gundb_1.derive)(priv, pub, {
+            this.wallets = await derive(priv, pub, {
                 includeSecp256k1Bitcoin: true,
                 includeSecp256k1Ethereum: true,
             });
         });
-        this.rx = new gundb_1.RxJS(this._gun);
+        this.rx = new RxJS(this._gun);
         this.registerBuiltinPlugins(config);
         // Initialize async components
         this.initialize().catch((error) => {
@@ -207,7 +204,7 @@ class ShogunCore {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("OAuth plugin will be registered with provided configuration");
                 }
-                const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
+                const oauthPlugin = new OAuthPlugin();
                 if (typeof oauthPlugin.configure === "function") {
                     oauthPlugin.configure(config.oauth);
                 }
@@ -218,7 +215,7 @@ class ShogunCore {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("WebAuthn plugin will be registered with provided configuration");
                 }
-                const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
+                const webauthnPlugin = new WebauthnPlugin();
                 if (typeof webauthnPlugin.configure === "function") {
                     webauthnPlugin.configure(config.webauthn);
                 }
@@ -229,7 +226,7 @@ class ShogunCore {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("Web3 plugin will be registered with provided configuration");
                 }
-                const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
+                const web3Plugin = new Web3ConnectorPlugin();
                 if (typeof web3Plugin.configure === "function") {
                     web3Plugin.configure(config.web3);
                 }
@@ -240,7 +237,7 @@ class ShogunCore {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("Nostr plugin will be registered with provided configuration");
                 }
-                const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
+                const nostrPlugin = new NostrConnectorPlugin();
                 if (typeof nostrPlugin.configure === "function") {
                     nostrPlugin.configure(config.nostr);
                 }
@@ -459,7 +456,7 @@ class ShogunCore {
                     return;
                 }
                 // Reinizializza il plugin
-                if (pluginName === shogun_1.CorePlugins.OAuth) {
+                if (pluginName === CorePlugins.OAuth) {
                     // Rimuovo la chiamata a initialize
                     plugin.initialize(this);
                 }
@@ -569,13 +566,13 @@ class ShogunCore {
     getAuthenticationMethod(type) {
         switch (type) {
             case "webauthn":
-                return this.getPlugin(shogun_1.CorePlugins.WebAuthn);
+                return this.getPlugin(CorePlugins.WebAuthn);
             case "web3":
-                return this.getPlugin(shogun_1.CorePlugins.Web3);
+                return this.getPlugin(CorePlugins.Web3);
             case "nostr":
-                return this.getPlugin(shogun_1.CorePlugins.Nostr);
+                return this.getPlugin(CorePlugins.Nostr);
             case "oauth":
-                return this.getPlugin(shogun_1.CorePlugins.OAuth);
+                return this.getPlugin(CorePlugins.OAuth);
             case "password":
             default:
                 return {
@@ -597,7 +594,7 @@ class ShogunCore {
      * @returns List of most recent errors
      */
     getRecentErrors(count = 10) {
-        return errorHandler_1.ErrorHandler.getRecentErrors(count);
+        return ErrorHandler.getRecentErrors(count);
     }
     // *********************************************************************************************************
     // 🔐 AUTHENTICATION
@@ -625,7 +622,7 @@ class ShogunCore {
             this.eventEmitter.emit("auth:logout");
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
         }
     }
     /**
@@ -661,7 +658,7 @@ class ShogunCore {
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
             return {
                 success: false,
                 error: error.message ?? "Unknown error during login",
@@ -704,7 +701,7 @@ class ShogunCore {
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
             return {
                 success: false,
                 error: error.message ?? "Unknown error during pair login",
@@ -851,7 +848,6 @@ class ShogunCore {
         return !!(this.user && this.user.is);
     }
 }
-exports.ShogunCore = ShogunCore;
 if (typeof window !== "undefined") {
     window.SHOGUN_CORE_CLASS = ShogunCore;
 }
@@ -861,4 +857,4 @@ if (typeof window !== "undefined") {
     };
     window.SHOGUN_CORE_CLASS = ShogunCore;
 }
-exports.default = ShogunCore;
+export default ShogunCore;

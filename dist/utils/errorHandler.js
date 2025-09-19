@@ -1,11 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ErrorHandler = exports.ErrorType = void 0;
-exports.createError = createError;
 /**
  * Types of errors that can occur in the application
  */
-var ErrorType;
+export var ErrorType;
 (function (ErrorType) {
     ErrorType["AUTHENTICATION"] = "AuthenticationError";
     ErrorType["AUTHORIZATION"] = "AuthorizationError";
@@ -29,7 +25,7 @@ var ErrorType;
     ErrorType["BIP32"] = "BIP32Error";
     ErrorType["ETHEREUM"] = "EthereumError";
     ErrorType["BITCOIN"] = "BitcoinError";
-})(ErrorType || (exports.ErrorType = ErrorType = {}));
+})(ErrorType || (ErrorType = {}));
 /**
  * Wrapper to standardize errors
  * @param type - Error type
@@ -38,7 +34,7 @@ var ErrorType;
  * @param originalError - Original error
  * @returns A structured error object
  */
-function createError(type, code, message, originalError) {
+export function createError(type, code, message, originalError) {
     return {
         type,
         code,
@@ -50,7 +46,7 @@ function createError(type, code, message, originalError) {
 /**
  * Centralized error handler
  */
-class ErrorHandler {
+export class ErrorHandler {
     static errors = [];
     static maxErrors = 100;
     static listeners = [];
@@ -243,4 +239,3 @@ class ErrorHandler {
         this.errors = [];
     }
 }
-exports.ErrorHandler = ErrorHandler;

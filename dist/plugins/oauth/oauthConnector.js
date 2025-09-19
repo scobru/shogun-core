@@ -1,20 +1,14 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.OAuthConnector = void 0;
 /**
  * OAuth Connector - Secure version for GunDB user creation
  */
-const eventEmitter_1 = require("../../utils/eventEmitter");
-const derive_1 = __importDefault(require("../../gundb/derive"));
-const validation_1 = require("../../utils/validation");
-const ethers_1 = require("ethers");
+import { EventEmitter } from "../../utils/eventEmitter";
+import derive from "../../gundb/derive";
+import { generateUsernameFromIdentity, generateDeterministicPassword, } from "../../utils/validation";
+import { ethers } from "ethers";
 /**
  * OAuth Connector
  */
-class OAuthConnector extends eventEmitter_1.EventEmitter {
+export class OAuthConnector extends EventEmitter {
     DEFAULT_CONFIG = {
         providers: {
             google: {
@@ -394,15 +388,15 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
             throw new Error(`Provider ${provider} is not configured.`);
         }
         // Username uniforme
-        const username = (0, validation_1.generateUsernameFromIdentity)(provider, userInfo);
+        const username = generateUsernameFromIdentity(provider, userInfo);
         try {
             console.log(`Generating credentials for ${provider} user: ${userInfo.id}`);
             const saltData = `${userInfo.id}_${provider}_${userInfo.email || "no-email"}`;
-            const salt = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(saltData));
+            const salt = ethers.keccak256(ethers.toUtf8Bytes(saltData));
             // Password deterministica (compatibilità)
-            const password = (0, validation_1.generateDeterministicPassword)(salt);
+            const password = generateDeterministicPassword(salt);
             // Deriva la chiave GunDB
-            const key = await (0, derive_1.default)(password, salt, { includeP256: true });
+            const key = await derive(password, salt, { includeP256: true });
             const credentials = {
                 username,
                 password,
@@ -757,4 +751,3 @@ class OAuthConnector extends eventEmitter_1.EventEmitter {
         }
     }
 }
-exports.OAuthConnector = OAuthConnector;

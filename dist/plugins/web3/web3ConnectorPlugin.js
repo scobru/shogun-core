@@ -1,14 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Web3ConnectorPlugin = void 0;
-const base_1 = require("../base");
-const web3Connector_1 = require("./web3Connector");
-const web3Signer_1 = require("./web3Signer");
-const errorHandler_1 = require("../../utils/errorHandler");
+import { BasePlugin } from "../base";
+import { Web3Connector } from "./web3Connector";
+import { Web3Signer } from "./web3Signer";
+import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
-class Web3ConnectorPlugin extends base_1.BasePlugin {
+export class Web3ConnectorPlugin extends BasePlugin {
     name = "web3";
     version = "1.0.0";
     description = "Provides Ethereum wallet connection and authentication for ShogunCore";
@@ -20,8 +17,8 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
     initialize(core) {
         super.initialize(core);
         // Inizializziamo il modulo Web3
-        this.Web3 = new web3Connector_1.Web3Connector();
-        this.signer = new web3Signer_1.Web3Signer(this.Web3);
+        this.Web3 = new Web3Connector();
+        this.signer = new Web3Signer(this.Web3);
         // Rimuovo i console.log superflui
     }
     /**
@@ -319,10 +316,10 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!address) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 login");
+                throw createError(ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 login");
             }
             if (!this.isAvailable()) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
+                throw createError(ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
             console.log(`🔧 Web3 login - starting login for address:`, address);
             // FIX: Use deterministic pair instead of generating new credentials
@@ -369,7 +366,7 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
                 address,
             });
             if (!gunUser.success) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_LOGIN_FAILED", gunUser.error || "Failed to log in with Web3 credentials");
+                throw createError(ErrorType.AUTHENTICATION, "WEB3_LOGIN_FAILED", gunUser.error || "Failed to log in with Web3 credentials");
             }
             console.log(`🔧 Web3 login - gunUser success, userPub:`, gunUser.userPub ? gunUser.userPub.slice(0, 8) + "..." : "null");
             // Set authentication method to web3
@@ -400,10 +397,10 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
+            const errorType = error?.type || ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "WEB3_LOGIN_ERROR";
             const errorMessage = error?.message || "Unknown error during Web3 login";
-            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -416,15 +413,15 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!address) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 registration");
+                throw createError(ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Ethereum address required for Web3 registration");
             }
             if (!this.isAvailable()) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
+                throw createError(ErrorType.ENVIRONMENT, "WEB3_UNAVAILABLE", "Web3 is not available in the browser");
             }
             // Use setupConsistentOneshotSigning for signup
             const { gunUser } = await this.setupConsistentOneshotSigning(address);
             if (!gunUser.success) {
-                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "WEB3_SIGNUP_FAILED", gunUser.error || "Failed to sign up with Web3 credentials");
+                throw createError(ErrorType.AUTHENTICATION, "WEB3_SIGNUP_FAILED", gunUser.error || "Failed to sign up with Web3 credentials");
             }
             // Set authentication method to web3
             core.setAuthMethod("web3");
@@ -441,12 +438,11 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
+            const errorType = error?.type || ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "WEB3_SIGNUP_ERROR";
             const errorMessage = error?.message || "Unknown error during Web3 registration";
-            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
 }
-exports.Web3ConnectorPlugin = Web3ConnectorPlugin;

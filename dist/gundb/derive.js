@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = default_1;
-const p256_1 = require("@noble/curves/p256");
-const secp256k1_1 = require("@noble/curves/secp256k1");
-const sha256_1 = require("@noble/hashes/sha256");
-const sha3_1 = require("@noble/hashes/sha3");
-const ripemd160_1 = require("@noble/hashes/ripemd160");
-async function default_1(pwd, extra, options = {}) {
+import { p256 } from "@noble/curves/p256";
+import { secp256k1 } from "@noble/curves/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
+import { keccak_256 } from "@noble/hashes/sha3";
+import { ripemd160 } from "@noble/hashes/ripemd160";
+export default async function (pwd, extra, options = {}) {
     const TEXT_ENCODER = new TextEncoder();
     const pwdBytes = pwd
         ? typeof pwd === "string"
@@ -36,10 +33,10 @@ async function default_1(pwd, extra, options = {}) {
         const [signingKeys, encryptionKeys] = await Promise.all(salts.map(async ({ label }) => {
             const salt = TEXT_ENCODER.encode(`${label}-${version}`);
             const privateKey = await stretchKey(combinedInput, salt);
-            if (!p256_1.p256.utils.isValidPrivateKey(privateKey)) {
+            if (!p256.utils.isValidPrivateKey(privateKey)) {
                 throw new Error(`Invalid private key for ${label}`);
             }
-            const publicKey = p256_1.p256.getPublicKey(privateKey, false);
+            const publicKey = p256.getPublicKey(privateKey, false);
             return {
                 pub: keyBufferToJwk(publicKey),
                 priv: arrayBufToBase64UrlEncode(privateKey),
@@ -55,10 +52,10 @@ async function default_1(pwd, extra, options = {}) {
     if (includeSecp256k1Bitcoin) {
         const bitcoinSalt = TEXT_ENCODER.encode(`secp256k1-bitcoin-${version}`);
         const bitcoinPrivateKey = await stretchKey(combinedInput, bitcoinSalt);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(bitcoinPrivateKey)) {
+        if (!secp256k1.utils.isValidPrivateKey(bitcoinPrivateKey)) {
             throw new Error("Invalid secp256k1 private key for Bitcoin");
         }
-        const bitcoinPublicKey = secp256k1_1.secp256k1.getPublicKey(bitcoinPrivateKey, true); // Compressed
+        const bitcoinPublicKey = secp256k1.getPublicKey(bitcoinPrivateKey, true); // Compressed
         result.secp256k1Bitcoin = {
             privateKey: bytesToHex(bitcoinPrivateKey),
             publicKey: bytesToHex(bitcoinPublicKey),
@@ -69,10 +66,10 @@ async function default_1(pwd, extra, options = {}) {
     if (includeSecp256k1Ethereum) {
         const ethereumSalt = TEXT_ENCODER.encode(`secp256k1-ethereum-${version}`);
         const ethereumPrivateKey = await stretchKey(combinedInput, ethereumSalt);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(ethereumPrivateKey)) {
+        if (!secp256k1.utils.isValidPrivateKey(ethereumPrivateKey)) {
             throw new Error("Invalid secp256k1 private key for Ethereum");
         }
-        const ethereumPublicKey = secp256k1_1.secp256k1.getPublicKey(ethereumPrivateKey, false); // Uncompressed
+        const ethereumPublicKey = secp256k1.getPublicKey(ethereumPrivateKey, false); // Uncompressed
         result.secp256k1Ethereum = {
             privateKey: "0x" + bytesToHex(ethereumPrivateKey),
             publicKey: "0x" + bytesToHex(ethereumPublicKey),
@@ -203,15 +200,15 @@ function base58Encode(bytes) {
 function deriveP2PKHAddress(publicKey) {
     // Bitcoin P2PKH address derivation
     // 1. SHA256 hash del public key
-    const sha256Hash = (0, sha256_1.sha256)(publicKey);
+    const sha256Hash = sha256(publicKey);
     // 2. RIPEMD160 hash del risultato
-    const ripemd160Hash = (0, ripemd160_1.ripemd160)(sha256Hash);
+    const ripemd160Hash = ripemd160(sha256Hash);
     // 3. Aggiungi version byte (0x00 per mainnet P2PKH)
     const versionedHash = new Uint8Array(21);
     versionedHash[0] = 0x00; // Mainnet P2PKH version
     versionedHash.set(ripemd160Hash, 1);
     // 4. Double SHA256 per checksum
-    const checksum = (0, sha256_1.sha256)((0, sha256_1.sha256)(versionedHash));
+    const checksum = sha256(sha256(versionedHash));
     // 5. Aggiungi i primi 4 byte del checksum
     const addressBytes = new Uint8Array(25);
     addressBytes.set(versionedHash);
@@ -224,7 +221,7 @@ function deriveKeccak256Address(publicKey) {
     // 1. Rimuovi il prefix byte (0x04) dalla chiave pubblica non compressa
     const publicKeyWithoutPrefix = publicKey.slice(1);
     // 2. Calcola Keccak256 hash
-    const hash = (0, sha3_1.keccak_256)(publicKeyWithoutPrefix);
+    const hash = keccak_256(publicKeyWithoutPrefix);
     // 3. Prendi gli ultimi 20 byte
     const address = hash.slice(-20);
     // 4. Aggiungi '0x' prefix e converti in hex

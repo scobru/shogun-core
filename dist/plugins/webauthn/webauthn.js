@@ -1,20 +1,13 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Webauthn = void 0;
-exports.deriveWebauthnKeys = deriveWebauthnKeys;
 /**
  * Constants for WebAuthn configuration
  */
 const MIN_USERNAME_LENGTH = 3;
 const MAX_USERNAME_LENGTH = 64;
-const ethers_1 = require("ethers");
-const errorHandler_1 = require("../../utils/errorHandler");
-const eventEmitter_1 = require("../../utils/eventEmitter");
-const types_1 = require("./types");
-const derive_1 = __importDefault(require("../../gundb/derive"));
+import { ethers } from "ethers";
+import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+import { EventEmitter } from "../../utils/eventEmitter";
+import { WebAuthnEventType, } from "./types";
+import derive from "../../gundb/derive";
 /**
  * Constants for WebAuthn configuration
  */
@@ -29,7 +22,7 @@ const DEFAULT_CONFIG = {
 /**
  * Main WebAuthn class for authentication management
  */
-class Webauthn extends eventEmitter_1.EventEmitter {
+export class Webauthn extends EventEmitter {
     config;
     gunInstance;
     credential;
@@ -80,8 +73,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                 try {
                     const result = await this.generateCredentials(username, credentials, isNewDevice);
                     if (result.success) {
-                        this.emit(types_1.WebAuthnEventType.DEVICE_REGISTERED, {
-                            type: types_1.WebAuthnEventType.DEVICE_REGISTERED,
+                        this.emit(WebAuthnEventType.DEVICE_REGISTERED, {
+                            type: WebAuthnEventType.DEVICE_REGISTERED,
                             data: { username },
                             timestamp: Date.now(),
                         });
@@ -100,8 +93,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             throw lastError || new Error("Failed to create account after retries");
         }
         catch (error) {
-            this.emit(types_1.WebAuthnEventType.ERROR, {
-                type: types_1.WebAuthnEventType.ERROR,
+            this.emit(WebAuthnEventType.ERROR, {
+                type: WebAuthnEventType.ERROR,
                 data: { error: error.message },
                 timestamp: Date.now(),
             });
@@ -116,7 +109,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             this.validateUsername(username);
             if (!salt) {
                 const error = new Error("No WebAuthn credentials found for this username");
-                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
+                ErrorHandler.handle(ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
                 return { success: false, error: error.message };
             }
             // Cancel any existing authentication attempt
@@ -150,8 +143,8 @@ class Webauthn extends eventEmitter_1.EventEmitter {
                     credentialId: this.bufferToBase64(assertion.rawId),
                     deviceInfo,
                 };
-                this.emit(types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS, {
-                    type: types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS,
+                this.emit(WebAuthnEventType.AUTHENTICATION_SUCCESS, {
+                    type: WebAuthnEventType.AUTHENTICATION_SUCCESS,
                     data: { username, deviceInfo },
                     timestamp: Date.now(),
                 });
@@ -164,12 +157,12 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown WebAuthn error";
-            this.emit(types_1.WebAuthnEventType.AUTHENTICATION_FAILED, {
-                type: types_1.WebAuthnEventType.AUTHENTICATION_FAILED,
+            this.emit(WebAuthnEventType.AUTHENTICATION_FAILED, {
+                type: WebAuthnEventType.AUTHENTICATION_FAILED,
                 data: { username, error: errorMessage },
                 timestamp: Date.now(),
             });
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
+            ErrorHandler.handle(ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -262,9 +255,9 @@ class Webauthn extends eventEmitter_1.EventEmitter {
      * Generates credentials from username and salt
      */
     generateCredentialsFromSalt(username, salt) {
-        const data = ethers_1.ethers.toUtf8Bytes(username + salt);
+        const data = ethers.toUtf8Bytes(username + salt);
         return {
-            password: ethers_1.ethers.sha256(data),
+            password: ethers.sha256(data),
         };
     }
     /**
@@ -468,7 +461,6 @@ class Webauthn extends eventEmitter_1.EventEmitter {
         return signature;
     }
 }
-exports.Webauthn = Webauthn;
 // Add to global scope if available
 if (typeof window !== "undefined") {
     window.Webauthn = Webauthn;
@@ -477,10 +469,10 @@ else if (typeof global !== "undefined") {
     global.Webauthn = Webauthn;
 }
 // Funzione helper per derivare chiavi WebAuthn (come per Web3)
-async function deriveWebauthnKeys(username, credentialId) {
-    const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(credentialId));
+export async function deriveWebauthnKeys(username, credentialId) {
+    const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(credentialId));
     const salt = `${username}_${credentialId}`;
-    return await (0, derive_1.default)(hashedCredentialId, salt, {
+    return await derive(hashedCredentialId, salt, {
         includeP256: true,
     });
 }
