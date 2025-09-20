@@ -951,11 +951,9 @@ class DataBase {
     async createAliasIndex(username, userPub) {
         try {
             const aliasNode = this.gun.get(`~@${username}`);
-            const ack = await aliasNode
-                .put({
-                "~pubKeyOfUser": this.gun.get(userPub),
-            })
-                .then();
+            // For Gun.js alias validation to pass, the data must be exactly equal to the key
+            // The key is `~@${username}`, so we store that as the data
+            const ack = await aliasNode.put(`~@${username}`).then();
             if (ack.err) {
                 console.error(`Error creating alias index: ${ack.err}`);
             }
