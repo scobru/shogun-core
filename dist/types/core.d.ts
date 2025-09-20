@@ -19,7 +19,7 @@ import { PluginManager } from "./managers/PluginManager";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    static readonly API_VERSION = "^3.0.5";
+    static readonly API_VERSION = "^3.0.1";
     db: DataBase;
     storage: ShogunStorage;
     provider?: ethers.Provider;

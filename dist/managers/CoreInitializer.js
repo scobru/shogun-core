@@ -67,17 +67,23 @@ export class CoreInitializer {
         try {
             if (config.gunInstance && config.gunInstance instanceof Gun) {
                 console.log("config.gunInstance", config.gunInstance);
-                this.core.gun = config.gunInstance;
+                this.core._gun = config.gunInstance;
             }
             else {
                 console.log("config.gunOptions", config.gunOptions);
-                this.core.gun = createGun(config.gunOptions);
+                this.core._gun = createGun(config.gunOptions);
                 // Explicitly apply peers configuration if not already set
                 if (config.gunOptions?.peers &&
                     Array.isArray(config.gunOptions.peers)) {
                     console.log("Applying peers configuration:", config.gunOptions.peers);
-                    this.core.gun.opt({ peers: config.gunOptions.peers });
-                    console.log("Peers after explicit application:", this.core.gun?.opt?.peers);
+                    this.core._gun.opt({ peers: config.gunOptions.peers });
+                    console.log("Peers after explicit application:", this.core._gun?.opt?.peers);
+                    // Force peer connection
+                    console.log("Forcing peer connections...");
+                    config.gunOptions.peers.forEach((peer) => {
+                        console.log("Connecting to peer:", peer);
+                        this.core._gun.opt({ peers: [peer] });
+                    });
                 }
             }
         }
@@ -90,7 +96,7 @@ export class CoreInitializer {
         try {
             console.log("Initialize Gun instance", this.core.gun);
             this.core.db = new DataBase(this.core.gun, config.gunOptions.scope || "");
-            this.core.gun = this.core.db.gun;
+            this.core._gun = this.core.db.gun;
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
@@ -104,7 +110,7 @@ export class CoreInitializer {
      */
     async initializeGunUser() {
         try {
-            this.core.user = this.core.gun.user().recall({ sessionStorage: true });
+            this.core._user = this.core.gun.user().recall({ sessionStorage: true });
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
@@ -113,7 +119,7 @@ export class CoreInitializer {
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
         this.core.gun.on("auth", (user) => {
-            this.core.user = this.core.gun.user().recall({ sessionStorage: true });
+            this.core._user = this.core.gun.user().recall({ sessionStorage: true });
             this.core.emit("auth:login", {
                 userPub: user.pub,
                 method: "password",

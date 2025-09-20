@@ -115,7 +115,9 @@ export interface SignUpResult {
 }
 export interface IShogunCore extends PluginManager {
     gun: GunInstance;
+    _gun: GunInstance;
     user: GunUserInstance | null;
+    _user: GunUserInstance | null;
     db: DataBase;
     rx: RxJS;
     storage: ShogunStorage;
