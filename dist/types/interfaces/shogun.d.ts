@@ -1,4 +1,5 @@
-import { IGunInstance } from "gun/types";
+import { GunInstance, GunUserInstance } from "../gundb/improved-types";
+import { ISEAPair } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { DataBase } from "../gundb/db";
@@ -37,7 +38,7 @@ export declare enum CorePlugins {
     /** OAuth plugin */
     OAuth = "oauth"
 }
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "oauth" | "pair";
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -112,7 +113,8 @@ export interface SignUpResult {
     };
 }
 export interface IShogunCore extends PluginManager {
-    gun: IGunInstance<any>;
+    gun: GunInstance;
+    user: GunUserInstance | null;
     db: DataBase;
     rx: RxJS;
     storage: ShogunStorage;
@@ -126,7 +128,7 @@ export interface IShogunCore extends PluginManager {
     emit(eventName: string | symbol, ...args: any[]): boolean;
     getRecentErrors(count?: number): ShogunError[];
     login(username: string, password: string): Promise<AuthResult>;
-    signUp(username: string, password: string, passwordConfirmation?: string): Promise<SignUpResult>;
+    signUp(username: string, password?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     getAuthenticationMethod(type: AuthMethod): any;
     getCurrentUser(): {
         pub: string;
@@ -150,12 +152,8 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
-    gunInstance?: IGunInstance<any>;
-    authToken?: string;
-    scope?: string;
-    peers?: string[];
-    localStorage?: boolean;
-    radisk?: boolean;
+    gunInstance?: GunInstance;
+    gunOptions?: any;
     webauthn?: WebauthnConfig;
     web3?: {
         enabled?: boolean;

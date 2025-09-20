@@ -2,10 +2,15 @@
 
 ## Overview
 
-Comprehensive API documentation for Shogun Core with unified type system and consistent authentication interfaces.
+Comprehensive API documentation for Shogun Core with unified type system, consistent authentication interfaces, and simplified API layer.
 
-### Recent Improvements
+### Recent Improvements (v2.0.0)
 
+- **⭐ NEW: Simple API Layer**: Easy-to-use wrapper for common operations with minimal complexity
+- **⭐ NEW: User Space Management**: Complete CRUD operations for user-specific data storage
+- **⭐ NEW: Quick Start Functions**: `quickStart()` and `QuickStart` class for rapid initialization
+- **⭐ NEW: Improved Type System**: Reduced `any` usage with better TypeScript types
+- **⭐ NEW: Configuration Presets**: Pre-built configurations for common use cases
 - Type consistency across all plugins: unified `AuthResult` and `SignUpResult`
 - Typed event system with `ShogunEventMap` for safer listeners
 - OAuth hardening: PKCE support, improved Google flow, richer user profile
@@ -13,6 +18,129 @@ Comprehensive API documentation for Shogun Core with unified type system and con
 - Password recovery via security questions retained and documented
 
 Note: This file is the single source of truth for Shogun Core docs. The former `LLM.md` has been merged here for consistency and maintenance.
+
+## ⭐ **NEW: Simple API Components**
+
+### SimpleGunAPI (simple-api.ts)
+
+Easy-to-use wrapper for common GunDB operations with minimal complexity.
+
+```typescript
+class SimpleGunAPI {
+  // Authentication
+  async signup(username: string, password: string): Promise<{ userPub: string; username: string } | null>;
+  async login(username: string, password: string): Promise<{ userPub: string; username: string } | null>;
+  logout(): void;
+  isLoggedIn(): boolean;
+
+  // Basic data operations
+  async get<T = unknown>(path: string): Promise<T | null>;
+  async put<T = unknown>(path: string, data: T): Promise<boolean>;
+  async set<T = unknown>(path: string, data: T): Promise<boolean>;
+  async remove(path: string): Promise<boolean>;
+
+  // User space operations
+  async putUserData<T = unknown>(path: string, data: T): Promise<boolean>;
+  async getUserData<T = unknown>(path: string): Promise<T | null>;
+  async setUserData<T = unknown>(path: string, data: T): Promise<boolean>;
+  async removeUserData(path: string): Promise<boolean>;
+  async getAllUserData(): Promise<Record<string, unknown> | null>;
+
+  // Profile management
+  async updateProfile(profileData: {
+    name?: string;
+    email?: string;
+    bio?: string;
+    avatar?: string;
+    [key: string]: unknown;
+  }): Promise<boolean>;
+  async getProfile(): Promise<Record<string, unknown> | null>;
+
+  // Settings and preferences
+  async saveSettings(settings: Record<string, unknown>): Promise<boolean>;
+  async getSettings(): Promise<Record<string, unknown> | null>;
+  async savePreferences(preferences: Record<string, unknown>): Promise<boolean>;
+  async getPreferences(): Promise<Record<string, unknown> | null>;
+
+  // Collections
+  async createCollection<T = unknown>(collectionName: string, items: Record<string, T>): Promise<boolean>;
+  async addToCollection<T = unknown>(collectionName: string, itemId: string, item: T): Promise<boolean>;
+  async getCollection(collectionName: string): Promise<Record<string, unknown> | null>;
+  async removeFromCollection(collectionName: string, itemId: string): Promise<boolean>;
+
+  // Utility methods
+  getCurrentUser(): { pub: string; username?: string } | null;
+  async userExists(alias: string): Promise<boolean>;
+  async getUser(alias: string): Promise<{ userPub: string; username: string } | null>;
+}
+```
+
+### QuickStart (simple-api.ts)
+
+Rapid initialization helper for quick setup.
+
+```typescript
+class QuickStart {
+  constructor(gunInstance: any, appScope: string = 'shogun');
+  async init(): Promise<void>;
+  get api(): SimpleGunAPI;
+  get database(): DataBase;
+}
+
+// Global helper function
+function quickStart(gunInstance: any, appScope?: string): QuickStart;
+```
+
+### Improved Types (improved-types.ts)
+
+Better TypeScript types to reduce `any` usage.
+
+```typescript
+// Core types
+export type GunInstance = IGunInstance<any>;
+export type GunUserInstance = IGunUserInstance<any>;
+export type GunChain = IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
+
+// Data types
+export interface GunData {
+  [key: string]: unknown;
+}
+
+export interface GunNodeData {
+  [key: string]: unknown;
+  _?: {
+    "#": string;
+    ">": Record<string, number>;
+  };
+}
+
+// Operation results
+export interface TypedGunOperationResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  ack?: {
+    err?: string;
+    ok?: number;
+    pub?: string;
+  };
+}
+
+// Authentication results
+export interface TypedAuthResult {
+  success: boolean;
+  userPub?: string;
+  username?: string;
+  error?: string;
+  ack?: {
+    err?: string;
+    ok?: number;
+    pub?: string;
+    sea?: ISEAPair;
+  };
+  sea?: ISEAPair;
+}
+```
 
 ## Core Components
 
@@ -88,21 +216,21 @@ class ShogunCore implements IShogunCore {
 }
 ```
 
-### GunInstance (gun-Instance.ts)
+### DataBase (db.ts)
 
 Database layer providing GunDB integration with core authentication and data operations.
 
 ```typescript
-class GunInstance {
+class DataBase {
   // Core Properties
-  public gun: IGunInstance<any>;
-  public user: IGunUserInstance<any> | null;
+  public gun: GunInstance;
+  public user: GunUserInstance | null;
   public crypto: typeof crypto;
   public sea: typeof SEA;
-  public node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
+  public node: GunChain;
 
   // Construction & Lifecycle
-  constructor(gun: IGunInstance<any>, appScope?: string);
+  constructor(gun: GunInstance, appScope?: string);
   async initialize(appScope?: string): Promise<void>;
 
   // Authentication API - ✅ SIMPLIFIED & FIXED TYPES
@@ -129,11 +257,6 @@ class GunInstance {
   async putUserData(path: string, data: any): Promise<void>;
   async getUserData(path: string): Promise<any>;
 
-  // Cryptographic Operations
-  async hashText(text: string): Promise<string>;
-  async encrypt(data: any, key: string): Promise<string>;
-  async decrypt(encryptedData: string, key: string): Promise<any>;
-
   // Password Recovery System
   async setPasswordHint(
     username: string,
@@ -155,7 +278,7 @@ class GunInstance {
   resetPeers(newPeers?: string[]): void;
 
   // Utilities
-  getGun(): IGunInstance<any>;
+  getGun(): GunInstance;
   getCurrentUser(): UserInfo | null;
   getUser(): GunUser;
   rx(): GunRxJS;
@@ -212,55 +335,9 @@ class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
     credentials: WebAuthnCredentials
   ): Promise<{ success: boolean; updatedCredentials?: WebAuthnCredentials }>;
 
-  // Oneshot Signing API
-  async createSigningCredential(
-    username: string
-  ): Promise<WebAuthnSigningCredential>;
-  createAuthenticator(
-    credentialId: string
-  ): (data: any) => Promise<AuthenticatorAssertionResponse>;
-  async createDerivedKeyPair(
-    credentialId: string,
-    username: string,
-    extra?: string[]
-  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(
-    data: any,
-    credentialId: string,
-    username: string,
-    extra?: string[]
-  ): Promise<string>;
-  async createGunUserFromSigningCredential(
-    credentialId: string,
-    username: string
-  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
-
-  // Credential Management
-  getSigningCredential(
-    credentialId: string
-  ): WebAuthnSigningCredential | undefined;
-  listSigningCredentials(): WebAuthnSigningCredential[];
-  removeSigningCredential(credentialId: string): boolean;
-  getGunUserPubFromSigningCredential(credentialId: string): string | undefined;
-  getHashedCredentialId(credentialId: string): string | undefined;
-
-  // Consistency & Verification
-  async verifyConsistency(
-    credentialId: string,
-    username: string,
-    expectedUserPub?: string
-  ): Promise<{
-    consistent: boolean;
-    actualUserPub?: string;
-    expectedUserPub?: string;
-  }>;
-  async setupConsistentOneshotSigning(username: string): Promise<{
-    credential: WebAuthnSigningCredential;
-    authenticator: Function;
-    gunUser: any;
-    pub: string;
-    hashedCredentialId: string;
-  }>;
+  // WebAuthn-specific methods
+  register(username: string, displayName?: string): Promise<WebAuthnCredential>;
+  authenticate(username?: string): Promise<WebAuthnCredential>;
 
   // Lifecycle
   initialize(core: ShogunCore): void;
@@ -297,48 +374,6 @@ class Web3ConnectorPlugin
   async generatePassword(signature: string): Promise<string>;
   async verifySignature(message: string, signature: string): Promise<string>;
   cleanup(): void;
-
-  // Oneshot Signing API
-  async createSigningCredential(
-    address: string
-  ): Promise<Web3SigningCredential>;
-  createAuthenticator(address: string): (data: any) => Promise<string>;
-  async createDerivedKeyPair(
-    address: string,
-    extra?: string[]
-  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(
-    data: any,
-    address: string,
-    extra?: string[]
-  ): Promise<string>;
-  async createGunUserFromSigningCredential(
-    address: string
-  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
-
-  // Credential Management
-  getSigningCredential(address: string): Web3SigningCredential | undefined;
-  listSigningCredentials(): Web3SigningCredential[];
-  removeSigningCredential(address: string): boolean;
-  getGunUserPubFromSigningCredential(address: string): string | undefined;
-  getPassword(address: string): string | undefined;
-
-  // Consistency & Verification
-  async verifyConsistency(
-    address: string,
-    expectedUserPub?: string
-  ): Promise<{
-    consistent: boolean;
-    actualUserPub?: string;
-    expectedUserPub?: string;
-  }>;
-  async setupConsistentOneshotSigning(address: string): Promise<{
-    credential: Web3SigningCredential;
-    authenticator: Function;
-    gunUser: any;
-    username: string;
-    password: string;
-  }>;
 
   // Lifecycle
   initialize(core: ShogunCore): void;
@@ -391,48 +426,6 @@ class NostrConnectorPlugin
   clearSignatureCache(address?: string): void;
   cleanup(): void;
 
-  // Oneshot Signing API
-  async createSigningCredential(
-    address: string
-  ): Promise<NostrSigningCredential>;
-  createAuthenticator(address: string): (data: any) => Promise<string>;
-  async createDerivedKeyPair(
-    address: string,
-    extra?: string[]
-  ): Promise<{ pub: string; priv: string; epub: string; epriv: string }>;
-  async signWithDerivedKeys(
-    data: any,
-    address: string,
-    extra?: string[]
-  ): Promise<string>;
-  async createGunUserFromSigningCredential(
-    address: string
-  ): Promise<{ success: boolean; userPub?: string; error?: string }>;
-
-  // Credential Management
-  getSigningCredential(address: string): NostrSigningCredential | undefined;
-  listSigningCredentials(): NostrSigningCredential[];
-  removeSigningCredential(address: string): boolean;
-  getGunUserPubFromSigningCredential(address: string): string | undefined;
-  getPassword(address: string): string | undefined;
-
-  // Consistency & Verification
-  async verifyConsistency(
-    address: string,
-    expectedUserPub?: string
-  ): Promise<{
-    consistent: boolean;
-    actualUserPub?: string;
-    expectedUserPub?: string;
-  }>;
-  async setupConsistentOneshotSigning(address: string): Promise<{
-    credential: NostrSigningCredential;
-    authenticator: Function;
-    gunUser: any;
-    username: string;
-    password: string;
-  }>;
-
   // Lifecycle
   initialize(core: ShogunCore): void;
   destroy(): void;
@@ -482,12 +475,6 @@ class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
   // Configuration
   configure(config: Partial<OAuthConfig>): void;
 
-  // Legacy Support (Deprecated)
-  async handleSimpleOAuth(
-    provider: OAuthProvider,
-    authCode: string,
-    state: string
-  ): Promise<AuthResult>;
 
   // Lifecycle
   initialize(core: ShogunCore): void;
@@ -653,6 +640,57 @@ interface ShogunCoreConfig {
 ```
 
 ## Usage Examples
+
+### ⭐ **NEW: Simple API Usage**
+
+```typescript
+import { quickStart, Gun } from "shogun-core";
+
+// Quick setup
+const gun = Gun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
+const shogun = quickStart(gun, 'my-app');
+await shogun.init();
+
+// Authentication
+const user = await shogun.api.signup('alice', 'password123');
+if (user) {
+  console.log('User created:', user.username);
+  
+  // User space operations
+  await shogun.api.updateProfile({ 
+    name: 'Alice', 
+    email: 'alice@example.com',
+    bio: 'Developer' 
+  });
+  
+  await shogun.api.saveSettings({ 
+    theme: 'dark', 
+    language: 'en',
+    notifications: true 
+  });
+  
+  // Create collections
+  await shogun.api.createCollection('todos', {
+    '1': { text: 'Learn Shogun Core', done: false },
+    '2': { text: 'Build dApp', done: false }
+  });
+  
+  // Add more items
+  await shogun.api.addToCollection('todos', '3', { 
+    text: 'Deploy to production', 
+    done: false 
+  });
+  
+  // Retrieve data
+  const profile = await shogun.api.getProfile();
+  const settings = await shogun.api.getSettings();
+  const todos = await shogun.api.getCollection('todos');
+  
+  console.log('Profile:', profile);
+  console.log('Settings:', settings);
+  console.log('Todos:', todos);
+}
+```
 
 ### Basic Authentication
 

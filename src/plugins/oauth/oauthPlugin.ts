@@ -491,7 +491,7 @@ export class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
     }
 
     // If login fails, try signup
-    const signupResult = await this.core.signUp(username, "", "", k);
+    const signupResult = await this.core.signUp(username, undefined, k);
     if (signupResult.success) {
       // Immediately login after signup
       const postSignupLogin = await this.core.login(username, "", k);

@@ -394,7 +394,7 @@ export class NostrConnectorPlugin extends BasePlugin {
             // Set authentication method to nostr before signup
             core.setAuthMethod("nostr");
             // Usa le chiavi derivate per signup
-            const signupResult = await core.signUp(credentials.username, "", "", k);
+            const signupResult = await core.signUp(credentials.username, undefined, k);
             if (signupResult.success) {
                 // Dopo la creazione, autentica subito
                 const authResult = await core.login(credentials.username, "", k);

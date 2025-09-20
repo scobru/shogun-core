@@ -579,7 +579,11 @@ export class NostrConnectorPlugin
       core.setAuthMethod("nostr");
 
       // Usa le chiavi derivate per signup
-      const signupResult = await core.signUp(credentials.username, "", "", k);
+      const signupResult = await core.signUp(
+        credentials.username,
+        undefined,
+        k,
+      );
 
       if (signupResult.success) {
         // Dopo la creazione, autentica subito

@@ -5,6 +5,7 @@
  * - Direct authentication through Gun.user()
  */
 import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
+import type { GunInstance, GunUserInstance, GunChain } from "./improved-types";
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
@@ -14,25 +15,25 @@ import "gun/lib/radisk";
 import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
-import "gun/lib/evict";
-import "gun/lib/les";
+import "gun/lib/wire";
+import "gun/lib/axe";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
-import type { IGunUserInstance, IGunInstance, IGunChain, ISEAPair } from "gun/types";
+import type { IGunInstance, ISEAPair } from "gun/types";
 import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 declare class DataBase {
-    gun: IGunInstance<any>;
-    user: IGunUserInstance<any> | null;
+    gun: GunInstance;
+    user: GunUserInstance | null;
     crypto: typeof crypto;
     sea: typeof SEA;
-    node: IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
+    node: GunChain;
     private readonly onAuthCallbacks;
     private readonly eventEmitter;
     private _rxjs?;
-    constructor(gun: IGunInstance<any>, appScope?: string);
+    constructor(gun: GunInstance, appScope?: string);
     /**
      * Initialize the GunInstance asynchronously
      * This method should be called after construction to perform async operations
@@ -97,7 +98,7 @@ declare class DataBase {
      * Gets the Gun instance
      * @returns Gun instance
      */
-    getGun(): IGunInstance<any>;
+    getGun(): GunInstance;
     /**
      * Gets the current user
      * @returns Current user object or null
@@ -169,10 +170,6 @@ declare class DataBase {
      */
     private validateSignupCredentials;
     /**
-     * Checks if user exists by attempting authentication
-     */
-    private checkUserExistence;
-    /**
      * Creates a new user in Gun
      */
     private createNewUser;
@@ -193,6 +190,87 @@ declare class DataBase {
      */
     private createNewUserWithPair;
     private runPostAuthOnAuthResult;
+    /**
+     * Sets up comprehensive user tracking system for agile user lookup
+     * Creates multiple indexes for efficient user discovery
+     */
+    private setupComprehensiveUserTracking;
+    /**
+     * Creates alias index following GunDB pattern: ~@alias -> userPub
+     */
+    private createAliasIndex;
+    /**
+     * Creates username mapping: usernames/alias -> userPub
+     */
+    private createUsernameMapping;
+    /**
+     * Creates user registry: users/userPub -> user data
+     */
+    private createUserRegistry;
+    /**
+     * Creates reverse lookup: userPub -> alias
+     */
+    private createReverseLookup;
+    /**
+     * Creates epub index: epubKeys/epub -> userPub
+     */
+    private createEpubIndex;
+    /**
+     * Creates user metadata in user's own node
+     */
+    private createUserMetadata;
+    /**
+     * Gets user information by alias using the comprehensive tracking system
+     * @param alias Username/alias to lookup
+     * @returns Promise resolving to user information or null if not found
+     */
+    getUserByAlias(alias: string): Promise<{
+        userPub: string;
+        epub: string | null;
+        username: string;
+        registeredAt: number;
+        lastSeen: number;
+    } | null>;
+    /**
+     * Gets user information by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user information or null if not found
+     */
+    getUserDataByPub(userPub: string): Promise<{
+        userPub: string;
+        epub: string | null;
+        username: string;
+        registeredAt: number;
+        lastSeen: number;
+    } | null>;
+    /**
+     * Gets user public key by encryption public key (epub)
+     * @param epub User's encryption public key
+     * @returns Promise resolving to user public key or null if not found
+     */
+    getUserPubByEpub(epub: string): Promise<string | null>;
+    /**
+     * Gets user alias by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user alias or null if not found
+     */
+    getUserAliasByPub(userPub: string): Promise<string | null>;
+    /**
+     * Gets all registered users (for admin purposes)
+     * @returns Promise resolving to array of user information
+     */
+    getAllRegisteredUsers(): Promise<Array<{
+        userPub: string;
+        epub: string | null;
+        username: string;
+        registeredAt: number;
+        lastSeen: number;
+    }>>;
+    /**
+     * Updates user's last seen timestamp
+     * @param userPub User's public key
+     */
+    updateUserLastSeen(userPub: string): Promise<void>;
     /**
      * Performs authentication with Gun
      */

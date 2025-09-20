@@ -558,7 +558,7 @@ export class WebauthnPlugin
       }
 
       // Use pair-based authentication instead of password
-      return await core.signUp(username, "", "", pair);
+      return await core.signUp(username, undefined, pair);
     } catch (error: any) {
       console.error(`Error during WebAuthn registration: ${error}`);
       ErrorHandler.handle(

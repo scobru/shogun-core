@@ -1,0 +1,270 @@
+import { IShogunCore, ShogunCoreConfig } from "../interfaces/shogun";
+import { ShogunStorage } from "../storage/storage";
+import { ErrorHandler, ShogunError } from "../utils/errorHandler";
+import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
+import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
+import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
+import { OAuthPlugin } from "../plugins/oauth/oauthPlugin";
+import {
+  restrictedPut,
+  DataBase,
+  RxJS,
+  createGun,
+  Gun,
+  derive,
+} from "../gundb";
+
+/**
+ * Handles initialization of ShogunCore components
+ */
+export class CoreInitializer {
+  private core: IShogunCore;
+
+  constructor(core: IShogunCore) {
+    this.core = core;
+  }
+
+  /**
+   * Initialize the Shogun SDK
+   * @param config - SDK Configuration object
+   * @description Creates a new instance of ShogunCore with the provided configuration.
+   * Initializes all required components including storage, event emitter, GunInstance connection,
+   * and plugin system.
+   */
+  async initialize(config: ShogunCoreConfig): Promise<void> {
+    // Polyfill console for environments where it might be missing
+    if (typeof console === "undefined") {
+      (global as any).console = {
+        log: () => {},
+        warn: () => {},
+        error: () => {},
+        info: () => {},
+        debug: () => {},
+      };
+    }
+
+    // Initialize storage
+    (this.core as any).storage = new ShogunStorage();
+
+    // Setup error handler
+    ErrorHandler.addListener((error: ShogunError) => {
+      this.core.emit("error", {
+        action: error.code,
+        message: error.message,
+        type: error.type,
+      });
+    });
+
+    // Setup Gun instance
+    await this.initializeGun(config);
+
+    // Setup Gun user
+    await this.initializeGunUser();
+
+    // Setup Gun event forwarding
+    this.setupGunEventForwarding();
+
+    // Setup wallet derivation
+    this.setupWalletDerivation();
+
+    // Initialize RxJS
+    (this.core as any).rx = new RxJS((this.core as any)._gun);
+
+    // Register built-in plugins
+    this.registerBuiltinPlugins(config);
+
+    // Initialize async components
+    await this.initializeAsync();
+  }
+
+  /**
+   * Initialize Gun instance
+   */
+  private async initializeGun(config: ShogunCoreConfig): Promise<void> {
+    if (config.gunOptions.authToken) {
+      restrictedPut(Gun, config.gunOptions.authToken);
+    }
+
+    try {
+      if (config.gunInstance) {
+        (this.core as any)._gun = config.gunInstance;
+      } else {
+        (this.core as any)._gun = createGun(config.gunOptions);
+      }
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error creating Gun instance:", error);
+      }
+      throw new Error(`Failed to create Gun instance: ${error}`);
+    }
+
+    try {
+      (this.core as any).db = new DataBase(
+        (this.core as any)._gun,
+        config.gunOptions.scope || "",
+      );
+      (this.core as any)._gun = (this.core as any).db.gun;
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error initializing GunInstance:", error);
+      }
+      throw new Error(`Failed to initialize GunInstance: ${error}`);
+    }
+  }
+
+  /**
+   * Initialize Gun user
+   */
+  private async initializeGunUser(): Promise<void> {
+    try {
+      (this.core as any)._user = (this.core as any)._gun
+        .user()
+        .recall({ sessionStorage: true });
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error initializing Gun user:", error);
+      }
+      throw new Error(`Failed to initialize Gun user: ${error}`);
+    }
+
+    (this.core as any)._gun.on("auth", (user: any) => {
+      (this.core as any)._user = (this.core as any)._gun
+        .user()
+        .recall({ sessionStorage: true });
+      this.core.emit("auth:login", {
+        userPub: user.pub,
+        method: "password" as const,
+      });
+    });
+  }
+
+  /**
+   * Setup Gun event forwarding
+   */
+  private setupGunEventForwarding(): void {
+    const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"] as const;
+    gunEvents.forEach((eventName) => {
+      (this.core as any).db.on(eventName, (data: any) => {
+        this.core.emit(eventName, data);
+      });
+    });
+
+    const peerEvents = [
+      "gun:peer:add",
+      "gun:peer:remove",
+      "gun:peer:connect",
+      "gun:peer:disconnect",
+    ] as const;
+
+    peerEvents.forEach((eventName) => {
+      (this.core as any).db.on(eventName, (data: any) => {
+        this.core.emit(eventName, data);
+      });
+    });
+  }
+
+  /**
+   * Setup wallet derivation
+   */
+  private setupWalletDerivation(): void {
+    (this.core as any)._gun.on("auth", async (user: any) => {
+      if (!user) return;
+      const priv = (user as any)._?.sea?.epriv;
+      const pub = (user as any)._?.sea?.epub;
+      (this.core as any).wallets = await derive(priv, pub, {
+        includeSecp256k1Bitcoin: true,
+        includeSecp256k1Ethereum: true,
+      });
+    });
+  }
+
+  /**
+   * Register built-in plugins based on configuration
+   */
+  private registerBuiltinPlugins(config: ShogunCoreConfig): void {
+    try {
+      // Register OAuth plugin if configuration is provided
+      if (config.oauth) {
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "OAuth plugin will be registered with provided configuration",
+          );
+        }
+
+        const oauthPlugin = new OAuthPlugin();
+        if (typeof (oauthPlugin as any).configure === "function") {
+          (oauthPlugin as any).configure(config.oauth);
+        }
+        (this.core as any).pluginManager.register(oauthPlugin);
+      }
+
+      // Register WebAuthn plugin if configuration is provided
+      if (config.webauthn) {
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "WebAuthn plugin will be registered with provided configuration",
+          );
+        }
+
+        const webauthnPlugin = new WebauthnPlugin();
+        if (typeof (webauthnPlugin as any).configure === "function") {
+          (webauthnPlugin as any).configure(config.webauthn);
+        }
+        (this.core as any).pluginManager.register(webauthnPlugin);
+      }
+
+      // Register Web3 plugin if configuration is provided
+      if (config.web3) {
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "Web3 plugin will be registered with provided configuration",
+          );
+        }
+
+        const web3Plugin = new Web3ConnectorPlugin();
+        if (typeof (web3Plugin as any).configure === "function") {
+          (web3Plugin as any).configure(config.web3);
+        }
+        (this.core as any).pluginManager.register(web3Plugin);
+      }
+
+      // Register Nostr plugin if configuration is provided
+      if (config.nostr) {
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "Nostr plugin will be registered with provided configuration",
+          );
+        }
+
+        const nostrPlugin = new NostrConnectorPlugin();
+        if (typeof (nostrPlugin as any).configure === "function") {
+          (nostrPlugin as any).configure(config.nostr);
+        }
+        (this.core as any).pluginManager.register(nostrPlugin);
+      }
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error registering builtin plugins:", error);
+      }
+    }
+  }
+
+  /**
+   * Initialize async components
+   */
+  private async initializeAsync(): Promise<void> {
+    try {
+      await (this.core as any).db.initialize();
+
+      this.core.emit("debug", {
+        action: "core_initialized",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Error during Shogun Core initialization:", error);
+      }
+      throw error;
+    }
+  }
+}

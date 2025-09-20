@@ -4,8 +4,8 @@ import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./interfaces/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
-import { IGunUserInstance, IGunInstance, DataBase, RxJS } from "./gundb";
 import { ISEAPair } from "gun";
+import { DataBase, RxJS, GunInstance, GunUserInstance } from "./gundb";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -26,10 +26,11 @@ export declare class ShogunCore implements IShogunCore {
     rx: RxJS;
     private _gun;
     private _user;
-    private readonly eventEmitter;
-    private readonly plugins;
-    private currentAuthMethod?;
     wallets: Wallets | undefined;
+    private pluginManager;
+    private authManager;
+    private eventManager;
+    private coreInitializer;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -39,20 +40,15 @@ export declare class ShogunCore implements IShogunCore {
      */
     constructor(config: ShogunCoreConfig);
     /**
-     * Initialize the Shogun SDK asynchronously
-     * This method handles initialization tasks that require async operations
-     */
-    initialize(): Promise<void>;
-    /**
      * Access to the Gun instance
      * @returns The Gun instance
      */
-    get gun(): IGunInstance<any>;
+    get gun(): GunInstance;
     /**
      * Access to the current user
      * @returns The current Gun user instance
      */
-    get user(): IGunUserInstance<any> | null;
+    get user(): GunUserInstance | null;
     /**
      * Gets the current user information
      * @returns Current user object or null
@@ -61,16 +57,6 @@ export declare class ShogunCore implements IShogunCore {
         pub: string;
         user?: any;
     } | null;
-    /**
-     * Setup event forwarding from GunInstance to main event emitter
-     * @private
-     */
-    private setupGunEventForwarding;
-    /**
-     * Register built-in plugins based on configuration
-     * @private
-     */
-    private registerBuiltinPlugins;
     /**
      * Registers a plugin with the Shogun SDK
      * @param plugin Plugin instance to register
@@ -82,16 +68,6 @@ export declare class ShogunCore implements IShogunCore {
      * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName: string): void;
-    /**
-     * Internal method to register a plugin
-     * @param plugin Plugin instance to register
-     */
-    private registerPlugin;
-    /**
-     * Internal method to unregister a plugin
-     * @param name Name of the plugin to unregister
-     */
-    private unregisterPlugin;
     /**
      * Retrieve a registered plugin by name
      * @param name Name of the plugin
@@ -221,10 +197,7 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): ShogunPlugin | {
-        login: (username: string, password: string) => Promise<AuthResult>;
-        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
-    } | undefined;
+    getAuthenticationMethod(type: AuthMethod): unknown;
     /**
      * Retrieve recent errors logged by the system
      * @param count - Number of errors to retrieve (default: 10)
@@ -265,13 +238,13 @@ export declare class ShogunCore implements IShogunCore {
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password
-     * @param passwordConfirmation - Password confirmation
+     * @param email - Email (optional)
      * @param pair - Pair of keys
      * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    signUp(username: string, password?: string, email?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
+    signUp(username: string, password?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     /**
      * Emits an event through the core's event emitter.
      * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
@@ -324,11 +297,5 @@ export declare class ShogunCore implements IShogunCore {
      */
     saveCredentials(credentials: any): Promise<void>;
     getIsLoggedIn(): boolean;
-}
-declare global {
-    interface Window {
-        SHOGUN_CORE: (config: ShogunCoreConfig) => ShogunCore;
-        SHOGUN_CORE_CLASS: typeof ShogunCore;
-    }
 }
 export default ShogunCore;

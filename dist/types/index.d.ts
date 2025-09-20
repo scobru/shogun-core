@@ -1,12 +1,14 @@
 import { ShogunCore } from "./core";
 import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/db";
 import { SEA, RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import { SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, GunInstance, GunUserInstance, TypedGunOperationResult, TypedAuthResult } from "./gundb";
 import Gun from "./gundb/db";
 export * from "./utils/errorHandler";
 export * from "./plugins";
 export * from "./interfaces/shogun";
 export type * from "./interfaces/plugin";
-export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, };
-export { SEA, RxJS, crypto, derive, GunErrors, DataBase };
+export * from "./config/simplified-config";
+export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, GunInstance, GunUserInstance, TypedGunOperationResult, TypedAuthResult, };
+export { SEA, RxJS, crypto, derive, GunErrors, DataBase, SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, };
 export { Gun };
 export { ShogunCore };

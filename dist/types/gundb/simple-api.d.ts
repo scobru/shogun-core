@@ -1,0 +1,90 @@
+/**
+ * Simplified API layer to reduce complexity for common use cases
+ * Provides quick-start methods that wrap the full DataBase functionality
+ */
+import { DataBase } from "./db";
+/**
+ * Simple API wrapper that provides common operations with minimal complexity
+ */
+export declare class SimpleGunAPI {
+    private db;
+    constructor(db: DataBase);
+    /**
+     * Quick data operations - simplified interface
+     */
+    get<T = unknown>(path: string): Promise<T | null>;
+    put<T = unknown>(path: string, data: T): Promise<boolean>;
+    set<T = unknown>(path: string, data: T): Promise<boolean>;
+    remove(path: string): Promise<boolean>;
+    /**
+     * Quick authentication - simplified interface
+     */
+    login(username: string, password: string): Promise<{
+        userPub: string;
+        username: string;
+    } | null>;
+    signup(username: string, password: string): Promise<{
+        userPub: string;
+        username: string;
+    } | null>;
+    logout(): void;
+    isLoggedIn(): boolean;
+    /**
+     * Quick user data operations - simplified interface
+     */
+    getUserData<T = unknown>(path: string): Promise<T | null>;
+    putUserData<T = unknown>(path: string, data: T): Promise<boolean>;
+    setUserData<T = unknown>(path: string, data: T): Promise<boolean>;
+    removeUserData(path: string): Promise<boolean>;
+    /**
+     * Quick utility methods
+     */
+    getCurrentUser(): {
+        pub: string;
+        username?: string;
+    } | null;
+    userExists(alias: string): Promise<boolean>;
+    getUser(alias: string): Promise<{
+        userPub: string;
+        username: string;
+    } | null>;
+    /**
+     * Advanced user space operations
+     */
+    getAllUserData(): Promise<Record<string, unknown> | null>;
+    updateProfile(profileData: {
+        name?: string;
+        email?: string;
+        bio?: string;
+        avatar?: string;
+        [key: string]: unknown;
+    }): Promise<boolean>;
+    getProfile(): Promise<Record<string, unknown> | null>;
+    saveSettings(settings: Record<string, unknown>): Promise<boolean>;
+    getSettings(): Promise<Record<string, unknown> | null>;
+    savePreferences(preferences: Record<string, unknown>): Promise<boolean>;
+    getPreferences(): Promise<Record<string, unknown> | null>;
+    createCollection<T = unknown>(collectionName: string, items: Record<string, T>): Promise<boolean>;
+    addToCollection<T = unknown>(collectionName: string, itemId: string, item: T): Promise<boolean>;
+    getCollection(collectionName: string): Promise<Record<string, unknown> | null>;
+    removeFromCollection(collectionName: string, itemId: string): Promise<boolean>;
+}
+/**
+ * Factory function to create a simple API instance
+ */
+export declare function createSimpleAPI(db: DataBase): SimpleGunAPI;
+/**
+ * Quick start helper - creates a simple API with minimal configuration
+ */
+export declare class QuickStart {
+    private db;
+    private simpleAPI;
+    constructor(gunInstance: any, appScope?: string);
+    init(): Promise<void>;
+    get api(): SimpleGunAPI;
+    get database(): DataBase;
+}
+/**
+ * Global helper for quick setup
+ */
+export declare function quickStart(gunInstance: any, appScope?: string): QuickStart;

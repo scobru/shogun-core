@@ -384,7 +384,7 @@ export class WebauthnPlugin extends BasePlugin {
                 throw new Error("Failed to generate SEA pair from WebAuthn credentials");
             }
             // Use pair-based authentication instead of password
-            return await core.signUp(username, "", "", pair);
+            return await core.signUp(username, undefined, pair);
         }
         catch (error) {
             console.error(`Error during WebAuthn registration: ${error}`);

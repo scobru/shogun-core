@@ -13,7 +13,7 @@ import type {
 export type GunType = (config?: any) => IGunInstance<any>; // Gun is a constructor function
 export type SEAType = any; // Using any for SEA to avoid complex type conflicts
 
-// User types
+// User types - keeping legacy types for backward compatibility
 export type GunUser = IGunUserInstance<any>;
 export type UserInfo = {
   pub: string;

@@ -12,8 +12,8 @@ import "gun/lib/radisk";
 import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
-import "gun/lib/evict";
-import "gun/lib/les";
+import "gun/lib/wire";
+import "gun/lib/axe";
 import { restrictedPut } from "./restricted-put";
 import derive from "./derive";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
@@ -335,11 +335,8 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).once((data) => {
-                resolve(data);
-            });
-        });
+        const node = await this.navigateToPath(this.gun, path).then();
+        return node;
     }
     /**
      * Puts data at the specified path
@@ -348,14 +345,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).put(data, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).put(data).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Sets data at the specified path
@@ -364,14 +358,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).set(data, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).set(data).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Removes data at the specified path
@@ -379,14 +370,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).put(null, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).put(null).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Checks if a user is currently logged in
@@ -601,37 +589,25 @@ class DataBase {
         }
         // If using pair authentication, skip password validation
         if (pair) {
+            if (!pair.pub ||
+                !pair.priv ||
+                !pair.epub ||
+                !pair.epriv) {
+                return {
+                    valid: false,
+                    error: "Invalid pair provided",
+                };
+            }
+            if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+                return {
+                    valid: false,
+                    error: "Invalid pair provided",
+                };
+            }
             return { valid: true };
         }
         // Validate password strength
         return this.validatePasswordStrength(password);
-    }
-    /**
-     * Checks if user exists by attempting authentication
-     */
-    async checkUserExistence(username, password, pair) {
-        return new Promise((resolve) => {
-            if (pair) {
-                this.gun.user().auth(pair, (ack) => {
-                    if (ack.err) {
-                        resolve({ exists: false, error: ack.err });
-                    }
-                    else {
-                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                    }
-                });
-            }
-            else {
-                this.gun.user().auth(username, password, (ack) => {
-                    if (ack.err) {
-                        resolve({ exists: false, error: ack.err });
-                    }
-                    else {
-                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                    }
-                });
-            }
-        });
     }
     /**
      * Creates a new user in Gun
@@ -786,7 +762,6 @@ class DataBase {
             if (!validation.valid) {
                 return { success: false, error: validation.error };
             }
-            // Create new user - use different method based on authentication type
             let createResult;
             if (pair) {
                 // For Web3/plugin authentication, use pair-based creation
@@ -911,105 +886,26 @@ class DataBase {
                 throw new Error("Username cannot be empty");
             }
             console.log(`Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`);
-            const existingUser = await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    console.warn(`⚠️ Timeout getting user data for ${userPub} - proceeding with null`);
-                    resolve(null);
-                }, 5000); // 5 second timeout
-                this.gun.get(userPub).once((data) => {
-                    clearTimeout(timeout);
-                    resolve(data);
-                });
-            });
-            // Check if user already has metadata to avoid overwriting
-            if (!existingUser) {
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout saving user metadata for ${userPub} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.gun
-                            .get(userPub)
-                            .put({ username: normalizedUsername }, (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                console.error(`Error saving user metadata: ${ack.err}`);
-                                reject(ack.err);
-                            }
-                            else {
-                                // User metadata saved successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (metadataError) {
-                    console.error(`Error saving user metadata: ${metadataError}`);
-                    // Don't throw here, continue with other operations
-                }
-                // Create username mapping
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout creating username mapping for ${normalizedUsername} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.node
-                            .get("usernames")
-                            .get(normalizedUsername)
-                            .put(userPub, (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                reject(ack.err);
-                            }
-                            else {
-                                // Username mapping created successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (mappingError) {
-                    console.error(`Error creating username mapping: ${mappingError}`);
-                    // Don't throw here, continue with other operations
-                }
-                // Add user to users collection
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout adding user to collection for ${userPub} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.node.get("users").set(this.gun.get(userPub), (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                reject(ack.err);
-                            }
-                            else {
-                                // User added to collection successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (collectionError) {
-                    console.error(`Error adding user to collection: ${collectionError}`);
-                    // Don't throw here, continue with other operations
-                }
-            }
+            const existingUser = await this.gun.get(userPub).once().then();
+            const isNewUser = !existingUser || !existingUser.username;
+            // Get user's encryption public key (epub) for comprehensive tracking
+            const userInstance = this.gun.user();
+            const userSea = userInstance?._?.sea;
+            const epub = userSea?.epub || null;
+            // Enhanced user tracking system
+            await this.setupComprehensiveUserTracking(normalizedUsername, userPub, epub, isNewUser);
             return {
                 success: true,
                 userPub: userPub,
                 username: normalizedUsername,
-                isNewUser: !existingUser || !existingUser.username,
+                isNewUser: isNewUser,
                 // Get the SEA pair from the user object
-                sea: this.gun.user()?._?.sea
+                sea: userSea
                     ? {
-                        pub: this.gun.user()._?.sea.pub,
-                        priv: this.gun.user()._?.sea.priv,
-                        epub: this.gun.user()._?.sea.epub,
-                        epriv: this.gun.user()._?.sea.epriv,
+                        pub: userSea.pub,
+                        priv: userSea.priv,
+                        epub: userSea.epub,
+                        epriv: userSea.epriv,
                     }
                     : undefined,
             };
@@ -1020,6 +916,365 @@ class DataBase {
                 success: false,
                 error: `Post-authentication setup failed: ${error}`,
             };
+        }
+    }
+    /**
+     * Sets up comprehensive user tracking system for agile user lookup
+     * Creates multiple indexes for efficient user discovery
+     */
+    async setupComprehensiveUserTracking(username, userPub, epub, isNewUser) {
+        try {
+            // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
+            await this.createAliasIndex(username, userPub);
+            // 2. Create username mapping: usernames/alias -> userPub
+            await this.createUsernameMapping(username, userPub);
+            // 3. Create user registry: users/userPub -> user data
+            await this.createUserRegistry(username, userPub, epub);
+            // 4. Create reverse lookup: userPub -> alias
+            await this.createReverseLookup(username, userPub);
+            // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
+            if (epub) {
+                await this.createEpubIndex(epub, userPub);
+            }
+            // 6. Create user metadata in user's own node
+            await this.createUserMetadata(username, userPub, epub);
+            console.log(`Comprehensive user tracking setup completed for ${username}`);
+        }
+        catch (error) {
+            console.error(`Error in comprehensive user tracking setup: ${error}`);
+            // Don't throw - continue with other operations
+        }
+    }
+    /**
+     * Creates alias index following GunDB pattern: ~@alias -> userPub
+     */
+    async createAliasIndex(username, userPub) {
+        try {
+            const aliasNode = this.gun.get(`~@${username}`);
+            const ack = await aliasNode
+                .put({
+                "~pubKeyOfUser": this.gun.get(userPub),
+            })
+                .then();
+            if (ack.err) {
+                console.error(`Error creating alias index: ${ack.err}`);
+            }
+            else {
+                console.log(`Alias index created: ~@${username} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating alias index: ${error}`);
+        }
+    }
+    /**
+     * Creates username mapping: usernames/alias -> userPub
+     */
+    async createUsernameMapping(username, userPub) {
+        try {
+            const ack = await this.node
+                .get("usernames")
+                .get(username)
+                .put(userPub)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating username mapping: ${ack.err}`);
+            }
+            else {
+                console.log(`Username mapping created: ${username} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating username mapping: ${error}`);
+        }
+    }
+    /**
+     * Creates user registry: users/userPub -> user data
+     */
+    async createUserRegistry(username, userPub, epub) {
+        try {
+            const userData = {
+                username: username,
+                userPub: userPub,
+                epub: epub,
+                registeredAt: Date.now(),
+                lastSeen: Date.now(),
+            };
+            const ack = await this.node
+                .get("users")
+                .get(userPub)
+                .put(userData)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating user registry: ${ack.err}`);
+            }
+            else {
+                console.log(`User registry created: ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating user registry: ${error}`);
+        }
+    }
+    /**
+     * Creates reverse lookup: userPub -> alias
+     */
+    async createReverseLookup(username, userPub) {
+        try {
+            const ack = await this.node
+                .get("userAliases")
+                .get(userPub)
+                .put(username)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating reverse lookup: ${ack.err}`);
+            }
+            else {
+                console.log(`Reverse lookup created: ${userPub} -> ${username}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating reverse lookup: ${error}`);
+        }
+    }
+    /**
+     * Creates epub index: epubKeys/epub -> userPub
+     */
+    async createEpubIndex(epub, userPub) {
+        try {
+            const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
+            if (ack.err) {
+                console.error(`Error creating epub index: ${ack.err}`);
+            }
+            else {
+                console.log(`Epub index created: ${epub} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating epub index: ${error}`);
+        }
+    }
+    /**
+     * Creates user metadata in user's own node
+     */
+    async createUserMetadata(username, userPub, epub) {
+        try {
+            const userMetadata = {
+                username: username,
+                epub: epub,
+                registeredAt: Date.now(),
+                lastSeen: Date.now(),
+            };
+            const ack = await this.gun.get(userPub).put(userMetadata).then();
+            if (ack.err) {
+                console.error(`Error creating user metadata: ${ack.err}`);
+            }
+            else {
+                console.log(`User metadata created for ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating user metadata: ${error}`);
+        }
+    }
+    /**
+     * Gets user information by alias using the comprehensive tracking system
+     * @param alias Username/alias to lookup
+     * @returns Promise resolving to user information or null if not found
+     */
+    async getUserByAlias(alias) {
+        try {
+            const normalizedAlias = alias.trim().toLowerCase();
+            if (!normalizedAlias) {
+                return null;
+            }
+            // Method 1: Try GunDB standard alias lookup (~@alias)
+            try {
+                const aliasData = await this.gun
+                    .get(`~@${normalizedAlias}`)
+                    .once()
+                    .then();
+                if (aliasData && aliasData["~pubKeyOfUser"]) {
+                    const userPub = aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
+                    if (userPub) {
+                        const userData = await this.getUserDataByPub(userPub);
+                        if (userData) {
+                            return userData;
+                        }
+                    }
+                }
+            }
+            catch (error) {
+                console.log(`GunDB alias lookup failed for ${normalizedAlias}:`, error);
+            }
+            // Method 2: Try username mapping (usernames/alias -> userPub)
+            try {
+                const userPub = await this.node
+                    .get("usernames")
+                    .get(normalizedAlias)
+                    .once()
+                    .then();
+                if (userPub) {
+                    const userData = await this.getUserDataByPub(userPub);
+                    if (userData) {
+                        return userData;
+                    }
+                }
+            }
+            catch (error) {
+                console.log(`Username mapping lookup failed for ${normalizedAlias}:`, error);
+            }
+            return null;
+        }
+        catch (error) {
+            console.error(`Error looking up user by alias ${alias}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user information by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user information or null if not found
+     */
+    async getUserDataByPub(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return null;
+            }
+            // Method 1: Try user registry (users/userPub -> user data)
+            try {
+                const userData = await this.node
+                    .get("users")
+                    .get(userPub)
+                    .once()
+                    .then();
+                if (userData && userData.username) {
+                    return {
+                        userPub: userData.userPub || userPub,
+                        epub: userData.epub || null,
+                        username: userData.username,
+                        registeredAt: userData.registeredAt || 0,
+                        lastSeen: userData.lastSeen || 0,
+                    };
+                }
+            }
+            catch (error) {
+                console.log(`User registry lookup failed for ${userPub}:`, error);
+            }
+            // Method 2: Try user's own node
+            try {
+                const userNodeData = await this.gun.get(userPub).once().then();
+                if (userNodeData && userNodeData.username) {
+                    return {
+                        userPub: userPub,
+                        epub: userNodeData.epub || null,
+                        username: userNodeData.username,
+                        registeredAt: userNodeData.registeredAt || 0,
+                        lastSeen: userNodeData.lastSeen || 0,
+                    };
+                }
+            }
+            catch (error) {
+                console.log(`User node lookup failed for ${userPub}:`, error);
+            }
+            return null;
+        }
+        catch (error) {
+            console.error(`Error looking up user data by pub ${userPub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user public key by encryption public key (epub)
+     * @param epub User's encryption public key
+     * @returns Promise resolving to user public key or null if not found
+     */
+    async getUserPubByEpub(epub) {
+        try {
+            if (!epub || typeof epub !== "string") {
+                return null;
+            }
+            const userPub = await this.node.get("epubKeys").get(epub).once().then();
+            return userPub || null;
+        }
+        catch (error) {
+            console.error(`Error looking up user pub by epub ${epub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user alias by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user alias or null if not found
+     */
+    async getUserAliasByPub(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return null;
+            }
+            const alias = await this.node
+                .get("userAliases")
+                .get(userPub)
+                .once()
+                .then();
+            return alias || null;
+        }
+        catch (error) {
+            console.error(`Error looking up user alias by pub ${userPub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets all registered users (for admin purposes)
+     * @returns Promise resolving to array of user information
+     */
+    async getAllRegisteredUsers() {
+        try {
+            const users = [];
+            // Get all users from the users registry
+            const usersNode = this.node.get("users");
+            // Note: This is a simplified approach. In a real implementation,
+            // you might want to use Gun's map functionality or iterate through
+            // known user public keys
+            return users;
+        }
+        catch (error) {
+            console.error(`Error getting all registered users:`, error);
+            return [];
+        }
+    }
+    /**
+     * Updates user's last seen timestamp
+     * @param userPub User's public key
+     */
+    async updateUserLastSeen(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return;
+            }
+            const timestamp = Date.now();
+            // Update in user registry
+            try {
+                await this.node
+                    .get("users")
+                    .get(userPub)
+                    .get("lastSeen")
+                    .put(timestamp)
+                    .then();
+            }
+            catch (error) {
+                console.log(`Failed to update lastSeen in user registry:`, error);
+            }
+            // Update in user's own node
+            try {
+                await this.gun.get(userPub).get("lastSeen").put(timestamp).then();
+            }
+            catch (error) {
+                console.log(`Failed to update lastSeen in user node:`, error);
+            }
+        }
+        catch (error) {
+            console.error(`Error updating user last seen for ${userPub}:`, error);
         }
     }
     /**
@@ -1106,6 +1361,14 @@ class DataBase {
             catch (postAuthError) {
                 console.error(`Post-auth error during login: ${postAuthError}`);
                 // Continue with login even if post-auth fails
+            }
+            // Update user's last seen timestamp
+            try {
+                await this.updateUserLastSeen(userPub);
+            }
+            catch (lastSeenError) {
+                console.error(`Error updating last seen: ${lastSeenError}`);
+                // Continue with login even if last seen update fails
             }
             // Save credentials for future sessions
             try {
@@ -1278,20 +1541,14 @@ class DataBase {
                 questions: JSON.stringify(securityQuestions),
                 hint: encryptedHint,
             };
-            await new Promise((resolve, reject) => {
-                this.node.get(userPub)
-                    .get("security")
-                    .put(securityPayload, (ack) => {
-                    if (ack.err) {
-                        console.error("Error saving security data to public graph:", ack.err);
-                        reject(new Error(ack.err));
-                    }
-                    else {
-                        // console.log(`Security data saved to public graph for ${userPub}`);
-                        resolve();
-                    }
-                });
-            });
+            const ack = await this.node.get(userPub)
+                .get("security")
+                .put(securityPayload)
+                .then();
+            if (ack.err) {
+                console.error("Error saving security data to public graph:", ack.err);
+                throw new Error(ack.err);
+            }
             return { success: true };
         }
         catch (error) {
@@ -1310,28 +1567,20 @@ class DataBase {
         try {
             // Find the user's data using direct lookup
             const normalizedUsername = username.trim().toLowerCase();
-            const userPub = await new Promise((resolve) => {
-                this.node
-                    .get("usernames")
-                    .get(normalizedUsername)
-                    .once((data) => {
-                    resolve(data || null);
-                });
-            });
+            const userPub = (await this.node
+                .get("usernames")
+                .get(normalizedUsername)
+                .once()
+                .then()) || null;
             if (!userPub) {
                 return { success: false, error: "User not found" };
             }
             // console.log(`Found user public key for password recovery: ${userPub}`);
             // Access the user's security data directly from their public key node
-            const securityData = await new Promise((resolve) => {
-                this.node.get(userPub).get("security").once((data) => {
-                    // console.log(
-                    //   `Retrieved security data for user ${username}:`,
-                    //   data ? "found" : "not found",
-                    // );
-                    resolve(data);
-                });
-            });
+            const securityData = await this.node.get(userPub)
+                .get("security")
+                .once()
+                .then();
             if (!securityData || !securityData.hint) {
                 return {
                     success: false,
@@ -1401,21 +1650,14 @@ class DataBase {
      * @returns Promise that resolves when the data is saved
      */
     async putUserData(path, data) {
-        return new Promise((resolve, reject) => {
-            const user = this.gun.user();
-            if (!user.is) {
-                reject(new Error("User not authenticated"));
-                return;
-            }
-            this.navigateToPath(user, path).put(data, (ack) => {
-                if (ack.err) {
-                    reject(new Error(ack.err));
-                }
-                else {
-                    resolve(ack);
-                }
-            });
-        });
+        const user = this.gun.user();
+        if (!user.is) {
+            throw new Error("User not authenticated");
+        }
+        const ack = await this.navigateToPath(user, path).put(data).then();
+        if (ack.err) {
+            throw new Error(ack.err);
+        }
     }
     /**
      * Gets user data from the specified path
@@ -1423,47 +1665,34 @@ class DataBase {
      * @returns Promise that resolves with the data
      */
     async getUserData(path) {
-        return new Promise((resolve, reject) => {
-            // Validazione del path
-            if (!path || typeof path !== "string") {
-                const error = "Path must be a non-empty string";
-                reject(new Error(error));
-                return;
+        // Validazione del path
+        if (!path || typeof path !== "string") {
+            throw new Error("Path must be a non-empty string");
+        }
+        const user = this.gun.user();
+        if (!user.is) {
+            throw new Error("User not authenticated");
+        }
+        try {
+            const data = await this.navigateToPath(user, path).once().then();
+            // Gestisci i riferimenti GunDB
+            if (data && typeof data === "object" && data["#"]) {
+                // È un riferimento GunDB, carica i dati effettivi
+                const referencePath = data["#"];
+                const actualData = await this.navigateToPath(this.gun, referencePath)
+                    .once()
+                    .then();
+                return actualData;
             }
-            const user = this.gun.user();
-            if (!user.is) {
-                const error = "User not authenticated";
-                reject(new Error(error));
-                return;
+            else {
+                // Dati diretti, restituisci così come sono
+                return data;
             }
-            // Timeout per evitare attese infinite
-            const timeout = setTimeout(() => {
-                const error = "Operation timeout";
-                reject(new Error(error));
-            }, CONFIG.TIMEOUTS.USER_DATA_OPERATION); // 10 secondi di timeout
-            try {
-                this.navigateToPath(user, path).once((data) => {
-                    clearTimeout(timeout);
-                    // Gestisci i riferimenti GunDB
-                    if (data && typeof data === "object" && data["#"]) {
-                        // È un riferimento GunDB, carica i dati effettivi
-                        const referencePath = data["#"];
-                        this.navigateToPath(this.gun, referencePath).once((actualData) => {
-                            resolve(actualData);
-                        });
-                    }
-                    else {
-                        // Dati diretti, restituisci così come sono
-                        resolve(data);
-                    }
-                });
-            }
-            catch (error) {
-                clearTimeout(timeout);
-                const errorMsg = error instanceof Error ? error.message : "Unknown error";
-                reject(error);
-            }
-        });
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            throw new Error(errorMsg);
+        }
     }
     // Errors
     static Errors = GunErrors;

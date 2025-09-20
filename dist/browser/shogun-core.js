@@ -29535,300 +29535,319 @@ module.exports = webpackEmptyContext;
 
 /***/ }),
 
-/***/ "./node_modules/gun/lib/evict.js":
-/*!***************************************!*\
-  !*** ./node_modules/gun/lib/evict.js ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
-
-/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
-;(function(){
-	var Gun = ( true)? window.Gun : 0;
-	var ev = {}, empty = {}, u;
-	Gun.on('opt', function(root){
-		this.to.next(root);
-		if(root.once){ return }
-		if(typeof process == 'undefined'){ return }
-		var util = process.memoryUsage, heap;
-		if(!util){ return }
-		try{ heap = Object(function webpackMissingModule() { var e = new Error("Cannot find module 'v8'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()) }catch(e){}
-		if(!heap){ return }
-
-		ev.max = parseFloat(root.opt.memory || (heap().heap_size_limit / 1024 / 1024) || process.env.WEB_MEMORY || 1399) * 0.8; // max_old_space_size defaults to 1400 MB. Note: old space !== memory space though. // KEEPING USED_HEA_SIZE < HEAP_SIZE_LIMIT ONLY THING TO BE BELOW TO PREVENT CRASH!
-		
-		setInterval(check, 1000);
-		function check(){
-			var used = util().rss / 1024 / 1024;
-			var hused = heap().used_heap_size / 1024 / 1024;
-			var tmp; if(tmp = console.STAT){ tmp.memax = parseFloat(ev.max.toFixed(1)); tmp.memused = parseFloat(used.toFixed(1)); tmp.memhused = parseFloat(hused.toFixed(1)); }
-			if(hused < ev.max && used < ev.max){ return }
-			//if(used < ev.max){ return }
-			console.STAT && console.STAT('evict memory:', hused.toFixed(), used.toFixed(), ev.max.toFixed());
-			GC();//setTimeout(GC, 1);
-		}
-		function GC(){
-			var S = +new Date;
-			var souls = Object.keys(root.graph||empty);
-			var toss = Math.ceil(souls.length * 0.01);
-			setTimeout.each(souls, function(soul){
-				if(--toss < 0){ return 1 }
-				root.$.get(soul).off();
-			},0,99);
-			root.dup.drop(1000 * 9); // clean up message tracker
-			console.STAT && console.STAT(S, +new Date - S, 'evict');
-		}
-		/*
-		root.on('in', function(msg){
-			this.to.next(msg);
-			if(msg.get){
-				return;
-			}
-			Gun.graph.is(msg, function(node, soul){
-				var meta = (root.next||empty)[soul];
-				if(!meta){ return }
-				Gun.node.is(node, function(data, key){
-
-				});
-			});
-		});
-		*/
-	});
-}());
-
-/***/ }),
-
-/***/ "./node_modules/gun/lib/les.js":
+/***/ "./node_modules/gun/lib/axe.js":
 /*!*************************************!*\
-  !*** ./node_modules/gun/lib/les.js ***!
+  !*** ./node_modules/gun/lib/axe.js ***!
   \*************************************/
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
 /* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
-;
-(function() {
+// I don't quite know where this should go yet, so putting it here
+// what will probably wind up happening is that minimal AXE logic added to end of gun.js
+// and then rest of AXE logic (here) will be moved back to gun/axe.js
+// but for now... I gotta rush this out!
+var Gun = ( true)? window.Gun : 0, u;
+Gun.on('opt', function(at){ start(at); this.to.next(at) }); // make sure to call the "next" middleware adapter.
+// TODO: BUG: panic test/panic/1 & test/panic/3 fail when AXE is on.
+function start(root){
+	if(root.axe){ return }
+	var opt = root.opt, peers = opt.peers;
+	if(false === opt.axe){ return }
+	if((typeof process !== "undefined") && 'false' === ''+(opt.env=process.env||'').AXE){ return }
+	Gun.log.once("AXE", "AXE relay enabled!");
+	var axe = root.axe = {}, tmp, id;
+	var mesh = opt.mesh = opt.mesh || Gun.Mesh(root); // DAM!
+	var dup = root.dup;
 
-	//  _     _____ ____    _     
-	// | |   | ____/ ___|  (_)___ 
-	// | |   |  _| \___ \  | / __|
-	// | |___| |___ ___) | | \__ \
-	// |_____|_____|____(_)/ |___/
-	// ----------------------------
-	// LES.js (Last rEcently uSed)
-	// ----------------------------
-	// A Small, lightweight, queue-based
-	// Garbage Collector for Gun
-	// Originally By: Collin Conrad (@masterex1000)
-
-	/**
-	 *
-	 * Usage: require the file in your application
-	 * 
-	 * Gun Params: these are passed to the new gun constructor
-	 *
-	 *  - gc_enable : enables the gc, good if you are running multiple instances of gun, etc... def. true
-	 *	- gc_delay	: sets the amount of time between attempted garbage collections in milliseconds
-	 *	- gc_info_enable : Enables or Disables the info printout
-	 *	- gc_info	: sets the ~ amount of time between info messages
-	 *				  this is checked every time the gc is ran
-	 *	- gc_info_mini : this will use a smaller, less user friendly info printout
-	 *	- gc_importance_func : This will be the function used for finding the importance of a potential collect
-	 *							takes the form of func(timestamp, ctime, memoryUsageRatio) {return val}
-	 *							Collects when returned value is 100
-	 */
-	
-	//NOTE: set to false to use require for getting gun DEFAULT: false
-	var USELOCALGUN = false; 
-		
-	
-	//NOTE: adds some debug messages DEFAULT: false
-	var DEBUG = false;
-	
-	if(false)
-		// removed by dead control flow
-{}
-	
-	var Gun = ( true) ? window.Gun : (0);
-	
-	//Removes a node from the garbage collection until next write
-	Gun.chain.gcDequeue = function() {
-		//console.log(this._.root.dequeueNode);
-		if(this._.root.dequeueNode) { // check that we actually have the dequeue command on this node
-			let ctx = this;
-		
-			this.get(function (soul) {
-				ctx._.root.dequeueNode(soul);
-			}, true);
-		}
+	mesh.way = function(msg){
+		if(!msg){ return }
+		//relayUp(msg); // TEMPORARY!!!
+		if(msg.get){ return GET(msg) }
+		if(msg.put){ return }
+		fall(msg);
 	}
-	
-	//Puts node at the front for garbage collection, NOTE: only collects when it is hit it's time
-	Gun.chain.gcCollect = function() {
-		if(this._.root.collectNode) { // check that we actually have the dequeue command on this node
-			let ctx = this;
-			
-			this.get(function (soul) {
-				ctx._.root.collectNode(soul);
-			}, true);
-		}
+
+	function GET(msg){
+		if(!msg){ return }
+		var via = (msg._||'').via, soul, has, tmp, ref;
+		if(!via || !via.id){ return fall(msg) }
+		// SUBSCRIPTION LOGIC MOVED TO GET'S ACK REPLY.
+		if(!(ref = REF(msg)._)){ return fall(msg) }
+		ref.asked = +new Date;
+		GET.turn(msg, ref.route, 0);
 	}
+	GET.turn = function(msg, route, turn){
+		var tmp = msg['#'], tag = dup.s[tmp], next; 
+		if(!tmp || !tag){ return } // message timed out, GUN may require us to relay, tho AXE does not like that. Rethink?
+		// TOOD: BUG! Handle edge case where live updates occur while these turn hashes are being checked (they'll never be consistent), but we don't want to degrade to O(N), if we know the via asking peer got an update, then we should do something like cancel these turns asking for data.
+		// Ideas: Save a random seed that sorts the route, store it and the index. // Or indexing on lowest latency is probably better.
+		clearTimeout(tag.lack);
+		if(tag.ack && (tmp = tag['##']) && msg['##'] === tmp){ return } // hashes match, stop asking other peers!
+		next = (Object.maps(route||opt.peers)).slice(turn = turn || 0);
+		if(!next.length){
+			if(!route){ return } // asked all peers, stop asking!
+			GET.turn(msg, u, 0); // asked all subs, now now ask any peers. (not always the best idea, but stays )
+			return;
+		}
+		setTimeout.each(next, function(id){
+			var peer = opt.peers[id]; turn++;
+			if(!peer || !peer.wire){ route && route.delete(id); return } // bye! // TODO: CHECK IF 0 OTHER PEERS & UNSUBSCRIBE
+			if(mesh.say(msg, peer) === false){ return } // was self
+			if(0 == (turn % 3)){ return 1 }
+		}, function(){
+			tag['##'] = msg['##']; // should probably set this in a more clever manner, do live `in` checks ++ --, etc. but being lazy for now. // TODO: Yes, see `in` TODO, currently this might match against only in-mem cause no other peers reply, which is "fine", but could cause a false positive.
+			tag.lack = setTimeout(function(){ GET.turn(msg, route, turn) }, 25);
+		}, 3);
+	}
+	function fall(msg){ mesh.say(msg, opt.peers) }
+	function REF(msg){
+		var ref = '', soul, has, tmp;
+		if(!msg || !msg.get){ return ref }
+		if('string' == typeof (soul = msg.get['#'])){ ref = root.$.get(soul) }
+		if('string' == typeof (tmp = msg.get['.'])){ has = tmp } else { has = '' }
+
+		var via = (msg._||'').via, sub = (via.sub || (via.sub = new Object.Map)); (sub.get(soul) || (sub.set(soul, tmp = new Object.Map) && tmp)).set(has, 1); // {soul: {'':1, has: 1}} // TEMPORARILY REVERT AXE TOWER TYING TO SUBSCRIBING TO EVERYTHING. UNDO THIS!
+		via.id && ref._ && (ref._.route || (ref._.route = new Object.Map)).set(via.id, via); // SAME AS ^
+
+		return ref;
+	}
+	function LEX(lex){ return (lex = lex || '')['='] || lex['*'] || lex['>'] || lex }
 	
-	Gun.on('opt', function(root) {
-		//Setup various options
-		
-		const gc_enable = root.opt.gc_enable ? root.opt.gc_enable : true;
-		const gc_delay = root.opt.gc_delay ? root.opt.gc_delay : 1000;
-		
-		const gc_info_enable  = ("gc_info_enable" in root.opt) ? root.opt.gc_info_enable  : true;
-		const gc_info  = root.opt.gc_info  ? root.opt.gc_info  : 5000;
-		const gc_info_mini = root.opt.gc_info_mini ? root.opt.gc_info_mini : false;
-		
-		//This is long, but it works well
-		const calcRemoveImportance = root.opt.gc_importance_func ? root.opt.gc_importance_func : function (timestamp, ctime, memoryUsageRatio) {
-			var time = (ctime - timestamp) * 0.001;
-			return time * 10 * (memoryUsageRatio * memoryUsageRatio);
-		}
-		
-		if(DEBUG) console.log(root.opt);
-		
-		this.to.next(root);
-		
-		if (root.once)
-			return;
-		if (typeof process == 'undefined')
-			return
-		var mem = process.memoryUsage;
+	root.on('in', function(msg){ var to = this.to, tmp;
+		if((tmp = msg['@']) && (tmp = dup.s[tmp])){
+			tmp.ack = (tmp.ack || 0) + 1; // count remote ACKs to GET. // TODO: If mismatch, should trigger next asks.
+			if(tmp.it && tmp.it.get && msg.put){ // WHEN SEEING A PUT REPLY TO A GET...
+				var get = tmp.it.get||'', ref = REF(tmp.it)._, via = (tmp.it._||'').via||'', sub;
+				if(via && ref){ // SUBSCRIBE THE PEER WHO ASKED VIA FOR IT:
+					//console.log("SUBSCRIBING", Object.maps(ref.route||''), "to", LEX(get['#']));
+					via.id && (ref.route || (ref.route = new Object.Map)).set(via.id, via);
+					sub = (via.sub || (via.sub = new Object.Map));
+					ref && (sub.get(LEX(get['#'])) || (sub.set(LEX(get['#']), sub = new Object.Map) && sub)).set(LEX(get['.']), 1); // {soul: {'':1, has: 1}}
 
-		if(!gc_enable) // exit because the gc is disabled
-			return;
-		
-		if (!mem) //exit because we are in the browser
-			return;
-
-		var ev = {}; //stores the environment
-		var empty = {}; //An empty list used to prevent crashes
-		
-		//Figure out the most amount of memory we can use. TODO: make configurable?
-		ev.max = parseFloat(root.opt.memory || process.env.WEB_MEMORY || 512) * 0.8;
-
-		var nodes = {}; //checks if the node already exists
-		var nodesArray = []; //used to easily sort everything and store info about the nodes
-		var memoryUpdate = 0; // last time we printed the current memory stats
-
-		root.dequeueNode = (soul) => {  //forward the call to our gc
-			dequeueNode(soul);
-		}
-		
-		root.collectNode = (soul) => {  //forward the call to our gc
-			collectNode(soul);
-		}
-		
-		var check = function() {
-			ev.used = mem().rss / 1024 / 1024; //Contains the amt. of used ram in MB
-			setTimeout(function() { // So we can handle requests etc. before we start collecting
-				GC(ev.used / ev.max); // Calculate the memory ratio, and execute the garbage collector
-				//GC(0.99);
-			}, 1);
-		}
-		
-		setInterval(check, gc_delay); // set the garbage collector to run every second
-		
-		//Executed every time a node gets modified
-		root.on("put", function(e) {
-			this.to.next(e);
-			var ctime = Date.now();
-			var souls = Object.keys(e.put || empty); // get all of the nodes in the update
-			for (var i = 0; i < souls.length; i++) { // iterate over them and add them
-				enqueueNode(souls[i], ctime);
+					via = (msg._||'').via||'';
+					if(via){ // BIDIRECTIONAL SUBSCRIBE: REPLIER IS NOW SUBSCRIBED. DO WE WANT THIS?
+						via.id && (ref.route || (ref.route = new Object.Map)).set(via.id, via);
+						sub = (via.sub || (via.sub = new Object.Map));
+						if(ref){
+							var soul = LEX(get['#']), sift = sub.get(soul), has = LEX(get['.']);
+							if(has){
+								(sift || (sub.set(soul, sift = new Object.Map) && sift)).set(has, 1);
+							} else
+							if(!sift){
+								sub.set(soul, sift = new Object.Map);
+								sift.set('', 1);
+							}
+						}
+					}
+				}
 			}
+			if((tmp = tmp.back)){ // backtrack OKs since AXE splits PUTs up.
+				setTimeout.each(Object.keys(tmp), function(id){
+					to.next({'#': msg['#'], '@': id, ok: msg.ok});
+				});
+				return;
+			}
+		}
+		to.next(msg);
+	});
+
+	root.on('create', function(root){
+		this.to.next(root);
+		var Q = {};
+		root.on('put', function(msg){
+			var eve = this, at = eve.as, put = msg.put, soul = put['#'], has = put['.'], val = put[':'], state = put['>'], q, tmp;
+			eve.to.next(msg);
+			if(msg['@']){ return } // acks send existing data, not updates, so no need to resend to others.
+			if(!soul || !has){ return }
+			var ref = root.$.get(soul)._, route = (ref||'').route;
+			if(!route){ return }
+			if(ref.skip && ref.skip.has == has){ ref.skip.now = msg['#']; return }
+			(ref.skip = {now: msg['#'], has: has}).to = setTimeout(function(){
+			setTimeout.each(Object.maps(route), function(pid){ var peer, tmp;
+				var skip = ref.skip||''; ref.skip = null;
+				if(!(peer = route.get(pid))){ return }
+				if(!peer.wire){ route.delete(pid); return } // bye!
+				var sub = (peer.sub || (peer.sub = new Object.Map)).get(soul);
+				if(!sub){ return }
+				if(!sub.get(has) && !sub.get('')){ return }
+				var put = peer.put || (peer.put = {});
+				var node = root.graph[soul], tmp;
+				if(node && u !== (tmp = node[has])){
+					state = state_is(node, has);
+					val = tmp;
+				}
+				put[soul] = state_ify(put[soul], has, state, val, soul);
+				tmp = dup.track(peer.next = peer.next || String.random(9));
+				(tmp.back || (tmp.back = {}))[''+(skip.now||msg['#'])] = 1;
+				if(peer.to){ return }
+				peer.to = setTimeout(function(){ flush(peer) }, opt.gap);
+			}) }, 9);
+		});
+	});
+
+	function flush(peer){
+		var msg = {'#': peer.next, put: peer.put, ok: {'@': 3, '/': mesh.near}}; // BUG: TODO: sub count!
+		// TODO: what about DAM's >< dedup? Current thinking is, don't use it, however, you could store first msg# & latest msg#, and if here... latest === first then likely it is the same >< thing, so if(firstMsg['><'][peer.id]){ return } don't send.
+		peer.next = peer.put = peer.to = null;
+		mesh.say(msg, peer);
+	}
+	var state_ify = Gun.state.ify, state_is = Gun.state.is;
+
+	function relayUp(msg){
+		mesh.say(msg, axe.up);
+	}
+
+	;(function(){ // THIS IS THE UP MODULE;
+		axe.up = {};
+		var hi = mesh.hear['?']; // lower-level integration with DAM! This is abnormal but helps performance.
+		mesh.hear['?'] = function(msg, peer){ var p; // deduplicate unnecessary connections:
+			hi(msg, peer);
+			if(!peer.pid){ return }
+			if(peer.pid === opt.pid){ mesh.bye(peer); return } // if I connected to myself, drop.
+			if(p = axe.up[peer.pid]){ // if we both connected to each other...
+				if(p === peer){ return } // do nothing if no conflict,
+				if(opt.pid > peer.pid){ // else deterministically sort
+					p = peer; // so we will wind up choosing the same to keep
+					peer = axe.up[p.pid]; // and the same to drop.
+				}
+				p.url = p.url || peer.url; // copy if not
+				mesh.bye(peer); // drop
+				axe.up[p.pid] = p; // update same to be same.
+				return;
+			}
+			if(!peer.url){ return }
+			axe.up[peer.pid] = peer;
+			if(axe.stay){ axe.stay() }
+		};
+
+		mesh.hear['opt'] = function(msg, peer){
+			if(msg.ok){ return }
+			var tmp = msg.opt;
+			if(!tmp){ return }
+			tmp = tmp.peers;
+			if(!tmp || 'string' != typeof tmp){ return }
+			if(99 <= Object.keys(axe.up).length){ return } // 99 TEMPORARILY UNTIL BENCHMARKED!
+			mesh.hi({id: tmp, url: tmp, retry: 9});
+			if(peer){ mesh.say({dam: 'opt', ok: 1, '@': msg['#']}, peer) }
+		}
+
+		axe.stay = function(){
+			clearTimeout(axe.stay.to);
+			axe.stay.to = setTimeout(function(tmp, urls){
+				if(!(tmp = root.stats && root.stats.stay)){ return }
+				urls = {}; Object.keys(axe.up||'').forEach(function(p){
+					p = (axe.up||'')[p]; if(p.url){ urls[p.url] = {} }
+				});
+				(tmp.axe = tmp.axe || {}).up = urls;
+			}, 1000 * 9);//1000 * 60);
+		};
+		setTimeout(function(tmp){
+			if(!(tmp = root.stats && root.stats.stay && root.stats.stay.axe)){ return }
+			if(!(tmp = tmp.up)){ return }
+			if(!(tmp instanceof Array)){ tmp = Object.keys(tmp) }
+			setTimeout.each(tmp||[], function(url){ mesh.hear.opt({opt: {peers: url}}) });
+		},1000);
+	}());
+
+	setTimeout(function(){ __webpack_require__(/*! ./service */ "./node_modules/gun/lib/service.js")(root) },9);
+
+	;(function(){ // THIS IS THE MOB MODULE;
+		//return; // WORK IN PROGRESS, TEST FINALIZED, NEED TO MAKE STABLE.
+		/*
+			AXE should have a couple of threshold items...
+			let's pretend there is a variable max peers connected
+			mob = 10000
+			if we get more peers than that...
+			we should start sending those peers a remote command
+			that they should connect to this or that other peer
+			and then once they (or before they do?) drop them from us.
+			sake of the test... gonna set that peer number to 1.
+			The mob threshold might be determined by other factors,
+			like how much RAM or CPU stress we have.
+		*/
+		opt.mob = opt.mob || parseFloat((opt.env||'').MOB) || 999999; // should be based on ulimit, some clouds as low as 10K.
+
+		// handle rebalancing a mob of peers:
+		root.on('hi', function(peer){
+			this.to.next(peer);
+			if(peer.url){ return } // I am assuming that if we are wanting to make an outbound connection to them, that we don't ever want to drop them unless our actual config settings change.
+			var count = /*Object.keys(opt.peers).length ||*/ mesh.near; // TODO: BUG! This is slow, use .near, but near is buggy right now, fix in DAM.
+			//console.log("are we mobbed?", opt.mob, Object.keys(opt.peers).length, mesh.near);
+			if(opt.mob >= count){ return }  // TODO: Make dynamic based on RAM/CPU also. Or possibly even weird stuff like opt.mob / axe.up length?
+			var peers = {};Object.keys(axe.up).forEach(function(p){ p = axe.up[p]; p.url && (peers[p.url]={}) });
+			// TODO: BUG!!! Infinite reconnection loop happens if not enough relays, or if some are missing. For instance, :8766 says to connect to :8767 which then says to connect to :8766. To not DDoS when system overload, figure clever way to tell peers to retry later, that network does not have enough capacity?
+			mesh.say({dam: 'mob', mob: count, peers: peers}, peer);
+			setTimeout(function(){ mesh.bye(peer) }, 9); // something with better perf?
+		});
+		root.on('bye', function(peer){
+			this.to.next(peer);
 		});
 
-		//Adds a soul the garbage collectors "freeing" queue
-		function enqueueNode(soul, ctime) {
-			if (nodes[soul] == true) { //The node already exists in the queue
-				var index = nodesArray.findIndex(function(e) {
-					return e[0] === soul;
+	}());
+
+	;(function(){ // THIS IS THE UNIVERSAL NOTIFICATION MODULE
+		var to = {}, key = {}, email = __webpack_require__(/*! ./email */ "./node_modules/gun/lib/email.js");
+		if(email.err){ return }
+		mesh.hear['tag'] = function(msg, peer, who){
+			if(who = key[msg.key]){ who.rate = Math.max(msg.rate||1000*60*15, 1000*60); return }
+			if(!msg.src || !msg.email){ return }
+			if(+new Date < peer.emailed + 1000*60*2){ mesh.say({dam:'tag',err:'too fast'},peer); return } // peer can only send notifications > 2min
+			var src; try{ src = new URL(msg.src = msg.src.split(/\s/)[0]); } catch(e){ return } // throws if invalid URL.
+			(who = (to[msg.email] = to[msg.email] || {go:{}})).go[''+src] = 1; // we're keeping in-memory for now, maybe will "stay" to disk in future.
+			peer.emailed = +new Date;
+			if(who.batch){ return }
+			key[who.key = Math.random().toString(36).slice(2)] = who;
+			who.batch = setTimeout(function(){
+				email.send({
+					from: process.env.EMAIL,
+					to: msg.email,
+					subject: "Notification:",
+					text: 'Someone or a bot tagged you at: (⚠️ only click link if you recognize & trust it ⚠️)\n'+
+						'[use #'+who.key+' to unsubscribe please mute this thread by tapping the top most "⋮" button and clicking mute]\n\n' +
+						Object.keys(who.go).join('\n'), // TODO: NEEDS TO BE CPU SCHEDULED
+					headers: {'message-id': '<123456789.8765@example.com>'} // hardcode id so all batches also group into the same email thread to reduce clutter.
+				}, function(err, r){
+					who.batch = null; who.go = {};
+					err && console.log("email TAG:", err);
 				});
-				if (index == -1) {
-					console.error("Something happened and the node '" + soul + "' won't get garbage collection unless the value is updated again");
-					return;
-				} else {
-					nodesArray.splice(index, 1); // remove the existing ref. faster than dequeue
-					nodesArray.push([soul, ctime]); // push the new instance
-				}
-			} else {
-				nodesArray.push([soul, ctime]);
-				nodes[soul] = true;
-			}
-		}
+			}, who.rate || (1000*60*60*24)); // default to 1 day
+		};
+	}());
+};
 
-		//Removes a node from the queue
-		function dequeueNode(soul) {
-			if (nodes[soul] == true) { //The node already exists in the queue
-				var index = nodesArray.findIndex(function(e) {
-					return e[0] === soul;
-				});
-				if (index != -1) {
-					//nodesArray.splice(index, 1); // remove the existing ref.
-					nodesArray.shift();
-					nodes[soul] = false; // store that we no longer have that node in the queue
-				}
-			}
-		}
-		
-		//Moves a node to the start of the queue
-		function collectNode(soul) {
-			if (nodes[soul] == true) { //The node already exists in the queue
-				var index = nodesArray.findIndex(function(e) {
-					return e[0] === soul;
-				});
-				if (index != -1) {
-					//nodesArray.splice(index, 1); // remove the existing ref.
-					nodesArray.shift(); // WAY faster than splice
-				}
-				nodesArray.unshift([soul, nodesArray[0][1]]); // create a new node with the next nodes time stamp
-				nodes[soul] = true; // store that we no longer have that node in the queue
-			}
-		}
-		
-		//The main garbage collecting routine
-		function GC(memRatio) {
-			var curTime = Date.now(); // get the current time
-
-			if (gc_info_enable && curTime - memoryUpdate >= gc_info) { // check if we need to print info
-				if(!gc_info_mini)
-					console.log("|GC| %s | Current Memory Ratio: %d | Current Ram Usage %sMB | Nodes in Memory %s", new Date().toLocaleString(), round(memRatio, 2), round(ev.used, 2), Object.keys(root.graph || empty).length);
-				else
-					console.log("|GC| %s, Mem Ratio %d, Ram %sMB, Nodes in mem %s, Tracked Nodes %s", new Date().toLocaleString(), round(memRatio, 2), round(ev.used, 2), Object.keys(root.graph || empty).length, nodesArray.length);
-				memoryUpdate = curTime; // reset the last update time
-			}
-
-			var freed = 0; // Just a nice performance counter
-
-			while (nodesArray.length > 0) { // iterate over all of our nodes
-				var soul = nodesArray[0][0];
-				var nts = nodesArray[0][1];
-				if (DEBUG)
-					console.log("Soul: " + soul + " | Remove Importance: " + calcRemoveImportance(nts, curTime, memRatio) +
-						" | Memory Ratio: " + memRatio + " | Time Existed: " + (curTime - nts) / 1000);
-				if (calcRemoveImportance(nodesArray[0][1], curTime, memRatio) >= 100) {
-					root.gun.get(nodesArray[0][0]).off(); //Remove the node
-					delete nodes[nodesArray[0][0]]; // remove the lookup value
-					//nodesArray.splice(0, 1);
-					nodesArray.shift();
-					freed++; // add one to our perf counter
-				} else
-					break; // Break out of the loop because we don't have any more nodes to free
-			}
-			if (freed > 0)
-				console.log("|GC| Removed %s nodes in %s seconds-----------------------------------------------------------------", freed, (Date.now() - curTime) * 0.001);
-		}
-		
-		function round(value, decimals) { //a basic rounding function
-			return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
-		}
-	});
+;(function(){
+	var from = Array.from;
+	Object.maps = function(o){
+		if(from && o instanceof Map){ return from(o.keys()) }
+		if(o instanceof Object.Map){ o = o.s }
+		return Object.keys(o);
+	}
+	if(from){ return Object.Map = Map }
+	(Object.Map = function(){ this.s = {} }).prototype = {set:function(k,v){this.s[k]=v;return this},get:function(k){return this.s[k]},delete:function(k){delete this.s[k]}};
 }());
 
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/email.js":
+/*!***************************************!*\
+  !*** ./node_modules/gun/lib/email.js ***!
+  \***************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+;(function(){
+	var email, fail = {send: function(opt, cb){ cb && cb("You do not have email installed.") } };
+	if(!process.env.EMAIL){ return module.exports = fail }
+	try{ email = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'emailjs'"); e.code = 'MODULE_NOT_FOUND'; throw e; }())) }catch(e){};
+	if(!email){ return module.exports = fail }
+	return module.exports = email.server.connect({
+	  user: process.env.EMAIL,
+	  password: process.env.EMAIL_KEY,
+	  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+	  ssl: process.env.EMAIL_SSL || true
+	});
+}());
 
 /***/ }),
 
@@ -30698,6 +30717,64 @@ if (navigator.storage && navigator.storage.estimate) {
 
 /***/ }),
 
+/***/ "./node_modules/gun/lib/service.js":
+/*!*****************************************!*\
+  !*** ./node_modules/gun/lib/service.js ***!
+  \*****************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+var __dirname = "/";
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+module.exports = function(root){
+	var mesh = root.opt.mesh, cmd = {}, run = Object(function webpackMissingModule() { var e = new Error("Cannot find module 'child_process'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()), fs = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'fs'"); e.code = 'MODULE_NOT_FOUND'; throw e; }())), home = (__webpack_require__(/*! os */ "./node_modules/os-browserify/main.js").homedir)(), examp = (__webpack_require__(/*! path */ "./node_modules/path-browserify/index.js").resolve)(__dirname, '../examples');
+	mesh.hear['service'] = function(msg, peer){
+		if(!fs.existsSync('/lib/systemd/system/relay.service')){
+			mesh.say({dam: '!', err: "Not serviced."});
+			return;
+		}
+		try{ (cmd[msg.try]||cmd.any)(msg, peer); }catch(err){ mesh.say({dam: '!', err: "service error: "+err}) }
+	}
+	cmd.https = function(msg, peer){ var log;
+		if(!msg.email || !msg.domain){
+			mesh.say({dam: '!', err: 'Domain/email missing, use `location.hostname`!'});
+			return;
+		}
+		if(fs.existsSync(home+'/cert.pem')){
+			mesh.say({dam: '!', err: 'Cert already exists.'});
+			return;
+		}
+		fs.writeFile(examp+'/../email', msg.email, function(){});
+		run("bash "+examp+"/https.sh", {env: {'EMAIL': msg.email, 'WEB': examp, 'DOMAIN':  msg.domain}}, function(e, out, err){
+			log = "|"+e+"|"+out+"|"+err;
+			mesh.say({dam: '!', log: ''+log}, peer);
+			setTimeout(function(){ process.exit() },999);
+		});
+	}
+	cmd.update = function(msg, peer){ var log, pass;
+		try{ pass = (''+fs.readFileSync(home+'/pass')).trim() }catch(e){}
+		if(!pass || (msg.pass||'').trim() != pass){ return }
+		root.stats.stay.updated = +new Date;
+		run("bash "+examp+"/install.sh", {env: {VERSION: msg.version||''}}, function(e, out, err){
+			log = e+"|"+out+"|"+err;
+			mesh.say({dam: '!', log: ''+log}, peer);
+			setTimeout(function(){ process.exit() },999);
+		});
+	}
+	;(function update(){ var last;
+		if(!fs.existsSync(home+'/cert.pem')){ return }
+		setTimeout(update, 1000*60*60*24);
+		last = root.stats.stay.updated || 0;
+		if(+new Date - last < 1000*60*60*24*15){ return }
+		root.stats.stay.updated = +new Date;
+		run("bash "+examp+"/install.sh", {}, function(){});
+	}());
+
+	cmd.any = function(){};
+
+};
+
+/***/ }),
+
 /***/ "./node_modules/gun/lib/store.js":
 /*!***************************************!*\
   !*** ./node_modules/gun/lib/store.js ***!
@@ -31030,6 +31107,108 @@ Gun.chain.then = function(cb) {
 		}
 	});
 }());
+
+
+/***/ }),
+
+/***/ "./node_modules/gun/lib/wire.js":
+/*!**************************************!*\
+  !*** ./node_modules/gun/lib/wire.js ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+var Gun = __webpack_require__(/*! ../gun */ "./node_modules/gun/gun.js");
+
+/*
+	An Ad-Hoc Mesh-Network Daisy-Chain
+	should work even if humans are
+	communicating with each other blind.
+
+	To prevent infinite broadcast loops,
+	we use a deduplication process
+	based on the message's identifier.
+	This is currently implemented in core.
+
+	However, because this still creates a
+	N*2 (where N is the number of connections)
+	flood, it is not scalable for traditional
+	services that have a hub network topology.
+
+	Does this mean we have to abandon mesh
+	algorithms? No, we can simply layer more
+	efficient optimizations in based on constraints.
+	If these constraints exist, it automatically
+	upgrades, but if not, it falls back to the
+	brute-force mesh based robust algorithm.
+	A simple example is to limit peer connections
+	and rely upon daisy chaining to relay messages.
+
+	Another example, is if peers are willing to
+	identify themselves, then we can improve the
+	efficiency of the network by having each peer
+	include the names of peers it is connected in
+	each message. Then each subsequent peer will
+	not relay it to them, since it is unnecessary.
+	This should create N (where N is the number of
+	peers) messages (or possibly N+ if there is a
+	common peer of uncommon peers that receives it
+	and relays at exact latency timings), which is
+	optimal.
+
+	Since computer networks aren't actually blind,
+	we will implement the above method to improve
+	the performance of the ad-hoc mesh network.
+
+	But why not have every message contain the
+	whole history of peers that it relayed through?
+	Because in sufficiently large enough networks,
+	with extensive daisy chaining, this will cause
+	the message to become prohibitively slow and
+	increase indefinitely in size.
+
+*/
+
+Gun.on('opt', function (root) {
+	var opt = root.opt;
+	if (false === opt.ws || opt.once) {
+		this.to.next(root);
+		return;
+	}
+	opt.mesh = opt.mesh || Gun.Mesh(root);
+	opt.WebSocket = opt.WebSocket || __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'ws'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+	var ws = opt.ws = opt.ws || {};
+	ws.path = ws.path || '/gun';
+	// if we DO need an HTTP server, then choose ws specific one or GUN default one.
+	if (!opt.web || ws.noServer) {
+		this.to.next(root);
+		return;// no server no sockets
+	}
+	ws.noServer = true;//workaround for ws.path
+	ws.web = ws.web || new opt.WebSocket.Server(ws);
+	opt.web.on('upgrade', (req, socket, head) => {
+		opt.web.host = opt.web.host || (req.headers||'').origin || (req.headers||'').host; 
+		if (req.url == ws.path) {
+			ws.web.handleUpgrade(req, socket, head, function done(ws) {
+				open(ws, req);
+			});
+		}
+	});
+	function open(wire, req) {
+		var peer;
+		wire.headers = wire.headers || (req || '').headers || '';
+		console.STAT && ((console.STAT.sites || (console.STAT.sites = {}))[wire.headers.origin] = 1);
+		opt.mesh.hi(peer = { wire: wire });
+		wire.on('message', function (msg) {
+			opt.mesh.hear(msg.data || msg, peer);
+		});
+		wire.on('close', function () {
+			opt.mesh.bye(peer);
+		});
+		wire.on('error', function (e) { });
+		setTimeout(function heart() { if (!opt.peers[peer.id]) { return } try { wire.send("[]") } catch (e) { }; setTimeout(heart, 1000 * 20) }, 1000 * 20); // Some systems, like Heroku, require heartbeats to not time out. // TODO: Make this configurable? // TODO: PERF: Find better approach than try/timeouts?
+	}
+	this.to.next(root);
+});
 
 
 /***/ }),
@@ -35340,6 +35519,17 @@ utils.encode = function encode(arr, enc) {
 
 /***/ }),
 
+/***/ "./node_modules/os-browserify/main.js":
+/*!********************************************!*\
+  !*** ./node_modules/os-browserify/main.js ***!
+  \********************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = __webpack_require__(/*! os */ "./node_modules/os-browserify/main.js");
+
+
+/***/ }),
+
 /***/ "./node_modules/parse-asn1/aesid.json":
 /*!********************************************!*\
   !*** ./node_modules/parse-asn1/aesid.json ***!
@@ -35747,6 +35937,547 @@ function parseKeys(buffer) {
 parseKeys.signature = asn1.signature;
 
 module.exports = parseKeys;
+
+
+/***/ }),
+
+/***/ "./node_modules/path-browserify/index.js":
+/*!***********************************************!*\
+  !*** ./node_modules/path-browserify/index.js ***!
+  \***********************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+// 'path' module extracted from Node.js v8.11.1 (only the posix part)
+// transplited with Babel
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+
+function assertPath(path) {
+  if (typeof path !== 'string') {
+    throw new TypeError('Path must be a string. Received ' + JSON.stringify(path));
+  }
+}
+
+// Resolves . and .. elements in a path with directory names
+function normalizeStringPosix(path, allowAboveRoot) {
+  var res = '';
+  var lastSegmentLength = 0;
+  var lastSlash = -1;
+  var dots = 0;
+  var code;
+  for (var i = 0; i <= path.length; ++i) {
+    if (i < path.length)
+      code = path.charCodeAt(i);
+    else if (code === 47 /*/*/)
+      break;
+    else
+      code = 47 /*/*/;
+    if (code === 47 /*/*/) {
+      if (lastSlash === i - 1 || dots === 1) {
+        // NOOP
+      } else if (lastSlash !== i - 1 && dots === 2) {
+        if (res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== 46 /*.*/ || res.charCodeAt(res.length - 2) !== 46 /*.*/) {
+          if (res.length > 2) {
+            var lastSlashIndex = res.lastIndexOf('/');
+            if (lastSlashIndex !== res.length - 1) {
+              if (lastSlashIndex === -1) {
+                res = '';
+                lastSegmentLength = 0;
+              } else {
+                res = res.slice(0, lastSlashIndex);
+                lastSegmentLength = res.length - 1 - res.lastIndexOf('/');
+              }
+              lastSlash = i;
+              dots = 0;
+              continue;
+            }
+          } else if (res.length === 2 || res.length === 1) {
+            res = '';
+            lastSegmentLength = 0;
+            lastSlash = i;
+            dots = 0;
+            continue;
+          }
+        }
+        if (allowAboveRoot) {
+          if (res.length > 0)
+            res += '/..';
+          else
+            res = '..';
+          lastSegmentLength = 2;
+        }
+      } else {
+        if (res.length > 0)
+          res += '/' + path.slice(lastSlash + 1, i);
+        else
+          res = path.slice(lastSlash + 1, i);
+        lastSegmentLength = i - lastSlash - 1;
+      }
+      lastSlash = i;
+      dots = 0;
+    } else if (code === 46 /*.*/ && dots !== -1) {
+      ++dots;
+    } else {
+      dots = -1;
+    }
+  }
+  return res;
+}
+
+function _format(sep, pathObject) {
+  var dir = pathObject.dir || pathObject.root;
+  var base = pathObject.base || (pathObject.name || '') + (pathObject.ext || '');
+  if (!dir) {
+    return base;
+  }
+  if (dir === pathObject.root) {
+    return dir + base;
+  }
+  return dir + sep + base;
+}
+
+var posix = {
+  // path.resolve([from ...], to)
+  resolve: function resolve() {
+    var resolvedPath = '';
+    var resolvedAbsolute = false;
+    var cwd;
+
+    for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+      var path;
+      if (i >= 0)
+        path = arguments[i];
+      else {
+        if (cwd === undefined)
+          cwd = process.cwd();
+        path = cwd;
+      }
+
+      assertPath(path);
+
+      // Skip empty entries
+      if (path.length === 0) {
+        continue;
+      }
+
+      resolvedPath = path + '/' + resolvedPath;
+      resolvedAbsolute = path.charCodeAt(0) === 47 /*/*/;
+    }
+
+    // At this point the path should be resolved to a full absolute path, but
+    // handle relative paths to be safe (might happen when process.cwd() fails)
+
+    // Normalize the path
+    resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute);
+
+    if (resolvedAbsolute) {
+      if (resolvedPath.length > 0)
+        return '/' + resolvedPath;
+      else
+        return '/';
+    } else if (resolvedPath.length > 0) {
+      return resolvedPath;
+    } else {
+      return '.';
+    }
+  },
+
+  normalize: function normalize(path) {
+    assertPath(path);
+
+    if (path.length === 0) return '.';
+
+    var isAbsolute = path.charCodeAt(0) === 47 /*/*/;
+    var trailingSeparator = path.charCodeAt(path.length - 1) === 47 /*/*/;
+
+    // Normalize the path
+    path = normalizeStringPosix(path, !isAbsolute);
+
+    if (path.length === 0 && !isAbsolute) path = '.';
+    if (path.length > 0 && trailingSeparator) path += '/';
+
+    if (isAbsolute) return '/' + path;
+    return path;
+  },
+
+  isAbsolute: function isAbsolute(path) {
+    assertPath(path);
+    return path.length > 0 && path.charCodeAt(0) === 47 /*/*/;
+  },
+
+  join: function join() {
+    if (arguments.length === 0)
+      return '.';
+    var joined;
+    for (var i = 0; i < arguments.length; ++i) {
+      var arg = arguments[i];
+      assertPath(arg);
+      if (arg.length > 0) {
+        if (joined === undefined)
+          joined = arg;
+        else
+          joined += '/' + arg;
+      }
+    }
+    if (joined === undefined)
+      return '.';
+    return posix.normalize(joined);
+  },
+
+  relative: function relative(from, to) {
+    assertPath(from);
+    assertPath(to);
+
+    if (from === to) return '';
+
+    from = posix.resolve(from);
+    to = posix.resolve(to);
+
+    if (from === to) return '';
+
+    // Trim any leading backslashes
+    var fromStart = 1;
+    for (; fromStart < from.length; ++fromStart) {
+      if (from.charCodeAt(fromStart) !== 47 /*/*/)
+        break;
+    }
+    var fromEnd = from.length;
+    var fromLen = fromEnd - fromStart;
+
+    // Trim any leading backslashes
+    var toStart = 1;
+    for (; toStart < to.length; ++toStart) {
+      if (to.charCodeAt(toStart) !== 47 /*/*/)
+        break;
+    }
+    var toEnd = to.length;
+    var toLen = toEnd - toStart;
+
+    // Compare paths to find the longest common path from root
+    var length = fromLen < toLen ? fromLen : toLen;
+    var lastCommonSep = -1;
+    var i = 0;
+    for (; i <= length; ++i) {
+      if (i === length) {
+        if (toLen > length) {
+          if (to.charCodeAt(toStart + i) === 47 /*/*/) {
+            // We get here if `from` is the exact base path for `to`.
+            // For example: from='/foo/bar'; to='/foo/bar/baz'
+            return to.slice(toStart + i + 1);
+          } else if (i === 0) {
+            // We get here if `from` is the root
+            // For example: from='/'; to='/foo'
+            return to.slice(toStart + i);
+          }
+        } else if (fromLen > length) {
+          if (from.charCodeAt(fromStart + i) === 47 /*/*/) {
+            // We get here if `to` is the exact base path for `from`.
+            // For example: from='/foo/bar/baz'; to='/foo/bar'
+            lastCommonSep = i;
+          } else if (i === 0) {
+            // We get here if `to` is the root.
+            // For example: from='/foo'; to='/'
+            lastCommonSep = 0;
+          }
+        }
+        break;
+      }
+      var fromCode = from.charCodeAt(fromStart + i);
+      var toCode = to.charCodeAt(toStart + i);
+      if (fromCode !== toCode)
+        break;
+      else if (fromCode === 47 /*/*/)
+        lastCommonSep = i;
+    }
+
+    var out = '';
+    // Generate the relative path based on the path difference between `to`
+    // and `from`
+    for (i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i) {
+      if (i === fromEnd || from.charCodeAt(i) === 47 /*/*/) {
+        if (out.length === 0)
+          out += '..';
+        else
+          out += '/..';
+      }
+    }
+
+    // Lastly, append the rest of the destination (`to`) path that comes after
+    // the common path parts
+    if (out.length > 0)
+      return out + to.slice(toStart + lastCommonSep);
+    else {
+      toStart += lastCommonSep;
+      if (to.charCodeAt(toStart) === 47 /*/*/)
+        ++toStart;
+      return to.slice(toStart);
+    }
+  },
+
+  _makeLong: function _makeLong(path) {
+    return path;
+  },
+
+  dirname: function dirname(path) {
+    assertPath(path);
+    if (path.length === 0) return '.';
+    var code = path.charCodeAt(0);
+    var hasRoot = code === 47 /*/*/;
+    var end = -1;
+    var matchedSlash = true;
+    for (var i = path.length - 1; i >= 1; --i) {
+      code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          if (!matchedSlash) {
+            end = i;
+            break;
+          }
+        } else {
+        // We saw the first non-path separator
+        matchedSlash = false;
+      }
+    }
+
+    if (end === -1) return hasRoot ? '/' : '.';
+    if (hasRoot && end === 1) return '//';
+    return path.slice(0, end);
+  },
+
+  basename: function basename(path, ext) {
+    if (ext !== undefined && typeof ext !== 'string') throw new TypeError('"ext" argument must be a string');
+    assertPath(path);
+
+    var start = 0;
+    var end = -1;
+    var matchedSlash = true;
+    var i;
+
+    if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
+      if (ext.length === path.length && ext === path) return '';
+      var extIdx = ext.length - 1;
+      var firstNonSlashEnd = -1;
+      for (i = path.length - 1; i >= 0; --i) {
+        var code = path.charCodeAt(i);
+        if (code === 47 /*/*/) {
+            // If we reached a path separator that was not part of a set of path
+            // separators at the end of the string, stop now
+            if (!matchedSlash) {
+              start = i + 1;
+              break;
+            }
+          } else {
+          if (firstNonSlashEnd === -1) {
+            // We saw the first non-path separator, remember this index in case
+            // we need it if the extension ends up not matching
+            matchedSlash = false;
+            firstNonSlashEnd = i + 1;
+          }
+          if (extIdx >= 0) {
+            // Try to match the explicit extension
+            if (code === ext.charCodeAt(extIdx)) {
+              if (--extIdx === -1) {
+                // We matched the extension, so mark this as the end of our path
+                // component
+                end = i;
+              }
+            } else {
+              // Extension does not match, so our result is the entire path
+              // component
+              extIdx = -1;
+              end = firstNonSlashEnd;
+            }
+          }
+        }
+      }
+
+      if (start === end) end = firstNonSlashEnd;else if (end === -1) end = path.length;
+      return path.slice(start, end);
+    } else {
+      for (i = path.length - 1; i >= 0; --i) {
+        if (path.charCodeAt(i) === 47 /*/*/) {
+            // If we reached a path separator that was not part of a set of path
+            // separators at the end of the string, stop now
+            if (!matchedSlash) {
+              start = i + 1;
+              break;
+            }
+          } else if (end === -1) {
+          // We saw the first non-path separator, mark this as the end of our
+          // path component
+          matchedSlash = false;
+          end = i + 1;
+        }
+      }
+
+      if (end === -1) return '';
+      return path.slice(start, end);
+    }
+  },
+
+  extname: function extname(path) {
+    assertPath(path);
+    var startDot = -1;
+    var startPart = 0;
+    var end = -1;
+    var matchedSlash = true;
+    // Track the state of characters (if any) we see before our first dot and
+    // after any path separator we find
+    var preDotState = 0;
+    for (var i = path.length - 1; i >= 0; --i) {
+      var code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          // If we reached a path separator that was not part of a set of path
+          // separators at the end of the string, stop now
+          if (!matchedSlash) {
+            startPart = i + 1;
+            break;
+          }
+          continue;
+        }
+      if (end === -1) {
+        // We saw the first non-path separator, mark this as the end of our
+        // extension
+        matchedSlash = false;
+        end = i + 1;
+      }
+      if (code === 46 /*.*/) {
+          // If this is our first dot, mark it as the start of our extension
+          if (startDot === -1)
+            startDot = i;
+          else if (preDotState !== 1)
+            preDotState = 1;
+      } else if (startDot !== -1) {
+        // We saw a non-dot and non-path separator before our dot, so we should
+        // have a good chance at having a non-empty extension
+        preDotState = -1;
+      }
+    }
+
+    if (startDot === -1 || end === -1 ||
+        // We saw a non-dot character immediately before the dot
+        preDotState === 0 ||
+        // The (right-most) trimmed path component is exactly '..'
+        preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+      return '';
+    }
+    return path.slice(startDot, end);
+  },
+
+  format: function format(pathObject) {
+    if (pathObject === null || typeof pathObject !== 'object') {
+      throw new TypeError('The "pathObject" argument must be of type Object. Received type ' + typeof pathObject);
+    }
+    return _format('/', pathObject);
+  },
+
+  parse: function parse(path) {
+    assertPath(path);
+
+    var ret = { root: '', dir: '', base: '', ext: '', name: '' };
+    if (path.length === 0) return ret;
+    var code = path.charCodeAt(0);
+    var isAbsolute = code === 47 /*/*/;
+    var start;
+    if (isAbsolute) {
+      ret.root = '/';
+      start = 1;
+    } else {
+      start = 0;
+    }
+    var startDot = -1;
+    var startPart = 0;
+    var end = -1;
+    var matchedSlash = true;
+    var i = path.length - 1;
+
+    // Track the state of characters (if any) we see before our first dot and
+    // after any path separator we find
+    var preDotState = 0;
+
+    // Get non-dir info
+    for (; i >= start; --i) {
+      code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          // If we reached a path separator that was not part of a set of path
+          // separators at the end of the string, stop now
+          if (!matchedSlash) {
+            startPart = i + 1;
+            break;
+          }
+          continue;
+        }
+      if (end === -1) {
+        // We saw the first non-path separator, mark this as the end of our
+        // extension
+        matchedSlash = false;
+        end = i + 1;
+      }
+      if (code === 46 /*.*/) {
+          // If this is our first dot, mark it as the start of our extension
+          if (startDot === -1) startDot = i;else if (preDotState !== 1) preDotState = 1;
+        } else if (startDot !== -1) {
+        // We saw a non-dot and non-path separator before our dot, so we should
+        // have a good chance at having a non-empty extension
+        preDotState = -1;
+      }
+    }
+
+    if (startDot === -1 || end === -1 ||
+    // We saw a non-dot character immediately before the dot
+    preDotState === 0 ||
+    // The (right-most) trimmed path component is exactly '..'
+    preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+      if (end !== -1) {
+        if (startPart === 0 && isAbsolute) ret.base = ret.name = path.slice(1, end);else ret.base = ret.name = path.slice(startPart, end);
+      }
+    } else {
+      if (startPart === 0 && isAbsolute) {
+        ret.name = path.slice(1, startDot);
+        ret.base = path.slice(1, end);
+      } else {
+        ret.name = path.slice(startPart, startDot);
+        ret.base = path.slice(startPart, end);
+      }
+      ret.ext = path.slice(startDot, end);
+    }
+
+    if (startPart > 0) ret.dir = path.slice(0, startPart - 1);else if (isAbsolute) ret.dir = '/';
+
+    return ret;
+  },
+
+  sep: '/',
+  delimiter: ':',
+  win32: null,
+  posix: null
+};
+
+posix.posix = posix;
+
+module.exports = posix;
 
 
 /***/ }),
@@ -43098,7 +43829,7 @@ var __webpack_exports__ = {};
 (() => {
 "use strict";
 /*!************************************!*\
-  !*** ./src/index.ts + 209 modules ***!
+  !*** ./src/index.ts + 216 modules ***!
   \************************************/
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
@@ -43106,6 +43837,7 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   BasePlugin: () => (/* reexport */ BasePlugin),
+  ConfigHelpers: () => (/* reexport */ ConfigHelpers),
   CorePlugins: () => (/* reexport */ CorePlugins),
   DataBase: () => (/* reexport */ DataBase),
   ErrorHandler: () => (/* reexport */ ErrorHandler),
@@ -43117,16 +43849,23 @@ __webpack_require__.d(__webpack_exports__, {
   OAuthConnector: () => (/* reexport */ OAuthConnector),
   OAuthPlugin: () => (/* reexport */ OAuthPlugin),
   PluginCategory: () => (/* reexport */ PluginCategory),
+  QuickConfig: () => (/* reexport */ QuickConfig),
+  QuickStart: () => (/* reexport */ QuickStart),
   RxJS: () => (/* reexport */ RxJS),
   SEA: () => (/* reexport */ (sea_default())),
+  ShogunConfigBuilder: () => (/* reexport */ ShogunConfigBuilder),
   ShogunCore: () => (/* reexport */ ShogunCore),
+  ShogunPresets: () => (/* reexport */ ShogunPresets),
+  SimpleGunAPI: () => (/* reexport */ SimpleGunAPI),
   Web3Connector: () => (/* reexport */ Web3Connector),
   Web3ConnectorPlugin: () => (/* reexport */ Web3ConnectorPlugin),
   Webauthn: () => (/* reexport */ Webauthn),
   WebauthnPlugin: () => (/* reexport */ WebauthnPlugin),
   createError: () => (/* reexport */ createError),
+  createSimpleAPI: () => (/* reexport */ createSimpleAPI),
   crypto: () => (/* reexport */ gundb_crypto_namespaceObject),
-  derive: () => (/* reexport */ derive)
+  derive: () => (/* reexport */ derive),
+  quickStart: () => (/* reexport */ quickStart)
 });
 
 // NAMESPACE OBJECT: ./node_modules/ethers/node_modules/@noble/curves/esm/abstract/utils.js
@@ -43210,122 +43949,6 @@ __webpack_require__.d(gundb_crypto_namespaceObject, {
   secret: () => (secret),
   unsafeHash: () => (unsafeHash)
 });
-
-;// ./src/utils/eventEmitter.ts
-/**
- * Simple event emitter implementation with generic event types
- */
-class EventEmitter {
-    events;
-    constructor() {
-        this.events = new Map();
-    }
-    /**
-     * Registers an event listener
-     */
-    on(event, listener) {
-        if (!this.events.has(event)) {
-            this.events.set(event, []);
-        }
-        this.events.get(event)?.push(listener);
-    }
-    /**
-     * Emits an event with arguments
-     */
-    emit(event, data) {
-        if (!this.events.has(event))
-            return false;
-        const listeners = this.events.get(event) || [];
-        listeners.forEach((listener) => {
-            try {
-                listener(data);
-            }
-            catch (error) {
-                // Ensure error is properly formatted for console.error and pass Error instance
-                const err = error instanceof Error ? error : new Error(String(error));
-                console.error(`Error in event listener for ${String(event)}:`, err);
-            }
-        });
-        return true;
-    }
-    /**
-     * Removes an event listener
-     */
-    off(event, listener) {
-        if (!this.events.has(event))
-            return;
-        const listeners = this.events.get(event) || [];
-        const index = listeners.indexOf(listener);
-        if (index !== -1) {
-            listeners.splice(index, 1);
-            if (listeners.length === 0) {
-                this.events.delete(event);
-            }
-            else {
-                this.events.set(event, listeners);
-            }
-        }
-    }
-    /**
-     * Registers a one-time event listener
-     */
-    once(event, listener) {
-        const onceWrapper = (data) => {
-            listener(data);
-            this.off(event, onceWrapper);
-        };
-        this.on(event, onceWrapper);
-    }
-    /**
-     * Removes all listeners for an event or all events
-     */
-    removeAllListeners(event) {
-        if (event) {
-            this.events.delete(event);
-        }
-        else {
-            this.events.clear();
-        }
-    }
-}
-
-;// ./src/interfaces/events.ts
-
-/**
- * Extended EventEmitter class with typed events for Shogun
- * @class ShogunEventEmitter
- * @extends EventEmitter
- */
-class ShogunEventEmitter extends EventEmitter {
-    /**
-     * Emit a typed Shogun event
-     * @template K - Event key type
-     * @param {K} event - Event name
-     * @param {ShogunEventMap[K]} data - Event data
-     * @returns {boolean} - Returns true if the event had listeners, false otherwise
-     */
-    emit(event, data) {
-        return super.emit(event, data);
-    }
-    /**
-     * Register a listener for a typed Shogun event
-     * @template K - Event key type
-     * @param {K} event - Event name
-     * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function
-     */
-    on(event, listener) {
-        super.on(event, listener);
-    }
-    /**
-     * Remove a listener for a typed Shogun event
-     * @template K - Event key type
-     * @param {K} event - Event name
-     * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function to remove
-     */
-    off(event, listener) {
-        super.off(event, listener);
-    }
-}
 
 ;// ./src/utils/errorHandler.ts
 /**
@@ -43570,6 +44193,716 @@ class ErrorHandler {
     }
 }
 
+;// ./src/managers/PluginManager.ts
+/**
+ * Manages plugin registration, validation, and lifecycle
+ */
+class PluginManager {
+    plugins = new Map();
+    core;
+    constructor(core) {
+        this.core = core;
+    }
+    /**
+     * Register a plugin with the Shogun SDK
+     * @param plugin Plugin instance to register
+     * @throws Error if a plugin with the same name is already registered
+     */
+    register(plugin) {
+        try {
+            if (!plugin.name) {
+                if (typeof console !== "undefined" && console.error) {
+                    console.error("Plugin registration failed: Plugin must have a name");
+                }
+                return;
+            }
+            if (this.plugins.has(plugin.name)) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
+                }
+                return;
+            }
+            // Initialize plugin with core instance
+            plugin.initialize(this.core);
+            this.plugins.set(plugin.name, plugin);
+            this.core.emit("plugin:registered", {
+                name: plugin.name,
+                version: plugin.version || "unknown",
+                category: plugin._category || "unknown",
+            });
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error registering plugin "${plugin.name}":`, error);
+            }
+        }
+    }
+    /**
+     * Unregister a plugin from the Shogun SDK
+     * @param name Name of the plugin to unregister
+     */
+    unregister(name) {
+        try {
+            const plugin = this.plugins.get(name);
+            if (!plugin) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn(`Plugin "${name}" not found for unregistration`);
+                }
+                return false;
+            }
+            // Destroy plugin if it has a destroy method
+            if (typeof plugin.destroy === "function") {
+                try {
+                    plugin.destroy();
+                }
+                catch (destroyError) {
+                    if (typeof console !== "undefined" && console.error) {
+                        console.error(`Error destroying plugin "${name}":`, destroyError);
+                    }
+                }
+            }
+            this.plugins.delete(name);
+            this.core.emit("plugin:unregistered", {
+                name: plugin.name,
+            });
+            return true;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error unregistering plugin "${name}":`, error);
+            }
+            return false;
+        }
+    }
+    /**
+     * Retrieve a registered plugin by name
+     * @param name Name of the plugin
+     * @returns The requested plugin or undefined if not found
+     * @template T Type of the plugin or its public interface
+     */
+    getPlugin(name) {
+        if (!name || typeof name !== "string") {
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("Invalid plugin name provided to getPlugin");
+            }
+            return undefined;
+        }
+        const plugin = this.plugins.get(name);
+        if (!plugin) {
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn(`Plugin "${name}" not found`);
+            }
+            return undefined;
+        }
+        return plugin;
+    }
+    /**
+     * Get information about all registered plugins
+     * @returns Array of plugin information objects
+     */
+    getPluginsInfo() {
+        const pluginsInfo = [];
+        this.plugins.forEach((plugin) => {
+            pluginsInfo.push({
+                name: plugin.name,
+                version: plugin.version || "unknown",
+                category: plugin._category,
+                description: plugin.description,
+            });
+        });
+        return pluginsInfo;
+    }
+    /**
+     * Get the total number of registered plugins
+     * @returns Number of registered plugins
+     */
+    getPluginCount() {
+        return this.plugins.size;
+    }
+    /**
+     * Check if all plugins are properly initialized
+     * @returns Object with initialization status for each plugin
+     */
+    getPluginsInitializationStatus() {
+        const status = {};
+        this.plugins.forEach((plugin, name) => {
+            try {
+                // Verifica se il plugin ha un metodo per controllare l'inizializzazione
+                if (typeof plugin.assertInitialized === "function") {
+                    plugin.assertInitialized();
+                    status[name] = { initialized: true };
+                }
+                else {
+                    // Fallback: verifica se il plugin ha un riferimento al core
+                    status[name] = {
+                        initialized: !!plugin.core,
+                        error: !plugin.core
+                            ? "No core reference found"
+                            : undefined,
+                    };
+                }
+            }
+            catch (error) {
+                status[name] = {
+                    initialized: false,
+                    error: error instanceof Error ? error.message : String(error),
+                };
+            }
+        });
+        return status;
+    }
+    /**
+     * Validate plugin system integrity
+     * @returns Object with validation results
+     */
+    validatePluginSystem() {
+        const status = this.getPluginsInitializationStatus();
+        const totalPlugins = Object.keys(status).length;
+        const initializedPlugins = Object.values(status).filter((s) => s.initialized).length;
+        const failedPlugins = Object.entries(status)
+            .filter(([_, s]) => !s.initialized)
+            .map(([name, _]) => name);
+        const warnings = [];
+        if (totalPlugins === 0) {
+            warnings.push("No plugins registered");
+        }
+        if (failedPlugins.length > 0) {
+            warnings.push(`Failed plugins: ${failedPlugins.join(", ")}`);
+        }
+        return {
+            totalPlugins,
+            initializedPlugins,
+            failedPlugins,
+            warnings,
+        };
+    }
+    /**
+     * Attempt to reinitialize failed plugins
+     * @returns Object with reinitialization results
+     */
+    reinitializeFailedPlugins() {
+        const status = this.getPluginsInitializationStatus();
+        const failedPlugins = Object.entries(status)
+            .filter(([_, s]) => !s.initialized)
+            .map(([name, _]) => name);
+        const success = [];
+        const failed = [];
+        failedPlugins.forEach((pluginName) => {
+            try {
+                const plugin = this.plugins.get(pluginName);
+                if (!plugin) {
+                    failed.push({ name: pluginName, error: "Plugin not found" });
+                    return;
+                }
+                // Reinizializza il plugin
+                plugin.initialize(this.core);
+                success.push(pluginName);
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                failed.push({ name: pluginName, error: errorMessage });
+                if (typeof console !== "undefined" && console.error) {
+                    console.error(`[PluginManager] Failed to reinitialize plugin ${pluginName}:`, error);
+                }
+            }
+        });
+        return { success, failed };
+    }
+    /**
+     * Check plugin compatibility with current ShogunCore version
+     * @returns Object with compatibility information
+     */
+    checkPluginCompatibility() {
+        const compatible = [];
+        const incompatible = [];
+        const unknown = [];
+        this.plugins.forEach((plugin) => {
+            const pluginInfo = {
+                name: plugin.name,
+                version: plugin.version || "unknown",
+            };
+            // Verifica se il plugin ha informazioni di compatibilità
+            if (typeof plugin.getCompatibilityInfo === "function") {
+                try {
+                    const compatibilityInfo = plugin.getCompatibilityInfo();
+                    if (compatibilityInfo && compatibilityInfo.compatible) {
+                        compatible.push(pluginInfo);
+                    }
+                    else {
+                        incompatible.push({
+                            ...pluginInfo,
+                            reason: compatibilityInfo?.reason || "Unknown compatibility issue",
+                        });
+                    }
+                }
+                catch (error) {
+                    unknown.push(pluginInfo);
+                }
+            }
+            else {
+                // Se non ha informazioni di compatibilità, considera sconosciuto
+                unknown.push(pluginInfo);
+            }
+        });
+        return { compatible, incompatible, unknown };
+    }
+    /**
+     * Get comprehensive debug information about the plugin system
+     * @returns Complete plugin system debug information
+     */
+    getPluginSystemDebugInfo() {
+        const pluginsInfo = this.getPluginsInfo();
+        const initializationStatus = this.getPluginsInitializationStatus();
+        const plugins = pluginsInfo.map((info) => ({
+            ...info,
+            initialized: initializationStatus[info.name]?.initialized || false,
+            error: initializationStatus[info.name]?.error,
+        }));
+        return {
+            shogunCoreVersion: "^1.6.6",
+            totalPlugins: this.getPluginCount(),
+            plugins,
+            initializationStatus,
+            validation: this.validatePluginSystem(),
+            compatibility: this.checkPluginCompatibility(),
+        };
+    }
+    /**
+     * Check if a plugin is registered
+     * @param name Name of the plugin to check
+     * @returns true if the plugin is registered, false otherwise
+     */
+    hasPlugin(name) {
+        return this.plugins.has(name);
+    }
+    /**
+     * Get all plugins of a specific category
+     * @param category Category of plugins to filter
+     * @returns Array of plugins in the specified category
+     */
+    getPluginsByCategory(category) {
+        const result = [];
+        this.plugins.forEach((plugin) => {
+            if (plugin._category === category) {
+                result.push(plugin);
+            }
+        });
+        return result;
+    }
+}
+
+;// ./src/managers/AuthManager.ts
+
+/**
+ * Manages authentication operations for ShogunCore
+ */
+class AuthManager {
+    core;
+    currentAuthMethod;
+    constructor(core) {
+        this.core = core;
+    }
+    /**
+     * Check if user is logged in
+     * @returns {boolean} True if user is logged in, false otherwise
+     * @description Verifies authentication status by checking GunInstance login state
+     * and presence of authentication credentials in storage
+     */
+    isLoggedIn() {
+        return this.core.db.isLoggedIn();
+    }
+    /**
+     * Perform user logout
+     * @description Logs out the current user from GunInstance and emits logout event.
+     * If user is not authenticated, the logout operation is ignored.
+     */
+    logout() {
+        try {
+            if (!this.isLoggedIn()) {
+                return;
+            }
+            this.core.db.logout();
+            this.core.emit("auth:logout");
+        }
+        catch (error) {
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
+        }
+    }
+    /**
+     * Authenticate user with username and password
+     * @param username - Username
+     * @param password - User password
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Attempts to log in user with provided credentials.
+     * Emits login event on success.
+     */
+    async login(username, password, pair) {
+        try {
+            if (!this.currentAuthMethod) {
+                this.currentAuthMethod = "password";
+            }
+            const result = await this.core.db.login(username, password, pair);
+            if (result.success) {
+                // Include SEA pair in the response
+                const seaPair = this.core.user?._?.sea;
+                if (seaPair) {
+                    result.sea = seaPair;
+                }
+                this.core.emit("auth:login", {
+                    userPub: result.userPub ?? "",
+                    method: this.currentAuthMethod === "pair"
+                        ? "password"
+                        : this.currentAuthMethod || "password",
+                });
+            }
+            else {
+                result.error = result.error || "Wrong user or password";
+            }
+            return result;
+        }
+        catch (error) {
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
+            return {
+                success: false,
+                error: error.message ?? "Unknown error during login",
+            };
+        }
+    }
+    /**
+     * Login with GunDB pair directly
+     * @param pair - GunDB SEA pair for authentication
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Authenticates user using a GunDB pair directly.
+     * Emits login event on success.
+     */
+    async loginWithPair(pair) {
+        try {
+            if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+                return {
+                    success: false,
+                    error: "Invalid pair structure - missing required keys",
+                };
+            }
+            // Use the new loginWithPair method from GunInstance
+            const result = await this.core.db.login("", "", pair);
+            if (result.success) {
+                // Include SEA pair in the response
+                const seaPair = this.core.user?._?.sea;
+                if (seaPair) {
+                    result.sea = seaPair;
+                }
+                this.currentAuthMethod = "pair";
+                this.core.emit("auth:login", {
+                    userPub: result.userPub ?? "",
+                    method: "password",
+                });
+            }
+            else {
+                result.error =
+                    result.error || "Authentication failed with provided pair";
+            }
+            return result;
+        }
+        catch (error) {
+            ErrorHandler.handle(ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
+            return {
+                success: false,
+                error: error.message ?? "Unknown error during pair login",
+            };
+        }
+    }
+    /**
+     * Register a new user with provided credentials
+     * @param username - Username
+     * @param password - Password
+     * @param email - Email (optional)
+     * @param pair - Pair of keys
+     * @returns {Promise<SignUpResult>} Registration result
+     * @description Creates a new user account with the provided credentials.
+     * Validates password requirements and emits signup event on success.
+     */
+    async signUp(username, password, pair) {
+        try {
+            if (!this.core.db) {
+                throw new Error("Database not initialized");
+            }
+            // For password-based signup, ensure password is provided
+            if (!pair && (!password || password.trim() === "")) {
+                throw new Error("Password is required for password-based signup");
+            }
+            const result = await this.core.db.signUp(username, password || "", pair);
+            if (result.success) {
+                // Update current authentication method
+                this.currentAuthMethod = pair ? "web3" : "password";
+                this.core.emit("auth:signup", {
+                    userPub: result.userPub,
+                    username,
+                    method: this.currentAuthMethod,
+                });
+                this.core.emit("debug", {
+                    action: "signup_success",
+                    userPub: result.userPub,
+                    method: this.currentAuthMethod,
+                });
+            }
+            else {
+                this.core.emit("debug", {
+                    action: "signup_failed",
+                    error: result.error,
+                    username,
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(`Error during registration for user ${username}:`, error);
+            }
+            this.core.emit("debug", {
+                action: "signup_error",
+                error: error instanceof Error ? error.message : String(error),
+                username,
+            });
+            return {
+                success: false,
+                error: `Registration failed: ${error instanceof Error ? error.message : String(error)}`,
+            };
+        }
+    }
+    /**
+     * Set the current authentication method
+     * This is used by plugins to indicate which authentication method was used
+     * @param method The authentication method used
+     */
+    setAuthMethod(method) {
+        this.currentAuthMethod = method;
+    }
+    /**
+     * Get the current authentication method
+     * @returns The current authentication method or undefined if not set
+     */
+    getAuthMethod() {
+        return this.currentAuthMethod;
+    }
+    /**
+     * Get an authentication method plugin by type
+     * @param type The type of authentication method
+     * @returns The authentication plugin or undefined if not available
+     * This is a more modern approach to accessing authentication methods
+     */
+    getAuthenticationMethod(type) {
+        switch (type) {
+            case "webauthn":
+                return this.core.getPlugin("WebAuthn");
+            case "web3":
+                return this.core.getPlugin("Web3");
+            case "nostr":
+                return this.core.getPlugin("Nostr");
+            case "oauth":
+                return this.core.getPlugin("OAuth");
+            case "password":
+            default:
+                return {
+                    login: async (username, password) => {
+                        return await this.login(username, password);
+                    },
+                    signUp: async (username, password, confirm) => {
+                        // For password-based signup, validate password confirmation
+                        if (confirm && password !== confirm) {
+                            throw new Error("Password and confirm password do not match");
+                        }
+                        return await this.signUp(username, password);
+                    },
+                };
+        }
+    }
+}
+
+;// ./src/utils/eventEmitter.ts
+/**
+ * Simple event emitter implementation with generic event types
+ */
+class EventEmitter {
+    events;
+    constructor() {
+        this.events = new Map();
+    }
+    /**
+     * Registers an event listener
+     */
+    on(event, listener) {
+        if (!this.events.has(event)) {
+            this.events.set(event, []);
+        }
+        this.events.get(event)?.push(listener);
+    }
+    /**
+     * Emits an event with arguments
+     */
+    emit(event, data) {
+        if (!this.events.has(event))
+            return false;
+        const listeners = this.events.get(event) || [];
+        listeners.forEach((listener) => {
+            try {
+                listener(data);
+            }
+            catch (error) {
+                // Ensure error is properly formatted for console.error and pass Error instance
+                const err = error instanceof Error ? error : new Error(String(error));
+                console.error(`Error in event listener for ${String(event)}:`, err);
+            }
+        });
+        return true;
+    }
+    /**
+     * Removes an event listener
+     */
+    off(event, listener) {
+        if (!this.events.has(event))
+            return;
+        const listeners = this.events.get(event) || [];
+        const index = listeners.indexOf(listener);
+        if (index !== -1) {
+            listeners.splice(index, 1);
+            if (listeners.length === 0) {
+                this.events.delete(event);
+            }
+            else {
+                this.events.set(event, listeners);
+            }
+        }
+    }
+    /**
+     * Registers a one-time event listener
+     */
+    once(event, listener) {
+        const onceWrapper = (data) => {
+            listener(data);
+            this.off(event, onceWrapper);
+        };
+        this.on(event, onceWrapper);
+    }
+    /**
+     * Removes all listeners for an event or all events
+     */
+    removeAllListeners(event) {
+        if (event) {
+            this.events.delete(event);
+        }
+        else {
+            this.events.clear();
+        }
+    }
+}
+
+;// ./src/interfaces/events.ts
+
+/**
+ * Extended EventEmitter class with typed events for Shogun
+ * @class ShogunEventEmitter
+ * @extends EventEmitter
+ */
+class ShogunEventEmitter extends EventEmitter {
+    /**
+     * Emit a typed Shogun event
+     * @template K - Event key type
+     * @param {K} event - Event name
+     * @param {ShogunEventMap[K]} data - Event data
+     * @returns {boolean} - Returns true if the event had listeners, false otherwise
+     */
+    emit(event, data) {
+        return super.emit(event, data);
+    }
+    /**
+     * Register a listener for a typed Shogun event
+     * @template K - Event key type
+     * @param {K} event - Event name
+     * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function
+     */
+    on(event, listener) {
+        super.on(event, listener);
+    }
+    /**
+     * Remove a listener for a typed Shogun event
+     * @template K - Event key type
+     * @param {K} event - Event name
+     * @param {(data: ShogunEventMap[K]) => void} listener - Event listener function to remove
+     */
+    off(event, listener) {
+        super.off(event, listener);
+    }
+}
+
+;// ./src/managers/EventManager.ts
+
+/**
+ * Manages event operations for ShogunCore
+ */
+class EventManager {
+    eventEmitter;
+    constructor() {
+        this.eventEmitter = new ShogunEventEmitter();
+    }
+    /**
+     * Emits an event through the core's event emitter.
+     * Plugins should use this method to emit events instead of accessing the private eventEmitter directly.
+     * @param eventName The name of the event to emit.
+     * @param data The data to pass with the event.
+     * @returns {boolean} Indicates if the event had listeners.
+     */
+    emit(eventName, data) {
+        return this.eventEmitter.emit(eventName, data);
+    }
+    /**
+     * Add an event listener
+     * @param eventName The name of the event to listen for
+     * @param listener The callback function to execute when the event is emitted
+     * @returns {this} Returns this instance for method chaining
+     */
+    on(eventName, listener) {
+        this.eventEmitter.on(eventName, listener);
+        return this;
+    }
+    /**
+     * Add a one-time event listener
+     * @param eventName The name of the event to listen for
+     * @param listener The callback function to execute when the event is emitted
+     * @returns {this} Returns this instance for method chaining
+     */
+    once(eventName, listener) {
+        this.eventEmitter.once(eventName, listener);
+        return this;
+    }
+    /**
+     * Remove an event listener
+     * @param eventName The name of the event to stop listening for
+     * @param listener The callback function to remove
+     * @returns {this} Returns this instance for method chaining
+     */
+    off(eventName, listener) {
+        this.eventEmitter.off(eventName, listener);
+        return this;
+    }
+    /**
+     * Remove all listeners for a specific event or all events
+     * @param eventName Optional. The name of the event to remove listeners for.
+     * If not provided, all listeners for all events are removed.
+     * @returns {this} Returns this instance for method chaining
+     */
+    removeAllListeners(eventName) {
+        this.eventEmitter.removeAllListeners(eventName);
+        return this;
+    }
+    /**
+     * Get the underlying event emitter instance
+     * @returns The ShogunEventEmitter instance
+     */
+    getEventEmitter() {
+        return this.eventEmitter;
+    }
+}
+
 ;// ./src/storage/storage.ts
 /**
  * Storage implementation based on StorageMock
@@ -43718,42 +45051,6 @@ class ShogunStorage {
         }
     }
 }
-
-;// ./src/interfaces/shogun.ts
-/**
- * Standard plugin categories in ShogunCore
- */
-var PluginCategory;
-(function (PluginCategory) {
-    /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
-    PluginCategory["Authentication"] = "authentication";
-    /** Wallet management plugins */
-    PluginCategory["Wallet"] = "wallet";
-    /** Privacy and anonymity plugins */
-    PluginCategory["Privacy"] = "privacy";
-    /** Decentralized identity plugins */
-    PluginCategory["Identity"] = "identity";
-    /** Other utility plugins */
-    PluginCategory["Utility"] = "utility";
-    /** Messages plugins */
-    PluginCategory["Messages"] = "messages";
-    /** Messaging plugins */
-    PluginCategory["Other"] = "other";
-})(PluginCategory || (PluginCategory = {}));
-/**
- * Standard names for built-in plugins
- */
-var CorePlugins;
-(function (CorePlugins) {
-    /** WebAuthn plugin */
-    CorePlugins["WebAuthn"] = "webauthn";
-    /** Ethereum plugin */
-    CorePlugins["Web3"] = "web3";
-    /** Bitcoin wallet plugin */
-    CorePlugins["Nostr"] = "nostr";
-    /** OAuth plugin */
-    CorePlugins["OAuth"] = "oauth";
-})(CorePlugins || (CorePlugins = {}));
 
 ;// ./src/plugins/base.ts
 
@@ -52366,7 +53663,7 @@ class WebauthnPlugin extends BasePlugin {
                 throw new Error("Failed to generate SEA pair from WebAuthn credentials");
             }
             // Use pair-based authentication instead of password
-            return await core.signUp(username, "", "", pair);
+            return await core.signUp(username, undefined, pair);
         }
         catch (error) {
             console.error(`Error during WebAuthn registration: ${error}`);
@@ -84697,7 +85994,7 @@ class NostrConnectorPlugin extends BasePlugin {
             // Set authentication method to nostr before signup
             core.setAuthMethod("nostr");
             // Usa le chiavi derivate per signup
-            const signupResult = await core.signUp(credentials.username, "", "", k);
+            const signupResult = await core.signUp(credentials.username, undefined, k);
             if (signupResult.success) {
                 // Dopo la creazione, autentica subito
                 const authResult = await core.login(credentials.username, "", k);
@@ -85873,7 +87170,7 @@ class OAuthPlugin extends BasePlugin {
             return loginResult;
         }
         // If login fails, try signup
-        const signupResult = await this.core.signUp(username, "", "", k);
+        const signupResult = await this.core.signUp(username, undefined, k);
         if (signupResult.success) {
             // Immediately login after signup
             const postSignupLogin = await this.core.login(username, "", k);
@@ -85914,10 +87211,10 @@ var store = __webpack_require__("./node_modules/gun/lib/store.js");
 var rindexed = __webpack_require__("./node_modules/gun/lib/rindexed.js");
 // EXTERNAL MODULE: ./node_modules/gun/lib/webrtc.js
 var webrtc = __webpack_require__("./node_modules/gun/lib/webrtc.js");
-// EXTERNAL MODULE: ./node_modules/gun/lib/evict.js
-var evict = __webpack_require__("./node_modules/gun/lib/evict.js");
-// EXTERNAL MODULE: ./node_modules/gun/lib/les.js
-var les = __webpack_require__("./node_modules/gun/lib/les.js");
+// EXTERNAL MODULE: ./node_modules/gun/lib/wire.js
+var wire = __webpack_require__("./node_modules/gun/lib/wire.js");
+// EXTERNAL MODULE: ./node_modules/gun/lib/axe.js
+var axe = __webpack_require__("./node_modules/gun/lib/axe.js");
 ;// ./src/gundb/restricted-put.ts
 // Functional programming style implementation
 const gunHeaderModule = (Gun) => {
@@ -88319,11 +89616,8 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).once((data) => {
-                resolve(data);
-            });
-        });
+        const node = await this.navigateToPath(this.gun, path).then();
+        return node;
     }
     /**
      * Puts data at the specified path
@@ -88332,14 +89626,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).put(data, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).put(data).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Sets data at the specified path
@@ -88348,14 +89639,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).set(data, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).set(data).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Removes data at the specified path
@@ -88363,14 +89651,11 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        return new Promise((resolve) => {
-            this.navigateToPath(this.gun, path).put(null, (ack) => {
-                const result = ack.err
-                    ? { success: false, error: ack.err }
-                    : { success: true };
-                resolve(result);
-            });
-        });
+        const ack = await this.navigateToPath(this.gun, path).put(null).then();
+        const result = ack.err
+            ? { success: false, error: ack.err }
+            : { success: true };
+        return result;
     }
     /**
      * Checks if a user is currently logged in
@@ -88586,37 +89871,25 @@ class DataBase {
         }
         // If using pair authentication, skip password validation
         if (pair) {
+            if (!pair.pub ||
+                !pair.priv ||
+                !pair.epub ||
+                !pair.epriv) {
+                return {
+                    valid: false,
+                    error: "Invalid pair provided",
+                };
+            }
+            if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+                return {
+                    valid: false,
+                    error: "Invalid pair provided",
+                };
+            }
             return { valid: true };
         }
         // Validate password strength
         return this.validatePasswordStrength(password);
-    }
-    /**
-     * Checks if user exists by attempting authentication
-     */
-    async checkUserExistence(username, password, pair) {
-        return new Promise((resolve) => {
-            if (pair) {
-                this.gun.user().auth(pair, (ack) => {
-                    if (ack.err) {
-                        resolve({ exists: false, error: ack.err });
-                    }
-                    else {
-                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                    }
-                });
-            }
-            else {
-                this.gun.user().auth(username, password, (ack) => {
-                    if (ack.err) {
-                        resolve({ exists: false, error: ack.err });
-                    }
-                    else {
-                        resolve({ exists: true, userPub: this.gun.user().is?.pub });
-                    }
-                });
-            }
-        });
     }
     /**
      * Creates a new user in Gun
@@ -88771,7 +90044,6 @@ class DataBase {
             if (!validation.valid) {
                 return { success: false, error: validation.error };
             }
-            // Create new user - use different method based on authentication type
             let createResult;
             if (pair) {
                 // For Web3/plugin authentication, use pair-based creation
@@ -88896,105 +90168,26 @@ class DataBase {
                 throw new Error("Username cannot be empty");
             }
             console.log(`Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`);
-            const existingUser = await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    console.warn(`⚠️ Timeout getting user data for ${userPub} - proceeding with null`);
-                    resolve(null);
-                }, 5000); // 5 second timeout
-                this.gun.get(userPub).once((data) => {
-                    clearTimeout(timeout);
-                    resolve(data);
-                });
-            });
-            // Check if user already has metadata to avoid overwriting
-            if (!existingUser) {
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout saving user metadata for ${userPub} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.gun
-                            .get(userPub)
-                            .put({ username: normalizedUsername }, (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                console.error(`Error saving user metadata: ${ack.err}`);
-                                reject(ack.err);
-                            }
-                            else {
-                                // User metadata saved successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (metadataError) {
-                    console.error(`Error saving user metadata: ${metadataError}`);
-                    // Don't throw here, continue with other operations
-                }
-                // Create username mapping
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout creating username mapping for ${normalizedUsername} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.node
-                            .get("usernames")
-                            .get(normalizedUsername)
-                            .put(userPub, (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                reject(ack.err);
-                            }
-                            else {
-                                // Username mapping created successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (mappingError) {
-                    console.error(`Error creating username mapping: ${mappingError}`);
-                    // Don't throw here, continue with other operations
-                }
-                // Add user to users collection
-                try {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.warn(`⚠️ Timeout adding user to collection for ${userPub} - continuing`);
-                            resolve({ ok: 0 }); // Resolve with mock success to continue
-                        }, 5000); // 5 second timeout
-                        this.node.get("users").set(this.gun.get(userPub), (ack) => {
-                            clearTimeout(timeout);
-                            if (ack.err) {
-                                reject(ack.err);
-                            }
-                            else {
-                                // User added to collection successfully
-                                resolve(ack);
-                            }
-                        });
-                    });
-                }
-                catch (collectionError) {
-                    console.error(`Error adding user to collection: ${collectionError}`);
-                    // Don't throw here, continue with other operations
-                }
-            }
+            const existingUser = await this.gun.get(userPub).once().then();
+            const isNewUser = !existingUser || !existingUser.username;
+            // Get user's encryption public key (epub) for comprehensive tracking
+            const userInstance = this.gun.user();
+            const userSea = userInstance?._?.sea;
+            const epub = userSea?.epub || null;
+            // Enhanced user tracking system
+            await this.setupComprehensiveUserTracking(normalizedUsername, userPub, epub, isNewUser);
             return {
                 success: true,
                 userPub: userPub,
                 username: normalizedUsername,
-                isNewUser: !existingUser || !existingUser.username,
+                isNewUser: isNewUser,
                 // Get the SEA pair from the user object
-                sea: this.gun.user()?._?.sea
+                sea: userSea
                     ? {
-                        pub: this.gun.user()._?.sea.pub,
-                        priv: this.gun.user()._?.sea.priv,
-                        epub: this.gun.user()._?.sea.epub,
-                        epriv: this.gun.user()._?.sea.epriv,
+                        pub: userSea.pub,
+                        priv: userSea.priv,
+                        epub: userSea.epub,
+                        epriv: userSea.epriv,
                     }
                     : undefined,
             };
@@ -89005,6 +90198,365 @@ class DataBase {
                 success: false,
                 error: `Post-authentication setup failed: ${error}`,
             };
+        }
+    }
+    /**
+     * Sets up comprehensive user tracking system for agile user lookup
+     * Creates multiple indexes for efficient user discovery
+     */
+    async setupComprehensiveUserTracking(username, userPub, epub, isNewUser) {
+        try {
+            // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
+            await this.createAliasIndex(username, userPub);
+            // 2. Create username mapping: usernames/alias -> userPub
+            await this.createUsernameMapping(username, userPub);
+            // 3. Create user registry: users/userPub -> user data
+            await this.createUserRegistry(username, userPub, epub);
+            // 4. Create reverse lookup: userPub -> alias
+            await this.createReverseLookup(username, userPub);
+            // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
+            if (epub) {
+                await this.createEpubIndex(epub, userPub);
+            }
+            // 6. Create user metadata in user's own node
+            await this.createUserMetadata(username, userPub, epub);
+            console.log(`Comprehensive user tracking setup completed for ${username}`);
+        }
+        catch (error) {
+            console.error(`Error in comprehensive user tracking setup: ${error}`);
+            // Don't throw - continue with other operations
+        }
+    }
+    /**
+     * Creates alias index following GunDB pattern: ~@alias -> userPub
+     */
+    async createAliasIndex(username, userPub) {
+        try {
+            const aliasNode = this.gun.get(`~@${username}`);
+            const ack = await aliasNode
+                .put({
+                "~pubKeyOfUser": this.gun.get(userPub),
+            })
+                .then();
+            if (ack.err) {
+                console.error(`Error creating alias index: ${ack.err}`);
+            }
+            else {
+                console.log(`Alias index created: ~@${username} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating alias index: ${error}`);
+        }
+    }
+    /**
+     * Creates username mapping: usernames/alias -> userPub
+     */
+    async createUsernameMapping(username, userPub) {
+        try {
+            const ack = await this.node
+                .get("usernames")
+                .get(username)
+                .put(userPub)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating username mapping: ${ack.err}`);
+            }
+            else {
+                console.log(`Username mapping created: ${username} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating username mapping: ${error}`);
+        }
+    }
+    /**
+     * Creates user registry: users/userPub -> user data
+     */
+    async createUserRegistry(username, userPub, epub) {
+        try {
+            const userData = {
+                username: username,
+                userPub: userPub,
+                epub: epub,
+                registeredAt: Date.now(),
+                lastSeen: Date.now(),
+            };
+            const ack = await this.node
+                .get("users")
+                .get(userPub)
+                .put(userData)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating user registry: ${ack.err}`);
+            }
+            else {
+                console.log(`User registry created: ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating user registry: ${error}`);
+        }
+    }
+    /**
+     * Creates reverse lookup: userPub -> alias
+     */
+    async createReverseLookup(username, userPub) {
+        try {
+            const ack = await this.node
+                .get("userAliases")
+                .get(userPub)
+                .put(username)
+                .then();
+            if (ack.err) {
+                console.error(`Error creating reverse lookup: ${ack.err}`);
+            }
+            else {
+                console.log(`Reverse lookup created: ${userPub} -> ${username}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating reverse lookup: ${error}`);
+        }
+    }
+    /**
+     * Creates epub index: epubKeys/epub -> userPub
+     */
+    async createEpubIndex(epub, userPub) {
+        try {
+            const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
+            if (ack.err) {
+                console.error(`Error creating epub index: ${ack.err}`);
+            }
+            else {
+                console.log(`Epub index created: ${epub} -> ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating epub index: ${error}`);
+        }
+    }
+    /**
+     * Creates user metadata in user's own node
+     */
+    async createUserMetadata(username, userPub, epub) {
+        try {
+            const userMetadata = {
+                username: username,
+                epub: epub,
+                registeredAt: Date.now(),
+                lastSeen: Date.now(),
+            };
+            const ack = await this.gun.get(userPub).put(userMetadata).then();
+            if (ack.err) {
+                console.error(`Error creating user metadata: ${ack.err}`);
+            }
+            else {
+                console.log(`User metadata created for ${userPub}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error creating user metadata: ${error}`);
+        }
+    }
+    /**
+     * Gets user information by alias using the comprehensive tracking system
+     * @param alias Username/alias to lookup
+     * @returns Promise resolving to user information or null if not found
+     */
+    async getUserByAlias(alias) {
+        try {
+            const normalizedAlias = alias.trim().toLowerCase();
+            if (!normalizedAlias) {
+                return null;
+            }
+            // Method 1: Try GunDB standard alias lookup (~@alias)
+            try {
+                const aliasData = await this.gun
+                    .get(`~@${normalizedAlias}`)
+                    .once()
+                    .then();
+                if (aliasData && aliasData["~pubKeyOfUser"]) {
+                    const userPub = aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
+                    if (userPub) {
+                        const userData = await this.getUserDataByPub(userPub);
+                        if (userData) {
+                            return userData;
+                        }
+                    }
+                }
+            }
+            catch (error) {
+                console.log(`GunDB alias lookup failed for ${normalizedAlias}:`, error);
+            }
+            // Method 2: Try username mapping (usernames/alias -> userPub)
+            try {
+                const userPub = await this.node
+                    .get("usernames")
+                    .get(normalizedAlias)
+                    .once()
+                    .then();
+                if (userPub) {
+                    const userData = await this.getUserDataByPub(userPub);
+                    if (userData) {
+                        return userData;
+                    }
+                }
+            }
+            catch (error) {
+                console.log(`Username mapping lookup failed for ${normalizedAlias}:`, error);
+            }
+            return null;
+        }
+        catch (error) {
+            console.error(`Error looking up user by alias ${alias}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user information by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user information or null if not found
+     */
+    async getUserDataByPub(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return null;
+            }
+            // Method 1: Try user registry (users/userPub -> user data)
+            try {
+                const userData = await this.node
+                    .get("users")
+                    .get(userPub)
+                    .once()
+                    .then();
+                if (userData && userData.username) {
+                    return {
+                        userPub: userData.userPub || userPub,
+                        epub: userData.epub || null,
+                        username: userData.username,
+                        registeredAt: userData.registeredAt || 0,
+                        lastSeen: userData.lastSeen || 0,
+                    };
+                }
+            }
+            catch (error) {
+                console.log(`User registry lookup failed for ${userPub}:`, error);
+            }
+            // Method 2: Try user's own node
+            try {
+                const userNodeData = await this.gun.get(userPub).once().then();
+                if (userNodeData && userNodeData.username) {
+                    return {
+                        userPub: userPub,
+                        epub: userNodeData.epub || null,
+                        username: userNodeData.username,
+                        registeredAt: userNodeData.registeredAt || 0,
+                        lastSeen: userNodeData.lastSeen || 0,
+                    };
+                }
+            }
+            catch (error) {
+                console.log(`User node lookup failed for ${userPub}:`, error);
+            }
+            return null;
+        }
+        catch (error) {
+            console.error(`Error looking up user data by pub ${userPub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user public key by encryption public key (epub)
+     * @param epub User's encryption public key
+     * @returns Promise resolving to user public key or null if not found
+     */
+    async getUserPubByEpub(epub) {
+        try {
+            if (!epub || typeof epub !== "string") {
+                return null;
+            }
+            const userPub = await this.node.get("epubKeys").get(epub).once().then();
+            return userPub || null;
+        }
+        catch (error) {
+            console.error(`Error looking up user pub by epub ${epub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets user alias by public key
+     * @param userPub User's public key
+     * @returns Promise resolving to user alias or null if not found
+     */
+    async getUserAliasByPub(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return null;
+            }
+            const alias = await this.node
+                .get("userAliases")
+                .get(userPub)
+                .once()
+                .then();
+            return alias || null;
+        }
+        catch (error) {
+            console.error(`Error looking up user alias by pub ${userPub}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Gets all registered users (for admin purposes)
+     * @returns Promise resolving to array of user information
+     */
+    async getAllRegisteredUsers() {
+        try {
+            const users = [];
+            // Get all users from the users registry
+            const usersNode = this.node.get("users");
+            // Note: This is a simplified approach. In a real implementation,
+            // you might want to use Gun's map functionality or iterate through
+            // known user public keys
+            return users;
+        }
+        catch (error) {
+            console.error(`Error getting all registered users:`, error);
+            return [];
+        }
+    }
+    /**
+     * Updates user's last seen timestamp
+     * @param userPub User's public key
+     */
+    async updateUserLastSeen(userPub) {
+        try {
+            if (!userPub || typeof userPub !== "string") {
+                return;
+            }
+            const timestamp = Date.now();
+            // Update in user registry
+            try {
+                await this.node
+                    .get("users")
+                    .get(userPub)
+                    .get("lastSeen")
+                    .put(timestamp)
+                    .then();
+            }
+            catch (error) {
+                console.log(`Failed to update lastSeen in user registry:`, error);
+            }
+            // Update in user's own node
+            try {
+                await this.gun.get(userPub).get("lastSeen").put(timestamp).then();
+            }
+            catch (error) {
+                console.log(`Failed to update lastSeen in user node:`, error);
+            }
+        }
+        catch (error) {
+            console.error(`Error updating user last seen for ${userPub}:`, error);
         }
     }
     /**
@@ -89091,6 +90643,14 @@ class DataBase {
             catch (postAuthError) {
                 console.error(`Post-auth error during login: ${postAuthError}`);
                 // Continue with login even if post-auth fails
+            }
+            // Update user's last seen timestamp
+            try {
+                await this.updateUserLastSeen(userPub);
+            }
+            catch (lastSeenError) {
+                console.error(`Error updating last seen: ${lastSeenError}`);
+                // Continue with login even if last seen update fails
             }
             // Save credentials for future sessions
             try {
@@ -89263,20 +90823,14 @@ class DataBase {
                 questions: JSON.stringify(securityQuestions),
                 hint: encryptedHint,
             };
-            await new Promise((resolve, reject) => {
-                this.node.get(userPub)
-                    .get("security")
-                    .put(securityPayload, (ack) => {
-                    if (ack.err) {
-                        console.error("Error saving security data to public graph:", ack.err);
-                        reject(new Error(ack.err));
-                    }
-                    else {
-                        // console.log(`Security data saved to public graph for ${userPub}`);
-                        resolve();
-                    }
-                });
-            });
+            const ack = await this.node.get(userPub)
+                .get("security")
+                .put(securityPayload)
+                .then();
+            if (ack.err) {
+                console.error("Error saving security data to public graph:", ack.err);
+                throw new Error(ack.err);
+            }
             return { success: true };
         }
         catch (error) {
@@ -89295,28 +90849,20 @@ class DataBase {
         try {
             // Find the user's data using direct lookup
             const normalizedUsername = username.trim().toLowerCase();
-            const userPub = await new Promise((resolve) => {
-                this.node
-                    .get("usernames")
-                    .get(normalizedUsername)
-                    .once((data) => {
-                    resolve(data || null);
-                });
-            });
+            const userPub = (await this.node
+                .get("usernames")
+                .get(normalizedUsername)
+                .once()
+                .then()) || null;
             if (!userPub) {
                 return { success: false, error: "User not found" };
             }
             // console.log(`Found user public key for password recovery: ${userPub}`);
             // Access the user's security data directly from their public key node
-            const securityData = await new Promise((resolve) => {
-                this.node.get(userPub).get("security").once((data) => {
-                    // console.log(
-                    //   `Retrieved security data for user ${username}:`,
-                    //   data ? "found" : "not found",
-                    // );
-                    resolve(data);
-                });
-            });
+            const securityData = await this.node.get(userPub)
+                .get("security")
+                .once()
+                .then();
             if (!securityData || !securityData.hint) {
                 return {
                     success: false,
@@ -89386,21 +90932,14 @@ class DataBase {
      * @returns Promise that resolves when the data is saved
      */
     async putUserData(path, data) {
-        return new Promise((resolve, reject) => {
-            const user = this.gun.user();
-            if (!user.is) {
-                reject(new Error("User not authenticated"));
-                return;
-            }
-            this.navigateToPath(user, path).put(data, (ack) => {
-                if (ack.err) {
-                    reject(new Error(ack.err));
-                }
-                else {
-                    resolve(ack);
-                }
-            });
-        });
+        const user = this.gun.user();
+        if (!user.is) {
+            throw new Error("User not authenticated");
+        }
+        const ack = await this.navigateToPath(user, path).put(data).then();
+        if (ack.err) {
+            throw new Error(ack.err);
+        }
     }
     /**
      * Gets user data from the specified path
@@ -89408,47 +90947,34 @@ class DataBase {
      * @returns Promise that resolves with the data
      */
     async getUserData(path) {
-        return new Promise((resolve, reject) => {
-            // Validazione del path
-            if (!path || typeof path !== "string") {
-                const error = "Path must be a non-empty string";
-                reject(new Error(error));
-                return;
+        // Validazione del path
+        if (!path || typeof path !== "string") {
+            throw new Error("Path must be a non-empty string");
+        }
+        const user = this.gun.user();
+        if (!user.is) {
+            throw new Error("User not authenticated");
+        }
+        try {
+            const data = await this.navigateToPath(user, path).once().then();
+            // Gestisci i riferimenti GunDB
+            if (data && typeof data === "object" && data["#"]) {
+                // È un riferimento GunDB, carica i dati effettivi
+                const referencePath = data["#"];
+                const actualData = await this.navigateToPath(this.gun, referencePath)
+                    .once()
+                    .then();
+                return actualData;
             }
-            const user = this.gun.user();
-            if (!user.is) {
-                const error = "User not authenticated";
-                reject(new Error(error));
-                return;
+            else {
+                // Dati diretti, restituisci così come sono
+                return data;
             }
-            // Timeout per evitare attese infinite
-            const timeout = setTimeout(() => {
-                const error = "Operation timeout";
-                reject(new Error(error));
-            }, CONFIG.TIMEOUTS.USER_DATA_OPERATION); // 10 secondi di timeout
-            try {
-                this.navigateToPath(user, path).once((data) => {
-                    clearTimeout(timeout);
-                    // Gestisci i riferimenti GunDB
-                    if (data && typeof data === "object" && data["#"]) {
-                        // È un riferimento GunDB, carica i dati effettivi
-                        const referencePath = data["#"];
-                        this.navigateToPath(this.gun, referencePath).once((actualData) => {
-                            resolve(actualData);
-                        });
-                    }
-                    else {
-                        // Dati diretti, restituisci così come sono
-                        resolve(data);
-                    }
-                });
-            }
-            catch (error) {
-                clearTimeout(timeout);
-                const errorMsg = error instanceof Error ? error.message : "Unknown error";
-                reject(error);
-            }
-        });
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            throw new Error(errorMsg);
+        }
     }
     // Errors
     static Errors = gundb_errors_namespaceObject;
@@ -89585,16 +91111,692 @@ const createGun = (config) => {
 
 /* harmony default export */ const db = ((gun_default()));
 
+;// ./src/gundb/improved-types.ts
+/**
+ * Improved type definitions to reduce 'any' usage while maintaining GunDB compatibility
+ */
+
+
+;// ./src/gundb/simple-api.ts
+/**
+ * Simplified API layer to reduce complexity for common use cases
+ * Provides quick-start methods that wrap the full DataBase functionality
+ */
+
+/**
+ * Simple API wrapper that provides common operations with minimal complexity
+ */
+class SimpleGunAPI {
+    db;
+    constructor(db) {
+        this.db = db;
+    }
+    /**
+     * Quick data operations - simplified interface
+     */
+    // Simple get - returns data directly or null
+    async get(path) {
+        try {
+            const result = await this.db.getData(path);
+            return result;
+        }
+        catch (error) {
+            console.warn(`Failed to get data from ${path}:`, error);
+            return null;
+        }
+    }
+    // Simple put - returns success boolean
+    async put(path, data) {
+        try {
+            const result = await this.db.put(path, data);
+            return result.success;
+        }
+        catch (error) {
+            console.warn(`Failed to put data to ${path}:`, error);
+            return false;
+        }
+    }
+    // Simple set - returns success boolean
+    async set(path, data) {
+        try {
+            const result = await this.db.set(path, data);
+            return result.success;
+        }
+        catch (error) {
+            console.warn(`Failed to set data to ${path}:`, error);
+            return false;
+        }
+    }
+    // Simple remove - returns success boolean
+    async remove(path) {
+        try {
+            const result = await this.db.remove(path);
+            return result.success;
+        }
+        catch (error) {
+            console.warn(`Failed to remove data from ${path}:`, error);
+            return false;
+        }
+    }
+    /**
+     * Quick authentication - simplified interface
+     */
+    // Simple login - returns user info or null
+    async login(username, password) {
+        try {
+            const result = await this.db.login(username, password);
+            if (result.success && result.userPub) {
+                return {
+                    userPub: result.userPub,
+                    username: result.username || username,
+                };
+            }
+            return null;
+        }
+        catch (error) {
+            console.warn(`Login failed for ${username}:`, error);
+            return null;
+        }
+    }
+    // Simple signup - returns user info or null
+    async signup(username, password) {
+        try {
+            const result = await this.db.signUp(username, password);
+            if (result.success && result.userPub) {
+                return {
+                    userPub: result.userPub,
+                    username: result.username || username,
+                };
+            }
+            return null;
+        }
+        catch (error) {
+            console.warn(`Signup failed for ${username}:`, error);
+            return null;
+        }
+    }
+    // Simple logout
+    logout() {
+        this.db.logout();
+    }
+    // Simple check if logged in
+    isLoggedIn() {
+        return this.db.isLoggedIn();
+    }
+    /**
+     * Quick user data operations - simplified interface
+     */
+    // Simple user data get
+    async getUserData(path) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            return (await this.db.getUserData(path));
+        }
+        catch (error) {
+            console.warn(`Failed to get user data from ${path}:`, error);
+            return null;
+        }
+    }
+    // Simple user data put
+    async putUserData(path, data) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            await this.db.putUserData(path, data);
+            return true;
+        }
+        catch (error) {
+            console.warn(`Failed to put user data to ${path}:`, error);
+            return false;
+        }
+    }
+    // Simple user data set (alternative to put)
+    async setUserData(path, data) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            // Use the user's gun instance directly for set operations
+            const user = this.db.getUser();
+            if (user && user.is) {
+                await new Promise((resolve, reject) => {
+                    user.get(path).set(data, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(ack.err));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            console.warn(`Failed to set user data to ${path}:`, error);
+            return false;
+        }
+    }
+    // Simple user data remove
+    async removeUserData(path) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            const user = this.db.getUser();
+            if (user && user.is) {
+                await new Promise((resolve, reject) => {
+                    user.get(path).put(null, (ack) => {
+                        if (ack.err) {
+                            reject(new Error(ack.err));
+                        }
+                        else {
+                            resolve();
+                        }
+                    });
+                });
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            console.warn(`Failed to remove user data from ${path}:`, error);
+            return false;
+        }
+    }
+    /**
+     * Quick utility methods
+     */
+    // Get current user info
+    getCurrentUser() {
+        const user = this.db.getCurrentUser();
+        if (user) {
+            return {
+                pub: user.pub,
+                username: user.username,
+            };
+        }
+        return null;
+    }
+    // Check if user exists by alias
+    async userExists(alias) {
+        try {
+            const user = await this.db.getUserByAlias(alias);
+            return user !== null;
+        }
+        catch (error) {
+            console.warn(`Failed to check if user exists: ${alias}`, error);
+            return false;
+        }
+    }
+    // Get user by alias
+    async getUser(alias) {
+        try {
+            const user = await this.db.getUserByAlias(alias);
+            if (user) {
+                return {
+                    userPub: user.userPub,
+                    username: user.username,
+                };
+            }
+            return null;
+        }
+        catch (error) {
+            console.warn(`Failed to get user: ${alias}`, error);
+            return null;
+        }
+    }
+    /**
+     * Advanced user space operations
+     */
+    // Get all user data (returns user's entire data tree)
+    async getAllUserData() {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            const user = this.db.getUser();
+            if (user && user.is) {
+                const userData = await new Promise((resolve, reject) => {
+                    user.once((data) => {
+                        resolve(data);
+                    });
+                });
+                return userData;
+            }
+            return null;
+        }
+        catch (error) {
+            console.warn("Failed to get all user data:", error);
+            return null;
+        }
+    }
+    // Update user profile (common use case)
+    async updateProfile(profileData) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.putUserData("profile", profileData);
+        }
+        catch (error) {
+            console.warn("Failed to update profile:", error);
+            return false;
+        }
+    }
+    // Get user profile
+    async getProfile() {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            return await this.getUserData("profile");
+        }
+        catch (error) {
+            console.warn("Failed to get profile:", error);
+            return null;
+        }
+    }
+    // Save user settings
+    async saveSettings(settings) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.putUserData("settings", settings);
+        }
+        catch (error) {
+            console.warn("Failed to save settings:", error);
+            return false;
+        }
+    }
+    // Get user settings
+    async getSettings() {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            return await this.getUserData("settings");
+        }
+        catch (error) {
+            console.warn("Failed to get settings:", error);
+            return null;
+        }
+    }
+    // Save user preferences
+    async savePreferences(preferences) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.putUserData("preferences", preferences);
+        }
+        catch (error) {
+            console.warn("Failed to save preferences:", error);
+            return false;
+        }
+    }
+    // Get user preferences
+    async getPreferences() {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            return await this.getUserData("preferences");
+        }
+        catch (error) {
+            console.warn("Failed to get preferences:", error);
+            return null;
+        }
+    }
+    // Create a user collection (for storing multiple items)
+    async createCollection(collectionName, items) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.putUserData(`collections/${collectionName}`, items);
+        }
+        catch (error) {
+            console.warn(`Failed to create collection ${collectionName}:`, error);
+            return false;
+        }
+    }
+    // Add item to collection
+    async addToCollection(collectionName, itemId, item) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.putUserData(`collections/${collectionName}/${itemId}`, item);
+        }
+        catch (error) {
+            console.warn(`Failed to add item to collection ${collectionName}:`, error);
+            return false;
+        }
+    }
+    // Get collection
+    async getCollection(collectionName) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return null;
+            }
+            return await this.getUserData(`collections/${collectionName}`);
+        }
+        catch (error) {
+            console.warn(`Failed to get collection ${collectionName}:`, error);
+            return null;
+        }
+    }
+    // Remove item from collection
+    async removeFromCollection(collectionName, itemId) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            return await this.removeUserData(`collections/${collectionName}/${itemId}`);
+        }
+        catch (error) {
+            console.warn(`Failed to remove item from collection ${collectionName}:`, error);
+            return false;
+        }
+    }
+}
+/**
+ * Factory function to create a simple API instance
+ */
+function createSimpleAPI(db) {
+    return new SimpleGunAPI(db);
+}
+/**
+ * Quick start helper - creates a simple API with minimal configuration
+ */
+class QuickStart {
+    db;
+    simpleAPI;
+    constructor(gunInstance, appScope = "shogun") {
+        this.db = new DataBase(gunInstance, appScope);
+        this.simpleAPI = new SimpleGunAPI(this.db);
+    }
+    // Initialize the database
+    async init() {
+        await this.db.initialize();
+    }
+    // Get the simple API
+    get api() {
+        return this.simpleAPI;
+    }
+    // Get the full database instance for advanced usage
+    get database() {
+        return this.db;
+    }
+}
+/**
+ * Global helper for quick setup
+ */
+function quickStart(gunInstance, appScope) {
+    return new QuickStart(gunInstance, appScope);
+}
+
 ;// ./src/gundb/index.ts
 // Export the main class
 
+// Export improved types
+
+// Export simplified API
+
+
+;// ./src/managers/CoreInitializer.ts
+
+
+
+
+
+
+
+/**
+ * Handles initialization of ShogunCore components
+ */
+class CoreInitializer {
+    core;
+    constructor(core) {
+        this.core = core;
+    }
+    /**
+     * Initialize the Shogun SDK
+     * @param config - SDK Configuration object
+     * @description Creates a new instance of ShogunCore with the provided configuration.
+     * Initializes all required components including storage, event emitter, GunInstance connection,
+     * and plugin system.
+     */
+    async initialize(config) {
+        // Polyfill console for environments where it might be missing
+        if (typeof console === "undefined") {
+            __webpack_require__.g.console = {
+                log: () => { },
+                warn: () => { },
+                error: () => { },
+                info: () => { },
+                debug: () => { },
+            };
+        }
+        // Initialize storage
+        this.core.storage = new ShogunStorage();
+        // Setup error handler
+        ErrorHandler.addListener((error) => {
+            this.core.emit("error", {
+                action: error.code,
+                message: error.message,
+                type: error.type,
+            });
+        });
+        // Setup Gun instance
+        await this.initializeGun(config);
+        // Setup Gun user
+        await this.initializeGunUser();
+        // Setup Gun event forwarding
+        this.setupGunEventForwarding();
+        // Setup wallet derivation
+        this.setupWalletDerivation();
+        // Initialize RxJS
+        this.core.rx = new RxJS(this.core._gun);
+        // Register built-in plugins
+        this.registerBuiltinPlugins(config);
+        // Initialize async components
+        await this.initializeAsync();
+    }
+    /**
+     * Initialize Gun instance
+     */
+    async initializeGun(config) {
+        if (config.gunOptions.authToken) {
+            restrictedPut((gun_default()), config.gunOptions.authToken);
+        }
+        try {
+            if (config.gunInstance) {
+                this.core._gun = config.gunInstance;
+            }
+            else {
+                this.core._gun = createGun(config.gunOptions);
+            }
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error creating Gun instance:", error);
+            }
+            throw new Error(`Failed to create Gun instance: ${error}`);
+        }
+        try {
+            this.core.db = new DataBase(this.core._gun, config.gunOptions.scope || "");
+            this.core._gun = this.core.db.gun;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing GunInstance:", error);
+            }
+            throw new Error(`Failed to initialize GunInstance: ${error}`);
+        }
+    }
+    /**
+     * Initialize Gun user
+     */
+    async initializeGunUser() {
+        try {
+            this.core._user = this.core._gun
+                .user()
+                .recall({ sessionStorage: true });
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing Gun user:", error);
+            }
+            throw new Error(`Failed to initialize Gun user: ${error}`);
+        }
+        this.core._gun.on("auth", (user) => {
+            this.core._user = this.core._gun
+                .user()
+                .recall({ sessionStorage: true });
+            this.core.emit("auth:login", {
+                userPub: user.pub,
+                method: "password",
+            });
+        });
+    }
+    /**
+     * Setup Gun event forwarding
+     */
+    setupGunEventForwarding() {
+        const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
+        gunEvents.forEach((eventName) => {
+            this.core.db.on(eventName, (data) => {
+                this.core.emit(eventName, data);
+            });
+        });
+        const peerEvents = [
+            "gun:peer:add",
+            "gun:peer:remove",
+            "gun:peer:connect",
+            "gun:peer:disconnect",
+        ];
+        peerEvents.forEach((eventName) => {
+            this.core.db.on(eventName, (data) => {
+                this.core.emit(eventName, data);
+            });
+        });
+    }
+    /**
+     * Setup wallet derivation
+     */
+    setupWalletDerivation() {
+        this.core._gun.on("auth", async (user) => {
+            if (!user)
+                return;
+            const priv = user._?.sea?.epriv;
+            const pub = user._?.sea?.epub;
+            this.core.wallets = await derive(priv, pub, {
+                includeSecp256k1Bitcoin: true,
+                includeSecp256k1Ethereum: true,
+            });
+        });
+    }
+    /**
+     * Register built-in plugins based on configuration
+     */
+    registerBuiltinPlugins(config) {
+        try {
+            // Register OAuth plugin if configuration is provided
+            if (config.oauth) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("OAuth plugin will be registered with provided configuration");
+                }
+                const oauthPlugin = new OAuthPlugin();
+                if (typeof oauthPlugin.configure === "function") {
+                    oauthPlugin.configure(config.oauth);
+                }
+                this.core.pluginManager.register(oauthPlugin);
+            }
+            // Register WebAuthn plugin if configuration is provided
+            if (config.webauthn) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("WebAuthn plugin will be registered with provided configuration");
+                }
+                const webauthnPlugin = new WebauthnPlugin();
+                if (typeof webauthnPlugin.configure === "function") {
+                    webauthnPlugin.configure(config.webauthn);
+                }
+                this.core.pluginManager.register(webauthnPlugin);
+            }
+            // Register Web3 plugin if configuration is provided
+            if (config.web3) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Web3 plugin will be registered with provided configuration");
+                }
+                const web3Plugin = new Web3ConnectorPlugin();
+                if (typeof web3Plugin.configure === "function") {
+                    web3Plugin.configure(config.web3);
+                }
+                this.core.pluginManager.register(web3Plugin);
+            }
+            // Register Nostr plugin if configuration is provided
+            if (config.nostr) {
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("Nostr plugin will be registered with provided configuration");
+                }
+                const nostrPlugin = new NostrConnectorPlugin();
+                if (typeof nostrPlugin.configure === "function") {
+                    nostrPlugin.configure(config.nostr);
+                }
+                this.core.pluginManager.register(nostrPlugin);
+            }
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error registering builtin plugins:", error);
+            }
+        }
+    }
+    /**
+     * Initialize async components
+     */
+    async initializeAsync() {
+        try {
+            await this.core.db.initialize();
+            this.core.emit("debug", {
+                action: "core_initialized",
+                timestamp: Date.now(),
+            });
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error during Shogun Core initialization:", error);
+            }
+            throw error;
+        }
+    }
+}
 
 ;// ./src/core.ts
 
-
-
-
-
+// Import managers
 
 
 
@@ -89619,10 +91821,12 @@ class ShogunCore {
     rx;
     _gun;
     _user = null;
-    eventEmitter;
-    plugins = new Map();
-    currentAuthMethod;
     wallets;
+    // Managers
+    pluginManager;
+    authManager;
+    eventManager;
+    coreInitializer;
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -89631,112 +91835,18 @@ class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
-        // Polyfill console for environments where it might be missing
-        if (typeof console === "undefined") {
-            __webpack_require__.g.console = {
-                log: () => { },
-                warn: () => { },
-                error: () => { },
-                info: () => { },
-                debug: () => { },
-            };
-        }
         this.config = config;
-        this.storage = new ShogunStorage();
-        this.eventEmitter = new ShogunEventEmitter();
-        ErrorHandler.addListener((error) => {
-            this.eventEmitter.emit("error", {
-                action: error.code,
-                message: error.message,
-                type: error.type,
-            });
-        });
-        if (config.authToken) {
-            restrictedPut((gun_default()), config.authToken);
-        }
-        try {
-            if (config.gunInstance) {
-                this._gun = config.gunInstance;
-            }
-            else {
-                this._gun = createGun({
-                    peers: config.peers || [],
-                    radisk: config.radisk || false,
-                    localStorage: config.localStorage || false,
-                });
-            }
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error creating Gun instance:", error);
-            }
-            throw new Error(`Failed to create Gun instance: ${error}`);
-        }
-        try {
-            this.db = new DataBase(this._gun, config.scope || "");
-            this._gun = this.db.gun;
-            this.setupGunEventForwarding();
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing GunInstance:", error);
-            }
-            throw new Error(`Failed to initialize GunInstance: ${error}`);
-        }
-        try {
-            this._user = this._gun.user().recall({ sessionStorage: true });
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing Gun user:", error);
-            }
-            throw new Error(`Failed to initialize Gun user: ${error}`);
-        }
-        this._gun.on("auth", (user) => {
-            this._user = this._gun.user().recall({ sessionStorage: true });
-            this.eventEmitter.emit("auth:login", {
-                userPub: user.pub,
-                method: "password",
-            });
-        });
-        // ascolta gun se user è loggato crei i wallets
-        this._gun.on("auth", async (user) => {
-            if (!user)
-                return;
-            const priv = user._?.sea?.epriv;
-            const pub = user._?.sea?.epub;
-            this.wallets = await derive(priv, pub, {
-                includeSecp256k1Bitcoin: true,
-                includeSecp256k1Ethereum: true,
-            });
-        });
-        this.rx = new RxJS(this._gun);
-        this.registerBuiltinPlugins(config);
+        // Initialize managers
+        this.eventManager = new EventManager();
+        this.pluginManager = new PluginManager(this);
+        this.authManager = new AuthManager(this);
+        this.coreInitializer = new CoreInitializer(this);
         // Initialize async components
-        this.initialize().catch((error) => {
+        this.coreInitializer.initialize(config).catch((error) => {
             if (typeof console !== "undefined" && console.warn) {
                 console.warn("Error during async initialization:", error);
             }
         });
-    }
-    /**
-     * Initialize the Shogun SDK asynchronously
-     * This method handles initialization tasks that require async operations
-     */
-    async initialize() {
-        try {
-            await this.db.initialize();
-            this.eventEmitter.emit("debug", {
-                action: "core_initialized",
-                timestamp: Date.now(),
-            });
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error during Shogun Core initialization:", error);
-            }
-            throw error;
-        }
     }
     /**
      * Access to the Gun instance
@@ -89762,170 +91872,23 @@ class ShogunCore {
         }
         return this.db.getCurrentUser();
     }
-    /**
-     * Setup event forwarding from GunInstance to main event emitter
-     * @private
-     */
-    setupGunEventForwarding() {
-        const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
-        gunEvents.forEach((eventName) => {
-            this.db.on(eventName, (data) => {
-                this.eventEmitter.emit(eventName, data);
-            });
-        });
-        const peerEvents = [
-            "gun:peer:add",
-            "gun:peer:remove",
-            "gun:peer:connect",
-            "gun:peer:disconnect",
-        ];
-        peerEvents.forEach((eventName) => {
-            this.db.on(eventName, (data) => {
-                this.eventEmitter.emit(eventName, data);
-            });
-        });
-    }
-    /**
-     * Register built-in plugins based on configuration
-     * @private
-     */
-    registerBuiltinPlugins(config) {
-        try {
-            // Register OAuth plugin if configuration is provided
-            if (config.oauth) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("OAuth plugin will be registered with provided configuration");
-                }
-                const oauthPlugin = new OAuthPlugin();
-                if (typeof oauthPlugin.configure === "function") {
-                    oauthPlugin.configure(config.oauth);
-                }
-                this.registerPlugin(oauthPlugin);
-            }
-            // Register WebAuthn plugin if configuration is provided
-            if (config.webauthn) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("WebAuthn plugin will be registered with provided configuration");
-                }
-                const webauthnPlugin = new WebauthnPlugin();
-                if (typeof webauthnPlugin.configure === "function") {
-                    webauthnPlugin.configure(config.webauthn);
-                }
-                this.registerPlugin(webauthnPlugin);
-            }
-            // Register Web3 plugin if configuration is provided
-            if (config.web3) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("Web3 plugin will be registered with provided configuration");
-                }
-                const web3Plugin = new Web3ConnectorPlugin();
-                if (typeof web3Plugin.configure === "function") {
-                    web3Plugin.configure(config.web3);
-                }
-                this.registerPlugin(web3Plugin);
-            }
-            // Register Nostr plugin if configuration is provided
-            if (config.nostr) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("Nostr plugin will be registered with provided configuration");
-                }
-                const nostrPlugin = new NostrConnectorPlugin();
-                if (typeof nostrPlugin.configure === "function") {
-                    nostrPlugin.configure(config.nostr);
-                }
-                this.registerPlugin(nostrPlugin);
-            }
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error registering builtin plugins:", error);
-            }
-        }
-    }
+    // *********************************************************************************************************
+    // 🔌 PLUGIN MANAGEMENT 🔌
+    // *********************************************************************************************************
     /**
      * Registers a plugin with the Shogun SDK
      * @param plugin Plugin instance to register
      * @throws Error if a plugin with the same name is already registered
      */
     register(plugin) {
-        this.registerPlugin(plugin);
+        this.pluginManager.register(plugin);
     }
     /**
      * Unregisters a plugin from the Shogun SDK
      * @param pluginName Name of the plugin to unregister
      */
     unregister(pluginName) {
-        this.unregisterPlugin(pluginName);
-    }
-    /**
-     * Internal method to register a plugin
-     * @param plugin Plugin instance to register
-     */
-    registerPlugin(plugin) {
-        try {
-            if (!plugin.name) {
-                if (typeof console !== "undefined" && console.error) {
-                    console.error("Plugin registration failed: Plugin must have a name");
-                }
-                return;
-            }
-            if (this.plugins.has(plugin.name)) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
-                }
-                return;
-            }
-            // Initialize plugin with core instance
-            plugin.initialize(this);
-            this.plugins.set(plugin.name, plugin);
-            this.eventEmitter.emit("plugin:registered", {
-                name: plugin.name,
-                version: plugin.version || "unknown",
-                category: plugin._category || "unknown",
-            });
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error(`Error registering plugin "${plugin.name}":`, error);
-            }
-        }
-    }
-    /**
-     * Internal method to unregister a plugin
-     * @param name Name of the plugin to unregister
-     */
-    unregisterPlugin(name) {
-        try {
-            const plugin = this.plugins.get(name);
-            if (!plugin) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn(`Plugin "${name}" not found for unregistration`);
-                }
-                return false;
-            }
-            // Destroy plugin if it has a destroy method
-            if (typeof plugin.destroy === "function") {
-                try {
-                    plugin.destroy();
-                }
-                catch (destroyError) {
-                    if (typeof console !== "undefined" && console.error) {
-                        console.error(`Error destroying plugin "${name}":`, destroyError);
-                    }
-                }
-            }
-            this.plugins.delete(name);
-            this.eventEmitter.emit("plugin:unregistered", {
-                name: plugin.name,
-            });
-            return true;
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error(`Error unregistering plugin "${name}":`, error);
-            }
-            return false;
-        }
+        this.pluginManager.unregister(pluginName);
     }
     /**
      * Retrieve a registered plugin by name
@@ -89934,198 +91897,56 @@ class ShogunCore {
      * @template T Type of the plugin or its public interface
      */
     getPlugin(name) {
-        if (!name || typeof name !== "string") {
-            if (typeof console !== "undefined" && console.warn) {
-                console.warn("Invalid plugin name provided to getPlugin");
-            }
-            return undefined;
-        }
-        const plugin = this.plugins.get(name);
-        if (!plugin) {
-            if (typeof console !== "undefined" && console.warn) {
-                console.warn(`Plugin "${name}" not found`);
-            }
-            return undefined;
-        }
-        return plugin;
+        return this.pluginManager.getPlugin(name);
     }
     /**
      * Get information about all registered plugins
      * @returns Array of plugin information objects
      */
     getPluginsInfo() {
-        const pluginsInfo = [];
-        this.plugins.forEach((plugin) => {
-            pluginsInfo.push({
-                name: plugin.name,
-                version: plugin.version || "unknown",
-                category: plugin._category,
-                description: plugin.description,
-            });
-        });
-        return pluginsInfo;
+        return this.pluginManager.getPluginsInfo();
     }
     /**
      * Get the total number of registered plugins
      * @returns Number of registered plugins
      */
     getPluginCount() {
-        return this.plugins.size;
+        return this.pluginManager.getPluginCount();
     }
     /**
      * Check if all plugins are properly initialized
      * @returns Object with initialization status for each plugin
      */
     getPluginsInitializationStatus() {
-        const status = {};
-        this.plugins.forEach((plugin, name) => {
-            try {
-                // Verifica se il plugin ha un metodo per controllare l'inizializzazione
-                if (typeof plugin.assertInitialized === "function") {
-                    plugin.assertInitialized();
-                    status[name] = { initialized: true };
-                }
-                else {
-                    // Fallback: verifica se il plugin ha un riferimento al core
-                    status[name] = {
-                        initialized: !!plugin.core,
-                        error: !plugin.core
-                            ? "No core reference found"
-                            : undefined,
-                    };
-                }
-            }
-            catch (error) {
-                status[name] = {
-                    initialized: false,
-                    error: error instanceof Error ? error.message : String(error),
-                };
-            }
-        });
-        return status;
+        return this.pluginManager.getPluginsInitializationStatus();
     }
     /**
      * Validate plugin system integrity
      * @returns Object with validation results
      */
     validatePluginSystem() {
-        const status = this.getPluginsInitializationStatus();
-        const totalPlugins = Object.keys(status).length;
-        const initializedPlugins = Object.values(status).filter((s) => s.initialized).length;
-        const failedPlugins = Object.entries(status)
-            .filter(([_, s]) => !s.initialized)
-            .map(([name, _]) => name);
-        const warnings = [];
-        if (totalPlugins === 0) {
-            warnings.push("No plugins registered");
-        }
-        if (failedPlugins.length > 0) {
-            warnings.push(`Failed plugins: ${failedPlugins.join(", ")}`);
-        }
-        return {
-            totalPlugins,
-            initializedPlugins,
-            failedPlugins,
-            warnings,
-        };
+        return this.pluginManager.validatePluginSystem();
     }
     /**
      * Attempt to reinitialize failed plugins
      * @returns Object with reinitialization results
      */
     reinitializeFailedPlugins() {
-        const status = this.getPluginsInitializationStatus();
-        const failedPlugins = Object.entries(status)
-            .filter(([_, s]) => !s.initialized)
-            .map(([name, _]) => name);
-        const success = [];
-        const failed = [];
-        failedPlugins.forEach((pluginName) => {
-            try {
-                const plugin = this.plugins.get(pluginName);
-                if (!plugin) {
-                    failed.push({ name: pluginName, error: "Plugin not found" });
-                    return;
-                }
-                // Reinizializza il plugin
-                if (pluginName === CorePlugins.OAuth) {
-                    // Rimuovo la chiamata a initialize
-                    plugin.initialize(this);
-                }
-                else {
-                    // Rimuovo la chiamata a initialize
-                    plugin.initialize(this);
-                }
-                success.push(pluginName);
-            }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                failed.push({ name: pluginName, error: errorMessage });
-                if (typeof console !== "undefined" && console.error) {
-                    console.error(`[ShogunCore] Failed to reinitialize plugin ${pluginName}:`, error);
-                }
-            }
-        });
-        return { success, failed };
+        return this.pluginManager.reinitializeFailedPlugins();
     }
     /**
      * Check plugin compatibility with current ShogunCore version
      * @returns Object with compatibility information
      */
     checkPluginCompatibility() {
-        const compatible = [];
-        const incompatible = [];
-        const unknown = [];
-        this.plugins.forEach((plugin) => {
-            const pluginInfo = {
-                name: plugin.name,
-                version: plugin.version || "unknown",
-            };
-            // Verifica se il plugin ha informazioni di compatibilità
-            if (typeof plugin.getCompatibilityInfo === "function") {
-                try {
-                    const compatibilityInfo = plugin.getCompatibilityInfo();
-                    if (compatibilityInfo && compatibilityInfo.compatible) {
-                        compatible.push(pluginInfo);
-                    }
-                    else {
-                        incompatible.push({
-                            ...pluginInfo,
-                            reason: compatibilityInfo?.reason || "Unknown compatibility issue",
-                        });
-                    }
-                }
-                catch (error) {
-                    unknown.push(pluginInfo);
-                }
-            }
-            else {
-                // Se non ha informazioni di compatibilità, considera sconosciuto
-                unknown.push(pluginInfo);
-            }
-        });
-        return { compatible, incompatible, unknown };
+        return this.pluginManager.checkPluginCompatibility();
     }
     /**
      * Get comprehensive debug information about the plugin system
      * @returns Complete plugin system debug information
      */
     getPluginSystemDebugInfo() {
-        const pluginsInfo = this.getPluginsInfo();
-        const initializationStatus = this.getPluginsInitializationStatus();
-        const plugins = pluginsInfo.map((info) => ({
-            ...info,
-            initialized: initializationStatus[info.name]?.initialized || false,
-            error: initializationStatus[info.name]?.error,
-        }));
-        return {
-            shogunCoreVersion: ShogunCore.API_VERSION,
-            totalPlugins: this.getPluginCount(),
-            plugins,
-            initializationStatus,
-            validation: this.validatePluginSystem(),
-            compatibility: this.checkPluginCompatibility(),
-        };
+        return this.pluginManager.getPluginSystemDebugInfo();
     }
     /**
      * Check if a plugin is registered
@@ -90133,7 +91954,7 @@ class ShogunCore {
      * @returns true if the plugin is registered, false otherwise
      */
     hasPlugin(name) {
-        return this.plugins.has(name);
+        return this.pluginManager.hasPlugin(name);
     }
     /**
      * Get all plugins of a specific category
@@ -90141,13 +91962,7 @@ class ShogunCore {
      * @returns Array of plugins in the specified category
      */
     getPluginsByCategory(category) {
-        const result = [];
-        this.plugins.forEach((plugin) => {
-            if (plugin._category === category) {
-                result.push(plugin);
-            }
-        });
-        return result;
+        return this.pluginManager.getPluginsByCategory(category);
     }
     /**
      * Get an authentication method plugin by type
@@ -90156,26 +91971,7 @@ class ShogunCore {
      * This is a more modern approach to accessing authentication methods
      */
     getAuthenticationMethod(type) {
-        switch (type) {
-            case "webauthn":
-                return this.getPlugin(CorePlugins.WebAuthn);
-            case "web3":
-                return this.getPlugin(CorePlugins.Web3);
-            case "nostr":
-                return this.getPlugin(CorePlugins.Nostr);
-            case "oauth":
-                return this.getPlugin(CorePlugins.OAuth);
-            case "password":
-            default:
-                return {
-                    login: async (username, password) => {
-                        return await this.login(username, password);
-                    },
-                    signUp: async (username, password, confirm) => {
-                        return await this.signUp(username, password, confirm);
-                    },
-                };
-        }
+        return this.authManager.getAuthenticationMethod(type);
     }
     // *********************************************************************************************************
     // 🔐 ERROR HANDLER 🔐
@@ -90198,7 +91994,7 @@ class ShogunCore {
      * and presence of authentication credentials in storage
      */
     isLoggedIn() {
-        return this.db.isLoggedIn();
+        return this.authManager.isLoggedIn();
     }
     /**
      * Perform user logout
@@ -90206,16 +92002,7 @@ class ShogunCore {
      * If user is not authenticated, the logout operation is ignored.
      */
     logout() {
-        try {
-            if (!this.isLoggedIn()) {
-                return;
-            }
-            this.db.logout();
-            this.eventEmitter.emit("auth:logout");
-        }
-        catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
-        }
+        this.authManager.logout();
     }
     /**
      * Authenticate user with username and password
@@ -90226,36 +92013,7 @@ class ShogunCore {
      * Emits login event on success.
      */
     async login(username, password, pair) {
-        try {
-            if (!this.currentAuthMethod) {
-                this.currentAuthMethod = "password";
-            }
-            const result = await this.db.login(username, password, pair);
-            if (result.success) {
-                // Include SEA pair in the response
-                const seaPair = this.user?._?.sea;
-                if (seaPair) {
-                    result.sea = seaPair;
-                }
-                this.eventEmitter.emit("auth:login", {
-                    userPub: result.userPub ?? "",
-                    method: this.currentAuthMethod === "pair"
-                        ? "password"
-                        : this.currentAuthMethod || "password",
-                });
-            }
-            else {
-                result.error = result.error || "Wrong user or password";
-            }
-            return result;
-        }
-        catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
-            return {
-                success: false,
-                error: error.message ?? "Unknown error during login",
-            };
-        }
+        return this.authManager.login(username, password, pair);
     }
     /**
      * Login with GunDB pair directly
@@ -90265,94 +92023,20 @@ class ShogunCore {
      * Emits login event on success.
      */
     async loginWithPair(pair) {
-        try {
-            if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
-                return {
-                    success: false,
-                    error: "Invalid pair structure - missing required keys",
-                };
-            }
-            // Use the new loginWithPair method from GunInstance
-            const result = await this.db.login("", "", pair);
-            if (result.success) {
-                // Include SEA pair in the response
-                const seaPair = this.user?._?.sea;
-                if (seaPair) {
-                    result.sea = seaPair;
-                }
-                this.currentAuthMethod = "pair";
-                this.eventEmitter.emit("auth:login", {
-                    userPub: result.userPub ?? "",
-                    method: "password",
-                });
-            }
-            else {
-                result.error =
-                    result.error || "Authentication failed with provided pair";
-            }
-            return result;
-        }
-        catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
-            return {
-                success: false,
-                error: error.message ?? "Unknown error during pair login",
-            };
-        }
+        return this.authManager.loginWithPair(pair);
     }
     /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password
-     * @param passwordConfirmation - Password confirmation
+     * @param email - Email (optional)
      * @param pair - Pair of keys
      * @returns {Promise<SignUpResult>} Registration result
      * @description Creates a new user account with the provided credentials.
      * Validates password requirements and emits signup event on success.
      */
-    async signUp(username, password = "", email = "", pair) {
-        try {
-            if (!this.db) {
-                throw new Error("Database not initialized");
-            }
-            const result = await this.db.signUp(username, password, pair);
-            if (result.success) {
-                // Update current authentication method
-                this.currentAuthMethod = pair ? "web3" : "password";
-                this.eventEmitter.emit("auth:signup", {
-                    userPub: result.userPub,
-                    username,
-                    method: this.currentAuthMethod,
-                });
-                this.eventEmitter.emit("debug", {
-                    action: "signup_success",
-                    userPub: result.userPub,
-                    method: this.currentAuthMethod,
-                });
-            }
-            else {
-                this.eventEmitter.emit("debug", {
-                    action: "signup_failed",
-                    error: result.error,
-                    username,
-                });
-            }
-            return result;
-        }
-        catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error(`Error during registration for user ${username}:`, error);
-            }
-            this.eventEmitter.emit("debug", {
-                action: "signup_error",
-                error: error instanceof Error ? error.message : String(error),
-                username,
-            });
-            return {
-                success: false,
-                error: `Registration failed: ${error instanceof Error ? error.message : String(error)}`,
-            };
-        }
+    async signUp(username, password, pair) {
+        return this.authManager.signUp(username, password, pair);
     }
     // 📢 EVENT EMITTER 📢
     /**
@@ -90363,7 +92047,7 @@ class ShogunCore {
      * @returns {boolean} Indicates if the event had listeners.
      */
     emit(eventName, data) {
-        return this.eventEmitter.emit(eventName, data);
+        return this.eventManager.emit(eventName, data);
     }
     /**
      * Add an event listener
@@ -90372,7 +92056,7 @@ class ShogunCore {
      * @returns {this} Returns this instance for method chaining
      */
     on(eventName, listener) {
-        this.eventEmitter.on(eventName, listener);
+        this.eventManager.on(eventName, listener);
         return this;
     }
     /**
@@ -90382,7 +92066,7 @@ class ShogunCore {
      * @returns {this} Returns this instance for method chaining
      */
     once(eventName, listener) {
-        this.eventEmitter.once(eventName, listener);
+        this.eventManager.once(eventName, listener);
         return this;
     }
     /**
@@ -90392,7 +92076,7 @@ class ShogunCore {
      * @returns {this} Returns this instance for method chaining
      */
     off(eventName, listener) {
-        this.eventEmitter.off(eventName, listener);
+        this.eventManager.off(eventName, listener);
         return this;
     }
     /**
@@ -90402,7 +92086,7 @@ class ShogunCore {
      * @returns {this} Returns this instance for method chaining
      */
     removeAllListeners(eventName) {
-        this.eventEmitter.removeAllListeners(eventName);
+        this.eventManager.removeAllListeners(eventName);
         return this;
     }
     /**
@@ -90411,14 +92095,14 @@ class ShogunCore {
      * @param method The authentication method used
      */
     setAuthMethod(method) {
-        this.currentAuthMethod = method;
+        this.authManager.setAuthMethod(method);
     }
     /**
      * Get the current authentication method
      * @returns The current authentication method or undefined if not set
      */
     getAuthMethod() {
-        return this.currentAuthMethod;
+        return this.authManager.getAuthMethod();
     }
     /**
      * Saves the current user credentials to storage
@@ -90440,9 +92124,8 @@ class ShogunCore {
         return !!(this.user && this.user.is);
     }
 }
-if (true) {
-    window.SHOGUN_CORE_CLASS = ShogunCore;
-}
+// Global declarations are handled in the original core.ts file
+// to avoid conflicts, we only set the window properties here
 if (true) {
     window.SHOGUN_CORE = (config) => {
         return new ShogunCore(config);
@@ -90471,13 +92154,285 @@ if (true) {
 
 
 
+;// ./src/interfaces/shogun.ts
+/**
+ * Standard plugin categories in ShogunCore
+ */
+var PluginCategory;
+(function (PluginCategory) {
+    /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
+    PluginCategory["Authentication"] = "authentication";
+    /** Wallet management plugins */
+    PluginCategory["Wallet"] = "wallet";
+    /** Privacy and anonymity plugins */
+    PluginCategory["Privacy"] = "privacy";
+    /** Decentralized identity plugins */
+    PluginCategory["Identity"] = "identity";
+    /** Other utility plugins */
+    PluginCategory["Utility"] = "utility";
+    /** Messages plugins */
+    PluginCategory["Messages"] = "messages";
+    /** Messaging plugins */
+    PluginCategory["Other"] = "other";
+})(PluginCategory || (PluginCategory = {}));
+/**
+ * Standard names for built-in plugins
+ */
+var CorePlugins;
+(function (CorePlugins) {
+    /** WebAuthn plugin */
+    CorePlugins["WebAuthn"] = "webauthn";
+    /** Ethereum plugin */
+    CorePlugins["Web3"] = "web3";
+    /** Bitcoin wallet plugin */
+    CorePlugins["Nostr"] = "nostr";
+    /** OAuth plugin */
+    CorePlugins["OAuth"] = "oauth";
+})(CorePlugins || (CorePlugins = {}));
+
+;// ./src/config/simplified-config.ts
+/**
+ * Simplified configuration options to reduce complexity
+ * Provides sensible defaults and easy-to-use presets
+ */
+/**
+ * Preset configurations for common use cases
+ */
+const ShogunPresets = {
+    /**
+     * Minimal configuration for simple apps
+     */
+    minimal: () => ({
+        gunOptions: {
+            peers: ["https://gunjs.herokuapp.com/gun"],
+            localStorage: true,
+        },
+    }),
+    /**
+     * Development configuration with local storage
+     */
+    development: () => ({
+        gunOptions: {
+            peers: ["https://gunjs.herokuapp.com/gun"],
+            localStorage: true,
+            radisk: false,
+        },
+        timeouts: {
+            login: 5000,
+            signup: 5000,
+            operation: 3000,
+        },
+    }),
+    /**
+     * Production configuration with multiple peers
+     */
+    production: (customPeers) => ({
+        gunOptions: {
+            peers: customPeers || [
+                "https://gunjs.herokuapp.com/gun",
+                "https://gun-manhattan.herokuapp.com/gun",
+            ],
+            localStorage: true,
+            radisk: true,
+        },
+        timeouts: {
+            login: 10000,
+            signup: 10000,
+            operation: 5000,
+        },
+    }),
+    /**
+     * Offline-first configuration
+     */
+    offline: () => ({
+        gunOptions: {
+            peers: [],
+            localStorage: true,
+            radisk: true,
+        },
+    }),
+    /**
+     * Web3-enabled configuration
+     */
+    web3: () => ({
+        gunOptions: {
+            peers: ["https://gunjs.herokuapp.com/gun"],
+            localStorage: true,
+        },
+        web3: {
+            enabled: true,
+        },
+    }),
+    /**
+     * WebAuthn-enabled configuration
+     */
+    webauthn: () => ({
+        gunOptions: {
+            peers: ["https://gunjs.herokuapp.com/gun"],
+            localStorage: true,
+        },
+        webauthn: {
+            enabled: true,
+            rpName: "My Shogun App",
+            rpId: window.location.hostname,
+        },
+    }),
+};
+/**
+ * Configuration builder for custom setups
+ */
+class ShogunConfigBuilder {
+    config = {};
+    /**
+     * Set Gun options
+     */
+    gunOptions(options) {
+        this.config.gunOptions = { ...this.config.gunOptions, ...options };
+        return this;
+    }
+    /**
+     * Add peers
+     */
+    peers(peerList) {
+        this.config.gunOptions = {
+            ...this.config.gunOptions,
+            peers: [...(this.config.gunOptions?.peers || []), ...peerList],
+        };
+        return this;
+    }
+    /**
+     * Enable WebAuthn
+     */
+    enableWebAuthn(rpName, rpId) {
+        this.config.webauthn = {
+            enabled: true,
+            rpName: rpName || "My App",
+            rpId: rpId || window.location.hostname,
+        };
+        return this;
+    }
+    /**
+     * Enable Web3
+     */
+    enableWeb3() {
+        this.config.web3 = { enabled: true };
+        return this;
+    }
+    /**
+     * Enable Nostr
+     */
+    enableNostr() {
+        this.config.nostr = { enabled: true };
+        return this;
+    }
+    /**
+     * Set timeouts
+     */
+    timeouts(timeouts) {
+        this.config.timeouts = { ...this.config.timeouts, ...timeouts };
+        return this;
+    }
+    /**
+     * Build the final configuration
+     */
+    build() {
+        return this.config;
+    }
+}
+/**
+ * Helper functions for common configuration patterns
+ */
+const ConfigHelpers = {
+    /**
+     * Create a configuration for a specific environment
+     */
+    forEnvironment(env) {
+        switch (env) {
+            case "development":
+                return ShogunPresets.development();
+            case "production":
+                return ShogunPresets.production();
+            case "test":
+                return ShogunPresets.offline();
+            default:
+                return ShogunPresets.minimal();
+        }
+    },
+    /**
+     * Create a configuration with custom peers
+     */
+    withPeers(peers) {
+        return ShogunPresets.production(peers);
+    },
+    /**
+     * Create a configuration for a specific use case
+     */
+    forUseCase(useCase) {
+        const baseConfig = ShogunPresets.production();
+        switch (useCase) {
+            case "chat":
+                return {
+                    ...baseConfig,
+                    timeouts: { ...baseConfig.timeouts, operation: 2000 },
+                };
+            case "social":
+                return {
+                    ...baseConfig,
+                    webauthn: { enabled: true, rpName: "Social App" },
+                };
+            case "gaming":
+                return {
+                    ...baseConfig,
+                    timeouts: { ...baseConfig.timeouts, operation: 1000 },
+                };
+            case "finance":
+                return {
+                    ...baseConfig,
+                    webauthn: { enabled: true, rpName: "Finance App" },
+                    timeouts: { ...baseConfig.timeouts, login: 15000 },
+                };
+            default:
+                return baseConfig;
+        }
+    },
+};
+/**
+ * Quick configuration functions
+ */
+const QuickConfig = {
+    /**
+     * Minimal setup for quick testing
+     */
+    test: () => ShogunPresets.minimal(),
+    /**
+     * Standard setup for most apps
+     */
+    standard: () => ShogunPresets.production(),
+    /**
+     * Setup with WebAuthn for secure apps
+     */
+    secure: () => ShogunPresets.webauthn(),
+    /**
+     * Setup with Web3 for crypto apps
+     */
+    crypto: () => ShogunPresets.web3(),
+    /**
+     * Offline setup for local development
+     */
+    local: () => ShogunPresets.offline(),
+};
+
 ;// ./src/index.ts
 
+
+// Import Simple API and improved types
 
 // Import Gun as default export
 
 
 
+
+// Export simplified configuration
 
 
 

@@ -1,4 +1,6 @@
 import { IGunInstance, IGunUserInstance } from "gun/types";
+import { GunInstance, GunUserInstance } from "../gundb/improved-types";
+import { ISEAPair } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { DataBase } from "../gundb/db";
@@ -46,7 +48,6 @@ export type AuthMethod =
   | "web3"
   | "nostr"
   | "oauth"
-  | "bitcoin"
   | "pair";
 
 // Authentication result interfaces
@@ -132,7 +133,8 @@ export interface SignUpResult {
 }
 
 export interface IShogunCore extends PluginManager {
-  gun: IGunInstance<any>;
+  gun: GunInstance;
+  user: GunUserInstance | null;
   db: DataBase;
   rx: RxJS; // RxJS integration
   storage: ShogunStorage;
@@ -154,8 +156,8 @@ export interface IShogunCore extends PluginManager {
 
   signUp(
     username: string,
-    password: string,
-    passwordConfirmation?: string,
+    password?: string,
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult>;
 
   // Authentication method retrieval
@@ -185,12 +187,8 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
-  gunInstance?: IGunInstance<any>;
-  authToken?: string;
-  scope?: string;
-  peers?: string[];
-  localStorage?: boolean;
-  radisk?: boolean;
+  gunInstance?: GunInstance;
+  gunOptions?: any;
   webauthn?: WebauthnConfig;
   web3?: {
     enabled?: boolean;

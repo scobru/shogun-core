@@ -20,11 +20,20 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🔑 **Password Recovery**: Secure password hint system with security questions
 - ✅ **Type Consistency**: Unified return types across all authentication methods
 - 🚀 **Simplified Architecture**: Focused on core functionality with reduced complexity
+- ⭐ **Simple API**: Easy-to-use wrapper for common operations with minimal complexity
+- 👤 **User Space Management**: Complete CRUD operations for user-specific data storage
+- ⚡ **Quick Start**: Rapid initialization with pre-configured setups
+- 🎛️ **Configuration Presets**: Pre-built configurations for common use cases
 
-## Recent Updates (v1.9.5)
+## Recent Updates (v2.0.0)
 
-### ✅ **Major API Simplification**
+### ✅ **Major API Improvements & Simplification**
 
+- **⭐ NEW: Simple API Layer**: Added `SimpleGunAPI` with simplified methods for common operations
+- **⭐ NEW: User Space Management**: Complete CRUD operations for user-specific data storage
+- **⭐ NEW: Quick Start Functions**: `quickStart()` and `QuickStart` class for rapid initialization
+- **⭐ NEW: Improved Type System**: Reduced `any` usage with better TypeScript types
+- **⭐ NEW: Configuration Presets**: Pre-built configurations for common use cases
 - **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
 - **Simplified Architecture**: Removed cryptographic key derivation functions and advanced peer management
 - **Streamlined Event System**: Removed complex event emission for data and peer operations
@@ -51,7 +60,45 @@ yarn add shogun-core
 
 ## Quick Start
 
-### Basic Setup
+### ⭐ **NEW: Simple API Setup (Recommended)**
+
+```typescript
+import { quickStart, Gun } from "shogun-core";
+
+// Create Gun instance
+const gun = Gun({ 
+  peers: ['https://gun-manhattan.herokuapp.com/gun'] 
+});
+
+// Quick start with simple API
+const shogun = quickStart(gun, 'my-app');
+await shogun.init();
+
+// Use simplified API
+const user = await shogun.api.signup('alice', 'password123');
+if (user) {
+  console.log('User created:', user.username);
+  
+  // User space operations
+  await shogun.api.updateProfile({ 
+    name: 'Alice', 
+    email: 'alice@example.com' 
+  });
+  
+  await shogun.api.saveSettings({ 
+    theme: 'dark', 
+    language: 'en' 
+  });
+  
+  // Create collections
+  await shogun.api.createCollection('todos', {
+    '1': { text: 'Learn Shogun Core', done: false },
+    '2': { text: 'Build dApp', done: false }
+  });
+}
+```
+
+### Advanced Setup (Full Features)
 
 ```typescript
 import { ShogunCore } from "shogun-core";
@@ -106,6 +153,71 @@ const shogun = new ShogunCore({
 await shogun.initialize();
 
 console.log("Shogun Core initialized!");
+```
+
+## ⭐ **NEW: Simple API**
+
+The Simple API provides an easy-to-use interface for common operations with minimal complexity. Perfect for beginners or when you need quick setup.
+
+### Simple API Methods
+
+```typescript
+import { quickStart, Gun } from "shogun-core";
+
+const gun = Gun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
+const shogun = quickStart(gun, 'my-app');
+await shogun.init();
+
+// Authentication
+const user = await shogun.api.signup('username', 'password');
+const loginResult = await shogun.api.login('username', 'password');
+shogun.api.logout();
+const isLoggedIn = shogun.api.isLoggedIn();
+
+// Basic data operations
+await shogun.api.put('path/to/data', { value: 'hello' });
+const data = await shogun.api.get('path/to/data');
+await shogun.api.set('path/to/data', { value: 'updated' });
+await shogun.api.remove('path/to/data');
+
+// User space operations (requires login)
+await shogun.api.putUserData('preferences', { theme: 'dark' });
+const prefs = await shogun.api.getUserData('preferences');
+await shogun.api.removeUserData('preferences');
+
+// Profile management
+await shogun.api.updateProfile({ 
+  name: 'John Doe', 
+  email: 'john@example.com',
+  bio: 'Developer' 
+});
+const profile = await shogun.api.getProfile();
+
+// Settings and preferences
+await shogun.api.saveSettings({ language: 'en', notifications: true });
+const settings = await shogun.api.getSettings();
+
+await shogun.api.savePreferences({ theme: 'dark', fontSize: 14 });
+const preferences = await shogun.api.getPreferences();
+
+// Collections (for structured data)
+await shogun.api.createCollection('todos', {
+  '1': { text: 'Learn Shogun Core', done: false },
+  '2': { text: 'Build dApp', done: false }
+});
+
+await shogun.api.addToCollection('todos', '3', { 
+  text: 'Deploy to production', 
+  done: false 
+});
+
+const todos = await shogun.api.getCollection('todos');
+await shogun.api.removeFromCollection('todos', '2');
+
+// Utility methods
+const currentUser = shogun.api.getCurrentUser();
+const userExists = await shogun.api.userExists('username');
+const user = await shogun.api.getUser('username');
 ```
 
 ## Plugin Authentication APIs
@@ -474,10 +586,44 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 
 ## API Reference
 
-### Core Methods
+### ⭐ **Simple API Methods**
 
 #### Authentication
+- `signup(username: string, password: string): Promise<UserInfo | null>` - Create new user account
+- `login(username: string, password: string): Promise<UserInfo | null>` - Authenticate with username/password
+- `logout(): void` - Logout current user
+- `isLoggedIn(): boolean` - Check if user is authenticated
 
+#### Data Operations
+- `get<T>(path: string): Promise<T | null>` - Get data from path
+- `put<T>(path: string, data: T): Promise<boolean>` - Store data at path
+- `set<T>(path: string, data: T): Promise<boolean>` - Update data at path
+- `remove(path: string): Promise<boolean>` - Remove data from path
+
+#### User Space Operations
+- `putUserData<T>(path: string, data: T): Promise<boolean>` - Store user-specific data
+- `getUserData<T>(path: string): Promise<T | null>` - Get user-specific data
+- `setUserData<T>(path: string, data: T): Promise<boolean>` - Update user-specific data
+- `removeUserData(path: string): Promise<boolean>` - Remove user-specific data
+- `getAllUserData(): Promise<Record<string, unknown> | null>` - Get all user data
+
+#### Profile & Settings
+- `updateProfile(profileData: ProfileData): Promise<boolean>` - Update user profile
+- `getProfile(): Promise<Record<string, unknown> | null>` - Get user profile
+- `saveSettings(settings: Record<string, unknown>): Promise<boolean>` - Save user settings
+- `getSettings(): Promise<Record<string, unknown> | null>` - Get user settings
+- `savePreferences(preferences: Record<string, unknown>): Promise<boolean>` - Save user preferences
+- `getPreferences(): Promise<Record<string, unknown> | null>` - Get user preferences
+
+#### Collections
+- `createCollection<T>(name: string, items: Record<string, T>): Promise<boolean>` - Create user collection
+- `addToCollection<T>(name: string, itemId: string, item: T): Promise<boolean>` - Add item to collection
+- `getCollection(name: string): Promise<Record<string, unknown> | null>` - Get collection
+- `removeFromCollection(name: string, itemId: string): Promise<boolean>` - Remove item from collection
+
+### Advanced API Methods
+
+#### Core Authentication
 - `login(username: string, password: string): Promise<AuthResult>` - Authenticate with username/password
 - `loginWithPair(pair: ISEAPair): Promise<AuthResult>` - Authenticate directly with a GunDB SEA pair
 - `signUp(username: string, password: string, email?: string, pair?: ISEAPair | null): Promise<SignUpResult>` - Create new user account
@@ -485,14 +631,12 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 - `isLoggedIn(): boolean` - Check if user is authenticated
 
 #### Plugin Management
-
 - `getPlugin<T>(name: string): T | undefined` - Get plugin by name
 - `hasPlugin(name: string): boolean` - Check if plugin exists
 - `register(plugin: ShogunPlugin): void` - Register custom plugin
 - `unregister(pluginName: string): void` - Remove plugin
 
 #### Event Handling
-
 - `on<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Subscribe to typed events
 - `off<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Unsubscribe from events
 - `emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K]): boolean` - Emit custom events
@@ -547,19 +691,6 @@ interface ShogunEventMap {
   "auth:login": AuthEventData; // User logged in
   "auth:logout": void; // User logged out
   "auth:signup": AuthEventData; // New user registered
-  "auth:username_changed": {
-    oldUsername?: string;
-    newUsername?: string;
-    userPub?: string;
-  }; // Username changed
-  "gun:put": GunDataEventData; // Data written to GunDB
-  "gun:get": GunDataEventData; // Data read from GunDB
-  "gun:set": GunDataEventData; // Data updated in GunDB
-  "gun:remove": GunDataEventData; // Data removed from GunDB
-  "gun:peer:add": GunPeerEventData; // Peer added
-  "gun:peer:remove": GunPeerEventData; // Peer removed
-  "gun:peer:connect": GunPeerEventData; // Peer connected
-  "gun:peer:disconnect": GunPeerEventData; // Peer disconnected
   "plugin:registered": { name: string; version?: string; category?: string }; // Plugin registered
   "plugin:unregistered": { name: string }; // Plugin unregistered
   debug: { action: string; [key: string]: any }; // Debug information
