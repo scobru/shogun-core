@@ -2,7 +2,7 @@
 export * from "./db";
 
 // Export improved types
-export * from "./improved-types";
+export * from "./types";
 
 // Export simplified API
 export * from "./simple-api";

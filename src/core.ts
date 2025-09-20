@@ -34,19 +34,19 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^1.6.6";
+  public static readonly API_VERSION = "^3.0.5";
   public db!: DataBase;
   public storage!: ShogunStorage;
   public provider?: ethers.Provider;
   public config: ShogunCoreConfig;
   public rx!: RxJS;
 
-  private _gun!: GunInstance;
-  private _user: GunUserInstance | null = null;
+  public _gun!: GunInstance;
+  public _user: GunUserInstance | null = null;
   public wallets: Wallets | undefined;
 
   // Managers
-  private pluginManager: PluginManager;
+  public pluginManager: PluginManager;
   private authManager: AuthManager;
   private eventManager: EventManager;
   private coreInitializer: CoreInitializer;

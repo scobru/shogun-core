@@ -1,7 +1,6 @@
 import { Observable } from "rxjs";
 import { distinctUntilChanged } from "rxjs/operators";
-import { IGunInstance, IGunUserInstance } from "gun";
-import { GunInstance, GunUserInstance } from "./improved-types";
+import { GunInstance, GunUserInstance } from "./types";
 
 /**
  * RxJS Integration for GunDB

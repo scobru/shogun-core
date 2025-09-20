@@ -44,7 +44,7 @@ export class CoreInitializer {
     }
 
     // Initialize storage
-    (this.core as any).storage = new ShogunStorage();
+    this.core.storage = new ShogunStorage();
 
     // Setup error handler
     ErrorHandler.addListener((error: ShogunError) => {
@@ -68,7 +68,7 @@ export class CoreInitializer {
     this.setupWalletDerivation();
 
     // Initialize RxJS
-    (this.core as any).rx = new RxJS((this.core as any)._gun);
+    this.core.rx = new RxJS(this.core.gun);
 
     // Register built-in plugins
     this.registerBuiltinPlugins(config);
@@ -81,15 +81,32 @@ export class CoreInitializer {
    * Initialize Gun instance
    */
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
+    console.log("Initialize Gun instance", config);
+
     if (config.gunOptions.authToken) {
       restrictedPut(Gun, config.gunOptions.authToken);
     }
 
     try {
-      if (config.gunInstance) {
-        (this.core as any)._gun = config.gunInstance;
+      if (config.gunInstance && config.gunInstance instanceof Gun) {
+        console.log("config.gunInstance", config.gunInstance);
+        this.core.gun = config.gunInstance;
       } else {
-        (this.core as any)._gun = createGun(config.gunOptions);
+        console.log("config.gunOptions", config.gunOptions);
+        this.core.gun = createGun(config.gunOptions);
+
+        // Explicitly apply peers configuration if not already set
+        if (
+          config.gunOptions?.peers &&
+          Array.isArray(config.gunOptions.peers)
+        ) {
+          console.log("Applying peers configuration:", config.gunOptions.peers);
+          this.core.gun.opt({ peers: config.gunOptions.peers });
+          console.log(
+            "Peers after explicit application:",
+            (this.core.gun as any)?.opt?.peers,
+          );
+        }
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -99,11 +116,9 @@ export class CoreInitializer {
     }
 
     try {
-      (this.core as any).db = new DataBase(
-        (this.core as any)._gun,
-        config.gunOptions.scope || "",
-      );
-      (this.core as any)._gun = (this.core as any).db.gun;
+      console.log("Initialize Gun instance", this.core.gun);
+      this.core.db = new DataBase(this.core.gun, config.gunOptions.scope || "");
+      this.core.gun = this.core.db.gun;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing GunInstance:", error);
@@ -117,9 +132,7 @@ export class CoreInitializer {
    */
   private async initializeGunUser(): Promise<void> {
     try {
-      (this.core as any)._user = (this.core as any)._gun
-        .user()
-        .recall({ sessionStorage: true });
+      this.core.user = this.core.gun.user().recall({ sessionStorage: true });
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing Gun user:", error);
@@ -127,10 +140,8 @@ export class CoreInitializer {
       throw new Error(`Failed to initialize Gun user: ${error}`);
     }
 
-    (this.core as any)._gun.on("auth", (user: any) => {
-      (this.core as any)._user = (this.core as any)._gun
-        .user()
-        .recall({ sessionStorage: true });
+    this.core.gun.on("auth", (user: any) => {
+      this.core.user = this.core.gun.user().recall({ sessionStorage: true });
       this.core.emit("auth:login", {
         userPub: user.pub,
         method: "password" as const,
@@ -144,7 +155,7 @@ export class CoreInitializer {
   private setupGunEventForwarding(): void {
     const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"] as const;
     gunEvents.forEach((eventName) => {
-      (this.core as any).db.on(eventName, (data: any) => {
+      this.core.db.on(eventName, (data: any) => {
         this.core.emit(eventName, data);
       });
     });
@@ -157,7 +168,7 @@ export class CoreInitializer {
     ] as const;
 
     peerEvents.forEach((eventName) => {
-      (this.core as any).db.on(eventName, (data: any) => {
+      this.core.db.on(eventName, (data: any) => {
         this.core.emit(eventName, data);
       });
     });
@@ -167,11 +178,11 @@ export class CoreInitializer {
    * Setup wallet derivation
    */
   private setupWalletDerivation(): void {
-    (this.core as any)._gun.on("auth", async (user: any) => {
+    this.core.gun.on("auth", async (user: any) => {
       if (!user) return;
       const priv = (user as any)._?.sea?.epriv;
       const pub = (user as any)._?.sea?.epub;
-      (this.core as any).wallets = await derive(priv, pub, {
+      this.core.wallets = await derive(priv, pub, {
         includeSecp256k1Bitcoin: true,
         includeSecp256k1Ethereum: true,
       });
@@ -195,7 +206,7 @@ export class CoreInitializer {
         if (typeof (oauthPlugin as any).configure === "function") {
           (oauthPlugin as any).configure(config.oauth);
         }
-        (this.core as any).pluginManager.register(oauthPlugin);
+        this.core.pluginManager.register(oauthPlugin);
       }
 
       // Register WebAuthn plugin if configuration is provided
@@ -210,7 +221,7 @@ export class CoreInitializer {
         if (typeof (webauthnPlugin as any).configure === "function") {
           (webauthnPlugin as any).configure(config.webauthn);
         }
-        (this.core as any).pluginManager.register(webauthnPlugin);
+        this.core.pluginManager.register(webauthnPlugin);
       }
 
       // Register Web3 plugin if configuration is provided
@@ -225,7 +236,7 @@ export class CoreInitializer {
         if (typeof (web3Plugin as any).configure === "function") {
           (web3Plugin as any).configure(config.web3);
         }
-        (this.core as any).pluginManager.register(web3Plugin);
+        this.core.pluginManager.register(web3Plugin);
       }
 
       // Register Nostr plugin if configuration is provided
@@ -240,7 +251,7 @@ export class CoreInitializer {
         if (typeof (nostrPlugin as any).configure === "function") {
           (nostrPlugin as any).configure(config.nostr);
         }
-        (this.core as any).pluginManager.register(nostrPlugin);
+        this.core.pluginManager.register(nostrPlugin);
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -254,7 +265,7 @@ export class CoreInitializer {
    */
   private async initializeAsync(): Promise<void> {
     try {
-      await (this.core as any).db.initialize();
+      await this.core.db.initialize();
 
       this.core.emit("debug", {
         action: "core_initialized",

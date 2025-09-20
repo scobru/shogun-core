@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { GunInstance, GunUserInstance } from "./improved-types";
+import { GunInstance, GunUserInstance } from "./types";
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data

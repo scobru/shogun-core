@@ -11,19 +11,11 @@ import type {
   AuthCallback,
   GunData,
   GunNode,
-  UserExistenceResult,
   EventData,
   EventListener,
   GunOperationResult,
 } from "./types";
-import type {
-  GunInstance,
-  GunUserInstance,
-  GunChain,
-  TypedGunOperationResult,
-  TypedAuthResult,
-  GunPath,
-} from "./improved-types";
+import type { GunInstance, GunUserInstance, GunChain } from "./types";
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 
@@ -42,12 +34,7 @@ import "gun/lib/axe";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 
-import type {
-  IGunUserInstance,
-  IGunInstance,
-  IGunChain,
-  ISEAPair,
-} from "gun/types";
+import type { ISEAPair } from "gun/types";
 
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";
@@ -2212,7 +2199,15 @@ class DataBase {
 }
 
 const createGun = (config: any) => {
-  return new Gun(config);
+  console.log("Creating Gun instance with config:", config);
+  console.log("Config peers:", config?.peers);
+
+  const gunInstance = new Gun(config);
+
+  console.log("Created Gun instance:", gunInstance);
+  console.log("Gun instance opt after creation:", (gunInstance as any)?.opt);
+
+  return gunInstance;
 };
 
 export {

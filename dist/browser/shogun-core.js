@@ -43829,7 +43829,7 @@ var __webpack_exports__ = {};
 (() => {
 "use strict";
 /*!************************************!*\
-  !*** ./src/index.ts + 216 modules ***!
+  !*** ./src/index.ts + 211 modules ***!
   \************************************/
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
@@ -47079,10 +47079,10 @@ var WebAuthnEventType;
     WebAuthnEventType["ERROR"] = "error";
 })(WebAuthnEventType || (WebAuthnEventType = {}));
 
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/crypto.js
+;// ./node_modules/@noble/hashes/esm/crypto.js
 const esm_crypto_crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
 //# sourceMappingURL=crypto.js.map
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/utils.js
+;// ./node_modules/@noble/hashes/esm/utils.js
 /**
  * Utilities for hex, bytes, CSPRNG.
  * @module
@@ -47364,7 +47364,7 @@ function utils_randomBytes(bytesLength = 32) {
     throw new Error('crypto.getRandomValues must be defined');
 }
 //# sourceMappingURL=utils.js.map
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/_md.js
+;// ./node_modules/@noble/hashes/esm/_md.js
 /**
  * Internal Merkle-Damgard hash utils.
  * @module
@@ -47520,7 +47520,7 @@ const SHA512_IV = /* @__PURE__ */ Uint32Array.from([
     0x510e527f, 0xade682d1, 0x9b05688c, 0x2b3e6c1f, 0x1f83d9ab, 0xfb41bd6b, 0x5be0cd19, 0x137e2179,
 ]);
 //# sourceMappingURL=_md.js.map
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/_u64.js
+;// ./node_modules/@noble/hashes/esm/_u64.js
 /**
  * Internal helpers for u64. BigUint64Array is too slow as per 2025, so we implement it using Uint32Array.
  * @todo re-check https://issues.chromium.org/issues/42212588
@@ -47588,7 +47588,7 @@ const _u64_u64 = {
 };
 /* harmony default export */ const esm_u64 = (_u64_u64);
 //# sourceMappingURL=_u64.js.map
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/sha2.js
+;// ./node_modules/@noble/hashes/esm/sha2.js
 /**
  * SHA2 hash function. A.k.a. sha256, sha384, sha512, sha512_224, sha512_256.
  * SHA256 is the fastest hash implementable in JS, even faster than Blake3.
@@ -47964,7 +47964,7 @@ const sha2_sha512_256 = /* @__PURE__ */ createHasher(() => new sha2_SHA512_256()
  */
 const sha2_sha512_224 = /* @__PURE__ */ createHasher(() => new sha2_SHA512_224());
 //# sourceMappingURL=sha2.js.map
-;// ./node_modules/@noble/curves/node_modules/@noble/hashes/esm/hmac.js
+;// ./node_modules/@noble/hashes/esm/hmac.js
 /**
  * HMAC: RFC2104 message authentication code.
  * @module
@@ -51451,523 +51451,54 @@ const secp256k1_hashToCurve = /* @__PURE__ */ (() => secp256k1_hasher.hashToCurv
 /** @deprecated use `import { secp256k1_hasher } from '@noble/curves/secp256k1.js';` */
 const secp256k1_encodeToCurve = /* @__PURE__ */ (() => secp256k1_hasher.encodeToCurve)();
 //# sourceMappingURL=secp256k1.js.map
-;// ./node_modules/@noble/hashes/esm/_assert.js
-function _assert_number(n) {
-    if (!Number.isSafeInteger(n) || n < 0)
-        throw new Error(`Wrong positive integer: ${n}`);
-}
-function _assert_bool(b) {
-    if (typeof b !== 'boolean')
-        throw new Error(`Expected boolean, not ${b}`);
-}
-function _assert_bytes(b, ...lengths) {
-    if (!(b instanceof Uint8Array))
-        throw new Error('Expected Uint8Array');
-    if (lengths.length > 0 && !lengths.includes(b.length))
-        throw new Error(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
-}
-function hash(hash) {
-    if (typeof hash !== 'function' || typeof hash.create !== 'function')
-        throw new Error('Hash should be wrapped by utils.wrapConstructor');
-    _assert_number(hash.outputLen);
-    _assert_number(hash.blockLen);
-}
-function _assert_exists(instance, checkFinished = true) {
-    if (instance.destroyed)
-        throw new Error('Hash instance has been destroyed');
-    if (checkFinished && instance.finished)
-        throw new Error('Hash#digest() has already been called');
-}
-function _assert_output(out, instance) {
-    _assert_bytes(out);
-    const min = instance.outputLen;
-    if (out.length < min) {
-        throw new Error(`digestInto() expects output buffer of length at least ${min}`);
-    }
-}
-const esm_assert_assert = {
-    number: _assert_number,
-    bool: _assert_bool,
-    bytes: _assert_bytes,
-    hash,
-    exists: _assert_exists,
-    output: _assert_output,
-};
-/* harmony default export */ const esm_assert = (esm_assert_assert);
-//# sourceMappingURL=_assert.js.map
-;// ./node_modules/@noble/hashes/esm/crypto.js
-const hashes_esm_crypto_crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
-//# sourceMappingURL=crypto.js.map
-;// ./node_modules/@noble/hashes/esm/utils.js
-/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-// We use WebCrypto aka globalThis.crypto, which exists in browsers and node.js 16+.
-// node.js versions earlier than v19 don't declare it in global scope.
-// For node.js, package.json#exports field mapping rewrites import
-// from `crypto` to `cryptoNode`, which imports native module.
-// Makes the utils un-importable in browsers without a bundler.
-// Once node.js 18 is deprecated, we can just drop the import.
-
-const utils_u8a = (a) => a instanceof Uint8Array;
-// Cast array to different type
-const esm_utils_u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-const esm_utils_u32 = (arr) => new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
-// Cast array to view
-const esm_utils_createView = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-// The rotate right (circular right shift) operation for uint32
-const esm_utils_rotr = (word, shift) => (word << (32 - shift)) | (word >>> shift);
-// big-endian hardware is rare. Just in case someone still decides to run hashes:
-// early-throw an error because we don't support BE yet.
-const esm_utils_isLE = new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44;
-if (!esm_utils_isLE)
-    throw new Error('Non little-endian hardware is not supported');
-const esm_utils_hexes = Array.from({ length: 256 }, (v, i) => i.toString(16).padStart(2, '0'));
-/**
- * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
- */
-function esm_utils_bytesToHex(bytes) {
-    if (!utils_u8a(bytes))
-        throw new Error('Uint8Array expected');
-    // pre-caching improves the speed 6x
-    let hex = '';
-    for (let i = 0; i < bytes.length; i++) {
-        hex += esm_utils_hexes[bytes[i]];
-    }
-    return hex;
-}
-/**
- * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
- */
-function esm_utils_hexToBytes(hex) {
-    if (typeof hex !== 'string')
-        throw new Error('hex string expected, got ' + typeof hex);
-    const len = hex.length;
-    if (len % 2)
-        throw new Error('padded hex string expected, got unpadded hex of length ' + len);
-    const array = new Uint8Array(len / 2);
-    for (let i = 0; i < array.length; i++) {
-        const j = i * 2;
-        const hexByte = hex.slice(j, j + 2);
-        const byte = Number.parseInt(hexByte, 16);
-        if (Number.isNaN(byte) || byte < 0)
-            throw new Error('Invalid byte sequence');
-        array[i] = byte;
-    }
-    return array;
-}
-// There is no setImmediate in browser and setTimeout is slow.
-// call of async fn will return Promise, which will be fullfiled only on
-// next scheduler queue processing step and this is exactly what we need.
-const esm_utils_nextTick = async () => { };
-// Returns control to thread each 'tick' ms to avoid blocking
-async function esm_utils_asyncLoop(iters, tick, cb) {
-    let ts = Date.now();
-    for (let i = 0; i < iters; i++) {
-        cb(i);
-        // Date.now() is not monotonic, so in case if clock goes backwards we return return control too
-        const diff = Date.now() - ts;
-        if (diff >= 0 && diff < tick)
-            continue;
-        await esm_utils_nextTick();
-        ts += diff;
-    }
-}
-/**
- * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
- */
-function esm_utils_utf8ToBytes(str) {
-    if (typeof str !== 'string')
-        throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
-    return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
-}
-/**
- * Normalizes (non-hex) string or Uint8Array to Uint8Array.
- * Warning: when Uint8Array is passed, it would NOT get copied.
- * Keep in mind for future mutable operations.
- */
-function esm_utils_toBytes(data) {
-    if (typeof data === 'string')
-        data = esm_utils_utf8ToBytes(data);
-    if (!utils_u8a(data))
-        throw new Error(`expected Uint8Array, got ${typeof data}`);
-    return data;
-}
-/**
- * Copies several Uint8Arrays into one.
- */
-function esm_utils_concatBytes(...arrays) {
-    const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
-    let pad = 0; // walk through each item, ensure they have proper type
-    arrays.forEach((a) => {
-        if (!utils_u8a(a))
-            throw new Error('Uint8Array expected');
-        r.set(a, pad);
-        pad += a.length;
-    });
-    return r;
-}
-// For runtime check if class implements interface
-class esm_utils_Hash {
-    // Safe version that clones internal state
-    clone() {
-        return this._cloneInto();
-    }
-}
-// Check if object doens't have custom constructor (like Uint8Array/Array)
-const isPlainObject = (obj) => Object.prototype.toString.call(obj) === '[object Object]' && obj.constructor === Object;
-function esm_utils_checkOpts(defaults, opts) {
-    if (opts !== undefined && (typeof opts !== 'object' || !isPlainObject(opts)))
-        throw new Error('Options should be object or undefined');
-    const merged = Object.assign(defaults, opts);
-    return merged;
-}
-function esm_utils_wrapConstructor(hashCons) {
-    const hashC = (msg) => hashCons().update(esm_utils_toBytes(msg)).digest();
-    const tmp = hashCons();
-    hashC.outputLen = tmp.outputLen;
-    hashC.blockLen = tmp.blockLen;
-    hashC.create = () => hashCons();
-    return hashC;
-}
-function esm_utils_wrapConstructorWithOpts(hashCons) {
-    const hashC = (msg, opts) => hashCons(opts).update(esm_utils_toBytes(msg)).digest();
-    const tmp = hashCons({});
-    hashC.outputLen = tmp.outputLen;
-    hashC.blockLen = tmp.blockLen;
-    hashC.create = (opts) => hashCons(opts);
-    return hashC;
-}
-function esm_utils_wrapXOFConstructorWithOpts(hashCons) {
-    const hashC = (msg, opts) => hashCons(opts).update(esm_utils_toBytes(msg)).digest();
-    const tmp = hashCons({});
-    hashC.outputLen = tmp.outputLen;
-    hashC.blockLen = tmp.blockLen;
-    hashC.create = (opts) => hashCons(opts);
-    return hashC;
-}
-/**
- * Secure PRNG. Uses `crypto.getRandomValues`, which defers to OS.
- */
-function esm_utils_randomBytes(bytesLength = 32) {
-    if (hashes_esm_crypto_crypto && typeof hashes_esm_crypto_crypto.getRandomValues === 'function') {
-        return hashes_esm_crypto_crypto.getRandomValues(new Uint8Array(bytesLength));
-    }
-    throw new Error('crypto.getRandomValues must be defined');
-}
-//# sourceMappingURL=utils.js.map
-;// ./node_modules/@noble/hashes/esm/_sha2.js
-
-
-// Polyfill for Safari 14
-function _sha2_setBigUint64(view, byteOffset, value, isLE) {
-    if (typeof view.setBigUint64 === 'function')
-        return view.setBigUint64(byteOffset, value, isLE);
-    const _32n = BigInt(32);
-    const _u32_max = BigInt(0xffffffff);
-    const wh = Number((value >> _32n) & _u32_max);
-    const wl = Number(value & _u32_max);
-    const h = isLE ? 4 : 0;
-    const l = isLE ? 0 : 4;
-    view.setUint32(byteOffset + h, wh, isLE);
-    view.setUint32(byteOffset + l, wl, isLE);
-}
-// Base SHA2 class (RFC 6234)
-class _sha2_SHA2 extends esm_utils_Hash {
-    constructor(blockLen, outputLen, padOffset, isLE) {
-        super();
-        this.blockLen = blockLen;
-        this.outputLen = outputLen;
-        this.padOffset = padOffset;
-        this.isLE = isLE;
-        this.finished = false;
-        this.length = 0;
-        this.pos = 0;
-        this.destroyed = false;
-        this.buffer = new Uint8Array(blockLen);
-        this.view = esm_utils_createView(this.buffer);
-    }
-    update(data) {
-        esm_assert.exists(this);
-        const { view, buffer, blockLen } = this;
-        data = esm_utils_toBytes(data);
-        const len = data.length;
-        for (let pos = 0; pos < len;) {
-            const take = Math.min(blockLen - this.pos, len - pos);
-            // Fast path: we have at least one block in input, cast it to view and process
-            if (take === blockLen) {
-                const dataView = esm_utils_createView(data);
-                for (; blockLen <= len - pos; pos += blockLen)
-                    this.process(dataView, pos);
-                continue;
-            }
-            buffer.set(data.subarray(pos, pos + take), this.pos);
-            this.pos += take;
-            pos += take;
-            if (this.pos === blockLen) {
-                this.process(view, 0);
-                this.pos = 0;
-            }
-        }
-        this.length += data.length;
-        this.roundClean();
-        return this;
-    }
-    digestInto(out) {
-        esm_assert.exists(this);
-        esm_assert.output(out, this);
-        this.finished = true;
-        // Padding
-        // We can avoid allocation of buffer for padding completely if it
-        // was previously not allocated here. But it won't change performance.
-        const { buffer, view, blockLen, isLE } = this;
-        let { pos } = this;
-        // append the bit '1' to the message
-        buffer[pos++] = 0b10000000;
-        this.buffer.subarray(pos).fill(0);
-        // we have less than padOffset left in buffer, so we cannot put length in current block, need process it and pad again
-        if (this.padOffset > blockLen - pos) {
-            this.process(view, 0);
-            pos = 0;
-        }
-        // Pad until full block byte with zeros
-        for (let i = pos; i < blockLen; i++)
-            buffer[i] = 0;
-        // Note: sha512 requires length to be 128bit integer, but length in JS will overflow before that
-        // You need to write around 2 exabytes (u64_max / 8 / (1024**6)) for this to happen.
-        // So we just write lowest 64 bits of that value.
-        _sha2_setBigUint64(view, blockLen - 8, BigInt(this.length * 8), isLE);
-        this.process(view, 0);
-        const oview = esm_utils_createView(out);
-        const len = this.outputLen;
-        // NOTE: we do division by 4 later, which should be fused in single op with modulo by JIT
-        if (len % 4)
-            throw new Error('_sha2: outputLen should be aligned to 32bit');
-        const outLen = len / 4;
-        const state = this.get();
-        if (outLen > state.length)
-            throw new Error('_sha2: outputLen bigger than state');
-        for (let i = 0; i < outLen; i++)
-            oview.setUint32(4 * i, state[i], isLE);
-    }
-    digest() {
-        const { buffer, outputLen } = this;
-        this.digestInto(buffer);
-        const res = buffer.slice(0, outputLen);
-        this.destroy();
-        return res;
-    }
-    _cloneInto(to) {
-        to || (to = new this.constructor());
-        to.set(...this.get());
-        const { blockLen, buffer, length, finished, destroyed, pos } = this;
-        to.length = length;
-        to.pos = pos;
-        to.finished = finished;
-        to.destroyed = destroyed;
-        if (length % blockLen)
-            to.buffer.set(buffer);
-        return to;
-    }
-}
-//# sourceMappingURL=_sha2.js.map
 ;// ./node_modules/@noble/hashes/esm/sha256.js
-
-
-// Choice: a ? b : c
-const sha256_Chi = (a, b, c) => (a & b) ^ (~a & c);
-// Majority function, true if any two inpust is true
-const sha256_Maj = (a, b, c) => (a & b) ^ (a & c) ^ (b & c);
-// Round constants:
-// first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311)
-// prettier-ignore
-const sha256_SHA256_K = new Uint32Array([
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-]);
-// Initial state (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
-// prettier-ignore
-const sha256_IV = new Uint32Array([
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-]);
-// Temporary buffer, not used to store anything between runs
-// Named this way because it matches specification.
-const sha256_SHA256_W = new Uint32Array(64);
-class sha256_SHA256 extends _sha2_SHA2 {
-    constructor() {
-        super(64, 32, 8, false);
-        // We cannot use array here since array allows indexing by variable
-        // which means optimizer/compiler cannot use registers.
-        this.A = sha256_IV[0] | 0;
-        this.B = sha256_IV[1] | 0;
-        this.C = sha256_IV[2] | 0;
-        this.D = sha256_IV[3] | 0;
-        this.E = sha256_IV[4] | 0;
-        this.F = sha256_IV[5] | 0;
-        this.G = sha256_IV[6] | 0;
-        this.H = sha256_IV[7] | 0;
-    }
-    get() {
-        const { A, B, C, D, E, F, G, H } = this;
-        return [A, B, C, D, E, F, G, H];
-    }
-    // prettier-ignore
-    set(A, B, C, D, E, F, G, H) {
-        this.A = A | 0;
-        this.B = B | 0;
-        this.C = C | 0;
-        this.D = D | 0;
-        this.E = E | 0;
-        this.F = F | 0;
-        this.G = G | 0;
-        this.H = H | 0;
-    }
-    process(view, offset) {
-        // Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array
-        for (let i = 0; i < 16; i++, offset += 4)
-            sha256_SHA256_W[i] = view.getUint32(offset, false);
-        for (let i = 16; i < 64; i++) {
-            const W15 = sha256_SHA256_W[i - 15];
-            const W2 = sha256_SHA256_W[i - 2];
-            const s0 = esm_utils_rotr(W15, 7) ^ esm_utils_rotr(W15, 18) ^ (W15 >>> 3);
-            const s1 = esm_utils_rotr(W2, 17) ^ esm_utils_rotr(W2, 19) ^ (W2 >>> 10);
-            sha256_SHA256_W[i] = (s1 + sha256_SHA256_W[i - 7] + s0 + sha256_SHA256_W[i - 16]) | 0;
-        }
-        // Compression function main loop, 64 rounds
-        let { A, B, C, D, E, F, G, H } = this;
-        for (let i = 0; i < 64; i++) {
-            const sigma1 = esm_utils_rotr(E, 6) ^ esm_utils_rotr(E, 11) ^ esm_utils_rotr(E, 25);
-            const T1 = (H + sigma1 + sha256_Chi(E, F, G) + sha256_SHA256_K[i] + sha256_SHA256_W[i]) | 0;
-            const sigma0 = esm_utils_rotr(A, 2) ^ esm_utils_rotr(A, 13) ^ esm_utils_rotr(A, 22);
-            const T2 = (sigma0 + sha256_Maj(A, B, C)) | 0;
-            H = G;
-            G = F;
-            F = E;
-            E = (D + T1) | 0;
-            D = C;
-            C = B;
-            B = A;
-            A = (T1 + T2) | 0;
-        }
-        // Add the compressed chunk to the current hash value
-        A = (A + this.A) | 0;
-        B = (B + this.B) | 0;
-        C = (C + this.C) | 0;
-        D = (D + this.D) | 0;
-        E = (E + this.E) | 0;
-        F = (F + this.F) | 0;
-        G = (G + this.G) | 0;
-        H = (H + this.H) | 0;
-        this.set(A, B, C, D, E, F, G, H);
-    }
-    roundClean() {
-        sha256_SHA256_W.fill(0);
-    }
-    destroy() {
-        this.set(0, 0, 0, 0, 0, 0, 0, 0);
-        this.buffer.fill(0);
-    }
-}
-// Constants from https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
-class sha256_SHA224 extends sha256_SHA256 {
-    constructor() {
-        super();
-        this.A = 0xc1059ed8 | 0;
-        this.B = 0x367cd507 | 0;
-        this.C = 0x3070dd17 | 0;
-        this.D = 0xf70e5939 | 0;
-        this.E = 0xffc00b31 | 0;
-        this.F = 0x68581511 | 0;
-        this.G = 0x64f98fa7 | 0;
-        this.H = 0xbefa4fa4 | 0;
-        this.outputLen = 28;
-    }
-}
 /**
- * SHA2-256 hash function
- * @param message - data that would be hashed
+ * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
+ *
+ * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
+ * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
+ *
+ * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+ * @module
+ * @deprecated
  */
-const sha256_sha256 = esm_utils_wrapConstructor(() => new sha256_SHA256());
-const sha256_sha224 = esm_utils_wrapConstructor(() => new sha256_SHA224());
+
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha256_SHA256 = sha2_SHA256;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha256_sha256 = esm_sha2_sha256;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha256_SHA224 = sha2_SHA224;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha256_sha224 = sha2_sha224;
 //# sourceMappingURL=sha256.js.map
-;// ./node_modules/@noble/hashes/esm/_u64.js
-const esm_u64_U32_MASK64 = BigInt(2 ** 32 - 1);
-const esm_u64_32n = BigInt(32);
-// We are not using BigUint64Array, because they are extremely slow as per 2022
-function esm_u64_fromBig(n, le = false) {
-    if (le)
-        return { h: Number(n & esm_u64_U32_MASK64), l: Number((n >> esm_u64_32n) & esm_u64_U32_MASK64) };
-    return { h: Number((n >> esm_u64_32n) & esm_u64_U32_MASK64) | 0, l: Number(n & esm_u64_U32_MASK64) | 0 };
-}
-function esm_u64_split(lst, le = false) {
-    let Ah = new Uint32Array(lst.length);
-    let Al = new Uint32Array(lst.length);
-    for (let i = 0; i < lst.length; i++) {
-        const { h, l } = esm_u64_fromBig(lst[i], le);
-        [Ah[i], Al[i]] = [h, l];
-    }
-    return [Ah, Al];
-}
-const esm_u64_toBig = (h, l) => (BigInt(h >>> 0) << esm_u64_32n) | BigInt(l >>> 0);
-// for Shift in [0, 32)
-const esm_u64_shrSH = (h, l, s) => h >>> s;
-const esm_u64_shrSL = (h, l, s) => (h << (32 - s)) | (l >>> s);
-// Right rotate for Shift in [1, 32)
-const esm_u64_rotrSH = (h, l, s) => (h >>> s) | (l << (32 - s));
-const esm_u64_rotrSL = (h, l, s) => (h << (32 - s)) | (l >>> s);
-// Right rotate for Shift in (32, 64), NOTE: 32 is special case.
-const esm_u64_rotrBH = (h, l, s) => (h << (64 - s)) | (l >>> (s - 32));
-const esm_u64_rotrBL = (h, l, s) => (h >>> (s - 32)) | (l << (64 - s));
-// Right rotate for shift===32 (just swaps l&h)
-const esm_u64_rotr32H = (h, l) => l;
-const esm_u64_rotr32L = (h, l) => h;
-// Left rotate for Shift in [1, 32)
-const esm_u64_rotlSH = (h, l, s) => (h << s) | (l >>> (32 - s));
-const esm_u64_rotlSL = (h, l, s) => (l << s) | (h >>> (32 - s));
-// Left rotate for Shift in (32, 64), NOTE: 32 is special case.
-const esm_u64_rotlBH = (h, l, s) => (l << (s - 32)) | (h >>> (64 - s));
-const esm_u64_rotlBL = (h, l, s) => (h << (s - 32)) | (l >>> (64 - s));
-// JS uses 32-bit signed integers for bitwise operations which means we cannot
-// simple take carry out of low bit sum by shift, we need to use division.
-// Removing "export" has 5% perf penalty -_-
-function esm_u64_add(Ah, Al, Bh, Bl) {
-    const l = (Al >>> 0) + (Bl >>> 0);
-    return { h: (Ah + Bh + ((l / 2 ** 32) | 0)) | 0, l: l | 0 };
-}
-// Addition with more than 2 elements
-const esm_u64_add3L = (Al, Bl, Cl) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0);
-const esm_u64_add3H = (low, Ah, Bh, Ch) => (Ah + Bh + Ch + ((low / 2 ** 32) | 0)) | 0;
-const esm_u64_add4L = (Al, Bl, Cl, Dl) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0);
-const esm_u64_add4H = (low, Ah, Bh, Ch, Dh) => (Ah + Bh + Ch + Dh + ((low / 2 ** 32) | 0)) | 0;
-const esm_u64_add5L = (Al, Bl, Cl, Dl, El) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0) + (El >>> 0);
-const esm_u64_add5H = (low, Ah, Bh, Ch, Dh, Eh) => (Ah + Bh + Ch + Dh + Eh + ((low / 2 ** 32) | 0)) | 0;
-// prettier-ignore
-const esm_u64_u64 = {
-    fromBig: esm_u64_fromBig, split: esm_u64_split, toBig: esm_u64_toBig,
-    shrSH: esm_u64_shrSH, shrSL: esm_u64_shrSL,
-    rotrSH: esm_u64_rotrSH, rotrSL: esm_u64_rotrSL, rotrBH: esm_u64_rotrBH, rotrBL: esm_u64_rotrBL,
-    rotr32H: esm_u64_rotr32H, rotr32L: esm_u64_rotr32L,
-    rotlSH: esm_u64_rotlSH, rotlSL: esm_u64_rotlSL, rotlBH: esm_u64_rotlBH, rotlBL: esm_u64_rotlBL,
-    add: esm_u64_add, add3L: esm_u64_add3L, add3H: esm_u64_add3H, add4L: esm_u64_add4L, add4H: esm_u64_add4H, add5H: esm_u64_add5H, add5L: esm_u64_add5L,
-};
-/* harmony default export */ const hashes_esm_u64 = (esm_u64_u64);
-//# sourceMappingURL=_u64.js.map
 ;// ./node_modules/@noble/hashes/esm/sha3.js
+/**
+ * SHA3 (keccak) hash function, based on a new "Sponge function" design.
+ * Different from older hashes, the internal state is bigger than output size.
+ *
+ * Check out [FIPS-202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf),
+ * [Website](https://keccak.team/keccak.html),
+ * [the differences between SHA-3 and Keccak](https://crypto.stackexchange.com/questions/15727/what-are-the-key-differences-between-the-draft-sha-3-standard-and-the-keccak-sub).
+ *
+ * Check out `sha3-addons` module for cSHAKE, k12, and others.
+ * @module
+ */
 
+// prettier-ignore
 
-
+// No __PURE__ annotations in sha3 header:
+// EVERYTHING is in fact used on every export.
 // Various per round constants calculations
-const [sha3_SHA3_PI, sha3_SHA3_ROTL, sha3_SHA3_IOTA] = [[], [], []];
 const sha3_0n = BigInt(0);
 const sha3_1n = BigInt(1);
 const sha3_2n = BigInt(2);
 const sha3_7n = BigInt(7);
 const sha3_256n = BigInt(256);
 const sha3_0x71n = BigInt(0x71);
+const sha3_SHA3_PI = [];
+const sha3_SHA3_ROTL = [];
+const sha3_SHA3_IOTA = [];
 for (let round = 0, R = sha3_1n, x = 1, y = 0; round < 24; round++) {
     // Pi
     [x, y] = [y, (2 * x + 3 * y) % 5];
@@ -51979,15 +51510,17 @@ for (let round = 0, R = sha3_1n, x = 1, y = 0; round < 24; round++) {
     for (let j = 0; j < 7; j++) {
         R = ((R << sha3_1n) ^ ((R >> sha3_7n) * sha3_0x71n)) % sha3_256n;
         if (R & sha3_2n)
-            t ^= sha3_1n << ((sha3_1n << BigInt(j)) - sha3_1n);
+            t ^= sha3_1n << ((sha3_1n << /* @__PURE__ */ BigInt(j)) - sha3_1n);
     }
     sha3_SHA3_IOTA.push(t);
 }
-const [sha3_SHA3_IOTA_H, sha3_SHA3_IOTA_L] = hashes_esm_u64.split(sha3_SHA3_IOTA, true);
+const IOTAS = _u64_split(sha3_SHA3_IOTA, true);
+const sha3_SHA3_IOTA_H = IOTAS[0];
+const sha3_SHA3_IOTA_L = IOTAS[1];
 // Left rotation (without 0, 32, 64)
-const sha3_rotlH = (h, l, s) => s > 32 ? hashes_esm_u64.rotlBH(h, l, s) : hashes_esm_u64.rotlSH(h, l, s);
-const sha3_rotlL = (h, l, s) => s > 32 ? hashes_esm_u64.rotlBL(h, l, s) : hashes_esm_u64.rotlSL(h, l, s);
-// Same as keccakf1600, but allows to skip some rounds
+const sha3_rotlH = (h, l, s) => (s > 32 ? _u64_rotlBH(h, l, s) : _u64_rotlSH(h, l, s));
+const sha3_rotlL = (h, l, s) => (s > 32 ? _u64_rotlBL(h, l, s) : _u64_rotlSL(h, l, s));
+/** `keccakf1600` internal function, additionally allows to adjust round count. */
 function sha3_keccakP(s, rounds = 24) {
     const B = new Uint32Array(5 * 2);
     // NOTE: all indices are x2 since we store state as u32 instead of u64 (bigints to slow in js)
@@ -52031,38 +51564,47 @@ function sha3_keccakP(s, rounds = 24) {
         s[0] ^= sha3_SHA3_IOTA_H[round];
         s[1] ^= sha3_SHA3_IOTA_L[round];
     }
-    B.fill(0);
+    clean(B);
 }
-class sha3_Keccak extends esm_utils_Hash {
+/** Keccak sponge function. */
+class sha3_Keccak extends utils_Hash {
     // NOTE: we accept arguments in bytes instead of bits here.
     constructor(blockLen, suffix, outputLen, enableXOF = false, rounds = 24) {
         super();
+        this.pos = 0;
+        this.posOut = 0;
+        this.finished = false;
+        this.destroyed = false;
+        this.enableXOF = false;
         this.blockLen = blockLen;
         this.suffix = suffix;
         this.outputLen = outputLen;
         this.enableXOF = enableXOF;
         this.rounds = rounds;
-        this.pos = 0;
-        this.posOut = 0;
-        this.finished = false;
-        this.destroyed = false;
         // Can be passed from user as dkLen
-        esm_assert.number(outputLen);
+        anumber(outputLen);
         // 1600 = 5x5 matrix of 64bit.  1600 bits === 200 bytes
-        if (0 >= this.blockLen || this.blockLen >= 200)
-            throw new Error('Sha3 supports only keccak-f1600 function');
+        // 0 < blockLen < 200
+        if (!(0 < blockLen && blockLen < 200))
+            throw new Error('only keccak-f1600 function is supported');
         this.state = new Uint8Array(200);
-        this.state32 = esm_utils_u32(this.state);
+        this.state32 = utils_u32(this.state);
+    }
+    clone() {
+        return this._cloneInto();
     }
     keccak() {
+        swap32IfBE(this.state32);
         sha3_keccakP(this.state32, this.rounds);
+        swap32IfBE(this.state32);
         this.posOut = 0;
         this.pos = 0;
     }
     update(data) {
-        esm_assert.exists(this);
+        aexists(this);
+        data = utils_toBytes(data);
+        abytes(data);
         const { blockLen, state } = this;
-        data = esm_utils_toBytes(data);
         const len = data.length;
         for (let pos = 0; pos < len;) {
             const take = Math.min(blockLen - this.pos, len - pos);
@@ -52086,8 +51628,8 @@ class sha3_Keccak extends esm_utils_Hash {
         this.keccak();
     }
     writeInto(out) {
-        esm_assert.exists(this, false);
-        esm_assert.bytes(out);
+        aexists(this, false);
+        abytes(out);
         this.finish();
         const bufferOut = this.state;
         const { blockLen } = this;
@@ -52108,11 +51650,11 @@ class sha3_Keccak extends esm_utils_Hash {
         return this.writeInto(out);
     }
     xof(bytes) {
-        esm_assert.number(bytes);
+        anumber(bytes);
         return this.xofInto(new Uint8Array(bytes));
     }
     digestInto(out) {
-        esm_assert.output(out, this);
+        aoutput(out, this);
         if (this.finished)
             throw new Error('digest() was already called');
         this.writeInto(out);
@@ -52124,7 +51666,7 @@ class sha3_Keccak extends esm_utils_Hash {
     }
     destroy() {
         this.destroyed = true;
-        this.state.fill(0);
+        clean(this.state);
     }
     _cloneInto(to) {
         const { blockLen, suffix, outputLen, rounds, enableXOF } = this;
@@ -52142,69 +51684,251 @@ class sha3_Keccak extends esm_utils_Hash {
         return to;
     }
 }
-const sha3_gen = (suffix, blockLen, outputLen) => esm_utils_wrapConstructor(() => new sha3_Keccak(blockLen, suffix, outputLen));
-const sha3_sha3_224 = sha3_gen(0x06, 144, 224 / 8);
-/**
- * SHA3-256 hash function
- * @param message - that would be hashed
- */
-const sha3_sha3_256 = sha3_gen(0x06, 136, 256 / 8);
-const sha3_sha3_384 = sha3_gen(0x06, 104, 384 / 8);
-const sha3_sha3_512 = sha3_gen(0x06, 72, 512 / 8);
-const sha3_keccak_224 = sha3_gen(0x01, 144, 224 / 8);
-/**
- * keccak-256 hash function. Different from SHA3-256.
- * @param message - that would be hashed
- */
-const sha3_keccak_256 = sha3_gen(0x01, 136, 256 / 8);
-const sha3_keccak_384 = sha3_gen(0x01, 104, 384 / 8);
-const sha3_keccak_512 = sha3_gen(0x01, 72, 512 / 8);
-const sha3_genShake = (suffix, blockLen, outputLen) => esm_utils_wrapXOFConstructorWithOpts((opts = {}) => new sha3_Keccak(blockLen, suffix, opts.dkLen === undefined ? outputLen : opts.dkLen, true));
-const sha3_shake128 = sha3_genShake(0x1f, 168, 128 / 8);
-const sha3_shake256 = sha3_genShake(0x1f, 136, 256 / 8);
+const sha3_gen = (suffix, blockLen, outputLen) => createHasher(() => new sha3_Keccak(blockLen, suffix, outputLen));
+/** SHA3-224 hash function. */
+const sha3_sha3_224 = /* @__PURE__ */ (() => sha3_gen(0x06, 144, 224 / 8))();
+/** SHA3-256 hash function. Different from keccak-256. */
+const sha3_sha3_256 = /* @__PURE__ */ (() => sha3_gen(0x06, 136, 256 / 8))();
+/** SHA3-384 hash function. */
+const sha3_sha3_384 = /* @__PURE__ */ (() => sha3_gen(0x06, 104, 384 / 8))();
+/** SHA3-512 hash function. */
+const sha3_sha3_512 = /* @__PURE__ */ (() => sha3_gen(0x06, 72, 512 / 8))();
+/** keccak-224 hash function. */
+const sha3_keccak_224 = /* @__PURE__ */ (() => sha3_gen(0x01, 144, 224 / 8))();
+/** keccak-256 hash function. Different from SHA3-256. */
+const sha3_keccak_256 = /* @__PURE__ */ (() => sha3_gen(0x01, 136, 256 / 8))();
+/** keccak-384 hash function. */
+const sha3_keccak_384 = /* @__PURE__ */ (() => sha3_gen(0x01, 104, 384 / 8))();
+/** keccak-512 hash function. */
+const sha3_keccak_512 = /* @__PURE__ */ (() => sha3_gen(0x01, 72, 512 / 8))();
+const sha3_genShake = (suffix, blockLen, outputLen) => createXOFer((opts = {}) => new sha3_Keccak(blockLen, suffix, opts.dkLen === undefined ? outputLen : opts.dkLen, true));
+/** SHAKE128 XOF with 128-bit security. */
+const sha3_shake128 = /* @__PURE__ */ (() => sha3_genShake(0x1f, 168, 128 / 8))();
+/** SHAKE256 XOF with 256-bit security. */
+const sha3_shake256 = /* @__PURE__ */ (() => sha3_genShake(0x1f, 136, 256 / 8))();
 //# sourceMappingURL=sha3.js.map
-;// ./node_modules/@noble/hashes/esm/ripemd160.js
+;// ./node_modules/@noble/hashes/esm/legacy.js
+/**
+
+SHA1 (RFC 3174), MD5 (RFC 1321) and RIPEMD160 (RFC 2286) legacy, weak hash functions.
+Don't use them in a new protocol. What "weak" means:
+
+- Collisions can be made with 2^18 effort in MD5, 2^60 in SHA1, 2^80 in RIPEMD160.
+- No practical pre-image attacks (only theoretical, 2^123.4)
+- HMAC seems kinda ok: https://datatracker.ietf.org/doc/html/rfc6151
+ * @module
+ */
 
 
-// https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-// https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
-const Rho = new Uint8Array([7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8]);
-const Id = Uint8Array.from({ length: 16 }, (_, i) => i);
-const Pi = Id.map((i) => (9 * i + 5) % 16);
-let idxL = [Id];
-let idxR = [Pi];
-for (let i = 0; i < 4; i++)
-    for (let j of [idxL, idxR])
-        j.push(j[i].map((k) => Rho[k]));
-const shifts = [
+/** Initial SHA1 state */
+const SHA1_IV = /* @__PURE__ */ Uint32Array.from([
+    0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0,
+]);
+// Reusable temporary buffer
+const SHA1_W = /* @__PURE__ */ new Uint32Array(80);
+/** SHA1 legacy hash class. */
+class SHA1 extends HashMD {
+    constructor() {
+        super(64, 20, 8, false);
+        this.A = SHA1_IV[0] | 0;
+        this.B = SHA1_IV[1] | 0;
+        this.C = SHA1_IV[2] | 0;
+        this.D = SHA1_IV[3] | 0;
+        this.E = SHA1_IV[4] | 0;
+    }
+    get() {
+        const { A, B, C, D, E } = this;
+        return [A, B, C, D, E];
+    }
+    set(A, B, C, D, E) {
+        this.A = A | 0;
+        this.B = B | 0;
+        this.C = C | 0;
+        this.D = D | 0;
+        this.E = E | 0;
+    }
+    process(view, offset) {
+        for (let i = 0; i < 16; i++, offset += 4)
+            SHA1_W[i] = view.getUint32(offset, false);
+        for (let i = 16; i < 80; i++)
+            SHA1_W[i] = rotl(SHA1_W[i - 3] ^ SHA1_W[i - 8] ^ SHA1_W[i - 14] ^ SHA1_W[i - 16], 1);
+        // Compression function main loop, 80 rounds
+        let { A, B, C, D, E } = this;
+        for (let i = 0; i < 80; i++) {
+            let F, K;
+            if (i < 20) {
+                F = _md_Chi(B, C, D);
+                K = 0x5a827999;
+            }
+            else if (i < 40) {
+                F = B ^ C ^ D;
+                K = 0x6ed9eba1;
+            }
+            else if (i < 60) {
+                F = _md_Maj(B, C, D);
+                K = 0x8f1bbcdc;
+            }
+            else {
+                F = B ^ C ^ D;
+                K = 0xca62c1d6;
+            }
+            const T = (rotl(A, 5) + F + E + K + SHA1_W[i]) | 0;
+            E = D;
+            D = C;
+            C = rotl(B, 30);
+            B = A;
+            A = T;
+        }
+        // Add the compressed chunk to the current hash value
+        A = (A + this.A) | 0;
+        B = (B + this.B) | 0;
+        C = (C + this.C) | 0;
+        D = (D + this.D) | 0;
+        E = (E + this.E) | 0;
+        this.set(A, B, C, D, E);
+    }
+    roundClean() {
+        clean(SHA1_W);
+    }
+    destroy() {
+        this.set(0, 0, 0, 0, 0);
+        clean(this.buffer);
+    }
+}
+/** SHA1 (RFC 3174) legacy hash function. It was cryptographically broken. */
+const sha1 = /* @__PURE__ */ createHasher(() => new SHA1());
+/** Per-round constants */
+const p32 = /* @__PURE__ */ Math.pow(2, 32);
+const K = /* @__PURE__ */ Array.from({ length: 64 }, (_, i) => Math.floor(p32 * Math.abs(Math.sin(i + 1))));
+/** md5 initial state: same as sha1, but 4 u32 instead of 5. */
+const MD5_IV = /* @__PURE__ */ SHA1_IV.slice(0, 4);
+// Reusable temporary buffer
+const MD5_W = /* @__PURE__ */ new Uint32Array(16);
+/** MD5 legacy hash class. */
+class MD5 extends HashMD {
+    constructor() {
+        super(64, 16, 8, true);
+        this.A = MD5_IV[0] | 0;
+        this.B = MD5_IV[1] | 0;
+        this.C = MD5_IV[2] | 0;
+        this.D = MD5_IV[3] | 0;
+    }
+    get() {
+        const { A, B, C, D } = this;
+        return [A, B, C, D];
+    }
+    set(A, B, C, D) {
+        this.A = A | 0;
+        this.B = B | 0;
+        this.C = C | 0;
+        this.D = D | 0;
+    }
+    process(view, offset) {
+        for (let i = 0; i < 16; i++, offset += 4)
+            MD5_W[i] = view.getUint32(offset, true);
+        // Compression function main loop, 64 rounds
+        let { A, B, C, D } = this;
+        for (let i = 0; i < 64; i++) {
+            let F, g, s;
+            if (i < 16) {
+                F = _md_Chi(B, C, D);
+                g = i;
+                s = [7, 12, 17, 22];
+            }
+            else if (i < 32) {
+                F = _md_Chi(D, B, C);
+                g = (5 * i + 1) % 16;
+                s = [5, 9, 14, 20];
+            }
+            else if (i < 48) {
+                F = B ^ C ^ D;
+                g = (3 * i + 5) % 16;
+                s = [4, 11, 16, 23];
+            }
+            else {
+                F = C ^ (B | ~D);
+                g = (7 * i) % 16;
+                s = [6, 10, 15, 21];
+            }
+            F = F + A + K[i] + MD5_W[g];
+            A = D;
+            D = C;
+            C = B;
+            B = B + rotl(F, s[i % 4]);
+        }
+        // Add the compressed chunk to the current hash value
+        A = (A + this.A) | 0;
+        B = (B + this.B) | 0;
+        C = (C + this.C) | 0;
+        D = (D + this.D) | 0;
+        this.set(A, B, C, D);
+    }
+    roundClean() {
+        clean(MD5_W);
+    }
+    destroy() {
+        this.set(0, 0, 0, 0);
+        clean(this.buffer);
+    }
+}
+/**
+ * MD5 (RFC 1321) legacy hash function. It was cryptographically broken.
+ * MD5 architecture is similar to SHA1, with some differences:
+ * - Reduced output length: 16 bytes (128 bit) instead of 20
+ * - 64 rounds, instead of 80
+ * - Little-endian: could be faster, but will require more code
+ * - Non-linear index selection: huge speed-up for unroll
+ * - Per round constants: more memory accesses, additional speed-up for unroll
+ */
+const md5 = /* @__PURE__ */ createHasher(() => new MD5());
+// RIPEMD-160
+const Rho160 = /* @__PURE__ */ Uint8Array.from([
+    7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
+]);
+const Id160 = /* @__PURE__ */ (() => Uint8Array.from(new Array(16).fill(0).map((_, i) => i)))();
+const Pi160 = /* @__PURE__ */ (() => Id160.map((i) => (9 * i + 5) % 16))();
+const idxLR = /* @__PURE__ */ (() => {
+    const L = [Id160];
+    const R = [Pi160];
+    const res = [L, R];
+    for (let i = 0; i < 4; i++)
+        for (let j of res)
+            j.push(j[i].map((k) => Rho160[k]));
+    return res;
+})();
+const idxL = /* @__PURE__ */ (() => idxLR[0])();
+const idxR = /* @__PURE__ */ (() => idxLR[1])();
+// const [idxL, idxR] = idxLR;
+const shifts160 = /* @__PURE__ */ [
     [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8],
     [12, 13, 11, 15, 6, 9, 9, 7, 12, 15, 11, 13, 7, 8, 7, 7],
     [13, 15, 14, 11, 7, 7, 6, 8, 13, 14, 13, 12, 5, 5, 6, 9],
     [14, 11, 12, 14, 8, 6, 5, 5, 15, 12, 15, 14, 9, 9, 8, 6],
     [15, 12, 13, 13, 9, 5, 8, 6, 14, 11, 12, 11, 8, 6, 5, 5],
-].map((i) => new Uint8Array(i));
-const shiftsL = idxL.map((idx, i) => idx.map((j) => shifts[i][j]));
-const shiftsR = idxR.map((idx, i) => idx.map((j) => shifts[i][j]));
-const Kl = new Uint32Array([0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]);
-const Kr = new Uint32Array([0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]);
-// The rotate left (circular left shift) operation for uint32
-const ripemd160_rotl = (word, shift) => (word << shift) | (word >>> (32 - shift));
+].map((i) => Uint8Array.from(i));
+const shiftsL160 = /* @__PURE__ */ idxL.map((idx, i) => idx.map((j) => shifts160[i][j]));
+const shiftsR160 = /* @__PURE__ */ idxR.map((idx, i) => idx.map((j) => shifts160[i][j]));
+const Kl160 = /* @__PURE__ */ Uint32Array.from([
+    0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e,
+]);
+const Kr160 = /* @__PURE__ */ Uint32Array.from([
+    0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000,
+]);
 // It's called f() in spec.
-function f(group, x, y, z) {
+function ripemd_f(group, x, y, z) {
     if (group === 0)
         return x ^ y ^ z;
-    else if (group === 1)
+    if (group === 1)
         return (x & y) | (~x & z);
-    else if (group === 2)
+    if (group === 2)
         return (x | ~y) ^ z;
-    else if (group === 3)
+    if (group === 3)
         return (x & z) | (y & ~z);
-    else
-        return x ^ (y | ~z);
+    return x ^ (y | ~z);
 }
-// Temporary buffer, not used to store anything between runs
-const BUF = new Uint32Array(16);
-class RIPEMD160 extends _sha2_SHA2 {
+// Reusable temporary buffer
+const BUF_160 = /* @__PURE__ */ new Uint32Array(16);
+class RIPEMD160 extends HashMD {
     constructor() {
         super(64, 20, 8, true);
         this.h0 = 0x67452301 | 0;
@@ -52226,43 +51950,58 @@ class RIPEMD160 extends _sha2_SHA2 {
     }
     process(view, offset) {
         for (let i = 0; i < 16; i++, offset += 4)
-            BUF[i] = view.getUint32(offset, true);
+            BUF_160[i] = view.getUint32(offset, true);
         // prettier-ignore
         let al = this.h0 | 0, ar = al, bl = this.h1 | 0, br = bl, cl = this.h2 | 0, cr = cl, dl = this.h3 | 0, dr = dl, el = this.h4 | 0, er = el;
         // Instead of iterating 0 to 80, we split it into 5 groups
         // And use the groups in constants, functions, etc. Much simpler
         for (let group = 0; group < 5; group++) {
             const rGroup = 4 - group;
-            const hbl = Kl[group], hbr = Kr[group]; // prettier-ignore
+            const hbl = Kl160[group], hbr = Kr160[group]; // prettier-ignore
             const rl = idxL[group], rr = idxR[group]; // prettier-ignore
-            const sl = shiftsL[group], sr = shiftsR[group]; // prettier-ignore
+            const sl = shiftsL160[group], sr = shiftsR160[group]; // prettier-ignore
             for (let i = 0; i < 16; i++) {
-                const tl = (ripemd160_rotl(al + f(group, bl, cl, dl) + BUF[rl[i]] + hbl, sl[i]) + el) | 0;
-                al = el, el = dl, dl = ripemd160_rotl(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
+                const tl = (rotl(al + ripemd_f(group, bl, cl, dl) + BUF_160[rl[i]] + hbl, sl[i]) + el) | 0;
+                al = el, el = dl, dl = rotl(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
             }
             // 2 loops are 10% faster
             for (let i = 0; i < 16; i++) {
-                const tr = (ripemd160_rotl(ar + f(rGroup, br, cr, dr) + BUF[rr[i]] + hbr, sr[i]) + er) | 0;
-                ar = er, er = dr, dr = ripemd160_rotl(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
+                const tr = (rotl(ar + ripemd_f(rGroup, br, cr, dr) + BUF_160[rr[i]] + hbr, sr[i]) + er) | 0;
+                ar = er, er = dr, dr = rotl(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
             }
         }
         // Add the compressed chunk to the current hash value
         this.set((this.h1 + cl + dr) | 0, (this.h2 + dl + er) | 0, (this.h3 + el + ar) | 0, (this.h4 + al + br) | 0, (this.h0 + bl + cr) | 0);
     }
     roundClean() {
-        BUF.fill(0);
+        clean(BUF_160);
     }
     destroy() {
         this.destroyed = true;
-        this.buffer.fill(0);
+        clean(this.buffer);
         this.set(0, 0, 0, 0, 0);
     }
 }
 /**
- * RIPEMD-160 - a hash function from 1990s.
- * @param message - msg that would be hashed
+ * RIPEMD-160 - a legacy hash function from 1990s.
+ * * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+ * * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
  */
-const ripemd160 = esm_utils_wrapConstructor(() => new RIPEMD160());
+const ripemd160 = /* @__PURE__ */ createHasher(() => new RIPEMD160());
+//# sourceMappingURL=legacy.js.map
+;// ./node_modules/@noble/hashes/esm/ripemd160.js
+/**
+ * RIPEMD-160 legacy hash function.
+ * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+ * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
+ * @module
+ * @deprecated
+ */
+
+/** @deprecated Use import from `noble/hashes/legacy` module */
+const ripemd160_RIPEMD160 = RIPEMD160;
+/** @deprecated Use import from `noble/hashes/legacy` module */
+const ripemd160_ripemd160 = ripemd160;
 //# sourceMappingURL=ripemd160.js.map
 ;// ./src/gundb/derive.ts
 
@@ -52469,7 +52208,7 @@ function deriveP2PKHAddress(publicKey) {
     // 1. SHA256 hash del public key
     const sha256Hash = sha256_sha256(publicKey);
     // 2. RIPEMD160 hash del risultato
-    const ripemd160Hash = ripemd160(sha256Hash);
+    const ripemd160Hash = ripemd160_ripemd160(sha256Hash);
     // 3. Aggiungi version byte (0x00 per mainnet P2PKH)
     const versionedHash = new Uint8Array(21);
     versionedHash[0] = 0x00; // Mainnet P2PKH version
@@ -57245,13 +56984,13 @@ function resolveAddress(target, resolver) {
 const abstract_utils_0n = BigInt(0);
 const abstract_utils_1n = BigInt(1);
 const utils_2n = BigInt(2);
-const abstract_utils_u8a = (a) => a instanceof Uint8Array;
+const utils_u8a = (a) => a instanceof Uint8Array;
 const abstract_utils_hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 /**
  * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
 function abstract_utils_bytesToHex(bytes) {
-    if (!abstract_utils_u8a(bytes))
+    if (!utils_u8a(bytes))
         throw new Error('Uint8Array expected');
     // pre-caching improves the speed 6x
     let hex = '';
@@ -57295,7 +57034,7 @@ function utils_bytesToNumberBE(bytes) {
     return utils_hexToNumber(abstract_utils_bytesToHex(bytes));
 }
 function utils_bytesToNumberLE(bytes) {
-    if (!abstract_utils_u8a(bytes))
+    if (!utils_u8a(bytes))
         throw new Error('Uint8Array expected');
     return utils_hexToNumber(abstract_utils_bytesToHex(Uint8Array.from(bytes).reverse()));
 }
@@ -57328,7 +57067,7 @@ function utils_ensureBytes(title, hex, expectedLength) {
             throw new Error(`${title} must be valid hex string, got "${hex}". Cause: ${e}`);
         }
     }
-    else if (abstract_utils_u8a(hex)) {
+    else if (utils_u8a(hex)) {
         // Uint8Array.from() instead of hash.slice() because node.js Buffer
         // is instance of Uint8Array, and its slice() creates **mutable** copy
         res = Uint8Array.from(hex);
@@ -57348,7 +57087,7 @@ function abstract_utils_concatBytes(...arrays) {
     const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
     let pad = 0; // walk through each item, ensure they have proper type
     arrays.forEach((a) => {
-        if (!abstract_utils_u8a(a))
+        if (!utils_u8a(a))
             throw new Error('Uint8Array expected');
         r.set(a, pad);
         pad += a.length;
@@ -72874,33 +72613,33 @@ Object.freeze(computeHmac);
 
 // https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
 // https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
-const ripemd160_Rho = /* @__PURE__ */ new Uint8Array([7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8]);
-const ripemd160_Id = /* @__PURE__ */ Uint8Array.from({ length: 16 }, (_, i) => i);
-const ripemd160_Pi = /* @__PURE__ */ ripemd160_Id.map((i) => (9 * i + 5) % 16);
-let ripemd160_idxL = [ripemd160_Id];
-let ripemd160_idxR = [ripemd160_Pi];
+const Rho = /* @__PURE__ */ new Uint8Array([7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8]);
+const Id = /* @__PURE__ */ Uint8Array.from({ length: 16 }, (_, i) => i);
+const Pi = /* @__PURE__ */ Id.map((i) => (9 * i + 5) % 16);
+let ripemd160_idxL = [Id];
+let ripemd160_idxR = [Pi];
 for (let i = 0; i < 4; i++)
     for (let j of [ripemd160_idxL, ripemd160_idxR])
-        j.push(j[i].map((k) => ripemd160_Rho[k]));
-const ripemd160_shifts = /* @__PURE__ */ [
+        j.push(j[i].map((k) => Rho[k]));
+const shifts = /* @__PURE__ */ [
     [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8],
     [12, 13, 11, 15, 6, 9, 9, 7, 12, 15, 11, 13, 7, 8, 7, 7],
     [13, 15, 14, 11, 7, 7, 6, 8, 13, 14, 13, 12, 5, 5, 6, 9],
     [14, 11, 12, 14, 8, 6, 5, 5, 15, 12, 15, 14, 9, 9, 8, 6],
     [15, 12, 13, 13, 9, 5, 8, 6, 14, 11, 12, 11, 8, 6, 5, 5],
 ].map((i) => new Uint8Array(i));
-const ripemd160_shiftsL = /* @__PURE__ */ ripemd160_idxL.map((idx, i) => idx.map((j) => ripemd160_shifts[i][j]));
-const ripemd160_shiftsR = /* @__PURE__ */ ripemd160_idxR.map((idx, i) => idx.map((j) => ripemd160_shifts[i][j]));
-const ripemd160_Kl = /* @__PURE__ */ new Uint32Array([
+const shiftsL = /* @__PURE__ */ ripemd160_idxL.map((idx, i) => idx.map((j) => shifts[i][j]));
+const shiftsR = /* @__PURE__ */ ripemd160_idxR.map((idx, i) => idx.map((j) => shifts[i][j]));
+const Kl = /* @__PURE__ */ new Uint32Array([
     0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e,
 ]);
-const ripemd160_Kr = /* @__PURE__ */ new Uint32Array([
+const Kr = /* @__PURE__ */ new Uint32Array([
     0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000,
 ]);
 // The rotate left (circular left shift) operation for uint32
-const esm_ripemd160_rotl = (word, shift) => (word << shift) | (word >>> (32 - shift));
+const ripemd160_rotl = (word, shift) => (word << shift) | (word >>> (32 - shift));
 // It's called f() in spec.
-function ripemd160_f(group, x, y, z) {
+function f(group, x, y, z) {
     if (group === 0)
         return x ^ y ^ z;
     else if (group === 1)
@@ -72913,8 +72652,8 @@ function ripemd160_f(group, x, y, z) {
         return x ^ (y | ~z);
 }
 // Temporary buffer, not used to store anything between runs
-const ripemd160_BUF = /* @__PURE__ */ new Uint32Array(16);
-class ripemd160_RIPEMD160 extends SHA2 {
+const BUF = /* @__PURE__ */ new Uint32Array(16);
+class esm_ripemd160_RIPEMD160 extends SHA2 {
     constructor() {
         super(64, 20, 8, true);
         this.h0 = 0x67452301 | 0;
@@ -72936,31 +72675,31 @@ class ripemd160_RIPEMD160 extends SHA2 {
     }
     process(view, offset) {
         for (let i = 0; i < 16; i++, offset += 4)
-            ripemd160_BUF[i] = view.getUint32(offset, true);
+            BUF[i] = view.getUint32(offset, true);
         // prettier-ignore
         let al = this.h0 | 0, ar = al, bl = this.h1 | 0, br = bl, cl = this.h2 | 0, cr = cl, dl = this.h3 | 0, dr = dl, el = this.h4 | 0, er = el;
         // Instead of iterating 0 to 80, we split it into 5 groups
         // And use the groups in constants, functions, etc. Much simpler
         for (let group = 0; group < 5; group++) {
             const rGroup = 4 - group;
-            const hbl = ripemd160_Kl[group], hbr = ripemd160_Kr[group]; // prettier-ignore
+            const hbl = Kl[group], hbr = Kr[group]; // prettier-ignore
             const rl = ripemd160_idxL[group], rr = ripemd160_idxR[group]; // prettier-ignore
-            const sl = ripemd160_shiftsL[group], sr = ripemd160_shiftsR[group]; // prettier-ignore
+            const sl = shiftsL[group], sr = shiftsR[group]; // prettier-ignore
             for (let i = 0; i < 16; i++) {
-                const tl = (esm_ripemd160_rotl(al + ripemd160_f(group, bl, cl, dl) + ripemd160_BUF[rl[i]] + hbl, sl[i]) + el) | 0;
-                al = el, el = dl, dl = esm_ripemd160_rotl(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
+                const tl = (ripemd160_rotl(al + f(group, bl, cl, dl) + BUF[rl[i]] + hbl, sl[i]) + el) | 0;
+                al = el, el = dl, dl = ripemd160_rotl(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
             }
             // 2 loops are 10% faster
             for (let i = 0; i < 16; i++) {
-                const tr = (esm_ripemd160_rotl(ar + ripemd160_f(rGroup, br, cr, dr) + ripemd160_BUF[rr[i]] + hbr, sr[i]) + er) | 0;
-                ar = er, er = dr, dr = esm_ripemd160_rotl(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
+                const tr = (ripemd160_rotl(ar + f(rGroup, br, cr, dr) + BUF[rr[i]] + hbr, sr[i]) + er) | 0;
+                ar = er, er = dr, dr = ripemd160_rotl(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
             }
         }
         // Add the compressed chunk to the current hash value
         this.set((this.h1 + cl + dr) | 0, (this.h2 + dl + er) | 0, (this.h3 + el + ar) | 0, (this.h4 + al + br) | 0, (this.h0 + bl + cr) | 0);
     }
     roundClean() {
-        ripemd160_BUF.fill(0);
+        BUF.fill(0);
     }
     destroy() {
         this.destroyed = true;
@@ -72972,14 +72711,14 @@ class ripemd160_RIPEMD160 extends SHA2 {
  * RIPEMD-160 - a hash function from 1990s.
  * @param message - msg that would be hashed
  */
-const ripemd160_ripemd160 = /* @__PURE__ */ wrapConstructor(() => new ripemd160_RIPEMD160());
+const esm_ripemd160_ripemd160 = /* @__PURE__ */ wrapConstructor(() => new esm_ripemd160_RIPEMD160());
 //# sourceMappingURL=ripemd160.js.map
 ;// ./node_modules/ethers/lib.esm/crypto/ripemd160.js
 
 
 let ripemd160_locked = false;
 const _ripemd160 = function (data) {
-    return ripemd160_ripemd160(data);
+    return esm_ripemd160_ripemd160(data);
 };
 let __ripemd160 = _ripemd160;
 /**
@@ -76793,15 +76532,15 @@ class Web3ConnectorPlugin extends BasePlugin {
 }
 
 ;// ./node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/_assert.js
-function esm_assert_number(n) {
+function _assert_number(n) {
     if (!Number.isSafeInteger(n) || n < 0)
         throw new Error(`Wrong positive integer: ${n}`);
 }
-function esm_assert_bool(b) {
+function _assert_bool(b) {
     if (typeof b !== 'boolean')
         throw new Error(`Expected boolean, not ${b}`);
 }
-function esm_assert_bytes(b, ...lengths) {
+function _assert_bytes(b, ...lengths) {
     if (!(b instanceof Uint8Array))
         throw new Error('Expected Uint8Array');
     if (lengths.length > 0 && !lengths.includes(b.length))
@@ -76810,28 +76549,28 @@ function esm_assert_bytes(b, ...lengths) {
 function esm_assert_hash(hash) {
     if (typeof hash !== 'function' || typeof hash.create !== 'function')
         throw new Error('Hash should be wrapped by utils.wrapConstructor');
-    esm_assert_number(hash.outputLen);
-    esm_assert_number(hash.blockLen);
+    _assert_number(hash.outputLen);
+    _assert_number(hash.blockLen);
 }
-function esm_assert_exists(instance, checkFinished = true) {
+function _assert_exists(instance, checkFinished = true) {
     if (instance.destroyed)
         throw new Error('Hash instance has been destroyed');
     if (checkFinished && instance.finished)
         throw new Error('Hash#digest() has already been called');
 }
-function esm_assert_output(out, instance) {
-    esm_assert_bytes(out);
+function _assert_output(out, instance) {
+    _assert_bytes(out);
     const min = instance.outputLen;
     if (out.length < min) {
         throw new Error(`digestInto() expects output buffer of length at least ${min}`);
     }
 }
 
-const hashes_esm_assert_assert = { number: esm_assert_number, bool: esm_assert_bool, bytes: esm_assert_bytes, hash: esm_assert_hash, exists: esm_assert_exists, output: esm_assert_output };
-/* harmony default export */ const hashes_esm_assert = (hashes_esm_assert_assert);
+const esm_assert_assert = { number: _assert_number, bool: _assert_bool, bytes: _assert_bytes, hash: esm_assert_hash, exists: _assert_exists, output: _assert_output };
+/* harmony default export */ const esm_assert = (esm_assert_assert);
 //# sourceMappingURL=_assert.js.map
 ;// ./node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/crypto.js
-const _noble_hashes_esm_crypto_crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
+const hashes_esm_crypto_crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
 //# sourceMappingURL=crypto.js.map
 ;// ./node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/utils.js
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
@@ -76844,35 +76583,35 @@ const _noble_hashes_esm_crypto_crypto = typeof globalThis === 'object' && 'crypt
 
 const esm_utils_u8a = (a) => a instanceof Uint8Array;
 // Cast array to different type
-const hashes_esm_utils_u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-const hashes_esm_utils_u32 = (arr) => new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
+const esm_utils_u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+const esm_utils_u32 = (arr) => new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
 // Cast array to view
-const hashes_esm_utils_createView = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+const esm_utils_createView = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
 // The rotate right (circular right shift) operation for uint32
-const hashes_esm_utils_rotr = (word, shift) => (word << (32 - shift)) | (word >>> shift);
+const esm_utils_rotr = (word, shift) => (word << (32 - shift)) | (word >>> shift);
 // big-endian hardware is rare. Just in case someone still decides to run hashes:
 // early-throw an error because we don't support BE yet.
-const hashes_esm_utils_isLE = new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44;
-if (!hashes_esm_utils_isLE)
+const esm_utils_isLE = new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44;
+if (!esm_utils_isLE)
     throw new Error('Non little-endian hardware is not supported');
-const hashes_esm_utils_hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
+const esm_utils_hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 /**
  * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
-function hashes_esm_utils_bytesToHex(bytes) {
+function esm_utils_bytesToHex(bytes) {
     if (!esm_utils_u8a(bytes))
         throw new Error('Uint8Array expected');
     // pre-caching improves the speed 6x
     let hex = '';
     for (let i = 0; i < bytes.length; i++) {
-        hex += hashes_esm_utils_hexes[bytes[i]];
+        hex += esm_utils_hexes[bytes[i]];
     }
     return hex;
 }
 /**
  * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
  */
-function hashes_esm_utils_hexToBytes(hex) {
+function esm_utils_hexToBytes(hex) {
     if (typeof hex !== 'string')
         throw new Error('hex string expected, got ' + typeof hex);
     const len = hex.length;
@@ -76892,9 +76631,9 @@ function hashes_esm_utils_hexToBytes(hex) {
 // There is no setImmediate in browser and setTimeout is slow.
 // call of async fn will return Promise, which will be fullfiled only on
 // next scheduler queue processing step and this is exactly what we need.
-const hashes_esm_utils_nextTick = async () => { };
+const esm_utils_nextTick = async () => { };
 // Returns control to thread each 'tick' ms to avoid blocking
-async function hashes_esm_utils_asyncLoop(iters, tick, cb) {
+async function esm_utils_asyncLoop(iters, tick, cb) {
     let ts = Date.now();
     for (let i = 0; i < iters; i++) {
         cb(i);
@@ -76902,14 +76641,14 @@ async function hashes_esm_utils_asyncLoop(iters, tick, cb) {
         const diff = Date.now() - ts;
         if (diff >= 0 && diff < tick)
             continue;
-        await hashes_esm_utils_nextTick();
+        await esm_utils_nextTick();
         ts += diff;
     }
 }
 /**
  * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
  */
-function hashes_esm_utils_utf8ToBytes(str) {
+function esm_utils_utf8ToBytes(str) {
     if (typeof str !== 'string')
         throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
     return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
@@ -76919,9 +76658,9 @@ function hashes_esm_utils_utf8ToBytes(str) {
  * Warning: when Uint8Array is passed, it would NOT get copied.
  * Keep in mind for future mutable operations.
  */
-function hashes_esm_utils_toBytes(data) {
+function esm_utils_toBytes(data) {
     if (typeof data === 'string')
-        data = hashes_esm_utils_utf8ToBytes(data);
+        data = esm_utils_utf8ToBytes(data);
     if (!esm_utils_u8a(data))
         throw new Error(`expected Uint8Array, got ${typeof data}`);
     return data;
@@ -76929,7 +76668,7 @@ function hashes_esm_utils_toBytes(data) {
 /**
  * Copies several Uint8Arrays into one.
  */
-function hashes_esm_utils_concatBytes(...arrays) {
+function esm_utils_concatBytes(...arrays) {
     const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
     let pad = 0; // walk through each item, ensure they have proper type
     arrays.forEach((a) => {
@@ -76941,37 +76680,37 @@ function hashes_esm_utils_concatBytes(...arrays) {
     return r;
 }
 // For runtime check if class implements interface
-class hashes_esm_utils_Hash {
+class esm_utils_Hash {
     // Safe version that clones internal state
     clone() {
         return this._cloneInto();
     }
 }
 const utils_toStr = {}.toString;
-function hashes_esm_utils_checkOpts(defaults, opts) {
+function esm_utils_checkOpts(defaults, opts) {
     if (opts !== undefined && utils_toStr.call(opts) !== '[object Object]')
         throw new Error('Options should be object or undefined');
     const merged = Object.assign(defaults, opts);
     return merged;
 }
-function hashes_esm_utils_wrapConstructor(hashCons) {
-    const hashC = (msg) => hashCons().update(hashes_esm_utils_toBytes(msg)).digest();
+function esm_utils_wrapConstructor(hashCons) {
+    const hashC = (msg) => hashCons().update(esm_utils_toBytes(msg)).digest();
     const tmp = hashCons();
     hashC.outputLen = tmp.outputLen;
     hashC.blockLen = tmp.blockLen;
     hashC.create = () => hashCons();
     return hashC;
 }
-function hashes_esm_utils_wrapConstructorWithOpts(hashCons) {
-    const hashC = (msg, opts) => hashCons(opts).update(hashes_esm_utils_toBytes(msg)).digest();
+function esm_utils_wrapConstructorWithOpts(hashCons) {
+    const hashC = (msg, opts) => hashCons(opts).update(esm_utils_toBytes(msg)).digest();
     const tmp = hashCons({});
     hashC.outputLen = tmp.outputLen;
     hashC.blockLen = tmp.blockLen;
     hashC.create = (opts) => hashCons(opts);
     return hashC;
 }
-function hashes_esm_utils_wrapXOFConstructorWithOpts(hashCons) {
-    const hashC = (msg, opts) => hashCons(opts).update(hashes_esm_utils_toBytes(msg)).digest();
+function esm_utils_wrapXOFConstructorWithOpts(hashCons) {
+    const hashC = (msg, opts) => hashCons(opts).update(esm_utils_toBytes(msg)).digest();
     const tmp = hashCons({});
     hashC.outputLen = tmp.outputLen;
     hashC.blockLen = tmp.blockLen;
@@ -76981,9 +76720,9 @@ function hashes_esm_utils_wrapXOFConstructorWithOpts(hashCons) {
 /**
  * Secure PRNG. Uses `crypto.getRandomValues`, which defers to OS.
  */
-function hashes_esm_utils_randomBytes(bytesLength = 32) {
-    if (_noble_hashes_esm_crypto_crypto && typeof _noble_hashes_esm_crypto_crypto.getRandomValues === 'function') {
-        return _noble_hashes_esm_crypto_crypto.getRandomValues(new Uint8Array(bytesLength));
+function esm_utils_randomBytes(bytesLength = 32) {
+    if (hashes_esm_crypto_crypto && typeof hashes_esm_crypto_crypto.getRandomValues === 'function') {
+        return hashes_esm_crypto_crypto.getRandomValues(new Uint8Array(bytesLength));
     }
     throw new Error('crypto.getRandomValues must be defined');
 }
@@ -76992,7 +76731,7 @@ function hashes_esm_utils_randomBytes(bytesLength = 32) {
 
 
 // Polyfill for Safari 14
-function esm_sha2_setBigUint64(view, byteOffset, value, isLE) {
+function _sha2_setBigUint64(view, byteOffset, value, isLE) {
     if (typeof view.setBigUint64 === 'function')
         return view.setBigUint64(byteOffset, value, isLE);
     const _32n = BigInt(32);
@@ -77005,7 +76744,7 @@ function esm_sha2_setBigUint64(view, byteOffset, value, isLE) {
     view.setUint32(byteOffset + l, wl, isLE);
 }
 // Base SHA2 class (RFC 6234)
-class esm_sha2_SHA2 extends hashes_esm_utils_Hash {
+class _sha2_SHA2 extends esm_utils_Hash {
     constructor(blockLen, outputLen, padOffset, isLE) {
         super();
         this.blockLen = blockLen;
@@ -77017,18 +76756,18 @@ class esm_sha2_SHA2 extends hashes_esm_utils_Hash {
         this.pos = 0;
         this.destroyed = false;
         this.buffer = new Uint8Array(blockLen);
-        this.view = hashes_esm_utils_createView(this.buffer);
+        this.view = esm_utils_createView(this.buffer);
     }
     update(data) {
-        esm_assert_exists(this);
+        _assert_exists(this);
         const { view, buffer, blockLen } = this;
-        data = hashes_esm_utils_toBytes(data);
+        data = esm_utils_toBytes(data);
         const len = data.length;
         for (let pos = 0; pos < len;) {
             const take = Math.min(blockLen - this.pos, len - pos);
             // Fast path: we have at least one block in input, cast it to view and process
             if (take === blockLen) {
-                const dataView = hashes_esm_utils_createView(data);
+                const dataView = esm_utils_createView(data);
                 for (; blockLen <= len - pos; pos += blockLen)
                     this.process(dataView, pos);
                 continue;
@@ -77046,8 +76785,8 @@ class esm_sha2_SHA2 extends hashes_esm_utils_Hash {
         return this;
     }
     digestInto(out) {
-        esm_assert_exists(this);
-        esm_assert_output(out, this);
+        _assert_exists(this);
+        _assert_output(out, this);
         this.finished = true;
         // Padding
         // We can avoid allocation of buffer for padding completely if it
@@ -77068,9 +76807,9 @@ class esm_sha2_SHA2 extends hashes_esm_utils_Hash {
         // Note: sha512 requires length to be 128bit integer, but length in JS will overflow before that
         // You need to write around 2 exabytes (u64_max / 8 / (1024**6)) for this to happen.
         // So we just write lowest 64 bits of that value.
-        esm_sha2_setBigUint64(view, blockLen - 8, BigInt(this.length * 8), isLE);
+        _sha2_setBigUint64(view, blockLen - 8, BigInt(this.length * 8), isLE);
         this.process(view, 0);
-        const oview = hashes_esm_utils_createView(out);
+        const oview = esm_utils_createView(out);
         const len = this.outputLen;
         // NOTE: we do division by 4 later, which should be fused in single op with modulo by JIT
         if (len % 4)
@@ -77109,13 +76848,13 @@ class esm_sha2_SHA2 extends hashes_esm_utils_Hash {
 // SHA2-256 need to try 2^128 hashes to execute birthday attack.
 // BTC network is doing 2^67 hashes/sec as per early 2023.
 // Choice: a ? b : c
-const esm_sha256_Chi = (a, b, c) => (a & b) ^ (~a & c);
+const sha256_Chi = (a, b, c) => (a & b) ^ (~a & c);
 // Majority function, true if any two inpust is true
-const esm_sha256_Maj = (a, b, c) => (a & b) ^ (a & c) ^ (b & c);
+const sha256_Maj = (a, b, c) => (a & b) ^ (a & c) ^ (b & c);
 // Round constants:
 // first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311)
 // prettier-ignore
-const esm_sha256_SHA256_K = /* @__PURE__ */ new Uint32Array([
+const sha256_SHA256_K = /* @__PURE__ */ new Uint32Array([
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -77127,25 +76866,25 @@ const esm_sha256_SHA256_K = /* @__PURE__ */ new Uint32Array([
 ]);
 // Initial state (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
 // prettier-ignore
-const esm_sha256_IV = /* @__PURE__ */ new Uint32Array([
+const sha256_IV = /* @__PURE__ */ new Uint32Array([
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
 ]);
 // Temporary buffer, not used to store anything between runs
 // Named this way because it matches specification.
-const esm_sha256_SHA256_W = /* @__PURE__ */ new Uint32Array(64);
-class esm_sha256_SHA256 extends esm_sha2_SHA2 {
+const sha256_SHA256_W = /* @__PURE__ */ new Uint32Array(64);
+class esm_sha256_SHA256 extends _sha2_SHA2 {
     constructor() {
         super(64, 32, 8, false);
         // We cannot use array here since array allows indexing by variable
         // which means optimizer/compiler cannot use registers.
-        this.A = esm_sha256_IV[0] | 0;
-        this.B = esm_sha256_IV[1] | 0;
-        this.C = esm_sha256_IV[2] | 0;
-        this.D = esm_sha256_IV[3] | 0;
-        this.E = esm_sha256_IV[4] | 0;
-        this.F = esm_sha256_IV[5] | 0;
-        this.G = esm_sha256_IV[6] | 0;
-        this.H = esm_sha256_IV[7] | 0;
+        this.A = sha256_IV[0] | 0;
+        this.B = sha256_IV[1] | 0;
+        this.C = sha256_IV[2] | 0;
+        this.D = sha256_IV[3] | 0;
+        this.E = sha256_IV[4] | 0;
+        this.F = sha256_IV[5] | 0;
+        this.G = sha256_IV[6] | 0;
+        this.H = sha256_IV[7] | 0;
     }
     get() {
         const { A, B, C, D, E, F, G, H } = this;
@@ -77165,21 +76904,21 @@ class esm_sha256_SHA256 extends esm_sha2_SHA2 {
     process(view, offset) {
         // Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array
         for (let i = 0; i < 16; i++, offset += 4)
-            esm_sha256_SHA256_W[i] = view.getUint32(offset, false);
+            sha256_SHA256_W[i] = view.getUint32(offset, false);
         for (let i = 16; i < 64; i++) {
-            const W15 = esm_sha256_SHA256_W[i - 15];
-            const W2 = esm_sha256_SHA256_W[i - 2];
-            const s0 = hashes_esm_utils_rotr(W15, 7) ^ hashes_esm_utils_rotr(W15, 18) ^ (W15 >>> 3);
-            const s1 = hashes_esm_utils_rotr(W2, 17) ^ hashes_esm_utils_rotr(W2, 19) ^ (W2 >>> 10);
-            esm_sha256_SHA256_W[i] = (s1 + esm_sha256_SHA256_W[i - 7] + s0 + esm_sha256_SHA256_W[i - 16]) | 0;
+            const W15 = sha256_SHA256_W[i - 15];
+            const W2 = sha256_SHA256_W[i - 2];
+            const s0 = esm_utils_rotr(W15, 7) ^ esm_utils_rotr(W15, 18) ^ (W15 >>> 3);
+            const s1 = esm_utils_rotr(W2, 17) ^ esm_utils_rotr(W2, 19) ^ (W2 >>> 10);
+            sha256_SHA256_W[i] = (s1 + sha256_SHA256_W[i - 7] + s0 + sha256_SHA256_W[i - 16]) | 0;
         }
         // Compression function main loop, 64 rounds
         let { A, B, C, D, E, F, G, H } = this;
         for (let i = 0; i < 64; i++) {
-            const sigma1 = hashes_esm_utils_rotr(E, 6) ^ hashes_esm_utils_rotr(E, 11) ^ hashes_esm_utils_rotr(E, 25);
-            const T1 = (H + sigma1 + esm_sha256_Chi(E, F, G) + esm_sha256_SHA256_K[i] + esm_sha256_SHA256_W[i]) | 0;
-            const sigma0 = hashes_esm_utils_rotr(A, 2) ^ hashes_esm_utils_rotr(A, 13) ^ hashes_esm_utils_rotr(A, 22);
-            const T2 = (sigma0 + esm_sha256_Maj(A, B, C)) | 0;
+            const sigma1 = esm_utils_rotr(E, 6) ^ esm_utils_rotr(E, 11) ^ esm_utils_rotr(E, 25);
+            const T1 = (H + sigma1 + sha256_Chi(E, F, G) + sha256_SHA256_K[i] + sha256_SHA256_W[i]) | 0;
+            const sigma0 = esm_utils_rotr(A, 2) ^ esm_utils_rotr(A, 13) ^ esm_utils_rotr(A, 22);
+            const T2 = (sigma0 + sha256_Maj(A, B, C)) | 0;
             H = G;
             G = F;
             F = E;
@@ -77201,7 +76940,7 @@ class esm_sha256_SHA256 extends esm_sha2_SHA2 {
         this.set(A, B, C, D, E, F, G, H);
     }
     roundClean() {
-        esm_sha256_SHA256_W.fill(0);
+        sha256_SHA256_W.fill(0);
     }
     destroy() {
         this.set(0, 0, 0, 0, 0, 0, 0, 0);
@@ -77227,8 +76966,8 @@ class esm_sha256_SHA224 extends esm_sha256_SHA256 {
  * SHA2-256 hash function
  * @param message - data that would be hashed
  */
-const esm_sha256_sha256 = /* @__PURE__ */ hashes_esm_utils_wrapConstructor(() => new esm_sha256_SHA256());
-const esm_sha256_sha224 = /* @__PURE__ */ hashes_esm_utils_wrapConstructor(() => new esm_sha256_SHA224());
+const esm_sha256_sha256 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new esm_sha256_SHA256());
+const esm_sha256_sha224 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new esm_sha256_SHA224());
 //# sourceMappingURL=sha256.js.map
 ;// ./node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/utils.js
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
@@ -77239,13 +76978,13 @@ const esm_sha256_sha224 = /* @__PURE__ */ hashes_esm_utils_wrapConstructor(() =>
 const esm_abstract_utils_0n = BigInt(0);
 const esm_abstract_utils_1n = BigInt(1);
 const abstract_utils_2n = BigInt(2);
-const esm_abstract_utils_u8a = (a) => a instanceof Uint8Array;
+const abstract_utils_u8a = (a) => a instanceof Uint8Array;
 const esm_abstract_utils_hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 /**
  * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
 function esm_abstract_utils_bytesToHex(bytes) {
-    if (!esm_abstract_utils_u8a(bytes))
+    if (!abstract_utils_u8a(bytes))
         throw new Error('Uint8Array expected');
     // pre-caching improves the speed 6x
     let hex = '';
@@ -77289,7 +77028,7 @@ function abstract_utils_bytesToNumberBE(bytes) {
     return abstract_utils_hexToNumber(esm_abstract_utils_bytesToHex(bytes));
 }
 function abstract_utils_bytesToNumberLE(bytes) {
-    if (!esm_abstract_utils_u8a(bytes))
+    if (!abstract_utils_u8a(bytes))
         throw new Error('Uint8Array expected');
     return abstract_utils_hexToNumber(esm_abstract_utils_bytesToHex(Uint8Array.from(bytes).reverse()));
 }
@@ -77322,7 +77061,7 @@ function abstract_utils_ensureBytes(title, hex, expectedLength) {
             throw new Error(`${title} must be valid hex string, got "${hex}". Cause: ${e}`);
         }
     }
-    else if (esm_abstract_utils_u8a(hex)) {
+    else if (abstract_utils_u8a(hex)) {
         // Uint8Array.from() instead of hash.slice() because node.js Buffer
         // is instance of Uint8Array, and its slice() creates **mutable** copy
         res = Uint8Array.from(hex);
@@ -77342,7 +77081,7 @@ function esm_abstract_utils_concatBytes(...arrays) {
     const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
     let pad = 0; // walk through each item, ensure they have proper type
     arrays.forEach((a) => {
-        if (!esm_abstract_utils_u8a(a))
+        if (!abstract_utils_u8a(a))
             throw new Error('Uint8Array expected');
         r.set(a, pad);
         pad += a.length;
@@ -79306,13 +79045,13 @@ function esm_abstract_hash_to_curve_createHasher(Point, mapToCurve, def) {
 
 
 // HMAC (RFC 2104)
-class esm_hmac_HMAC extends hashes_esm_utils_Hash {
+class esm_hmac_HMAC extends esm_utils_Hash {
     constructor(hash, _key) {
         super();
         this.finished = false;
         this.destroyed = false;
         esm_assert_hash(hash);
-        const key = hashes_esm_utils_toBytes(_key);
+        const key = esm_utils_toBytes(_key);
         this.iHash = hash.create();
         if (typeof this.iHash.update !== 'function')
             throw new Error('Expected instance of class which extends utils.Hash');
@@ -79334,13 +79073,13 @@ class esm_hmac_HMAC extends hashes_esm_utils_Hash {
         pad.fill(0);
     }
     update(buf) {
-        esm_assert_exists(this);
+        _assert_exists(this);
         this.iHash.update(buf);
         return this;
     }
     digestInto(out) {
-        esm_assert_exists(this);
-        esm_assert_bytes(out, this.outputLen);
+        _assert_exists(this);
+        _assert_bytes(out, this.outputLen);
         this.finished = true;
         this.iHash.digestInto(out);
         this.oHash.update(out);
@@ -79389,8 +79128,8 @@ esm_hmac_hmac.create = (hash, key) => new esm_hmac_HMAC(hash, key);
 function esm_shortw_utils_getHash(hash) {
     return {
         hash,
-        hmac: (key, ...msgs) => esm_hmac_hmac(hash, key, hashes_esm_utils_concatBytes(...msgs)),
-        randomBytes: hashes_esm_utils_randomBytes,
+        hmac: (key, ...msgs) => esm_hmac_hmac(hash, key, esm_utils_concatBytes(...msgs)),
+        randomBytes: esm_utils_randomBytes,
     };
 }
 function esm_shortw_utils_createCurve(curveDef, defHash) {
@@ -79545,7 +79284,7 @@ function esm_secp256k1_schnorrGetPublicKey(privateKey) {
  * Creates Schnorr signature as per BIP340. Verifies itself before returning anything.
  * auxRand is optional and is not the sole source of k generation: bad CSPRNG won't be dangerous.
  */
-function esm_secp256k1_schnorrSign(message, privateKey, auxRand = hashes_esm_utils_randomBytes(32)) {
+function esm_secp256k1_schnorrSign(message, privateKey, auxRand = esm_utils_randomBytes(32)) {
     const m = abstract_utils_ensureBytes('message', message);
     const { bytes: px, scalar: d } = esm_secp256k1_schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
     const a = abstract_utils_ensureBytes('auxRand', auxRand, 32); // Auxiliary random data a: a 32-byte array
@@ -80050,11 +79789,11 @@ const stringToBytes = (type, str) => {
 const esm_bytes = stringToBytes;
 
 ;// ./node_modules/@noble/ciphers/esm/_assert.js
-function ciphers_esm_assert_number(n) {
+function esm_assert_number(n) {
     if (!Number.isSafeInteger(n) || n < 0)
         throw new Error(`positive integer expected, not ${n}`);
 }
-function ciphers_esm_assert_bool(b) {
+function esm_assert_bool(b) {
     if (typeof b !== 'boolean')
         throw new Error(`boolean expected, not ${b}`);
 }
@@ -80062,33 +79801,33 @@ function _assert_isBytes(a) {
     return (a instanceof Uint8Array ||
         (a != null && typeof a === 'object' && a.constructor.name === 'Uint8Array'));
 }
-function ciphers_esm_assert_bytes(b, ...lengths) {
+function esm_assert_bytes(b, ...lengths) {
     if (!_assert_isBytes(b))
         throw new Error('Uint8Array expected');
     if (lengths.length > 0 && !lengths.includes(b.length))
         throw new Error(`Uint8Array expected of length ${lengths}, not of length=${b.length}`);
 }
-function ciphers_esm_assert_hash(hash) {
+function hash(hash) {
     if (typeof hash !== 'function' || typeof hash.create !== 'function')
         throw new Error('hash must be wrapped by utils.wrapConstructor');
-    ciphers_esm_assert_number(hash.outputLen);
-    ciphers_esm_assert_number(hash.blockLen);
+    esm_assert_number(hash.outputLen);
+    esm_assert_number(hash.blockLen);
 }
-function ciphers_esm_assert_exists(instance, checkFinished = true) {
+function esm_assert_exists(instance, checkFinished = true) {
     if (instance.destroyed)
         throw new Error('Hash instance has been destroyed');
     if (checkFinished && instance.finished)
         throw new Error('Hash#digest() has already been called');
 }
-function ciphers_esm_assert_output(out, instance) {
-    ciphers_esm_assert_bytes(out);
+function esm_assert_output(out, instance) {
+    esm_assert_bytes(out);
     const min = instance.outputLen;
     if (out.length < min) {
         throw new Error(`digestInto() expects output buffer of length at least ${min}`);
     }
 }
 
-const ciphers_esm_assert_assert = { number: ciphers_esm_assert_number, bool: ciphers_esm_assert_bool, bytes: ciphers_esm_assert_bytes, hash: ciphers_esm_assert_hash, exists: ciphers_esm_assert_exists, output: ciphers_esm_assert_output };
+const ciphers_esm_assert_assert = { number: esm_assert_number, bool: esm_assert_bool, bytes: esm_assert_bytes, hash, exists: esm_assert_exists, output: esm_assert_output };
 /* harmony default export */ const ciphers_esm_assert = (ciphers_esm_assert_assert);
 //# sourceMappingURL=_assert.js.map
 ;// ./node_modules/@noble/ciphers/esm/utils.js
@@ -80111,7 +79850,7 @@ const ciphers_esm_utils_hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, 
  * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
 function ciphers_esm_utils_bytesToHex(bytes) {
-    ciphers_esm_assert_bytes(bytes);
+    esm_assert_bytes(bytes);
     // pre-caching improves the speed 6x
     let hex = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -80217,7 +79956,7 @@ function ciphers_esm_utils_concatBytes(...arrays) {
     let sum = 0;
     for (let i = 0; i < arrays.length; i++) {
         const a = arrays[i];
-        ciphers_esm_assert_bytes(a);
+        esm_assert_bytes(a);
         sum += a.length;
     }
     const res = new Uint8Array(sum);
@@ -80341,7 +80080,7 @@ class GHASH {
         this.s3 = 0;
         this.finished = false;
         key = ciphers_esm_utils_toBytes(key);
-        ciphers_esm_assert_bytes(key, 16);
+        esm_assert_bytes(key, 16);
         const kView = ciphers_esm_utils_createView(key);
         let k0 = kView.getUint32(0, false);
         let k1 = kView.getUint32(4, false);
@@ -80404,7 +80143,7 @@ class GHASH {
     }
     update(data) {
         data = ciphers_esm_utils_toBytes(data);
-        ciphers_esm_assert_exists(this);
+        esm_assert_exists(this);
         const b32 = ciphers_esm_utils_u32(data);
         const blocks = Math.floor(data.length / BLOCK_SIZE);
         const left = data.length % BLOCK_SIZE;
@@ -80426,8 +80165,8 @@ class GHASH {
         }
     }
     digestInto(out) {
-        ciphers_esm_assert_exists(this);
-        ciphers_esm_assert_output(out, this);
+        esm_assert_exists(this);
+        esm_assert_output(out, this);
         this.finished = true;
         const { s0, s1, s2, s3 } = this;
         const o32 = ciphers_esm_utils_u32(out);
@@ -80453,7 +80192,7 @@ class Polyval extends GHASH {
     }
     update(data) {
         data = ciphers_esm_utils_toBytes(data);
-        ciphers_esm_assert_exists(this);
+        esm_assert_exists(this);
         const b32 = ciphers_esm_utils_u32(data);
         const left = data.length % BLOCK_SIZE;
         const blocks = Math.floor(data.length / BLOCK_SIZE);
@@ -80468,8 +80207,8 @@ class Polyval extends GHASH {
         return this;
     }
     digestInto(out) {
-        ciphers_esm_assert_exists(this);
-        ciphers_esm_assert_output(out, this);
+        esm_assert_exists(this);
+        esm_assert_output(out, this);
         this.finished = true;
         // tmp ugly hack
         const { s0, s1, s2, s3 } = this;
@@ -80580,7 +80319,7 @@ const xPowers = /* @__PURE__ */ (() => {
     return p;
 })();
 function expandKeyLE(key) {
-    ciphers_esm_assert_bytes(key);
+    esm_assert_bytes(key);
     const len = key.length;
     if (![16, 24, 32].includes(len))
         throw new Error(`aes: wrong key size: should be 16, 24 or 32, got: ${len}`);
@@ -80671,15 +80410,15 @@ function aes_decrypt(xk, s0, s1, s2, s3) {
 function getDst(len, dst) {
     if (!dst)
         return new Uint8Array(len);
-    ciphers_esm_assert_bytes(dst);
+    esm_assert_bytes(dst);
     if (dst.length < len)
         throw new Error(`aes: wrong destination length, expected at least ${len}, got: ${dst.length}`);
     return dst;
 }
 // TODO: investigate merging with ctr32
 function ctrCounter(xk, nonce, src, dst) {
-    ciphers_esm_assert_bytes(nonce, aes_BLOCK_SIZE);
-    ciphers_esm_assert_bytes(src);
+    esm_assert_bytes(nonce, aes_BLOCK_SIZE);
+    esm_assert_bytes(src);
     const srcLen = src.length;
     dst = getDst(srcLen, dst);
     const ctr = nonce;
@@ -80718,8 +80457,8 @@ function ctrCounter(xk, nonce, src, dst) {
 // It's possible to do 32le significantly simpler (and probably faster) by using u32.
 // But, we need both, and perf bottleneck is in ghash anyway.
 function ctr32(xk, isLE, nonce, src, dst) {
-    ciphers_esm_assert_bytes(nonce, aes_BLOCK_SIZE);
-    ciphers_esm_assert_bytes(src);
+    esm_assert_bytes(nonce, aes_BLOCK_SIZE);
+    esm_assert_bytes(src);
     dst = getDst(src.length, dst);
     const ctr = nonce; // write new value to nonce, so it can be re-used
     const c32 = ciphers_esm_utils_u32(ctr);
@@ -80756,8 +80495,8 @@ function ctr32(xk, isLE, nonce, src, dst) {
  * Requires good IV. Parallelizable. OK, but no MAC.
  */
 const ctr = wrapCipher({ blockSize: 16, nonceLength: 16 }, function ctr(key, nonce) {
-    ciphers_esm_assert_bytes(key);
-    ciphers_esm_assert_bytes(nonce, aes_BLOCK_SIZE);
+    esm_assert_bytes(key);
+    esm_assert_bytes(nonce, aes_BLOCK_SIZE);
     function processCtr(buf, dst) {
         const xk = expandKeyLE(key);
         const n = nonce.slice();
@@ -80772,7 +80511,7 @@ const ctr = wrapCipher({ blockSize: 16, nonceLength: 16 }, function ctr(key, non
     };
 });
 function validateBlockDecrypt(data) {
-    ciphers_esm_assert_bytes(data);
+    esm_assert_bytes(data);
     if (data.length % aes_BLOCK_SIZE !== 0) {
         throw new Error(`aes/(cbc-ecb).decrypt ciphertext should consist of blocks with size ${aes_BLOCK_SIZE}`);
     }
@@ -80822,11 +80561,11 @@ function padPCKS(left) {
  * Dangerous: always map x to y. See [AES Penguin](https://words.filippo.io/the-ecb-penguin/).
  */
 const ecb = wrapCipher({ blockSize: 16 }, function ecb(key, opts = {}) {
-    ciphers_esm_assert_bytes(key);
+    esm_assert_bytes(key);
     const pcks5 = !opts.disablePadding;
     return {
         encrypt: (plaintext, dst) => {
-            ciphers_esm_assert_bytes(plaintext);
+            esm_assert_bytes(plaintext);
             const { b, o, out: _out } = validateBlockEncrypt(plaintext, pcks5, dst);
             const xk = expandKeyLE(key);
             let i = 0;
@@ -80862,8 +80601,8 @@ const ecb = wrapCipher({ blockSize: 16 }, function ecb(key, opts = {}) {
  * Fragile: needs proper padding. Unauthenticated: needs MAC.
  */
 const cbc = wrapCipher({ blockSize: 16, nonceLength: 16 }, function cbc(key, iv, opts = {}) {
-    ciphers_esm_assert_bytes(key);
-    ciphers_esm_assert_bytes(iv, 16);
+    esm_assert_bytes(key);
+    esm_assert_bytes(iv, 16);
     const pcks5 = !opts.disablePadding;
     return {
         encrypt: (plaintext, dst) => {
@@ -80913,8 +80652,8 @@ const cbc = wrapCipher({ blockSize: 16, nonceLength: 16 }, function cbc(key, iv,
  * Unauthenticated: needs MAC.
  */
 const cfb = wrapCipher({ blockSize: 16, nonceLength: 16 }, function cfb(key, iv) {
-    ciphers_esm_assert_bytes(key);
-    ciphers_esm_assert_bytes(iv, 16);
+    esm_assert_bytes(key);
+    esm_assert_bytes(iv, 16);
     function processCfb(src, isEncrypt, dst) {
         const xk = expandKeyLE(key);
         const srcLen = src.length;
@@ -80970,7 +80709,7 @@ function computeTag(fn, isLE, key, data, AAD) {
  * Be careful: MACs can be forged.
  */
 const gcm = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, function gcm(key, nonce, AAD) {
-    ciphers_esm_assert_bytes(nonce);
+    esm_assert_bytes(nonce);
     // Nonce can be pretty much anything (even 1 byte). But smaller nonces less secure.
     if (nonce.length === 0)
         throw new Error('aes/gcm: empty nonce');
@@ -81003,7 +80742,7 @@ const gcm = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, functi
     }
     return {
         encrypt: (plaintext) => {
-            ciphers_esm_assert_bytes(plaintext);
+            esm_assert_bytes(plaintext);
             const { xk, authKey, counter, tagMask } = deriveKeys();
             const out = new Uint8Array(plaintext.length + tagLength);
             ctr32(xk, false, counter, plaintext, out);
@@ -81013,7 +80752,7 @@ const gcm = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, functi
             return out;
         },
         decrypt: (ciphertext) => {
-            ciphers_esm_assert_bytes(ciphertext);
+            esm_assert_bytes(ciphertext);
             if (ciphertext.length < tagLength)
                 throw new Error(`aes/gcm: ciphertext less than tagLen (${tagLength})`);
             const { xk, authKey, counter, tagMask } = deriveKeys();
@@ -81047,10 +80786,10 @@ const siv = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, functi
     const PLAIN_LIMIT = limit('plaintext', 0, 2 ** 36);
     const NONCE_LIMIT = limit('nonce', 12, 12);
     const CIPHER_LIMIT = limit('ciphertext', 16, 2 ** 36 + 16);
-    ciphers_esm_assert_bytes(nonce);
+    esm_assert_bytes(nonce);
     NONCE_LIMIT(nonce.length);
     if (AAD) {
-        ciphers_esm_assert_bytes(AAD);
+        esm_assert_bytes(AAD);
         AAD_LIMIT(AAD.length);
     }
     function deriveKeys() {
@@ -81101,7 +80840,7 @@ const siv = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, functi
     }
     return {
         encrypt: (plaintext) => {
-            ciphers_esm_assert_bytes(plaintext);
+            esm_assert_bytes(plaintext);
             PLAIN_LIMIT(plaintext.length);
             const { encKey, authKey } = deriveKeys();
             const tag = _computeTag(encKey, authKey, plaintext);
@@ -81113,7 +80852,7 @@ const siv = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, functi
             return out;
         },
         decrypt: (ciphertext) => {
-            ciphers_esm_assert_bytes(ciphertext);
+            esm_assert_bytes(ciphertext);
             CIPHER_LIMIT(ciphertext.length);
             const tag = ciphertext.subarray(-tagLength);
             const { encKey, authKey } = deriveKeys();
@@ -81133,7 +80872,7 @@ function isBytes32(a) {
         (a instanceof Uint32Array || a.constructor.name === 'Uint32Array'));
 }
 function encryptBlock(xk, block) {
-    ciphers_esm_assert_bytes(block, 16);
+    esm_assert_bytes(block, 16);
     if (!isBytes32(xk))
         throw new Error('_encryptBlock accepts result of expandKeyLE');
     const b32 = ciphers_esm_utils_u32(block);
@@ -81142,7 +80881,7 @@ function encryptBlock(xk, block) {
     return block;
 }
 function decryptBlock(xk, block) {
-    ciphers_esm_assert_bytes(block, 16);
+    esm_assert_bytes(block, 16);
     if (!isBytes32(xk))
         throw new Error('_decryptBlock accepts result of expandKeyLE');
     const b32 = ciphers_esm_utils_u32(block);
@@ -81182,7 +80921,7 @@ class Poly1305 {
         this.pos = 0;
         this.finished = false;
         key = ciphers_esm_utils_toBytes(key);
-        ciphers_esm_assert_bytes(key, 32);
+        esm_assert_bytes(key, 32);
         const t0 = u8to16(key, 0);
         const t1 = u8to16(key, 2);
         const t2 = u8to16(key, 4);
@@ -81361,7 +81100,7 @@ class Poly1305 {
         }
     }
     update(data) {
-        ciphers_esm_assert_exists(this);
+        esm_assert_exists(this);
         const { buffer, blockLen } = this;
         data = ciphers_esm_utils_toBytes(data);
         const len = data.length;
@@ -81390,8 +81129,8 @@ class Poly1305 {
         this.pad.fill(0);
     }
     digestInto(out) {
-        ciphers_esm_assert_exists(this);
-        ciphers_esm_assert_output(out, this);
+        esm_assert_exists(this);
+        esm_assert_output(out, this);
         this.finished = true;
         const { buffer, h } = this;
         let { pos } = this;
@@ -81524,19 +81263,19 @@ function createCipher(core, opts) {
     const { allowShortKeys, extendNonceFn, counterLength, counterRight, rounds } = ciphers_esm_utils_checkOpts({ allowShortKeys: false, counterLength: 8, counterRight: false, rounds: 20 }, opts);
     if (typeof core !== 'function')
         throw new Error('core must be a function');
-    ciphers_esm_assert_number(counterLength);
-    ciphers_esm_assert_number(rounds);
-    ciphers_esm_assert_bool(counterRight);
-    ciphers_esm_assert_bool(allowShortKeys);
+    esm_assert_number(counterLength);
+    esm_assert_number(rounds);
+    esm_assert_bool(counterRight);
+    esm_assert_bool(allowShortKeys);
     return (key, nonce, data, output, counter = 0) => {
-        ciphers_esm_assert_bytes(key);
-        ciphers_esm_assert_bytes(nonce);
-        ciphers_esm_assert_bytes(data);
+        esm_assert_bytes(key);
+        esm_assert_bytes(nonce);
+        esm_assert_bytes(data);
         const len = data.length;
         if (!output)
             output = new Uint8Array(len);
-        ciphers_esm_assert_bytes(output);
-        ciphers_esm_assert_number(counter);
+        esm_assert_bytes(output);
+        esm_assert_number(counter);
         if (counter < 0 || counter >= MAX_COUNTER)
             throw new Error('arx: counter overflow');
         if (output.length < len)
@@ -81868,14 +81607,14 @@ function chacha_computeTag(fn, key, nonce, data, AAD) {
  */
 const _poly1305_aead = (xorStream) => (key, nonce, AAD) => {
     const tagLength = 16;
-    ciphers_esm_assert_bytes(key, 32);
-    ciphers_esm_assert_bytes(nonce);
+    esm_assert_bytes(key, 32);
+    esm_assert_bytes(nonce);
     return {
         encrypt: (plaintext, output) => {
             const plength = plaintext.length;
             const clength = plength + tagLength;
             if (output) {
-                ciphers_esm_assert_bytes(output, clength);
+                esm_assert_bytes(output, clength);
             }
             else {
                 output = new Uint8Array(clength);
@@ -81891,7 +81630,7 @@ const _poly1305_aead = (xorStream) => (key, nonce, AAD) => {
             if (clength < tagLength)
                 throw new Error(`encrypted data must be at least ${tagLength} bytes`);
             if (output) {
-                ciphers_esm_assert_bytes(output, plength);
+                esm_assert_bytes(output, plength);
             }
             else {
                 output = new Uint8Array(plength);
@@ -81918,128 +81657,52 @@ const chacha20poly1305 = /* @__PURE__ */ wrapCipher({ blockSize: 64, nonceLength
  */
 const xchacha20poly1305 = /* @__PURE__ */ wrapCipher({ blockSize: 64, nonceLength: 24, tagLength: 16 }, _poly1305_aead(xchacha20));
 //# sourceMappingURL=chacha.js.map
-;// ./node_modules/@noble/hashes/esm/hmac.js
-
-
-// HMAC (RFC 2104)
-class hashes_esm_hmac_HMAC extends esm_utils_Hash {
-    constructor(hash, _key) {
-        super();
-        this.finished = false;
-        this.destroyed = false;
-        esm_assert.hash(hash);
-        const key = esm_utils_toBytes(_key);
-        this.iHash = hash.create();
-        if (typeof this.iHash.update !== 'function')
-            throw new Error('Expected instance of class which extends utils.Hash');
-        this.blockLen = this.iHash.blockLen;
-        this.outputLen = this.iHash.outputLen;
-        const blockLen = this.blockLen;
-        const pad = new Uint8Array(blockLen);
-        // blockLen can be bigger than outputLen
-        pad.set(key.length > blockLen ? hash.create().update(key).digest() : key);
-        for (let i = 0; i < pad.length; i++)
-            pad[i] ^= 0x36;
-        this.iHash.update(pad);
-        // By doing update (processing of first block) of outer hash here we can re-use it between multiple calls via clone
-        this.oHash = hash.create();
-        // Undo internal XOR && apply outer XOR
-        for (let i = 0; i < pad.length; i++)
-            pad[i] ^= 0x36 ^ 0x5c;
-        this.oHash.update(pad);
-        pad.fill(0);
-    }
-    update(buf) {
-        esm_assert.exists(this);
-        this.iHash.update(buf);
-        return this;
-    }
-    digestInto(out) {
-        esm_assert.exists(this);
-        esm_assert.bytes(out, this.outputLen);
-        this.finished = true;
-        this.iHash.digestInto(out);
-        this.oHash.update(out);
-        this.oHash.digestInto(out);
-        this.destroy();
-    }
-    digest() {
-        const out = new Uint8Array(this.oHash.outputLen);
-        this.digestInto(out);
-        return out;
-    }
-    _cloneInto(to) {
-        // Create new instance without calling constructor since key already in state and we don't know it.
-        to || (to = Object.create(Object.getPrototypeOf(this), {}));
-        const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
-        to = to;
-        to.finished = finished;
-        to.destroyed = destroyed;
-        to.blockLen = blockLen;
-        to.outputLen = outputLen;
-        to.oHash = oHash._cloneInto(to.oHash);
-        to.iHash = iHash._cloneInto(to.iHash);
-        return to;
-    }
-    destroy() {
-        this.destroyed = true;
-        this.oHash.destroy();
-        this.iHash.destroy();
-    }
-}
-/**
- * HMAC: RFC2104 message authentication code.
- * @param hash - function that would be used e.g. sha256
- * @param key - message key
- * @param message - message data
- */
-const hashes_esm_hmac_hmac = (hash, key, message) => new hashes_esm_hmac_HMAC(hash, key).update(message).digest();
-hashes_esm_hmac_hmac.create = (hash, key) => new hashes_esm_hmac_HMAC(hash, key);
-//# sourceMappingURL=hmac.js.map
 ;// ./node_modules/@noble/hashes/esm/hkdf.js
-
-
-
-// HKDF (RFC 5869)
-// https://soatok.blog/2021/11/17/understanding-hkdf/
 /**
- * HKDF-Extract(IKM, salt) -> PRK
+ * HKDF (RFC 5869): extract + expand in one step.
+ * See https://soatok.blog/2021/11/17/understanding-hkdf/.
+ * @module
+ */
+
+
+/**
+ * HKDF-extract from spec. Less important part. `HKDF-Extract(IKM, salt) -> PRK`
  * Arguments position differs from spec (IKM is first one, since it is not optional)
- * @param hash
- * @param ikm
- * @param salt
- * @returns
+ * @param hash - hash function that would be used (e.g. sha256)
+ * @param ikm - input keying material, the initial key
+ * @param salt - optional salt value (a non-secret random value)
  */
 function extract(hash, ikm, salt) {
-    esm_assert.hash(hash);
+    ahash(hash);
     // NOTE: some libraries treat zero-length array as 'not provided';
     // we don't, since we have undefined as 'not provided'
     // https://github.com/RustCrypto/KDFs/issues/15
     if (salt === undefined)
-        salt = new Uint8Array(hash.outputLen); // if not provided, it is set to a string of HashLen zeros
-    return hashes_esm_hmac_hmac(hash, esm_utils_toBytes(salt), esm_utils_toBytes(ikm));
+        salt = new Uint8Array(hash.outputLen);
+    return hmac_hmac(hash, utils_toBytes(salt), utils_toBytes(ikm));
 }
-// HKDF-Expand(PRK, info, L) -> OKM
-const HKDF_COUNTER = new Uint8Array([0]);
-const EMPTY_BUFFER = new Uint8Array();
+const HKDF_COUNTER = /* @__PURE__ */ Uint8Array.from([0]);
+const EMPTY_BUFFER = /* @__PURE__ */ Uint8Array.of();
 /**
- * HKDF-expand from the spec.
+ * HKDF-expand from the spec. The most important part. `HKDF-Expand(PRK, info, L) -> OKM`
+ * @param hash - hash function that would be used (e.g. sha256)
  * @param prk - a pseudorandom key of at least HashLen octets (usually, the output from the extract step)
  * @param info - optional context and application specific information (can be a zero-length string)
- * @param length - length of output keying material in octets
+ * @param length - length of output keying material in bytes
  */
 function expand(hash, prk, info, length = 32) {
-    esm_assert.hash(hash);
-    esm_assert.number(length);
-    if (length > 255 * hash.outputLen)
+    ahash(hash);
+    anumber(length);
+    const olen = hash.outputLen;
+    if (length > 255 * olen)
         throw new Error('Length should be <= 255*HashLen');
-    const blocks = Math.ceil(length / hash.outputLen);
+    const blocks = Math.ceil(length / olen);
     if (info === undefined)
         info = EMPTY_BUFFER;
     // first L(ength) octets of T
-    const okm = new Uint8Array(blocks * hash.outputLen);
+    const okm = new Uint8Array(blocks * olen);
     // Re-use HMAC instance between blocks
-    const HMAC = hashes_esm_hmac_hmac.create(hash, prk);
+    const HMAC = hmac_hmac.create(hash, prk);
     const HMACTmp = HMAC._cloneInto();
     const T = new Uint8Array(HMAC.outputLen);
     for (let counter = 0; counter < blocks; counter++) {
@@ -82050,22 +81713,30 @@ function expand(hash, prk, info, length = 32) {
             .update(info)
             .update(HKDF_COUNTER)
             .digestInto(T);
-        okm.set(T, hash.outputLen * counter);
+        okm.set(T, olen * counter);
         HMAC._cloneInto(HMACTmp);
     }
     HMAC.destroy();
     HMACTmp.destroy();
-    T.fill(0);
-    HKDF_COUNTER.fill(0);
+    clean(T, HKDF_COUNTER);
     return okm.slice(0, length);
 }
 /**
- * HKDF (RFC 5869): extract + expand in one step.
+ * HKDF (RFC 5869): derive keys from an initial input.
+ * Combines hkdf_extract + hkdf_expand in one step
  * @param hash - hash function that would be used (e.g. sha256)
  * @param ikm - input keying material, the initial key
  * @param salt - optional salt value (a non-secret random value)
- * @param info - optional context and application specific information
- * @param length - length of output keying material in octets
+ * @param info - optional context and application specific information (can be a zero-length string)
+ * @param length - length of output keying material in bytes
+ * @example
+ * import { hkdf } from '@noble/hashes/hkdf';
+ * import { sha256 } from '@noble/hashes/sha2';
+ * import { randomBytes } from '@noble/hashes/utils';
+ * const inputKey = randomBytes(32);
+ * const salt = randomBytes(32);
+ * const info = 'application-key';
+ * const hk1 = hkdf(sha256, inputKey, salt, info, 32);
  */
 const hkdf = (hash, ikm, salt, info, length) => expand(hash, extract(hash, ikm, salt), info, length);
 //# sourceMappingURL=hkdf.js.map
@@ -82127,8 +81798,8 @@ __export(utils_exports, {
   Queue: () => Queue,
   QueueNode: () => QueueNode,
   binarySearch: () => binarySearch,
-  bytesToHex: () => esm_utils_bytesToHex,
-  hexToBytes: () => esm_utils_hexToBytes,
+  bytesToHex: () => utils_bytesToHex,
+  hexToBytes: () => utils_hexToBytes,
   insertEventIntoAscendingList: () => insertEventIntoAscendingList,
   insertEventIntoDescendingList: () => insertEventIntoDescendingList,
   normalizeURL: () => normalizeURL,
@@ -82253,13 +81924,13 @@ var JS = class {
     return esm_secp256k1_schnorr.utils.randomPrivateKey();
   }
   getPublicKey(secretKey) {
-    return esm_utils_bytesToHex(esm_secp256k1_schnorr.getPublicKey(secretKey));
+    return utils_bytesToHex(esm_secp256k1_schnorr.getPublicKey(secretKey));
   }
   finalizeEvent(t, secretKey) {
     const event = t;
-    event.pubkey = esm_utils_bytesToHex(esm_secp256k1_schnorr.getPublicKey(secretKey));
+    event.pubkey = utils_bytesToHex(esm_secp256k1_schnorr.getPublicKey(secretKey));
     event.id = getEventHash(event);
-    event.sig = esm_utils_bytesToHex(esm_secp256k1_schnorr.sign(getEventHash(event), secretKey));
+    event.sig = utils_bytesToHex(esm_secp256k1_schnorr.sign(getEventHash(event), secretKey));
     event[verifiedSymbol] = true;
     return event;
   }
@@ -82288,7 +81959,7 @@ function serializeEvent(evt) {
 }
 function getEventHash(event) {
   let eventHash = sha256_sha256(utf8Encoder.encode(serializeEvent(event)));
-  return esm_utils_bytesToHex(eventHash);
+  return utils_bytesToHex(eventHash);
 }
 var i = new JS();
 var generateSecretKey = i.generateSecretKey;
@@ -83338,7 +83009,7 @@ function esm_decode(code) {
       return {
         type: "nprofile",
         data: {
-          pubkey: esm_utils_bytesToHex(tlv[0][0]),
+          pubkey: utils_bytesToHex(tlv[0][0]),
           relays: tlv[1] ? tlv[1].map((d) => utf8Decoder.decode(d)) : []
         }
       };
@@ -83356,10 +83027,10 @@ function esm_decode(code) {
       return {
         type: "nevent",
         data: {
-          id: esm_utils_bytesToHex(tlv[0][0]),
+          id: utils_bytesToHex(tlv[0][0]),
           relays: tlv[1] ? tlv[1].map((d) => utf8Decoder.decode(d)) : [],
-          author: tlv[2]?.[0] ? esm_utils_bytesToHex(tlv[2][0]) : void 0,
-          kind: tlv[3]?.[0] ? parseInt(esm_utils_bytesToHex(tlv[3][0]), 16) : void 0
+          author: tlv[2]?.[0] ? utils_bytesToHex(tlv[2][0]) : void 0,
+          kind: tlv[3]?.[0] ? parseInt(utils_bytesToHex(tlv[3][0]), 16) : void 0
         }
       };
     }
@@ -83379,8 +83050,8 @@ function esm_decode(code) {
         type: "naddr",
         data: {
           identifier: utf8Decoder.decode(tlv[0][0]),
-          pubkey: esm_utils_bytesToHex(tlv[2][0]),
-          kind: parseInt(esm_utils_bytesToHex(tlv[3][0]), 16),
+          pubkey: utils_bytesToHex(tlv[2][0]),
+          kind: parseInt(utils_bytesToHex(tlv[3][0]), 16),
           relays: tlv[1] ? tlv[1].map((d) => utf8Decoder.decode(d)) : []
         }
       };
@@ -83389,7 +83060,7 @@ function esm_decode(code) {
       return { type: prefix, data };
     case "npub":
     case "note":
-      return { type: prefix, data: esm_utils_bytesToHex(data) };
+      return { type: prefix, data: utils_bytesToHex(data) };
     default:
       throw new Error(`unknown prefix ${prefix}`);
   }
@@ -83413,10 +83084,10 @@ function nsecEncode(key) {
   return esm_encodeBytes("nsec", key);
 }
 function npubEncode(hex) {
-  return esm_encodeBytes("npub", esm_utils_hexToBytes(hex));
+  return esm_encodeBytes("npub", utils_hexToBytes(hex));
 }
 function noteEncode(hex) {
-  return esm_encodeBytes("note", esm_utils_hexToBytes(hex));
+  return esm_encodeBytes("note", utils_hexToBytes(hex));
 }
 function encodeBech32(prefix, data) {
   let words = bech32.toWords(data);
@@ -83427,7 +83098,7 @@ function esm_encodeBytes(prefix, bytes) {
 }
 function nprofileEncode(profile) {
   let data = encodeTLV({
-    0: [esm_utils_hexToBytes(profile.pubkey)],
+    0: [utils_hexToBytes(profile.pubkey)],
     1: (profile.relays || []).map((url) => utf8Encoder.encode(url))
   });
   return encodeBech32("nprofile", data);
@@ -83438,9 +83109,9 @@ function neventEncode(event) {
     kindArray = integerToUint8Array(event.kind);
   }
   let data = encodeTLV({
-    0: [esm_utils_hexToBytes(event.id)],
+    0: [utils_hexToBytes(event.id)],
     1: (event.relays || []).map((url) => utf8Encoder.encode(url)),
-    2: event.author ? [esm_utils_hexToBytes(event.author)] : [],
+    2: event.author ? [utils_hexToBytes(event.author)] : [],
     3: kindArray ? [new Uint8Array(kindArray)] : []
   });
   return encodeBech32("nevent", data);
@@ -83451,7 +83122,7 @@ function naddrEncode(addr) {
   let data = encodeTLV({
     0: [utf8Encoder.encode(addr.identifier)],
     1: (addr.relays || []).map((url) => utf8Encoder.encode(url)),
-    2: [esm_utils_hexToBytes(addr.pubkey)],
+    2: [utils_hexToBytes(addr.pubkey)],
     3: [new Uint8Array(kind)]
   });
   return encodeBech32("naddr", data);
@@ -83467,7 +83138,7 @@ function encodeTLV(tlv) {
       entries.push(entry);
     });
   });
-  return esm_utils_concatBytes(...entries);
+  return utils_concatBytes(...entries);
 }
 
 // references.ts
@@ -83570,10 +83241,10 @@ __export(nip04_exports, {
 
 
 function esm_encrypt(secretKey, pubkey, text) {
-  const privkey = secretKey instanceof Uint8Array ? esm_utils_bytesToHex(secretKey) : secretKey;
+  const privkey = secretKey instanceof Uint8Array ? utils_bytesToHex(secretKey) : secretKey;
   const key = esm_secp256k1_secp256k1.getSharedSecret(privkey, "02" + pubkey);
   const normalizedKey = getNormalizedX(key);
-  let iv = Uint8Array.from(esm_utils_randomBytes(16));
+  let iv = Uint8Array.from(utils_randomBytes(16));
   let plaintext = utf8Encoder.encode(text);
   let ciphertext = cbc(normalizedKey, iv).encrypt(plaintext);
   let ctb64 = base64.encode(new Uint8Array(ciphertext));
@@ -83581,7 +83252,7 @@ function esm_encrypt(secretKey, pubkey, text) {
   return `${ctb64}?iv=${ivb64}`;
 }
 function esm_decrypt(secretKey, pubkey, data) {
-  const privkey = secretKey instanceof Uint8Array ? esm_utils_bytesToHex(secretKey) : secretKey;
+  const privkey = secretKey instanceof Uint8Array ? utils_bytesToHex(secretKey) : secretKey;
   let [ctb64, ivb64] = data.split("?iv=");
   let key = esm_secp256k1_secp256k1.getSharedSecret(privkey, "02" + pubkey);
   let normalizedKey = getNormalizedX(key);
@@ -83818,7 +83489,7 @@ function minePow(unsigned, difficulty) {
   return event;
 }
 function fastEventHash(evt) {
-  return esm_utils_bytesToHex(
+  return utils_bytesToHex(
     sha256_sha256(utf8Encoder.encode(JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content])))
   );
 }
@@ -83895,7 +83566,7 @@ function pad(plaintext) {
   const unpaddedLen = unpadded.length;
   const prefix = writeU16BE(unpaddedLen);
   const suffix = new Uint8Array(calcPaddedLen(unpaddedLen) - unpaddedLen);
-  return esm_utils_concatBytes(prefix, unpadded, suffix);
+  return utils_concatBytes(prefix, unpadded, suffix);
 }
 function unpad(padded) {
   const unpaddedLen = new DataView(padded.buffer).getUint16(0);
@@ -83907,8 +83578,8 @@ function unpad(padded) {
 function hmacAad(key, message, aad) {
   if (aad.length !== 32)
     throw new Error("AAD associated data must be 32 bytes");
-  const combined = esm_utils_concatBytes(aad, message);
-  return hashes_esm_hmac_hmac(sha256_sha256, key, combined);
+  const combined = utils_concatBytes(aad, message);
+  return hmac_hmac(sha256_sha256, key, combined);
 }
 function decodePayload(payload) {
   if (typeof payload !== "string")
@@ -83936,12 +83607,12 @@ function decodePayload(payload) {
     mac: data.subarray(-32)
   };
 }
-function encrypt2(plaintext, conversationKey, nonce = esm_utils_randomBytes(32)) {
+function encrypt2(plaintext, conversationKey, nonce = utils_randomBytes(32)) {
   const { chacha_key, chacha_nonce, hmac_key } = getMessageKeys(conversationKey, nonce);
   const padded = pad(plaintext);
   const ciphertext = chacha20(chacha_key, chacha_nonce, padded);
   const mac = hmacAad(hmac_key, ciphertext, nonce);
-  return base64.encode(esm_utils_concatBytes(new Uint8Array([2]), nonce, ciphertext, mac));
+  return base64.encode(utils_concatBytes(new Uint8Array([2]), nonce, ciphertext, mac));
 }
 function decrypt2(payload, conversationKey) {
   const { nonce, ciphertext, mac } = decodePayload(payload);
@@ -84758,7 +84429,7 @@ function validateEventMethodTag(event, method) {
 }
 function hashPayload(payload) {
   const hash = sha256_sha256(utf8Encoder.encode(JSON.stringify(payload)));
-  return esm_utils_bytesToHex(hash);
+  return utils_bytesToHex(hash);
 }
 function validateEventPayloadTag(event, payload) {
   const payloadTag = event.tags.find((t) => t[0] === "payload");
@@ -91104,14 +90775,19 @@ class DataBase {
     }
 }
 const createGun = (config) => {
-    return new (gun_default())(config);
+    console.log("Creating Gun instance with config:", config);
+    console.log("Config peers:", config?.peers);
+    const gunInstance = new (gun_default())(config);
+    console.log("Created Gun instance:", gunInstance);
+    console.log("Gun instance opt after creation:", gunInstance?.opt);
+    return gunInstance;
 };
 
 /* harmony default export */ const db = ((gun_default()));
 
-;// ./src/gundb/improved-types.ts
+;// ./src/gundb/types.ts
 /**
- * Improved type definitions to reduce 'any' usage while maintaining GunDB compatibility
+ * Type definitions for GunDB to replace 'any' usage
  */
 
 
@@ -91616,7 +91292,7 @@ class CoreInitializer {
         // Setup wallet derivation
         this.setupWalletDerivation();
         // Initialize RxJS
-        this.core.rx = new RxJS(this.core._gun);
+        this.core.rx = new RxJS(this.core.gun);
         // Register built-in plugins
         this.registerBuiltinPlugins(config);
         // Initialize async components
@@ -91626,15 +91302,25 @@ class CoreInitializer {
      * Initialize Gun instance
      */
     async initializeGun(config) {
+        console.log("Initialize Gun instance", config);
         if (config.gunOptions.authToken) {
             restrictedPut((gun_default()), config.gunOptions.authToken);
         }
         try {
-            if (config.gunInstance) {
-                this.core._gun = config.gunInstance;
+            if (config.gunInstance && config.gunInstance instanceof (gun_default())) {
+                console.log("config.gunInstance", config.gunInstance);
+                this.core.gun = config.gunInstance;
             }
             else {
-                this.core._gun = createGun(config.gunOptions);
+                console.log("config.gunOptions", config.gunOptions);
+                this.core.gun = createGun(config.gunOptions);
+                // Explicitly apply peers configuration if not already set
+                if (config.gunOptions?.peers &&
+                    Array.isArray(config.gunOptions.peers)) {
+                    console.log("Applying peers configuration:", config.gunOptions.peers);
+                    this.core.gun.opt({ peers: config.gunOptions.peers });
+                    console.log("Peers after explicit application:", this.core.gun?.opt?.peers);
+                }
             }
         }
         catch (error) {
@@ -91644,8 +91330,9 @@ class CoreInitializer {
             throw new Error(`Failed to create Gun instance: ${error}`);
         }
         try {
-            this.core.db = new DataBase(this.core._gun, config.gunOptions.scope || "");
-            this.core._gun = this.core.db.gun;
+            console.log("Initialize Gun instance", this.core.gun);
+            this.core.db = new DataBase(this.core.gun, config.gunOptions.scope || "");
+            this.core.gun = this.core.db.gun;
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
@@ -91659,9 +91346,7 @@ class CoreInitializer {
      */
     async initializeGunUser() {
         try {
-            this.core._user = this.core._gun
-                .user()
-                .recall({ sessionStorage: true });
+            this.core.user = this.core.gun.user().recall({ sessionStorage: true });
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
@@ -91669,10 +91354,8 @@ class CoreInitializer {
             }
             throw new Error(`Failed to initialize Gun user: ${error}`);
         }
-        this.core._gun.on("auth", (user) => {
-            this.core._user = this.core._gun
-                .user()
-                .recall({ sessionStorage: true });
+        this.core.gun.on("auth", (user) => {
+            this.core.user = this.core.gun.user().recall({ sessionStorage: true });
             this.core.emit("auth:login", {
                 userPub: user.pub,
                 method: "password",
@@ -91705,7 +91388,7 @@ class CoreInitializer {
      * Setup wallet derivation
      */
     setupWalletDerivation() {
-        this.core._gun.on("auth", async (user) => {
+        this.core.gun.on("auth", async (user) => {
             if (!user)
                 return;
             const priv = user._?.sea?.epriv;
@@ -91811,7 +91494,7 @@ class CoreInitializer {
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "^1.6.6";
+    static API_VERSION = "^3.0.5";
     db;
     storage;
     provider;

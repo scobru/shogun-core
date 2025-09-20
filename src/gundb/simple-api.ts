@@ -4,11 +4,6 @@
  */
 
 import { DataBase } from "./db";
-import {
-  TypedGunOperationResult,
-  GunPath,
-  TypedAuthResult,
-} from "./improved-types";
 
 /**
  * Simple API wrapper that provides common operations with minimal complexity

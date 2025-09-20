@@ -51,7 +51,7 @@ export interface PluginManager {
    * @returns Il plugin richiesto o undefined se non trovato
    * @template T Tipo del plugin o dell'interfaccia pubblica del plugin
    */
-  getPlugin<T>(name: string): T | undefined;
+  getPlugin<T = ShogunPlugin>(name: string): T | undefined;
 
   /**
    * Verifica se un plugin è registrato
@@ -66,4 +66,92 @@ export interface PluginManager {
    * @returns Array di plugin della categoria specificata
    */
   getPluginsByCategory(category: PluginCategory): ShogunPlugin[];
+
+  /**
+   * Ottiene informazioni su tutti i plugin registrati
+   * @returns Array di oggetti con informazioni sui plugin
+   */
+  getPluginsInfo(): Array<{
+    name: string;
+    version: string;
+    category?: PluginCategory;
+    description?: string;
+  }>;
+
+  /**
+   * Ottiene il numero totale di plugin registrati
+   * @returns Numero di plugin registrati
+   */
+  getPluginCount(): number;
+
+  /**
+   * Verifica se tutti i plugin sono inizializzati correttamente
+   * @returns Oggetto con stato di inizializzazione per ogni plugin
+   */
+  getPluginsInitializationStatus(): Record<
+    string,
+    { initialized: boolean; error?: string }
+  >;
+
+  /**
+   * Valida l'integrità del sistema di plugin
+   * @returns Oggetto con risultati della validazione
+   */
+  validatePluginSystem(): {
+    totalPlugins: number;
+    initializedPlugins: number;
+    failedPlugins: string[];
+    warnings: string[];
+  };
+
+  /**
+   * Tenta di reinizializzare i plugin falliti
+   * @returns Oggetto con risultati della reinizializzazione
+   */
+  reinitializeFailedPlugins(): {
+    success: string[];
+    failed: Array<{ name: string; error: string }>;
+  };
+
+  /**
+   * Verifica la compatibilità dei plugin con la versione corrente di ShogunCore
+   * @returns Oggetto con informazioni sulla compatibilità
+   */
+  checkPluginCompatibility(): {
+    compatible: Array<{ name: string; version: string }>;
+    incompatible: Array<{ name: string; version: string; reason: string }>;
+    unknown: Array<{ name: string; version: string }>;
+  };
+
+  /**
+   * Ottiene informazioni complete di debug sul sistema di plugin
+   * @returns Informazioni complete di debug del sistema di plugin
+   */
+  getPluginSystemDebugInfo(): {
+    shogunCoreVersion: string;
+    totalPlugins: number;
+    plugins: Array<{
+      name: string;
+      version: string;
+      category?: PluginCategory;
+      description?: string;
+      initialized: boolean;
+      error?: string;
+    }>;
+    initializationStatus: Record<
+      string,
+      { initialized: boolean; error?: string }
+    >;
+    validation: {
+      totalPlugins: number;
+      initializedPlugins: number;
+      failedPlugins: string[];
+      warnings: string[];
+    };
+    compatibility: {
+      compatible: Array<{ name: string; version: string }>;
+      incompatible: Array<{ name: string; version: string; reason: string }>;
+      unknown: Array<{ name: string; version: string }>;
+    };
+  };
 }

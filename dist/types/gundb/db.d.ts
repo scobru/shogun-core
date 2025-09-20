@@ -5,7 +5,7 @@
  * - Direct authentication through Gun.user()
  */
 import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
-import type { GunInstance, GunUserInstance, GunChain } from "./improved-types";
+import type { GunInstance, GunUserInstance, GunChain } from "./types";
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
@@ -19,7 +19,7 @@ import "gun/lib/wire";
 import "gun/lib/axe";
 import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
-import type { IGunInstance, ISEAPair } from "gun/types";
+import type { ISEAPair } from "gun/types";
 import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
@@ -396,7 +396,7 @@ declare class DataBase {
      */
     isAuthenticated(): boolean;
 }
-declare const createGun: (config: any) => IGunInstance<any>;
+declare const createGun: (config: any) => import("gun").IGunInstance<any>;
 export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, restrictedPut, createGun, };
 export default Gun;
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";

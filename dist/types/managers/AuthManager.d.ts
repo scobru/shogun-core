@@ -65,5 +65,8 @@ export declare class AuthManager {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): unknown;
+    getAuthenticationMethod(type: AuthMethod): import("..").ShogunPlugin | {
+        login: (username: string, password: string) => Promise<AuthResult>;
+        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
+    } | undefined;
 }

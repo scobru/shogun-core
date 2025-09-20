@@ -30,7 +30,6 @@ module.exports = {
       gun$: path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
-      "gun/lib/then": path.resolve(__dirname, "node_modules/gun/lib/then.js"),
       gun: path.resolve(__dirname, "node_modules/gun"),
     },
     fallback: {

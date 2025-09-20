@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
 import { ISEAPair } from "gun";
 import { DataBase, RxJS, GunInstance, GunUserInstance } from "./gundb";
+import { PluginManager } from "./managers/PluginManager";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -18,16 +19,16 @@ import { DataBase, RxJS, GunInstance, GunUserInstance } from "./gundb";
  * @since 2.0.0
  */
 export declare class ShogunCore implements IShogunCore {
-    static readonly API_VERSION = "^1.6.6";
+    static readonly API_VERSION = "^3.0.5";
     db: DataBase;
     storage: ShogunStorage;
     provider?: ethers.Provider;
     config: ShogunCoreConfig;
     rx: RxJS;
-    private _gun;
-    private _user;
+    _gun: GunInstance;
+    _user: GunUserInstance | null;
     wallets: Wallets | undefined;
-    private pluginManager;
+    pluginManager: PluginManager;
     private authManager;
     private eventManager;
     private coreInitializer;
@@ -197,7 +198,10 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): unknown;
+    getAuthenticationMethod(type: AuthMethod): ShogunPlugin | {
+        login: (username: string, password: string) => Promise<AuthResult>;
+        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
+    } | undefined;
     /**
      * Retrieve recent errors logged by the system
      * @param count - Number of errors to retrieve (default: 10)

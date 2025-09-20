@@ -16,7 +16,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore {
-    static API_VERSION = "^1.6.6";
+    static API_VERSION = "^3.0.5";
     db;
     storage;
     provider;

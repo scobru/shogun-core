@@ -1,4 +1,4 @@
-import { GunInstance, GunUserInstance } from "../gundb/improved-types";
+import { GunInstance, GunUserInstance } from "../gundb/types";
 import { ISEAPair } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
@@ -6,6 +6,7 @@ import { DataBase } from "../gundb/db";
 import { RxJS } from "../gundb/rxjs";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
+import { ShogunEventMap } from "./events";
 /**
  * Standard plugin categories in ShogunCore
  */
@@ -121,21 +122,28 @@ export interface IShogunCore extends PluginManager {
     config: ShogunCoreConfig;
     provider?: ethers.Provider;
     signer?: ethers.Signer;
-    on(eventName: string | symbol, listener: (...args: any[]) => void): any;
-    off(eventName: string | symbol, listener: (...args: any[]) => void): any;
-    once(eventName: string | symbol, listener: (...args: any[]) => void): any;
-    removeAllListeners(eventName?: string | symbol): any;
-    emit(eventName: string | symbol, ...args: any[]): boolean;
+    wallets?: Wallets;
+    pluginManager: any;
+    on<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
+    off<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
+    once<K extends keyof ShogunEventMap>(eventName: K, listener: ShogunEventMap[K] extends void ? () => void : (data: ShogunEventMap[K]) => void): this;
+    removeAllListeners(eventName?: string | symbol): this;
+    emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K] extends void ? never : ShogunEventMap[K]): boolean;
     getRecentErrors(count?: number): ShogunError[];
-    login(username: string, password: string): Promise<AuthResult>;
+    login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
+    loginWithPair(pair: ISEAPair): Promise<AuthResult>;
     signUp(username: string, password?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     getAuthenticationMethod(type: AuthMethod): any;
+    setAuthMethod(method: AuthMethod): void;
+    getAuthMethod(): AuthMethod | undefined;
     getCurrentUser(): {
         pub: string;
         user?: any;
     } | null;
+    getIsLoggedIn(): boolean;
     logout(): void;
     isLoggedIn(): boolean;
+    saveCredentials(credentials: any): Promise<void>;
 }
 /**
  * WebAuthn configuration
