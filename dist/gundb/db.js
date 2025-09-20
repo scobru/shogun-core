@@ -1826,7 +1826,6 @@ const createGun = (config) => {
     console.log("Config peers:", config?.peers);
     const gunInstance = new Gun(config);
     console.log("Created Gun instance:", gunInstance);
-    console.log("Gun instance opt after creation:", gunInstance?.opt);
     return gunInstance;
 };
 export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, restrictedPut, createGun, };

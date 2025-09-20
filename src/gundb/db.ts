@@ -2205,8 +2205,6 @@ const createGun = (config: any) => {
   const gunInstance = new Gun(config);
 
   console.log("Created Gun instance:", gunInstance);
-  console.log("Gun instance opt after creation:", (gunInstance as any)?.opt);
-
   return gunInstance;
 };
 
