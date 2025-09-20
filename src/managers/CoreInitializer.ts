@@ -82,7 +82,10 @@ export class CoreInitializer {
         this.core._gun = config.gunInstance;
       } else if (config.gunOptions) {
         console.log("Creating new Gun instance");
-        this.core._gun = createGun(config.gunOptions || {});
+        this.core._gun = createGun(config.gunOptions);
+      } else {
+        console.log("Creating new Gun instance with default options");
+        this.core._gun = createGun({});
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {

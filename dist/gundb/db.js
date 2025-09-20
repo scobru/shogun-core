@@ -12,8 +12,6 @@ import "gun/lib/radisk";
 import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
-import "gun/lib/wire";
-import "gun/lib/axe";
 import derive from "./derive";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";

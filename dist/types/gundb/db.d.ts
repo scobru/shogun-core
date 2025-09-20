@@ -15,8 +15,6 @@ import "gun/lib/radisk";
 import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
-import "gun/lib/wire";
-import "gun/lib/axe";
 import derive, { DeriveOptions } from "./derive";
 import type { ISEAPair } from "gun/types";
 import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
