@@ -80,9 +80,9 @@ export class CoreInitializer {
       if (config.gunInstance) {
         console.log("Using provided Gun instance");
         this.core._gun = config.gunInstance;
-      } else {
+      } else if (config.gunOptions) {
         console.log("Creating new Gun instance");
-        this.core._gun = createGun(config.gunOptions);
+        this.core._gun = createGun(config.gunOptions || {});
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -96,9 +96,8 @@ export class CoreInitializer {
 
       this.core.db = new DataBase(
         this.core._gun,
-        config.gunOptions.scope || "",
+        config.gunOptions?.scope || "",
       );
-      this.core._gun = this.core.db.gun;
       // Note: gun is a getter that returns _gun, so we don't need to assign it
       this.core._user = this.core._gun.user().recall({ sessionStorage: true });
       // Note: user is a getter that returns _user, so we don't need to assign it
