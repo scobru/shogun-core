@@ -77,15 +77,14 @@ export class CoreInitializer {
     console.log("Initialize Gun instance", config);
 
     try {
-      if (config.gunInstance) {
+      if (config.gunInstance && config.gunOptions === undefined) {
         console.log("Using provided Gun instance");
         this.core._gun = config.gunInstance;
-      } else if (config.gunOptions) {
+      } else if (config.gunOptions && config.gunInstance === undefined) {
         console.log("Creating new Gun instance");
         this.core._gun = createGun(config.gunOptions);
       } else {
-        console.log("Creating new Gun instance with default options");
-        this.core._gun = createGun({});
+        throw new Error("!!! NO GUN INSTANCE OR GUN OPTIONS PROVIDED !!!");
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -101,8 +100,6 @@ export class CoreInitializer {
         this.core._gun,
         config.gunOptions?.scope || "",
       );
-      // Note: gun is a getter that returns _gun, so we don't need to assign it
-      this.core._user = this.core._gun.user().recall({ sessionStorage: true });
       // Note: user is a getter that returns _user, so we don't need to assign it
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {

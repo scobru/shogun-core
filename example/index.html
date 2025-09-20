@@ -44,14 +44,14 @@
     if (window.SHOGUN_CORE) {
       log('✓ <b>ShogunCore</b> found on window', 'ok');
       const config = {
-        appToken: "12345678",
         oauth: { enabled: false },
-        peers: [],
+        gunOptions: {
+          peers: ['https://peer.wallie.io/gun', 'https://v5g5jseqhgkp43lppgregcfbvi.srv.us/gun', 'https://relay.shogun-eco.xyz/gun'],
+        },
       };
       try {
         const shogun = window.SHOGUN_CORE(config);
-
-        shogun.initialize();
+        //shogun.initialize();
         console.log(shogun);
 
         window.gun = shogun.gun
