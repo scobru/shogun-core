@@ -5,14 +5,7 @@ import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { OAuthPlugin } from "../plugins/oauth/oauthPlugin";
-import {
-  restrictedPut,
-  DataBase,
-  RxJS,
-  createGun,
-  Gun,
-  derive,
-} from "../gundb";
+import { DataBase, RxJS, createGun, derive } from "../gundb";
 
 /**
  * Handles initialization of ShogunCore components
@@ -82,10 +75,6 @@ export class CoreInitializer {
    */
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
     console.log("Initialize Gun instance", config);
-
-    if (config.gunOptions.authToken) {
-      restrictedPut(Gun, config.gunOptions.authToken);
-    }
 
     try {
       if (config.gunInstance) {

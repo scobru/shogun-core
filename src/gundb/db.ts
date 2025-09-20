@@ -31,7 +31,6 @@ import "gun/lib/webrtc";
 import "gun/lib/wire";
 import "gun/lib/axe";
 
-import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 
 import type { ISEAPair } from "gun/types";
@@ -2202,23 +2201,13 @@ const createGun = (config: any) => {
   console.log("Creating Gun instance with config:", config);
   console.log("Config peers:", config?.peers);
 
-  const gunInstance = new Gun(config);
+  const gunInstance = Gun(config);
 
   console.log("Created Gun instance:", gunInstance);
   return gunInstance;
 };
 
-export {
-  Gun,
-  DataBase,
-  SEA,
-  RxJS,
-  crypto,
-  GunErrors,
-  derive,
-  restrictedPut,
-  createGun,
-};
+export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
 
 export default Gun;
 

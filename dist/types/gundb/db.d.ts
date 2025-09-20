@@ -17,7 +17,6 @@ import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 import "gun/lib/wire";
 import "gun/lib/axe";
-import { restrictedPut } from "./restricted-put";
 import derive, { DeriveOptions } from "./derive";
 import type { ISEAPair } from "gun/types";
 import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
@@ -397,7 +396,7 @@ declare class DataBase {
     isAuthenticated(): boolean;
 }
 declare const createGun: (config: any) => import("gun").IGunInstance<any>;
-export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, restrictedPut, createGun, };
+export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
 export default Gun;
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };

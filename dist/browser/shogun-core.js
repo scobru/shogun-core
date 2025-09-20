@@ -43829,7 +43829,7 @@ var __webpack_exports__ = {};
 (() => {
 "use strict";
 /*!************************************!*\
-  !*** ./src/index.ts + 211 modules ***!
+  !*** ./src/index.ts + 210 modules ***!
   \************************************/
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
@@ -86886,89 +86886,6 @@ var webrtc = __webpack_require__("./node_modules/gun/lib/webrtc.js");
 var wire = __webpack_require__("./node_modules/gun/lib/wire.js");
 // EXTERNAL MODULE: ./node_modules/gun/lib/axe.js
 var axe = __webpack_require__("./node_modules/gun/lib/axe.js");
-;// ./src/gundb/restricted-put.ts
-// Functional programming style implementation
-const gunHeaderModule = (Gun) => {
-    // Closure for token state
-    const tokenState = {
-        value: undefined,
-    };
-    // Pure function to create a new token state
-    const setToken = (newToken) => {
-        tokenState.value = newToken;
-        setupTokenMiddleware();
-        return tokenState.value;
-    };
-    // Pure function to retrieve token
-    const getToken = () => tokenState.value;
-    // Function to add token to headers
-    const addTokenToHeaders = (msg) => ({
-        ...msg,
-        headers: {
-            ...msg.headers,
-            token: tokenState.value,
-        },
-    });
-    // Setup middleware
-    const setupTokenMiddleware = () => {
-        Gun.on("opt", function (ctx) {
-            if (ctx.once)
-                return;
-            ctx.on("out", function (msg) {
-                const to = this.to;
-                // Apply pure function to add headers
-                const msgWithHeaders = addTokenToHeaders(msg);
-                //console.log('[PUT HEADERS]', msgWithHeaders)
-                to.next(msgWithHeaders); // pass to next middleware
-            });
-        });
-    };
-    // Initialize middleware
-    setupTokenMiddleware();
-    // Expose public API
-    return {
-        setToken,
-        getToken,
-    };
-};
-// Module instance and exports
-let moduleInstance;
-/**
- * Initialize the Gun headers module with Gun instance and optional token
- * @param Gun - Gun instance
- * @param token - Optional authentication token
- */
-const restrictedPut = (Gun, token) => {
-    moduleInstance = gunHeaderModule(Gun);
-    if (token) {
-        moduleInstance.setToken(token);
-    }
-};
-/**
- * Set the authentication token for Gun requests
- * @param newToken - Token to set
- */
-const setToken = (newToken) => {
-    if (!moduleInstance) {
-        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
-    }
-    return moduleInstance.setToken(newToken);
-};
-/**
- * Get the current authentication token
- */
-const restricted_put_getToken = () => {
-    if (!moduleInstance) {
-        throw new Error("Gun headers module not initialized. Call init(Gun, token) first.");
-    }
-    return moduleInstance.getToken();
-};
-// Export the functions to global window (if in browser environment)
-if (true) {
-    window.setToken = setToken;
-    window.getToken = restricted_put_getToken;
-}
-
 ;// ./node_modules/tslib/tslib.es6.mjs
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -88972,7 +88889,6 @@ function crypto_randomUUID() {
 
 
 
-
 /**
  * Configuration constants for timeouts and security
  */
@@ -90777,7 +90693,7 @@ class DataBase {
 const createGun = (config) => {
     console.log("Creating Gun instance with config:", config);
     console.log("Config peers:", config?.peers);
-    const gunInstance = new (gun_default())(config);
+    const gunInstance = gun_default()(config);
     console.log("Created Gun instance:", gunInstance);
     return gunInstance;
 };
@@ -91302,9 +91218,6 @@ class CoreInitializer {
      */
     async initializeGun(config) {
         console.log("Initialize Gun instance", config);
-        if (config.gunOptions.authToken) {
-            restrictedPut((gun_default()), config.gunOptions.authToken);
-        }
         try {
             if (config.gunInstance) {
                 console.log("Using provided Gun instance");

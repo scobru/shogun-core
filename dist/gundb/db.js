@@ -14,7 +14,6 @@ import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 import "gun/lib/wire";
 import "gun/lib/axe";
-import { restrictedPut } from "./restricted-put";
 import derive from "./derive";
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";
@@ -1824,9 +1823,9 @@ class DataBase {
 const createGun = (config) => {
     console.log("Creating Gun instance with config:", config);
     console.log("Config peers:", config?.peers);
-    const gunInstance = new Gun(config);
+    const gunInstance = Gun(config);
     console.log("Created Gun instance:", gunInstance);
     return gunInstance;
 };
-export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, restrictedPut, createGun, };
+export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
 export default Gun;
