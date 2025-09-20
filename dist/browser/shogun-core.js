@@ -91307,26 +91307,11 @@ class CoreInitializer {
             restrictedPut((gun_default()), config.gunOptions.authToken);
         }
         try {
-            if (config.gunInstance && config.gunInstance instanceof (gun_default())) {
-                console.log("config.gunInstance", config.gunInstance);
+            if (config.gunInstance) {
                 this.core._gun = config.gunInstance;
             }
             else {
-                console.log("config.gunOptions", config.gunOptions);
                 this.core._gun = createGun(config.gunOptions);
-                // Explicitly apply peers configuration if not already set
-                if (config.gunOptions?.peers &&
-                    Array.isArray(config.gunOptions.peers)) {
-                    console.log("Applying peers configuration:", config.gunOptions.peers);
-                    this.core._gun.opt({ peers: config.gunOptions.peers });
-                    console.log("Peers after explicit application:", this.core._gun?.opt?.peers);
-                    // Force peer connection
-                    console.log("Forcing peer connections...");
-                    config.gunOptions.peers.forEach((peer) => {
-                        console.log("Connecting to peer:", peer);
-                        this.core._gun.opt({ peers: [peer] });
-                    });
-                }
             }
         }
         catch (error) {
@@ -91337,8 +91322,11 @@ class CoreInitializer {
         }
         try {
             console.log("Initialize Gun instance", this.core.gun);
-            this.core.db = new DataBase(this.core.gun, config.gunOptions.scope || "");
+            this.core.db = new DataBase(this.core._gun, config.gunOptions.scope || "");
             this.core._gun = this.core.db.gun;
+            this.core.gun = this.core._gun;
+            this.core._user = this.core._gun.user().recall({ sessionStorage: true });
+            this.core.user = this.core._user;
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
