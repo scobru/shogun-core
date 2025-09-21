@@ -106,6 +106,11 @@ module.exports = {
       resourceRegExp: /^(http|https|fs|net|tls|child_process|ws)$/,
       contextRegExp: /node_modules/,
     }),
+    // Ignore Gun.js ws.js file that imports Node.js ws module
+    new webpack.IgnorePlugin({
+      resourceRegExp: /gun\/lib\/ws\.js$/,
+      contextRegExp: /node_modules/,
+    }),
     // Add module concatenation plugin for better tree-shaking
     new webpack.optimize.ModuleConcatenationPlugin(),
     // Define Gun as a global variable
