@@ -68,6 +68,7 @@ class DataBase {
         this.crypto = crypto;
         this.sea = SEA;
         this.node = null;
+        this._rxjs = new RxJS(this.gun);
     }
     /**
      * Initialize the GunInstance asynchronously
@@ -529,9 +530,6 @@ class DataBase {
      * @returns GunRxJS instance
      */
     rx() {
-        if (!this._rxjs) {
-            this._rxjs = new RxJS(this.gun);
-        }
         return this._rxjs;
     }
     /**

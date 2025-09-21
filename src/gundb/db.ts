@@ -113,6 +113,8 @@ class DataBase {
     this.sea = SEA;
 
     this.node = null as any;
+
+    this._rxjs = new RxJS(this.gun);
   }
 
   /**
@@ -619,10 +621,7 @@ class DataBase {
    * @returns GunRxJS instance
    */
   rx(): RxJS {
-    if (!this._rxjs) {
-      this._rxjs = new RxJS(this.gun);
-    }
-    return this._rxjs;
+    return this._rxjs as RxJS;
   }
 
   /**

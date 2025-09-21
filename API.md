@@ -820,6 +820,303 @@ export const useOAuth = (protocol) => {
 };
 ```
 
+## Advanced API Features
+
+### Advanced Plugin Management
+
+Shogun Core provides comprehensive plugin management capabilities beyond basic registration and retrieval:
+
+```typescript
+// Get detailed plugin information
+const pluginsInfo = shogun.getPluginsInfo();
+console.log(`Total plugins: ${pluginsInfo.length}`);
+pluginsInfo.forEach(plugin => {
+  console.log(`${plugin.name} v${plugin.version} - ${plugin.description}`);
+});
+
+// Check plugin initialization status
+const initStatus = shogun.getPluginsInitializationStatus();
+Object.entries(initStatus).forEach(([name, status]) => {
+  console.log(`${name}: ${status.initialized ? 'OK' : 'FAILED'}${status.error ? ` - ${status.error}` : ''}`);
+});
+
+// Validate plugin system health
+const validation = shogun.validatePluginSystem();
+console.log(`Initialized: ${validation.initializedPlugins}/${validation.totalPlugins}`);
+if (validation.failedPlugins.length > 0) {
+  console.log('Failed plugins:', validation.failedPlugins);
+}
+
+// Check plugin compatibility
+const compatibility = shogun.checkPluginCompatibility();
+console.log('Compatible plugins:', compatibility.compatible);
+console.log('Incompatible plugins:', compatibility.incompatible);
+
+// Get comprehensive debug information
+const debugInfo = shogun.getPluginSystemDebugInfo();
+console.log('Plugin system debug info:', debugInfo);
+
+// Reinitialize failed plugins
+const reinitResult = shogun.reinitializeFailedPlugins();
+console.log('Reinitialized:', reinitResult.success);
+console.log('Still failed:', reinitResult.failed);
+
+// Get plugins by category
+const authPlugins = shogun.getPluginsByCategory('authentication');
+const walletPlugins = shogun.getPluginsByCategory('wallet');
+```
+
+### Peer Network Management
+
+Manage GunDB peer connections dynamically:
+
+```typescript
+// Add new peers to the network
+shogun.db.addPeer('https://new-peer.example.com/gun');
+shogun.db.addPeer('wss://websocket-peer.example.com/gun');
+
+// Remove peers
+shogun.db.removePeer('https://old-peer.example.com/gun');
+
+// Get current connected peers
+const connectedPeers = shogun.db.getCurrentPeers();
+console.log('Connected peers:', connectedPeers);
+
+// Get all configured peers (connected and disconnected)
+const allPeers = shogun.db.getAllConfiguredPeers();
+console.log('All configured peers:', allPeers);
+
+// Get detailed peer information
+const peerInfo = shogun.db.getPeerInfo();
+Object.entries(peerInfo).forEach(([peer, info]) => {
+  console.log(`${peer}: ${info.status} (connected: ${info.connected})`);
+});
+
+// Reconnect to a specific peer
+shogun.db.reconnectToPeer('https://disconnected-peer.example.com/gun');
+
+// Reset all peers and add new ones
+shogun.db.resetPeers([
+  'https://primary-peer.example.com/gun',
+  'https://backup-peer.example.com/gun'
+]);
+```
+
+### Advanced User Management System
+
+Comprehensive user lookup and management capabilities:
+
+```typescript
+// Get user by alias/username
+const userInfo = await shogun.db.getUserByAlias('alice');
+if (userInfo) {
+  console.log(`User: ${userInfo.username}`);
+  console.log(`Public Key: ${userInfo.userPub}`);
+  console.log(`Encryption Key: ${userInfo.epub}`);
+  console.log(`Registered: ${new Date(userInfo.registeredAt)}`);
+  console.log(`Last Seen: ${new Date(userInfo.lastSeen)}`);
+}
+
+// Get user by public key
+const userByPub = await shogun.db.getUserDataByPub(userPub);
+console.log('User data:', userByPub);
+
+// Get user public key by encryption key
+const pubByEpub = await shogun.db.getUserPubByEpub(epubKey);
+console.log('User public key:', pubByEpub);
+
+// Get user alias by public key
+const aliasByPub = await shogun.db.getUserAliasByPub(userPub);
+console.log('User alias:', aliasByPub);
+
+// Get all registered users (for admin purposes)
+const allUsers = await shogun.db.getAllRegisteredUsers();
+console.log(`Total registered users: ${allUsers.length}`);
+
+// Update user's last seen timestamp
+await shogun.db.updateUserLastSeen(userPub);
+```
+
+### Password Recovery & Security System
+
+Secure password hint system with security questions:
+
+```typescript
+// Set up password recovery with security questions
+const securityResult = await shogun.db.setPasswordHintWithSecurity(
+  'alice',
+  'currentPassword',
+  'My favorite color is blue',
+  [
+    'What is your favorite color?',
+    'What was your first pet\'s name?',
+    'What city were you born in?'
+  ],
+  ['blue', 'fluffy', 'rome']
+);
+
+if (securityResult.success) {
+  console.log('Password recovery system set up successfully');
+} else {
+  console.error('Failed to set up password recovery:', securityResult.error);
+}
+
+// Recover password using security answers
+const recoveryResult = await shogun.db.forgotPassword(
+  'alice',
+  ['blue', 'fluffy', 'rome']
+);
+
+if (recoveryResult.success) {
+  console.log('Password hint:', recoveryResult.hint);
+} else {
+  console.error('Password recovery failed:', recoveryResult.error);
+}
+```
+
+### Error Handling & Debugging
+
+Comprehensive error tracking and debugging capabilities:
+
+```typescript
+// Get recent errors for debugging
+const recentErrors = shogun.getRecentErrors(20);
+console.log(`Recent errors (${recentErrors.length}):`);
+recentErrors.forEach((error, index) => {
+  console.log(`${index + 1}. [${error.type}] ${error.message}`);
+  console.log(`   Timestamp: ${new Date(error.timestamp)}`);
+  console.log(`   Stack: ${error.stack}`);
+});
+
+// Handle errors with specific error types
+try {
+  await shogun.login('invalid_user', 'wrong_password');
+} catch (error) {
+  if (error instanceof ShogunError) {
+    switch (error.type) {
+      case ErrorType.AUTHENTICATION:
+        console.log('Authentication failed - check credentials');
+        break;
+      case ErrorType.NETWORK:
+        console.log('Network error - check connection');
+        break;
+      case ErrorType.GUN:
+        console.log('GunDB error - check peers');
+        break;
+      default:
+        console.log('Unknown error:', error.message);
+    }
+  }
+}
+```
+
+### Event System Complete Reference
+
+Comprehensive event handling with type safety:
+
+```typescript
+// Listen to all authentication events
+shogun.on('auth:login', (data: AuthEventData) => {
+  console.log(`User ${data.username} logged in via ${data.method}`);
+  if (data.provider) {
+    console.log(`OAuth provider: ${data.provider}`);
+  }
+});
+
+shogun.on('auth:logout', () => {
+  console.log('User logged out');
+});
+
+shogun.on('auth:signup', (data: AuthEventData) => {
+  console.log(`New user registered: ${data.username}`);
+});
+
+// Plugin system events
+shogun.on('plugin:registered', (data) => {
+  console.log(`Plugin registered: ${data.name} v${data.version}`);
+  if (data.category) {
+    console.log(`Category: ${data.category}`);
+  }
+});
+
+shogun.on('plugin:unregistered', (data) => {
+  console.log(`Plugin unregistered: ${data.name}`);
+});
+
+// Debug events
+shogun.on('debug', (data) => {
+  console.log(`Debug [${data.action}]:`, data);
+});
+
+// Error events
+shogun.on('error', (error: ErrorEventData) => {
+  console.error(`Shogun Error: ${error.message}`);
+  console.error(`Type: ${error.type}`);
+  console.error(`Stack: ${error.stack}`);
+});
+
+// Database-level event handling
+shogun.db.on('data:put', (data) => {
+  console.log('Data stored:', data);
+});
+
+shogun.db.on('data:get', (data) => {
+  console.log('Data retrieved:', data);
+});
+
+// One-time event listeners
+shogun.once('auth:login', (data) => {
+  console.log('First login detected:', data.username);
+});
+
+// Remove event listeners
+const loginHandler = (data: AuthEventData) => {
+  console.log('Login event:', data);
+};
+shogun.on('auth:login', loginHandler);
+// Later...
+shogun.off('auth:login', loginHandler);
+
+// Remove all listeners for a specific event
+shogun.removeAllListeners('auth:login');
+
+// Remove all listeners
+shogun.removeAllListeners();
+```
+
+### Database Lifecycle Management
+
+Advanced database initialization and management:
+
+```typescript
+// Initialize database with custom scope
+await shogun.db.initialize('my-custom-app-scope');
+
+// Get database utilities
+const gunInstance = shogun.db.getGun();
+const currentUser = shogun.db.getCurrentUser();
+const userInstance = shogun.db.getUser();
+
+// Access RxJS reactive programming
+const rxjs = shogun.db.rx();
+rxjs.from('users/alice/profile').subscribe(data => {
+  console.log('Profile updated:', data);
+});
+
+// Session management
+shogun.db.recall(); // Restore session
+shogun.db.leave();  // Leave session
+
+// Get application scope
+const appScope = shogun.db.getAppScope();
+console.log('App scope:', appScope);
+
+// Check authentication status
+const isAuthenticated = shogun.db.isAuthenticated();
+const userPub = shogun.db.getUserPub();
+console.log(`Authenticated: ${isAuthenticated}, User: ${userPub}`);
+```
+
 ## Best Practices
 
 1. Always check plugin availability before use
@@ -829,3 +1126,8 @@ export const useOAuth = (protocol) => {
 5. Enforce PKCE for OAuth in browsers; validate redirect URIs and state
 6. Validate inputs (username, provider) before calling plugin APIs
 7. Return `AuthResult` for login and `SignUpResult` for signup from plugins
+8. Use peer management to ensure network connectivity
+9. Implement proper error handling with `getRecentErrors()` for debugging
+10. Set up password recovery system for production applications
+11. Monitor plugin system health with validation methods
+12. Use event system for real-time application state management

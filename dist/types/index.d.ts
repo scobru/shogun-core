@@ -1,7 +1,8 @@
 import { ShogunCore } from "./core";
 import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/db";
-import { SEA, RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
-import { SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, GunInstance, GunUserInstance, TypedGunOperationResult, TypedAuthResult } from "./gundb";
+import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import { SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, GunInstance, GunUserInstance, TypedGunOperationResult, TypedAuthResult, AutoQuickStart, autoQuickStart } from "./gundb";
+import { SEA } from "./gundb/db";
 import Gun from "./gundb/db";
 export * from "./utils/errorHandler";
 export * from "./plugins";
@@ -9,6 +10,4 @@ export * from "./interfaces/shogun";
 export type * from "./interfaces/plugin";
 export * from "./config/simplified-config";
 export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, GunInstance, GunUserInstance, TypedGunOperationResult, TypedAuthResult, };
-export { SEA, RxJS, crypto, derive, GunErrors, DataBase, SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, };
-export { Gun };
-export { ShogunCore };
+export { Gun, ShogunCore, SEA, RxJS, crypto, derive, GunErrors, DataBase, SimpleGunAPI, QuickStart, quickStart, createSimpleAPI, AutoQuickStart, autoQuickStart, };

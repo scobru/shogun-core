@@ -21,6 +21,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - ✅ **Type Consistency**: Unified return types across all authentication methods
 - 🚀 **Simplified Architecture**: Focused on core functionality with reduced complexity
 - ⭐ **Simple API**: Easy-to-use wrapper for common operations with minimal complexity
+- 🔗 **Advanced Chaining**: Powerful chaining operations for complex nested data structures
 - 👤 **User Space Management**: Complete CRUD operations for user-specific data storage
 - ⚡ **Quick Start**: Rapid initialization with pre-configured setups
 - 🎛️ **Configuration Presets**: Pre-built configurations for common use cases
@@ -30,16 +31,18 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 ### ✅ **Major API Improvements & Simplification**
 
 - **⭐ NEW: Simple API Layer**: Added `SimpleGunAPI` with simplified methods for common operations
+- **⭐ NEW: Advanced Chaining**: Added `node()`, `chain()`, and `getNode()` methods for powerful data chaining
 - **⭐ NEW: User Space Management**: Complete CRUD operations for user-specific data storage
 - **⭐ NEW: Quick Start Functions**: `quickStart()` and `QuickStart` class for rapid initialization
 - **⭐ NEW: Improved Type System**: Reduced `any` usage with better TypeScript types
 - **⭐ NEW: Configuration Presets**: Pre-built configurations for common use cases
+- **⭐ NEW: Advanced API Features**: Comprehensive plugin management, peer network control, advanced user management, and security systems
 - **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
-- **Simplified Architecture**: Removed cryptographic key derivation functions and advanced peer management
-- **Streamlined Event System**: Removed complex event emission for data and peer operations
-- **Enhanced Core Focus**: Maintained password hint system while removing advanced features
-- **Improved Maintainability**: Reduced codebase complexity by ~400-500 lines
-- **Better Performance**: Simplified operations with reduced overhead
+- **Enhanced Advanced Features**: Maintained and improved advanced plugin management, peer network management, and user tracking systems
+- **Streamlined Event System**: Enhanced event system with better type safety and comprehensive event handling
+- **Enhanced Core Focus**: Maintained password hint system with security questions and comprehensive user management
+- **Improved Maintainability**: Better organized codebase with clear separation between simple and advanced APIs
+- **Better Performance**: Optimized operations with advanced peer management and user tracking
 
 ## Recent Updates (v1.7.0)
 
@@ -180,6 +183,19 @@ const data = await shogun.api.get('path/to/data');
 await shogun.api.set('path/to/data', { value: 'updated' });
 await shogun.api.remove('path/to/data');
 
+// Advanced chaining operations (NEW!)
+// Direct Gun node chaining - recommended for complex operations
+await shogun.api.node('users').get('alice').get('profile').put({ name: 'Alice' });
+const profile = await shogun.api.node('users').get('alice').get('profile').once();
+
+// Simplified chaining wrapper
+await shogun.api.chain('users').get('alice').get('settings').put({ theme: 'dark' });
+const settings = await shogun.api.chain('users').get('alice').get('settings').once();
+
+// Get Gun node for advanced operations like .map()
+const userNode = shogun.api.getNode('users');
+userNode.map((user, userId) => console.log(`User ${userId}:`, user));
+
 // User space operations (requires login)
 await shogun.api.putUserData('preferences', { theme: 'dark' });
 const prefs = await shogun.api.getUserData('preferences');
@@ -219,6 +235,140 @@ const currentUser = shogun.api.getCurrentUser();
 const userExists = await shogun.api.userExists('username');
 const user = await shogun.api.getUser('username');
 ```
+
+## 🔗 **NEW: Advanced Chaining Operations**
+
+Shogun Core now supports powerful chaining operations for complex data structures. You have three options depending on your needs:
+
+### 1. **Direct Gun Node Chaining (Recommended)**
+
+Use `node()` for full Gun.js functionality with chaining:
+
+```typescript
+// Store nested data
+await shogun.api.node('users').get('alice').get('profile').put({
+  name: 'Alice Smith',
+  email: 'alice@example.com',
+  preferences: {
+    theme: 'dark',
+    language: 'en'
+  }
+});
+
+// Read nested data
+const profile = await shogun.api.node('users').get('alice').get('profile').once();
+
+// Update specific fields
+await shogun.api.node('users').get('alice').get('profile').get('preferences').get('theme').put('light');
+
+// Iterate over collections
+shogun.api.node('users').map((user, userId) => {
+  console.log(`User ${userId}:`, user);
+});
+
+// Complex chaining
+await shogun.api.node('projects').get('my-app').get('tasks').get('1').put({
+  title: 'Implement authentication',
+  status: 'completed',
+  assignee: 'alice'
+});
+```
+
+### 2. **Simplified Chaining Wrapper**
+
+Use `chain()` for simplified chaining with error handling:
+
+```typescript
+// Simplified chaining with built-in error handling
+const success = await shogun.api.chain('users').get('alice').get('settings').put({
+  notifications: true,
+  privacy: 'private'
+});
+
+if (success) {
+  console.log('Settings saved successfully');
+}
+
+// Read with simplified chaining
+const settings = await shogun.api.chain('users').get('alice').get('settings').once();
+```
+
+### 3. **Get Gun Node for Advanced Operations**
+
+Use `getNode()` for advanced Gun.js operations:
+
+```typescript
+// Get node for advanced operations
+const usersNode = shogun.api.getNode('users');
+
+// Use all Gun.js methods
+usersNode.map((user, userId) => {
+  console.log(`Processing user ${userId}`);
+  return user;
+});
+
+// Chain from the node
+const aliceProfile = await usersNode.get('alice').get('profile').once();
+```
+
+### Chaining Examples
+
+```typescript
+// User management system
+await shogun.api.node('users').get('alice').put({
+  profile: {
+    name: 'Alice',
+    email: 'alice@example.com'
+  },
+  settings: {
+    theme: 'dark',
+    notifications: true
+  },
+  posts: {
+    '1': { title: 'Hello World', content: 'My first post' },
+    '2': { title: 'GunDB is awesome', content: 'Learning decentralized storage' }
+  }
+});
+
+// Blog system
+await shogun.api.node('blog').get('posts').get('2024-01-15').put({
+  title: 'Getting Started with Shogun Core',
+  author: 'alice',
+  content: 'Shogun Core makes decentralized apps easy...',
+  tags: ['tutorial', 'decentralized', 'web3'],
+  comments: {
+    '1': { author: 'bob', text: 'Great tutorial!' },
+    '2': { author: 'charlie', text: 'Very helpful, thanks!' }
+  }
+});
+
+// E-commerce system
+await shogun.api.node('shop').get('products').get('laptop-001').put({
+  name: 'Gaming Laptop',
+  price: 1299.99,
+  stock: 15,
+  reviews: {
+    '1': { user: 'alice', rating: 5, comment: 'Amazing performance!' },
+    '2': { user: 'bob', rating: 4, comment: 'Good value for money' }
+  }
+});
+
+// Read complex nested data
+const product = await shogun.api.node('shop').get('products').get('laptop-001').once();
+console.log('Product:', product.name);
+console.log('Reviews:', product.reviews);
+
+// Update nested data
+await shogun.api.node('shop').get('products').get('laptop-001').get('stock').put(12);
+```
+
+### Best Practices for Chaining
+
+1. **Use `node()` for most operations** - It provides full Gun.js functionality
+2. **Use `chain()` for simplified error handling** - Good for beginners
+3. **Use `getNode()` for advanced operations** - When you need Gun.js methods like `.map()`
+4. **Keep paths descriptive** - Use meaningful path segments like `users/alice/profile`
+5. **Handle errors appropriately** - Chaining operations can fail, always check results
 
 ## Plugin Authentication APIs
 
@@ -600,6 +750,11 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 - `set<T>(path: string, data: T): Promise<boolean>` - Update data at path
 - `remove(path: string): Promise<boolean>` - Remove data from path
 
+#### Advanced Chaining Operations (NEW!)
+- `node(path: string): GunNode` - Get Gun node for direct chaining (recommended)
+- `chain(path: string): ChainingWrapper` - Get simplified chaining wrapper
+- `getNode(path: string): GunNode` - Get Gun node for advanced operations like .map()
+
 #### User Space Operations
 - `putUserData<T>(path: string, data: T): Promise<boolean>` - Store user-specific data
 - `getUserData<T>(path: string): Promise<T | null>` - Get user-specific data
@@ -629,17 +784,54 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 - `signUp(username: string, password: string, email?: string, pair?: ISEAPair | null): Promise<SignUpResult>` - Create new user account
 - `logout(): void` - Logout current user
 - `isLoggedIn(): boolean` - Check if user is authenticated
+- `setAuthMethod(method: AuthMethod): void` - Set authentication method
+- `getAuthMethod(): AuthMethod | undefined` - Get current authentication method
+- `saveCredentials(credentials: any): Promise<void>` - Save user credentials
 
 #### Plugin Management
 - `getPlugin<T>(name: string): T | undefined` - Get plugin by name
 - `hasPlugin(name: string): boolean` - Check if plugin exists
 - `register(plugin: ShogunPlugin): void` - Register custom plugin
 - `unregister(pluginName: string): void` - Remove plugin
+- `getPluginsInfo(): Array<{name: string; version: string; category?: PluginCategory; description?: string}>` - Get detailed plugin information
+- `getPluginCount(): number` - Get total number of plugins
+- `getPluginsInitializationStatus(): Record<string, {initialized: boolean; error?: string}>` - Check plugin initialization status
+- `getPluginsByCategory(category: PluginCategory): ShogunPlugin[]` - Get plugins by category
+- `validatePluginSystem(): {...}` - Validate plugin system health
+- `reinitializeFailedPlugins(): {...}` - Reinitialize failed plugins
+- `checkPluginCompatibility(): {...}` - Check plugin compatibility
+- `getPluginSystemDebugInfo(): {...}` - Get comprehensive debug information
+
+#### Peer Network Management (Database)
+- `addPeer(peer: string): void` - Add new peer to network
+- `removePeer(peer: string): void` - Remove peer from network
+- `getCurrentPeers(): string[]` - Get currently connected peers
+- `getAllConfiguredPeers(): string[]` - Get all configured peers
+- `getPeerInfo(): {[peer: string]: {connected: boolean; status: string}}` - Get detailed peer information
+- `reconnectToPeer(peer: string): void` - Reconnect to specific peer
+- `resetPeers(newPeers?: string[]): void` - Reset all peers and optionally add new ones
+
+#### Advanced User Management (Database)
+- `getUserByAlias(alias: string): Promise<{...}>` - Get user by alias/username
+- `getUserDataByPub(userPub: string): Promise<{...}>` - Get user by public key
+- `getUserPubByEpub(epub: string): Promise<string | null>` - Get user public key by encryption key
+- `getUserAliasByPub(userPub: string): Promise<string | null>` - Get user alias by public key
+- `getAllRegisteredUsers(): Promise<Array<{...}>>` - Get all registered users
+- `updateUserLastSeen(userPub: string): Promise<void>` - Update user's last seen timestamp
+
+#### Password Recovery & Security (Database)
+- `setPasswordHintWithSecurity(username: string, password: string, hint: string, securityQuestions: string[], securityAnswers: string[]): Promise<{success: boolean; error?: string}>` - Set up password recovery
+- `forgotPassword(username: string, securityAnswers: string[]): Promise<{success: boolean; hint?: string; error?: string}>` - Recover password
+
+#### Error Handling & Debugging
+- `getRecentErrors(count?: number): ShogunError[]` - Get recent errors for debugging
 
 #### Event Handling
 - `on<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Subscribe to typed events
 - `off<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Unsubscribe from events
+- `once<K extends keyof ShogunEventMap>(eventName: K, listener: Function): this` - Subscribe to one-time events
 - `emit<K extends keyof ShogunEventMap>(eventName: K, data?: ShogunEventMap[K]): boolean` - Emit custom events
+- `removeAllListeners(eventName?: string | symbol): this` - Remove all event listeners
 
 ### Configuration Options
 
@@ -777,9 +969,22 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Advanced Features
+
+For advanced use cases and comprehensive API coverage, see the [Advanced API Features](./API.md#advanced-api-features) section which includes:
+
+- **Advanced Plugin Management**: Plugin health monitoring, compatibility checking, and system validation
+- **Peer Network Management**: Dynamic peer connection management and network monitoring
+- **Advanced User Management**: Comprehensive user lookup, tracking, and metadata management
+- **Password Recovery & Security**: Secure password hint system with security questions
+- **Error Handling & Debugging**: Advanced error tracking and debugging capabilities
+- **Event System**: Complete event handling reference with type safety
+- **Database Lifecycle**: Advanced database initialization and management
+
 ## Support
 
 - 📖 [Documentation](https://shogun-core-docs.vercel.app/)
+- 📚 [Advanced API Reference](./API.md#advanced-api-features)
 - 💬 [Telegram Community](t.me/shogun_eco)
 - 🐛 [Issue Tracker](https://github.com/scobru/shogun-core/issues)
 

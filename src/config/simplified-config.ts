@@ -14,7 +14,7 @@ export const ShogunPresets = {
    */
   minimal: (): ShogunCoreConfig => ({
     gunOptions: {
-      peers: ["https://gunjs.herokuapp.com/gun"],
+      peers: ["https://relay.shogun-eco.xyz/gun"],
       localStorage: true,
     },
   }),
@@ -24,7 +24,7 @@ export const ShogunPresets = {
    */
   development: (): ShogunCoreConfig => ({
     gunOptions: {
-      peers: ["https://gunjs.herokuapp.com/gun"],
+      peers: ["https://relay.shogun-eco.xyz/gun"],
       localStorage: true,
       radisk: false,
     },
@@ -41,8 +41,8 @@ export const ShogunPresets = {
   production: (customPeers?: string[]): ShogunCoreConfig => ({
     gunOptions: {
       peers: customPeers || [
-        "https://gunjs.herokuapp.com/gun",
-        "https://gun-manhattan.herokuapp.com/gun",
+        "https://relay.shogun-eco.xyz/gun",
+        "https://peer.wallie.io/gun",
       ],
       localStorage: true,
       radisk: true,
@@ -70,7 +70,7 @@ export const ShogunPresets = {
    */
   web3: (): ShogunCoreConfig => ({
     gunOptions: {
-      peers: ["https://gunjs.herokuapp.com/gun"],
+      peers: ["https://relay.shogun-eco.xyz/gun"],
       localStorage: true,
     },
     web3: {
@@ -83,7 +83,7 @@ export const ShogunPresets = {
    */
   webauthn: (): ShogunCoreConfig => ({
     gunOptions: {
-      peers: ["https://gunjs.herokuapp.com/gun"],
+      peers: ["https://relay.shogun-eco.xyz/gun"],
       localStorage: true,
     },
     webauthn: {

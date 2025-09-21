@@ -3,7 +3,7 @@
  * Provides quick-start methods that wrap the full DataBase functionality
  */
 
-import { DataBase } from "./db";
+import { DataBase, createGun } from "./db";
 
 /**
  * Simple API wrapper that provides common operations with minimal complexity
@@ -28,6 +28,69 @@ export class SimpleGunAPI {
       console.warn(`Failed to get data from ${path}:`, error);
       return null;
     }
+  }
+
+  // Get Gun node - returns Gun node for chaining operations like .map()
+  getNode(path: string): any {
+    return this.db.get(path);
+  }
+
+  // Get Gun node for direct chaining - returns the actual Gun node for full chaining support
+  node(path: string): any {
+    return this.db.get(path);
+  }
+
+  // Get Gun node with chaining support - returns a wrapper that supports chaining
+  chain(path: string): {
+    get: (subPath: string) => any;
+    put: (data: any) => Promise<boolean>;
+    set: (data: any) => Promise<boolean>;
+    once: () => Promise<any>;
+    then: () => Promise<any>;
+    map: (callback: (value: any, key: string) => any) => any;
+  } {
+    const node = this.db.get(path);
+
+    return {
+      get: (subPath: string) => this.chain(`${path}/${subPath}`),
+      put: async (data: any) => {
+        try {
+          const result = await this.db.put(path, data);
+          return result.success;
+        } catch (error) {
+          console.warn(`Failed to put data to ${path}:`, error);
+          return false;
+        }
+      },
+      set: async (data: any) => {
+        try {
+          const result = await this.db.set(path, data);
+          return result.success;
+        } catch (error) {
+          console.warn(`Failed to set data to ${path}:`, error);
+          return false;
+        }
+      },
+      once: async () => {
+        try {
+          return await this.db.getData(path);
+        } catch (error) {
+          console.warn(`Failed to get data from ${path}:`, error);
+          return null;
+        }
+      },
+      then: async () => {
+        try {
+          return await this.db.getData(path);
+        } catch (error) {
+          console.warn(`Failed to get data from ${path}:`, error);
+          return null;
+        }
+      },
+      map: (callback: (value: any, key: string) => any) => {
+        return node.map ? node.map(callback) : null;
+      },
+    };
   }
 
   // Simple put - returns success boolean
@@ -486,8 +549,69 @@ export class QuickStart {
 }
 
 /**
+ * Auto Quick Start helper - creates a simple API with automatic Gun instance creation
+ * No need to pass a Gun instance, it creates one automatically
+ */
+export class AutoQuickStart {
+  private db: DataBase;
+  private simpleAPI: SimpleGunAPI;
+  private gunInstance: any;
+
+  constructor(config?: {
+    peers?: string[];
+    appScope?: string;
+    [key: string]: any;
+  }) {
+    const gunConfig = {
+      peers: config?.peers || [],
+      ...config,
+    };
+
+    // Remove appScope from gunConfig as it's not a Gun configuration option
+    delete gunConfig.appScope;
+
+    this.gunInstance = createGun(gunConfig);
+    const appScope = config?.appScope || "shogun";
+
+    this.db = new DataBase(this.gunInstance, appScope);
+    this.simpleAPI = new SimpleGunAPI(this.db);
+  }
+
+  // Initialize the database
+  async init(): Promise<void> {
+    await this.db.initialize();
+  }
+
+  // Get the simple API
+  get api(): SimpleGunAPI {
+    return this.simpleAPI;
+  }
+
+  // Get the full database instance for advanced usage
+  get database(): DataBase {
+    return this.db;
+  }
+
+  // Get the Gun instance for advanced usage
+  get gun(): any {
+    return this.gunInstance;
+  }
+}
+
+/**
  * Global helper for quick setup
  */
 export function quickStart(gunInstance: any, appScope?: string): QuickStart {
   return new QuickStart(gunInstance, appScope);
+}
+
+/**
+ * Global helper for auto quick setup - creates Gun instance automatically
+ */
+export function autoQuickStart(config?: {
+  peers?: string[];
+  appScope?: string;
+  [key: string]: any;
+}): AutoQuickStart {
+  return new AutoQuickStart(config);
 }

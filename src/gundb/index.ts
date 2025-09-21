@@ -5,4 +5,4 @@ export * from "./db";
 export * from "./types";
 
 // Export simplified API
-export * from "./simple-api";
+export * from "./api";

@@ -1,3 +1,3 @@
 export * from "./db";
 export * from "./types";
-export * from "./simple-api";
+export * from "./api";

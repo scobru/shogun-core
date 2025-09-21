@@ -42808,6 +42808,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
+  AutoQuickStart: () => (/* reexport */ AutoQuickStart),
   BasePlugin: () => (/* reexport */ BasePlugin),
   ConfigHelpers: () => (/* reexport */ ConfigHelpers),
   CorePlugins: () => (/* reexport */ CorePlugins),
@@ -42833,6 +42834,7 @@ __webpack_require__.d(__webpack_exports__, {
   Web3ConnectorPlugin: () => (/* reexport */ Web3ConnectorPlugin),
   Webauthn: () => (/* reexport */ Webauthn),
   WebauthnPlugin: () => (/* reexport */ WebauthnPlugin),
+  autoQuickStart: () => (/* reexport */ autoQuickStart),
   createError: () => (/* reexport */ createError),
   createSimpleAPI: () => (/* reexport */ createSimpleAPI),
   crypto: () => (/* reexport */ gundb_crypto_namespaceObject),
@@ -87905,6 +87907,7 @@ class DataBase {
         this.crypto = gundb_crypto_namespaceObject;
         this.sea = (sea_default());
         this.node = null;
+        this._rxjs = new RxJS(this.gun);
     }
     /**
      * Initialize the GunInstance asynchronously
@@ -88367,9 +88370,6 @@ class DataBase {
      * @returns GunRxJS instance
      */
     rx() {
-        if (!this._rxjs) {
-            this._rxjs = new RxJS(this.gun);
-        }
         return this._rxjs;
     }
     /**
@@ -89672,7 +89672,7 @@ const createGun = (config) => {
  */
 
 
-;// ./src/gundb/simple-api.ts
+;// ./src/gundb/api.ts
 /**
  * Simplified API layer to reduce complexity for common use cases
  * Provides quick-start methods that wrap the full DataBase functionality
@@ -89699,6 +89699,62 @@ class SimpleGunAPI {
             console.warn(`Failed to get data from ${path}:`, error);
             return null;
         }
+    }
+    // Get Gun node - returns Gun node for chaining operations like .map()
+    getNode(path) {
+        return this.db.get(path);
+    }
+    // Get Gun node for direct chaining - returns the actual Gun node for full chaining support
+    node(path) {
+        return this.db.get(path);
+    }
+    // Get Gun node with chaining support - returns a wrapper that supports chaining
+    chain(path) {
+        const node = this.db.get(path);
+        return {
+            get: (subPath) => this.chain(`${path}/${subPath}`),
+            put: async (data) => {
+                try {
+                    const result = await this.db.put(path, data);
+                    return result.success;
+                }
+                catch (error) {
+                    console.warn(`Failed to put data to ${path}:`, error);
+                    return false;
+                }
+            },
+            set: async (data) => {
+                try {
+                    const result = await this.db.set(path, data);
+                    return result.success;
+                }
+                catch (error) {
+                    console.warn(`Failed to set data to ${path}:`, error);
+                    return false;
+                }
+            },
+            once: async () => {
+                try {
+                    return await this.db.getData(path);
+                }
+                catch (error) {
+                    console.warn(`Failed to get data from ${path}:`, error);
+                    return null;
+                }
+            },
+            then: async () => {
+                try {
+                    return await this.db.getData(path);
+                }
+                catch (error) {
+                    console.warn(`Failed to get data from ${path}:`, error);
+                    return null;
+                }
+            },
+            map: (callback) => {
+                return node.map ? node.map(callback) : null;
+            },
+        };
     }
     // Simple put - returns success boolean
     async put(path, data) {
@@ -90106,10 +90162,53 @@ class QuickStart {
     }
 }
 /**
+ * Auto Quick Start helper - creates a simple API with automatic Gun instance creation
+ * No need to pass a Gun instance, it creates one automatically
+ */
+class AutoQuickStart {
+    db;
+    simpleAPI;
+    gunInstance;
+    constructor(config) {
+        const gunConfig = {
+            peers: config?.peers || [],
+            ...config,
+        };
+        // Remove appScope from gunConfig as it's not a Gun configuration option
+        delete gunConfig.appScope;
+        this.gunInstance = createGun(gunConfig);
+        const appScope = config?.appScope || "shogun";
+        this.db = new DataBase(this.gunInstance, appScope);
+        this.simpleAPI = new SimpleGunAPI(this.db);
+    }
+    // Initialize the database
+    async init() {
+        await this.db.initialize();
+    }
+    // Get the simple API
+    get api() {
+        return this.simpleAPI;
+    }
+    // Get the full database instance for advanced usage
+    get database() {
+        return this.db;
+    }
+    // Get the Gun instance for advanced usage
+    get gun() {
+        return this.gunInstance;
+    }
+}
+/**
  * Global helper for quick setup
  */
 function quickStart(gunInstance, appScope) {
     return new QuickStart(gunInstance, appScope);
+}
+/**
+ * Global helper for auto quick setup - creates Gun instance automatically
+ */
+function autoQuickStart(config) {
+    return new AutoQuickStart(config);
 }
 
 ;// ./src/gundb/index.ts
@@ -90759,7 +90858,7 @@ const ShogunPresets = {
      */
     minimal: () => ({
         gunOptions: {
-            peers: ["https://gunjs.herokuapp.com/gun"],
+            peers: ["https://relay.shogun-eco.xyz/gun"],
             localStorage: true,
         },
     }),
@@ -90768,7 +90867,7 @@ const ShogunPresets = {
      */
     development: () => ({
         gunOptions: {
-            peers: ["https://gunjs.herokuapp.com/gun"],
+            peers: ["https://relay.shogun-eco.xyz/gun"],
             localStorage: true,
             radisk: false,
         },
@@ -90784,8 +90883,8 @@ const ShogunPresets = {
     production: (customPeers) => ({
         gunOptions: {
             peers: customPeers || [
-                "https://gunjs.herokuapp.com/gun",
-                "https://gun-manhattan.herokuapp.com/gun",
+                "https://relay.shogun-eco.xyz/gun",
+                "https://peer.wallie.io/gun",
             ],
             localStorage: true,
             radisk: true,
@@ -90811,7 +90910,7 @@ const ShogunPresets = {
      */
     web3: () => ({
         gunOptions: {
-            peers: ["https://gunjs.herokuapp.com/gun"],
+            peers: ["https://relay.shogun-eco.xyz/gun"],
             localStorage: true,
         },
         web3: {
@@ -90823,7 +90922,7 @@ const ShogunPresets = {
      */
     webauthn: () => ({
         gunOptions: {
-            peers: ["https://gunjs.herokuapp.com/gun"],
+            peers: ["https://relay.shogun-eco.xyz/gun"],
             localStorage: true,
         },
         webauthn: {
@@ -90982,14 +91081,12 @@ const QuickConfig = {
 
 // Import Simple API and improved types
 
-// Import Gun as default export
+
 
 
 
 
 // Export simplified configuration
-
-
 
 
 

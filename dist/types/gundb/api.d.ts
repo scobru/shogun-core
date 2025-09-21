@@ -13,6 +13,16 @@ export declare class SimpleGunAPI {
      * Quick data operations - simplified interface
      */
     get<T = unknown>(path: string): Promise<T | null>;
+    getNode(path: string): any;
+    node(path: string): any;
+    chain(path: string): {
+        get: (subPath: string) => any;
+        put: (data: any) => Promise<boolean>;
+        set: (data: any) => Promise<boolean>;
+        once: () => Promise<any>;
+        then: () => Promise<any>;
+        map: (callback: (value: any, key: string) => any) => any;
+    };
     put<T = unknown>(path: string, data: T): Promise<boolean>;
     set<T = unknown>(path: string, data: T): Promise<boolean>;
     remove(path: string): Promise<boolean>;
@@ -85,6 +95,32 @@ export declare class QuickStart {
     get database(): DataBase;
 }
 /**
+ * Auto Quick Start helper - creates a simple API with automatic Gun instance creation
+ * No need to pass a Gun instance, it creates one automatically
+ */
+export declare class AutoQuickStart {
+    private db;
+    private simpleAPI;
+    private gunInstance;
+    constructor(config?: {
+        peers?: string[];
+        appScope?: string;
+        [key: string]: any;
+    });
+    init(): Promise<void>;
+    get api(): SimpleGunAPI;
+    get database(): DataBase;
+    get gun(): any;
+}
+/**
  * Global helper for quick setup
  */
 export declare function quickStart(gunInstance: any, appScope?: string): QuickStart;
+/**
+ * Global helper for auto quick setup - creates Gun instance automatically
+ */
+export declare function autoQuickStart(config?: {
+    peers?: string[];
+    appScope?: string;
+    [key: string]: any;
+}): AutoQuickStart;

@@ -8,7 +8,7 @@ import {
   DeriveOptions,
 } from "./gundb/db";
 
-import { SEA, RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
 
 // Import Simple API and improved types
 import {
@@ -20,9 +20,12 @@ import {
   GunUserInstance,
   TypedGunOperationResult,
   TypedAuthResult,
+  AutoQuickStart,
+  autoQuickStart,
 } from "./gundb";
 
-// Import Gun as default export
+import { SEA } from "./gundb/db";
+
 import Gun from "./gundb/db";
 
 export * from "./utils/errorHandler";
@@ -50,6 +53,8 @@ export type {
 };
 
 export {
+  Gun,
+  ShogunCore,
   SEA,
   RxJS,
   crypto,
@@ -61,7 +66,6 @@ export {
   QuickStart,
   quickStart,
   createSimpleAPI,
+  AutoQuickStart,
+  autoQuickStart,
 };
-export { Gun };
-
-export { ShogunCore };
