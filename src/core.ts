@@ -34,7 +34,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^3.0.1";
+  public static readonly API_VERSION = "^3.0.11";
   public db!: DataBase;
   public storage!: ShogunStorage;
   public provider?: ethers.Provider;
