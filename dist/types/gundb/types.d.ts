@@ -6,9 +6,10 @@ export type SEAType = any;
 export type GunUser = IGunUserInstance<any>;
 export type UserInfo = {
     pub: string;
+    epub?: string;
     alias?: string;
-    timestamp?: number;
     user?: GunUser;
+    timestamp?: number;
 };
 export type AuthCallback = (user: GunUser) => void;
 export type AuthResult = {
@@ -178,13 +179,6 @@ export interface TypedGunOperationResult<T = unknown> {
         ok?: number;
         pub?: string;
     };
-}
-export interface TypedUserInfo {
-    pub: string;
-    alias?: string;
-    timestamp?: number;
-    user?: GunUserInstance;
-    metadata?: Record<string, unknown>;
 }
 export interface TypedAuthCallback {
     (user: GunUserInstance): void;

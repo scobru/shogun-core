@@ -10,9 +10,10 @@ export type SEAType = any; // Using any for SEA to avoid complex type conflicts
 export type GunUser = IGunUserInstance<any>;
 export type UserInfo = {
   pub: string;
+  epub?: string;
   alias?: string;
-  timestamp?: number;
   user?: GunUser; // Add user property for compatibility
+  timestamp?: number;
 };
 
 // Auth callback types
@@ -240,14 +241,14 @@ export interface TypedGunOperationResult<T = unknown> {
   };
 }
 
-// User data with proper typing
-export interface TypedUserInfo {
-  pub: string;
-  alias?: string;
-  timestamp?: number;
-  user?: GunUserInstance;
-  metadata?: Record<string, unknown>;
-}
+// // User data with proper typing
+// export interface TypedUserInfo {
+//   pub: string;
+//   alias?: string;
+//   timestamp?: number;
+//   user?: GunUserInstance;
+//   metadata?: Record<string, unknown>;
+// }
 
 // Authentication with better typing
 export interface TypedAuthCallback {

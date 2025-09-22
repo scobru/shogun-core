@@ -278,7 +278,7 @@ export class SimpleGunAPI {
     if (user) {
       return {
         pub: user.pub,
-        username: (user as any).username,
+        username: user.alias,
       };
     }
     return null;

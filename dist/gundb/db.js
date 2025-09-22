@@ -303,9 +303,15 @@ class DataBase {
      */
     getCurrentUser() {
         try {
-            const user = this.gun.user();
-            const pub = user?.is?.pub;
-            return pub ? { pub, user } : null;
+            const _user = this.gun.user();
+            return _user?.is?.pub
+                ? {
+                    pub: _user?.is?.pub,
+                    epub: _user?.is?.epub,
+                    alias: _user?.is?.alias,
+                    user: _user,
+                }
+                : null;
         }
         catch (error) {
             console.error("Error getting current user:", error);
@@ -1366,7 +1372,7 @@ class DataBase {
             // Save credentials for future sessions
             try {
                 const userInfo = {
-                    username,
+                    alias: username,
                     pair: pair ?? null,
                     userPub: userPub,
                 };
@@ -1439,7 +1445,7 @@ class DataBase {
     saveCredentials(userInfo) {
         try {
             const sessionInfo = {
-                username: userInfo.username,
+                username: userInfo.alias,
                 pair: userInfo.pair,
                 userPub: userInfo.userPub,
                 timestamp: Date.now(),
