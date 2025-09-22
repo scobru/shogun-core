@@ -1,8 +1,14 @@
-import { Webauthn } from "./webauthn";
-import { p256 } from "@noble/curves/p256";
-import { sha256 } from "@noble/hashes/sha256";
-import derive from "../../gundb/derive";
-import { ethers } from "ethers";
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebAuthnSigner = void 0;
+const webauthn_1 = require("./webauthn");
+const p256_1 = require("@noble/curves/p256");
+const sha256_1 = require("@noble/hashes/sha256");
+const derive_1 = __importDefault(require("../../gundb/derive"));
+const ethers_1 = require("ethers");
 /**
  * Base64URL encoding utilities
  */
@@ -27,11 +33,10 @@ const base64url = {
  * Similar to webauthn.js but integrated with our architecture
  * CONSISTENT with normal WebAuthn approach
  */
-export class WebAuthnSigner {
-    webauthn;
-    credentials = new Map();
+class WebAuthnSigner {
     constructor(webauthn) {
-        this.webauthn = webauthn || new Webauthn();
+        this.credentials = new Map();
+        this.webauthn = webauthn || new webauthn_1.Webauthn();
     }
     /**
      * Creates a new WebAuthn credential for signing
@@ -83,7 +88,7 @@ export class WebAuthnSigner {
             const y = base64url.encode(yCoord);
             const pub = `${x}.${y}`;
             // CONSISTENCY: Use the same hashing approach as normal WebAuthn
-            const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(credential.id));
+            const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(credential.id));
             const signingCredential = {
                 id: credential.id,
                 rawId: credential.rawId,
@@ -152,7 +157,7 @@ export class WebAuthnSigner {
         try {
             // CONSISTENCY: Use the same approach as normal WebAuthn
             // Use hashedCredentialId as password (same as normal approach)
-            const derivedKeys = await derive(credential.hashedCredentialId, // This is the key change!
+            const derivedKeys = await (0, derive_1.default)(credential.hashedCredentialId, // This is the key change!
             extra, { includeP256: true });
             return {
                 pub: derivedKeys.pub,
@@ -234,11 +239,11 @@ export class WebAuthnSigner {
             const keyPair = await this.createDerivedKeyPair(credentialId, username, extra);
             // Create signature using P-256 (same as SEA)
             const message = JSON.stringify(data);
-            const messageHash = sha256(new TextEncoder().encode(message));
+            const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(message));
             // Convert base64url private key to bytes
             const privKeyBytes = base64url.decode(keyPair.priv);
             // Sign with P-256
-            const signature = p256.sign(messageHash, privKeyBytes);
+            const signature = p256_1.p256.sign(messageHash, privKeyBytes);
             // Format like SEA signature
             const seaSignature = {
                 m: message,
@@ -301,4 +306,5 @@ export class WebAuthnSigner {
         return this.credentials.delete(credentialId);
     }
 }
-export default WebAuthnSigner;
+exports.WebAuthnSigner = WebAuthnSigner;
+exports.default = WebAuthnSigner;

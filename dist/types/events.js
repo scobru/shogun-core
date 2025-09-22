@@ -1,11 +1,16 @@
+"use strict";
 /**
  * Event types and interfaces for Shogun SDK
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShogunEventEmitter = void 0;
 /**
  * Event emitter class for Shogun SDK
  */
-export class ShogunEventEmitter {
-    listeners = new Map();
+class ShogunEventEmitter {
+    constructor() {
+        this.listeners = new Map();
+    }
     on(eventName, listener) {
         if (!this.listeners.has(eventName)) {
             this.listeners.set(eventName, []);
@@ -62,3 +67,4 @@ export class ShogunEventEmitter {
         return Array.from(this.listeners.keys());
     }
 }
+exports.ShogunEventEmitter = ShogunEventEmitter;

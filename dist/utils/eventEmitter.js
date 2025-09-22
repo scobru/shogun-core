@@ -1,8 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EventEmitter = void 0;
 /**
  * Simple event emitter implementation with generic event types
  */
-export class EventEmitter {
-    events;
+class EventEmitter {
     constructor() {
         this.events = new Map();
     }
@@ -74,3 +76,4 @@ export class EventEmitter {
         }
     }
 }
+exports.EventEmitter = EventEmitter;

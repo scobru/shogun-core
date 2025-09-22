@@ -4,10 +4,10 @@
     "declarationDir": "./dist/types",
     "outDir": "./dist",
     "isolatedModules": true,
-    "target": "es2022", // Target modern JavaScript
-    "module": "ESNext",
-    "lib": ["es2022", "dom"], // Include modern JavaScript and DOM libraries
-    "moduleResolution": "bundler", // Use Node.js module resolution
+    "target": "ES2020", // Target modern JavaScript
+    "module": "NodeNext",
+    "lib": ["ES2020", "dom"], // Include modern JavaScript and DOM libraries
+    "moduleResolution": "NodeNext", // Use Node.js module resolution
     "typeRoots": ["./node_modules/@types"], // Specify type definition directories
     "allowJs": true, // Allow JavaScript files to be included in the project
     "skipLibCheck": true, // Skip type checking of declaration files
@@ -25,12 +25,11 @@
     "noImplicitReturns": true, // Report error when not all code paths in function return a value
     "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statements
   },
-  "include": ["src/**/*", "example/simple-usage.ts"],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",
     "src/__tests__/**/*",
-    "**/*.test.ts",
-    "src/examples/**/*"
-  ]
+    "**/*.test.ts"
+    ]
 }

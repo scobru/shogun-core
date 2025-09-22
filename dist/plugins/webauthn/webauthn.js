@@ -1,13 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Webauthn = void 0;
+exports.deriveWebauthnKeys = deriveWebauthnKeys;
 /**
  * Constants for WebAuthn configuration
  */
 const MIN_USERNAME_LENGTH = 3;
 const MAX_USERNAME_LENGTH = 64;
-import { ethers } from "ethers";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
-import { EventEmitter } from "../../utils/eventEmitter";
-import { WebAuthnEventType, } from "./types";
-import derive from "../../gundb/derive";
+const ethers_1 = require("ethers");
+const errorHandler_1 = require("../../utils/errorHandler");
+const eventEmitter_1 = require("../../utils/eventEmitter");
+const types_1 = require("./types");
+const derive_1 = __importDefault(require("../../gundb/derive"));
 /**
  * Constants for WebAuthn configuration
  */
@@ -22,16 +29,13 @@ const DEFAULT_CONFIG = {
 /**
  * Main WebAuthn class for authentication management
  */
-export class Webauthn extends EventEmitter {
-    config;
-    gunInstance;
-    credential;
-    abortController = null;
+class Webauthn extends eventEmitter_1.EventEmitter {
     /**
      * Creates a new WebAuthn instance
      */
     constructor(gunInstance, config) {
         super();
+        this.abortController = null;
         this.gunInstance = gunInstance;
         this.credential = null;
         // Merge default config with provided config
@@ -73,8 +77,8 @@ export class Webauthn extends EventEmitter {
                 try {
                     const result = await this.generateCredentials(username, credentials, isNewDevice);
                     if (result.success) {
-                        this.emit(WebAuthnEventType.DEVICE_REGISTERED, {
-                            type: WebAuthnEventType.DEVICE_REGISTERED,
+                        this.emit(types_1.WebAuthnEventType.DEVICE_REGISTERED, {
+                            type: types_1.WebAuthnEventType.DEVICE_REGISTERED,
                             data: { username },
                             timestamp: Date.now(),
                         });
@@ -93,8 +97,8 @@ export class Webauthn extends EventEmitter {
             throw lastError || new Error("Failed to create account after retries");
         }
         catch (error) {
-            this.emit(WebAuthnEventType.ERROR, {
-                type: WebAuthnEventType.ERROR,
+            this.emit(types_1.WebAuthnEventType.ERROR, {
+                type: types_1.WebAuthnEventType.ERROR,
                 data: { error: error.message },
                 timestamp: Date.now(),
             });
@@ -109,7 +113,7 @@ export class Webauthn extends EventEmitter {
             this.validateUsername(username);
             if (!salt) {
                 const error = new Error("No WebAuthn credentials found for this username");
-                ErrorHandler.handle(ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
+                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "NO_CREDENTIALS", error.message, error);
                 return { success: false, error: error.message };
             }
             // Cancel any existing authentication attempt
@@ -143,8 +147,8 @@ export class Webauthn extends EventEmitter {
                     credentialId: this.bufferToBase64(assertion.rawId),
                     deviceInfo,
                 };
-                this.emit(WebAuthnEventType.AUTHENTICATION_SUCCESS, {
-                    type: WebAuthnEventType.AUTHENTICATION_SUCCESS,
+                this.emit(types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS, {
+                    type: types_1.WebAuthnEventType.AUTHENTICATION_SUCCESS,
                     data: { username, deviceInfo },
                     timestamp: Date.now(),
                 });
@@ -157,12 +161,12 @@ export class Webauthn extends EventEmitter {
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown WebAuthn error";
-            this.emit(WebAuthnEventType.AUTHENTICATION_FAILED, {
-                type: WebAuthnEventType.AUTHENTICATION_FAILED,
+            this.emit(types_1.WebAuthnEventType.AUTHENTICATION_FAILED, {
+                type: types_1.WebAuthnEventType.AUTHENTICATION_FAILED,
                 data: { username, error: errorMessage },
                 timestamp: Date.now(),
             });
-            ErrorHandler.handle(ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "AUTH_ERROR", errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -255,9 +259,9 @@ export class Webauthn extends EventEmitter {
      * Generates credentials from username and salt
      */
     generateCredentialsFromSalt(username, salt) {
-        const data = ethers.toUtf8Bytes(username + salt);
+        const data = ethers_1.ethers.toUtf8Bytes(username + salt);
         return {
-            password: ethers.sha256(data),
+            password: ethers_1.ethers.sha256(data),
         };
     }
     /**
@@ -461,6 +465,7 @@ export class Webauthn extends EventEmitter {
         return signature;
     }
 }
+exports.Webauthn = Webauthn;
 // Add to global scope if available
 if (typeof window !== "undefined") {
     window.Webauthn = Webauthn;
@@ -469,10 +474,10 @@ else if (typeof global !== "undefined") {
     global.Webauthn = Webauthn;
 }
 // Funzione helper per derivare chiavi WebAuthn (come per Web3)
-export async function deriveWebauthnKeys(username, credentialId) {
-    const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(credentialId));
+async function deriveWebauthnKeys(username, credentialId) {
+    const hashedCredentialId = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(credentialId));
     const salt = `${username}_${credentialId}`;
-    return await derive(hashedCredentialId, salt, {
+    return await (0, derive_1.default)(hashedCredentialId, salt, {
         includeP256: true,
     });
 }

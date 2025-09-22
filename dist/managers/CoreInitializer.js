@@ -1,15 +1,17 @@
-import { ShogunStorage } from "../storage/storage";
-import { ErrorHandler } from "../utils/errorHandler";
-import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
-import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
-import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
-import { OAuthPlugin } from "../plugins/oauth/oauthPlugin";
-import { DataBase, RxJS, createGun, derive } from "../gundb";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CoreInitializer = void 0;
+const storage_1 = require("../storage/storage");
+const errorHandler_1 = require("../utils/errorHandler");
+const webauthnPlugin_1 = require("../plugins/webauthn/webauthnPlugin");
+const web3ConnectorPlugin_1 = require("../plugins/web3/web3ConnectorPlugin");
+const nostrConnectorPlugin_1 = require("../plugins/nostr/nostrConnectorPlugin");
+const oauthPlugin_1 = require("../plugins/oauth/oauthPlugin");
+const gundb_1 = require("../gundb");
 /**
  * Handles initialization of ShogunCore components
  */
-export class CoreInitializer {
-    core;
+class CoreInitializer {
     constructor(core) {
         this.core = core;
     }
@@ -32,9 +34,9 @@ export class CoreInitializer {
             };
         }
         // Initialize storage
-        this.core.storage = new ShogunStorage();
+        this.core.storage = new storage_1.ShogunStorage();
         // Setup error handler
-        ErrorHandler.addListener((error) => {
+        errorHandler_1.ErrorHandler.addListener((error) => {
             this.core.emit("error", {
                 action: error.code,
                 message: error.message,
@@ -50,7 +52,7 @@ export class CoreInitializer {
         // Setup wallet derivation
         this.setupWalletDerivation();
         // Initialize RxJS
-        this.core.rx = new RxJS(this.core.gun);
+        this.core.rx = new gundb_1.RxJS(this.core.gun);
         // Register built-in plugins
         this.registerBuiltinPlugins(config);
         // Initialize async components
@@ -68,7 +70,7 @@ export class CoreInitializer {
             }
             else if (config.gunOptions && config.gunInstance === undefined) {
                 console.log("Creating new Gun instance");
-                this.core._gun = createGun(config.gunOptions);
+                this.core._gun = (0, gundb_1.createGun)(config.gunOptions);
             }
             else if (config.gunInstance && config.gunOptions) {
                 // Both provided, prefer gunInstance
@@ -78,7 +80,7 @@ export class CoreInitializer {
             else {
                 // Neither provided, create a default Gun instance for testing
                 console.log("No Gun instance or options provided, creating default instance");
-                this.core._gun = createGun({ peers: config.gunOptions?.peers || [] });
+                this.core._gun = (0, gundb_1.createGun)({ peers: config.gunOptions?.peers || [] });
             }
         }
         catch (error) {
@@ -89,7 +91,7 @@ export class CoreInitializer {
         }
         try {
             console.log("Initialize Gun instance", this.core.gun);
-            this.core.db = new DataBase(this.core._gun, config.gunOptions?.scope || "");
+            this.core.db = new gundb_1.DataBase(this.core._gun, config.gunOptions?.scope || "");
             // Note: user is a getter that returns _user, so we don't need to assign it
         }
         catch (error) {
@@ -151,7 +153,7 @@ export class CoreInitializer {
                 return;
             const priv = user._?.sea?.epriv;
             const pub = user._?.sea?.epub;
-            this.core.wallets = await derive(priv, pub, {
+            this.core.wallets = await (0, gundb_1.derive)(priv, pub, {
                 includeSecp256k1Bitcoin: true,
                 includeSecp256k1Ethereum: true,
             });
@@ -167,7 +169,7 @@ export class CoreInitializer {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("OAuth plugin will be registered with provided configuration");
                 }
-                const oauthPlugin = new OAuthPlugin();
+                const oauthPlugin = new oauthPlugin_1.OAuthPlugin();
                 if (typeof oauthPlugin.configure === "function") {
                     oauthPlugin.configure(config.oauth);
                 }
@@ -178,7 +180,7 @@ export class CoreInitializer {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("WebAuthn plugin will be registered with provided configuration");
                 }
-                const webauthnPlugin = new WebauthnPlugin();
+                const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
                 if (typeof webauthnPlugin.configure === "function") {
                     webauthnPlugin.configure(config.webauthn);
                 }
@@ -189,7 +191,7 @@ export class CoreInitializer {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("Web3 plugin will be registered with provided configuration");
                 }
-                const web3Plugin = new Web3ConnectorPlugin();
+                const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
                 if (typeof web3Plugin.configure === "function") {
                     web3Plugin.configure(config.web3);
                 }
@@ -200,7 +202,7 @@ export class CoreInitializer {
                 if (typeof console !== "undefined" && console.warn) {
                     console.warn("Nostr plugin will be registered with provided configuration");
                 }
-                const nostrPlugin = new NostrConnectorPlugin();
+                const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
                 if (typeof nostrPlugin.configure === "function") {
                     nostrPlugin.configure(config.nostr);
                 }
@@ -232,3 +234,4 @@ export class CoreInitializer {
         }
     }
 }
+exports.CoreInitializer = CoreInitializer;

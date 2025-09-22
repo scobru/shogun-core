@@ -51,6 +51,8 @@ await api.node('users').get('alice').get('todos').get('1').put({
 - **⭐ NEW: Quick Start Functions**: `quickStart()` and `QuickStart` class for rapid initialization
 - **⭐ NEW: Improved Type System**: Reduced `any` usage with better TypeScript types
 - **⭐ NEW: Configuration Presets**: Pre-built configurations for common use cases
+- **🔧 FIXED: Remove Operations**: Fixed null handling in `remove()` and `removeUserData()` methods
+- **🔧 IMPROVED: User Data Operations**: All user data methods now use direct Gun user node for better reliability
 - Type consistency across all plugins: unified `AuthResult` and `SignUpResult`
 - Typed event system with `ShogunEventMap` for safer listeners
 - OAuth hardening: PKCE support, improved Google flow, richer user profile
@@ -58,6 +60,59 @@ await api.node('users').get('alice').get('todos').get('1').put({
 - Password recovery via security questions retained and documented
 
 Note: This file is the single source of truth for Shogun Core docs. The former `LLM.md` has been merged here for consistency and maintenance.
+
+## 🔧 **RECENT FIXES & IMPROVEMENTS**
+
+### Fixed Remove Operations (v2.0.1)
+
+**Problem**: The `remove()` and `removeUserData()` methods were throwing `TypeError: Cannot read properties of null (reading 'err')` when GunDB operations returned `null` instead of an acknowledgment object.
+
+**Solution**: Added proper null checking before accessing the `err` property:
+
+```typescript
+// Before (causing errors):
+const result = ack.err ? { success: false, error: ack.err } : { success: true };
+
+// After (fixed):
+const result = ack && ack.err ? { success: false, error: ack.err } : { success: true };
+```
+
+**Impact**: 
+- ✅ `remove()` method now works reliably for global data removal
+- ✅ `removeUserData()` method now works reliably for user data removal  
+- ✅ All user data operations (`getUserData`, `putUserData`, `setUserData`, `removeUserData`) now use direct Gun user node for better reliability
+- ✅ Improved error handling and logging throughout user data operations
+
+### Improved User Data Operations
+
+All user data methods in `SimpleGunAPI` have been rewritten to use the Gun user node directly instead of going through the `DataBase` layer:
+
+```typescript
+// New implementation uses direct user node access:
+async removeUserData(path: string): Promise<boolean> {
+  try {
+    if (!this.isLoggedIn()) {
+      console.warn("User not logged in");
+      return false;
+    }
+    if (!this.db.user) {
+      console.warn("User node not available");
+      return false;
+    }
+    await this.db.user.get(path).put(null).then();
+    return true;
+  } catch (error) {
+    console.warn(`Failed to remove user data from ${path}:`, error);
+    return false;
+  }
+}
+```
+
+**Benefits**:
+- More reliable user data operations
+- Better error handling and logging
+- Consistent behavior across all user data methods
+- Proper authentication checks before operations
 
 ## ⭐ **NEW: Simple API Components**
 

@@ -1,9 +1,12 @@
-import { ErrorHandler } from "./utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShogunCore = void 0;
+const errorHandler_1 = require("./utils/errorHandler");
 // Import managers
-import { PluginManager } from "./managers/PluginManager";
-import { AuthManager } from "./managers/AuthManager";
-import { EventManager } from "./managers/EventManager";
-import { CoreInitializer } from "./managers/CoreInitializer";
+const PluginManager_1 = require("./managers/PluginManager");
+const AuthManager_1 = require("./managers/AuthManager");
+const EventManager_1 = require("./managers/EventManager");
+const CoreInitializer_1 = require("./managers/CoreInitializer");
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *
@@ -15,21 +18,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  *
  * @since 2.0.0
  */
-export class ShogunCore {
-    static API_VERSION = "^3.0.11";
-    db;
-    storage;
-    provider;
-    config;
-    rx;
-    _gun;
-    _user = null;
-    wallets;
-    // Managers
-    pluginManager;
-    authManager;
-    eventManager;
-    coreInitializer;
+class ShogunCore {
     /**
      * Initialize the Shogun SDK
      * @param config - SDK Configuration object
@@ -38,12 +27,13 @@ export class ShogunCore {
      * and plugin system.
      */
     constructor(config) {
+        this._user = null;
         this.config = config;
         // Initialize managers
-        this.eventManager = new EventManager();
-        this.pluginManager = new PluginManager(this);
-        this.authManager = new AuthManager(this);
-        this.coreInitializer = new CoreInitializer(this);
+        this.eventManager = new EventManager_1.EventManager();
+        this.pluginManager = new PluginManager_1.PluginManager(this);
+        this.authManager = new AuthManager_1.AuthManager(this);
+        this.coreInitializer = new CoreInitializer_1.CoreInitializer(this);
         // Initialize async components
         this.coreInitializer.initialize(config).catch((error) => {
             if (typeof console !== "undefined" && console.warn) {
@@ -185,7 +175,7 @@ export class ShogunCore {
      * @returns List of most recent errors
      */
     getRecentErrors(count = 10) {
-        return ErrorHandler.getRecentErrors(count);
+        return errorHandler_1.ErrorHandler.getRecentErrors(count);
     }
     // *********************************************************************************************************
     // 🔐 AUTHENTICATION
@@ -327,6 +317,8 @@ export class ShogunCore {
         return !!(this.user && this.user.is);
     }
 }
+exports.ShogunCore = ShogunCore;
+ShogunCore.API_VERSION = "^3.0.11";
 // Global declarations are handled in the original core.ts file
 // to avoid conflicts, we only set the window properties here
 if (typeof window !== "undefined") {
@@ -335,4 +327,4 @@ if (typeof window !== "undefined") {
     };
     window.SHOGUN_CORE_CLASS = ShogunCore;
 }
-export default ShogunCore;
+exports.default = ShogunCore;

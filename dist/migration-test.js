@@ -1,21 +1,26 @@
+"use strict";
 /**
  * Migration test file to verify that the refactored ShogunCore
  * maintains the same public API as the original implementation
  */
-import { ShogunCore } from "./core";
-import { ShogunCore as OriginalShogunCore } from "./core";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.testApiCompatibility = testApiCompatibility;
+exports.testStaticProperties = testStaticProperties;
+exports.runCompatibilityTests = runCompatibilityTests;
+const core_1 = require("./core");
+const core_2 = require("./core");
 /**
  * Test function to verify API compatibility
  */
-export function testApiCompatibility() {
+function testApiCompatibility() {
     const config = {
         gunOptions: {
             peers: ["https://gunjs.herokuapp.com/gun"],
         },
     };
     // Test that both implementations can be instantiated with the same config
-    const originalCore = new OriginalShogunCore(config);
-    const refactoredCore = new ShogunCore(config);
+    const originalCore = new core_2.ShogunCore(config);
+    const refactoredCore = new core_1.ShogunCore(config);
     // Test that all public methods exist on both implementations
     const publicMethods = [
         // Plugin management
@@ -69,8 +74,8 @@ export function testApiCompatibility() {
 /**
  * Test that the refactored implementation maintains the same static properties
  */
-export function testStaticProperties() {
-    if (ShogunCore.API_VERSION !== OriginalShogunCore.API_VERSION) {
+function testStaticProperties() {
+    if (core_1.ShogunCore.API_VERSION !== core_2.ShogunCore.API_VERSION) {
         throw new Error("API_VERSION mismatch between implementations");
     }
     console.log("✅ Static properties test passed");
@@ -78,7 +83,7 @@ export function testStaticProperties() {
 /**
  * Run all compatibility tests
  */
-export function runCompatibilityTests() {
+function runCompatibilityTests() {
     try {
         testStaticProperties();
         testApiCompatibility();

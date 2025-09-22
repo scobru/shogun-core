@@ -1,33 +1,39 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NostrConnector = exports.MESSAGE_TO_SIGN = void 0;
+exports.deriveNostrKeys = deriveNostrKeys;
 /**
  * The BitcoinWallet class provides functionality for connecting, signing up, and logging in using Bitcoin wallets.
  * Supports Alby and Nostr extensions, as well as manual key management.
  */
-import { ethers } from "ethers";
-import { verifyEvent, finalizeEvent, utils as nostrUtils, getEventHash, } from "nostr-tools";
-import { EventEmitter } from "../../utils/eventEmitter";
-import derive from "../../gundb/derive";
-import { generateUsernameFromIdentity } from "../../utils/validation";
-export const MESSAGE_TO_SIGN = "I Love Shogun!";
+const ethers_1 = require("ethers");
+const nostr_tools_1 = require("nostr-tools");
+const eventEmitter_1 = require("../../utils/eventEmitter");
+const derive_1 = __importDefault(require("../../gundb/derive"));
+const validation_1 = require("../../utils/validation");
+exports.MESSAGE_TO_SIGN = "I Love Shogun!";
 /**
  * Class for Bitcoin wallet connections and operations
  */
-class NostrConnector extends EventEmitter {
-    DEFAULT_CONFIG = {
-        cacheDuration: 24 * 60 * 60 * 1000, // 24 hours instead of 30 minutes for better UX
-        maxRetries: 3,
-        retryDelay: 1000,
-        timeout: 60000,
-        network: "mainnet",
-        useApi: false,
-    };
-    config;
-    signatureCache = new Map();
-    // Connection state
-    connectedAddress = null;
-    connectedType = null;
-    manualKeyPair = null;
+class NostrConnector extends eventEmitter_1.EventEmitter {
     constructor(config = {}) {
         super();
+        this.DEFAULT_CONFIG = {
+            cacheDuration: 24 * 60 * 60 * 1000, // 24 hours instead of 30 minutes for better UX
+            maxRetries: 3,
+            retryDelay: 1000,
+            timeout: 60000,
+            network: "mainnet",
+            useApi: false,
+        };
+        this.signatureCache = new Map();
+        // Connection state
+        this.connectedAddress = null;
+        this.connectedType = null;
+        this.manualKeyPair = null;
         this.config = { ...this.DEFAULT_CONFIG, ...config };
         this.setupEventListeners();
     }
@@ -211,12 +217,12 @@ class NostrConnector extends EventEmitter {
      * Generate credentials using Nostr: username deterministico e chiave GunDB derivata dall'address
      */
     async generateCredentials(address, signature, message) {
-        const username = generateUsernameFromIdentity("nostr", { id: address });
+        const username = (0, validation_1.generateUsernameFromIdentity)("nostr", { id: address });
         // Usa un hashing robusto di address con keccak256
-        const hashedAddress = ethers.keccak256(ethers.toUtf8Bytes(address));
+        const hashedAddress = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(address));
         // Include la signature nel salt per aggiungere un ulteriore livello di sicurezza
         const salt = `${username}_${address}_${message}_${signature}`;
-        const key = await derive(hashedAddress, salt, { includeP256: true });
+        const key = await (0, derive_1.default)(hashedAddress, salt, { includeP256: true });
         return { username, key, message, signature };
     }
     /**
@@ -229,7 +235,7 @@ class NostrConnector extends EventEmitter {
         try {
             // Create a deterministic hash from the signature using a secure algorithm
             const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
-            const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
+            const passwordHash = ethers_1.ethers.sha256(ethers_1.ethers.toUtf8Bytes(normalizedSig));
             return passwordHash;
         }
         catch (error) {
@@ -264,10 +270,10 @@ class NostrConnector extends EventEmitter {
                     };
                     const event = {
                         ...eventData,
-                        id: getEventHash(eventData),
+                        id: (0, nostr_tools_1.getEventHash)(eventData),
                         sig: signature,
                     };
-                    return verifyEvent(event);
+                    return (0, nostr_tools_1.verifyEvent)(event);
                 }
                 catch (verifyError) {
                     console.error("Error in Nostr signature verification:", verifyError);
@@ -291,10 +297,10 @@ class NostrConnector extends EventEmitter {
                     };
                     const event = {
                         ...eventData,
-                        id: getEventHash(eventData),
+                        id: (0, nostr_tools_1.getEventHash)(eventData),
                         sig: signature,
                     };
-                    return verifyEvent(event);
+                    return (0, nostr_tools_1.verifyEvent)(event);
                 }
                 catch (manualVerifyError) {
                     console.error("Error in manual signature verification:", manualVerifyError);
@@ -349,7 +355,7 @@ class NostrConnector extends EventEmitter {
                     };
                     const nostrEvent = {
                         ...eventData,
-                        id: getEventHash(eventData),
+                        id: (0, nostr_tools_1.getEventHash)(eventData),
                         sig: "", // This will be filled by window.nostr.signEvent
                     };
                     const signedEvent = await window.nostr.signEvent(nostrEvent);
@@ -370,11 +376,11 @@ class NostrConnector extends EventEmitter {
                     };
                     const eventTemplate = {
                         ...manualEventData,
-                        id: getEventHash(manualEventData),
+                        id: (0, nostr_tools_1.getEventHash)(manualEventData),
                         sig: "", // This will be filled by finalizeEvent
                     };
-                    const privateKeyBytes = nostrUtils.hexToBytes(this.manualKeyPair.privateKey);
-                    const signedEventManual = await finalizeEvent(eventTemplate, privateKeyBytes);
+                    const privateKeyBytes = nostr_tools_1.utils.hexToBytes(this.manualKeyPair.privateKey);
+                    const signedEventManual = await (0, nostr_tools_1.finalizeEvent)(eventTemplate, privateKeyBytes);
                     console.log("Generated manual signature:", signedEventManual.sig.substring(0, 20) + "...");
                     return signedEventManual.sig;
                 default:
@@ -396,11 +402,12 @@ class NostrConnector extends EventEmitter {
         this.manualKeyPair = null;
     }
 }
+exports.NostrConnector = NostrConnector;
 // Funzione helper per derivare chiavi Nostr/Bitcoin (come per Web3/WebAuthn)
-export async function deriveNostrKeys(address, signature, message) {
+async function deriveNostrKeys(address, signature, message) {
     // Usa solo l'address per rendere le credenziali deterministiche
     const salt = `${address}_${message}`;
-    return await derive(address, salt, {
+    return await (0, derive_1.default)(address, salt, {
         includeP256: true,
     });
 }
@@ -410,4 +417,3 @@ if (typeof window !== "undefined") {
 else if (typeof global !== "undefined") {
     global.NostrConnector = NostrConnector;
 }
-export { NostrConnector };

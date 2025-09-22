@@ -339,16 +339,8 @@ class DataBase {
   private navigateToPath(node: GunNode, path: string): GunNode {
     if (!path || typeof path !== "string") return node;
 
-    // Sanitize path to remove any control characters or invalid characters
-    const sanitizedPath = path
-      .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-      .replace(/[^\w\-._/]/g, "") // Only allow alphanumeric, hyphens, dots, underscores, and slashes
-      .trim();
-
-    if (!sanitizedPath) return node;
-
     // Split path by '/' and filter out empty segments
-    const pathSegments = sanitizedPath
+    const pathSegments = path
       .split("/")
       .filter((segment) => segment.length > 0)
       .map((segment) => segment.trim())
@@ -358,31 +350,6 @@ class DataBase {
     return pathSegments.reduce((currentNode, segment) => {
       return currentNode.get(segment);
     }, node);
-  }
-
-  /**
-   * Deconstruct path for GunDB navigation in user space
-   * Converts "todos/1234" to user.get("todos").get("1234")
-   * @param path Path string to deconstruct
-   * @returns Gun node at the specified path in user space
-   */
-  public deconstructUserPath(path: string): GunNode {
-    const user = this.gun.user();
-    if (!user || !user.is) {
-      throw new Error("User not logged in");
-    }
-
-    return this.navigateToPath(user, path);
-  }
-
-  /**
-   * Deconstruct path for GunDB navigation in global space
-   * Converts "todos/1234" to gun.get("todos").get("1234")
-   * @param path Path string to deconstruct
-   * @returns Gun node at the specified path in global space
-   */
-  public deconstructGlobalPath(path: string): GunNode {
-    return this.navigateToPath(this.gun, path);
   }
 
   /**
@@ -437,7 +404,7 @@ class DataBase {
    * @returns Promise resolving to the data
    */
   async getData(path: string): Promise<GunData> {
-    const node = this.deconstructGlobalPath(path);
+    const node = this.navigateToPath(this.gun, path);
     const data = await node.then();
     return data;
   }
@@ -449,7 +416,7 @@ class DataBase {
    * @returns Promise resolving to operation result
    */
   async put(path: string, data: GunData): Promise<GunOperationResult> {
-    const node = this.deconstructGlobalPath(path);
+    const node = this.navigateToPath(this.gun, path);
     const ack = await node.put(data).then();
     const result = ack.err
       ? { success: false, error: ack.err }
@@ -465,7 +432,7 @@ class DataBase {
    * @returns Promise resolving to operation result
    */
   async set(path: string, data: GunData): Promise<GunOperationResult> {
-    const node = this.deconstructGlobalPath(path);
+    const node = this.navigateToPath(this.gun, path);
     const ack = await node.set(data).then();
     const result = ack.err
       ? { success: false, error: ack.err }
@@ -480,11 +447,10 @@ class DataBase {
    * @returns Promise resolving to operation result
    */
   async remove(path: string): Promise<GunOperationResult> {
-    const node = this.deconstructGlobalPath(path);
+    const node = this.navigateToPath(this.gun, path);
     const ack = await node.put(null).then();
-    const result = ack.err
-      ? { success: false, error: ack.err }
-      : { success: true };
+    const result =
+      ack && ack.err ? { success: false, error: ack.err } : { success: true };
 
     return result;
   }
@@ -2045,65 +2011,6 @@ class DataBase {
     } catch (error) {
       console.error("Error recovering password hint:", error);
       return { success: false, error: String(error) };
-    }
-  }
-
-  /**
-   * Saves user data at the specified path
-   * @param path Path to save the data (supports nested paths like "test/data/marco")
-   * @param data Data to save
-   * @returns Promise that resolves when the data is saved
-   */
-  async putUserData(path: string, data: any): Promise<void> {
-    const node = this.deconstructUserPath(path);
-    const ack = await node.put(data).then();
-    if (ack.err) {
-      throw new Error(ack.err);
-    }
-  }
-
-  /**
-   * Gets user data from the specified path
-   * @param path Path to get the data from (supports nested paths like "test/data/marco")
-   * @returns Promise that resolves with the data
-   */
-  async getUserData(path: string): Promise<any> {
-    // Validazione del path
-    if (!path || typeof path !== "string") {
-      throw new Error("Path must be a non-empty string");
-    }
-
-    try {
-      const node = this.deconstructUserPath(path);
-      const data = await node.once().then();
-
-      // Gestisci i riferimenti GunDB
-      if (data && typeof data === "object" && data["#"]) {
-        // È un riferimento GunDB, carica i dati effettivi
-        const referencePath = data["#"];
-        const referenceNode = this.deconstructGlobalPath(referencePath);
-        const actualData = await referenceNode.once().then();
-        return actualData;
-      } else {
-        // Dati diretti, restituisci così come sono
-        return data;
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(errorMsg);
-    }
-  }
-
-  /**
-   * Removes user data at the specified path
-   * @param path Path to remove the data from (supports nested paths like "test/data/marco")
-   * @returns Promise that resolves when the data is removed
-   */
-  async removeUserData(path: string): Promise<void> {
-    const node = this.deconstructUserPath(path);
-    const ack = await node.put(null).then();
-    if (ack.err) {
-      throw new Error(ack.err);
     }
   }
 

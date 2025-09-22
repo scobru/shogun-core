@@ -27,9 +27,15 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - ⚡ **Quick Start**: Rapid initialization with pre-configured setups
 - 🎛️ **Configuration Presets**: Pre-built configurations for common use cases
 
-## Recent Updates (v2.0.0)
+## Recent Updates (v2.0.1)
 
-### ✅ **Major API Improvements & Simplification**
+### 🔧 **Critical Bug Fixes**
+
+- **🔧 FIXED: Remove Operations**: Fixed critical bug in `remove()` and `removeUserData()` methods that was causing `TypeError: Cannot read properties of null (reading 'err')`
+- **🔧 IMPROVED: User Data Operations**: Rewrote all user data methods to use direct Gun user node for better reliability and error handling
+- **🔧 ENHANCED: Error Handling**: Added proper null checking and improved error logging throughout the user data operations
+
+### ✅ **Major API Improvements & Simplification (v2.0.0)**
 
 - **⭐ NEW: Simple API Layer**: Added `SimpleGunAPI` with simplified methods for common operations
 - **⭐ NEW: Advanced Chaining**: Added `node()`, `chain()`, and `getNode()` methods for powerful data chaining
@@ -44,6 +50,14 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - **Enhanced Core Focus**: Maintained password hint system with security questions and comprehensive user management
 - **Improved Maintainability**: Better organized codebase with clear separation between simple and advanced APIs
 - **Better Performance**: Optimized operations with advanced peer management and user tracking
+
+### 🔧 **Bug Fixes & Improvements**
+
+**Fixed Critical Remove Operations Bug**:
+- Fixed `TypeError: Cannot read properties of null (reading 'err')` in `remove()` and `removeUserData()` methods
+- Added proper null checking: `ack && ack.err` instead of just `ack.err`
+- All user data operations now use direct Gun user node for better reliability
+- Improved error handling and logging throughout user data operations
 
 ### ⚠️ **BREAKING CHANGES**
 

@@ -1,25 +1,31 @@
-import { BasePlugin } from "../base";
-import { NostrConnector, MESSAGE_TO_SIGN, deriveNostrKeys, } from "./nostrConnector";
-import { NostrSigner } from "./nostrSigner";
-import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NostrConnectorPlugin = void 0;
+const base_1 = require("../base");
+const nostrConnector_1 = require("./nostrConnector");
+const nostrSigner_1 = require("./nostrSigner");
+const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
  * Supports Alby, Nostr extensions, or direct key management
  */
-export class NostrConnectorPlugin extends BasePlugin {
-    name = "nostr";
-    version = "1.0.0";
-    description = "Provides Bitcoin wallet connection and authentication for ShogunCore";
-    bitcoinConnector = null;
-    signer = null;
+class NostrConnectorPlugin extends base_1.BasePlugin {
+    constructor() {
+        super(...arguments);
+        this.name = "nostr";
+        this.version = "1.0.0";
+        this.description = "Provides Bitcoin wallet connection and authentication for ShogunCore";
+        this.bitcoinConnector = null;
+        this.signer = null;
+    }
     /**
      * @inheritdoc
      */
     initialize(core) {
         super.initialize(core);
         // Initialize the Bitcoin wallet module
-        this.bitcoinConnector = new NostrConnector();
-        this.signer = new NostrSigner(this.bitcoinConnector);
+        this.bitcoinConnector = new nostrConnector_1.NostrConnector();
+        this.signer = new nostrSigner_1.NostrSigner(this.bitcoinConnector);
     }
     /**
      * @inheritdoc
@@ -315,33 +321,33 @@ export class NostrConnectorPlugin extends BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!address) {
-                throw createError(ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for login");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for login");
             }
             if (!this.isAvailable()) {
-                throw createError(ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
             }
-            const message = MESSAGE_TO_SIGN;
+            const message = nostrConnector_1.MESSAGE_TO_SIGN;
             const signature = await this.assertBitcoinConnector().requestSignature(address, message);
             const credentials = await this.generateCredentials(address, signature, message);
             if (!credentials?.username ||
                 !credentials?.key ||
                 !credentials.message ||
                 !credentials.signature) {
-                throw createError(ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
             }
             const isValid = await this.verifySignature(credentials.message, credentials.signature, address);
             if (!isValid) {
                 console.error(`Signature verification failed for address: ${address}`);
-                throw createError(ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
             // Deriva le chiavi da address, signature, message
-            const k = await deriveNostrKeys(address, signature, message);
+            const k = await (0, nostrConnector_1.deriveNostrKeys)(address, signature, message);
             // Set authentication method to nostr before login
             core.setAuthMethod("nostr");
             // Usa le chiavi derivate per login
             const loginResult = await core.login(credentials.username, "", k);
             if (!loginResult.success) {
-                throw createError(ErrorType.AUTHENTICATION, "BITCOIN_LOGIN_FAILED", loginResult.error || "Failed to log in with Bitcoin credentials");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "BITCOIN_LOGIN_FAILED", loginResult.error || "Failed to log in with Bitcoin credentials");
             }
             // Emit login event
             core.emit("auth:login", {
@@ -353,10 +359,10 @@ export class NostrConnectorPlugin extends BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || ErrorType.AUTHENTICATION;
+            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "BITCOIN_LOGIN_ERROR";
             const errorMessage = error?.message || "Unknown error during Bitcoin wallet login";
-            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -369,28 +375,28 @@ export class NostrConnectorPlugin extends BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!address) {
-                throw createError(ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for signup");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "ADDRESS_REQUIRED", "Bitcoin address required for signup");
             }
             if (!this.isAvailable()) {
-                throw createError(ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "BITCOIN_WALLET_UNAVAILABLE", "No Bitcoin wallet available in the browser");
             }
-            const message = MESSAGE_TO_SIGN;
+            const message = nostrConnector_1.MESSAGE_TO_SIGN;
             const signature = await this.assertBitcoinConnector().requestSignature(address, message);
             const credentials = await this.generateCredentials(address, signature, message);
             if (!credentials?.username ||
                 !credentials?.key ||
                 !credentials.message ||
                 !credentials.signature) {
-                throw createError(ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "CREDENTIAL_GENERATION_FAILED", "Bitcoin wallet credentials not generated correctly or signature missing");
             }
             // Verify signature
             const isValid = await this.verifySignature(credentials.message, credentials.signature, address);
             if (!isValid) {
                 console.error(`Signature verification failed for address: ${address}`);
-                throw createError(ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.SECURITY, "SIGNATURE_VERIFICATION_FAILED", "Bitcoin wallet signature verification failed");
             }
             // Deriva le chiavi da address, signature, message
-            const k = await deriveNostrKeys(address, signature, message);
+            const k = await (0, nostrConnector_1.deriveNostrKeys)(address, signature, message);
             // Set authentication method to nostr before signup
             core.setAuthMethod("nostr");
             // Usa le chiavi derivate per signup
@@ -424,10 +430,10 @@ export class NostrConnectorPlugin extends BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || ErrorType.AUTHENTICATION;
+            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "BITCOIN_SIGNUP_ERROR";
             const errorMessage = error?.message || "Unknown error during Bitcoin wallet signup";
-            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -444,3 +450,4 @@ export class NostrConnectorPlugin extends BasePlugin {
         return this.signUp(address);
     }
 }
+exports.NostrConnectorPlugin = NostrConnectorPlugin;

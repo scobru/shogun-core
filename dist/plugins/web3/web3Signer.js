@@ -1,17 +1,22 @@
-import { Web3Connector } from "./web3Connector";
-import { ethers } from "ethers";
-import derive from "../../gundb/derive";
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Web3Signer = void 0;
+const web3Connector_1 = require("./web3Connector");
+const ethers_1 = require("ethers");
+const derive_1 = __importDefault(require("../../gundb/derive"));
 /**
  * Web3 Signer - Provides oneshot signing functionality
  * Similar to webauthn.js but for Web3/MetaMask
  * CONSISTENT with normal Web3 approach
  */
-export class Web3Signer {
-    web3Connector;
-    credentials = new Map();
-    MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+class Web3Signer {
     constructor(web3Connector) {
-        this.web3Connector = web3Connector || new Web3Connector();
+        this.credentials = new Map();
+        this.MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+        this.web3Connector = web3Connector || new web3Connector_1.Web3Connector();
     }
     /**
      * Creates a new Web3 signing credential
@@ -20,14 +25,14 @@ export class Web3Signer {
     async createSigningCredential(address) {
         try {
             // Validate address
-            const validAddress = ethers.getAddress(address.toLowerCase());
+            const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
             // Request signature using the same approach as normal Web3
             const signature = await this.requestSignature(validAddress);
             // Generate credentials using the SAME logic as normal approach
             const username = `${validAddress.toLowerCase()}`;
             // FIX: Use only address for password generation to ensure consistency
             // The signature changes each time, causing different passwords for same user
-            const password = ethers.keccak256(ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
             const signingCredential = {
                 address: validAddress,
                 signature,
@@ -137,11 +142,11 @@ export class Web3Signer {
     async createDerivedKeyPairFromAddress(address, extra) {
         try {
             // Generate deterministic password from address (same as createSigningCredential)
-            const validAddress = ethers.getAddress(address.toLowerCase());
-            const password = ethers.keccak256(ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
+            const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
             console.log(`🔧 Web3Signer - generating deterministic pair for address:`, validAddress);
             // Use the same derive function as normal approach
-            const derivedKeys = await derive(password, // Deterministic password from address
+            const derivedKeys = await (0, derive_1.default)(password, // Deterministic password from address
             extra, { includeP256: true });
             return {
                 pub: derivedKeys.pub,
@@ -220,9 +225,9 @@ export class Web3Signer {
             const keyPair = await this.createDerivedKeyPair(address, extra);
             // Create signature using the same approach as SEA
             const message = JSON.stringify(data);
-            const messageHash = ethers.keccak256(ethers.toUtf8Bytes(message));
+            const messageHash = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(message));
             // Use ethers for signing (compatible with SEA)
-            const wallet = new ethers.Wallet(keyPair.priv);
+            const wallet = new ethers_1.ethers.Wallet(keyPair.priv);
             const signature = await wallet.signMessage(message);
             // Format like SEA signature
             const seaSignature = {
@@ -257,8 +262,8 @@ export class Web3Signer {
     getPassword(address) {
         try {
             // Generate deterministic password from address (same as createSigningCredential)
-            const validAddress = ethers.getAddress(address.toLowerCase());
-            const password = ethers.keccak256(ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
+            const validAddress = ethers_1.ethers.getAddress(address.toLowerCase());
+            const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
             return password;
         }
         catch (error) {
@@ -305,4 +310,5 @@ export class Web3Signer {
         return this.credentials.delete(address.toLowerCase());
     }
 }
-export default Web3Signer;
+exports.Web3Signer = Web3Signer;
+exports.default = Web3Signer;

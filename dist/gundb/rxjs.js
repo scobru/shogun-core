@@ -1,12 +1,13 @@
-import { Observable } from "rxjs";
-import { distinctUntilChanged } from "rxjs/operators";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RxJS = void 0;
+const rxjs_1 = require("rxjs");
+const operators_1 = require("rxjs/operators");
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
  */
-export class RxJS {
-    gun;
-    user;
+class RxJS {
     /**
      * Initialize GunRxJS with a GunDB instance
      * @param gun - GunDB instance
@@ -35,7 +36,7 @@ export class RxJS {
      * @returns Observable that emits whenever the node changes
      */
     observe(path) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             let node;
             if (Array.isArray(path)) {
                 // Support array paths by chaining get calls
@@ -72,7 +73,7 @@ export class RxJS {
                 }
                 node.off();
             };
-        }).pipe(distinctUntilChanged((prev, curr) => {
+        }).pipe((0, operators_1.distinctUntilChanged)((prev, curr) => {
             return JSON.stringify(prev) === JSON.stringify(curr);
         }));
     }
@@ -83,7 +84,7 @@ export class RxJS {
      * @returns Observable array of matched items
      */
     match(path, matchFn) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             if (!path) {
                 subscriber.next([]);
                 subscriber.complete();
@@ -123,7 +124,7 @@ export class RxJS {
      * @returns Observable that completes when the put is acknowledged
      */
     put(path, data) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const performPut = (target, value) => {
                 target.put(value, (ack) => {
                     if (ack.err) {
@@ -158,7 +159,7 @@ export class RxJS {
      * Backward-compatible overload that accepts optional callback like tests expect
      */
     putCompat(data, callback) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             this.gun.put(data, (ack) => {
                 if (callback)
                     callback(ack);
@@ -179,7 +180,7 @@ export class RxJS {
      * @returns Observable that completes when the set is acknowledged
      */
     set(path, data) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const performSet = (target, value) => {
                 target.set(value, (ack) => {
                     if (ack.err) {
@@ -209,7 +210,7 @@ export class RxJS {
         });
     }
     setCompat(data, callback) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             this.gun.set(data, (ack) => {
                 if (callback)
                     callback(ack);
@@ -239,7 +240,7 @@ export class RxJS {
         else {
             node = this.gun;
         }
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             node.once((data) => {
                 if (data === undefined || data === null) {
                     subscriber.next(null);
@@ -267,7 +268,7 @@ export class RxJS {
             return source;
         });
         // Combine the latest values from all sources
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             let values = new Array(sources.length).fill(undefined);
             let completed = new Array(sources.length).fill(false);
             const subscriptions = observables.map((obs, index) => {
@@ -307,7 +308,7 @@ export class RxJS {
      * @returns Observable that completes when the put is acknowledged
      */
     userPut(dataOrPath, maybeData, callback) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const user = this.gun.user();
             if (typeof dataOrPath === "string") {
                 user.get(dataOrPath).put(maybeData, (ack) => {
@@ -345,7 +346,7 @@ export class RxJS {
      * @returns Observable that completes when the set is acknowledged
      */
     userSet(dataOrPath, maybeData, callback) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const user = this.gun.user();
             if (typeof dataOrPath === "string") {
                 user.get(dataOrPath).set(maybeData, (ack) => {
@@ -382,7 +383,7 @@ export class RxJS {
      * @returns Observable that emits the data once
      */
     userOnce(path, callback) {
-        return new Observable((subscriber) => {
+        return new rxjs_1.Observable((subscriber) => {
             const user = this.gun.user();
             const target = path ? user.get(path) : user;
             target.once((data, ack) => {
@@ -443,3 +444,4 @@ export class RxJS {
         return cleanObj;
     }
 }
+exports.RxJS = RxJS;

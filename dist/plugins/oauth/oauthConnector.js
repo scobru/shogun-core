@@ -1,76 +1,81 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.OAuthConnector = void 0;
 /**
  * OAuth Connector - Secure version for GunDB user creation
  */
-import { EventEmitter } from "../../utils/eventEmitter";
-import derive from "../../gundb/derive";
-import { generateUsernameFromIdentity, generateDeterministicPassword, } from "../../utils/validation";
-import { ethers } from "ethers";
+const eventEmitter_1 = require("../../utils/eventEmitter");
+const derive_1 = __importDefault(require("../../gundb/derive"));
+const validation_1 = require("../../utils/validation");
+const ethers_1 = require("ethers");
 /**
  * OAuth Connector
  */
-export class OAuthConnector extends EventEmitter {
-    DEFAULT_CONFIG = {
-        providers: {
-            google: {
-                clientId: "",
-                redirectUri: `${this.getOrigin()}/auth/callback`,
-                scope: ["openid", "email", "profile"],
-                authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-                tokenUrl: "https://oauth2.googleapis.com/token",
-                userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
-                usePKCE: true, // Forza PKCE per Google
-            },
-            github: {
-                clientId: "",
-                redirectUri: `${this.getOrigin()}/auth/callback`,
-                scope: ["user:email"],
-                authUrl: "https://github.com/login/oauth/authorize",
-                tokenUrl: "https://github.com/login/oauth/access_token",
-                userInfoUrl: "https://api.github.com/user",
-                usePKCE: true,
-            },
-            discord: {
-                clientId: "",
-                redirectUri: `${this.getOrigin()}/auth/callback`,
-                scope: ["identify", "email"],
-                authUrl: "https://discord.com/api/oauth2/authorize",
-                tokenUrl: "https://discord.com/api/oauth2/token",
-                userInfoUrl: "https://discord.com/api/users/@me",
-                usePKCE: true,
-            },
-            twitter: {
-                clientId: "",
-                redirectUri: `${this.getOrigin()}/auth/callback`,
-                scope: ["tweet.read", "users.read"],
-                authUrl: "https://twitter.com/i/oauth2/authorize",
-                tokenUrl: "https://api.twitter.com/2/oauth2/token",
-                userInfoUrl: "https://api.twitter.com/2/users/me",
-                usePKCE: true,
-            },
-            custom: {
-                clientId: "",
-                redirectUri: "",
-                scope: [],
-                authUrl: "",
-                tokenUrl: "",
-                userInfoUrl: "",
-                usePKCE: true,
-            },
-        },
-        usePKCE: true, // PKCE abilitato di default per sicurezza
-        cacheDuration: 24 * 60 * 60 * 1000, // 24 hours
-        timeout: 60000,
-        maxRetries: 3,
-        retryDelay: 1000,
-        allowUnsafeClientSecret: false, // Disabilitato per sicurezza
-        stateTimeout: 10 * 60 * 1000, // 10 minuti per il timeout dello state
-    };
-    config;
-    userCache = new Map();
-    // Fallback storage for Node.js environment
-    memoryStorage = new Map();
+class OAuthConnector extends eventEmitter_1.EventEmitter {
     constructor(config = {}) {
         super();
+        this.DEFAULT_CONFIG = {
+            providers: {
+                google: {
+                    clientId: "",
+                    redirectUri: `${this.getOrigin()}/auth/callback`,
+                    scope: ["openid", "email", "profile"],
+                    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+                    tokenUrl: "https://oauth2.googleapis.com/token",
+                    userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+                    usePKCE: true, // Forza PKCE per Google
+                },
+                github: {
+                    clientId: "",
+                    redirectUri: `${this.getOrigin()}/auth/callback`,
+                    scope: ["user:email"],
+                    authUrl: "https://github.com/login/oauth/authorize",
+                    tokenUrl: "https://github.com/login/oauth/access_token",
+                    userInfoUrl: "https://api.github.com/user",
+                    usePKCE: true,
+                },
+                discord: {
+                    clientId: "",
+                    redirectUri: `${this.getOrigin()}/auth/callback`,
+                    scope: ["identify", "email"],
+                    authUrl: "https://discord.com/api/oauth2/authorize",
+                    tokenUrl: "https://discord.com/api/oauth2/token",
+                    userInfoUrl: "https://discord.com/api/users/@me",
+                    usePKCE: true,
+                },
+                twitter: {
+                    clientId: "",
+                    redirectUri: `${this.getOrigin()}/auth/callback`,
+                    scope: ["tweet.read", "users.read"],
+                    authUrl: "https://twitter.com/i/oauth2/authorize",
+                    tokenUrl: "https://api.twitter.com/2/oauth2/token",
+                    userInfoUrl: "https://api.twitter.com/2/users/me",
+                    usePKCE: true,
+                },
+                custom: {
+                    clientId: "",
+                    redirectUri: "",
+                    scope: [],
+                    authUrl: "",
+                    tokenUrl: "",
+                    userInfoUrl: "",
+                    usePKCE: true,
+                },
+            },
+            usePKCE: true, // PKCE abilitato di default per sicurezza
+            cacheDuration: 24 * 60 * 60 * 1000, // 24 hours
+            timeout: 60000,
+            maxRetries: 3,
+            retryDelay: 1000,
+            allowUnsafeClientSecret: false, // Disabilitato per sicurezza
+            stateTimeout: 10 * 60 * 1000, // 10 minuti per il timeout dello state
+        };
+        this.userCache = new Map();
+        // Fallback storage for Node.js environment
+        this.memoryStorage = new Map();
         this.config = {
             ...this.DEFAULT_CONFIG,
             ...config,
@@ -388,15 +393,15 @@ export class OAuthConnector extends EventEmitter {
             throw new Error(`Provider ${provider} is not configured.`);
         }
         // Username uniforme
-        const username = generateUsernameFromIdentity(provider, userInfo);
+        const username = (0, validation_1.generateUsernameFromIdentity)(provider, userInfo);
         try {
             console.log(`Generating credentials for ${provider} user: ${userInfo.id}`);
             const saltData = `${userInfo.id}_${provider}_${userInfo.email || "no-email"}`;
-            const salt = ethers.keccak256(ethers.toUtf8Bytes(saltData));
+            const salt = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(saltData));
             // Password deterministica (compatibilità)
-            const password = generateDeterministicPassword(salt);
+            const password = (0, validation_1.generateDeterministicPassword)(salt);
             // Deriva la chiave GunDB
-            const key = await derive(password, salt, { includeP256: true });
+            const key = await (0, derive_1.default)(password, salt, { includeP256: true });
             const credentials = {
                 username,
                 password,
@@ -751,3 +756,4 @@ export class OAuthConnector extends EventEmitter {
         }
     }
 }
+exports.OAuthConnector = OAuthConnector;

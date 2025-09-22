@@ -1,23 +1,68 @@
+"use strict";
 /**
  * GunDB class with enhanced features:
  * - Dynamic peer linking
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-import Gun from "gun/gun";
-import SEA from "gun/sea";
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
-import derive from "./derive";
-import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { EventEmitter } from "../utils/eventEmitter";
-import { RxJS } from "./rxjs";
-import * as GunErrors from "./errors";
-import * as crypto from "./crypto";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createGun = exports.derive = exports.GunErrors = exports.crypto = exports.RxJS = exports.SEA = exports.DataBase = exports.Gun = void 0;
+const gun_1 = __importDefault(require("gun/gun"));
+exports.Gun = gun_1.default;
+const sea_1 = __importDefault(require("gun/sea"));
+exports.SEA = sea_1.default;
+require("gun/lib/then");
+require("gun/lib/radix");
+require("gun/lib/radisk");
+require("gun/lib/store");
+require("gun/lib/rindexed");
+require("gun/lib/webrtc");
+const derive_1 = __importDefault(require("./derive"));
+exports.derive = derive_1.default;
+const errorHandler_1 = require("../utils/errorHandler");
+const eventEmitter_1 = require("../utils/eventEmitter");
+const rxjs_1 = require("./rxjs");
+Object.defineProperty(exports, "RxJS", { enumerable: true, get: function () { return rxjs_1.RxJS; } });
+const GunErrors = __importStar(require("./errors"));
+exports.GunErrors = GunErrors;
+const crypto = __importStar(require("./crypto"));
+exports.crypto = crypto;
 /**
  * Configuration constants for timeouts and security
  */
@@ -34,18 +79,11 @@ const CONFIG = {
     },
 };
 class DataBase {
-    gun;
-    user = null;
-    crypto;
-    sea;
-    node;
-    onAuthCallbacks = [];
-    eventEmitter;
-    // Integrated modules
-    _rxjs;
     constructor(gun, appScope = "shogun") {
+        this.user = null;
+        this.onAuthCallbacks = [];
         // Initialize event emitter
-        this.eventEmitter = new EventEmitter();
+        this.eventEmitter = new eventEmitter_1.EventEmitter();
         // Validate Gun instance
         if (!gun) {
             throw new Error("Gun instance is required but was not provided");
@@ -66,9 +104,9 @@ class DataBase {
         this.user = this.gun.user().recall({ sessionStorage: true });
         this.subscribeToAuthEvents();
         this.crypto = crypto;
-        this.sea = SEA;
+        this.sea = sea_1.default;
         this.node = null;
-        this._rxjs = new RxJS(this.gun);
+        this._rxjs = new rxjs_1.RxJS(this.gun);
     }
     /**
      * Initialize the GunInstance asynchronously
@@ -93,7 +131,7 @@ class DataBase {
         this.gun.on("auth", (ack) => {
             // Auth event received
             if (ack.err) {
-                ErrorHandler.handle(ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
+                errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.GUN, "AUTH_EVENT_ERROR", ack.err, new Error(ack.err));
             }
             else {
                 this.notifyAuthListeners(ack.sea?.pub || "");
@@ -272,15 +310,8 @@ class DataBase {
     navigateToPath(node, path) {
         if (!path || typeof path !== "string")
             return node;
-        // Sanitize path to remove any control characters or invalid characters
-        const sanitizedPath = path
-            .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-            .replace(/[^\w\-._/]/g, "") // Only allow alphanumeric, hyphens, dots, underscores, and slashes
-            .trim();
-        if (!sanitizedPath)
-            return node;
         // Split path by '/' and filter out empty segments
-        const pathSegments = sanitizedPath
+        const pathSegments = path
             .split("/")
             .filter((segment) => segment.length > 0)
             .map((segment) => segment.trim())
@@ -289,28 +320,6 @@ class DataBase {
         return pathSegments.reduce((currentNode, segment) => {
             return currentNode.get(segment);
         }, node);
-    }
-    /**
-     * Deconstruct path for GunDB navigation in user space
-     * Converts "todos/1234" to user.get("todos").get("1234")
-     * @param path Path string to deconstruct
-     * @returns Gun node at the specified path in user space
-     */
-    deconstructUserPath(path) {
-        const user = this.gun.user();
-        if (!user || !user.is) {
-            throw new Error("User not logged in");
-        }
-        return this.navigateToPath(user, path);
-    }
-    /**
-     * Deconstruct path for GunDB navigation in global space
-     * Converts "todos/1234" to gun.get("todos").get("1234")
-     * @param path Path string to deconstruct
-     * @returns Gun node at the specified path in global space
-     */
-    deconstructGlobalPath(path) {
-        return this.navigateToPath(this.gun, path);
     }
     /**
      * Gets the Gun instance
@@ -361,7 +370,7 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        const node = this.deconstructGlobalPath(path);
+        const node = this.navigateToPath(this.gun, path);
         const data = await node.then();
         return data;
     }
@@ -372,7 +381,7 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        const node = this.deconstructGlobalPath(path);
+        const node = this.navigateToPath(this.gun, path);
         const ack = await node.put(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
@@ -386,7 +395,7 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        const node = this.deconstructGlobalPath(path);
+        const node = this.navigateToPath(this.gun, path);
         const ack = await node.set(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
@@ -399,11 +408,9 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        const node = this.deconstructGlobalPath(path);
+        const node = this.navigateToPath(this.gun, path);
         const ack = await node.put(null).then();
-        const result = ack.err
-            ? { success: false, error: ack.err }
-            : { success: true };
+        const result = ack && ack.err ? { success: false, error: ack.err } : { success: true };
         return result;
     }
     /**
@@ -1439,13 +1446,13 @@ class DataBase {
                 (typeof screen !== "undefined"
                     ? screen.width + "x" + screen.height
                     : "");
-            const encryptionKey = await SEA.work(deviceInfo, null, null, {
+            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
                 name: "SHA-256",
             });
             if (!encryptionKey) {
                 throw new Error("Failed to generate encryption key");
             }
-            const encryptedData = await SEA.encrypt(JSON.stringify(data), encryptionKey);
+            const encryptedData = await sea_1.default.encrypt(JSON.stringify(data), encryptionKey);
             if (!encryptedData) {
                 throw new Error("Failed to encrypt session data");
             }
@@ -1466,13 +1473,13 @@ class DataBase {
                 (typeof screen !== "undefined"
                     ? screen.width + "x" + screen.height
                     : "");
-            const encryptionKey = await SEA.work(deviceInfo, null, null, {
+            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
                 name: "SHA-256",
             });
             if (!encryptionKey) {
                 throw new Error("Failed to generate decryption key");
             }
-            const decryptedData = await SEA.decrypt(encryptedData, encryptionKey);
+            const decryptedData = await sea_1.default.decrypt(encryptedData, encryptionKey);
             if (decryptedData === undefined) {
                 throw new Error("Failed to decrypt session data");
             }
@@ -1536,8 +1543,8 @@ class DataBase {
             let proofOfWork;
             try {
                 // Use SEA directly if available
-                if (SEA && SEA.work) {
-                    proofOfWork = await SEA.work(answersText, null, null, {
+                if (sea_1.default && sea_1.default.work) {
+                    proofOfWork = await sea_1.default.work(answersText, null, null, {
                         name: "SHA-256",
                     });
                 }
@@ -1558,8 +1565,8 @@ class DataBase {
             // Encrypt the password hint with the proof of work
             let encryptedHint;
             try {
-                if (SEA && SEA.encrypt) {
-                    encryptedHint = await SEA.encrypt(hint, proofOfWork);
+                if (sea_1.default && sea_1.default.encrypt) {
+                    encryptedHint = await sea_1.default.encrypt(hint, proofOfWork);
                 }
                 else if (this.crypto && this.crypto.encrypt) {
                     encryptedHint = await this.crypto.encrypt(hint, proofOfWork);
@@ -1632,8 +1639,8 @@ class DataBase {
             let proofOfWork;
             try {
                 // Use SEA directly if available
-                if (SEA && SEA.work) {
-                    proofOfWork = await SEA.work(answersText, null, null, {
+                if (sea_1.default && sea_1.default.work) {
+                    proofOfWork = await sea_1.default.work(answersText, null, null, {
                         name: "SHA-256",
                     });
                 }
@@ -1654,8 +1661,8 @@ class DataBase {
             // Decrypt the password hint with the proof of work
             let hint;
             try {
-                if (SEA && SEA.decrypt) {
-                    hint = await SEA.decrypt(securityData.hint, proofOfWork);
+                if (sea_1.default && sea_1.default.decrypt) {
+                    hint = await sea_1.default.decrypt(securityData.hint, proofOfWork);
                 }
                 else if (this.crypto && this.crypto.decrypt) {
                     hint = await this.crypto.decrypt(securityData.hint, proofOfWork);
@@ -1683,64 +1690,6 @@ class DataBase {
             return { success: false, error: String(error) };
         }
     }
-    /**
-     * Saves user data at the specified path
-     * @param path Path to save the data (supports nested paths like "test/data/marco")
-     * @param data Data to save
-     * @returns Promise that resolves when the data is saved
-     */
-    async putUserData(path, data) {
-        const node = this.deconstructUserPath(path);
-        const ack = await node.put(data).then();
-        if (ack.err) {
-            throw new Error(ack.err);
-        }
-    }
-    /**
-     * Gets user data from the specified path
-     * @param path Path to get the data from (supports nested paths like "test/data/marco")
-     * @returns Promise that resolves with the data
-     */
-    async getUserData(path) {
-        // Validazione del path
-        if (!path || typeof path !== "string") {
-            throw new Error("Path must be a non-empty string");
-        }
-        try {
-            const node = this.deconstructUserPath(path);
-            const data = await node.once().then();
-            // Gestisci i riferimenti GunDB
-            if (data && typeof data === "object" && data["#"]) {
-                // È un riferimento GunDB, carica i dati effettivi
-                const referencePath = data["#"];
-                const referenceNode = this.deconstructGlobalPath(referencePath);
-                const actualData = await referenceNode.once().then();
-                return actualData;
-            }
-            else {
-                // Dati diretti, restituisci così come sono
-                return data;
-            }
-        }
-        catch (error) {
-            const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            throw new Error(errorMsg);
-        }
-    }
-    /**
-     * Removes user data at the specified path
-     * @param path Path to remove the data from (supports nested paths like "test/data/marco")
-     * @returns Promise that resolves when the data is removed
-     */
-    async removeUserData(path) {
-        const node = this.deconstructUserPath(path);
-        const ack = await node.put(null).then();
-        if (ack.err) {
-            throw new Error(ack.err);
-        }
-    }
-    // Errors
-    static Errors = GunErrors;
     /**
      * Adds an event listener
      * @param event Event name
@@ -1868,12 +1817,15 @@ class DataBase {
         return this.user?.is?.pub ? true : false;
     }
 }
+exports.DataBase = DataBase;
+// Errors
+DataBase.Errors = GunErrors;
 const createGun = (config) => {
     console.log("Creating Gun instance with config:", config);
     console.log("Config peers:", config?.peers);
-    const gunInstance = Gun(config);
+    const gunInstance = (0, gun_1.default)(config);
     console.log("Created Gun instance:", gunInstance);
     return gunInstance;
 };
-export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
-export default Gun;
+exports.createGun = createGun;
+exports.default = gun_1.default;

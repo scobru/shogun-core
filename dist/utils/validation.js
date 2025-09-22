@@ -1,9 +1,16 @@
+"use strict";
 // Utility di validazione e generazione credenziali per ShogunCore
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.validateUsername = validateUsername;
+exports.validateEmail = validateEmail;
+exports.validateProvider = validateProvider;
+exports.generateUsernameFromIdentity = generateUsernameFromIdentity;
+exports.generateDeterministicPassword = generateDeterministicPassword;
 // --- VALIDAZIONE ---
 /**
  * Valida uno username secondo le regole comuni
  */
-export function validateUsername(username) {
+function validateUsername(username) {
     if (!username || typeof username !== "string")
         return false;
     if (username.length < 3 || username.length > 64)
@@ -15,7 +22,7 @@ export function validateUsername(username) {
 /**
  * Valida una email
  */
-export function validateEmail(email) {
+function validateEmail(email) {
     if (!email || typeof email !== "string")
         return false;
     // Regex semplice per email
@@ -24,7 +31,7 @@ export function validateEmail(email) {
 /**
  * Valida un provider OAuth supportato
  */
-export function validateProvider(provider) {
+function validateProvider(provider) {
     return ["google", "github", "discord", "twitter", "custom"].includes(provider);
 }
 // --- GENERAZIONE USERNAME ---
@@ -32,7 +39,7 @@ export function validateProvider(provider) {
  * Genera uno username uniforme a partire da provider e userInfo
  * Esempio: google_utente, github_12345, nostr_pubkey, web3_0xabc...
  */
-export function generateUsernameFromIdentity(provider, userInfo) {
+function generateUsernameFromIdentity(provider, userInfo) {
     if (provider === "web3" && userInfo.id) {
         return `web3_${userInfo.id.toLowerCase()}`;
     }
@@ -54,15 +61,15 @@ export function generateUsernameFromIdentity(provider, userInfo) {
     return `${provider}_user`;
 }
 // --- GENERAZIONE PASSWORD DETERMINISTICA ---
-import { ethers } from "ethers";
+const ethers_1 = require("ethers");
 /**
  * Genera una password deterministica sicura a partire da un salt
  * Usare per OAuth, Web3, Nostr, ecc.
  */
-export function generateDeterministicPassword(salt) {
+function generateDeterministicPassword(salt) {
     try {
         // Restituisce una stringa hex di 32 caratteri
-        return ethers.keccak256(ethers.toUtf8Bytes(salt)).slice(2, 34);
+        return ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(salt)).slice(2, 34);
     }
     catch (error) {
         // Fallback in case ethers is not available

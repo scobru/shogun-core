@@ -1,11 +1,13 @@
-import { ShogunEventEmitter } from "../interfaces/events";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EventManager = void 0;
+const events_1 = require("../interfaces/events");
 /**
  * Manages event operations for ShogunCore
  */
-export class EventManager {
-    eventEmitter;
+class EventManager {
     constructor() {
-        this.eventEmitter = new ShogunEventEmitter();
+        this.eventEmitter = new events_1.ShogunEventEmitter();
     }
     /**
      * Emits an event through the core's event emitter.
@@ -65,3 +67,4 @@ export class EventManager {
         return this.eventEmitter;
     }
 }
+exports.EventManager = EventManager;

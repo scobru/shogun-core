@@ -1,13 +1,18 @@
+"use strict";
 /**
  * Simplified API layer to reduce complexity for common use cases
  * Provides quick-start methods that wrap the full DataBase functionality
  */
-import { DataBase, createGun } from "./db";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AutoQuickStart = exports.QuickStart = exports.SimpleGunAPI = void 0;
+exports.createSimpleAPI = createSimpleAPI;
+exports.quickStart = quickStart;
+exports.autoQuickStart = autoQuickStart;
+const db_1 = require("./db");
 /**
  * Simple API wrapper that provides common operations with minimal complexity
  */
-export class SimpleGunAPI {
-    db;
+class SimpleGunAPI {
     constructor(db) {
         this.db = db;
     }
@@ -162,30 +167,37 @@ export class SimpleGunAPI {
     /**
      * Quick user data operations - simplified interface
      */
-    // Simple user data get
+    // Simple user data get - using direct user node
     async getUserData(path) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return null;
             }
-            // Use database method which handles path deconstruction
-            return (await this.db.getUserData(path));
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return null;
+            }
+            const data = await this.db.user.get(path).once().then();
+            return data;
         }
         catch (error) {
             console.warn(`Failed to get user data from ${path}:`, error);
             return null;
         }
     }
-    // Simple user data put
+    // Simple user data put - using direct user node
     async putUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            // Use database method which handles path deconstruction
-            await this.db.putUserData(path, data);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get(path).put(data).then();
             return true;
         }
         catch (error) {
@@ -193,15 +205,18 @@ export class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data set (alternative to put)
+    // Simple user data set (alternative to put) - using direct user node
     async setUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            // Use database method which handles path deconstruction
-            await this.db.putUserData(path, data);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get(path).put(data).then();
             return true;
         }
         catch (error) {
@@ -209,15 +224,18 @@ export class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data remove
+    // Simple user data remove - using direct user node
     async removeUserData(path) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            // Use database method which handles path deconstruction
-            await this.db.removeUserData(path);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get(path).put(null).then();
             return true;
         }
         catch (error) {
@@ -352,140 +370,202 @@ export class SimpleGunAPI {
             return null;
         }
     }
-    // Update user profile (common use case)
+    // Update user profile (common use case) - using direct user node
     async updateProfile(profileData) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.putUserData("profile", profileData);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get("profile").put(profileData).then();
+            return true;
         }
         catch (error) {
             console.warn("Failed to update profile:", error);
             return false;
         }
     }
-    // Get user profile
+    // Get user profile - using direct user node
     async getProfile() {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return null;
             }
-            return await this.getUserData("profile");
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return null;
+            }
+            const profileData = await this.db.user.get("profile").once().then();
+            return profileData;
         }
         catch (error) {
             console.warn("Failed to get profile:", error);
             return null;
         }
     }
-    // Save user settings
+    // Save user settings - using direct user node
     async saveSettings(settings) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.putUserData("settings", settings);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get("settings").put(settings).then();
+            return true;
         }
         catch (error) {
             console.warn("Failed to save settings:", error);
             return false;
         }
     }
-    // Get user settings
+    // Get user settings - using direct user node
     async getSettings() {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return null;
             }
-            return await this.getUserData("settings");
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return null;
+            }
+            const settingsData = await this.db.user.get("settings").once().then();
+            return settingsData;
         }
         catch (error) {
             console.warn("Failed to get settings:", error);
             return null;
         }
     }
-    // Save user preferences
+    // Save user preferences - using direct user node
     async savePreferences(preferences) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.putUserData("preferences", preferences);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get("preferences").put(preferences).then();
+            return true;
         }
         catch (error) {
             console.warn("Failed to save preferences:", error);
             return false;
         }
     }
-    // Get user preferences
+    // Get user preferences - using direct user node
     async getPreferences() {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return null;
             }
-            return await this.getUserData("preferences");
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return null;
+            }
+            const preferencesData = await this.db.user
+                .get("preferences")
+                .once()
+                .then();
+            return preferencesData;
         }
         catch (error) {
             console.warn("Failed to get preferences:", error);
             return null;
         }
     }
-    // Create a user collection (for storing multiple items)
+    // Create a user collection - using direct user node
     async createCollection(collectionName, items) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.putUserData(`collections/${collectionName}`, items);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user.get(`collections/${collectionName}`).put(items).then();
+            return true;
         }
         catch (error) {
             console.warn(`Failed to create collection ${collectionName}:`, error);
             return false;
         }
     }
-    // Add item to collection
+    // Add item to collection - using direct user node
     async addToCollection(collectionName, itemId, item) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.putUserData(`collections/${collectionName}/${itemId}`, item);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user
+                .get(`collections/${collectionName}/${itemId}`)
+                .put(item)
+                .then();
+            return true;
         }
         catch (error) {
             console.warn(`Failed to add item to collection ${collectionName}:`, error);
             return false;
         }
     }
-    // Get collection
+    // Get collection - using direct user node
     async getCollection(collectionName) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return null;
             }
-            return await this.getUserData(`collections/${collectionName}`);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return null;
+            }
+            const collectionData = await this.db.user
+                .get(`collections/${collectionName}`)
+                .once()
+                .then();
+            return collectionData;
         }
         catch (error) {
             console.warn(`Failed to get collection ${collectionName}:`, error);
             return null;
         }
     }
-    // Remove item from collection
+    // Remove item from collection - using direct user node
     async removeFromCollection(collectionName, itemId) {
         try {
             if (!this.isLoggedIn()) {
                 console.warn("User not logged in");
                 return false;
             }
-            return await this.removeUserData(`collections/${collectionName}/${itemId}`);
+            if (!this.db.user) {
+                console.warn("User node not available");
+                return false;
+            }
+            await this.db.user
+                .get(`collections/${collectionName}/${itemId}`)
+                .put(null)
+                .then();
+            return true;
         }
         catch (error) {
             console.warn(`Failed to remove item from collection ${collectionName}:`, error);
@@ -493,20 +573,19 @@ export class SimpleGunAPI {
         }
     }
 }
+exports.SimpleGunAPI = SimpleGunAPI;
 /**
  * Factory function to create a simple API instance
  */
-export function createSimpleAPI(db) {
+function createSimpleAPI(db) {
     return new SimpleGunAPI(db);
 }
 /**
  * Quick start helper - creates a simple API with minimal configuration
  */
-export class QuickStart {
-    db;
-    simpleAPI;
+class QuickStart {
     constructor(gunInstance, appScope = "shogun") {
-        this.db = new DataBase(gunInstance, appScope);
+        this.db = new db_1.DataBase(gunInstance, appScope);
         this.simpleAPI = new SimpleGunAPI(this.db);
     }
     // Initialize the database
@@ -522,14 +601,12 @@ export class QuickStart {
         return this.db;
     }
 }
+exports.QuickStart = QuickStart;
 /**
  * Auto Quick Start helper - creates a simple API with automatic Gun instance creation
  * No need to pass a Gun instance, it creates one automatically
  */
-export class AutoQuickStart {
-    db;
-    simpleAPI;
-    gunInstance;
+class AutoQuickStart {
     constructor(config) {
         const gunConfig = {
             peers: config?.peers || [],
@@ -537,9 +614,9 @@ export class AutoQuickStart {
         };
         // Remove appScope from gunConfig as it's not a Gun configuration option
         delete gunConfig.appScope;
-        this.gunInstance = createGun(gunConfig);
+        this.gunInstance = (0, db_1.createGun)(gunConfig);
         const appScope = config?.appScope || "shogun";
-        this.db = new DataBase(this.gunInstance, appScope);
+        this.db = new db_1.DataBase(this.gunInstance, appScope);
         this.simpleAPI = new SimpleGunAPI(this.db);
     }
     // Initialize the database
@@ -559,15 +636,16 @@ export class AutoQuickStart {
         return this.gunInstance;
     }
 }
+exports.AutoQuickStart = AutoQuickStart;
 /**
  * Global helper for quick setup
  */
-export function quickStart(gunInstance, appScope) {
+function quickStart(gunInstance, appScope) {
     return new QuickStart(gunInstance, appScope);
 }
 /**
  * Global helper for auto quick setup - creates Gun instance automatically
  */
-export function autoQuickStart(config) {
+function autoQuickStart(config) {
     return new AutoQuickStart(config);
 }

@@ -1,16 +1,22 @@
-import { BasePlugin } from "../base";
-import { Webauthn } from "./webauthn";
-import { WebAuthnSigner } from "./webauthnSigner";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebauthnPlugin = void 0;
+const base_1 = require("../base");
+const webauthn_1 = require("./webauthn");
+const webauthnSigner_1 = require("./webauthnSigner");
+const errorHandler_1 = require("../../utils/errorHandler");
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
-export class WebauthnPlugin extends BasePlugin {
-    name = "webauthn";
-    version = "1.0.0";
-    description = "Provides WebAuthn authentication functionality for ShogunCore";
-    webauthn = null;
-    signer = null;
+class WebauthnPlugin extends base_1.BasePlugin {
+    constructor() {
+        super(...arguments);
+        this.name = "webauthn";
+        this.version = "1.0.0";
+        this.description = "Provides WebAuthn authentication functionality for ShogunCore";
+        this.webauthn = null;
+        this.signer = null;
+    }
     /**
      * @inheritdoc
      */
@@ -27,8 +33,8 @@ export class WebauthnPlugin extends BasePlugin {
             return;
         }
         // Inizializziamo il modulo WebAuthn
-        this.webauthn = new Webauthn(core.gun);
-        this.signer = new WebAuthnSigner(this.webauthn);
+        this.webauthn = new webauthn_1.Webauthn(core.gun);
+        this.signer = new webauthnSigner_1.WebAuthnSigner(this.webauthn);
         console.log("[webauthnPlugin] WebAuthn plugin initialized with signer support");
     }
     /**
@@ -342,7 +348,7 @@ export class WebauthnPlugin extends BasePlugin {
         catch (error) {
             console.error(`Error during WebAuthn login: ${error}`);
             // Log but do not depend on handler return value
-            ErrorHandler.handle(ErrorType.WEBAUTHN, "WEBAUTHN_LOGIN_ERROR", error.message || "Error during WebAuthn login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_LOGIN_ERROR", error.message || "Error during WebAuthn login", error);
             return {
                 success: false,
                 error: error.message || "Error during WebAuthn login",
@@ -388,7 +394,7 @@ export class WebauthnPlugin extends BasePlugin {
         }
         catch (error) {
             console.error(`Error during WebAuthn registration: ${error}`);
-            ErrorHandler.handle(ErrorType.WEBAUTHN, "WEBAUTHN_SIGNUP_ERROR", error.message || "Error during WebAuthn registration", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "WEBAUTHN_SIGNUP_ERROR", error.message || "Error during WebAuthn registration", error);
             return {
                 success: false,
                 error: error.message || "Error during WebAuthn registration",
@@ -396,3 +402,4 @@ export class WebauthnPlugin extends BasePlugin {
         }
     }
 }
+exports.WebauthnPlugin = WebauthnPlugin;

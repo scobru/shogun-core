@@ -1,10 +1,11 @@
-import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuthManager = void 0;
+const errorHandler_1 = require("../utils/errorHandler");
 /**
  * Manages authentication operations for ShogunCore
  */
-export class AuthManager {
-    core;
-    currentAuthMethod;
+class AuthManager {
     constructor(core) {
         this.core = core;
     }
@@ -31,7 +32,7 @@ export class AuthManager {
             this.core.emit("auth:logout");
         }
         catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
         }
     }
     /**
@@ -67,7 +68,7 @@ export class AuthManager {
             return result;
         }
         catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
             return {
                 success: false,
                 error: error.message ?? "Unknown error during login",
@@ -110,7 +111,7 @@ export class AuthManager {
             return result;
         }
         catch (error) {
-            ErrorHandler.handle(ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
             return {
                 success: false,
                 error: error.message ?? "Unknown error during pair login",
@@ -223,3 +224,4 @@ export class AuthManager {
         }
     }
 }
+exports.AuthManager = AuthManager;

@@ -1,18 +1,21 @@
+"use strict";
 /**
  * Core types and interfaces for Shogun SDK
  */
-export var PluginCategory;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CorePlugins = exports.PluginCategory = void 0;
+var PluginCategory;
 (function (PluginCategory) {
     PluginCategory["Authentication"] = "authentication";
     PluginCategory["Wallet"] = "wallet";
     PluginCategory["Privacy"] = "privacy";
     PluginCategory["Identity"] = "identity";
     PluginCategory["Utility"] = "utility";
-})(PluginCategory || (PluginCategory = {}));
-export var CorePlugins;
+})(PluginCategory || (exports.PluginCategory = PluginCategory = {}));
+var CorePlugins;
 (function (CorePlugins) {
     CorePlugins["WebAuthn"] = "webauthn";
     CorePlugins["Web3"] = "web3";
     CorePlugins["Nostr"] = "nostr";
     CorePlugins["OAuth"] = "oauth";
-})(CorePlugins || (CorePlugins = {}));
+})(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

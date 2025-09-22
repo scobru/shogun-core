@@ -1,10 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PluginManager = void 0;
 /**
  * Manages plugin registration, validation, and lifecycle
  */
-export class PluginManager {
-    plugins = new Map();
-    core;
+class PluginManager {
     constructor(core) {
+        this.plugins = new Map();
         this.core = core;
     }
     /**
@@ -294,3 +296,4 @@ export class PluginManager {
         return result;
     }
 }
+exports.PluginManager = PluginManager;

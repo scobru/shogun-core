@@ -184,7 +184,7 @@ export class SimpleGunAPI {
    * Quick user data operations - simplified interface
    */
 
-  // Simple user data get
+  // Simple user data get - using direct user node
   async getUserData<T = unknown>(path: string): Promise<T | null> {
     try {
       if (!this.isLoggedIn()) {
@@ -192,15 +192,20 @@ export class SimpleGunAPI {
         return null;
       }
 
-      // Use database method which handles path deconstruction
-      return (await this.db.getUserData(path)) as T;
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return null;
+      }
+
+      const data = await this.db.user.get(path).once().then();
+      return data as T;
     } catch (error) {
       console.warn(`Failed to get user data from ${path}:`, error);
       return null;
     }
   }
 
-  // Simple user data put
+  // Simple user data put - using direct user node
   async putUserData<T = unknown>(path: string, data: T): Promise<boolean> {
     try {
       if (!this.isLoggedIn()) {
@@ -208,8 +213,12 @@ export class SimpleGunAPI {
         return false;
       }
 
-      // Use database method which handles path deconstruction
-      await this.db.putUserData(path, data);
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get(path).put(data).then();
       return true;
     } catch (error) {
       console.warn(`Failed to put user data to ${path}:`, error);
@@ -217,7 +226,7 @@ export class SimpleGunAPI {
     }
   }
 
-  // Simple user data set (alternative to put)
+  // Simple user data set (alternative to put) - using direct user node
   async setUserData<T = unknown>(path: string, data: T): Promise<boolean> {
     try {
       if (!this.isLoggedIn()) {
@@ -225,8 +234,12 @@ export class SimpleGunAPI {
         return false;
       }
 
-      // Use database method which handles path deconstruction
-      await this.db.putUserData(path, data);
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get(path).put(data).then();
       return true;
     } catch (error) {
       console.warn(`Failed to set user data to ${path}:`, error);
@@ -234,7 +247,7 @@ export class SimpleGunAPI {
     }
   }
 
-  // Simple user data remove
+  // Simple user data remove - using direct user node
   async removeUserData(path: string): Promise<boolean> {
     try {
       if (!this.isLoggedIn()) {
@@ -242,8 +255,12 @@ export class SimpleGunAPI {
         return false;
       }
 
-      // Use database method which handles path deconstruction
-      await this.db.removeUserData(path);
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get(path).put(null).then();
       return true;
     } catch (error) {
       console.warn(`Failed to remove user data from ${path}:`, error);
@@ -408,7 +425,7 @@ export class SimpleGunAPI {
     }
   }
 
-  // Update user profile (common use case)
+  // Update user profile (common use case) - using direct user node
   async updateProfile(profileData: {
     name?: string;
     email?: string;
@@ -421,56 +438,84 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      return await this.putUserData("profile", profileData);
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get("profile").put(profileData).then();
+      return true;
     } catch (error) {
       console.warn("Failed to update profile:", error);
       return false;
     }
   }
 
-  // Get user profile
+  // Get user profile - using direct user node
   async getProfile(): Promise<Record<string, unknown> | null> {
     try {
       if (!this.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
-      return await this.getUserData("profile");
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return null;
+      }
+
+      const profileData = await this.db.user.get("profile").once().then();
+      return profileData;
     } catch (error) {
       console.warn("Failed to get profile:", error);
       return null;
     }
   }
 
-  // Save user settings
+  // Save user settings - using direct user node
   async saveSettings(settings: Record<string, unknown>): Promise<boolean> {
     try {
       if (!this.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
-      return await this.putUserData("settings", settings);
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get("settings").put(settings).then();
+      return true;
     } catch (error) {
       console.warn("Failed to save settings:", error);
       return false;
     }
   }
 
-  // Get user settings
+  // Get user settings - using direct user node
   async getSettings(): Promise<Record<string, unknown> | null> {
     try {
       if (!this.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
-      return await this.getUserData("settings");
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return null;
+      }
+
+      const settingsData = await this.db.user.get("settings").once().then();
+      return settingsData;
     } catch (error) {
       console.warn("Failed to get settings:", error);
       return null;
     }
   }
 
-  // Save user preferences
+  // Save user preferences - using direct user node
   async savePreferences(
     preferences: Record<string, unknown>,
   ): Promise<boolean> {
@@ -479,28 +524,45 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      return await this.putUserData("preferences", preferences);
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get("preferences").put(preferences).then();
+      return true;
     } catch (error) {
       console.warn("Failed to save preferences:", error);
       return false;
     }
   }
 
-  // Get user preferences
+  // Get user preferences - using direct user node
   async getPreferences(): Promise<Record<string, unknown> | null> {
     try {
       if (!this.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
-      return await this.getUserData("preferences");
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return null;
+      }
+
+      const preferencesData = await this.db.user
+        .get("preferences")
+        .once()
+        .then();
+      return preferencesData;
     } catch (error) {
       console.warn("Failed to get preferences:", error);
       return null;
     }
   }
 
-  // Create a user collection (for storing multiple items)
+  // Create a user collection - using direct user node
   async createCollection<T = unknown>(
     collectionName: string,
     items: Record<string, T>,
@@ -510,14 +572,21 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      return await this.putUserData(`collections/${collectionName}`, items);
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user.get(`collections/${collectionName}`).put(items).then();
+      return true;
     } catch (error) {
       console.warn(`Failed to create collection ${collectionName}:`, error);
       return false;
     }
   }
 
-  // Add item to collection
+  // Add item to collection - using direct user node
   async addToCollection<T = unknown>(
     collectionName: string,
     itemId: string,
@@ -528,10 +597,17 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      return await this.putUserData(
-        `collections/${collectionName}/${itemId}`,
-        item,
-      );
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user
+        .get(`collections/${collectionName}/${itemId}`)
+        .put(item)
+        .then();
+      return true;
     } catch (error) {
       console.warn(
         `Failed to add item to collection ${collectionName}:`,
@@ -541,7 +617,7 @@ export class SimpleGunAPI {
     }
   }
 
-  // Get collection
+  // Get collection - using direct user node
   async getCollection(
     collectionName: string,
   ): Promise<Record<string, unknown> | null> {
@@ -550,14 +626,24 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return null;
       }
-      return await this.getUserData(`collections/${collectionName}`);
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return null;
+      }
+
+      const collectionData = await this.db.user
+        .get(`collections/${collectionName}`)
+        .once()
+        .then();
+      return collectionData;
     } catch (error) {
       console.warn(`Failed to get collection ${collectionName}:`, error);
       return null;
     }
   }
 
-  // Remove item from collection
+  // Remove item from collection - using direct user node
   async removeFromCollection(
     collectionName: string,
     itemId: string,
@@ -567,9 +653,17 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      return await this.removeUserData(
-        `collections/${collectionName}/${itemId}`,
-      );
+
+      if (!this.db.user) {
+        console.warn("User node not available");
+        return false;
+      }
+
+      await this.db.user
+        .get(`collections/${collectionName}/${itemId}`)
+        .put(null)
+        .then();
+      return true;
     } catch (error) {
       console.warn(
         `Failed to remove item from collection ${collectionName}:`,

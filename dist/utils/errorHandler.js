@@ -1,7 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ErrorHandler = exports.ErrorType = void 0;
+exports.createError = createError;
 /**
  * Types of errors that can occur in the application
  */
-export var ErrorType;
+var ErrorType;
 (function (ErrorType) {
     ErrorType["AUTHENTICATION"] = "AuthenticationError";
     ErrorType["AUTHORIZATION"] = "AuthorizationError";
@@ -25,7 +29,7 @@ export var ErrorType;
     ErrorType["BIP32"] = "BIP32Error";
     ErrorType["ETHEREUM"] = "EthereumError";
     ErrorType["BITCOIN"] = "BitcoinError";
-})(ErrorType || (ErrorType = {}));
+})(ErrorType || (exports.ErrorType = ErrorType = {}));
 /**
  * Wrapper to standardize errors
  * @param type - Error type
@@ -34,7 +38,7 @@ export var ErrorType;
  * @param originalError - Original error
  * @returns A structured error object
  */
-export function createError(type, code, message, originalError) {
+function createError(type, code, message, originalError) {
     return {
         type,
         code,
@@ -46,11 +50,7 @@ export function createError(type, code, message, originalError) {
 /**
  * Centralized error handler
  */
-export class ErrorHandler {
-    static errors = [];
-    static maxErrors = 100;
-    static listeners = [];
-    static externalLogger = null;
+class ErrorHandler {
     /**
      * Set an external logging service for production error monitoring
      * @param logger - External logger function to send errors to a monitoring service
@@ -239,3 +239,8 @@ export class ErrorHandler {
         this.errors = [];
     }
 }
+exports.ErrorHandler = ErrorHandler;
+ErrorHandler.errors = [];
+ErrorHandler.maxErrors = 100;
+ErrorHandler.listeners = [];
+ErrorHandler.externalLogger = null;

@@ -1,17 +1,22 @@
-import { NostrConnector } from "./nostrConnector";
-import derive from "../../gundb/derive";
-import { ethers } from "ethers";
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NostrSigner = void 0;
+const nostrConnector_1 = require("./nostrConnector");
+const derive_1 = __importDefault(require("../../gundb/derive"));
+const ethers_1 = require("ethers");
 /**
  * Nostr Signer - Provides oneshot signing functionality
  * Similar to webauthn.js but for Nostr/Bitcoin wallets
  * CONSISTENT with normal Nostr approach
  */
-export class NostrSigner {
-    nostrConnector;
-    credentials = new Map();
-    MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+class NostrSigner {
     constructor(nostrConnector) {
-        this.nostrConnector = nostrConnector || new NostrConnector();
+        this.credentials = new Map();
+        this.MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+        this.nostrConnector = nostrConnector || new nostrConnector_1.NostrConnector();
     }
     /**
      * Creates a new Nostr signing credential
@@ -112,7 +117,7 @@ export class NostrSigner {
         try {
             // SAME LOGIC as NostrConnector.generatePassword
             const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
-            const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
+            const passwordHash = ethers_1.ethers.sha256(ethers_1.ethers.toUtf8Bytes(normalizedSig));
             return passwordHash;
         }
         catch (error) {
@@ -164,7 +169,7 @@ export class NostrSigner {
         try {
             // CONSISTENCY: Use the same approach as normal Nostr
             // Use password as seed (same as normal approach)
-            const derivedKeys = await derive(credential.password, // This is the key consistency point!
+            const derivedKeys = await (0, derive_1.default)(credential.password, // This is the key consistency point!
             extra, { includeP256: true });
             return {
                 pub: derivedKeys.pub,
@@ -310,4 +315,5 @@ export class NostrSigner {
         return this.credentials.delete(address.toLowerCase());
     }
 }
-export default NostrSigner;
+exports.NostrSigner = NostrSigner;
+exports.default = NostrSigner;

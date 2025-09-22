@@ -1,11 +1,14 @@
+"use strict";
 /**
  * Simplified configuration options to reduce complexity
  * Provides sensible defaults and easy-to-use presets
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.QuickConfig = exports.ConfigHelpers = exports.ShogunConfigBuilder = exports.ShogunPresets = void 0;
 /**
  * Preset configurations for common use cases
  */
-export const ShogunPresets = {
+exports.ShogunPresets = {
     /**
      * Minimal configuration for simple apps
      */
@@ -88,8 +91,10 @@ export const ShogunPresets = {
 /**
  * Configuration builder for custom setups
  */
-export class ShogunConfigBuilder {
-    config = {};
+class ShogunConfigBuilder {
+    constructor() {
+        this.config = {};
+    }
     /**
      * Set Gun options
      */
@@ -146,36 +151,37 @@ export class ShogunConfigBuilder {
         return this.config;
     }
 }
+exports.ShogunConfigBuilder = ShogunConfigBuilder;
 /**
  * Helper functions for common configuration patterns
  */
-export const ConfigHelpers = {
+exports.ConfigHelpers = {
     /**
      * Create a configuration for a specific environment
      */
     forEnvironment(env) {
         switch (env) {
             case "development":
-                return ShogunPresets.development();
+                return exports.ShogunPresets.development();
             case "production":
-                return ShogunPresets.production();
+                return exports.ShogunPresets.production();
             case "test":
-                return ShogunPresets.offline();
+                return exports.ShogunPresets.offline();
             default:
-                return ShogunPresets.minimal();
+                return exports.ShogunPresets.minimal();
         }
     },
     /**
      * Create a configuration with custom peers
      */
     withPeers(peers) {
-        return ShogunPresets.production(peers);
+        return exports.ShogunPresets.production(peers);
     },
     /**
      * Create a configuration for a specific use case
      */
     forUseCase(useCase) {
-        const baseConfig = ShogunPresets.production();
+        const baseConfig = exports.ShogunPresets.production();
         switch (useCase) {
             case "chat":
                 return {
@@ -206,25 +212,25 @@ export const ConfigHelpers = {
 /**
  * Quick configuration functions
  */
-export const QuickConfig = {
+exports.QuickConfig = {
     /**
      * Minimal setup for quick testing
      */
-    test: () => ShogunPresets.minimal(),
+    test: () => exports.ShogunPresets.minimal(),
     /**
      * Standard setup for most apps
      */
-    standard: () => ShogunPresets.production(),
+    standard: () => exports.ShogunPresets.production(),
     /**
      * Setup with WebAuthn for secure apps
      */
-    secure: () => ShogunPresets.webauthn(),
+    secure: () => exports.ShogunPresets.webauthn(),
     /**
      * Setup with Web3 for crypto apps
      */
-    crypto: () => ShogunPresets.web3(),
+    crypto: () => exports.ShogunPresets.web3(),
     /**
      * Offline setup for local development
      */
-    local: () => ShogunPresets.offline(),
+    local: () => exports.ShogunPresets.offline(),
 };

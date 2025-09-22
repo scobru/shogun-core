@@ -1,24 +1,27 @@
-import { BasePlugin } from "../base";
-import { OAuthConnector } from "./oauthConnector";
-import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
-import { ShogunStorage } from "../../storage/storage";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.OAuthPlugin = void 0;
+const base_1 = require("../base");
+const oauthConnector_1 = require("./oauthConnector");
+const errorHandler_1 = require("../../utils/errorHandler");
+const storage_1 = require("../../storage/storage");
 /**
  * OAuth Plugin for ShogunCore
  * Provides authentication with external OAuth providers
  */
-export class OAuthPlugin extends BasePlugin {
-    name = "oauth";
-    version = "1.0.0";
-    description = "Provides OAuth authentication with external providers for ShogunCore";
-    oauthConnector = null;
-    config = {};
-    storage = null;
+class OAuthPlugin extends base_1.BasePlugin {
     /**
      * Constructor for OAuthPlugin
      * @param config - Initial configuration for OAuth
      */
     constructor(config) {
         super();
+        this.name = "oauth";
+        this.version = "1.0.0";
+        this.description = "Provides OAuth authentication with external providers for ShogunCore";
+        this.oauthConnector = null;
+        this.config = {};
+        this.storage = null;
         if (config) {
             this.config = config;
         }
@@ -28,9 +31,9 @@ export class OAuthPlugin extends BasePlugin {
      */
     initialize(core) {
         this.core = core;
-        this.storage = new ShogunStorage();
+        this.storage = new storage_1.ShogunStorage();
         // Inizializziamo il connector OAuth con la configurazione già presente
-        this.oauthConnector = new OAuthConnector(this.config);
+        this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
         // Valida la configurazione di sicurezza dopo l'inizializzazione
         this.validateOAuthSecurity();
     }
@@ -75,7 +78,7 @@ export class OAuthPlugin extends BasePlugin {
         this.config = { ...this.config, ...config, providers: mergedProviders };
         // Inizializza il connector se non è già stato fatto
         if (!this.oauthConnector) {
-            this.oauthConnector = new OAuthConnector(this.config);
+            this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
         }
         else {
             // Update connector configuration se già inizializzato
@@ -85,7 +88,7 @@ export class OAuthPlugin extends BasePlugin {
             }
             else {
                 // Fallback: recreate connector
-                this.oauthConnector = new OAuthConnector(this.config);
+                this.oauthConnector = new oauthConnector_1.OAuthConnector(this.config);
             }
         }
         // Validate security settings
@@ -177,20 +180,20 @@ export class OAuthPlugin extends BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!provider) {
-                throw createError(ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth login");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth login");
             }
             if (!this.isSupported()) {
-                throw createError(ErrorType.ENVIRONMENT, "OAUTH_UNAVAILABLE", "OAuth is not supported in this environment");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "OAUTH_UNAVAILABLE", "OAuth is not supported in this environment");
             }
             // Check if provider is available
             const availableProviders = this.getAvailableProviders();
             if (!availableProviders.includes(provider)) {
-                throw createError(ErrorType.VALIDATION, "PROVIDER_NOT_CONFIGURED", `Provider ${provider} is not configured or available`);
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_NOT_CONFIGURED", `Provider ${provider} is not configured or available`);
             }
             // Initiate OAuth flow with the provider
             const oauthResult = await this.initiateOAuth(provider);
             if (!oauthResult.success) {
-                throw createError(ErrorType.AUTHENTICATION, "OAUTH_INITIATION_FAILED", oauthResult.error || "Failed to initiate OAuth flow");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "OAUTH_INITIATION_FAILED", oauthResult.error || "Failed to initiate OAuth flow");
             }
             // In a browser environment, this would redirect to the OAuth provider
             // The frontend should handle the redirect and then call handleOAuthCallback
@@ -207,10 +210,10 @@ export class OAuthPlugin extends BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || ErrorType.AUTHENTICATION;
+            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "OAUTH_LOGIN_ERROR";
             const errorMessage = error?.message || "Unknown error during OAuth login";
-            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -223,20 +226,20 @@ export class OAuthPlugin extends BasePlugin {
         try {
             const core = this.assertInitialized();
             if (!provider) {
-                throw createError(ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth signup");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_REQUIRED", "OAuth provider required for OAuth signup");
             }
             if (!this.isSupported()) {
-                throw createError(ErrorType.ENVIRONMENT, "OAUTH_UNAVAILABLE", "OAuth is not supported in this environment");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, "OAUTH_UNAVAILABLE", "OAuth is not supported in this environment");
             }
             // Check if provider is available
             const availableProviders = this.getAvailableProviders();
             if (!availableProviders.includes(provider)) {
-                throw createError(ErrorType.VALIDATION, "PROVIDER_NOT_CONFIGURED", `Provider ${provider} is not configured or available`);
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.VALIDATION, "PROVIDER_NOT_CONFIGURED", `Provider ${provider} is not configured or available`);
             }
             // Initiate OAuth flow with the provider
             const oauthResult = await this.initiateOAuth(provider);
             if (!oauthResult.success) {
-                throw createError(ErrorType.AUTHENTICATION, "OAUTH_INITIATION_FAILED", oauthResult.error || "Failed to initiate OAuth flow");
+                throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.AUTHENTICATION, "OAUTH_INITIATION_FAILED", oauthResult.error || "Failed to initiate OAuth flow");
             }
             // In a browser environment, this would redirect to the OAuth provider
             // The frontend should handle the redirect and then call handleOAuthCallback
@@ -253,10 +256,10 @@ export class OAuthPlugin extends BasePlugin {
         }
         catch (error) {
             // Handle both ShogunError and generic errors
-            const errorType = error?.type || ErrorType.AUTHENTICATION;
+            const errorType = error?.type || errorHandler_1.ErrorType.AUTHENTICATION;
             const errorCode = error?.code || "OAUTH_SIGNUP_ERROR";
             const errorMessage = error?.message || "Unknown error during OAuth signup";
-            ErrorHandler.handle(errorType, errorCode, errorMessage, error);
+            errorHandler_1.ErrorHandler.handle(errorType, errorCode, errorMessage, error);
             return { success: false, error: errorMessage };
         }
     }
@@ -394,3 +397,4 @@ export class OAuthPlugin extends BasePlugin {
         return signupResult;
     }
 }
+exports.OAuthPlugin = OAuthPlugin;

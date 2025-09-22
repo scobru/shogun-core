@@ -1,4 +1,5 @@
+"use strict";
 /**
  * Type definitions for GunDB to replace 'any' usage
  */
-export {};
+Object.defineProperty(exports, "__esModule", { value: true });
