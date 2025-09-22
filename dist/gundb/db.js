@@ -291,6 +291,28 @@ class DataBase {
         }, node);
     }
     /**
+     * Deconstruct path for GunDB navigation in user space
+     * Converts "todos/1234" to user.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in user space
+     */
+    deconstructUserPath(path) {
+        const user = this.gun.user();
+        if (!user || !user.is) {
+            throw new Error("User not logged in");
+        }
+        return this.navigateToPath(user, path);
+    }
+    /**
+     * Deconstruct path for GunDB navigation in global space
+     * Converts "todos/1234" to gun.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in global space
+     */
+    deconstructGlobalPath(path) {
+        return this.navigateToPath(this.gun, path);
+    }
+    /**
      * Gets the Gun instance
      * @returns Gun instance
      */
@@ -339,8 +361,9 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        const node = await this.navigateToPath(this.gun, path).then();
-        return node;
+        const node = this.deconstructGlobalPath(path);
+        const data = await node.then();
+        return data;
     }
     /**
      * Puts data at the specified path
@@ -349,7 +372,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        const ack = await this.navigateToPath(this.gun, path).put(data).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.put(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -362,7 +386,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        const ack = await this.navigateToPath(this.gun, path).set(data).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.set(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -374,7 +399,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        const ack = await this.navigateToPath(this.gun, path).put(null).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.put(null).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -1664,11 +1690,8 @@ class DataBase {
      * @returns Promise that resolves when the data is saved
      */
     async putUserData(path, data) {
-        const user = this.gun.user();
-        if (!user.is) {
-            throw new Error("User not authenticated");
-        }
-        const ack = await this.navigateToPath(user, path).put(data).then();
+        const node = this.deconstructUserPath(path);
+        const ack = await node.put(data).then();
         if (ack.err) {
             throw new Error(ack.err);
         }
@@ -1683,19 +1706,15 @@ class DataBase {
         if (!path || typeof path !== "string") {
             throw new Error("Path must be a non-empty string");
         }
-        const user = this.gun.user();
-        if (!user.is) {
-            throw new Error("User not authenticated");
-        }
         try {
-            const data = await this.navigateToPath(user, path).once().then();
+            const node = this.deconstructUserPath(path);
+            const data = await node.once().then();
             // Gestisci i riferimenti GunDB
             if (data && typeof data === "object" && data["#"]) {
                 // È un riferimento GunDB, carica i dati effettivi
                 const referencePath = data["#"];
-                const actualData = await this.navigateToPath(this.gun, referencePath)
-                    .once()
-                    .then();
+                const referenceNode = this.deconstructGlobalPath(referencePath);
+                const actualData = await referenceNode.once().then();
                 return actualData;
             }
             else {
@@ -1706,6 +1725,18 @@ class DataBase {
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
             throw new Error(errorMsg);
+        }
+    }
+    /**
+     * Removes user data at the specified path
+     * @param path Path to remove the data from (supports nested paths like "test/data/marco")
+     * @returns Promise that resolves when the data is removed
+     */
+    async removeUserData(path) {
+        const node = this.deconstructUserPath(path);
+        const ack = await node.put(null).then();
+        if (ack.err) {
+            throw new Error(ack.err);
         }
     }
     // Errors

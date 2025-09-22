@@ -251,13 +251,13 @@ export class AuthManager {
   getAuthenticationMethod(type: AuthMethod) {
     switch (type) {
       case "webauthn":
-        return this.core.getPlugin("WebAuthn");
+        return this.core.getPlugin("webauthn");
       case "web3":
-        return this.core.getPlugin("Web3");
+        return this.core.getPlugin("web3");
       case "nostr":
-        return this.core.getPlugin("Nostr");
+        return this.core.getPlugin("nostr");
       case "oauth":
-        return this.core.getPlugin("OAuth");
+        return this.core.getPlugin("oauth");
       case "password":
       default:
         return {

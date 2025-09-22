@@ -1,22 +1,31 @@
-import { GunInstance } from "../../gundb/index";
+import { DataBase, RxJS, createGun, derive } from "../../gundb/index";
 
 describe("GunDB Index", () => {
-  it("should export GunInstance class", () => {
-    expect(GunInstance).toBeDefined();
-    expect(typeof GunInstance).toBe("function");
+  it("should export DataBase class", () => {
+    expect(DataBase).toBeDefined();
+    expect(typeof DataBase).toBe("function");
   });
 
-  it("should export GunInstance as a constructor", () => {
-    // Test that we can create a new instance (this will fail due to missing Gun instance, but we can test the export)
-    expect(() => {
-      // This will throw an error because Gun instance is required, but we're testing the export
-      new GunInstance({} as any);
-    }).toThrow();
+  it("should export RxJS class", () => {
+    expect(RxJS).toBeDefined();
+    expect(typeof RxJS).toBe("function");
   });
 
-  it("should have GunInstance as default export", () => {
-    // Test that the module exports GunInstance
+  it("should export createGun function", () => {
+    expect(createGun).toBeDefined();
+    expect(typeof createGun).toBe("function");
+  });
+
+  it("should export derive function", () => {
+    expect(derive).toBeDefined();
+    expect(typeof derive).toBe("function");
+  });
+
+  it("should have all expected exports", () => {
     const moduleExports = require("../../gundb/index");
-    expect(moduleExports.GunInstance).toBeDefined();
+    expect(moduleExports.DataBase).toBeDefined();
+    expect(moduleExports.RxJS).toBeDefined();
+    expect(moduleExports.createGun).toBeDefined();
+    expect(moduleExports.derive).toBeDefined();
   });
 });

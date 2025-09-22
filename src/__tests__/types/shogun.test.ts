@@ -9,7 +9,7 @@ import {
   ShogunSDKConfig,
   ShogunEvents,
   Wallets,
-} from "../../types/shogun";
+} from "../../interfaces/shogun";
 
 describe("Shogun Types", () => {
   describe("PluginCategory Enum", () => {
@@ -40,7 +40,9 @@ describe("Shogun Types", () => {
       expect(categories).toContain("privacy");
       expect(categories).toContain("identity");
       expect(categories).toContain("utility");
-      expect(categories).toHaveLength(5);
+      expect(categories).toContain("messages");
+      expect(categories).toContain("other");
+      expect(categories).toHaveLength(7);
     });
   });
 

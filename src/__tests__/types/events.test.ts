@@ -5,7 +5,7 @@ import {
   ErrorEventData,
   GunDataEventData,
   GunPeerEventData,
-} from "../../types/events";
+} from "../../interfaces/events";
 
 describe("Events Types", () => {
   describe("AuthEventData Interface", () => {

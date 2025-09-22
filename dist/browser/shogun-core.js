@@ -43667,13 +43667,13 @@ class AuthManager {
     getAuthenticationMethod(type) {
         switch (type) {
             case "webauthn":
-                return this.core.getPlugin("WebAuthn");
+                return this.core.getPlugin("webauthn");
             case "web3":
-                return this.core.getPlugin("Web3");
+                return this.core.getPlugin("web3");
             case "nostr":
-                return this.core.getPlugin("Nostr");
+                return this.core.getPlugin("nostr");
             case "oauth":
-                return this.core.getPlugin("OAuth");
+                return this.core.getPlugin("oauth");
             case "password":
             default:
                 return {
@@ -88130,6 +88130,28 @@ class DataBase {
         }, node);
     }
     /**
+     * Deconstruct path for GunDB navigation in user space
+     * Converts "todos/1234" to user.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in user space
+     */
+    deconstructUserPath(path) {
+        const user = this.gun.user();
+        if (!user || !user.is) {
+            throw new Error("User not logged in");
+        }
+        return this.navigateToPath(user, path);
+    }
+    /**
+     * Deconstruct path for GunDB navigation in global space
+     * Converts "todos/1234" to gun.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in global space
+     */
+    deconstructGlobalPath(path) {
+        return this.navigateToPath(this.gun, path);
+    }
+    /**
      * Gets the Gun instance
      * @returns Gun instance
      */
@@ -88178,8 +88200,9 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        const node = await this.navigateToPath(this.gun, path).then();
-        return node;
+        const node = this.deconstructGlobalPath(path);
+        const data = await node.then();
+        return data;
     }
     /**
      * Puts data at the specified path
@@ -88188,7 +88211,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        const ack = await this.navigateToPath(this.gun, path).put(data).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.put(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -88201,7 +88225,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        const ack = await this.navigateToPath(this.gun, path).set(data).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.set(data).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -88213,7 +88238,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        const ack = await this.navigateToPath(this.gun, path).put(null).then();
+        const node = this.deconstructGlobalPath(path);
+        const ack = await node.put(null).then();
         const result = ack.err
             ? { success: false, error: ack.err }
             : { success: true };
@@ -89504,11 +89530,8 @@ class DataBase {
      * @returns Promise that resolves when the data is saved
      */
     async putUserData(path, data) {
-        const user = this.gun.user();
-        if (!user.is) {
-            throw new Error("User not authenticated");
-        }
-        const ack = await this.navigateToPath(user, path).put(data).then();
+        const node = this.deconstructUserPath(path);
+        const ack = await node.put(data).then();
         if (ack.err) {
             throw new Error(ack.err);
         }
@@ -89523,19 +89546,15 @@ class DataBase {
         if (!path || typeof path !== "string") {
             throw new Error("Path must be a non-empty string");
         }
-        const user = this.gun.user();
-        if (!user.is) {
-            throw new Error("User not authenticated");
-        }
         try {
-            const data = await this.navigateToPath(user, path).once().then();
+            const node = this.deconstructUserPath(path);
+            const data = await node.once().then();
             // Gestisci i riferimenti GunDB
             if (data && typeof data === "object" && data["#"]) {
                 // È un riferimento GunDB, carica i dati effettivi
                 const referencePath = data["#"];
-                const actualData = await this.navigateToPath(this.gun, referencePath)
-                    .once()
-                    .then();
+                const referenceNode = this.deconstructGlobalPath(referencePath);
+                const actualData = await referenceNode.once().then();
                 return actualData;
             }
             else {
@@ -89546,6 +89565,18 @@ class DataBase {
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
             throw new Error(errorMsg);
+        }
+    }
+    /**
+     * Removes user data at the specified path
+     * @param path Path to remove the data from (supports nested paths like "test/data/marco")
+     * @returns Promise that resolves when the data is removed
+     */
+    async removeUserData(path) {
+        const node = this.deconstructUserPath(path);
+        const ack = await node.put(null).then();
+        if (ack.err) {
+            throw new Error(ack.err);
         }
     }
     // Errors
@@ -89865,6 +89896,7 @@ class SimpleGunAPI {
                 console.warn("User not logged in");
                 return null;
             }
+            // Use database method which handles path deconstruction
             return (await this.db.getUserData(path));
         }
         catch (error) {
@@ -89879,6 +89911,7 @@ class SimpleGunAPI {
                 console.warn("User not logged in");
                 return false;
             }
+            // Use database method which handles path deconstruction
             await this.db.putUserData(path, data);
             return true;
         }
@@ -89894,22 +89927,9 @@ class SimpleGunAPI {
                 console.warn("User not logged in");
                 return false;
             }
-            // Use the user's gun instance directly for set operations
-            const user = this.db.getUser();
-            if (user && user.is) {
-                await new Promise((resolve, reject) => {
-                    user.get(path).set(data, (ack) => {
-                        if (ack.err) {
-                            reject(new Error(ack.err));
-                        }
-                        else {
-                            resolve();
-                        }
-                    });
-                });
-                return true;
-            }
-            return false;
+            // Use database method which handles path deconstruction
+            await this.db.putUserData(path, data);
+            return true;
         }
         catch (error) {
             console.warn(`Failed to set user data to ${path}:`, error);
@@ -89923,26 +89943,214 @@ class SimpleGunAPI {
                 console.warn("User not logged in");
                 return false;
             }
-            const user = this.db.getUser();
-            if (user && user.is) {
-                await new Promise((resolve, reject) => {
-                    user.get(path).put(null, (ack) => {
-                        if (ack.err) {
-                            reject(new Error(ack.err));
-                        }
-                        else {
-                            resolve();
-                        }
-                    });
-                });
-                return true;
-            }
-            return false;
+            // Use database method which handles path deconstruction
+            await this.db.removeUserData(path);
+            return true;
         }
         catch (error) {
             console.warn(`Failed to remove user data from ${path}:`, error);
             return false;
         }
+    }
+    /**
+     * Array utilities for GunDB
+     * GunDB doesn't handle arrays well, so we convert them to indexed objects
+     */
+    // Convert array to indexed object for GunDB storage
+    // [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+    // becomes { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
+    getIndexedObjectFromArray(arr) {
+        // Filter out null/undefined items and ensure they have valid id
+        const validItems = (arr || []).filter((item) => item &&
+            typeof item === "object" &&
+            item.id !== null &&
+            item.id !== undefined);
+        return validItems.reduce((acc, item) => {
+            return {
+                ...acc,
+                [item.id]: item,
+            };
+        }, {});
+    }
+    // Convert indexed object back to array
+    // { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
+    // becomes [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+    getArrayFromIndexedObject(indexedObj) {
+        if (!indexedObj || typeof indexedObj !== "object") {
+            return [];
+        }
+        // Remove GunDB metadata and convert to array
+        const cleanObj = { ...indexedObj };
+        delete cleanObj._; // Remove GunDB metadata
+        // Filter out null/undefined values and ensure they are valid objects
+        return Object.values(cleanObj).filter((item) => item && typeof item === "object");
+    }
+    // Public method to convert array to indexed object
+    arrayToIndexedObject(arr) {
+        return this.getIndexedObjectFromArray(arr);
+    }
+    // Public method to convert indexed object to array
+    indexedObjectToArray(indexedObj) {
+        return this.getArrayFromIndexedObject(indexedObj);
+    }
+    // Save array as indexed object in user space
+    async putUserArray(path, arr) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            const indexedObject = this.getIndexedObjectFromArray(arr);
+            return await this.putUserData(path, indexedObject);
+        }
+        catch (error) {
+            console.warn(`Failed to put user array to ${path}:`, error);
+            return false;
+        }
+    }
+    // Get array from indexed object in user space
+    async getUserArray(path) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return [];
+            }
+            const indexedObject = await this.getUserData(path);
+            return this.getArrayFromIndexedObject(indexedObject);
+        }
+        catch (error) {
+            console.warn(`Failed to get user array from ${path}:`, error);
+            return [];
+        }
+    }
+    // Add item to user array collection
+    async addToUserArray(path, item) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            // Validate item before adding
+            if (!item || typeof item !== "object" || !item.id) {
+                console.warn("Invalid item: must be an object with an id property");
+                return false;
+            }
+            const currentArray = await this.getUserArray(path);
+            const newArray = [...currentArray, item];
+            return await this.putUserArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to add item to user array ${path}:`, error);
+            return false;
+        }
+    }
+    // Remove item from user array collection
+    async removeFromUserArray(path, itemId) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            const currentArray = await this.getUserArray(path);
+            const newArray = currentArray.filter((item) => item.id !== itemId);
+            return await this.putUserArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to remove item from user array ${path}:`, error);
+            return false;
+        }
+    }
+    // Update item in user array collection
+    async updateInUserArray(path, itemId, updates) {
+        try {
+            if (!this.isLoggedIn()) {
+                console.warn("User not logged in");
+                return false;
+            }
+            const currentArray = await this.getUserArray(path);
+            const newArray = currentArray.map((item) => item.id === itemId ? { ...item, ...updates } : item);
+            return await this.putUserArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to update item in user array ${path}:`, error);
+            return false;
+        }
+    }
+    // Save array as indexed object in global space
+    async putArray(path, arr) {
+        try {
+            const indexedObject = this.getIndexedObjectFromArray(arr);
+            return await this.put(path, indexedObject);
+        }
+        catch (error) {
+            console.warn(`Failed to put array to ${path}:`, error);
+            return false;
+        }
+    }
+    // Get array from indexed object in global space
+    async getArray(path) {
+        try {
+            const indexedObject = await this.get(path);
+            return this.getArrayFromIndexedObject(indexedObject);
+        }
+        catch (error) {
+            console.warn(`Failed to get array from ${path}:`, error);
+            return [];
+        }
+    }
+    // Add item to global array collection
+    async addToArray(path, item) {
+        try {
+            const currentArray = await this.getArray(path);
+            const newArray = [...currentArray, item];
+            return await this.putArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to add item to array ${path}:`, error);
+            return false;
+        }
+    }
+    // Remove item from global array collection
+    async removeFromArray(path, itemId) {
+        try {
+            const currentArray = await this.getArray(path);
+            const newArray = currentArray.filter((item) => item.id !== itemId);
+            return await this.putArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to remove item from array ${path}:`, error);
+            return false;
+        }
+    }
+    // Update item in global array collection
+    async updateInArray(path, itemId, updates) {
+        try {
+            const currentArray = await this.getArray(path);
+            const newArray = currentArray.map((item) => item.id === itemId ? { ...item, ...updates } : item);
+            return await this.putArray(path, newArray);
+        }
+        catch (error) {
+            console.warn(`Failed to update item in array ${path}:`, error);
+            return false;
+        }
+    }
+    /**
+     * Path utilities
+     */
+    // Public method to get deconstructed path node for user space
+    // Useful for advanced operations that need direct GunDB node access
+    getUserNode(path) {
+        if (!this.isLoggedIn()) {
+            throw new Error("User not logged in");
+        }
+        // Use the database's path deconstruction
+        return this.db.getUser().get(path);
+    }
+    // Public method to get deconstructed path node for global space
+    // Useful for advanced operations that need direct GunDB node access
+    getGlobalNode(path) {
+        // Use the database's path deconstruction
+        return this.db.get(path);
     }
     /**
      * Quick utility methods
@@ -90313,8 +90521,15 @@ class CoreInitializer {
                 console.log("Creating new Gun instance");
                 this.core._gun = createGun(config.gunOptions);
             }
+            else if (config.gunInstance && config.gunOptions) {
+                // Both provided, prefer gunInstance
+                console.log("Both gunInstance and gunOptions provided, using gunInstance");
+                this.core._gun = config.gunInstance;
+            }
             else {
-                throw new Error("!!! NO GUN INSTANCE OR GUN OPTIONS PROVIDED !!!");
+                // Neither provided, create a default Gun instance for testing
+                console.log("No Gun instance or options provided, creating default instance");
+                this.core._gun = createGun({ peers: config.gunOptions?.peers || [] });
             }
         }
         catch (error) {
@@ -90488,7 +90703,7 @@ class CoreInitializer {
  * @since 2.0.0
  */
 class ShogunCore {
-    static API_VERSION = "^3.0.1";
+    static API_VERSION = "^3.0.11";
     db;
     storage;
     provider;

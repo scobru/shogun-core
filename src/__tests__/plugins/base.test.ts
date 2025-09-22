@@ -1,5 +1,5 @@
 import { BasePlugin } from "../../plugins/base";
-import { PluginCategory } from "../../types/shogun";
+import { PluginCategory } from "../../interfaces/shogun";
 
 // Create a concrete implementation of BasePlugin for testing
 class TestPlugin extends BasePlugin {

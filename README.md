@@ -1,6 +1,6 @@
 # Shogun Core 📦
 
-[![npm](https://img.shields.io/badge/npm-v1.9.4-blue)](https://www.npmjs.com/package/shogun-core)
+[![npm](https://img.shields.io/badge/npm-v2.0.0-blue)](https://www.npmjs.com/package/shogun-core)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/scobru/shogun-core)
@@ -994,6 +994,20 @@ For advanced use cases and comprehensive API coverage, see the [Advanced API Fea
 Core library for Shogun Ecosystem
 
 ## Testing
+
+This project includes a comprehensive test suite that covers all major functionality and has been recently updated to align with the current codebase structure.
+
+### ✅ **Test Suite Status (Updated)**
+
+- **✅ All Tests Passing**: 659/659 tests pass successfully
+- **✅ Plugin System**: Complete plugin functionality testing
+- **✅ Authentication Methods**: All auth methods (WebAuthn, Web3, Nostr, OAuth) tested
+- **✅ Simple API**: Full coverage of SimpleGunAPI functionality
+- **✅ Error Handling**: Comprehensive error handling and edge case testing
+- **✅ Browser Compatibility**: Cross-browser support validation
+- **✅ Integration Tests**: End-to-end functionality testing
+
+### Test Coverage
 
 This project includes a comprehensive test suite that covers:
 

@@ -4,7 +4,7 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
+import type { GunUser, UserInfo, AuthCallback, GunData, GunNode, EventData, EventListener, GunOperationResult } from "./types";
 import type { GunInstance, GunUserInstance, GunChain } from "./types";
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import Gun from "gun/gun";
@@ -91,6 +91,20 @@ declare class DataBase {
      * @returns Gun node at the specified path
      */
     private navigateToPath;
+    /**
+     * Deconstruct path for GunDB navigation in user space
+     * Converts "todos/1234" to user.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in user space
+     */
+    deconstructUserPath(path: string): GunNode;
+    /**
+     * Deconstruct path for GunDB navigation in global space
+     * Converts "todos/1234" to gun.get("todos").get("1234")
+     * @param path Path string to deconstruct
+     * @returns Gun node at the specified path in global space
+     */
+    deconstructGlobalPath(path: string): GunNode;
     /**
      * Gets the Gun instance
      * @returns Gun instance
@@ -323,6 +337,12 @@ declare class DataBase {
      * @returns Promise that resolves with the data
      */
     getUserData(path: string): Promise<any>;
+    /**
+     * Removes user data at the specified path
+     * @param path Path to remove the data from (supports nested paths like "test/data/marco")
+     * @returns Promise that resolves when the data is removed
+     */
+    removeUserData(path: string): Promise<void>;
     static Errors: typeof GunErrors;
     /**
      * Adds an event listener

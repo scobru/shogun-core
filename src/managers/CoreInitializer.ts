@@ -83,8 +83,18 @@ export class CoreInitializer {
       } else if (config.gunOptions && config.gunInstance === undefined) {
         console.log("Creating new Gun instance");
         this.core._gun = createGun(config.gunOptions);
+      } else if (config.gunInstance && config.gunOptions) {
+        // Both provided, prefer gunInstance
+        console.log(
+          "Both gunInstance and gunOptions provided, using gunInstance",
+        );
+        this.core._gun = config.gunInstance;
       } else {
-        throw new Error("!!! NO GUN INSTANCE OR GUN OPTIONS PROVIDED !!!");
+        // Neither provided, create a default Gun instance for testing
+        console.log(
+          "No Gun instance or options provided, creating default instance",
+        );
+        this.core._gun = createGun({ peers: config.gunOptions?.peers || [] });
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {

@@ -52,6 +52,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -67,6 +68,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -91,6 +93,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -116,6 +119,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -130,6 +134,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -230,6 +235,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -244,6 +250,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -264,6 +271,8 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
+        gunOptions: { peers: [] }, // Provide gunOptions to avoid default creation
       };
 
       expect(() => {
@@ -279,6 +288,8 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
+        gunOptions: { peers: [] }, // Provide gunOptions to avoid default creation
       };
 
       expect(() => {
@@ -296,6 +307,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: true },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -310,6 +322,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: true },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -327,6 +340,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: true },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -341,6 +355,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: true },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -363,6 +378,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -377,6 +393,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -401,6 +418,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {
@@ -415,6 +433,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
+        gunOptions: { peers: [] },
       };
 
       expect(() => {

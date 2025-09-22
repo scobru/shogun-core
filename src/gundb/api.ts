@@ -191,6 +191,8 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return null;
       }
+
+      // Use database method which handles path deconstruction
       return (await this.db.getUserData(path)) as T;
     } catch (error) {
       console.warn(`Failed to get user data from ${path}:`, error);
@@ -205,6 +207,8 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
+
+      // Use database method which handles path deconstruction
       await this.db.putUserData(path, data);
       return true;
     } catch (error) {
@@ -220,21 +224,10 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      // Use the user's gun instance directly for set operations
-      const user = this.db.getUser();
-      if (user && user.is) {
-        await new Promise<void>((resolve, reject) => {
-          (user as any).get(path).set(data, (ack: any) => {
-            if (ack.err) {
-              reject(new Error(ack.err));
-            } else {
-              resolve();
-            }
-          });
-        });
-        return true;
-      }
-      return false;
+
+      // Use database method which handles path deconstruction
+      await this.db.putUserData(path, data);
+      return true;
     } catch (error) {
       console.warn(`Failed to set user data to ${path}:`, error);
       return false;
@@ -248,24 +241,275 @@ export class SimpleGunAPI {
         console.warn("User not logged in");
         return false;
       }
-      const user = this.db.getUser();
-      if (user && user.is) {
-        await new Promise<void>((resolve, reject) => {
-          user.get(path).put(null, (ack: any) => {
-            if (ack.err) {
-              reject(new Error(ack.err));
-            } else {
-              resolve();
-            }
-          });
-        });
-        return true;
-      }
-      return false;
+
+      // Use database method which handles path deconstruction
+      await this.db.removeUserData(path);
+      return true;
     } catch (error) {
       console.warn(`Failed to remove user data from ${path}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Array utilities for GunDB
+   * GunDB doesn't handle arrays well, so we convert them to indexed objects
+   */
+
+  // Convert array to indexed object for GunDB storage
+  // [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+  // becomes { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
+  private getIndexedObjectFromArray<T extends { id: string | number }>(
+    arr: T[],
+  ): Record<string, T> {
+    // Filter out null/undefined items and ensure they have valid id
+    const validItems = (arr || []).filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        item.id !== null &&
+        item.id !== undefined,
+    );
+
+    return validItems.reduce(
+      (acc, item) => {
+        return {
+          ...acc,
+          [item.id]: item,
+        };
+      },
+      {} as Record<string, T>,
+    );
+  }
+
+  // Convert indexed object back to array
+  // { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
+  // becomes [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+  private getArrayFromIndexedObject<T>(
+    indexedObj: Record<string, T> | null,
+  ): T[] {
+    if (!indexedObj || typeof indexedObj !== "object") {
+      return [];
+    }
+
+    // Remove GunDB metadata and convert to array
+    const cleanObj = { ...indexedObj };
+    delete (cleanObj as any)._; // Remove GunDB metadata
+
+    // Filter out null/undefined values and ensure they are valid objects
+    return Object.values(cleanObj).filter(
+      (item) => item && typeof item === "object",
+    );
+  }
+
+  // Public method to convert array to indexed object
+  arrayToIndexedObject<T extends { id: string | number }>(
+    arr: T[],
+  ): Record<string, T> {
+    return this.getIndexedObjectFromArray(arr);
+  }
+
+  // Public method to convert indexed object to array
+  indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[] {
+    return this.getArrayFromIndexedObject(indexedObj);
+  }
+
+  // Save array as indexed object in user space
+  async putUserArray<T extends { id: string | number }>(
+    path: string,
+    arr: T[],
+  ): Promise<boolean> {
+    try {
+      if (!this.isLoggedIn()) {
+        console.warn("User not logged in");
+        return false;
+      }
+
+      const indexedObject = this.getIndexedObjectFromArray(arr);
+      return await this.putUserData(path, indexedObject);
+    } catch (error) {
+      console.warn(`Failed to put user array to ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Get array from indexed object in user space
+  async getUserArray<T>(path: string): Promise<T[]> {
+    try {
+      if (!this.isLoggedIn()) {
+        console.warn("User not logged in");
+        return [];
+      }
+
+      const indexedObject = await this.getUserData<Record<string, T>>(path);
+      return this.getArrayFromIndexedObject(indexedObject);
+    } catch (error) {
+      console.warn(`Failed to get user array from ${path}:`, error);
+      return [];
+    }
+  }
+
+  // Add item to user array collection
+  async addToUserArray<T extends { id: string | number }>(
+    path: string,
+    item: T,
+  ): Promise<boolean> {
+    try {
+      if (!this.isLoggedIn()) {
+        console.warn("User not logged in");
+        return false;
+      }
+
+      // Validate item before adding
+      if (!item || typeof item !== "object" || !item.id) {
+        console.warn("Invalid item: must be an object with an id property");
+        return false;
+      }
+
+      const currentArray = await this.getUserArray<T>(path);
+      const newArray = [...currentArray, item];
+      return await this.putUserArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to add item to user array ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Remove item from user array collection
+  async removeFromUserArray<T extends { id: string | number }>(
+    path: string,
+    itemId: string | number,
+  ): Promise<boolean> {
+    try {
+      if (!this.isLoggedIn()) {
+        console.warn("User not logged in");
+        return false;
+      }
+
+      const currentArray = await this.getUserArray<T>(path);
+      const newArray = currentArray.filter((item) => item.id !== itemId);
+      return await this.putUserArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to remove item from user array ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Update item in user array collection
+  async updateInUserArray<T extends { id: string | number }>(
+    path: string,
+    itemId: string | number,
+    updates: Partial<T>,
+  ): Promise<boolean> {
+    try {
+      if (!this.isLoggedIn()) {
+        console.warn("User not logged in");
+        return false;
+      }
+
+      const currentArray = await this.getUserArray<T>(path);
+      const newArray = currentArray.map((item) =>
+        item.id === itemId ? { ...item, ...updates } : item,
+      );
+      return await this.putUserArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to update item in user array ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Save array as indexed object in global space
+  async putArray<T extends { id: string | number }>(
+    path: string,
+    arr: T[],
+  ): Promise<boolean> {
+    try {
+      const indexedObject = this.getIndexedObjectFromArray(arr);
+      return await this.put(path, indexedObject);
+    } catch (error) {
+      console.warn(`Failed to put array to ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Get array from indexed object in global space
+  async getArray<T>(path: string): Promise<T[]> {
+    try {
+      const indexedObject = await this.get<Record<string, T>>(path);
+      return this.getArrayFromIndexedObject(indexedObject);
+    } catch (error) {
+      console.warn(`Failed to get array from ${path}:`, error);
+      return [];
+    }
+  }
+
+  // Add item to global array collection
+  async addToArray<T extends { id: string | number }>(
+    path: string,
+    item: T,
+  ): Promise<boolean> {
+    try {
+      const currentArray = await this.getArray<T>(path);
+      const newArray = [...currentArray, item];
+      return await this.putArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to add item to array ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Remove item from global array collection
+  async removeFromArray<T extends { id: string | number }>(
+    path: string,
+    itemId: string | number,
+  ): Promise<boolean> {
+    try {
+      const currentArray = await this.getArray<T>(path);
+      const newArray = currentArray.filter((item) => item.id !== itemId);
+      return await this.putArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to remove item from array ${path}:`, error);
+      return false;
+    }
+  }
+
+  // Update item in global array collection
+  async updateInArray<T extends { id: string | number }>(
+    path: string,
+    itemId: string | number,
+    updates: Partial<T>,
+  ): Promise<boolean> {
+    try {
+      const currentArray = await this.getArray<T>(path);
+      const newArray = currentArray.map((item) =>
+        item.id === itemId ? { ...item, ...updates } : item,
+      );
+      return await this.putArray(path, newArray);
+    } catch (error) {
+      console.warn(`Failed to update item in array ${path}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Path utilities
+   */
+
+  // Public method to get deconstructed path node for user space
+  // Useful for advanced operations that need direct GunDB node access
+  getUserNode(path: string): any {
+    if (!this.isLoggedIn()) {
+      throw new Error("User not logged in");
+    }
+    // Use the database's path deconstruction
+    return this.db.getUser().get(path);
+  }
+
+  // Public method to get deconstructed path node for global space
+  // Useful for advanced operations that need direct GunDB node access
+  getGlobalNode(path: string): any {
+    // Use the database's path deconstruction
+    return this.db.get(path);
   }
 
   /**
