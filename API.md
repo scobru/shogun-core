@@ -4,6 +4,46 @@
 
 Comprehensive API documentation for Shogun Core with unified type system, consistent authentication interfaces, and simplified API layer.
 
+## ⚠️ **BREAKING CHANGES & MIGRATION**
+
+### Removed Functions (v2.0.0)
+The following array functions have been **REMOVED** due to GunDB compatibility issues:
+- `putUserArray()`, `getUserArray()`, `addToUserArray()`, `removeFromUserArray()`, `updateInUserArray()`
+
+### Deprecated Functions
+These functions are deprecated and show warnings:
+- `putArray()`, `getArray()`, `addToArray()`, `removeFromArray()`, `updateInArray()`
+
+### Migration Guide
+
+**❌ Old (Removed):**
+```typescript
+// These functions no longer exist
+await api.putUserArray('todos', todos);
+const todos = await api.getUserArray('todos');
+await api.addToUserArray('todos', newTodo);
+await api.updateInUserArray('todos', '1', { done: true });
+await api.removeFromUserArray('todos', '2');
+```
+
+**✅ New (Recommended):**
+```typescript
+// Option 1: Use Collections (recommended)
+await api.createCollection('todos', {
+  '1': { text: 'Learn Shogun Core', done: false },
+  '2': { text: 'Build dApp', done: false }
+});
+const todos = await api.getCollection('todos');
+await api.addToCollection('todos', '3', { text: 'Deploy', done: false });
+await api.removeFromCollection('todos', '2');
+
+// Option 2: Direct GunDB Operations
+await api.node('users').get('alice').get('todos').get('1').put({ 
+  text: 'Learn Shogun Core', 
+  done: false 
+});
+```
+
 ### Recent Improvements (v2.0.0)
 
 - **⭐ NEW: Simple API Layer**: Easy-to-use wrapper for common operations with minimal complexity
@@ -51,23 +91,16 @@ class SimpleGunAPI {
   async removeUserData(path: string): Promise<boolean>;
   async getAllUserData(): Promise<Record<string, unknown> | null>;
 
-  // Array operations (GunDB doesn't handle arrays well, so we convert them to indexed objects)
+  // Array utilities (helper functions only)
   arrayToIndexedObject<T extends { id: string | number }>(arr: T[]): Record<string, T>;
   indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[];
 
-  // User array operations
-  async putUserArray<T extends { id: string | number }>(path: string, arr: T[]): Promise<boolean>;
-  async getUserArray<T>(path: string): Promise<T[]>;
-  async addToUserArray<T extends { id: string | number }>(path: string, item: T): Promise<boolean>;
-  async removeFromUserArray<T extends { id: string | number }>(path: string, itemId: string | number): Promise<boolean>;
-  async updateInUserArray<T extends { id: string | number }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
+  // ⚠️ REMOVED: User array operations (putUserArray, getUserArray, addToUserArray, removeFromUserArray, updateInUserArray)
+  // These functions have been REMOVED due to GunDB compatibility issues.
+  // Use collections or direct GunDB operations instead.
 
-  // Global array operations
-  async putArray<T extends { id: string | number }>(path: string, arr: T[]): Promise<boolean>;
-  async getArray<T>(path: string): Promise<T[]>;
-  async addToArray<T extends { id: string | number }>(path: string, item: T): Promise<boolean>;
-  async removeFromArray<T extends { id: string | number }>(path: string, itemId: string | number): Promise<boolean>;
-  async updateInArray<T extends { id: string | number }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
+  // ⚠️ DEPRECATED: Global array operations (putArray, getArray, addToArray, removeFromArray, updateInArray)
+  // These functions are deprecated and show warnings. Use direct GunDB operations instead.
 
   // Profile management
   async updateProfile(profileData: {
@@ -740,34 +773,28 @@ if (user) {
     done: false 
   });
   
-  // Array operations (GunDB doesn't handle arrays well, so we convert them to indexed objects)
-  const todos = [
-    { id: '1', text: 'Learn Shogun Core', done: false },
-    { id: '2', text: 'Build dApp', done: false }
-  ];
+  // ⚠️ IMPORTANT: Array functions have been REMOVED due to GunDB compatibility issues
+  // Use collections or direct GunDB operations instead:
 
-  // Save array as indexed object
-  await shogun.api.putUserArray('todos', todos);
+  // Option 1: Collections (recommended for most use cases)
+  await shogun.api.createCollection('todos', {
+    '1': { text: 'Learn Shogun Core', done: false },
+    '2': { text: 'Build dApp', done: false }
+  });
+  
+  await shogun.api.addToCollection('todos', '3', { 
+    text: 'Deploy to production', 
+    done: false 
+  });
+  
+  const todos = await shogun.api.getCollection('todos');
+  await shogun.api.removeFromCollection('todos', '2');
 
-  // Get array back
-  const userTodos = await shogun.api.getUserArray('todos');
-
-  // Add item to array
-  await shogun.api.addToUserArray('todos', { id: '3', text: 'Deploy', done: false });
-
-  // Update item in array
-  await shogun.api.updateInUserArray('todos', '1', { done: true });
-
-  // Remove item from array
-  await shogun.api.removeFromUserArray('todos', '2');
-
-  // Global array operations (not user-specific)
-  await shogun.api.putArray('global/posts', [
-    { id: '1', title: 'Hello World', author: 'alice' },
-    { id: '2', title: 'GunDB is awesome', author: 'bob' }
-  ]);
-
-  const globalPosts = await shogun.api.getArray('global/posts');
+  // Option 2: Direct GunDB operations for complex nested data
+  await shogun.api.node('users').get('alice').get('todos').get('1').put({ 
+    text: 'Learn Shogun Core', 
+    done: false 
+  });
 
   // Advanced chaining operations
   await shogun.api.node('users').get('alice').get('profile').put({ name: 'Alice' });

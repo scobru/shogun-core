@@ -39,12 +39,35 @@ class SimpleGunAPI {
   async set<T = unknown>(path: string, data: T): Promise<boolean>;
   async remove(path: string): Promise<boolean>;
 
+  // Advanced chaining operations
+  getNode(path: string): any; // Get Gun node for advanced operations like .map()
+  node(path: string): any; // Get Gun node for direct chaining (recommended)
+  chain(path: string): ChainingWrapper; // Get simplified chaining wrapper
+
   // User space operations
   async putUserData<T = unknown>(path: string, data: T): Promise<boolean>;
   async getUserData<T = unknown>(path: string): Promise<T | null>;
   async setUserData<T = unknown>(path: string, data: T): Promise<boolean>;
   async removeUserData(path: string): Promise<boolean>;
   async getAllUserData(): Promise<Record<string, unknown> | null>;
+
+  // Array operations (GunDB doesn't handle arrays well, so we convert them to indexed objects)
+  arrayToIndexedObject<T extends { id: string | number }>(arr: T[]): Record<string, T>;
+  indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[];
+
+  // User array operations
+  async putUserArray<T extends { id: string | number }>(path: string, arr: T[]): Promise<boolean>;
+  async getUserArray<T>(path: string): Promise<T[]>;
+  async addToUserArray<T extends { id: string | number }>(path: string, item: T): Promise<boolean>;
+  async removeFromUserArray<T extends { id: string | number }>(path: string, itemId: string | number): Promise<boolean>;
+  async updateInUserArray<T extends { id: string | number }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
+
+  // Global array operations
+  async putArray<T extends { id: string | number }>(path: string, arr: T[]): Promise<boolean>;
+  async getArray<T>(path: string): Promise<T[]>;
+  async addToArray<T extends { id: string | number }>(path: string, item: T): Promise<boolean>;
+  async removeFromArray<T extends { id: string | number }>(path: string, itemId: string | number): Promise<boolean>;
+  async updateInArray<T extends { id: string | number }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
 
   // Profile management
   async updateProfile(profileData: {
@@ -68,6 +91,10 @@ class SimpleGunAPI {
   async getCollection(collectionName: string): Promise<Record<string, unknown> | null>;
   async removeFromCollection(collectionName: string, itemId: string): Promise<boolean>;
 
+  // Path utilities
+  getUserNode(path: string): any; // Get deconstructed path node for user space
+  getGlobalNode(path: string): any; // Get deconstructed path node for global space
+
   // Utility methods
   getCurrentUser(): { pub: string; username?: string } | null;
   async userExists(alias: string): Promise<boolean>;
@@ -89,6 +116,38 @@ class QuickStart {
 
 // Global helper function
 function quickStart(gunInstance: any, appScope?: string): QuickStart;
+```
+
+### AutoQuickStart (simple-api.ts)
+
+Auto initialization helper that creates Gun instance automatically.
+
+```typescript
+class AutoQuickStart {
+  constructor(config?: {
+    peers?: string[];
+    appScope?: string;
+    [key: string]: any;
+  });
+  async init(): Promise<void>;
+  get api(): SimpleGunAPI;
+  get database(): DataBase;
+  get gun(): any; // Get the Gun instance for advanced usage
+}
+
+// Global helper function
+function autoQuickStart(config?: {
+  peers?: string[];
+  appScope?: string;
+  [key: string]: any;
+}): AutoQuickStart;
+```
+
+### Factory Functions
+
+```typescript
+// Create a simple API instance from existing DataBase
+function createSimpleAPI(db: DataBase): SimpleGunAPI;
 ```
 
 ### Improved Types (improved-types.ts)
@@ -681,6 +740,51 @@ if (user) {
     done: false 
   });
   
+  // Array operations (GunDB doesn't handle arrays well, so we convert them to indexed objects)
+  const todos = [
+    { id: '1', text: 'Learn Shogun Core', done: false },
+    { id: '2', text: 'Build dApp', done: false }
+  ];
+
+  // Save array as indexed object
+  await shogun.api.putUserArray('todos', todos);
+
+  // Get array back
+  const userTodos = await shogun.api.getUserArray('todos');
+
+  // Add item to array
+  await shogun.api.addToUserArray('todos', { id: '3', text: 'Deploy', done: false });
+
+  // Update item in array
+  await shogun.api.updateInUserArray('todos', '1', { done: true });
+
+  // Remove item from array
+  await shogun.api.removeFromUserArray('todos', '2');
+
+  // Global array operations (not user-specific)
+  await shogun.api.putArray('global/posts', [
+    { id: '1', title: 'Hello World', author: 'alice' },
+    { id: '2', title: 'GunDB is awesome', author: 'bob' }
+  ]);
+
+  const globalPosts = await shogun.api.getArray('global/posts');
+
+  // Advanced chaining operations
+  await shogun.api.node('users').get('alice').get('profile').put({ name: 'Alice' });
+  const profile = await shogun.api.node('users').get('alice').get('profile').once();
+
+  // Simplified chaining wrapper
+  await shogun.api.chain('users').get('alice').get('settings').put({ theme: 'dark' });
+  const settings = await shogun.api.chain('users').get('alice').get('settings').once();
+
+  // Get Gun node for advanced operations like .map()
+  const userNode = shogun.api.getNode('users');
+  userNode.map((user, userId) => console.log(`User ${userId}:`, user));
+
+  // Path utilities for advanced operations
+  const userNode = shogun.api.getUserNode('profile'); // User space
+  const globalNode = shogun.api.getGlobalNode('posts'); // Global space
+  
   // Retrieve data
   const profile = await shogun.api.getProfile();
   const settings = await shogun.api.getSettings();
@@ -690,6 +794,50 @@ if (user) {
   console.log('Settings:', settings);
   console.log('Todos:', todos);
 }
+```
+
+### AutoQuickStart Usage
+
+```typescript
+import { autoQuickStart } from "shogun-core";
+
+// Auto setup with automatic Gun instance creation
+const shogun = autoQuickStart({
+  peers: ['https://gun-manhattan.herokuapp.com/gun'],
+  appScope: 'my-app'
+});
+await shogun.init();
+
+// Use the same API
+const user = await shogun.api.signup('alice', 'password123');
+if (user) {
+  console.log('User created:', user.username);
+  
+  // All the same operations as above
+  await shogun.api.updateProfile({ name: 'Alice' });
+  await shogun.api.saveSettings({ theme: 'dark' });
+}
+
+// Access the Gun instance if needed
+const gunInstance = shogun.gun;
+console.log('Gun instance:', gunInstance);
+```
+
+### Factory Function Usage
+
+```typescript
+import { createSimpleAPI, DataBase, createGun } from "shogun-core";
+
+// Create DataBase instance
+const gun = createGun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
+const db = new DataBase(gun, 'my-app');
+await db.initialize();
+
+// Create SimpleGunAPI from existing DataBase
+const api = createSimpleAPI(db);
+
+// Use the API
+const user = await api.signup('alice', 'password123');
 ```
 
 ### Basic Authentication
@@ -1116,6 +1264,43 @@ const isAuthenticated = shogun.db.isAuthenticated();
 const userPub = shogun.db.getUserPub();
 console.log(`Authenticated: ${isAuthenticated}, User: ${userPub}`);
 ```
+
+## Testing
+
+Shogun Core includes a comprehensive test suite with 659 passing tests covering all major functionality:
+
+### Test Coverage
+
+- **✅ Plugin System**: Complete plugin functionality testing (OAuth, Web3, WebAuthn, Nostr)
+- **✅ Simple API**: Full coverage of SimpleGunAPI with 56 comprehensive tests
+- **✅ Authentication Methods**: All authentication flows tested with proper error handling
+- **✅ Data Operations**: CRUD operations, user space management, and collections
+- **✅ Error Handling**: Comprehensive error scenarios and edge cases
+- **✅ Browser Compatibility**: Cross-browser support validation
+- **✅ Integration Tests**: End-to-end functionality testing
+
+### Running Tests
+
+```bash
+# Run all tests
+yarn test
+
+# Run specific test suites
+yarn test --testPathPattern="plugins"
+yarn test --testPathPattern="gundb/api.test.ts"
+
+# Run with coverage
+yarn test:ci
+```
+
+### Test Philosophy
+
+Tests are designed to be **realistic and non-intrusive**:
+- No codebase modifications required
+- Comprehensive coverage of all public APIs
+- Error resilience and edge case handling
+- Browser compatibility validation
+- Performance-aware testing
 
 ## Best Practices
 

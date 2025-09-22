@@ -325,11 +325,7 @@ describe("SimpleGunAPI", () => {
     });
   });
 
-  describe("Array Operations", () => {
-    beforeEach(() => {
-      mockDb.isLoggedIn.mockReturnValue(true);
-    });
-
+  describe("Array Utilities (Helper Functions Only)", () => {
     it("should convert array to indexed object", () => {
       const arr = [
         { id: "1", name: "Item 1" },
@@ -358,92 +354,17 @@ describe("SimpleGunAPI", () => {
       ]);
     });
 
-    it("should put user array successfully", async () => {
-      const arr = [
-        { id: "1", name: "Item 1" },
-        { id: "2", name: "Item 2" },
-      ];
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.putUserArray("items", arr);
-
-      expect(mockDb.putUserData).toHaveBeenCalledWith("items", {
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      });
-      expect(result).toBe(true);
-    });
-
-    it("should get user array successfully", async () => {
-      const indexedObj = {
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      };
-      mockDb.getUserData.mockResolvedValue(indexedObj);
-
-      const result = await api.getUserArray("items");
-
-      expect(mockDb.getUserData).toHaveBeenCalledWith("items");
-      expect(result).toEqual([
-        { id: "1", name: "Item 1" },
-        { id: "2", name: "Item 2" },
-      ]);
-    });
-
-    it("should add item to user array", async () => {
-      const existingArray = [{ id: "1", name: "Item 1" }];
-      const newItem = { id: "2", name: "Item 2" };
-
-      mockDb.getUserData.mockResolvedValue({
-        "1": { id: "1", name: "Item 1" },
-      });
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.addToUserArray("items", newItem);
-
-      expect(result).toBe(true);
-      expect(mockDb.putUserData).toHaveBeenCalledWith("items", {
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      });
-    });
-
-    it("should remove item from user array", async () => {
-      mockDb.getUserData.mockResolvedValue({
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      });
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.removeFromUserArray("items", "1");
-
-      expect(result).toBe(true);
-      expect(mockDb.putUserData).toHaveBeenCalledWith("items", {
-        "2": { id: "2", name: "Item 2" },
-      });
-    });
-
-    it("should update item in user array", async () => {
-      mockDb.getUserData.mockResolvedValue({
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      });
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.updateInUserArray("items", "1", {
-        name: "Updated Item",
-      });
-
-      expect(result).toBe(true);
-      expect(mockDb.putUserData).toHaveBeenCalledWith("items", {
-        "1": { id: "1", name: "Updated Item" },
-        "2": { id: "2", name: "Item 2" },
-      });
-    });
+    // Note: User array functions (putUserArray, getUserArray, addToUserArray, removeFromUserArray, updateInUserArray)
+    // have been REMOVED because they don't work reliably with GunDB's actual data structures.
+    // Use direct GunDB operations instead.
   });
 
-  describe("Global Array Operations", () => {
-    it("should put global array successfully", async () => {
+  describe("DEPRECATED: Global Array Operations", () => {
+    // These tests are kept for backward compatibility but the functions are deprecated
+    // because they don't work reliably with GunDB's actual data structures.
+
+    it("should show deprecation warning for putArray", async () => {
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
       const arr = [
         { id: "1", name: "Item 1" },
         { id: "2", name: "Item 2" },
@@ -452,14 +373,20 @@ describe("SimpleGunAPI", () => {
 
       const result = await api.putArray("global/items", arr);
 
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "DEPRECATED: putArray() is unreliable with GunDB. Use direct GunDB operations instead.",
+      );
       expect(mockDb.put).toHaveBeenCalledWith("global/items", {
         "1": { id: "1", name: "Item 1" },
         "2": { id: "2", name: "Item 2" },
       });
       expect(result).toBe(true);
+
+      consoleSpy.mockRestore();
     });
 
-    it("should get global array successfully", async () => {
+    it("should show deprecation warning for getArray", async () => {
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
       const indexedObj = {
         "1": { id: "1", name: "Item 1" },
         "2": { id: "2", name: "Item 2" },
@@ -468,11 +395,16 @@ describe("SimpleGunAPI", () => {
 
       const result = await api.getArray("global/items");
 
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "DEPRECATED: getArray() is unreliable with GunDB. Use direct GunDB operations instead.",
+      );
       expect(mockDb.getData).toHaveBeenCalledWith("global/items");
       expect(result).toEqual([
         { id: "1", name: "Item 1" },
         { id: "2", name: "Item 2" },
       ]);
+
+      consoleSpy.mockRestore();
     });
   });
 

@@ -56,32 +56,6 @@ export declare class SimpleGunAPI {
         id: string | number;
     }>(arr: T[]): Record<string, T>;
     indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[];
-    putUserArray<T extends {
-        id: string | number;
-    }>(path: string, arr: T[]): Promise<boolean>;
-    getUserArray<T>(path: string): Promise<T[]>;
-    addToUserArray<T extends {
-        id: string | number;
-    }>(path: string, item: T): Promise<boolean>;
-    removeFromUserArray<T extends {
-        id: string | number;
-    }>(path: string, itemId: string | number): Promise<boolean>;
-    updateInUserArray<T extends {
-        id: string | number;
-    }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
-    putArray<T extends {
-        id: string | number;
-    }>(path: string, arr: T[]): Promise<boolean>;
-    getArray<T>(path: string): Promise<T[]>;
-    addToArray<T extends {
-        id: string | number;
-    }>(path: string, item: T): Promise<boolean>;
-    removeFromArray<T extends {
-        id: string | number;
-    }>(path: string, itemId: string | number): Promise<boolean>;
-    updateInArray<T extends {
-        id: string | number;
-    }>(path: string, itemId: string | number, updates: Partial<T>): Promise<boolean>;
     /**
      * Path utilities
      */

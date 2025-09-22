@@ -45,6 +45,12 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - **Improved Maintainability**: Better organized codebase with clear separation between simple and advanced APIs
 - **Better Performance**: Optimized operations with advanced peer management and user tracking
 
+### ⚠️ **BREAKING CHANGES**
+
+- **🚨 REMOVED: Array Functions**: `putUserArray()`, `getUserArray()`, `addToUserArray()`, `removeFromUserArray()`, `updateInUserArray()` have been **REMOVED** due to GunDB compatibility issues
+- **⚠️ DEPRECATED: Global Array Functions**: `putArray()`, `getArray()`, `addToArray()`, `removeFromArray()`, `updateInArray()` are deprecated and show warnings
+- **✅ MIGRATION**: Use **Collections** or **Direct GunDB Operations** instead (see examples below)
+
 ## Recent Updates (v1.7.0)
 
 ### ✅ **Type System Fixes**
@@ -217,7 +223,11 @@ const settings = await shogun.api.getSettings();
 await shogun.api.savePreferences({ theme: 'dark', fontSize: 14 });
 const preferences = await shogun.api.getPreferences();
 
-// Collections (for structured data)
+// Collections (recommended for structured data)
+// Note: Array functions (putUserArray, getUserArray, etc.) have been removed due to GunDB compatibility issues
+// Use collections or direct GunDB operations instead:
+
+// Option 1: Collections (recommended for most use cases)
 await shogun.api.createCollection('todos', {
   '1': { text: 'Learn Shogun Core', done: false },
   '2': { text: 'Build dApp', done: false }
@@ -230,6 +240,12 @@ await shogun.api.addToCollection('todos', '3', {
 
 const todos = await shogun.api.getCollection('todos');
 await shogun.api.removeFromCollection('todos', '2');
+
+// Option 2: Direct GunDB operations for complex nested data
+await shogun.api.node('users').get('alice').get('todos').get('1').put({ 
+  text: 'Learn Shogun Core', 
+  done: false 
+});
 
 // Utility methods
 const currentUser = shogun.api.getCurrentUser();
@@ -776,6 +792,16 @@ You can also use Shogun Core directly in the browser by including it from a CDN.
 - `addToCollection<T>(name: string, itemId: string, item: T): Promise<boolean>` - Add item to collection
 - `getCollection(name: string): Promise<Record<string, unknown> | null>` - Get collection
 - `removeFromCollection(name: string, itemId: string): Promise<boolean>` - Remove item from collection
+
+#### Utility Functions
+- `arrayToIndexedObject<T>(arr: T[]): Record<string, T>` - Convert array to indexed object (helper)
+- `indexedObjectToArray<T>(indexedObj: Record<string, T>): T[]` - Convert indexed object to array (helper)
+
+#### ⚠️ **REMOVED FUNCTIONS**
+The following array functions have been **REMOVED** due to GunDB compatibility issues:
+- `putUserArray()`, `getUserArray()`, `addToUserArray()`, `removeFromUserArray()`, `updateInUserArray()`
+
+**Use collections or direct GunDB operations instead** (see examples above).
 
 ### Advanced API Methods
 
