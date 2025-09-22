@@ -88728,13 +88728,19 @@ class DataBase {
             }
             console.log(`Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`);
             const existingUser = await this.gun.get(userPub).once().then();
-            const isNewUser = !existingUser || !existingUser.username;
+            const isNewUser = !existingUser || !existingUser.alias;
             // Get user's encryption public key (epub) for comprehensive tracking
             const userInstance = this.gun.user();
             const userSea = userInstance?._?.sea;
             const epub = userSea?.epub || null;
             // Enhanced user tracking system
-            await this.setupComprehensiveUserTracking(normalizedUsername, userPub, epub, isNewUser);
+            const trackingResult = await this.setupComprehensiveUserTracking(normalizedUsername, userPub, epub, isNewUser);
+            if (!trackingResult) {
+                return {
+                    success: false,
+                    error: "Comprehensive user tracking setup failed",
+                };
+            }
             return {
                 success: true,
                 userPub: userPub,
@@ -88764,6 +88770,9 @@ class DataBase {
      * Creates multiple indexes for efficient user discovery
      */
     async setupComprehensiveUserTracking(username, userPub, epub, isNewUser) {
+        if (isNewUser) {
+            return true;
+        }
         try {
             // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
             await this.createAliasIndex(username, userPub);
@@ -88780,10 +88789,12 @@ class DataBase {
             // 6. Create user metadata in user's own node
             await this.createUserMetadata(username, userPub, epub);
             console.log(`Comprehensive user tracking setup completed for ${username}`);
+            return true;
         }
         catch (error) {
             console.error(`Error in comprehensive user tracking setup: ${error}`);
             // Don't throw - continue with other operations
+            return false;
         }
     }
     /**
@@ -89181,6 +89192,10 @@ class DataBase {
             // Add a small delay to ensure user state is properly set
             await new Promise((resolve) => setTimeout(resolve, 100));
             const userPub = this.gun.user().is?.pub;
+            let alias = this.gun.user().is?.alias;
+            if (!alias) {
+                alias = username;
+            }
             console.log(`Login authentication successful, extracted userPub: ${userPub}`);
             console.log(`User object:`, this.gun.user());
             console.log(`User.is:`, this.gun.user().is);
@@ -89192,7 +89207,7 @@ class DataBase {
             }
             // Pass the userPub to runPostAuthOnAuthResult
             try {
-                await this.runPostAuthOnAuthResult(username, userPub, {
+                await this.runPostAuthOnAuthResult(alias, userPub, {
                     success: true,
                     userPub: userPub,
                 });

@@ -1104,7 +1104,7 @@ class DataBase {
       );
 
       const existingUser = await this.gun.get(userPub).once().then();
-      const isNewUser = !existingUser || !(existingUser as any).username;
+      const isNewUser = !existingUser || !existingUser.alias;
 
       // Get user's encryption public key (epub) for comprehensive tracking
       const userInstance = this.gun.user();
@@ -1112,12 +1112,19 @@ class DataBase {
       const epub = userSea?.epub || null;
 
       // Enhanced user tracking system
-      await this.setupComprehensiveUserTracking(
+      const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
         epub,
         isNewUser,
       );
+
+      if (!trackingResult) {
+        return {
+          success: false,
+          error: "Comprehensive user tracking setup failed",
+        };
+      }
 
       return {
         success: true,
@@ -1150,9 +1157,12 @@ class DataBase {
   private async setupComprehensiveUserTracking(
     username: string,
     userPub: string,
-    epub: string | null,
+    epub: string,
     isNewUser: boolean,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (isNewUser) {
+      return true;
+    }
     try {
       // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
       await this.createAliasIndex(username, userPub);
@@ -1177,9 +1187,11 @@ class DataBase {
       console.log(
         `Comprehensive user tracking setup completed for ${username}`,
       );
+      return true;
     } catch (error) {
       console.error(`Error in comprehensive user tracking setup: ${error}`);
       // Don't throw - continue with other operations
+      return false;
     }
   }
 
@@ -1657,6 +1669,12 @@ class DataBase {
 
       const userPub = this.gun.user().is?.pub;
 
+      let alias = this.gun.user().is?.alias as string;
+
+      if (!alias) {
+        alias = username;
+      }
+
       console.log(
         `Login authentication successful, extracted userPub: ${userPub}`,
       );
@@ -1672,7 +1690,7 @@ class DataBase {
 
       // Pass the userPub to runPostAuthOnAuthResult
       try {
-        await this.runPostAuthOnAuthResult(username, userPub, {
+        await this.runPostAuthOnAuthResult(alias, userPub, {
           success: true,
           userPub: userPub,
         });
