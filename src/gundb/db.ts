@@ -1098,7 +1098,7 @@ class DataBase {
         `Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`,
       );
 
-      const existingUser = await this.gun.get(userPub).once().then();
+      const existingUser = await this.gun.get(userPub).then();
       const isNewUser = !existingUser || !existingUser.alias;
 
       // Get user's encryption public key (epub) for comprehensive tracking
@@ -1359,10 +1359,7 @@ class DataBase {
 
       // Method 1: Try GunDB standard alias lookup (~@alias)
       try {
-        const aliasData = await this.gun
-          .get(`~@${normalizedAlias}`)
-          .once()
-          .then();
+        const aliasData = await this.gun.get(`~@${normalizedAlias}`).then();
         if (aliasData && aliasData["~pubKeyOfUser"]) {
           const userPub =
             aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
@@ -1382,7 +1379,6 @@ class DataBase {
         const userPub = await this.node
           .get("usernames")
           .get(normalizedAlias)
-          .once()
           .then();
 
         if (userPub) {
@@ -1424,11 +1420,7 @@ class DataBase {
 
       // Method 1: Try user registry (users/userPub -> user data)
       try {
-        const userData = await this.node
-          .get("users")
-          .get(userPub)
-          .once()
-          .then();
+        const userData = await this.node.get("users").get(userPub).then();
 
         if (userData && userData.username) {
           return {
@@ -1445,7 +1437,7 @@ class DataBase {
 
       // Method 2: Try user's own node
       try {
-        const userNodeData = await this.gun.get(userPub).once().then();
+        const userNodeData = await this.gun.get(userPub).then();
         if (userNodeData && userNodeData.username) {
           return {
             userPub: userPub,
@@ -1477,7 +1469,7 @@ class DataBase {
         return null;
       }
 
-      const userPub = await this.node.get("epubKeys").get(epub).once().then();
+      const userPub = await this.node.get("epubKeys").get(epub).then();
 
       return userPub || null;
     } catch (error) {
@@ -1497,11 +1489,7 @@ class DataBase {
         return null;
       }
 
-      const alias = await this.node
-        .get("userAliases")
-        .get(userPub)
-        .once()
-        .then();
+      const alias = await this.node.get("userAliases").get(userPub).then();
 
       return alias || null;
     } catch (error) {
@@ -1935,11 +1923,8 @@ class DataBase {
       // Find the user's data using direct lookup
       const normalizedUsername = username.trim().toLowerCase();
       const userPub =
-        (await this.node
-          .get("usernames")
-          .get(normalizedUsername)
-          .once()
-          .then()) || null;
+        (await this.node.get("usernames").get(normalizedUsername).then()) ||
+        null;
 
       if (!userPub) {
         return { success: false, error: "User not found" };
@@ -1949,7 +1934,6 @@ class DataBase {
       // Access the user's security data directly from their public key node
       const securityData = await (this.node.get(userPub) as any)
         .get("security")
-        .once()
         .then();
 
       if (!securityData || !securityData.hint) {
