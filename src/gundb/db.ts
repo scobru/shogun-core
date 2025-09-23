@@ -1098,22 +1098,21 @@ class DataBase {
         `Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`,
       );
 
-      // const existingUser = await this.gun.get(userPub).then();
+      const existingUser = await this.gun.get(userPub).then();
 
-      // const isNewUser = !existingUser || !existingUser.alias;
-      const isNewUser = true;
+      const isNewUser = !existingUser || !existingUser.alias;
+      // const isNewUser = true;
 
       // Get user's encryption public key (epub) for comprehensive tracking
       const userInstance = this.gun.user();
       const userSea = (userInstance as any)?._?.sea;
-      const epub = userSea?.epub || null;
+      const epub = userSea?.epub;
 
       // Enhanced user tracking system
       const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
         epub,
-        isNewUser,
       );
 
       if (!trackingResult) {
@@ -1155,11 +1154,7 @@ class DataBase {
     username: string,
     userPub: string,
     epub: string,
-    isNewUser: boolean,
   ): Promise<boolean> {
-    if (isNewUser) {
-      return true;
-    }
     try {
       // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
       await this.createAliasIndex(username, userPub);
