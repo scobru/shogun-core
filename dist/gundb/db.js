@@ -920,8 +920,9 @@ class DataBase {
                 throw new Error("Username cannot be empty");
             }
             console.log(`Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`);
-            const existingUser = await this.gun.get(userPub).then();
-            const isNewUser = !existingUser || !existingUser.alias;
+            // const existingUser = await this.gun.get(userPub).then();
+            // const isNewUser = !existingUser || !existingUser.alias;
+            const isNewUser = true;
             // Get user's encryption public key (epub) for comprehensive tracking
             const userInstance = this.gun.user();
             const userSea = userInstance?._?.sea;
