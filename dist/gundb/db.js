@@ -105,8 +105,8 @@ class DataBase {
         this.subscribeToAuthEvents();
         this.crypto = crypto;
         this.sea = sea_1.default;
-        this.node = null;
         this._rxjs = new rxjs_1.RxJS(this.gun);
+        this.node = null;
     }
     /**
      * Initialize the GunInstance asynchronously
@@ -313,13 +313,14 @@ class DataBase {
         // Split path by '/' and filter out empty segments
         const pathSegments = path
             .split("/")
-            .filter((segment) => segment.length > 0)
             .map((segment) => segment.trim())
             .filter((segment) => segment.length > 0);
         // Chain .get() calls for each path segment
-        return pathSegments.reduce((currentNode, segment) => {
-            return currentNode.get(segment);
-        }, node);
+        let currentNode = node;
+        for (const segment of pathSegments) {
+            currentNode = currentNode.get(segment);
+        }
+        return currentNode;
     }
     /**
      * Gets the Gun instance
@@ -362,7 +363,7 @@ class DataBase {
      * @returns Gun node
      */
     get(path) {
-        return this.navigateToPath(this.gun, path);
+        return this.navigateToPath(this.node, path);
     }
     /**
      * Gets data at the specified path (one-time read)
@@ -370,9 +371,12 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        const node = this.navigateToPath(this.gun, path);
-        const data = await node.then();
-        return data;
+        const node = this.navigateToPath(this.node, path);
+        return new Promise((resolve, reject) => {
+            node.once((data) => {
+                resolve(data);
+            });
+        });
     }
     /**
      * Puts data at the specified path
@@ -381,12 +385,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.put(data).then();
-        const result = ack.err
-            ? { success: false, error: ack.err }
-            : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.put(data).then();
     }
     /**
      * Sets data at the specified path
@@ -395,12 +395,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.set(data).then();
-        const result = ack.err
-            ? { success: false, error: ack.err }
-            : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.set(data).then();
     }
     /**
      * Removes data at the specified path
@@ -408,10 +404,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.put(null).then();
-        const result = ack && ack.err ? { success: false, error: ack.err } : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.put(null).then();
     }
     /**
      * Checks if a user is currently logged in
@@ -436,27 +430,51 @@ class DataBase {
             if (typeof localStorage === "undefined") {
                 return { success: false, error: "localStorage not available" };
             }
-            const sessionInfo = localStorage.getItem("gun/session");
-            const pairInfo = localStorage.getItem("gun/pair");
-            if (!sessionInfo || !pairInfo) {
-                // No saved session found
-                return { success: false, error: "No saved session" };
+            // Check for session data in sessionStorage first (new format)
+            let sessionData = sessionStorage.getItem("gunSessionData");
+            if (!sessionData) {
+                // Fallback to old localStorage format
+                const sessionInfo = localStorage.getItem("gun/session");
+                const pairInfo = localStorage.getItem("gun/pair");
+                if (!sessionInfo || !pairInfo) {
+                    // No saved session found
+                    return { success: false, error: "No saved session" };
+                }
+                let session, pair;
+                try {
+                    session = JSON.parse(sessionInfo);
+                    pair = JSON.parse(pairInfo);
+                }
+                catch (parseError) {
+                    console.error("Error parsing session data:", parseError);
+                    // Clear corrupted data
+                    localStorage.removeItem("gun/session");
+                    localStorage.removeItem("gun/pair");
+                    return { success: false, error: "Corrupted session data" };
+                }
+                // Convert old format to new format
+                sessionData = JSON.stringify({
+                    username: session.username,
+                    pair: pair,
+                    userPub: session.userPub,
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                });
             }
-            let session, pair;
+            let session;
             try {
-                session = JSON.parse(sessionInfo);
-                pair = JSON.parse(pairInfo);
+                session = JSON.parse(sessionData);
             }
             catch (parseError) {
                 console.error("Error parsing session data:", parseError);
                 // Clear corrupted data
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
+                sessionStorage.removeItem("gunSessionData");
                 return { success: false, error: "Corrupted session data" };
             }
             // Validate session data structure
-            if (!session.username || !session.pair || !session.userPub) {
+            if (!session.username || !session.userPub) {
                 // Invalid session data, clearing storage
+                sessionStorage.removeItem("gunSessionData");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Incomplete session data" };
@@ -464,6 +482,7 @@ class DataBase {
             // Check if session is expired
             if (session.expiresAt && Date.now() > session.expiresAt) {
                 // Session expired, clearing storage
+                sessionStorage.removeItem("gunSessionData");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Session expired" };
@@ -473,16 +492,19 @@ class DataBase {
                 const userInstance = this.gun.user();
                 if (!userInstance) {
                     console.error("Gun user instance not available");
+                    sessionStorage.removeItem("gunSessionData");
                     localStorage.removeItem("gun/session");
                     localStorage.removeItem("gun/pair");
                     return { success: false, error: "Gun user instance not available" };
                 }
-                // Set the user pair
-                try {
-                    userInstance._ = { ...userInstance._, sea: session.pair };
-                }
-                catch (pairError) {
-                    console.error("Error setting user pair:", pairError);
+                // Set the user pair if available
+                if (session.pair) {
+                    try {
+                        userInstance._ = { ...userInstance._, sea: session.pair };
+                    }
+                    catch (pairError) {
+                        console.error("Error setting user pair:", pairError);
+                    }
                 }
                 // Attempt to recall user session
                 try {
@@ -503,6 +525,7 @@ class DataBase {
                 }
                 else {
                     // Session restoration verification failed
+                    sessionStorage.removeItem("gunSessionData");
                     localStorage.removeItem("gun/session");
                     localStorage.removeItem("gun/pair");
                     return { success: false, error: "Session verification failed" };
@@ -966,19 +989,37 @@ class DataBase {
     async setupComprehensiveUserTracking(username, userPub, epub) {
         try {
             // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
-            await this.createAliasIndex(username, userPub);
+            const aliasIndexResult = await this.createAliasIndex(username, userPub);
+            if (!aliasIndexResult) {
+                return false;
+            }
             // 2. Create username mapping: usernames/alias -> userPub
-            await this.createUsernameMapping(username, userPub);
+            const usernameMappingResult = await this.createUsernameMapping(username, userPub);
+            if (!usernameMappingResult) {
+                return false;
+            }
             // 3. Create user registry: users/userPub -> user data
-            await this.createUserRegistry(username, userPub, epub);
+            const userRegistryResult = await this.createUserRegistry(username, userPub, epub);
+            if (!userRegistryResult) {
+                return false;
+            }
             // 4. Create reverse lookup: userPub -> alias
-            await this.createReverseLookup(username, userPub);
+            const reverseLookupResult = await this.createReverseLookup(username, userPub);
+            if (!reverseLookupResult) {
+                return false;
+            }
             // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
             if (epub) {
-                await this.createEpubIndex(epub, userPub);
+                const epubIndexResult = await this.createEpubIndex(epub, userPub);
+                if (!epubIndexResult) {
+                    return false;
+                }
             }
             // 6. Create user metadata in user's own node
-            await this.createUserMetadata(username, userPub, epub);
+            const userMetadataResult = await this.createUserMetadata(username, userPub, epub);
+            if (!userMetadataResult) {
+                return false;
+            }
             console.log(`Comprehensive user tracking setup completed for ${username}`);
             return true;
         }
@@ -999,13 +1040,16 @@ class DataBase {
             const ack = await aliasNode.put(`~@${username}`).then();
             if (ack.err) {
                 console.error(`Error creating alias index: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Alias index created: ~@${username} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating alias index: ${error}`);
+            return false;
         }
     }
     /**
@@ -1020,13 +1064,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating username mapping: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Username mapping created: ${username} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating username mapping: ${error}`);
+            return false;
         }
     }
     /**
@@ -1048,13 +1095,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating user registry: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`User registry created: ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating user registry: ${error}`);
+            return false;
         }
     }
     /**
@@ -1069,13 +1119,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating reverse lookup: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Reverse lookup created: ${userPub} -> ${username}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating reverse lookup: ${error}`);
+            return false;
         }
     }
     /**
@@ -1086,13 +1139,16 @@ class DataBase {
             const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
             if (ack.err) {
                 console.error(`Error creating epub index: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Epub index created: ${epub} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating epub index: ${error}`);
+            return false;
         }
     }
     /**
@@ -1109,13 +1165,16 @@ class DataBase {
             const ack = await this.gun.get(userPub).put(userMetadata).then();
             if (ack.err) {
                 console.error(`Error creating user metadata: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`User metadata created for ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating user metadata: ${error}`);
+            return false;
         }
     }
     /**
@@ -1422,60 +1481,6 @@ class DataBase {
             return { success: false, error: String(error) };
         }
     }
-    /**
-     * Encrypts session data before storage
-     */
-    async encryptSessionData(data) {
-        try {
-            // Use a derived key from device fingerprint for encryption
-            const deviceInfo = navigator.userAgent +
-                (typeof screen !== "undefined"
-                    ? screen.width + "x" + screen.height
-                    : "");
-            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
-                name: "SHA-256",
-            });
-            if (!encryptionKey) {
-                throw new Error("Failed to generate encryption key");
-            }
-            const encryptedData = await sea_1.default.encrypt(JSON.stringify(data), encryptionKey);
-            if (!encryptedData) {
-                throw new Error("Failed to encrypt session data");
-            }
-            return encryptedData;
-        }
-        catch (error) {
-            console.error("Error encrypting session data:", error);
-            throw error;
-        }
-    }
-    /**
-     * Decrypts session data from storage
-     */
-    async decryptSessionData(encryptedData) {
-        try {
-            // Use the same device fingerprint for decryption
-            const deviceInfo = navigator.userAgent +
-                (typeof screen !== "undefined"
-                    ? screen.width + "x" + screen.height
-                    : "");
-            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
-                name: "SHA-256",
-            });
-            if (!encryptionKey) {
-                throw new Error("Failed to generate decryption key");
-            }
-            const decryptedData = await sea_1.default.decrypt(encryptedData, encryptionKey);
-            if (decryptedData === undefined) {
-                throw new Error("Failed to decrypt session data");
-            }
-            return JSON.parse(decryptedData);
-        }
-        catch (error) {
-            console.error("Error decrypting session data:", error);
-            throw error;
-        }
-    }
     saveCredentials(userInfo) {
         try {
             const sessionInfo = {
@@ -1486,16 +1491,8 @@ class DataBase {
                 expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
             };
             if (typeof sessionStorage !== "undefined") {
-                // Encrypt session data before storage
-                this.encryptSessionData(sessionInfo)
-                    .then((encryptedData) => {
-                    sessionStorage.setItem("gunSessionData", encryptedData);
-                })
-                    .catch((error) => {
-                    console.error("Failed to encrypt and save session data:", error);
-                    // Fallback to unencrypted storage (less secure)
-                    sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
-                });
+                // Save session data directly (unencrypted)
+                sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
             }
         }
         catch (error) {

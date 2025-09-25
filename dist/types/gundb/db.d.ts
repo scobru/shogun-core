@@ -4,8 +4,8 @@
  * - Support for remove/unset operations
  * - Direct authentication through Gun.user()
  */
-import type { GunUser, UserInfo, AuthCallback, GunData, EventData, EventListener, GunOperationResult } from "./types";
-import type { GunInstance, GunUserInstance, GunChain } from "./types";
+import type { UserInfo, AuthCallback, EventData, EventListener } from "./types";
+import type { IGunUserInstance, IGunChain, IGunInstance, ISEAPair, GunMessagePut } from "gun/types";
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
@@ -16,21 +16,20 @@ import "gun/lib/store";
 import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 import derive, { DeriveOptions } from "./derive";
-import type { ISEAPair } from "gun/types";
 import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 declare class DataBase {
-    gun: GunInstance;
-    user: GunUserInstance | null;
+    gun: IGunInstance;
+    user: IGunUserInstance | null;
     crypto: typeof crypto;
     sea: typeof SEA;
-    node: GunChain;
+    node: IGunChain<any, any, any, any>;
     private readonly onAuthCallbacks;
     private readonly eventEmitter;
     private _rxjs?;
-    constructor(gun: GunInstance, appScope?: string);
+    constructor(gun: IGunInstance, appScope?: string);
     /**
      * Initialize the GunInstance asynchronously
      * This method should be called after construction to perform async operations
@@ -95,7 +94,7 @@ declare class DataBase {
      * Gets the Gun instance
      * @returns Gun instance
      */
-    getGun(): GunInstance;
+    getGun(): IGunInstance;
     /**
      * Gets the current user
      * @returns Current user object or null
@@ -105,39 +104,39 @@ declare class DataBase {
      * Gets the current user instance
      * @returns User instance
      */
-    getUser(): GunUser;
+    getUser(): IGunUserInstance;
     /**
      * Gets a node at the specified path
      * @param path Path to the node
      * @returns Gun node
      */
-    get(path: string): any;
+    get(path: string): IGunChain<any, any>;
     /**
      * Gets data at the specified path (one-time read)
      * @param path Path to get the data from
      * @returns Promise resolving to the data
      */
-    getData(path: string): Promise<GunData>;
+    getData(path: string): Promise<any>;
     /**
      * Puts data at the specified path
      * @param path Path to store data
      * @param data Data to store
      * @returns Promise resolving to operation result
      */
-    put(path: string, data: GunData): Promise<GunOperationResult>;
+    put(path: string, data: any): Promise<GunMessagePut>;
     /**
      * Sets data at the specified path
      * @param path Path to store data
      * @param data Data to store
      * @returns Promise resolving to operation result
      */
-    set(path: string, data: GunData): Promise<GunOperationResult>;
+    set(path: string, data: any): Promise<GunMessagePut>;
     /**
      * Removes data at the specified path
      * @param path Path to remove
      * @returns Promise resolving to operation result
      */
-    remove(path: string): Promise<GunOperationResult>;
+    remove(path: string): Promise<GunMessagePut>;
     /**
      * Checks if a user is currently logged in
      * @returns True if logged in
@@ -277,14 +276,6 @@ declare class DataBase {
      */
     private buildLoginResult;
     login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
-    /**
-     * Encrypts session data before storage
-     */
-    private encryptSessionData;
-    /**
-     * Decrypts session data from storage
-     */
-    private decryptSessionData;
     private saveCredentials;
     /**
      * Sets up security questions and password hint
@@ -380,7 +371,7 @@ declare class DataBase {
      */
     isAuthenticated(): boolean;
 }
-declare const createGun: (config: any) => import("gun/types").IGunInstance<any>;
+declare const createGun: (config: any) => IGunInstance<any>;
 export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
 export default Gun;
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";

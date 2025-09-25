@@ -1,7 +1,7 @@
 "use strict";
 /**
- * Simplified API layer to reduce complexity for common use cases
- * Provides quick-start methods that wrap the full DataBase functionality
+ * Simplified API layer to reduce complexity for common use cases.
+ * Provides quick-start methods that wrap the full DataBase functionality.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AutoQuickStart = exports.QuickStart = exports.SimpleGunAPI = void 0;
@@ -10,16 +10,24 @@ exports.quickStart = quickStart;
 exports.autoQuickStart = autoQuickStart;
 const db_1 = require("./db");
 /**
- * Simple API wrapper that provides common operations with minimal complexity
+ * Simple API wrapper that provides common operations with minimal complexity.
  */
 class SimpleGunAPI {
+    /**
+     * Create a new SimpleGunAPI instance.
+     * @param db The DataBase instance to use.
+     */
     constructor(db) {
         this.db = db;
     }
+    // =========================
+    // Quick data operations
+    // =========================
     /**
-     * Quick data operations - simplified interface
+     * Get data at a given path.
+     * @param path The path to retrieve data from.
+     * @returns The data at the path, or null if not found or on error.
      */
-    // Simple get - returns data directly or null
     async get(path) {
         try {
             const result = await this.db.getData(path);
@@ -30,15 +38,27 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Get Gun node - returns Gun node for chaining operations like .map()
+    /**
+     * Get the Gun node at a given path for chaining operations.
+     * @param path The path to the node.
+     * @returns The Gun node.
+     */
     getNode(path) {
         return this.db.get(path);
     }
-    // Get Gun node for direct chaining - returns the actual Gun node for full chaining support
+    /**
+     * Get the Gun node at a given path for direct chaining.
+     * @param path The path to the node.
+     * @returns The Gun node.
+     */
     node(path) {
         return this.db.get(path);
     }
-    // Get Gun node with chaining support - returns a wrapper that supports chaining
+    /**
+     * Get a chainable wrapper for a Gun node at a given path.
+     * @param path The path to the node.
+     * @returns An object with chainable methods: get, put, set, once, then, map.
+     */
     chain(path) {
         const node = this.db.get(path);
         return {
@@ -46,21 +66,21 @@ class SimpleGunAPI {
             put: async (data) => {
                 try {
                     const result = await this.db.put(path, data);
-                    return result.success;
+                    return result;
                 }
                 catch (error) {
                     console.warn(`Failed to put data to ${path}:`, error);
-                    return false;
+                    return { err: String(error) };
                 }
             },
             set: async (data) => {
                 try {
                     const result = await this.db.set(path, data);
-                    return result.success;
+                    return result;
                 }
                 catch (error) {
                     console.warn(`Failed to set data to ${path}:`, error);
-                    return false;
+                    return { err: String(error) };
                 }
             },
             once: async () => {
@@ -86,43 +106,62 @@ class SimpleGunAPI {
             },
         };
     }
-    // Simple put - returns success boolean
+    /**
+     * Put data at a given path.
+     * @param path The path to put data to.
+     * @param data The data to put.
+     * @returns The GunMessagePut result.
+     */
     async put(path, data) {
         try {
             const result = await this.db.put(path, data);
-            return result.success;
+            return result;
         }
         catch (error) {
             console.warn(`Failed to put data to ${path}:`, error);
-            return false;
-        }
-    }
-    // Simple set - returns success boolean
-    async set(path, data) {
-        try {
-            const result = await this.db.set(path, data);
-            return result.success;
-        }
-        catch (error) {
-            console.warn(`Failed to set data to ${path}:`, error);
-            return false;
-        }
-    }
-    // Simple remove - returns success boolean
-    async remove(path) {
-        try {
-            const result = await this.db.remove(path);
-            return result.success;
-        }
-        catch (error) {
-            console.warn(`Failed to remove data from ${path}:`, error);
-            return false;
+            return { err: String(error) };
         }
     }
     /**
-     * Quick authentication - simplified interface
+     * Set data at a given path (alternative to put).
+     * @param path The path to set data to.
+     * @param data The data to set.
+     * @returns The GunMessagePut result.
      */
-    // Simple login - returns user info or null
+    async set(path, data) {
+        try {
+            const result = await this.db.set(path, data);
+            return result;
+        }
+        catch (error) {
+            console.warn(`Failed to set data to ${path}:`, error);
+            return { err: String(error) };
+        }
+    }
+    /**
+     * Remove data at a given path.
+     * @param path The path to remove data from.
+     * @returns The GunMessagePut result.
+     */
+    async remove(path) {
+        try {
+            const result = await this.db.remove(path);
+            return result;
+        }
+        catch (error) {
+            console.warn(`Failed to remove data from ${path}:`, error);
+            return { err: String(error) };
+        }
+    }
+    // =========================
+    // Quick authentication
+    // =========================
+    /**
+     * Log in a user.
+     * @param username The username.
+     * @param password The password.
+     * @returns The user info if successful, or null.
+     */
     async login(username, password) {
         try {
             const result = await this.db.login(username, password);
@@ -139,7 +178,12 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple signup - returns user info or null
+    /**
+     * Sign up a new user.
+     * @param username The username.
+     * @param password The password.
+     * @returns The user info if successful, or null.
+     */
     async signup(username, password) {
         try {
             const result = await this.db.signUp(username, password);
@@ -156,18 +200,27 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple logout
+    /**
+     * Log out the current user.
+     */
     logout() {
         this.db.logout();
     }
-    // Simple check if logged in
+    /**
+     * Check if a user is currently logged in.
+     * @returns True if logged in, false otherwise.
+     */
     isLoggedIn() {
         return this.db.isLoggedIn();
     }
+    // =========================
+    // Quick user data operations
+    // =========================
     /**
-     * Quick user data operations - simplified interface
+     * Get user data at a given path (requires login).
+     * @param path The path to the user data.
+     * @returns The user data, or null if not found or on error.
      */
-    // Simple user data get - using direct user node
     async getUserData(path) {
         try {
             if (!this.isLoggedIn()) {
@@ -186,7 +239,12 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple user data put - using direct user node
+    /**
+     * Put user data at a given path (requires login).
+     * @param path The path to put data to.
+     * @param data The data to put.
+     * @returns True if successful, false otherwise.
+     */
     async putUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
@@ -205,7 +263,12 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data set (alternative to put) - using direct user node
+    /**
+     * Set user data at a given path (alternative to put, requires login).
+     * @param path The path to set data to.
+     * @param data The data to set.
+     * @returns True if successful, false otherwise.
+     */
     async setUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
@@ -224,7 +287,11 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data remove - using direct user node
+    /**
+     * Remove user data at a given path (requires login).
+     * @param path The path to remove data from.
+     * @returns True if successful, false otherwise.
+     */
     async removeUserData(path) {
         try {
             if (!this.isLoggedIn()) {
@@ -243,13 +310,16 @@ class SimpleGunAPI {
             return false;
         }
     }
+    // =========================
+    // Array utilities for GunDB
+    // =========================
     /**
-     * Array utilities for GunDB
-     * GunDB doesn't handle arrays well, so we convert them to indexed objects
+     * Convert an array to an indexed object for GunDB storage.
+     * Example: [{id: '1', ...}, {id: '2', ...}] => { "1": {...}, "2": {...} }
+     * @param arr The array to convert.
+     * @returns The indexed object.
+     * @private
      */
-    // Convert array to indexed object for GunDB storage
-    // [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
-    // becomes { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
     getIndexedObjectFromArray(arr) {
         // Filter out null/undefined items and ensure they have valid id
         const validItems = (arr || []).filter((item) => item &&
@@ -263,9 +333,13 @@ class SimpleGunAPI {
             };
         }, {});
     }
-    // Convert indexed object back to array
-    // { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
-    // becomes [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+    /**
+     * Convert an indexed object back to an array.
+     * Example: { "1": {...}, "2": {...} } => [{id: '1', ...}, {id: '2', ...}]
+     * @param indexedObj The indexed object to convert.
+     * @returns The array.
+     * @private
+     */
     getArrayFromIndexedObject(indexedObj) {
         if (!indexedObj || typeof indexedObj !== "object") {
             return [];
@@ -276,19 +350,32 @@ class SimpleGunAPI {
         // Filter out null/undefined values and ensure they are valid objects
         return Object.values(cleanObj).filter((item) => item && typeof item === "object");
     }
-    // Public method to convert array to indexed object
+    /**
+     * Convert an array to an indexed object for GunDB storage (public method).
+     * @param arr The array to convert.
+     * @returns The indexed object.
+     */
     arrayToIndexedObject(arr) {
         return this.getIndexedObjectFromArray(arr);
     }
-    // Public method to convert indexed object to array
+    /**
+     * Convert an indexed object to an array (public method).
+     * @param indexedObj The indexed object to convert.
+     * @returns The array.
+     */
     indexedObjectToArray(indexedObj) {
         return this.getArrayFromIndexedObject(indexedObj);
     }
+    // =========================
+    // Path utilities
+    // =========================
     /**
-     * Path utilities
+     * Get the GunDB user node at a given path (requires login).
+     * Useful for advanced operations that need direct GunDB node access.
+     * @param path The path to the user node.
+     * @returns The Gun node.
+     * @throws If not logged in.
      */
-    // Public method to get deconstructed path node for user space
-    // Useful for advanced operations that need direct GunDB node access
     getUserNode(path) {
         if (!this.isLoggedIn()) {
             throw new Error("User not logged in");
@@ -296,16 +383,23 @@ class SimpleGunAPI {
         // Use the database's path deconstruction
         return this.db.getUser().get(path);
     }
-    // Public method to get deconstructed path node for global space
-    // Useful for advanced operations that need direct GunDB node access
+    /**
+     * Get the GunDB global node at a given path.
+     * Useful for advanced operations that need direct GunDB node access.
+     * @param path The path to the global node.
+     * @returns The Gun node.
+     */
     getGlobalNode(path) {
         // Use the database's path deconstruction
         return this.db.get(path);
     }
+    // =========================
+    // Quick utility methods
+    // =========================
     /**
-     * Quick utility methods
+     * Get the current user info.
+     * @returns The current user info, or null if not logged in.
      */
-    // Get current user info
     getCurrentUser() {
         const user = this.db.getCurrentUser();
         if (user) {
@@ -316,7 +410,11 @@ class SimpleGunAPI {
         }
         return null;
     }
-    // Check if user exists by alias
+    /**
+     * Check if a user exists by alias.
+     * @param alias The user alias.
+     * @returns True if the user exists, false otherwise.
+     */
     async userExists(alias) {
         try {
             const user = await this.db.getUserByAlias(alias);
@@ -327,7 +425,11 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Get user by alias
+    /**
+     * Get user info by alias.
+     * @param alias The user alias.
+     * @returns The user info, or null if not found.
+     */
     async getUser(alias) {
         try {
             const user = await this.db.getUserByAlias(alias);
@@ -355,9 +457,11 @@ class SimpleGunAPI {
                 return null;
             }
             const user = this.db.getUser();
-            if (user && user.is) {
+            const pubkey = user.is?.pub;
+            const node = this.db.get(`${pubkey}`);
+            if (node) {
                 const userData = await new Promise((resolve, reject) => {
-                    user.once((data) => {
+                    node.once((data) => {
                         resolve(data);
                     });
                 });

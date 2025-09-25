@@ -5,17 +5,15 @@
  * - Direct authentication through Gun.user()
  */
 
+import type { UserInfo, AuthCallback, EventData, EventListener } from "./types";
 import type {
-  GunUser,
-  UserInfo,
-  AuthCallback,
-  GunData,
-  GunNode,
-  EventData,
-  EventListener,
-  GunOperationResult,
-} from "./types";
-import type { GunInstance, GunUserInstance, GunChain } from "./types";
+  IGunUserInstance,
+  IGunChain,
+  IGunInstance,
+  ISEAPair,
+  GunMessagePut,
+  IGunInstanceRoot,
+} from "gun/types";
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 
@@ -30,8 +28,6 @@ import "gun/lib/rindexed";
 import "gun/lib/webrtc";
 
 import derive, { DeriveOptions } from "./derive";
-
-import type { ISEAPair } from "gun/types";
 
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 import { EventEmitter } from "../utils/eventEmitter";
@@ -57,11 +53,11 @@ const CONFIG = {
 } as const;
 
 class DataBase {
-  public gun: GunInstance;
-  public user: GunUserInstance | null = null;
+  public gun: IGunInstance;
+  public user: IGunUserInstance | null = null;
   public crypto: typeof crypto;
   public sea: typeof SEA;
-  public node: GunChain;
+  public node: IGunChain<any, any, any, any>;
 
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
   private readonly eventEmitter: EventEmitter;
@@ -69,7 +65,7 @@ class DataBase {
   // Integrated modules
   private _rxjs?: RxJS;
 
-  constructor(gun: GunInstance, appScope: string = "shogun") {
+  constructor(gun: IGunInstance, appScope: string = "shogun") {
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
@@ -112,9 +108,9 @@ class DataBase {
 
     this.sea = SEA;
 
-    this.node = null as any;
-
     this._rxjs = new RxJS(this.gun);
+
+    this.node = null as unknown as IGunChain<any, any, any, any>;
   }
 
   /**
@@ -125,7 +121,7 @@ class DataBase {
     try {
       const sessionResult = this.restoreSession();
 
-      this.node = this.gun.get(appScope);
+      this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
 
       if (sessionResult.success) {
         // Session automatically restored
@@ -175,7 +171,9 @@ class DataBase {
   removePeer(peer: string): void {
     try {
       // Get current peers from Gun instance
-      const gunOpts = (this.gun as any)._.opt;
+      const gunOpts = this.gun._.opt as unknown as {
+        peers: { [peer: string]: any };
+      };
       if (gunOpts && gunOpts.peers) {
         // Remove the peer from the peers object
         delete gunOpts.peers[peer];
@@ -201,7 +199,9 @@ class DataBase {
    */
   getCurrentPeers(): string[] {
     try {
-      const gunOpts = (this.gun as any)._.opt;
+      const gunOpts = this.gun._.opt as unknown as {
+        peers: { [peer: string]: any };
+      };
       if (gunOpts && gunOpts.peers) {
         return Object.keys(gunOpts.peers).filter((peer) => {
           const peerObj = gunOpts.peers[peer];
@@ -222,7 +222,9 @@ class DataBase {
    */
   getAllConfiguredPeers(): string[] {
     try {
-      const gunOpts = (this.gun as any)._.opt;
+      const gunOpts = this.gun._.opt as unknown as {
+        peers: { [peer: string]: any };
+      };
       if (gunOpts && gunOpts.peers) {
         return Object.keys(gunOpts.peers);
       }
@@ -239,7 +241,9 @@ class DataBase {
    */
   getPeerInfo(): { [peer: string]: { connected: boolean; status: string } } {
     try {
-      const gunOpts = (this.gun as any)._.opt;
+      const gunOpts = this.gun._.opt as unknown as {
+        peers: { [peer: string]: any };
+      };
       const peerInfo: {
         [peer: string]: { connected: boolean; status: string };
       } = {};
@@ -292,7 +296,9 @@ class DataBase {
    */
   resetPeers(newPeers?: string[]): void {
     try {
-      const gunOpts = (this.gun as any)._.opt;
+      const gunOpts = this.gun._.opt as unknown as {
+        peers: { [peer: string]: any };
+      };
       if (gunOpts && gunOpts.peers) {
         // Clear all existing peers
         Object.keys(gunOpts.peers).forEach((peer) => {
@@ -336,27 +342,28 @@ class DataBase {
    * @param path Path string (e.g., "test/data/marco")
    * @returns Gun node at the specified path
    */
-  private navigateToPath(node: GunNode, path: string): GunNode {
-    if (!path || typeof path !== "string") return node;
+  private navigateToPath(node: IGunChain<any>, path: string): IGunChain<any> {
+    if (!path || typeof path !== "string") return node as IGunChain<any>;
 
     // Split path by '/' and filter out empty segments
     const pathSegments = path
       .split("/")
-      .filter((segment) => segment.length > 0)
       .map((segment) => segment.trim())
       .filter((segment) => segment.length > 0);
 
     // Chain .get() calls for each path segment
-    return pathSegments.reduce((currentNode, segment) => {
-      return currentNode.get(segment);
-    }, node);
+    let currentNode: IGunChain<any> = node as IGunChain<any>;
+    for (const segment of pathSegments) {
+      currentNode = currentNode.get(segment);
+    }
+    return currentNode;
   }
 
   /**
    * Gets the Gun instance
    * @returns Gun instance
    */
-  getGun(): GunInstance {
+  getGun(): IGunInstance {
     return this.gun;
   }
 
@@ -385,7 +392,7 @@ class DataBase {
    * Gets the current user instance
    * @returns User instance
    */
-  getUser(): GunUser {
+  getUser(): IGunUserInstance {
     return this.gun.user();
   }
 
@@ -394,8 +401,8 @@ class DataBase {
    * @param path Path to the node
    * @returns Gun node
    */
-  get(path: string): any {
-    return this.navigateToPath(this.gun, path);
+  get(path: string): IGunChain<any, any> {
+    return this.navigateToPath(this.node, path) as IGunChain<any, any>;
   }
 
   /**
@@ -403,10 +410,13 @@ class DataBase {
    * @param path Path to get the data from
    * @returns Promise resolving to the data
    */
-  async getData(path: string): Promise<GunData> {
-    const node = this.navigateToPath(this.gun, path);
-    const data = await node.then();
-    return data;
+  async getData(path: string): Promise<any> {
+    const node = this.navigateToPath(this.node, path);
+    return new Promise<any>((resolve, reject) => {
+      node.once((data: any) => {
+        resolve(data);
+      });
+    });
   }
 
   /**
@@ -415,14 +425,9 @@ class DataBase {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async put(path: string, data: GunData): Promise<GunOperationResult> {
-    const node = this.navigateToPath(this.gun, path);
-    const ack = await node.put(data).then();
-    const result = ack.err
-      ? { success: false, error: ack.err }
-      : { success: true };
-
-    return result;
+  async put(path: string, data: any): Promise<GunMessagePut> {
+    const node = this.navigateToPath(this.node, path);
+    return await node.put(data).then();
   }
 
   /**
@@ -431,14 +436,9 @@ class DataBase {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async set(path: string, data: GunData): Promise<GunOperationResult> {
-    const node = this.navigateToPath(this.gun, path);
-    const ack = await node.set(data).then();
-    const result = ack.err
-      ? { success: false, error: ack.err }
-      : { success: true };
-
-    return result;
+  async set(path: string, data: any): Promise<GunMessagePut> {
+    const node = this.navigateToPath(this.node, path);
+    return await node.set(data).then();
   }
 
   /**
@@ -446,13 +446,9 @@ class DataBase {
    * @param path Path to remove
    * @returns Promise resolving to operation result
    */
-  async remove(path: string): Promise<GunOperationResult> {
-    const node = this.navigateToPath(this.gun, path);
-    const ack = await node.put(null).then();
-    const result =
-      ack && ack.err ? { success: false, error: ack.err } : { success: true };
-
-    return result;
+  async remove(path: string): Promise<GunMessagePut> {
+    const node = this.navigateToPath(this.node, path);
+    return await node.put(null).then();
   }
 
   /**
@@ -483,29 +479,55 @@ class DataBase {
         return { success: false, error: "localStorage not available" };
       }
 
-      const sessionInfo = localStorage.getItem("gun/session");
-      const pairInfo = localStorage.getItem("gun/pair");
+      // Check for session data in sessionStorage first (new format)
+      let sessionData = sessionStorage.getItem("gunSessionData");
 
-      if (!sessionInfo || !pairInfo) {
-        // No saved session found
-        return { success: false, error: "No saved session" };
+      if (!sessionData) {
+        // Fallback to old localStorage format
+        const sessionInfo = localStorage.getItem("gun/session");
+        const pairInfo = localStorage.getItem("gun/pair");
+
+        if (!sessionInfo || !pairInfo) {
+          // No saved session found
+          return { success: false, error: "No saved session" };
+        }
+
+        let session, pair;
+        try {
+          session = JSON.parse(sessionInfo);
+          pair = JSON.parse(pairInfo);
+        } catch (parseError) {
+          console.error("Error parsing session data:", parseError);
+          // Clear corrupted data
+          localStorage.removeItem("gun/session");
+          localStorage.removeItem("gun/pair");
+          return { success: false, error: "Corrupted session data" };
+        }
+
+        // Convert old format to new format
+        sessionData = JSON.stringify({
+          username: session.username,
+          pair: pair,
+          userPub: session.userPub,
+          timestamp: Date.now(),
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
       }
 
-      let session, pair;
+      let session;
       try {
-        session = JSON.parse(sessionInfo);
-        pair = JSON.parse(pairInfo);
+        session = JSON.parse(sessionData);
       } catch (parseError) {
         console.error("Error parsing session data:", parseError);
         // Clear corrupted data
-        localStorage.removeItem("gun/session");
-        localStorage.removeItem("gun/pair");
+        sessionStorage.removeItem("gunSessionData");
         return { success: false, error: "Corrupted session data" };
       }
 
       // Validate session data structure
-      if (!session.username || !session.pair || !session.userPub) {
+      if (!session.username || !session.userPub) {
         // Invalid session data, clearing storage
+        sessionStorage.removeItem("gunSessionData");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Incomplete session data" };
@@ -514,6 +536,7 @@ class DataBase {
       // Check if session is expired
       if (session.expiresAt && Date.now() > session.expiresAt) {
         // Session expired, clearing storage
+        sessionStorage.removeItem("gunSessionData");
         localStorage.removeItem("gun/session");
         localStorage.removeItem("gun/pair");
         return { success: false, error: "Session expired" };
@@ -524,16 +547,19 @@ class DataBase {
         const userInstance = this.gun.user();
         if (!userInstance) {
           console.error("Gun user instance not available");
+          sessionStorage.removeItem("gunSessionData");
           localStorage.removeItem("gun/session");
           localStorage.removeItem("gun/pair");
           return { success: false, error: "Gun user instance not available" };
         }
 
-        // Set the user pair
-        try {
-          (userInstance as any)._ = { ...userInstance._, sea: session.pair };
-        } catch (pairError) {
-          console.error("Error setting user pair:", pairError);
+        // Set the user pair if available
+        if (session.pair) {
+          try {
+            (userInstance as any)._ = { ...userInstance._, sea: session.pair };
+          } catch (pairError) {
+            console.error("Error setting user pair:", pairError);
+          }
         }
 
         // Attempt to recall user session
@@ -554,6 +580,7 @@ class DataBase {
           };
         } else {
           // Session restoration verification failed
+          sessionStorage.removeItem("gunSessionData");
           localStorage.removeItem("gun/session");
           localStorage.removeItem("gun/pair");
           return { success: false, error: "Session verification failed" };
@@ -1157,24 +1184,62 @@ class DataBase {
   ): Promise<boolean> {
     try {
       // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
-      await this.createAliasIndex(username, userPub);
+      const aliasIndexResult = await this.createAliasIndex(username, userPub);
+
+      if (!aliasIndexResult) {
+        return false;
+      }
 
       // 2. Create username mapping: usernames/alias -> userPub
-      await this.createUsernameMapping(username, userPub);
+      const usernameMappingResult = await this.createUsernameMapping(
+        username,
+        userPub,
+      );
+
+      if (!usernameMappingResult) {
+        return false;
+      }
 
       // 3. Create user registry: users/userPub -> user data
-      await this.createUserRegistry(username, userPub, epub);
+      const userRegistryResult = await this.createUserRegistry(
+        username,
+        userPub,
+        epub,
+      );
+
+      if (!userRegistryResult) {
+        return false;
+      }
 
       // 4. Create reverse lookup: userPub -> alias
-      await this.createReverseLookup(username, userPub);
+      const reverseLookupResult = await this.createReverseLookup(
+        username,
+        userPub,
+      );
+
+      if (!reverseLookupResult) {
+        return false;
+      }
 
       // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
       if (epub) {
-        await this.createEpubIndex(epub, userPub);
+        const epubIndexResult = await this.createEpubIndex(epub, userPub);
+
+        if (!epubIndexResult) {
+          return false;
+        }
       }
 
       // 6. Create user metadata in user's own node
-      await this.createUserMetadata(username, userPub, epub);
+      const userMetadataResult = await this.createUserMetadata(
+        username,
+        userPub,
+        epub,
+      );
+
+      if (!userMetadataResult) {
+        return false;
+      }
 
       console.log(
         `Comprehensive user tracking setup completed for ${username}`,
@@ -1193,7 +1258,7 @@ class DataBase {
   private async createAliasIndex(
     username: string,
     userPub: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const aliasNode = this.gun.get(`~@${username}`);
       // For Gun.js alias validation to pass, the data must be exactly equal to the key
@@ -1202,11 +1267,14 @@ class DataBase {
 
       if (ack.err) {
         console.error(`Error creating alias index: ${ack.err}`);
+        return false;
       } else {
         console.log(`Alias index created: ~@${username} -> ${userPub}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating alias index: ${error}`);
+      return false;
     }
   }
 
@@ -1216,7 +1284,7 @@ class DataBase {
   private async createUsernameMapping(
     username: string,
     userPub: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const ack = await this.node
         .get("usernames")
@@ -1226,11 +1294,14 @@ class DataBase {
 
       if (ack.err) {
         console.error(`Error creating username mapping: ${ack.err}`);
+        return false;
       } else {
         console.log(`Username mapping created: ${username} -> ${userPub}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating username mapping: ${error}`);
+      return false;
     }
   }
 
@@ -1241,7 +1312,7 @@ class DataBase {
     username: string,
     userPub: string,
     epub: string | null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const userData = {
         username: username,
@@ -1259,11 +1330,14 @@ class DataBase {
 
       if (ack.err) {
         console.error(`Error creating user registry: ${ack.err}`);
+        return false;
       } else {
         console.log(`User registry created: ${userPub}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating user registry: ${error}`);
+      return false;
     }
   }
 
@@ -1273,7 +1347,7 @@ class DataBase {
   private async createReverseLookup(
     username: string,
     userPub: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const ack = await this.node
         .get("userAliases")
@@ -1283,28 +1357,37 @@ class DataBase {
 
       if (ack.err) {
         console.error(`Error creating reverse lookup: ${ack.err}`);
+        return false;
       } else {
         console.log(`Reverse lookup created: ${userPub} -> ${username}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating reverse lookup: ${error}`);
+      return false;
     }
   }
 
   /**
    * Creates epub index: epubKeys/epub -> userPub
    */
-  private async createEpubIndex(epub: string, userPub: string): Promise<void> {
+  private async createEpubIndex(
+    epub: string,
+    userPub: string,
+  ): Promise<boolean> {
     try {
       const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
 
       if (ack.err) {
         console.error(`Error creating epub index: ${ack.err}`);
+        return false;
       } else {
         console.log(`Epub index created: ${epub} -> ${userPub}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating epub index: ${error}`);
+      return false;
     }
   }
 
@@ -1315,7 +1398,7 @@ class DataBase {
     username: string,
     userPub: string,
     epub: string | null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const userMetadata = {
         username: username,
@@ -1328,11 +1411,14 @@ class DataBase {
 
       if (ack.err) {
         console.error(`Error creating user metadata: ${ack.err}`);
+        return false;
       } else {
         console.log(`User metadata created for ${userPub}`);
+        return true;
       }
     } catch (error) {
       console.error(`Error creating user metadata: ${error}`);
+      return false;
     }
   }
 
@@ -1707,71 +1793,6 @@ class DataBase {
     }
   }
 
-  /**
-   * Encrypts session data before storage
-   */
-  private async encryptSessionData(data: any): Promise<string> {
-    try {
-      // Use a derived key from device fingerprint for encryption
-      const deviceInfo =
-        navigator.userAgent +
-        (typeof screen !== "undefined"
-          ? screen.width + "x" + screen.height
-          : "");
-      const encryptionKey = await SEA.work(deviceInfo, null, null, {
-        name: "SHA-256",
-      });
-
-      if (!encryptionKey) {
-        throw new Error("Failed to generate encryption key");
-      }
-
-      const encryptedData = await SEA.encrypt(
-        JSON.stringify(data),
-        encryptionKey,
-      );
-      if (!encryptedData) {
-        throw new Error("Failed to encrypt session data");
-      }
-
-      return encryptedData;
-    } catch (error) {
-      console.error("Error encrypting session data:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Decrypts session data from storage
-   */
-  private async decryptSessionData(encryptedData: string): Promise<any> {
-    try {
-      // Use the same device fingerprint for decryption
-      const deviceInfo =
-        navigator.userAgent +
-        (typeof screen !== "undefined"
-          ? screen.width + "x" + screen.height
-          : "");
-      const encryptionKey = await SEA.work(deviceInfo, null, null, {
-        name: "SHA-256",
-      });
-
-      if (!encryptionKey) {
-        throw new Error("Failed to generate decryption key");
-      }
-
-      const decryptedData = await SEA.decrypt(encryptedData, encryptionKey);
-      if (decryptedData === undefined) {
-        throw new Error("Failed to decrypt session data");
-      }
-
-      return JSON.parse(decryptedData);
-    } catch (error) {
-      console.error("Error decrypting session data:", error);
-      throw error;
-    }
-  }
-
   private saveCredentials(userInfo: {
     alias: string;
     pair: ISEAPair | null;
@@ -1787,19 +1808,8 @@ class DataBase {
       };
 
       if (typeof sessionStorage !== "undefined") {
-        // Encrypt session data before storage
-        this.encryptSessionData(sessionInfo)
-          .then((encryptedData) => {
-            sessionStorage.setItem("gunSessionData", encryptedData);
-          })
-          .catch((error) => {
-            console.error("Failed to encrypt and save session data:", error);
-            // Fallback to unencrypted storage (less secure)
-            sessionStorage.setItem(
-              "gunSessionData",
-              JSON.stringify(sessionInfo),
-            );
-          });
+        // Save session data directly (unencrypted)
+        sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
       }
     } catch (error) {
       console.error(`Error saving credentials: ${error}`);

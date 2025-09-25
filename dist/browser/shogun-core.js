@@ -99084,8 +99084,8 @@ exports["default"] = ShogunCore;
 "use strict";
 
 /**
- * Simplified API layer to reduce complexity for common use cases
- * Provides quick-start methods that wrap the full DataBase functionality
+ * Simplified API layer to reduce complexity for common use cases.
+ * Provides quick-start methods that wrap the full DataBase functionality.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AutoQuickStart = exports.QuickStart = exports.SimpleGunAPI = void 0;
@@ -99094,16 +99094,24 @@ exports.quickStart = quickStart;
 exports.autoQuickStart = autoQuickStart;
 const db_1 = __webpack_require__(/*! ./db */ "./src/gundb/db.ts");
 /**
- * Simple API wrapper that provides common operations with minimal complexity
+ * Simple API wrapper that provides common operations with minimal complexity.
  */
 class SimpleGunAPI {
+    /**
+     * Create a new SimpleGunAPI instance.
+     * @param db The DataBase instance to use.
+     */
     constructor(db) {
         this.db = db;
     }
+    // =========================
+    // Quick data operations
+    // =========================
     /**
-     * Quick data operations - simplified interface
+     * Get data at a given path.
+     * @param path The path to retrieve data from.
+     * @returns The data at the path, or null if not found or on error.
      */
-    // Simple get - returns data directly or null
     async get(path) {
         try {
             const result = await this.db.getData(path);
@@ -99114,15 +99122,27 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Get Gun node - returns Gun node for chaining operations like .map()
+    /**
+     * Get the Gun node at a given path for chaining operations.
+     * @param path The path to the node.
+     * @returns The Gun node.
+     */
     getNode(path) {
         return this.db.get(path);
     }
-    // Get Gun node for direct chaining - returns the actual Gun node for full chaining support
+    /**
+     * Get the Gun node at a given path for direct chaining.
+     * @param path The path to the node.
+     * @returns The Gun node.
+     */
     node(path) {
         return this.db.get(path);
     }
-    // Get Gun node with chaining support - returns a wrapper that supports chaining
+    /**
+     * Get a chainable wrapper for a Gun node at a given path.
+     * @param path The path to the node.
+     * @returns An object with chainable methods: get, put, set, once, then, map.
+     */
     chain(path) {
         const node = this.db.get(path);
         return {
@@ -99130,21 +99150,21 @@ class SimpleGunAPI {
             put: async (data) => {
                 try {
                     const result = await this.db.put(path, data);
-                    return result.success;
+                    return result;
                 }
                 catch (error) {
                     console.warn(`Failed to put data to ${path}:`, error);
-                    return false;
+                    return { err: String(error) };
                 }
             },
             set: async (data) => {
                 try {
                     const result = await this.db.set(path, data);
-                    return result.success;
+                    return result;
                 }
                 catch (error) {
                     console.warn(`Failed to set data to ${path}:`, error);
-                    return false;
+                    return { err: String(error) };
                 }
             },
             once: async () => {
@@ -99170,43 +99190,62 @@ class SimpleGunAPI {
             },
         };
     }
-    // Simple put - returns success boolean
+    /**
+     * Put data at a given path.
+     * @param path The path to put data to.
+     * @param data The data to put.
+     * @returns The GunMessagePut result.
+     */
     async put(path, data) {
         try {
             const result = await this.db.put(path, data);
-            return result.success;
+            return result;
         }
         catch (error) {
             console.warn(`Failed to put data to ${path}:`, error);
-            return false;
-        }
-    }
-    // Simple set - returns success boolean
-    async set(path, data) {
-        try {
-            const result = await this.db.set(path, data);
-            return result.success;
-        }
-        catch (error) {
-            console.warn(`Failed to set data to ${path}:`, error);
-            return false;
-        }
-    }
-    // Simple remove - returns success boolean
-    async remove(path) {
-        try {
-            const result = await this.db.remove(path);
-            return result.success;
-        }
-        catch (error) {
-            console.warn(`Failed to remove data from ${path}:`, error);
-            return false;
+            return { err: String(error) };
         }
     }
     /**
-     * Quick authentication - simplified interface
+     * Set data at a given path (alternative to put).
+     * @param path The path to set data to.
+     * @param data The data to set.
+     * @returns The GunMessagePut result.
      */
-    // Simple login - returns user info or null
+    async set(path, data) {
+        try {
+            const result = await this.db.set(path, data);
+            return result;
+        }
+        catch (error) {
+            console.warn(`Failed to set data to ${path}:`, error);
+            return { err: String(error) };
+        }
+    }
+    /**
+     * Remove data at a given path.
+     * @param path The path to remove data from.
+     * @returns The GunMessagePut result.
+     */
+    async remove(path) {
+        try {
+            const result = await this.db.remove(path);
+            return result;
+        }
+        catch (error) {
+            console.warn(`Failed to remove data from ${path}:`, error);
+            return { err: String(error) };
+        }
+    }
+    // =========================
+    // Quick authentication
+    // =========================
+    /**
+     * Log in a user.
+     * @param username The username.
+     * @param password The password.
+     * @returns The user info if successful, or null.
+     */
     async login(username, password) {
         try {
             const result = await this.db.login(username, password);
@@ -99223,7 +99262,12 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple signup - returns user info or null
+    /**
+     * Sign up a new user.
+     * @param username The username.
+     * @param password The password.
+     * @returns The user info if successful, or null.
+     */
     async signup(username, password) {
         try {
             const result = await this.db.signUp(username, password);
@@ -99240,18 +99284,27 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple logout
+    /**
+     * Log out the current user.
+     */
     logout() {
         this.db.logout();
     }
-    // Simple check if logged in
+    /**
+     * Check if a user is currently logged in.
+     * @returns True if logged in, false otherwise.
+     */
     isLoggedIn() {
         return this.db.isLoggedIn();
     }
+    // =========================
+    // Quick user data operations
+    // =========================
     /**
-     * Quick user data operations - simplified interface
+     * Get user data at a given path (requires login).
+     * @param path The path to the user data.
+     * @returns The user data, or null if not found or on error.
      */
-    // Simple user data get - using direct user node
     async getUserData(path) {
         try {
             if (!this.isLoggedIn()) {
@@ -99270,7 +99323,12 @@ class SimpleGunAPI {
             return null;
         }
     }
-    // Simple user data put - using direct user node
+    /**
+     * Put user data at a given path (requires login).
+     * @param path The path to put data to.
+     * @param data The data to put.
+     * @returns True if successful, false otherwise.
+     */
     async putUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
@@ -99289,7 +99347,12 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data set (alternative to put) - using direct user node
+    /**
+     * Set user data at a given path (alternative to put, requires login).
+     * @param path The path to set data to.
+     * @param data The data to set.
+     * @returns True if successful, false otherwise.
+     */
     async setUserData(path, data) {
         try {
             if (!this.isLoggedIn()) {
@@ -99308,7 +99371,11 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Simple user data remove - using direct user node
+    /**
+     * Remove user data at a given path (requires login).
+     * @param path The path to remove data from.
+     * @returns True if successful, false otherwise.
+     */
     async removeUserData(path) {
         try {
             if (!this.isLoggedIn()) {
@@ -99327,13 +99394,16 @@ class SimpleGunAPI {
             return false;
         }
     }
+    // =========================
+    // Array utilities for GunDB
+    // =========================
     /**
-     * Array utilities for GunDB
-     * GunDB doesn't handle arrays well, so we convert them to indexed objects
+     * Convert an array to an indexed object for GunDB storage.
+     * Example: [{id: '1', ...}, {id: '2', ...}] => { "1": {...}, "2": {...} }
+     * @param arr The array to convert.
+     * @returns The indexed object.
+     * @private
      */
-    // Convert array to indexed object for GunDB storage
-    // [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
-    // becomes { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
     getIndexedObjectFromArray(arr) {
         // Filter out null/undefined items and ensure they have valid id
         const validItems = (arr || []).filter((item) => item &&
@@ -99347,9 +99417,13 @@ class SimpleGunAPI {
             };
         }, {});
     }
-    // Convert indexed object back to array
-    // { "1": { id: '1', name: 'Dog'}, "2": { id: '2', name: 'Cat'} }
-    // becomes [{ id: '1', name: 'Dog'}, { id: '2', name: 'Cat'}]
+    /**
+     * Convert an indexed object back to an array.
+     * Example: { "1": {...}, "2": {...} } => [{id: '1', ...}, {id: '2', ...}]
+     * @param indexedObj The indexed object to convert.
+     * @returns The array.
+     * @private
+     */
     getArrayFromIndexedObject(indexedObj) {
         if (!indexedObj || typeof indexedObj !== "object") {
             return [];
@@ -99360,19 +99434,32 @@ class SimpleGunAPI {
         // Filter out null/undefined values and ensure they are valid objects
         return Object.values(cleanObj).filter((item) => item && typeof item === "object");
     }
-    // Public method to convert array to indexed object
+    /**
+     * Convert an array to an indexed object for GunDB storage (public method).
+     * @param arr The array to convert.
+     * @returns The indexed object.
+     */
     arrayToIndexedObject(arr) {
         return this.getIndexedObjectFromArray(arr);
     }
-    // Public method to convert indexed object to array
+    /**
+     * Convert an indexed object to an array (public method).
+     * @param indexedObj The indexed object to convert.
+     * @returns The array.
+     */
     indexedObjectToArray(indexedObj) {
         return this.getArrayFromIndexedObject(indexedObj);
     }
+    // =========================
+    // Path utilities
+    // =========================
     /**
-     * Path utilities
+     * Get the GunDB user node at a given path (requires login).
+     * Useful for advanced operations that need direct GunDB node access.
+     * @param path The path to the user node.
+     * @returns The Gun node.
+     * @throws If not logged in.
      */
-    // Public method to get deconstructed path node for user space
-    // Useful for advanced operations that need direct GunDB node access
     getUserNode(path) {
         if (!this.isLoggedIn()) {
             throw new Error("User not logged in");
@@ -99380,16 +99467,23 @@ class SimpleGunAPI {
         // Use the database's path deconstruction
         return this.db.getUser().get(path);
     }
-    // Public method to get deconstructed path node for global space
-    // Useful for advanced operations that need direct GunDB node access
+    /**
+     * Get the GunDB global node at a given path.
+     * Useful for advanced operations that need direct GunDB node access.
+     * @param path The path to the global node.
+     * @returns The Gun node.
+     */
     getGlobalNode(path) {
         // Use the database's path deconstruction
         return this.db.get(path);
     }
+    // =========================
+    // Quick utility methods
+    // =========================
     /**
-     * Quick utility methods
+     * Get the current user info.
+     * @returns The current user info, or null if not logged in.
      */
-    // Get current user info
     getCurrentUser() {
         const user = this.db.getCurrentUser();
         if (user) {
@@ -99400,7 +99494,11 @@ class SimpleGunAPI {
         }
         return null;
     }
-    // Check if user exists by alias
+    /**
+     * Check if a user exists by alias.
+     * @param alias The user alias.
+     * @returns True if the user exists, false otherwise.
+     */
     async userExists(alias) {
         try {
             const user = await this.db.getUserByAlias(alias);
@@ -99411,7 +99509,11 @@ class SimpleGunAPI {
             return false;
         }
     }
-    // Get user by alias
+    /**
+     * Get user info by alias.
+     * @param alias The user alias.
+     * @returns The user info, or null if not found.
+     */
     async getUser(alias) {
         try {
             const user = await this.db.getUserByAlias(alias);
@@ -99439,9 +99541,11 @@ class SimpleGunAPI {
                 return null;
             }
             const user = this.db.getUser();
-            if (user && user.is) {
+            const pubkey = user.is?.pub;
+            const node = this.db.get(`${pubkey}`);
+            if (node) {
                 const userData = await new Promise((resolve, reject) => {
-                    user.once((data) => {
+                    node.once((data) => {
                         resolve(data);
                     });
                 });
@@ -100145,8 +100249,8 @@ class DataBase {
         this.subscribeToAuthEvents();
         this.crypto = crypto;
         this.sea = sea_1.default;
-        this.node = null;
         this._rxjs = new rxjs_1.RxJS(this.gun);
+        this.node = null;
     }
     /**
      * Initialize the GunInstance asynchronously
@@ -100353,13 +100457,14 @@ class DataBase {
         // Split path by '/' and filter out empty segments
         const pathSegments = path
             .split("/")
-            .filter((segment) => segment.length > 0)
             .map((segment) => segment.trim())
             .filter((segment) => segment.length > 0);
         // Chain .get() calls for each path segment
-        return pathSegments.reduce((currentNode, segment) => {
-            return currentNode.get(segment);
-        }, node);
+        let currentNode = node;
+        for (const segment of pathSegments) {
+            currentNode = currentNode.get(segment);
+        }
+        return currentNode;
     }
     /**
      * Gets the Gun instance
@@ -100402,7 +100507,7 @@ class DataBase {
      * @returns Gun node
      */
     get(path) {
-        return this.navigateToPath(this.gun, path);
+        return this.navigateToPath(this.node, path);
     }
     /**
      * Gets data at the specified path (one-time read)
@@ -100410,9 +100515,12 @@ class DataBase {
      * @returns Promise resolving to the data
      */
     async getData(path) {
-        const node = this.navigateToPath(this.gun, path);
-        const data = await node.then();
-        return data;
+        const node = this.navigateToPath(this.node, path);
+        return new Promise((resolve, reject) => {
+            node.once((data) => {
+                resolve(data);
+            });
+        });
     }
     /**
      * Puts data at the specified path
@@ -100421,12 +100529,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async put(path, data) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.put(data).then();
-        const result = ack.err
-            ? { success: false, error: ack.err }
-            : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.put(data).then();
     }
     /**
      * Sets data at the specified path
@@ -100435,12 +100539,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async set(path, data) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.set(data).then();
-        const result = ack.err
-            ? { success: false, error: ack.err }
-            : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.set(data).then();
     }
     /**
      * Removes data at the specified path
@@ -100448,10 +100548,8 @@ class DataBase {
      * @returns Promise resolving to operation result
      */
     async remove(path) {
-        const node = this.navigateToPath(this.gun, path);
-        const ack = await node.put(null).then();
-        const result = ack && ack.err ? { success: false, error: ack.err } : { success: true };
-        return result;
+        const node = this.navigateToPath(this.node, path);
+        return await node.put(null).then();
     }
     /**
      * Checks if a user is currently logged in
@@ -100476,27 +100574,51 @@ class DataBase {
             if (typeof localStorage === "undefined") {
                 return { success: false, error: "localStorage not available" };
             }
-            const sessionInfo = localStorage.getItem("gun/session");
-            const pairInfo = localStorage.getItem("gun/pair");
-            if (!sessionInfo || !pairInfo) {
-                // No saved session found
-                return { success: false, error: "No saved session" };
+            // Check for session data in sessionStorage first (new format)
+            let sessionData = sessionStorage.getItem("gunSessionData");
+            if (!sessionData) {
+                // Fallback to old localStorage format
+                const sessionInfo = localStorage.getItem("gun/session");
+                const pairInfo = localStorage.getItem("gun/pair");
+                if (!sessionInfo || !pairInfo) {
+                    // No saved session found
+                    return { success: false, error: "No saved session" };
+                }
+                let session, pair;
+                try {
+                    session = JSON.parse(sessionInfo);
+                    pair = JSON.parse(pairInfo);
+                }
+                catch (parseError) {
+                    console.error("Error parsing session data:", parseError);
+                    // Clear corrupted data
+                    localStorage.removeItem("gun/session");
+                    localStorage.removeItem("gun/pair");
+                    return { success: false, error: "Corrupted session data" };
+                }
+                // Convert old format to new format
+                sessionData = JSON.stringify({
+                    username: session.username,
+                    pair: pair,
+                    userPub: session.userPub,
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                });
             }
-            let session, pair;
+            let session;
             try {
-                session = JSON.parse(sessionInfo);
-                pair = JSON.parse(pairInfo);
+                session = JSON.parse(sessionData);
             }
             catch (parseError) {
                 console.error("Error parsing session data:", parseError);
                 // Clear corrupted data
-                localStorage.removeItem("gun/session");
-                localStorage.removeItem("gun/pair");
+                sessionStorage.removeItem("gunSessionData");
                 return { success: false, error: "Corrupted session data" };
             }
             // Validate session data structure
-            if (!session.username || !session.pair || !session.userPub) {
+            if (!session.username || !session.userPub) {
                 // Invalid session data, clearing storage
+                sessionStorage.removeItem("gunSessionData");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Incomplete session data" };
@@ -100504,6 +100626,7 @@ class DataBase {
             // Check if session is expired
             if (session.expiresAt && Date.now() > session.expiresAt) {
                 // Session expired, clearing storage
+                sessionStorage.removeItem("gunSessionData");
                 localStorage.removeItem("gun/session");
                 localStorage.removeItem("gun/pair");
                 return { success: false, error: "Session expired" };
@@ -100513,16 +100636,19 @@ class DataBase {
                 const userInstance = this.gun.user();
                 if (!userInstance) {
                     console.error("Gun user instance not available");
+                    sessionStorage.removeItem("gunSessionData");
                     localStorage.removeItem("gun/session");
                     localStorage.removeItem("gun/pair");
                     return { success: false, error: "Gun user instance not available" };
                 }
-                // Set the user pair
-                try {
-                    userInstance._ = { ...userInstance._, sea: session.pair };
-                }
-                catch (pairError) {
-                    console.error("Error setting user pair:", pairError);
+                // Set the user pair if available
+                if (session.pair) {
+                    try {
+                        userInstance._ = { ...userInstance._, sea: session.pair };
+                    }
+                    catch (pairError) {
+                        console.error("Error setting user pair:", pairError);
+                    }
                 }
                 // Attempt to recall user session
                 try {
@@ -100543,6 +100669,7 @@ class DataBase {
                 }
                 else {
                     // Session restoration verification failed
+                    sessionStorage.removeItem("gunSessionData");
                     localStorage.removeItem("gun/session");
                     localStorage.removeItem("gun/pair");
                     return { success: false, error: "Session verification failed" };
@@ -101007,19 +101134,37 @@ class DataBase {
     async setupComprehensiveUserTracking(username, userPub, epub) {
         try {
             // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
-            await this.createAliasIndex(username, userPub);
+            const aliasIndexResult = await this.createAliasIndex(username, userPub);
+            if (!aliasIndexResult) {
+                return false;
+            }
             // 2. Create username mapping: usernames/alias -> userPub
-            await this.createUsernameMapping(username, userPub);
+            const usernameMappingResult = await this.createUsernameMapping(username, userPub);
+            if (!usernameMappingResult) {
+                return false;
+            }
             // 3. Create user registry: users/userPub -> user data
-            await this.createUserRegistry(username, userPub, epub);
+            const userRegistryResult = await this.createUserRegistry(username, userPub, epub);
+            if (!userRegistryResult) {
+                return false;
+            }
             // 4. Create reverse lookup: userPub -> alias
-            await this.createReverseLookup(username, userPub);
+            const reverseLookupResult = await this.createReverseLookup(username, userPub);
+            if (!reverseLookupResult) {
+                return false;
+            }
             // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
             if (epub) {
-                await this.createEpubIndex(epub, userPub);
+                const epubIndexResult = await this.createEpubIndex(epub, userPub);
+                if (!epubIndexResult) {
+                    return false;
+                }
             }
             // 6. Create user metadata in user's own node
-            await this.createUserMetadata(username, userPub, epub);
+            const userMetadataResult = await this.createUserMetadata(username, userPub, epub);
+            if (!userMetadataResult) {
+                return false;
+            }
             console.log(`Comprehensive user tracking setup completed for ${username}`);
             return true;
         }
@@ -101040,13 +101185,16 @@ class DataBase {
             const ack = await aliasNode.put(`~@${username}`).then();
             if (ack.err) {
                 console.error(`Error creating alias index: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Alias index created: ~@${username} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating alias index: ${error}`);
+            return false;
         }
     }
     /**
@@ -101061,13 +101209,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating username mapping: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Username mapping created: ${username} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating username mapping: ${error}`);
+            return false;
         }
     }
     /**
@@ -101089,13 +101240,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating user registry: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`User registry created: ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating user registry: ${error}`);
+            return false;
         }
     }
     /**
@@ -101110,13 +101264,16 @@ class DataBase {
                 .then();
             if (ack.err) {
                 console.error(`Error creating reverse lookup: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Reverse lookup created: ${userPub} -> ${username}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating reverse lookup: ${error}`);
+            return false;
         }
     }
     /**
@@ -101127,13 +101284,16 @@ class DataBase {
             const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
             if (ack.err) {
                 console.error(`Error creating epub index: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`Epub index created: ${epub} -> ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating epub index: ${error}`);
+            return false;
         }
     }
     /**
@@ -101150,13 +101310,16 @@ class DataBase {
             const ack = await this.gun.get(userPub).put(userMetadata).then();
             if (ack.err) {
                 console.error(`Error creating user metadata: ${ack.err}`);
+                return false;
             }
             else {
                 console.log(`User metadata created for ${userPub}`);
+                return true;
             }
         }
         catch (error) {
             console.error(`Error creating user metadata: ${error}`);
+            return false;
         }
     }
     /**
@@ -101463,60 +101626,6 @@ class DataBase {
             return { success: false, error: String(error) };
         }
     }
-    /**
-     * Encrypts session data before storage
-     */
-    async encryptSessionData(data) {
-        try {
-            // Use a derived key from device fingerprint for encryption
-            const deviceInfo = navigator.userAgent +
-                (typeof screen !== "undefined"
-                    ? screen.width + "x" + screen.height
-                    : "");
-            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
-                name: "SHA-256",
-            });
-            if (!encryptionKey) {
-                throw new Error("Failed to generate encryption key");
-            }
-            const encryptedData = await sea_1.default.encrypt(JSON.stringify(data), encryptionKey);
-            if (!encryptedData) {
-                throw new Error("Failed to encrypt session data");
-            }
-            return encryptedData;
-        }
-        catch (error) {
-            console.error("Error encrypting session data:", error);
-            throw error;
-        }
-    }
-    /**
-     * Decrypts session data from storage
-     */
-    async decryptSessionData(encryptedData) {
-        try {
-            // Use the same device fingerprint for decryption
-            const deviceInfo = navigator.userAgent +
-                (typeof screen !== "undefined"
-                    ? screen.width + "x" + screen.height
-                    : "");
-            const encryptionKey = await sea_1.default.work(deviceInfo, null, null, {
-                name: "SHA-256",
-            });
-            if (!encryptionKey) {
-                throw new Error("Failed to generate decryption key");
-            }
-            const decryptedData = await sea_1.default.decrypt(encryptedData, encryptionKey);
-            if (decryptedData === undefined) {
-                throw new Error("Failed to decrypt session data");
-            }
-            return JSON.parse(decryptedData);
-        }
-        catch (error) {
-            console.error("Error decrypting session data:", error);
-            throw error;
-        }
-    }
     saveCredentials(userInfo) {
         try {
             const sessionInfo = {
@@ -101527,16 +101636,8 @@ class DataBase {
                 expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
             };
             if (typeof sessionStorage !== "undefined") {
-                // Encrypt session data before storage
-                this.encryptSessionData(sessionInfo)
-                    .then((encryptedData) => {
-                    sessionStorage.setItem("gunSessionData", encryptedData);
-                })
-                    .catch((error) => {
-                    console.error("Failed to encrypt and save session data:", error);
-                    // Fallback to unencrypted storage (less secure)
-                    sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
-                });
+                // Save session data directly (unencrypted)
+                sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
             }
         }
         catch (error) {
