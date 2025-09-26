@@ -213,17 +213,6 @@ import type {
   ISEAPair,
 } from "gun/types";
 
-// Generic type parameters for better type safety
-// Using any to avoid GunDB type constraints
-export type GunInstance = IGunInstance<any>;
-export type GunUserInstance = IGunUserInstance<any>;
-export type GunChain = IGunChain<
-  any,
-  IGunInstance<any>,
-  IGunInstance<any>,
-  string
->;
-
 // Typed callback interfaces
 export interface GunAckCallback {
   (ack: { err?: string; ok?: number; pub?: string }): void;
@@ -252,7 +241,7 @@ export interface TypedGunOperationResult<T = unknown> {
 
 // Authentication with better typing
 export interface TypedAuthCallback {
-  (user: GunUserInstance): void;
+  (user: IGunUserInstance<any>): void;
 }
 
 export interface TypedAuthResult {
@@ -341,8 +330,8 @@ export type GunAuthMethod = "password" | "pair" | "webauthn" | "web3" | "nostr";
 
 // Generic wrapper for Gun operations
 export interface TypedGunWrapper<T = Record<string, unknown>> {
-  gun: GunInstance;
-  user: GunUserInstance | null;
+  gun: IGunInstance<any>;
+  user: IGunUserInstance | null;
 
   // Typed operations
   get(path: GunPath): Promise<T>;

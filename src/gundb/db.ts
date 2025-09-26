@@ -12,7 +12,6 @@ import type {
   IGunInstance,
   ISEAPair,
   GunMessagePut,
-  IGunInstanceRoot,
 } from "gun/types";
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";

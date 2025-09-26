@@ -1,5 +1,4 @@
 import { IGunInstance, IGunUserInstance } from "gun/types";
-import { GunInstance, GunUserInstance } from "../gundb/types";
 import { ISEAPair } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
@@ -134,10 +133,10 @@ export interface SignUpResult {
 }
 
 export interface IShogunCore extends PluginManager {
-  gun: GunInstance;
-  _gun: GunInstance; // Internal gun instance
-  user: GunUserInstance | null;
-  _user: GunUserInstance | null; // Internal user instance
+  gun: IGunInstance<any>;
+  _gun: IGunInstance<any>; // Internal gun instance
+  user: IGunUserInstance | null;
+  _user: IGunUserInstance | null; // Internal user instance
   db: DataBase;
   rx: RxJS; // RxJS integration
   storage: ShogunStorage;
@@ -219,7 +218,7 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
-  gunInstance?: GunInstance;
+  gunInstance?: IGunInstance<any>;
   gunOptions?: any;
   webauthn?: WebauthnConfig;
   web3?: {

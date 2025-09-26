@@ -12,9 +12,9 @@ import {
 } from "./interfaces/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
-import { ISEAPair } from "gun";
+import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
 
-import { DataBase, RxJS, GunInstance, GunUserInstance } from "./gundb";
+import { DataBase, RxJS } from "./gundb";
 
 // Import managers
 import { PluginManager } from "./managers/PluginManager";
@@ -41,8 +41,8 @@ export class ShogunCore implements IShogunCore {
   public config: ShogunCoreConfig;
   public rx!: RxJS;
 
-  public _gun!: GunInstance;
-  public _user: GunUserInstance | null = null;
+  public _gun!: IGunInstance<any>;
+  public _user: IGunUserInstance | null = null;
   public wallets: Wallets | undefined;
 
   // Managers
@@ -79,7 +79,7 @@ export class ShogunCore implements IShogunCore {
    * Access to the Gun instance
    * @returns The Gun instance
    */
-  get gun(): GunInstance {
+  get gun(): IGunInstance<any> {
     return this._gun;
   }
 
@@ -87,7 +87,7 @@ export class ShogunCore implements IShogunCore {
    * Access to the current user
    * @returns The current Gun user instance
    */
-  get user(): GunUserInstance | null {
+  get user(): IGunUserInstance | null {
     return this._user;
   }
 

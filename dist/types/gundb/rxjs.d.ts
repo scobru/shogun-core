@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { GunInstance, GunUserInstance } from "./types";
+import { IGunInstance, IGunUserInstance } from "gun";
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
@@ -11,12 +11,12 @@ export declare class RxJS {
      * Initialize GunRxJS with a GunDB instance
      * @param gun - GunDB instance
      */
-    constructor(gun: GunInstance);
+    constructor(gun: IGunInstance<any>);
     /**
      * Get the current user
      * @returns The current user
      */
-    getUser(): GunUserInstance;
+    getUser(): IGunUserInstance<any>;
     /**
      * Get the current user's public key
      * @returns The current user's public key

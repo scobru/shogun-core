@@ -1,20 +1,20 @@
 import { Observable } from "rxjs";
 import { distinctUntilChanged } from "rxjs/operators";
-import { GunInstance, GunUserInstance } from "./types";
+import { IGunInstance, IGunUserInstance } from "gun";
 
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
  */
 export class RxJS {
-  private readonly gun: GunInstance;
-  private readonly user: GunUserInstance;
+  private readonly gun: IGunInstance<any>;
+  private readonly user: IGunUserInstance;
 
   /**
    * Initialize GunRxJS with a GunDB instance
    * @param gun - GunDB instance
    */
-  constructor(gun: GunInstance) {
+  constructor(gun: IGunInstance<any>) {
     this.gun = gun;
     this.user = gun.user();
   }
@@ -23,7 +23,7 @@ export class RxJS {
    * Get the current user
    * @returns The current user
    */
-  getUser(): GunUserInstance {
+  getUser(): IGunUserInstance<any> {
     return this.user;
   }
 

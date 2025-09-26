@@ -159,10 +159,7 @@ export interface GunOperationResult {
 /**
  * Improved type definitions to reduce 'any' usage while maintaining GunDB compatibility
  */
-import type { IGunUserInstance, IGunInstance, IGunChain, ISEAPair } from "gun/types";
-export type GunInstance = IGunInstance<any>;
-export type GunUserInstance = IGunUserInstance<any>;
-export type GunChain = IGunChain<any, IGunInstance<any>, IGunInstance<any>, string>;
+import type { IGunUserInstance, IGunInstance, ISEAPair } from "gun/types";
 export interface GunAckCallback {
     (ack: {
         err?: string;
@@ -181,7 +178,7 @@ export interface TypedGunOperationResult<T = unknown> {
     };
 }
 export interface TypedAuthCallback {
-    (user: GunUserInstance): void;
+    (user: IGunUserInstance<any>): void;
 }
 export interface TypedAuthResult {
     success: boolean;
@@ -245,8 +242,8 @@ export interface TypedGunError extends Error {
 export type GunOperation = "get" | "put" | "set" | "remove" | "once" | "on" | "off";
 export type GunAuthMethod = "password" | "pair" | "webauthn" | "web3" | "nostr";
 export interface TypedGunWrapper<T = Record<string, unknown>> {
-    gun: GunInstance;
-    user: GunUserInstance | null;
+    gun: IGunInstance<any>;
+    user: IGunUserInstance | null;
     get(path: GunPath): Promise<T>;
     put(path: GunPath, data: T): Promise<TypedGunOperationResult<T>>;
     set(path: GunPath, data: T): Promise<TypedGunOperationResult<T>>;

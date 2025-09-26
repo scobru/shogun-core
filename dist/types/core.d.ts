@@ -4,8 +4,8 @@ import { ShogunStorage } from "./storage/storage";
 import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./interfaces/shogun";
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
-import { ISEAPair } from "gun";
-import { DataBase, RxJS, GunInstance, GunUserInstance } from "./gundb";
+import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
+import { DataBase, RxJS } from "./gundb";
 import { PluginManager } from "./managers/PluginManager";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -25,8 +25,8 @@ export declare class ShogunCore implements IShogunCore {
     provider?: ethers.Provider;
     config: ShogunCoreConfig;
     rx: RxJS;
-    _gun: GunInstance;
-    _user: GunUserInstance | null;
+    _gun: IGunInstance<any>;
+    _user: IGunUserInstance | null;
     wallets: Wallets | undefined;
     pluginManager: PluginManager;
     private authManager;
@@ -44,12 +44,12 @@ export declare class ShogunCore implements IShogunCore {
      * Access to the Gun instance
      * @returns The Gun instance
      */
-    get gun(): GunInstance;
+    get gun(): IGunInstance<any>;
     /**
      * Access to the current user
      * @returns The current Gun user instance
      */
-    get user(): GunUserInstance | null;
+    get user(): IGunUserInstance | null;
     /**
      * Gets the current user information
      * @returns Current user object or null

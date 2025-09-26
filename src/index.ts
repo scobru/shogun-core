@@ -16,8 +16,6 @@ import {
   QuickStart,
   quickStart,
   createSimpleAPI,
-  GunInstance,
-  GunUserInstance,
   TypedGunOperationResult,
   TypedAuthResult,
   AutoQuickStart,
@@ -46,8 +44,6 @@ export type {
   GunPeerEventData,
   DeriveOptions,
   // Improved types
-  GunInstance,
-  GunUserInstance,
   TypedGunOperationResult,
   TypedAuthResult,
 };
