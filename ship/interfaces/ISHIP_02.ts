@@ -336,6 +336,29 @@ export interface ISHIP_02 {
   signTransaction(tx: Transaction, address: string): Promise<SignatureResult>;
 
   /**
+   * @notice Send transaction to Ethereum network
+   * @param tx Transaction object to send
+   * @param address Address to send from
+   * @param waitForConfirmation Wait for transaction to be mined (default: false)
+   * @returns Promise resolving to transaction hash and optional receipt
+   * 
+   * Prerequisites:
+   * - RPC provider must be configured via setRpcUrl()
+   * - Address must be in the wallet (derived or cached)
+   * - Sufficient ETH balance for gas
+   */
+  sendTransaction(
+    tx: Transaction,
+    address: string,
+    waitForConfirmation?: boolean
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    receipt?: any;
+    error?: string;
+  }>;
+
+  /**
    * @notice Sign arbitrary message with a derived address
    * @param message Message to sign (string or bytes)
    * @param address Address to sign with

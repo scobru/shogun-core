@@ -606,6 +606,65 @@ class UserDirectory {
 
 ## Testing
 
+### Interactive CLI
+
+```bash
+# Terminal 1: Alice registers and explores identity
+yarn identity alice password123
+
+# Menu appears:
+🗡️  SHIP-00 Identity Manager
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. View Current User       - Show authenticated user info
+2. View Public Keys        - Display signing and encryption keys
+3. Export Key Pair         - Backup identity for multi-device
+4. Login with Key Pair     - Restore identity from backup
+5. Lookup User             - Find users by username
+6. Lookup by Public Key    - Find users by Gun public key
+7. Derive Ethereum Address - Get deterministic ETH address
+8. Publish Public Key      - Make discoverable on network
+9. Logout                  - End session
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Alice exports her keypair
+Choose option: 3
+
+✅ KEY PAIR EXPORTED
+═══════════════════════════════════════════════════════════
+🔑 Base64 Format:
+eyJwdWIiOiIuLi4iLCJwcml2IjoiLi4uIiwiZXB1YiI6Ii4uLiIsImVwcml2IjoiLi4uIn0=
+
+💾 Saved to: shogun-identity-alice-1234567890.txt
+⚠️  KEEP THIS SAFE! Contains your private keys!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Terminal 2: Bob looks up Alice
+yarn identity bob password456
+
+Choose option: 5  # Lookup User
+Enter username to lookup: alice
+
+✅ User Found:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Username:      alice
+  Public Key:    pW9x2...
+  Encryption Key: eK3m9...
+  Published:     1/11/2025, 3:45:20 PM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Terminal 3: Alice restores on new device
+yarn identity
+
+Choose option: 2  # Login with Key Pair
+Enter key pair: eyJwdWIiOiIuLi4iLCJwcml2IjoiLi4uIn0=
+
+✅ Login Successful!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Username:        alice
+  Derived Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
 ### Unit Tests
 
 ```bash
@@ -614,28 +673,6 @@ yarn test
 
 # Test SHIP-00 specifically
 yarn test SHIP_00
-```
-
-### Manual Testing
-
-```bash
-# Terminal 1: Alice
-node -e "
-const { SHIP_00 } = require('./dist/ship/implementation/SHIP_00');
-const identity = new SHIP_00({ gunOptions: { peers: ['https://peer.wallie.io/gun'] }});
-await identity.signup('alice', 'pass123');
-await identity.publishPublicKey();
-console.log('Alice registered:', await identity.getCurrentUser());
-"
-
-# Terminal 2: Bob looks up Alice
-node -e "
-const { SHIP_00 } = require('./dist/ship/implementation/SHIP_00');
-const identity = new SHIP_00({ gunOptions: { peers: ['https://peer.wallie.io/gun'] }});
-await identity.signup('bob', 'pass456');
-const alice = await identity.getUserByAlias('alice');
-console.log('Found Alice:', alice);
-"
 ```
 
 ---

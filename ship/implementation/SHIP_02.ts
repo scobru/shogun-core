@@ -173,8 +173,13 @@ class SHIP_02 implements ISHIP_02 {
     try {
       this.ensureInitialized();
 
+      // Verify HD wallet is available
+      if (!this.hdWallet) {
+        throw new Error("HD wallet not initialized. Call initialize() first.");
+      }
+
       // Derive child wallet from HD node
-      const childWallet = this.hdWallet!.derivePath(path);
+      const childWallet = this.hdWallet.derivePath(path);
       const address = childWallet.address;
       const publicKey = childWallet.publicKey;
 
@@ -230,6 +235,11 @@ class SHIP_02 implements ISHIP_02 {
   async getPrimaryAddress(): Promise<string> {
     this.ensureInitialized();
 
+    // Verify HD wallet is available
+    if (!this.hdWallet) {
+      throw new Error("HD wallet not initialized. Please call initialize() before deriving addresses.");
+    }
+
     // Check if primary address already exists in cache
     const primary = Array.from(this.addressCache.values()).find(
       (entry) => entry.index === 0
@@ -243,7 +253,8 @@ class SHIP_02 implements ISHIP_02 {
     const result = await this.deriveEthereumAddress();
 
     if (!result.success || !result.address) {
-      throw new Error("Failed to derive primary address");
+      const errorDetail = result.error || "Unknown error";
+      throw new Error(`Failed to derive primary address: ${errorDetail}`);
     }
 
     return result.address;
@@ -395,6 +406,81 @@ class SHIP_02 implements ISHIP_02 {
         txHash: parsedTx.hash!,
       };
     } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Send transaction to Ethereum network
+   * Combines signing + broadcasting in one step
+   */
+  async sendTransaction(
+    tx: Transaction,
+    address: string,
+    waitForConfirmation: boolean = false
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    receipt?: ethers.TransactionReceipt;
+    error?: string;
+  }> {
+    try {
+      this.ensureInitialized();
+
+      // Verify RPC provider is configured
+      if (!this.provider) {
+        return {
+          success: false,
+          error: "RPC provider not configured. Call setRpcUrl() first.",
+        };
+      }
+
+      // Get wallet for address
+      const wallet = this.walletCache.get(address);
+      if (!wallet) {
+        return {
+          success: false,
+          error: `No wallet found for address: ${address}`,
+        };
+      }
+
+      console.log(`📤 Sending transaction from ${address}...`);
+      console.log(`   To: ${tx.to}`);
+      console.log(`   Value: ${tx.value ? ethers.formatEther(tx.value) : "0"} ETH`);
+
+      // Connect wallet to provider
+      const connectedWallet = wallet.connect(this.provider);
+
+      // Send transaction (ethers handles signing + broadcasting)
+      const txResponse = await connectedWallet.sendTransaction(tx);
+      
+      console.log(`✅ Transaction sent: ${txResponse.hash}`);
+      console.log(`📍 View on Etherscan: https://etherscan.io/tx/${txResponse.hash}`);
+
+      // Wait for confirmation if requested
+      if (waitForConfirmation) {
+        console.log(`⏳ Waiting for confirmation...`);
+        const receipt = await txResponse.wait();
+        
+        console.log(`✅ Transaction confirmed in block ${receipt!.blockNumber}`);
+        console.log(`   Gas used: ${receipt!.gasUsed.toString()}`);
+        
+        return {
+          success: true,
+          txHash: txResponse.hash,
+          receipt: receipt!,
+        };
+      }
+
+      return {
+        success: true,
+        txHash: txResponse.hash,
+      };
+    } catch (error: any) {
+      console.error("❌ Transaction failed:", error);
       return {
         success: false,
         error: error.message,

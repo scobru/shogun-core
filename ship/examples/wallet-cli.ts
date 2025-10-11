@@ -191,11 +191,12 @@ class WalletCLI {
       console.log("16. Get Main Wallet");
       console.log("17. Export All User Data");
       console.log("18. Set RPC Provider");
-      console.log("19. Exit");
+      console.log("19. Send Transaction (RPC)");
+      console.log("20. Exit");
       console.log("\n💡 For stealth addresses, use: yarn stealth");
       console.log("═".repeat(60));
 
-      const choice = await this.prompt("Select option (1-19): ");
+      const choice = await this.prompt("Select option (1-20): ");
 
       switch (choice.trim()) {
         case "1":
@@ -253,6 +254,9 @@ class WalletCLI {
           await this.setRpcProvider();
           break;
         case "19":
+          await this.sendTransactionRPC();
+          break;
+        case "20":
           this.running = false;
           console.log("\n👋 Goodbye!");
           this.cleanup();
@@ -717,6 +721,86 @@ class WalletCLI {
       console.log("💡 You can now sign and send transactions");
     } catch (error: any) {
       console.log(`❌ Error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send transaction via RPC
+   */
+  private async sendTransactionRPC(): Promise<void> {
+    console.log("\n📤 Send Transaction (via RPC)");
+    console.log("═".repeat(60));
+
+    // Check if RPC is configured
+    const provider = this.wallet.getProvider();
+    if (!provider) {
+      console.log("❌ RPC Provider not configured!");
+      console.log("💡 Use option 18 to configure RPC first");
+      return;
+    }
+
+    const to = await this.prompt("To address: ");
+    const valueStr = await this.prompt("Value in ETH: ");
+    const addressInput = await this.prompt(
+      "Address to send from (leave empty for primary): "
+    );
+
+    const address = addressInput || (await this.wallet.getPrimaryAddress());
+
+    // Ask for confirmation
+    const waitInput = await this.prompt(
+      "Wait for confirmation? (y/n, default: y): "
+    );
+    const waitForConfirmation = waitInput.toLowerCase() !== "n";
+
+    try {
+      // Get nonce from network
+      const nonce = await provider.getTransactionCount(address);
+      
+      const tx = {
+        to,
+        value: ethers.parseEther(valueStr),
+        nonce,
+        // Let ethers estimate gas
+      };
+
+      console.log("\n📝 Transaction Details:");
+      console.log(`   From: ${address}`);
+      console.log(`   To: ${to}`);
+      console.log(`   Value: ${valueStr} ETH`);
+      console.log(`   Nonce: ${nonce}`);
+
+      const confirm = await this.prompt("\n⚠️  Confirm send? (yes/no): ");
+      
+      if (confirm.toLowerCase() !== "yes") {
+        console.log("❌ Transaction cancelled");
+        return;
+      }
+
+      console.log("\n⏳ Sending transaction...");
+      
+      const result = await this.wallet.sendTransaction(
+        tx,
+        address,
+        waitForConfirmation
+      );
+
+      if (result.success) {
+        console.log("\n✅ Transaction sent successfully!");
+        console.log(`   TX Hash: ${result.txHash}`);
+        console.log(`   Etherscan: https://etherscan.io/tx/${result.txHash}`);
+        
+        if (result.receipt) {
+          console.log(`\n📦 Receipt:`);
+          console.log(`   Block: ${result.receipt.blockNumber}`);
+          console.log(`   Gas Used: ${result.receipt.gasUsed.toString()}`);
+          console.log(`   Status: ${result.receipt.status === 1 ? "✅ Success" : "❌ Failed"}`);
+        }
+      } else {
+        console.log(`\n❌ Error: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.log(`\n❌ Error: ${error.message}`);
     }
   }
 

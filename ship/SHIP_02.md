@@ -396,31 +396,52 @@ const tx = {
 };
 ```
 
-### Transaction Signing
+### Transaction Signing & Sending
 
 ```typescript
+// ============================================
+// OPTION 1: Send Transaction (Recommended)
+// ============================================
+
+// Configure RPC provider first
+await addressDerivation.setRpcUrl("https://sepolia.infura.io/v3/YOUR_KEY");
+
+// Get primary address
+const primaryAddress = await addressDerivation.getPrimaryAddress();
+
 // Prepare transaction
-const transaction = {
+const tx = {
   to: "0x8f7e9c3b1a5d4e2c9f8b7a6c5d4e3f2b1a0c9d8e",
-  value: ethers.parseEther("0.5"),
-  gasLimit: 21000,
-  chainId: 1, // Ethereum mainnet
-  nonce: 0
+  value: ethers.parseEther("0.1"), // 0.1 ETH
 };
 
-// Sign with primary address
-const primaryAddress = await addressDerivation.getPrimaryAddress();
-const result = await addressDerivation.signTransaction(
-  transaction,
-  primaryAddress
+// Send transaction (sign + broadcast in one call)
+const result = await addressDerivation.sendTransaction(
+  tx,
+  primaryAddress,
+  true // wait for confirmation
 );
 
 if (result.success) {
-  console.log("Signed transaction:", result.signedTransaction);
-  console.log("Transaction hash:", result.txHash);
+  console.log("✅ Transaction sent!");
+  console.log("TX Hash:", result.txHash);
+  console.log("Block:", result.receipt?.blockNumber);
+  console.log("Gas Used:", result.receipt?.gasUsed.toString());
+}
+
+// ============================================
+// OPTION 2: Sign Only (Advanced Use)
+// ============================================
+
+const signResult = await addressDerivation.signTransaction(tx, primaryAddress);
+
+if (signResult.success) {
+  console.log("Signed TX:", signResult.signedTransaction);
+  console.log("TX Hash:", signResult.txHash);
   
-  // Broadcast to network
-  // await provider.sendTransaction(result.signedTransaction);
+  // Manually broadcast:
+  const provider = addressDerivation.getProvider();
+  await provider.sendTransaction(signResult.signedTransaction);
 }
 ```
 
