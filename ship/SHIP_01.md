@@ -3,13 +3,16 @@
 > **Status**: ✅ Implemented  
 > **Author**: Shogun Team  
 > **Created**: 2025  
-> **Updated**: 2025-01-11
+> **Updated**: 2025-01-11  
+> **Depends on**: [SHIP-00](./SHIP_00.md) (Identity & Authentication)
 
 ---
 
 ## Abstract
 
-SHIP-01 defines a standard for end-to-end encrypted messaging on a decentralized P2P network (GunDB). The protocol uses **GUN SEA** for authentication, **ECDH** for key agreement, and **AES-GCM** for message encryption, offering zero operational costs and censorship resistance.
+SHIP-01 defines a standard for end-to-end encrypted messaging on a decentralized P2P network (GunDB). The protocol **depends on SHIP-00** for identity management and uses **ECDH** for key agreement and **AES-GCM** for message encryption, offering zero operational costs and censorship resistance.
+
+**Note**: SHIP-01 uses SHIP-00 for all authentication and identity operations. This separation allows SHIP-01 to focus purely on messaging logic.
 
 ---
 
@@ -18,12 +21,14 @@ SHIP-01 defines a standard for end-to-end encrypted messaging on a decentralized
 ### Why SHIP-01?
 
 Modern messaging platforms present critical problems:
+
 - ❌ **Centralization**: Servers control data and access
 - ❌ **Costs**: Expensive hosting and infrastructure
 - ❌ **Privacy**: Servers can read messages
 - ❌ **Censorship**: Governments can block services
 
 **SHIP-01 solves all of this** with a pure P2P approach:
+
 - ✅ **Zero Server**: Completely peer-to-peer
 - ✅ **Zero Costs**: No infrastructure to pay for
 - ✅ **E2E Encryption**: No one can read messages
@@ -31,14 +36,41 @@ Modern messaging platforms present critical problems:
 
 ### Comparison with Alternatives
 
-| Feature | SHIP-01 | WhatsApp | Telegram | Blockchain |
-|----------------|---------|----------|----------|------------|
-| **Costs** | 🟢 Free | 🔴 $$$M infra | 🔴 $$M infra | 🔴 Gas fees |
-| **Speed** | 🟢 Real-time | 🟢 Real-time | 🟢 Real-time | 🔴 Block time |
-| **Privacy** | 🟢 E2E always | 🟡 E2E optional | 🔴 No E2E default | 🔴 Public |
-| **Decentralized** | 🟢 Pure P2P | 🔴 Central servers | 🔴 Central servers | 🟢 Blockchain |
-| **Censorship Res.** | 🟢 High | 🔴 Low | 🔴 Low | 🟢 High |
-| **Open Source** | 🟢 MIT | 🔴 Proprietary | 🟡 Partial | 🟢 Varies |
+| Feature             | SHIP-01       | WhatsApp           | Telegram           | Blockchain    |
+| ------------------- | ------------- | ------------------ | ------------------ | ------------- |
+| **Costs**           | 🟢 Free       | 🔴 $$$M infra      | 🔴 $$M infra       | 🔴 Gas fees   |
+| **Speed**           | 🟢 Real-time  | 🟢 Real-time       | 🟢 Real-time       | 🔴 Block time |
+| **Privacy**         | 🟢 E2E always | 🟡 E2E optional    | 🔴 No E2E default  | 🔴 Public     |
+| **Decentralized**   | 🟢 Pure P2P   | 🔴 Central servers | 🔴 Central servers | 🟢 Blockchain |
+| **Censorship Res.** | 🟢 High       | 🔴 Low             | 🔴 Low             | 🟢 High       |
+| **Open Source**     | 🟢 MIT        | 🔴 Proprietary     | 🟡 Partial         | 🟢 Varies     |
+
+---
+
+## Relationship with SHIP-00
+
+SHIP-01 **depends on** [SHIP-00](./SHIP_00.md) for:
+
+- ✅ User authentication (login/signup)
+- ✅ SEA key pair management
+- ✅ Public key publication and discovery
+- ✅ User registry and lookup
+
+This allows SHIP-01 to focus exclusively on messaging:
+
+```typescript
+import { SHIP_00 } from "./implementation/SHIP_00";
+import { SHIP_01 } from "./implementation/SHIP_01";
+
+// Setup identity with SHIP-00
+const identity = new SHIP_00(config);
+await identity.login("alice", "password123");
+await identity.publishPublicKey();
+
+// Use identity in SHIP-01 for messaging
+const messaging = new SHIP_01(identity);  // ← SHIP-01 depends on SHIP-00
+await messaging.sendMessage("bob", "Hello!");
+```
 
 ---
 
@@ -73,13 +105,28 @@ Modern messaging platforms present critical problems:
 
 ### Technology Stack
 
-| Component | Technology | Role |
-|------------|------------|-------|
-| **Authentication** | GUN SEA | Login/Signup with username/password |
-| **Key Agreement** | ECDH (secp256k1) | Shared key derivation |
-| **Encryption** | AES-256-GCM | Message encryption |
-| **Storage** | GunDB | Distributed P2P database |
-| **Transport** | WebRTC/WebSocket | Real-time communication |
+| Component          | Technology       | Role                                |
+| ------------------ | ---------------- | ----------------------------------- |
+| **Authentication** | GUN SEA          | Login/Signup with username/password |
+| **Key Agreement**  | ECDH (secp256k1) | Shared key derivation               |
+| **Encryption**     | AES-256-GCM      | Message encryption                  |
+| **Storage**        | GunDB            | Distributed P2P database            |
+| **Transport**      | WebRTC/WebSocket | Real-time communication             |
+
+### GunDB Node Structure
+
+SHIP-01 uses the following standardized Gun node names:
+
+```typescript
+SHIP_01.NODES = {
+  MESSAGES: "messages",              // ECDH-encrypted direct messages
+  TOKEN_MESSAGES: "token_messages",  // Token-encrypted messages (channels/groups)
+}
+```
+
+**Two encryption modes**:
+- **Direct Messages**: Use ECDH (recipient's public key) - stored in `messages` node
+- **Channel Messages**: Use shared token/password - stored in `token_messages` node
 
 ---
 
@@ -90,95 +137,128 @@ Modern messaging platforms present critical problems:
  * SHIP-01: Decentralized Encrypted Messaging Interface
  */
 interface ISHIP_01 {
-    // ============================================
-    // AUTHENTICATION
-    // ============================================
-    
-    /**
-     * Login with username and password
-     * Automatically generates keypair if it doesn't exist
-     * 
-     * @param username - Username (unique)
-     * @param password - Password (deterministic derivation)
-     * @returns Result with public key and derived address
-     */
-    login(username: string, password: string): Promise<AuthResult>;
-    
-    /**
-     * Register new user
-     * Creates new keypair and saves it on GunDB
-     * 
-     * @param username - Username (must be unique)
-     * @param password - Password for key derivation
-     * @returns Registration result
-     */
-    signup(username: string, password: string): Promise<SignupResult>;
-    
-    /**
-     * Logout current user
-     * Removes session but keeps data on GunDB
-     */
-    logout(): void;
-    
-    // ============================================
-    // KEY MANAGEMENT
-    // ============================================
-    
-    /**
-     * Publish public key on GunDB
-     * Makes the key available to other users
-     * 
-     * @returns Publication result
-     */
-    publishPublicKey(): Promise<Result>;
-    
-    /**
-     * Retrieve public key of a user
-     * Necessary to encrypt messages intended for that user
-     * 
-     * @param username - Username
-     * @returns Public key (pub + epub) or null if not found
-     */
-    getPublicKey(username: string): Promise<PublicKeyData | null>;
-    
-    // ============================================
-    // MESSAGING
-    // ============================================
-    
-    /**
-     * Send encrypted message to a user
-     * 
-     * Flow:
-     * 1. Retrieve recipient's public key
-     * 2. ECDH: derive shared secret
-     * 3. AES-GCM: encrypt message
-     * 4. Save on GunDB
-     * 5. Recipient receives in real-time
-     * 
-     * @param toUsername - Recipient
-     * @param content - Plain text content
-     * @returns Send result
-     */
-    sendMessage(toUsername: string, content: string): Promise<Result>;
-    
-    /**
-     * Listen for incoming messages
-     * Subscribes to messages on own GunDB node
-     * 
-     * @param callback - Called for each received message
-     */
-    listenForMessages(
-        callback: (message: Message) => void
-    ): Promise<void>;
-    
-    /**
-     * Retrieve conversation history with a user
-     * Decrypts all found messages
-     * 
-     * @param withUsername - User conversed with
-     * @returns Array of messages sorted by timestamp
-     */
-    getMessageHistory(withUsername: string): Promise<Message[]>;
+  // ============================================
+  // AUTHENTICATION
+  // ============================================
+
+  /**
+   * Login with username and password
+   * Automatically generates keypair if it doesn't exist
+   *
+   * @param username - Username (unique)
+   * @param password - Password (deterministic derivation)
+   * @returns Result with public key and derived address
+   */
+  login(username: string, password: string): Promise<AuthResult>;
+
+  /**
+   * Register new user
+   * Creates new keypair and saves it on GunDB
+   *
+   * @param username - Username (must be unique)
+   * @param password - Password for key derivation
+   * @returns Registration result
+   */
+  signup(username: string, password: string): Promise<SignupResult>;
+
+  /**
+   * Logout current user
+   * Removes session but keeps data on GunDB
+   */
+  logout(): void;
+
+  /**
+   * Check if user is authenticated
+   * @returns True if user is logged in
+   */
+  isLoggedIn(): boolean;
+
+  /**
+   * Login with exported SEA key pair
+   * Useful for account recovery and multi-device access
+   *
+   * @param seaPair - Exported SEA key pair
+   * @returns Authentication result
+   */
+  loginWithPair(seaPair: SEAPair): Promise<AuthResult>;
+
+  // ============================================
+  // KEY MANAGEMENT
+  // ============================================
+
+  /**
+   * Publish public key on GunDB
+   * Makes the key available to other users
+   *
+   * @returns Publication result
+   */
+  publishPublicKey(): Promise<Result>;
+
+  // ============================================
+  // MESSAGING
+  // ============================================
+
+  /**
+   * Send encrypted message to a user
+   *
+   * Flow:
+   * 1. Retrieve recipient's public key
+   * 2. ECDH: derive shared secret
+   * 3. AES-GCM: encrypt message
+   * 4. Save on GunDB
+   * 5. Recipient receives in real-time
+   *
+   * @param toUsername - Recipient
+   * @param content - Plain text content
+   * @returns Send result
+   */
+  sendMessage(toUsername: string, content: string): Promise<Result>;
+
+  /**
+   * Listen for incoming messages
+   * Subscribes to messages on own GunDB node
+   *
+   * @param callback - Called for each received message
+   */
+  listenForMessages(callback: (message: Message) => void): Promise<void>;
+
+  /**
+   * Retrieve conversation history with a user
+   * Decrypts all found messages
+   *
+   * @param withUsername - User conversed with
+   * @returns Array of messages sorted by timestamp
+   */
+  getMessageHistory(withUsername: string): Promise<Message[]>;
+
+  /**
+   * Send message encrypted with shared token/password
+   * Useful for group chats, channels, broadcast messages
+   *
+   * @param token - Shared secret/password for encryption
+   * @param message - Plain text content
+   * @param channel - Optional channel name
+   * @returns Send result
+   */
+  sendMessageWithToken(
+    token: string,
+    message: string,
+    channel?: string
+  ): Promise<Result>;
+
+  /**
+   * Listen for token-encrypted messages
+   * Subscribes to channel messages encrypted with token
+   *
+   * @param token - Shared secret/password for decryption
+   * @param callback - Called for each received message
+   * @param channel - Optional channel filter
+   */
+  listenForTokenMessages(
+    token: string,
+    callback: (message: TokenMessage) => void,
+    channel?: string
+  ): Promise<void>;
 }
 ```
 
@@ -189,46 +269,58 @@ interface ISHIP_01 {
  * Authentication result
  */
 interface AuthResult {
-    success: boolean;
-    userPub?: string;         // SEA public key
-    derivedAddress?: string;  // Derived Ethereum address (optional)
-    error?: string;
+  success: boolean;
+  userPub?: string; // SEA public key
+  derivedAddress?: string; // Derived Ethereum address (optional)
+  error?: string;
 }
 
 /**
  * Signup result
  */
 interface SignupResult {
-    success: boolean;
-    userPub?: string;
-    derivedAddress?: string;
-    error?: string;
+  success: boolean;
+  userPub?: string;
+  derivedAddress?: string;
+  error?: string;
 }
 
 /**
  * Decrypted message
  */
 interface Message {
-    from: string;      // Sender username
-    to: string;        // Recipient username
-    content: string;   // Decrypted content
-    timestamp: number; // Unix timestamp (ms)
+  from: string; // Sender username
+  to: string; // Recipient username
+  content: string; // Decrypted content
+  timestamp: number; // Unix timestamp (ms)
 }
 
 /**
- * User public key
+ * Token-encrypted message (channels/groups)
  */
-interface PublicKeyData {
-    pub: string;   // Public key for signature
-    epub: string;  // Encryption public key (ECDH)
+interface TokenMessage {
+  from: string; // Sender's public key
+  content: string; // Decrypted content
+  channel?: string; // Channel name
+  timestamp: number; // Unix timestamp (ms)
+}
+
+/**
+ * SEA key pair for authentication
+ */
+interface SEAPair {
+  pub: string; // Public key for signature
+  priv: string; // Private key
+  epub: string; // Encryption public key (ECDH)
+  epriv: string; // Encryption private key
 }
 
 /**
  * Generic operation result
  */
 interface Result {
-    success: boolean;
-    error?: string;
+  success: boolean;
+  error?: string;
 }
 ```
 
@@ -254,6 +346,7 @@ const derivedKeys = await SEA.pair();
 ```
 
 **Security Properties**:
+
 - ✅ **PBKDF2**: Password hashing with salt
 - ✅ **Deterministic**: Same username/password → same keypair
 - ✅ **No Plain Storage**: Passwords never stored in plain text
@@ -266,20 +359,21 @@ const derivedKeys = await SEA.pair();
 ```typescript
 // Alice computes shared secret with Bob
 const sharedSecret = await SEA.secret(
-    bobPublicKey.epub,  // Bob's encryption public key
-    aliceKeyPair        // Alice's keypair
+  bobPublicKey.epub, // Bob's encryption public key
+  aliceKeyPair // Alice's keypair
 );
 
 // Bob can compute the same secret
 const sameSecret = await SEA.secret(
-    alicePublicKey.epub, // Alice's encryption public key
-    bobKeyPair           // Bob's keypair
+  alicePublicKey.epub, // Alice's encryption public key
+  bobKeyPair // Bob's keypair
 );
 
 // sharedSecret === sameSecret (without exchanging private keys!)
 ```
 
 **Security Properties**:
+
 - ✅ **Perfect Forward Secrecy**: New key for each pair
 - ✅ **No Key Exchange**: Secret derived mathematically
 - ✅ **Secure Against MITM**: Public keys on GunDB are verifiable
@@ -291,18 +385,19 @@ const sameSecret = await SEA.secret(
 ```typescript
 // Encrypting
 const encrypted = await SEA.encrypt(
-    message,      // Plain text
-    sharedSecret  // Derived from ECDH
+  message, // Plain text
+  sharedSecret // Derived from ECDH
 );
 
 // Decrypting
 const decrypted = await SEA.decrypt(
-    encrypted,    // Cipher text
-    sharedSecret  // Same secret
+  encrypted, // Cipher text
+  sharedSecret // Same secret
 );
 ```
 
 **Security Properties**:
+
 - ✅ **AES-256**: Industry standard for encryption
 - ✅ **GCM Mode**: Authenticated encryption (no tampering)
 - ✅ **Unique IV**: Each message has a random IV
@@ -315,26 +410,23 @@ const decrypted = await SEA.decrypt(
 ```typescript
 // Export (secure backup)
 const keyPairBackup = {
-    pub: seaPair.pub,
-    priv: seaPair.priv,
-    epub: seaPair.epub,
-    epriv: seaPair.epriv,
-    alias: username,
-    exportedAt: Date.now()
+  pub: seaPair.pub,
+  priv: seaPair.priv,
+  epub: seaPair.epub,
+  epriv: seaPair.epriv,
+  alias: username,
+  exportedAt: Date.now(),
 };
 
-const base64 = Buffer.from(
-    JSON.stringify(keyPairBackup)
-).toString('base64');
+const base64 = Buffer.from(JSON.stringify(keyPairBackup)).toString("base64");
 
 // Import on another device
-const restored = JSON.parse(
-    Buffer.from(base64, 'base64').toString('utf-8')
-);
+const restored = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
 await gun.user().auth(restored);
 ```
 
 **⚠️ SECURITY WARNING**:
+
 - 🔴 The backup contains **private keys in plain text**
 - 🔴 Must be protected like a password
 - 🔴 Never share the backup
@@ -352,94 +444,129 @@ cd shogun-core
 yarn install
 
 # Start chat CLI
-yarn chat alice password123
+yarn messenger alice password123
 ```
 
 ### Complete Example
 
 ```typescript
+import { SHIP_00 } from "./implementation/SHIP_00";
 import { SHIP_01 } from "./implementation/SHIP_01";
 
 // ============================================
-// 1. INITIALIZATION
+// 1. IDENTITY SETUP (SHIP-00)
 // ============================================
 
-const app = new SHIP_01({
-    gunOptions: {
-        peers: [
-            "https://relay.shogun-eco.xyz/gun",
-            "https://peer.wallie.io/gun"
-        ],
-        radisk: false,
-        localStorage: false,
-        multicast: false
-    }
+const identity = new SHIP_00({
+  gunOptions: {
+    peers: ["https://relay.shogun-eco.xyz/gun", "https://peer.wallie.io/gun"],
+    radisk: false,
+    localStorage: false,
+    multicast: false,
+  },
 });
 
 // ============================================
-// 2. AUTHENTICATION
+// 2. AUTHENTICATION (SHIP-00)
 // ============================================
 
-// Login (or automatic signup if doesn't exist)
-const result = await app.login("alice", "password123");
+// Login (or signup if doesn't exist)
+const result = await identity.login("alice", "password123");
 
 if (result.success) {
-    console.log("✅ Login successful!");
-    console.log("Public Key:", result.userPub);
-    console.log("Derived Address:", result.derivedAddress);
+  console.log("✅ Login successful!");
+  console.log("Public Key:", result.userPub);
+  console.log("Derived Address:", result.derivedAddress);
 } else {
-    console.error("❌ Login failed:", result.error);
-    process.exit(1);
+  console.error("❌ Login failed:", result.error);
+  process.exit(1);
 }
 
 // ============================================
-// 3. KEY PUBLICATION
+// 3. KEY PUBLICATION (SHIP-00)
 // ============================================
 
-// Publish public key to make it available
-await app.publishPublicKey();
+// Publish public key to make it discoverable
+await identity.publishPublicKey();
 console.log("✅ Key published on GunDB");
 
 // ============================================
-// 4. RECEIVING MESSAGES
+// 4. MESSAGING SETUP (SHIP-01)
+// ============================================
+
+// Initialize messaging with identity provider
+const messaging = new SHIP_01(identity);
+console.log("✅ Messaging initialized");
+
+// ============================================
+// 5. RECEIVING MESSAGES (SHIP-01)
 // ============================================
 
 // Listen for incoming messages (real-time)
-await app.listenForMessages((message) => {
-    const time = new Date(message.timestamp).toLocaleTimeString();
-    console.log(`📨 [${time}] ${message.from}: ${message.content}`);
+await messaging.listenForMessages((message) => {
+  const time = new Date(message.timestamp).toLocaleTimeString();
+  console.log(`📨 [${time}] ${message.from}: ${message.content}`);
 });
 
 // ============================================
-// 5. SENDING MESSAGES
+// 6. SENDING MESSAGES (SHIP-01)
 // ============================================
 
 // Send message to Bob
-const sendResult = await app.sendMessage(
-    "bob",
-    "Hello Bob! This is encrypted E2E!"
+const sendResult = await messaging.sendMessage(
+  "bob",
+  "Hello Bob! This is encrypted E2E!"
 );
 
 if (sendResult.success) {
-    console.log("✅ Message sent to bob");
+  console.log("✅ Message sent to bob");
 } else {
-    console.error("❌ Send error:", sendResult.error);
+  console.error("❌ Send error:", sendResult.error);
 }
 
 // ============================================
-// 6. CONVERSATION HISTORY
+// 7. CONVERSATION HISTORY (SHIP-01)
 // ============================================
 
 // Retrieve history with Bob
-const history = await app.getMessageHistory("bob");
+const history = await messaging.getMessageHistory("bob");
 console.log(`📚 ${history.length} messages with bob:`);
 
-history.forEach(msg => {
-    const time = new Date(msg.timestamp).toLocaleTimeString();
-    const from = msg.from === "alice" ? "Me" : msg.from;
-    console.log(`  [${time}] ${from}: ${msg.content}`);
+history.forEach((msg) => {
+  const time = new Date(msg.timestamp).toLocaleTimeString();
+  const sender = msg.from === result.userPub ? "Me" : "Bob";
+  console.log(`  [${time}] ${sender}: ${msg.content}`);
 });
+
+// ============================================
+// 8. CHANNEL MESSAGING (TOKEN-BASED)
+// ============================================
+
+// Join channel with shared token
+const channelToken = "mySecretChannelToken123";
+const channelName = "dev-team";
+
+// Listen for channel messages
+await messaging.listenForTokenMessages(
+  channelToken,
+  (msg) => {
+    const time = new Date(msg.timestamp).toLocaleTimeString();
+    console.log(`📡 #${msg.channel} [${time}]: ${msg.content}`);
+  },
+  channelName
+);
+
+// Send message to channel
+await messaging.sendMessageWithToken(
+  channelToken,
+  "Hello everyone in the channel!",
+  channelName
+);
 ```
+
+**Note**: SHIP-01 now supports **two encryption modes**:
+- **Direct Messages (ECDH)**: End-to-end encryption using recipient's public key
+- **Channel Messages (Token)**: Symmetric encryption using shared password/token
 
 ---
 
@@ -449,7 +576,7 @@ history.forEach(msg => {
 
 ```bash
 # Alice logs in
-$ yarn chat alice pass123
+$ yarn messenger alice pass123
 
 🗡️  SHOGUN CHAT - Decentralized E2E Messaging
 
@@ -472,6 +599,7 @@ $ yarn chat alice pass123
 ```
 
 **Benefits**:
+
 - ✅ Zero server configuration
 - ✅ No operational costs
 - ✅ Automatic encryption
@@ -498,7 +626,7 @@ eyJwdWIiOiJwVzl4Mi4uLiIsInByaXYiOiIuLi4ifQ==
 
 ```bash
 # Alice logs in on another device
-$ yarn chat
+$ yarn messenger
 
 > /login-pair eyJwdWIiOiJwVzl4Mi4uLiIsInByaXYiOiIuLi4ifQ==
 
@@ -512,42 +640,102 @@ $ yarn chat
 
 **Use Case**: Multi-device, identity backup, account recovery
 
-### 3. Messaging in dApp
+### 3. Group Channels with Token Encryption
+
+```bash
+# Create a private dev team channel
+$ yarn messenger alice pass123
+
+> /channel dev-team superSecretToken123
+📡 Connected to channel #dev-team
+   Token: ********************
+
+> Hey team, new feature is ready!
+[15:10:30] #dev-team alice: Hey team, new feature is ready!
+
+# Bob joins the same channel (different terminal)
+$ yarn messenger bob pass456
+
+> /channel dev-team superSecretToken123
+📡 Connected to channel #dev-team
+
+# Bob receives Alice's messages in real-time
+📡 #dev-team
+[15:10:30] pW9x2...: Hey team, new feature is ready!
+
+> Great work Alice!
+[15:11:05] #dev-team bob: Great work Alice!
+
+# Alice receives Bob's message
+📡 #dev-team
+[15:11:05] xY8w3...: Great work Alice!
+```
+
+**Use Case**: 
+- 🔐 Private team channels
+- 📡 Broadcast messages
+- 👥 Community groups
+- 🎮 Gaming clans
+
+**Security**:
+- ✅ Token is hashed before encryption (SHA-256)
+- ✅ Anyone with the token can read/write
+- ✅ No public key needed
+- ✅ Perfect for groups with shared secret
+
+### 4. Messaging in dApp
 
 ```typescript
 // Integration in a dApp
+import { SHIP_00 } from "@shogun/ship-00";
 import { SHIP_01 } from "@shogun/ship-01";
 
 class ChatDApp {
-    private messaging: SHIP_01;
+  private identity: SHIP_00;
+  private messaging: SHIP_01;
 
-    async init(username: string, password: string) {
-        this.messaging = new SHIP_01({
-            gunOptions: { peers: ["https://relay.your-dapp.com/gun"] }
-        });
+  async init(username: string, password: string) {
+    // Initialize identity layer (SHIP-00)
+    this.identity = new SHIP_00({
+      gunOptions: { peers: ["https://relay.your-dapp.com/gun"] },
+    });
 
-        await this.messaging.login(username, password);
-        await this.messaging.publishPublicKey();
-        
-        // Real-time notifications
-        await this.messaging.listenForMessages((msg) => {
-            this.showNotification(msg);
-        });
-    }
+    // Authenticate user
+    await this.identity.login(username, password);
+    await this.identity.publishPublicKey();
 
-    async sendToUser(username: string, message: string) {
-        return await this.messaging.sendMessage(username, message);
-    }
+    // Initialize messaging layer (SHIP-01) with identity
+    this.messaging = new SHIP_01(this.identity);
 
-    private showNotification(message: Message) {
-        new Notification(`Message from ${message.from}`, {
-            body: message.content
-        });
-    }
+    // Real-time notifications
+    await this.messaging.listenForMessages((msg) => {
+      this.showNotification(msg);
+    });
+  }
+
+  async sendToUser(username: string, message: string) {
+    return await this.messaging.sendMessage(username, message);
+  }
+
+  getCurrentUser() {
+    return this.identity.getCurrentUser();
+  }
+
+  private showNotification(message: DecryptedMessage) {
+    new Notification(`Message from ${message.from}`, {
+      body: message.content,
+    });
+  }
 }
 ```
 
 **Use Case**: Integrated chat in dApp, P2P notifications, community messaging
+
+**Benefits of modular architecture**:
+- ✅ Identity layer (SHIP-00) can be reused across features
+- ✅ Easy to add more SHIP standards (file storage, etc.)
+- ✅ Clear separation of concerns
+- ✅ Easier testing and maintenance
 
 ---
 
@@ -567,10 +755,10 @@ yarn test SHIP_01
 
 ```bash
 # Terminal 1: Alice
-yarn chat alice pass123
+yarn messenger alice pass123
 
 # Terminal 2: Bob
-yarn chat bob pass456
+yarn messenger bob pass456
 
 # Alice: /to bob
 # Alice: Hello Bob!
@@ -595,6 +783,7 @@ yarn chat bob pass456
 ## Future Improvements
 
 ### SHIP-01.1 (Minor Update)
+
 - [ ] Group messaging
 - [ ] File attachments (< 1MB)
 - [ ] Message reactions (emoji)
@@ -602,12 +791,14 @@ yarn chat bob pass456
 - [ ] Typing indicators
 
 ### SHIP-02 (Next Major)
+
 - [ ] Ethereum address derivation from SEA pair
 - [ ] Bitcoin address derivation
 - [ ] Multi-chain support
 - [ ] BIP44 integration
 
 ### Long-term
+
 - [ ] Voice messages
 - [ ] P2P video calls
 - [ ] Screen sharing
@@ -642,9 +833,8 @@ MIT License - see [LICENSE](../../LICENSE)
 
 **SHIP-01: Decentralized Encrypted Messaging**
 
-*Zero Server. Zero Cost. Maximum Privacy.*
+_Zero Server. Zero Cost. Maximum Privacy._
 
 🗡️ Built with Shogun Core 🗡️
 
 </div>
-

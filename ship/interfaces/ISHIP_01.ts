@@ -3,58 +3,35 @@
  * 
  * @title ISHIP_01 - Decentralized Encrypted Messaging
  * @notice Interface for decentralized encrypted messaging on GunDB
+ * @dev This interface depends on ISHIP_00 for identity and authentication
  * 
  * ## Abstract
  * 
  * This standard defines an interface for decentralized messaging that allows:
- * - Username/password authentication
- * - Public key publication on GunDB
  * - End-to-end encrypted message sending (ECDH)
  * - Real-time message reception
  * - Decentralized message history
  * 
+ * ## Dependencies
+ * 
+ * - ISHIP_00: Identity and authentication layer
+ * - GunDB: P2P storage
+ * - SEA: Cryptography (ECDH + AES-GCM)
+ * 
  * ## Specification
  * 
  * Based on:
+ * - SHIP-00 for identity management
  * - GunDB for P2P storage
  * - SEA (Security, Encryption, Authorization) for cryptography
  * - ECDH (Elliptic Curve Diffie-Hellman) for key agreement
  */
 
+import type { ISHIP_00 } from "./ISHIP_00";
+
 // ============================================================================
 // CORE TYPES
 // ============================================================================
-
-/**
- * @notice Authentication result
- */
-export interface AuthResult {
-    success: boolean;
-    userPub?: string;
-    derivedAddress?: string;
-    error?: string;
-}
-
-/**
- * @notice Signup result
- */
-export interface SignupResult {
-    success: boolean;
-    userPub?: string;
-    derivedAddress?: string;
-    error?: string;
-}
-
-/**
- * @notice Message structure
- */
-export interface Message {
-    from: string;           // Sender's public key
-    to: string;             // Recipient's username
-    content: string;        // Encrypted content
-    timestamp: string;      // Message timestamp
-    messageId: string;      // Unique ID
-}
 
 /**
  * @notice Decrypted message structure (for UI)
@@ -66,28 +43,32 @@ export interface DecryptedMessage {
 }
 
 /**
- * @notice User public key
+ * @notice Message history entry
  */
-export interface UserPublicKey {
-    pub: string;            // Public signing key
-    epub: string;           // Encryption public key
-    algorithm: string;      // Algorithm (ECDSA)
-    timestamp: string;      // Publication timestamp
-}
-
-/**
- * @notice Operation result
- */
-export interface OperationResult {
-    success: boolean;
-    error?: string;
+export interface MessageHistoryEntry {
+    from: string;           // Sender's public key
+    to: string;             // Recipient's username
+    content: string;        // Decrypted content
+    timestamp: number;      // Message timestamp
 }
 
 /**
  * @notice Send message result
  */
-export interface SendMessageResult extends OperationResult {
+export interface SendMessageResult {
+    success: boolean;
     messageId?: string;
+    error?: string;
+}
+
+/**
+ * @notice Token-encrypted message (for channels/groups)
+ */
+export interface TokenMessage {
+    content: string;        // Encrypted content
+    from: string;           // Sender's public key
+    channel?: string;       // Optional channel name
+    timestamp: number;      // Message timestamp
 }
 
 // ============================================================================
@@ -97,53 +78,26 @@ export interface SendMessageResult extends OperationResult {
 /**
  * @title ISHIP_01 - Decentralized Messaging
  * @notice Main interface for the messaging system
+ * @dev Depends on ISHIP_00 for all identity operations
+ * 
+ * Constructor pattern:
+ * ```typescript
+ * class MessagingApp implements ISHIP_01 {
+ *     constructor(private identity: ISHIP_00) {}
+ * }
+ * ```
  */
 export interface ISHIP_01 {
     
-    // ========================================================================
-    // AUTHENTICATION
-    // ========================================================================
-
     /**
-     * @notice Register a new user
-     * @param username Desired username
-     * @param password Password
-     * @return Result with userPub and derivedAddress
+     * @notice Get the identity provider
+     * @dev Returns the ISHIP_00 instance used for identity operations
+     * @return Identity provider instance
      */
-    signup(username: string, password: string): Promise<SignupResult>;
-
-    /**
-     * @notice Login with username and password
-     * @param username Username
-     * @param password Password
-     * @return Result with userPub and derivedAddress
-     */
-    login(username: string, password: string): Promise<AuthResult>;
-
-    /**
-     * @notice Logout current user
-     */
-    logout(): void;
-
-    /**
-     * @notice Check if user is authenticated
-     * @return True if authenticated
-     */
-    isLoggedIn(): boolean;
-
+    getIdentity(): ISHIP_00;
+    
     // ========================================================================
-    // PUBLIC KEY MANAGEMENT
-    // ========================================================================
-
-    /**
-     * @notice Publish public key on GunDB
-     * @dev Allows others to find your key to encrypt messages
-     * @return Operation result
-     */
-    publishPublicKey(): Promise<OperationResult>;
-
-    // ========================================================================
-    // MESSAGING
+    // MESSAGING - Core Operations
     // ========================================================================
 
     /**
@@ -153,8 +107,12 @@ export interface ISHIP_01 {
      * @param message Plain text message content
      * @return Result with messageId
      * 
+     * Prerequisites:
+     * - User must be authenticated (via ISHIP_00)
+     * - Recipient must have published their public key
+     * 
      * Flow:
-     * 1. Retrieve recipient's epub from GunDB
+     * 1. Get recipient's epub from identity provider
      * 2. SEA.secret(recipient.epub, sender.pair) → shared_secret
      * 3. SEA.encrypt(message, shared_secret) → encrypted
      * 4. Save encrypted on GunDB
@@ -169,9 +127,12 @@ export interface ISHIP_01 {
      * @dev Automatically decrypts received messages
      * @param onMessage Callback called for each message
      * 
+     * Prerequisites:
+     * - User must be authenticated (via ISHIP_00)
+     * 
      * Decryption flow:
      * 1. Receive encrypted message from GunDB
-     * 2. Retrieve sender's epub
+     * 2. Retrieve sender's epub from identity provider
      * 3. SEA.secret(sender.epub, receiver.pair) → shared_secret
      * 4. SEA.decrypt(encrypted, shared_secret) → message
      * 5. Call callback with decrypted message
@@ -185,53 +146,77 @@ export interface ISHIP_01 {
      * @dev Decrypts all messages in history
      * @param withUsername Username of the other user
      * @return Array of decrypted messages sorted by timestamp
+     * 
+     * Prerequisites:
+     * - User must be authenticated (via ISHIP_00)
      */
     getMessageHistory(
         withUsername: string
-    ): Promise<Array<{
-        from: string;
-        to: string;
-        content: string;
-        timestamp: number;
-    }>>;
-}
+    ): Promise<MessageHistoryEntry[]>;
 
-// ============================================================================
-// UTILITY INTERFACES
-// ============================================================================
+    // ========================================================================
+    // TOKEN-BASED MESSAGING (Channels/Groups)
+    // ========================================================================
 
-/**
- * @notice Interface for GunDB → Ethereum identity conversion
- */
-export interface IAddressDerivation {
     /**
-     * @notice Convert GunDB public key to Ethereum address
-     * @param publicKey Public key in base64 format (GunDB)
-     * @return Ethereum address with checksum
+     * @notice Send message encrypted with a shared token/password
+     * @dev Uses symmetric encryption with provided token
+     * @param token Shared secret/password for encryption
+     * @param message Plain text message content
+     * @param channel Optional channel name for organization
+     * @return Result with messageId
      * 
-     * Process:
-     * 1. Decode from base64 (GunDB format)
-     * 2. Convert to bytes
-     * 3. keccak256(bytes)
-     * 4. Take last 20 bytes
-     * 5. Apply EIP-55 checksum
+     * Use cases:
+     * - Group chats with shared password
+     * - Broadcast channels
+     * - Private communities
+     * 
+     * Flow:
+     * 1. Hash token for key derivation
+     * 2. SEA.encrypt(message, hashedToken) → encrypted
+     * 3. Save encrypted on GunDB with channel tag
      */
-    pubKeyToAddress(publicKey: string): string;
+    sendMessageWithToken(
+        token: string,
+        message: string,
+        channel?: string
+    ): Promise<SendMessageResult>;
+
+    /**
+     * @notice Listen for token-encrypted messages
+     * @dev Automatically decrypts received messages with provided token
+     * @param token Shared secret/password for decryption
+     * @param onMessage Callback called for each message
+     * @param channel Optional channel filter
+     * 
+     * Prerequisites:
+     * - User must be authenticated (via ISHIP_00)
+     * 
+     * Decryption flow:
+     * 1. Receive encrypted message from GunDB
+     * 2. Hash token
+     * 3. SEA.decrypt(encrypted, hashedToken) → message
+     * 4. Call callback with decrypted message
+     */
+    listenForTokenMessages(
+        token: string,
+        onMessage: (message: TokenMessage) => void,
+        channel?: string
+    ): Promise<void>;
 }
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
 /**
  * @notice Messaging system configuration
  */
 export interface MessagingConfig {
     /**
-     * @notice GunDB peers
+     * @notice Identity provider (SHIP-00 instance)
      */
-    peers: string[];
-
-    /**
-     * @notice Application scope
-     */
-    scope: string;
+    identity: ISHIP_00;
 
     /**
      * @notice Operation timeout (ms)
@@ -319,47 +304,97 @@ export interface ISEACrypto {
 // ============================================================================
 
 /**
- * Example of how to implement ISHIP_01
+ * Example of how to implement ISHIP_01 with ISHIP_00 dependency
  * 
  * ```typescript
- * class SecureMessagingApp implements ISHIP_01 {
- *     private shogun: ShogunCore;
+ * import { ISHIP_00 } from './ISHIP_00';
+ * import { ISHIP_01, DecryptedMessage, SendMessageResult } from './ISHIP_01';
  * 
- *     constructor(config: MessagingConfig) {
- *         this.shogun = new ShogunCore(config);
+ * class SecureMessagingApp implements ISHIP_01 {
+ *     constructor(private identity: ISHIP_00) {
+ *         // Verify identity is authenticated
+ *         if (!identity.isLoggedIn()) {
+ *             throw new Error('User must be authenticated');
+ *         }
  *     }
  * 
- *     async signup(username: string, password: string): Promise<SignupResult> {
- *         const result = await this.shogun.signUp(username, password);
- *         return {
- *             success: result.success,
- *             userPub: result.pub,
- *             derivedAddress: this.pubKeyToAddress(result.pub || "")
- *         };
+ *     getIdentity(): ISHIP_00 {
+ *         return this.identity;
  *     }
  * 
  *     async sendMessage(recipientUsername: string, message: string): Promise<SendMessageResult> {
- *         // 1. Get recipient's epub
- *         const recipientKey = await this.getRecipientPublicKey(recipientUsername);
+ *         // 1. Get recipient's public key from identity provider
+ *         const recipientKey = await this.identity.getPublicKey(recipientUsername);
+ *         if (!recipientKey) {
+ *             return { success: false, error: 'Recipient not found' };
+ *         }
  *         
- *         // 2. Encrypt with ECDH
- *         const encrypted = await this.shogun.db.crypto.encFor(
+ *         // 2. Get sender's key pair from identity provider
+ *         const senderPair = this.identity.getKeyPair();
+ *         if (!senderPair) {
+ *             return { success: false, error: 'Not authenticated' };
+ *         }
+ *         
+ *         // 3. Encrypt with ECDH
+ *         const encrypted = await crypto.encFor(
  *             message,
- *             this.shogun.db.user.is, // sender
- *             { epub: recipientKey.epub } // receiver
+ *             senderPair,
+ *             { epub: recipientKey.epub }
  *         );
  *         
- *         // 3. Save to GunDB
- *         await this.shogun.db.user.get('messages/...').put({
+ *         // 4. Save to GunDB
+ *         const messageId = generateId();
+ *         await gun.get('messages').get(messageId).put({
  *             content: encrypted,
- *             from: this.shogun.db.user.is.pub,
+ *             from: senderPair.pub,
  *             to: recipientUsername,
  *             timestamp: Date.now().toString()
  *         });
  *         
- *         return { success: true, messageId: '...' };
+ *         return { success: true, messageId };
+ *     }
+ * 
+ *     async listenForMessages(onMessage: (message: DecryptedMessage) => void): Promise<void> {
+ *         const currentUser = this.identity.getCurrentUser();
+ *         if (!currentUser) {
+ *             throw new Error('Not authenticated');
+ *         }
+ *         
+ *         gun.get('messages').map().on(async (data, key) => {
+ *             if (data && data.to === currentUser.alias) {
+ *                 // Decrypt message
+ *                 const senderKey = await this.identity.getPublicKey(data.from);
+ *                 const receiverPair = this.identity.getKeyPair();
+ *                 
+ *                 if (senderKey && receiverPair) {
+ *                     const decrypted = await crypto.decFrom(
+ *                         data.content,
+ *                         { epub: senderKey.epub },
+ *                         receiverPair
+ *                     );
+ *                     
+ *                     onMessage({
+ *                         from: data.from,
+ *                         content: decrypted,
+ *                         timestamp: parseInt(data.timestamp)
+ *                     });
+ *                 }
+ *             }
+ *         });
+ *     }
+ * 
+ *     async getMessageHistory(withUsername: string): Promise<MessageHistoryEntry[]> {
+ *         // Implementation here
+ *         return [];
  *     }
  * }
+ * 
+ * // Usage
+ * const identity = new SHIP_00(config);
+ * await identity.login('alice', 'password123');
+ * await identity.publishPublicKey();
+ * 
+ * const messaging = new SecureMessagingApp(identity);
+ * await messaging.sendMessage('bob', 'Hello Bob!');
  * ```
  */
-

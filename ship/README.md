@@ -11,39 +11,98 @@ This folder contains the **SHIP (Shogun Interface Proposals)** specifications de
 
 | # | Name | Status | Description |
 |---|------|--------|-------------|
-| [**SHIP-01**](./SHIP_01.md) | Decentralized Encrypted Messaging | ✅ Implemented | P2P encrypted messaging on GunDB with GUN SEA |
-| **SHIP-02** | Ethereum Address Derivation | 🚧 In Progress | Deterministic address derivation from SEA keypair |
-| **SHIP-03** | Multi-Modal Authentication | 📋 Planned | WebAuthn, OAuth, Nostr, Web3 authentication |
-| **SHIP-04** | Encrypted File Storage | 💡 Proposed | Decentralized file storage with IPFS |
+| [**SHIP-00**](./SHIP_00.md) | Decentralized Identity & Authentication | ✅ Implemented | Foundation layer for identity and authentication |
+| [**SHIP-01**](./SHIP_01.md) | Decentralized Encrypted Messaging | ✅ Implemented | P2P encrypted messaging (depends on SHIP-00) |
+| [**SHIP-02**](./SHIP_02.md) | Ethereum Address Derivation | ✅ Implemented | Deterministic HD wallet derivation (extends SHIP-00) |
+| [**SHIP-03**](./SHIP_03.md) | Dual-Key Stealth Addresses | ✅ Implemented | ERC-5564 privacy-preserving stealth addresses |
+| **SHIP-04** | Multi-Modal Authentication | 📋 Planned | WebAuthn, OAuth, Nostr, Web3 auth (extends SHIP-00) |
+| **SHIP-05** | Encrypted File Storage | 💡 Proposed | Decentralized file storage with IPFS |
 
 ---
 
 ## 🚀 Quick Start
+
+### SHIP-00: Identity Foundation
+
+```bash
+cd shogun-core
+yarn install
+
+# Interactive CLI demo
+yarn identity alice password123
+
+# Use SHIP-00 in your code
+import { SHIP_00 } from "./ship/implementation/SHIP_00";
+```
+
+**Read the complete specification**: [SHIP_00.md](./SHIP_00.md)
 
 ### SHIP-01: Decentralized Messaging
 
 ```bash
 cd shogun-core
 yarn install
-yarn chat alice password123
+yarn messenger alice password123
 ```
 
 **Read the complete specification**: [SHIP_01.md](./SHIP_01.md)
+
+### SHIP-02: Ethereum Address Derivation
+
+```bash
+cd shogun-core
+yarn install
+yarn wallet alice password123
+```
+
+**Read the complete specification**: [SHIP_02.md](./SHIP_02.md)
+
+### SHIP-03: Dual-Key Stealth Addresses
+
+```typescript
+import { SHIP_00, SHIP_02, SHIP_03 } from 'shogun-core';
+
+const identity = new SHIP_00();
+await identity.login('alice', 'password');
+
+const eth = new SHIP_02(identity);
+await eth.initialize();
+
+const stealth = new SHIP_03(identity, eth);
+await stealth.initialize();
+
+// Get stealth keys
+const keys = await stealth.getStealthKeys();
+```
+
+**Read the complete specification**: [SHIP_03.md](./SHIP_03.md)
 
 ---
 
 ## 🛠️ Project Structure
 
 ```
-eip/
+ship/
 ├── README.md                          # This file (SHIP index)
-├── SHIP_01.md                         # Detailed SHIP-01 specification
+├── SHIP_00.md                         # Identity & Authentication spec
+├── SHIP_01.md                         # Decentralized Messaging spec
+├── SHIP_02.md                         # Ethereum HD Wallet spec
+├── SHIP_03.md                         # Dual-Key Stealth Addresses spec
 ├── interfaces/
-│   └── ISHIP_01.ts                   # TypeScript interface
+│   ├── ISHIP_00.ts                   # Identity interface
+│   ├── ISHIP_01.ts                   # Messaging interface
+│   ├── ISHIP_02.ts                   # HD Wallet interface
+│   └── ISHIP_03.ts                   # Stealth addresses interface
 ├── implementation/
-│   └── SHIP_01.ts                    # Reference implementation
+│   ├── SHIP_00.ts                    # Identity implementation
+│   ├── SHIP_01.ts                    # Messaging implementation
+│   ├── SHIP_02.ts                    # HD Wallet implementation
+│   └── SHIP_03.ts                    # Stealth addresses implementation
 └── examples/
-    └── chat-cli-SHIP_01.ts           # Practical CLI example
+    ├── identity-cli.ts               # Identity CLI example (SHIP-00)
+    ├── messenger-cli.ts              # Messaging CLI example (SHIP-01)
+    ├── wallet-cli.ts                 # Wallet CLI example (SHIP-02)
+    └── stealth-cli.ts                # Stealth CLI example (SHIP-03)
 ```
 
 ---
@@ -55,7 +114,10 @@ eip/
 - **API Documentation**: [../API.md](../API.md)
 
 ### SHIP Specifications
-- **Complete SHIP-01**: [SHIP_01.md](./SHIP_01.md)
+- **SHIP-00 (Identity)**: [SHIP_00.md](./SHIP_00.md)
+- **SHIP-01 (Messaging)**: [SHIP_01.md](./SHIP_01.md)
+- **SHIP-02 (HD Wallet)**: [SHIP_02.md](./SHIP_02.md)
+- **SHIP-03 (Stealth Addresses)**: [SHIP_03.md](./SHIP_03.md)
 
 ---
 
@@ -98,10 +160,26 @@ Each SHIP must include:
 
 | Metric | Value |
 |---------|--------|
-| Total SHIPs | 6 (1 live, 2 in progress, 3 proposed) |
+| Total SHIPs | 6 (4 implemented, 2 planned) |
 | Contributors | Open to everyone! |
-| Lines of Code | ~2000+ (SHIP-01) |
+| Lines of Code | ~7000+ (SHIP-00 + SHIP-01 + SHIP-02 + SHIP-03) |
 | Status | Active Development 🚀 |
+
+## 🏗️ SHIP Architecture
+
+```
+SHIP-00 (Identity Foundation)
+   │
+   ├─► SHIP-01 (Messaging) ✅
+   ├─► SHIP-02 (HD Wallet) ✅
+   │      │
+   │      └─► SHIP-03 (Stealth Addresses) ✅
+   │
+   ├─► SHIP-04 (Multi-Modal Auth) 📋
+   └─► SHIP-05 (File Storage) 💡
+```
+
+**SHIP-00** is the foundational layer that all other SHIPs depend on for identity and authentication.
 
 ---
 

@@ -6,8 +6,18 @@
  * Simple and functional CLI interface
  */
 
+import { SHIP_00 } from "../implementation/SHIP_00";
 import { SHIP_01 } from "../implementation/SHIP_01";
-import * as readline from "readline";
+
+// Only import readline in Node.js environment
+let readline: any;
+try {
+  if (typeof window === 'undefined') {
+    readline = require("readline");
+  }
+} catch (e) {
+  // Browser environment - readline not available
+}
 
 // ============================================================================
 // COLORS
@@ -35,28 +45,35 @@ const c = (color: keyof typeof colors, text: string) =>
 // ============================================================================
 
 export class MessengerCLI {
-  private app: SHIP_01;
-  private rl: readline.Interface;
+  private identity: SHIP_00;
+  private messaging: SHIP_01 | null = null;
+  private rl: any; // readline.Interface
   private currentUser: string = "";
   private recipient: string = "";
   private derivedAddress: string = "";
   private isAuthenticated: boolean = false;
+  private channelToken: string = ""; // Token for channel messages
+  private currentChannel: string = ""; // Current channel name
 
   constructor() {
-    this.app = new SHIP_01({
+    // Initialize identity layer (SHIP-00)
+    this.identity = new SHIP_00({
       gunOptions: {
         peers: [
+          "https://peer.wallie.io/gun",
           "https://v5g5jseqhgkp43lppgregcfbvi.srv.us/gun",
           "https://relay.shogun-eco.xyz/gun",
-          "https://peer.wallie.io/gun",
         ],
-        radisk: false,
+        radisk: true,
         localStorage: false,
-        multicast: false, // Disabilita multicast per evitare blocchi
-        wire: false,
-        axe: false,
       },
     });
+
+    // Don't initialize readline in browser environment
+    if (typeof window !== 'undefined' || !readline) {
+      console.warn('MessengerCLI is designed for Node.js CLI usage only');
+      return;
+    }
 
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -72,7 +89,7 @@ export class MessengerCLI {
   // ========================================================================
 
   private setupHandlers(): void {
-    this.rl.on("line", async (line) => {
+    this.rl.on("line", async (line: string) => {
       const input = line.trim();
 
       if (!input) {
@@ -130,9 +147,9 @@ export class MessengerCLI {
     }, 500);
 
     try {
-      // Prova login con timeout
+      // Prova login con timeout (SHIP-00)
       let result = await this.withTimeout(
-        this.app.login(username, password),
+        this.identity.login(username, password),
         15000,
         "Login timeout - verifica connessione ai peers"
       );
@@ -140,20 +157,20 @@ export class MessengerCLI {
       clearInterval(loadingInterval);
       console.log(""); // Nuova linea dopo i dots
 
-      // Se fallisce, prova signup
+      // Se fallisce, prova signup (SHIP-00)
       if (!result.success) {
         console.log(
           c("yellow", "📝 Utente non trovato, creazione in corso...")
         );
 
-        const signupResult = await this.app.signup(username, password);
+        const signupResult = await this.identity.signup(username, password);
 
         if (signupResult.success) {
           // Aspetta un momento per evitare race condition
           await new Promise((resolve) => setTimeout(resolve, 1000));
 
           // Riprova login
-          result = await this.app.login(username, password);
+          result = await this.identity.login(username, password);
         } else {
           console.log(c("red", `❌ Signup fallito: ${signupResult.error}`));
           return false;
@@ -180,7 +197,7 @@ export class MessengerCLI {
         console.log("");
 
         console.log(c("yellow", "📢 Pubblicazione chiave pubblica..."));
-        await this.app.publishPublicKey();
+        await this.identity.publishPublicKey();
 
         // Aspetta che la chiave sia sincronizzata
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -188,8 +205,12 @@ export class MessengerCLI {
         console.log(c("green", "✅ Chiave pubblicata su GunDB"));
         console.log("");
 
-        // Ascolta messaggi
-        await this.app.listenForMessages((msg) => {
+        // Inizializza messaging layer (SHIP-01)
+        this.messaging = new SHIP_01(this.identity);
+        console.log(c("green", "✅ Messaging inizializzato"));
+
+        // Ascolta messaggi (SHIP-01)
+        await this.messaging.listenForMessages((msg) => {
           this.onMessageReceived(msg);
         });
 
@@ -218,29 +239,55 @@ export class MessengerCLI {
   // ========================================================================
 
   private async sendMessage(content: string): Promise<void> {
-    if (!this.isAuthenticated) {
+    if (!this.isAuthenticated || !this.messaging) {
       console.log(c("red", "❌ Non autenticato. Usa /login"));
       return;
     }
 
-    if (!this.recipient) {
-      console.log(c("yellow", "⚠️  Nessun destinatario. Usa /to <username>"));
-      return;
-    }
-
     try {
-      const result = await this.app.sendMessage(this.recipient, content);
+      let result;
 
-      if (result.success) {
-        const time = new Date().toLocaleTimeString();
-        console.log(
-          c("gray", `[${time}]`) +
-            " " +
-            c("green", `${this.currentUser}:`) +
-            " " +
-            content
+      // Check if in channel mode or direct message mode
+      if (this.currentChannel && this.channelToken) {
+        // Send to channel with token encryption
+        result = await this.messaging.sendMessageWithToken(
+          this.channelToken,
+          content,
+          this.currentChannel
         );
+
+        if (result.success) {
+          const time = new Date().toLocaleTimeString();
+          console.log(
+            c("gray", `[${time}]`) +
+              " " +
+              c("magenta", `#${this.currentChannel}`) +
+              " " +
+              c("green", `${this.currentUser}:`) +
+              " " +
+              content
+          );
+        }
+      } else if (this.recipient) {
+        // Send direct message with ECDH encryption
+        result = await this.messaging.sendMessage(this.recipient, content);
+
+        if (result.success) {
+          const time = new Date().toLocaleTimeString();
+          console.log(
+            c("gray", `[${time}]`) +
+              " " +
+              c("green", `${this.currentUser}:`) +
+              " " +
+              content
+          );
+        }
       } else {
+        console.log(c("yellow", "⚠️  Usa /to <username> per messaggi diretti o /channel <nome> <token> per canali"));
+        return;
+      }
+
+      if (!result.success) {
         console.log(c("red", `❌ Errore invio: ${result.error}`));
       }
     } catch (error: any) {
@@ -269,31 +316,48 @@ export class MessengerCLI {
     this.rl.prompt();
   }
 
+  private onChannelMessageReceived(message: {
+    from: string;
+    content: string;
+    channel: string;
+    timestamp: number;
+  }): void {
+    const time = new Date(message.timestamp).toLocaleTimeString();
+    const fromUser = message.from.substring(0, 10) + "...";
+
+    console.log("");
+    console.log(c("magenta", `📡 #${message.channel}`));
+    console.log(
+      c("gray", `[${time}]`) +
+        " " +
+        c("cyan", `${fromUser}:`) +
+        " " +
+        message.content
+    );
+    console.log("");
+    this.rl.prompt();
+  }
+
   // ========================================================================
   // KEY PAIR MANAGEMENT
   // ========================================================================
 
   private async exportKeyPair(): Promise<void> {
     try {
-      // Ottieni il SEA pair completo
-      const seaPair = (this.app["shogun"].db.gun.user() as any)?._?.sea;
+      // Ottieni il SEA pair completo da SHIP-00
+      const seaPair = this.identity.exportKeyPair();
       
       if (!seaPair) {
         console.log(c("red", "❌ Impossibile accedere al SEA pair"));
         return;
       }
 
-      // Crea export object
+      // Converti in base64 per facilità di copia
       const exportData = {
-        pub: seaPair.pub,
-        priv: seaPair.priv,
-        epub: seaPair.epub,
-        epriv: seaPair.epriv,
+        ...seaPair,
         alias: this.currentUser,
         exportedAt: Date.now()
       };
-
-      // Converti in base64 per facilità di copia
       const jsonString = JSON.stringify(exportData);
       const base64 = Buffer.from(jsonString).toString('base64');
 
@@ -379,9 +443,9 @@ export class MessengerCLI {
         epriv: keyPairData.epriv
       };
 
-      // Login con pair
+      // Login con pair (SHIP-00)
       const result = await this.withTimeout(
-        this.app["shogun"].loginWithPair(seaPair),
+        this.identity.loginWithPair(seaPair),
         15000,
         "Login timeout"
       );
@@ -391,7 +455,7 @@ export class MessengerCLI {
 
       if (result.success) {
         this.currentUser = keyPairData.alias || result.username || 'unknown';
-        this.derivedAddress = await this.app.deriveEthereumAddress(seaPair.pub);
+        this.derivedAddress = await this.identity.deriveEthereumAddress(seaPair.pub);
         this.isAuthenticated = true;
 
         console.log("");
@@ -402,15 +466,18 @@ export class MessengerCLI {
         console.log("");
 
         console.log(c("yellow", "📢 Pubblicazione chiave pubblica..."));
-        await this.app.publishPublicKey();
+        await this.identity.publishPublicKey();
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         console.log(c("green", "✅ Chiave pubblicata su GunDB"));
         console.log("");
 
+        // Inizializza messaging (SHIP-01)
+        this.messaging = new SHIP_01(this.identity);
+
         // Ascolta messaggi
-        await this.app.listenForMessages((msg) => {
+        await this.messaging.listenForMessages((msg) => {
           this.onMessageReceived(msg);
         });
 
@@ -438,19 +505,26 @@ export class MessengerCLI {
     console.log("");
 
     // Conferma
-    this.rl.question(c("red", "Sei sicuro? Scrivi 'CONFERMA' per procedere: "), (answer) => {
+    this.rl.question(c("red", "Sei sicuro? Scrivi 'CONFERMA' per procedere: "), (answer: string) => {
       if (answer.trim() === "CONFERMA") {
         console.log(c("yellow", "🗑️  Cancellazione messaggi in corso..."));
 
-        // Ottieni tutti i messaggi
-        this.app["shogun"].db.gun.get("messages").once((allMessages: any) => {
+        // Ottieni tutti i messaggi (access GunDB through identity)
+        const gun = (this.identity as any).shogun?.db?.gun;
+        if (!gun) {
+          console.log(c("red", "❌ Impossibile accedere a GunDB"));
+          this.rl.prompt();
+          return;
+        }
+
+        gun.get(SHIP_01.NODES.MESSAGES).once((allMessages: any) => {
           if (allMessages && typeof allMessages === 'object') {
             let count = 0;
 
             // Cancella ogni messaggio
             for (const [messageId, data] of Object.entries(allMessages)) {
               if (typeof data === "object" && data !== null && messageId !== '_') {
-                this.app["shogun"].db.gun.get("messages").get(messageId).put(null);
+                gun.get(SHIP_01.NODES.MESSAGES).get(messageId).put(null);
                 count++;
               }
             }
@@ -506,8 +580,13 @@ export class MessengerCLI {
             c("cyan", `💬 Chattando con ${c("bold", this.recipient)}`)
           );
 
-          // Carica storico
-          const history = await this.app.getMessageHistory(this.recipient);
+          // Carica storico (SHIP-01)
+          if (!this.messaging) {
+            console.log(c("red", "❌ Messaging non inizializzato"));
+            break;
+          }
+
+          const history = await this.messaging.getMessageHistory(this.recipient);
           if (history.length > 0) {
             console.log(
               c(
@@ -551,7 +630,8 @@ export class MessengerCLI {
         break;
 
       case "/logout":
-        this.app.logout();
+        this.identity.logout();
+        this.messaging = null;
         this.isAuthenticated = false;
         this.currentUser = "";
         this.recipient = "";
@@ -594,6 +674,24 @@ export class MessengerCLI {
         await this.wipeAllMessages();
         break;
 
+      case "/channel":
+      case "/join":
+        if (!this.isAuthenticated) {
+          console.log(c("red", "❌ Prima fai login"));
+          break;
+        }
+        if (args.length >= 2) {
+          const [channelName, token] = args;
+          await this.joinChannel(channelName, token);
+        } else {
+          console.log(c("yellow", "⚠️  Uso: /channel <nome> <token>"));
+        }
+        break;
+
+      case "/leave":
+        this.leaveChannel();
+        break;
+
       case "/exit":
       case "/quit":
         this.rl.close();
@@ -605,6 +703,43 @@ export class MessengerCLI {
     }
   }
 
+  private async joinChannel(channelName: string, token: string): Promise<void> {
+    if (!this.messaging) {
+      console.log(c("red", "❌ Messaging non inizializzato"));
+      return;
+    }
+
+    this.currentChannel = channelName;
+    this.channelToken = token;
+    this.recipient = ""; // Clear direct message recipient
+
+    console.log("");
+    console.log(c("magenta", `📡 Connesso al canale #${channelName}`));
+    console.log(c("gray", "   Token: " + "*".repeat(token.length)));
+    console.log("");
+
+    // Listen for channel messages
+    await this.messaging.listenForTokenMessages(
+      token,
+      (msg) => this.onChannelMessageReceived(msg),
+      channelName
+    );
+
+    this.updatePrompt();
+  }
+
+  private leaveChannel(): void {
+    if (!this.currentChannel) {
+      console.log(c("yellow", "⚠️  Non sei in un canale"));
+      return;
+    }
+
+    console.log(c("yellow", `👋 Uscito dal canale #${this.currentChannel}`));
+    this.currentChannel = "";
+    this.channelToken = "";
+    this.updatePrompt();
+  }
+
   private showHelp(): void {
     console.log("");
     console.log(c("bold", c("cyan", "📖 COMANDI DISPONIBILI")));
@@ -614,7 +749,9 @@ export class MessengerCLI {
     console.log("  " + c("bold", "/login-pair <keypair>") + "  - Login con SEA key pair");
     console.log("");
     console.log(c("bold", "MESSAGGISTICA:"));
-    console.log("  " + c("bold", "/to <username>") + "        - Inizia chat con un utente");
+    console.log("  " + c("bold", "/to <username>") + "        - Chat diretta con utente");
+    console.log("  " + c("bold", "/channel <nome> <token>") + " - Entra in canale criptato");
+    console.log("  " + c("bold", "/leave") + "                - Esci dal canale");
     console.log("");
     console.log(c("bold", "KEY MANAGEMENT:"));
     console.log("  " + c("bold", "/export") + "                - Esporta il tuo key pair (backup)");
@@ -631,6 +768,7 @@ export class MessengerCLI {
     console.log(c("bold", c("green", "🔐 SICUREZZA")));
     console.log("");
     console.log("  ✅ Crittografia end-to-end (ECDH + AES-GCM)");
+    console.log("  ✅ Canali con token condiviso (AES-256)");
     console.log("  ✅ Storage decentralizzato P2P (GunDB)");
     console.log("  ✅ Nessun server può leggere i messaggi");
     console.log("  ✅ Key pair portabile (export/import)");
@@ -641,15 +779,16 @@ export class MessengerCLI {
     console.log("  " + c("gray", "# Login normale"));
     console.log("  " + c("gray", "/login alice password123"));
     console.log("");
-    console.log("  " + c("gray", "# Export key pair (backup)"));
-    console.log("  " + c("gray", "/export"));
-    console.log("");
-    console.log("  " + c("gray", "# Login con key pair (no password)"));
-    console.log("  " + c("gray", "/login-pair eyJwdWIiOiIuLi4ifQ=="));
-    console.log("");
-    console.log("  " + c("gray", "# Chattare"));
+    console.log("  " + c("gray", "# Chat diretta (ECDH)"));
     console.log("  " + c("gray", "/to bob"));
     console.log("  " + c("gray", "Ciao Bob! Come stai?"));
+    console.log("");
+    console.log("  " + c("gray", "# Canale criptato (token)"));
+    console.log("  " + c("gray", "/channel dev-team mySecretToken123"));
+    console.log("  " + c("gray", "Messaggio nel canale #dev-team"));
+    console.log("");
+    console.log("  " + c("gray", "# Export key pair (backup)"));
+    console.log("  " + c("gray", "/export"));
     console.log("");
   }
 
@@ -660,12 +799,30 @@ export class MessengerCLI {
     console.log(
       "  " + c("gray", "Utente:") + " " + c("green", this.currentUser)
     );
-    console.log(
-      "  " +
-        c("gray", "Destinatario:") +
-        " " +
-        c("yellow", this.recipient || "(nessuno)")
-    );
+    
+    if (this.currentChannel) {
+      console.log(
+        "  " +
+          c("gray", "Canale:") +
+          " " +
+          c("magenta", `#${this.currentChannel}`)
+      );
+    } else if (this.recipient) {
+      console.log(
+        "  " +
+          c("gray", "Chat con:") +
+          " " +
+          c("yellow", this.recipient)
+      );
+    } else {
+      console.log(
+        "  " +
+          c("gray", "Destinatario:") +
+          " " +
+          c("gray", "(nessuno)")
+      );
+    }
+    
     console.log(
       "  " + c("gray", "Address:") + " " + c("cyan", this.derivedAddress)
     );
@@ -707,7 +864,13 @@ export class MessengerCLI {
   private updatePrompt(): void {
     let prompt = "";
 
-    if (this.recipient) {
+    if (this.currentChannel) {
+      prompt =
+        c("green", `[${this.currentUser}]`) +
+        c("white", " → ") +
+        c("magenta", `#${this.currentChannel}`) +
+        c("green", " ➤ ");
+    } else if (this.recipient) {
       prompt =
         c("green", `[${this.currentUser}]`) +
         c("white", " → ") +
