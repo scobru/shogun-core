@@ -1317,8 +1317,8 @@ class DataBase {
         username: username,
         userPub: userPub,
         epub: epub,
-        registeredAt: Date.now(),
-        lastSeen: Date.now(),
+        registeredAt: Date.now().toString(),
+        lastSeen: Date.now().toString(),
       };
 
       const ack = await this.node

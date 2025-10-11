@@ -32,10 +32,15 @@ export * from "./plugins";
 
 export * from "./interfaces/shogun";
 
+export * from "./config/simplified-config";
+
 export type * from "./interfaces/plugin";
 
-// Export simplified configuration
-export * from "./config/simplified-config";
+export { SHIP_01 } from "../ship/implementation/SHIP_01";
+
+export type { ISHIP_01 } from "../ship/interfaces/ISHIP_01";
+
+export { MessengerCLI } from "../ship/examples/messenger-cli";
 
 export type {
   IGunUserInstance,
@@ -43,7 +48,6 @@ export type {
   GunDataEventData,
   GunPeerEventData,
   DeriveOptions,
-  // Improved types
   TypedGunOperationResult,
   TypedAuthResult,
 };
@@ -57,7 +61,6 @@ export {
   derive,
   GunErrors,
   DataBase,
-  // Simple API exports
   SimpleGunAPI,
   QuickStart,
   quickStart,

@@ -51,6 +51,7 @@ module.exports = {
       tls: false,
       child_process: false,
       ws: false,
+      readline: false, // CLI-only module
       // Add fallback for neo4j (used by cypher-query)
       "neo4j/lib/GraphDatabase": false,
     },
