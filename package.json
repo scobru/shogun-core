@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -23,6 +23,7 @@
     "build:cjs": "tsc",
     "build:browser": "webpack --config webpack.config.cjs",
     "dev": "tsc --watch",
+    "messenger": "tsx ship/examples/messenger-cli.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
     "prebuild": "rimraf dist",
