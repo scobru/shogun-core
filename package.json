@@ -1,30 +1,18 @@
 {
   "name": "shogun-core",
-  "version": "3.3.5",
+  "version": "3.3.6",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
-  "main": "./dist/src/index.js",
-  "module": "./dist/src/index.js",
-  "types": "./dist/types/src/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/src/index.d.ts",
-      "import": "./dist/src/index.js",
-      "require": "./dist/src/index.js",
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "browser": "./dist/browser/shogun-core.js",
-      "default": "./dist/src/index.js",
-      "node": "./dist/src/index.js"
-    },
-    "./ship": {
-      "types": "./dist/types/ship/index.d.ts",
-      "import": "./dist/ship/index.js",
-      "require": "./dist/ship/index.js",
-      "default": "./dist/ship/index.js"
-    },
-    "./ship/interfaces/*": {
-      "types": "./dist/types/ship/interfaces/*.d.ts",
-      "import": "./dist/ship/interfaces/*.js",
-      "require": "./dist/ship/interfaces/*.js",
-      "default": "./dist/ship/interfaces/*.js"
+      "default": "./dist/index.js",
+      "node": "./dist/index.js"
     }
   },
   "files": [
@@ -71,19 +59,15 @@
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
     "ethers": "^6.13.5",
-    "figlet": "^1.9.3",
-    "form-data": "^4.0.4",
     "gun": "git+https://github.com/amark/gun.git",
     "keccak256": "^1.0.6",
     "nostr-tools": "^2.15.0",
     "qs": "^6.14.0",
     "rxjs": "^7.8.2",
-    "shogun-ipfs": "file:../shogun-ipfs",
     "ts-node": "^10.9.2",
     "url": "^0.11.4",
     "uuid": "^11.1.0",
-    "vm-browserify": "^1.1.2",
-    "ws": "^8.18.3"
+    "vm-browserify": "^1.1.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.3",
