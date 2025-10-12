@@ -19,25 +19,14 @@ export class ShogunStorage {
     this.isTestMode = process.env.NODE_ENV === "test";
     this.useLocalStorage = false;
 
-    // Debug: log the environment (only if not silent)
-    if (!this.silent) {
-      console.log("ShogunStorage: NODE_ENV =", process.env.NODE_ENV);
-      console.log("ShogunStorage: isTestMode =", this.isTestMode);
-    }
-
     // In test mode, don't use localStorage to avoid test pollution
     if (this.isTestMode) {
       this.useLocalStorage = false;
-      if (!this.silent) {
-        console.log("ShogunStorage: Test mode detected, localStorage disabled");
-      }
+
       return;
     }
 
     if (typeof localStorage !== "undefined") {
-      if (!this.silent) {
-        console.log("ShogunStorage: localStorage is defined");
-      }
       try {
         // Probe localStorage without polluting expectations in tests
         const testKey = "_shogun_test";
@@ -58,15 +47,11 @@ export class ShogunStorage {
         if (!this.silent) {
           console.log(
             "ShogunStorage: localStorage error:",
-            (error as Error).message,
+            (error as Error).message
           );
         }
       }
-    } else {
-      if (!this.silent) {
-        console.log("ShogunStorage: localStorage is undefined");
-      }
-    }
+    } 
   }
 
   /**
@@ -148,7 +133,7 @@ export class ShogunStorage {
       try {
         localStorage.setItem(
           key,
-          typeof value === "string" ? value : JSON.stringify(value),
+          typeof value === "string" ? value : JSON.stringify(value)
         );
       } catch (error) {
         if (!this.isTestMode) {
