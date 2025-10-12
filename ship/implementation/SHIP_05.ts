@@ -722,9 +722,9 @@ class SHIP_05 implements ISHIP_05 {
                 headers: headers
               };
 
-              const request = httpModule.request(options, (response) => {
+              const request = httpModule.request(options, (response: any) => {
                 let responseData = '';
-                response.on('data', (chunk) => responseData += chunk);
+                response.on('data', (chunk: any) => responseData += chunk);
                 response.on('end', () => {
                   console.log(`📡 ${endpoint} response: ${response.statusCode}`);
                   
@@ -747,7 +747,7 @@ class SHIP_05 implements ISHIP_05 {
                 });
               });
 
-              request.on('error', (error) => reject(error));
+              request.on('error', (error: any) => reject(error));
               formData.pipe(request);
             });
           };
@@ -907,9 +907,9 @@ class SHIP_05 implements ISHIP_05 {
               options.headers["token"] = token;
             }
             
-            const request = httpModule.request(options, (response) => {
+            const request = httpModule.request(options, (response: any) => {
               let data = '';
-              response.on('data', (chunk) => data += chunk);
+              response.on('data', ( chunk: any) => data += chunk);
               response.on('end', () => {
                 if (response.statusCode === 200) {
                   console.log(`✅ Unpinned successfully`);
@@ -921,7 +921,7 @@ class SHIP_05 implements ISHIP_05 {
               });
             });
             
-            request.on('error', (error) => {
+            request.on('error', (error: any) => {
               console.warn(`⚠️  Unpin request error:`, error.message);
               resolve(false);
             });
@@ -1072,9 +1072,9 @@ class SHIP_05 implements ISHIP_05 {
                   options.headers["Content-Length"] = "0";
                 }
                 
-                const request = httpModule.request(options, (response) => {
+                const request = httpModule.request(options, (response: any) => {
                   let data = '';
-                  response.on('data', (chunk) => data += chunk);
+                  response.on('data', (chunk: any) => data += chunk);
                   response.on('end', () => {
                     if (response.statusCode === 200) {
                       console.log(`✅ Download successful via ${endpoint.path}`);
@@ -1085,7 +1085,7 @@ class SHIP_05 implements ISHIP_05 {
                   });
                 });
                 
-                request.on('error', (error) => reject(error));
+                request.on('error', (error: any) => reject(error));
                 request.end();
               });
               
