@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "3.3.4",
+  "version": "3.3.5",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/src/index.js",
   "module": "./dist/src/index.js",
@@ -19,12 +19,6 @@
       "import": "./dist/ship/index.js",
       "require": "./dist/ship/index.js",
       "default": "./dist/ship/index.js"
-    },
-    "./ship/implementation/*": {
-      "types": "./dist/types/ship/implementation/*.d.ts",
-      "import": "./dist/ship/implementation/*.js",
-      "require": "./dist/ship/implementation/*.js",
-      "default": "./dist/ship/implementation/*.js"
     },
     "./ship/interfaces/*": {
       "types": "./dist/types/ship/interfaces/*.d.ts",
@@ -46,7 +40,6 @@
     "wallet": "tsx ship/examples/wallet-cli.ts",
     "stealth": "tsx ship/examples/stealth-cli.ts",
     "storage": "tsx ship/examples/storage-cli.ts",
-    "ephemeral": "tsx ship/examples/ephemeral-cli.ts",
     "vault": "tsx ship/examples/vault-cli.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
@@ -78,6 +71,7 @@
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
     "ethers": "^6.13.5",
+    "figlet": "^1.9.3",
     "form-data": "^4.0.4",
     "gun": "git+https://github.com/amark/gun.git",
     "keccak256": "^1.0.6",
