@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "3.3.2",
+  "version": "3.3.4",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/src/index.js",
   "module": "./dist/src/index.js",
@@ -13,6 +13,24 @@
       "browser": "./dist/browser/shogun-core.js",
       "default": "./dist/src/index.js",
       "node": "./dist/src/index.js"
+    },
+    "./ship": {
+      "types": "./dist/types/ship/index.d.ts",
+      "import": "./dist/ship/index.js",
+      "require": "./dist/ship/index.js",
+      "default": "./dist/ship/index.js"
+    },
+    "./ship/implementation/*": {
+      "types": "./dist/types/ship/implementation/*.d.ts",
+      "import": "./dist/ship/implementation/*.js",
+      "require": "./dist/ship/implementation/*.js",
+      "default": "./dist/ship/implementation/*.js"
+    },
+    "./ship/interfaces/*": {
+      "types": "./dist/types/ship/interfaces/*.d.ts",
+      "import": "./dist/ship/interfaces/*.js",
+      "require": "./dist/ship/interfaces/*.js",
+      "default": "./dist/ship/interfaces/*.js"
     }
   },
   "files": [
@@ -57,7 +75,6 @@
     "assert": "^2.1.0",
     "base64url": "^3.0.1",
     "buffer": "^6.0.3",
-    "bugoff": "^0.0.9",
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
     "ethers": "^6.13.5",
@@ -72,8 +89,6 @@
     "url": "^0.11.4",
     "uuid": "^11.1.0",
     "vm-browserify": "^1.1.2",
-    "webtorrent": "^1.9.7",
-    "wrtc": "^0.4.7",
     "ws": "^8.18.3"
   },
   "devDependencies": {
