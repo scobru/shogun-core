@@ -89,7 +89,7 @@ export class CoreInitializer {
         // Both provided, prefer gunInstance
         if (!config.silent) {
           console.log(
-            "Both gunInstance and gunOptions provided, using gunInstance"
+            "Both gunInstance and gunOptions provided, using gunInstance",
           );
         }
         this.core._gun = config.gunInstance;
@@ -97,12 +97,12 @@ export class CoreInitializer {
         // Neither provided, create a default Gun instance for testing
         if (!config.silent) {
           console.log(
-            "No Gun instance or options provided, creating default instance"
+            "No Gun instance or options provided, creating default instance",
           );
         }
         this.core._gun = createGun(
           { peers: config.gunOptions?.peers || [] },
-          config.silent
+          config.silent,
         );
       }
     } catch (error) {
@@ -116,7 +116,7 @@ export class CoreInitializer {
       this.core.db = new DataBase(
         this.core._gun,
         config.gunOptions?.scope || "",
-        { disableAutoRecall: config.disableAutoRecall, silent: config.silent }
+        { disableAutoRecall: config.disableAutoRecall, silent: config.silent },
       );
       // Note: user is a getter that returns _user, so we don't need to assign it
     } catch (error) {
@@ -216,7 +216,7 @@ export class CoreInitializer {
       if (config.oauth) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "OAuth plugin will be registered with provided configuration"
+            "OAuth plugin will be registered with provided configuration",
           );
         }
 
@@ -231,7 +231,7 @@ export class CoreInitializer {
       if (config.webauthn) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "WebAuthn plugin will be registered with provided configuration"
+            "WebAuthn plugin will be registered with provided configuration",
           );
         }
 
@@ -246,7 +246,7 @@ export class CoreInitializer {
       if (config.web3) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "Web3 plugin will be registered with provided configuration"
+            "Web3 plugin will be registered with provided configuration",
           );
         }
 
@@ -261,7 +261,7 @@ export class CoreInitializer {
       if (config.nostr) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn(
-            "Nostr plugin will be registered with provided configuration"
+            "Nostr plugin will be registered with provided configuration",
           );
         }
 

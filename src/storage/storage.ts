@@ -47,11 +47,11 @@ export class ShogunStorage {
         if (!this.silent) {
           console.log(
             "ShogunStorage: localStorage error:",
-            (error as Error).message
+            (error as Error).message,
           );
         }
       }
-    } 
+    }
   }
 
   /**
@@ -133,7 +133,7 @@ export class ShogunStorage {
       try {
         localStorage.setItem(
           key,
-          typeof value === "string" ? value : JSON.stringify(value)
+          typeof value === "string" ? value : JSON.stringify(value),
         );
       } catch (error) {
         if (!this.isTestMode) {

@@ -34,8 +34,6 @@ export * from "./interfaces/shogun";
 
 export * from "./config/simplified-config";
 
-export * from "../ship";
-
 export type * from "./interfaces/plugin";
 
 export type {
