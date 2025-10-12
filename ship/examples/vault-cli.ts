@@ -13,7 +13,7 @@
  */
 
 import { SHIP_00 } from "../implementation/SHIP_00";
-import { SHIP_07 } from "../implementation/SHIP_07";
+import { SHIP_06 } from "../implementation/SHIP_06";
 import * as readline from "readline";
 import * as fs from "fs";
 import * as path from "path";
@@ -115,7 +115,7 @@ async function main() {
     console.log("🔐 INITIALIZING VAULT (SHIP-07)");
     console.log("-".repeat(70));
 
-    const vault = new SHIP_07(identity);
+    const vault = new SHIP_06(identity);
     await vault.initialize();
     
     console.log("✅ Vault initialized");

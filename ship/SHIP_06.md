@@ -1,34 +1,25 @@
-# SHIP-06: Ephemeral P2P Messaging
+# SHIP-06: Secure Vault
 
 > **Status**: ✅ Implemented  
 > **Author**: Shogun Team  
 > **Created**: 2025-01-11  
-> **Updated**: 2025-01-12  
-> **Dependencies**: **OPTIONAL** [SHIP-00](./SHIP_00.md) (Identity & Authentication)  
-> **Inspired by**: [Bugoff](https://github.com/draeder/bugoff)
+> **Depends on**: [SHIP-00](./SHIP_00.md) (Identity & Authentication)  
+> **Inspired by**: [Gunsafe](https://github.com/draeder/gunsafe)
 
 ---
 
 ## Abstract
 
-SHIP-06 defines a standard for **ephemeral P2P messaging** using GunDB relay for real-time communication between peers. Unlike SHIP-01 which stores messages permanently, SHIP-06 provides **completely ephemeral** messaging with no persistent storage. Messages are encrypted using Gun's SEA suite (ECDH + AES-GCM) and transmitted via Gun relay peers.
+SHIP-06 defines a standard for **secure encrypted vault** storage on GunDB. It provides a decentralized, encrypted key-value store where users can securely store sensitive data such as passwords, private keys, API tokens, and other confidential information. All data is encrypted using Gun's SEA suite before storage, ensuring privacy and security.
 
 **Key Features**:
-- 🚀 **Standalone Mode**: No SHIP-00 required - works with just nickname + room
-- ❌ **No Storage**: Pure relay-only, no radisk/localStorage
-- ✅ **Real-time Messaging**: Via Gun relay network
-- ✅ **End-to-End Encrypted**: Using Gun SEA (ECDH + AES-GCM)
-- ✅ **Deterministic Room IDs**: SHA-256 hash ensures same room across peers
-- 🔕 **Silent Mode**: ShogunCore with `silent: true` - zero initialization logs
-- ✅ **Perfect for**: Real-time chat, gaming, live streaming
-
-**Key Differences from SHIP-01**:
-- ❌ No persistent storage - relay-only communication
-- ✅ Real-time messaging via Gun relay
-- ✅ No trace left - ephemeral by design
-- ✅ Perfect for real-time chat, gaming, live streaming
-- ✅ No message history - privacy by design
-- ✅ Works standalone OR with SHIP-00 identity
+- ✅ End-to-end encrypted storage on GunDB
+- ✅ Key-value store with named records
+- ✅ Support for executable code storage (sandboxed)
+- ✅ Soft delete with recovery capability
+- ✅ Export/Import for backup
+- ✅ Multi-device synchronization
+- ✅ Zero knowledge - server cannot read data
 
 ---
 
@@ -36,58 +27,46 @@ SHIP-06 defines a standard for **ephemeral P2P messaging** using GunDB relay for
 
 ### Why SHIP-06?
 
-While SHIP-01 provides excellent persistent messaging, some use cases require **true ephemeral communication**:
+Modern applications need secure storage for sensitive data:
 
-- 🎮 **Gaming**: Real-time game chat that doesn't need history
-- 🎥 **Live Streaming**: Viewer chat during live events
-- 💬 **Temporary Rooms**: Chat rooms that disappear when everyone leaves
-- 🔒 **Maximum Privacy**: Messages that leave no trace
-- ⚡ **Ultra-Low Latency**: Direct P2P without database roundtrips
+- 🔑 **Passwords**: Store encrypted passwords safely
+- 💼 **API Keys**: Secure storage for API tokens
+- 🔐 **Private Keys**: Safely store crypto private keys
+- 📝 **Secrets**: Application secrets and configs
+- 💾 **Backup**: Encrypted backups of critical data
 
-### Comparison with SHIP-01
+### Problems with Current Solutions
 
-| Feature             | SHIP-06 (Ephemeral) | SHIP-01 (Persistent) |
-| ------------------- | ------------------- | -------------------- |
-| **Storage**         | 🟢 Ephemeral (30s)  | 🔴 Permanent GunDB   |
-| **Latency**         | 🟢 Real-time        | 🟡 Normal            |
-| **Privacy**         | 🟢 Maximum          | 🟡 Good              |
-| **History**         | 🔴 No history       | 🟢 Full history      |
-| **Use Case**        | Real-time chat      | Persistent messaging |
-| **Message Replay**  | 🔴 Not possible     | 🟢 Possible          |
-| **Offline Delivery**| 🔴 No               | 🟢 Yes               |
-| **Auto-cleanup**    | 🟢 Yes (30s)        | 🔴 No                |
+| Problem                | Traditional Solutions  | SHIP-07 Solution         |
+| ---------------------- | ---------------------- | ------------------------ |
+| **Centralized**        | 🔴 Single point failure| 🟢 Decentralized P2P     |
+| **Server Access**      | 🔴 Server can read     | 🟢 E2E encrypted         |
+| **Vendor Lock-in**     | 🔴 Proprietary APIs    | 🟢 Open standard         |
+| **Costs**              | 🔴 Subscription fees   | 🟢 Zero operational cost |
+| **Privacy**            | 🔴 Trust required      | 🟢 Zero knowledge        |
+| **Multi-device Sync**  | 🟡 Complex setup       | 🟢 Automatic via GunDB   |
+
+### Comparison with Alternatives
+
+| Feature              | SHIP-06        | 1Password        | Bitwarden        | LocalStorage  |
+| -------------------- | -------------- | ---------------- | ---------------- | ------------- |
+| **Decentralized**    | 🟢 Yes         | 🔴 No            | 🟡 Self-host     | 🟢 Yes        |
+| **E2E Encryption**   | 🟢 Yes         | 🟢 Yes           | 🟢 Yes           | 🔴 No         |
+| **Multi-device**     | 🟢 Auto sync   | 🟢 Yes           | 🟢 Yes           | 🔴 No         |
+| **Cost**             | 🟢 Free        | 🔴 $3-8/mo       | 🟡 Free/Self     | 🟢 Free       |
+| **Open Source**      | 🟢 MIT         | 🔴 Proprietary   | 🟢 GPL-3.0       | N/A           |
+| **Zero Knowledge**   | 🟢 Yes         | 🟢 Yes           | 🟢 Yes           | 🔴 No         |
 
 ---
 
 ## Relationship with SHIP-00
 
-SHIP-06 can work in **two modes**:
+SHIP-06 **depends on** [SHIP-00](./SHIP_00.md) for:
 
-### 🚀 **Standalone Mode** (Recommended for quick start)
-
-No authentication required - just nickname and room!
-
-```typescript
-import { SHIP_06 } from "./implementation/SHIP_06";
-
-// Just pass Gun peers array and room ID!
-const GUN_PEERS = [
-  "https://relay.shogun-eco.xyz/gun",
-  "https://peer.wallie.io/gun",
-  "https://v5g5jseqhgkp43lppgregcfbvi.srv.us/gun",
-];
-
-// Creates ShogunCore internally with silent: true, disableAutoRecall: true
-const ephemeral = new SHIP_06(GUN_PEERS, "my-chat-room");
-await ephemeral.connect();
-// Ready to chat! ✅
-
-// Zero logs, zero authentication, zero storage!
-```
-
-### 🔐 **Identity Mode** (With SHIP-00 authentication)
-
-For use cases requiring authenticated users:
+- ✅ User authentication and authorization
+- ✅ SEA encryption/decryption operations
+- ✅ Key pair management
+- ✅ Access to GunDB user node
 
 ```typescript
 import { SHIP_00 } from "./implementation/SHIP_00";
@@ -97,9 +76,12 @@ import { SHIP_06 } from "./implementation/SHIP_06";
 const identity = new SHIP_00(config);
 await identity.login("alice", "password123");
 
-// Use identity in SHIP-06 for ephemeral messaging
-const ephemeral = new SHIP_06(identity, "my-chat-room");
-await ephemeral.connect();
+// Use identity in SHIP-06 for secure vault
+const vault = new SHIP_06(identity);
+await vault.initialize();
+
+// Store encrypted data
+await vault.put("my-api-key", "sk_live_123456789");
 ```
 
 ---
@@ -110,25 +92,23 @@ await ephemeral.connect();
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│          SHIP-06 EPHEMERAL MESSAGING PROTOCOL                │
+│                SHIP-06 SECURE VAULT PROTOCOL                 │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   GUN SEA    │    │    GunDB     │    │   Cleanup    │  │
-│  │ (Encryption) │    │   (P2P DB)   │    │ (Auto-delete)│  │
+│  │   GUN SEA    │    │    GunDB     │    │  User Node   │  │
+│  │ (Encryption) │    │   (Storage)  │    │  (Private)   │  │
 │  └──────────────┘    └──────────────┘    └──────────────┘  │
 │         │                    │                    │          │
 │         │                    │                    │          │
 │    ┌────▼────────────────────▼────────────────────▼────┐    │
 │    │                                                    │    │
-│    │  1. Hash room ID (SHA-256)                        │    │
-│    │  2. Create ephemeral GunDB nodes                  │    │
-│    │  3. Generate ephemeral SEA pair per session       │    │
-│    │  4. Announce presence with heartbeat (5s)         │    │
-│    │  5. Encrypt message with shared secret (ECDH)     │    │
-│    │  6. Publish encrypted message to GunDB            │    │
-│    │  7. Auto-delete message after 30s                 │    │
-│    │  8. Recipient receives & decrypts in real-time    │    │
+│    │  1. User authenticated via SHIP-00                │    │
+│    │  2. Access user's private Gun node                │    │
+│    │  3. Encrypt data with SEA (AES-256-GCM)           │    │
+│    │  4. Store encrypted data in vault node            │    │
+│    │  5. Data synced across devices via GunDB          │    │
+│    │  6. Retrieve and decrypt when needed              │    │
 │    │                                                    │    │
 │    └────────────────────────────────────────────────────┘    │
 │                                                               │
@@ -137,55 +117,75 @@ await ephemeral.connect();
 
 ### Technology Stack
 
-| Component          | Technology         | Role                                |
-| ------------------ | ------------------ | ----------------------------------- |
-| **Core**           | ShogunCore (silent)| Gun wrapper with silent initialization |
-| **Authentication** | GUN SEA            | Ephemeral key generation & encryption |
-| **P2P Network**    | Gun Relay          | Real-time relay-based messaging     |
-| **Transport**      | WebSocket          | Gun relay connections               |
-| **Encryption**     | ECDH + AES-GCM     | End-to-end message encryption       |
-| **Room Discovery** | SHA-256 (Web Crypto)| Deterministic hashed room IDs      |
-| **Storage**        | None (relay-only)  | Zero persistence by design          |
+| Component          | Technology  | Role                              |
+| ------------------ | ----------- | --------------------------------- |
+| **Authentication** | SHIP-00     | User identity and auth            |
+| **Encryption**     | GUN SEA     | AES-256-GCM encryption            |
+| **Storage**        | GunDB       | Decentralized P2P storage         |
+| **User Space**     | Gun.user()  | Private encrypted user node       |
+| **Synchronization**| Gun sync    | Automatic multi-device sync       |
 
-### Message Flow
+### GunDB Node Structure
+
+SHIP-06 uses the following node structure:
+
+```typescript
+// User's vault node
+gun.user().get('vault').get('records').get(recordName)
+
+// Node structure:
+{
+  vault: {
+    records: {
+      "my-password": {
+        data: "encrypted_content",
+        created: "1234567890",
+        updated: "1234567890",
+        deleted: false,
+        metadata: { ... }
+      },
+      "api-key": {
+        data: "encrypted_content",
+        created: "1234567890",
+        updated: "1234567890",
+        deleted: false,
+        metadata: { ... }
+      }
+    },
+    metadata: {
+      version: "1.0.0",
+      recordCount: 2
+    }
+  }
+}
+```
+
+### Security Model
 
 ```
-Alice                          GunDB (ephemeral node)           Bob
-  │                                │                              │
-  │  1. Join "chat-room"           │                              │
-  ├───────────────────────────────►│                              │
-  │     SHA256("chat-room")        │                              │
-  │     Announce presence          │                              │
-  │     (heartbeat every 5s)       │                              │
-  │                                │                              │
-  │                                │  2. Bob joins same room      │
-  │                                │◄─────────────────────────────┤
-  │                                │     Announce presence        │
-  │                                │     (heartbeat every 5s)     │
-  │                                │                              │
-  │  3. Detect Bob's presence      │                              │
-  │◄──────────────────────────────────────────────────────────────►│
-  │     Exchange SEA public keys via presence                     │
-  │                                │                              │
-  │  4. Send encrypted message     │                              │
-  ├────────────────────────────────►│                              │
-  │     (published to GunDB)       │                              │
-  │     Auto-delete after 30s      │                              │
-  │                                │  5. Bob receives message     │
-  │                                ├─────────────────────────────►│
-  │                                │     Decrypt & display        │
-  │                                │                              │
+┌──────────────────────────────────────────────────┐
+│                  Security Layers                  │
+├──────────────────────────────────────────────────┤
+│                                                   │
+│  Layer 1: Authentication (SHIP-00)               │
+│  ├─ Username/Password                             │
+│  └─ SEA key pair derivation                       │
+│                                                   │
+│  Layer 2: User Node Encryption (Gun)             │
+│  ├─ Gun.user() creates encrypted space            │
+│  └─ Only authenticated user can write             │
+│                                                   │
+│  Layer 3: Data Encryption (SEA)                  │
+│  ├─ Each record encrypted individually            │
+│  ├─ AES-256-GCM encryption                        │
+│  └─ Cannot be read without user's key pair        │
+│                                                   │
+│  Layer 4: Transport Encryption                   │
+│  ├─ TLS/HTTPS for relay connections               │
+│  └─ Encrypted P2P connections                     │
+│                                                   │
+└──────────────────────────────────────────────────┘
 ```
-
-### Security Properties
-
-- ✅ **End-to-End Encryption**: All messages encrypted with ECDH
-- ✅ **Perfect Forward Secrecy**: New SEA pair per session
-- ✅ **Room Privacy**: Room names hashed with SHA-256
-- ✅ **Auto-Delete**: Messages automatically removed after 30s
-- ✅ **Ephemeral Keys**: Session keypairs discarded on disconnect
-- ✅ **No History**: Messages cannot be replayed
-- ⚠️ **Gun Relays**: Messages pass through Gun relay nodes (encrypted)
 
 ---
 
@@ -193,11 +193,11 @@ Alice                          GunDB (ephemeral node)           Bob
 
 ```typescript
 /**
- * SHIP-06: Ephemeral P2P Messaging Interface
+ * SHIP-06: Secure Vault Interface
  */
 interface ISHIP_06 {
   // ============================================
-  // CONNECTION MANAGEMENT
+  // INITIALIZATION
   // ============================================
 
   /**
@@ -207,97 +207,124 @@ interface ISHIP_06 {
   getIdentity(): ISHIP_00;
 
   /**
-   * Connect to ephemeral swarm
-   * Joins WebTorrent swarm and establishes P2P connections
+   * Initialize vault
+   * Sets up vault node structure
    */
-  connect(): Promise<void>;
+  initialize(): Promise<void>;
 
   /**
-   * Disconnect from swarm
-   * Closes all P2P connections
+   * Check if vault is initialized
    */
-  disconnect(): void;
-
-  /**
-   * Check if connected to swarm
-   */
-  isConnected(): boolean;
-
-  /**
-   * Get swarm identifier (SHA-256 hash)
-   */
-  getSwarmId(): string;
-
-  /**
-   * Get own peer address in swarm
-   */
-  getAddress(): string;
+  isInitialized(): boolean;
 
   // ============================================
-  // MESSAGING
+  // CRUD OPERATIONS
   // ============================================
 
   /**
-   * Send broadcast message to all peers in swarm
-   * @param message Plain text message
+   * Store encrypted record in vault
+   * @param name Record name/key
+   * @param data Data to encrypt and store (any type)
+   * @param metadata Optional metadata
    */
-  sendBroadcast(message: string): Promise<void>;
+  put(name: string, data: any, metadata?: RecordMetadata): Promise<VaultResult>;
 
   /**
-   * Send direct message to specific peer
-   * @param peerAddress Target peer address
-   * @param message Plain text message
+   * Retrieve and decrypt record from vault
+   * @param name Record name/key
+   * @param options Retrieval options
    */
-  sendDirect(peerAddress: string, message: string): Promise<void>;
+  get(name: string, options?: GetOptions): Promise<VaultRecord | null>;
 
   /**
-   * Listen for decrypted messages
-   * @param callback Called for each received message
+   * Delete record from vault (soft delete)
+   * @param name Record name/key (optional - deletes all if omitted)
    */
-  onMessage(callback: (msg: EphemeralMessage) => void): void;
+  delete(name?: string): Promise<VaultResult>;
 
   /**
-   * Listen for encrypted messages (debugging)
-   * @param callback Called for each encrypted message
+   * List all record names in vault
+   * @param options List options
    */
-  onEncryptedMessage(callback: (address: string, data: any) => void): void;
+  list(options?: ListOptions): Promise<string[]>;
+
+  /**
+   * Check if record exists
+   * @param name Record name/key
+   */
+  exists(name: string): Promise<boolean>;
+
+  /**
+   * Update existing record
+   * @param name Record name/key
+   * @param data New data
+   */
+  update(name: string, data: any): Promise<VaultResult>;
 
   // ============================================
-  // PEER MANAGEMENT
-  // ============================================
-
-  /**
-   * Listen for peer join events
-   * @param callback Called when peer joins
-   */
-  onPeerSeen(callback: (address: string) => void): void;
-
-  /**
-   * Listen for peer leave events
-   * @param callback Called when peer leaves
-   */
-  onPeerLeft(callback: (address: string) => void): void;
-
-  /**
-   * Get list of connected peers
-   */
-  getPeers(): string[];
-
-  // ============================================
-  // ENCRYPTION
+  // EXECUTABLE CODE STORAGE
   // ============================================
 
   /**
-   * Get current ephemeral SEA pair
-   * New pair generated per session
+   * Store executable code in vault
+   * @param name Record name/key
+   * @param code JavaScript code as string
+   * @param metadata Optional metadata
    */
-  getEphemeralPair(): Promise<SEAPair>;
+  putCode(name: string, code: string, metadata?: RecordMetadata): Promise<VaultResult>;
 
   /**
-   * Manually set SEA pair (optional)
-   * By default, SHIP-06 generates ephemeral pair
+   * Execute stored code (sandboxed)
+   * @param name Record name/key
+   * @param context Execution context (variables)
+   * @param options Execution options
    */
-  setEphemeralPair(pair: SEAPair): Promise<void>;
+  executeCode(
+    name: string,
+    context?: Record<string, any>,
+    options?: ExecuteOptions
+  ): Promise<any>;
+
+  // ============================================
+  // BACKUP & RESTORE
+  // ============================================
+
+  /**
+   * Export entire vault (encrypted)
+   * @param password Optional additional encryption password
+   */
+  export(password?: string): Promise<string>;
+
+  /**
+   * Import vault from backup
+   * @param backupData Exported vault data
+   * @param password Optional decryption password
+   * @param options Import options
+   */
+  import(
+    backupData: string,
+    password?: string,
+    options?: ImportOptions
+  ): Promise<VaultResult>;
+
+  // ============================================
+  // UTILITIES
+  // ============================================
+
+  /**
+   * Get vault statistics
+   */
+  getStats(): Promise<VaultStats>;
+
+  /**
+   * Clear all records (soft delete all)
+   */
+  clear(): Promise<VaultResult>;
+
+  /**
+   * Compact vault (remove deleted records permanently)
+   */
+  compact(): Promise<VaultResult>;
 }
 ```
 
@@ -305,248 +332,326 @@ interface ISHIP_06 {
 
 ```typescript
 /**
- * Ephemeral message structure
+ * Vault record structure
  */
-interface EphemeralMessage {
-  from: string; // Sender peer address
-  fromPubKey: string; // Sender's public key
-  content: string; // Decrypted content
-  timestamp: number; // Unix timestamp (ms)
-  type: "broadcast" | "direct"; // Message type
+interface VaultRecord {
+  name: string; // Record name/key
+  data: any; // Decrypted data
+  created: number; // Creation timestamp
+  updated: number; // Last update timestamp
+  deleted: boolean; // Soft delete flag
+  metadata?: RecordMetadata; // Optional metadata
 }
 
 /**
- * Configuration for ephemeral messaging
+ * Record metadata
  */
-interface EphemeralConfig {
-  identity: ISHIP_00; // Identity provider
-  roomId: string; // Room identifier (will be hashed)
-  debug?: boolean; // Enable debug logging
-  timeout?: number; // Operation timeout (ms)
+interface RecordMetadata {
+  type?: string; // Data type (password, apiKey, privateKey, etc.)
+  description?: string; // Human-readable description
+  tags?: string[]; // Tags for categorization
+  expiresAt?: number; // Expiration timestamp
+  [key: string]: any; // Custom metadata
 }
 
 /**
- * SEA key pair
+ * Vault operation result
  */
-interface SEAPair {
-  pub: string; // Public key
-  priv: string; // Private key
-  epub: string; // Encryption public key
-  epriv: string; // Encryption private key
+interface VaultResult {
+  success: boolean;
+  error?: string;
+  recordName?: string;
+  recordCount?: number;
+}
+
+/**
+ * Get options
+ */
+interface GetOptions {
+  includeDeleted?: boolean; // Include soft-deleted records
+  decrypt?: boolean; // Return decrypted data (default: true)
+}
+
+/**
+ * List options
+ */
+interface ListOptions {
+  includeDeleted?: boolean; // Include deleted records
+  filterByTag?: string; // Filter by tag
+  filterByType?: string; // Filter by metadata type
+}
+
+/**
+ * Code execution options
+ */
+interface ExecuteOptions {
+  useGlobal?: boolean; // Use global scope (eval) vs Function
+  timeout?: number; // Execution timeout (ms)
+  allowAsync?: boolean; // Allow async code
+}
+
+/**
+ * Import options
+ */
+interface ImportOptions {
+  merge?: boolean; // Merge with existing records
+  overwrite?: boolean; // Overwrite existing records
+  skipDeleted?: boolean; // Skip deleted records
+}
+
+/**
+ * Vault statistics
+ */
+interface VaultStats {
+  totalRecords: number; // Total records (including deleted)
+  activeRecords: number; // Non-deleted records
+  deletedRecords: number; // Soft-deleted records
+  totalSize: number; // Approximate size in bytes
+  created: number; // Vault creation timestamp
+  lastModified: number; // Last modification timestamp
 }
 ```
 
 ---
 
-## Implementation Details
+## Implementation
 
-### Silent Mode Architecture
-
-SHIP-06 uses `ShogunCore` in **silent mode** for standalone operation:
-
-```typescript
-// Internal ShogunCore configuration for standalone mode
-const shogunCore = new ShogunCore({
-  gunOptions: {
-    peers: gunPeersArray,     // Your Gun relay peers
-    radisk: false,            // ❌ No disk storage
-    localStorage: false,      // ❌ No localStorage
-    multicast: false,         // ❌ No multicast
-    axe: false,              // ❌ No AXE relay logs
-  },
-  silent: true,               // 🔕 Zero console logs
-  disableAutoRecall: true,    // ❌ No auto-login attempts
-});
-```
-
-**Benefits:**
-- ✅ Zero initialization logs
-- ✅ No auto-login attempts from ShogunCore
-- ✅ Pure relay communication (no local storage)
-- ✅ Clean console output - only SHIP-06 messages
-
-### Deterministic Room Hashing
-
-Room IDs are hashed using **Web Crypto API SHA-256** for deterministic results:
-
-```typescript
-// This ensures alice and bob get SAME swarm ID for same room!
-const encoder = new TextEncoder();
-const data = encoder.encode("my-room");
-const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-const hashArray = Array.from(new Uint8Array(hashBuffer));
-const swarmId = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-```
-
-**Why not `SEA.work()`?**
-- ❌ `SEA.work()` is non-deterministic (uses salt)
-- ✅ SHA-256 gives consistent hash across all peers
-- ✅ Critical for peer discovery on same Gun node path
-
----
-
-### Quick Start (Standalone Mode)
+### Quick Start
 
 ```bash
 # Install dependencies
 cd shogun-core
 yarn install
 
-# Start ephemeral chat CLI (NO authentication needed!)
-# Terminal 1
-yarn ephemeral alice test-room
-
-# Terminal 2
-yarn ephemeral bob test-room
-
-# Alice and Bob can now chat in real-time! 🎉
+# Start vault CLI
+yarn vault alice password123
 ```
 
-**That's it!** No signup, no login, just pure ephemeral P2P chat!
-
-### Complete Example (Standalone Mode)
+### Complete Example
 
 ```typescript
+import { SHIP_00 } from "./implementation/SHIP_00";
 import { SHIP_06 } from "./implementation/SHIP_06";
 
 // ============================================
-// 1. CONFIGURE GUN PEERS
+// 1. IDENTITY SETUP (SHIP-00)
 // ============================================
 
-const GUN_PEERS = [
-  "https://relay.shogun-eco.xyz/gun",
-  "https://peer.wallie.io/gun",
-  "https://v5g5jseqhgkp43lppgregcfbvi.srv.us/gun",
-];
-
-// ============================================
-// 2. JOIN EPHEMERAL ROOM (NO LOGIN!)
-// ============================================
-
-const roomId = "my-chat-room";
-const ephemeral = new SHIP_06(GUN_PEERS, roomId);
-
-// Connect to swarm
-await ephemeral.connect();
-console.log("✅ Connected to swarm:", ephemeral.getSwarmId());
-console.log("📍 My address:", ephemeral.getAddress());
-
-// ============================================
-// 4. LISTEN FOR EVENTS
-// ============================================
-
-// Peer joined
-ephemeral.onPeerSeen((address) => {
-  console.log("👋 Peer joined:", address);
-});
-
-// Peer left
-ephemeral.onPeerLeft((address) => {
-  console.log("👋 Peer left:", address);
-});
-
-// Messages
-ephemeral.onMessage((msg) => {
-  const time = new Date(msg.timestamp).toLocaleTimeString();
-  const type = msg.type === "broadcast" ? "📢" : "📨";
-  console.log(`${type} [${time}] ${msg.from}: ${msg.content}`);
+const identity = new SHIP_00({
+  gunOptions: {
+    peers: ["https://relay.shogun-eco.xyz/gun"],
+    radisk: true,
+  },
 });
 
 // ============================================
-// 5. SEND MESSAGES
+// 2. AUTHENTICATION (SHIP-00)
 // ============================================
 
-// Broadcast to all peers
-await ephemeral.sendBroadcast("Hello everyone! 👋");
-
-// Direct message to specific peer
-const peers = ephemeral.getPeers();
-if (peers.length > 0) {
-  await ephemeral.sendDirect(peers[0], "Private message!");
-}
+await identity.login("alice", "password123");
+console.log("✅ Authenticated as alice");
 
 // ============================================
-// 6. CLEANUP
+// 3. INITIALIZE VAULT (SHIP-06)
 // ============================================
 
-// Disconnect when done
-process.on("SIGINT", () => {
-  ephemeral.disconnect();
-  console.log("👋 Disconnected from swarm");
-  process.exit(0);
+const vault = new SHIP_06(identity);
+await vault.initialize();
+console.log("✅ Vault initialized");
+
+// ============================================
+// 4. STORE ENCRYPTED DATA
+// ============================================
+
+// Store password
+await vault.put("github-password", "super_secret_pass", {
+  type: "password",
+  description: "GitHub account password",
+  tags: ["github", "auth"],
 });
+
+// Store API key
+await vault.put("stripe-api-key", "sk_live_123456789", {
+  type: "apiKey",
+  description: "Stripe production API key",
+  tags: ["stripe", "production"],
+});
+
+// Store private key
+await vault.put("eth-private-key", "0x1234567890abcdef...", {
+  type: "privateKey",
+  description: "Ethereum wallet private key",
+  tags: ["ethereum", "wallet"],
+  expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year
+});
+
+console.log("✅ Data stored securely");
+
+// ============================================
+// 5. RETRIEVE ENCRYPTED DATA
+// ============================================
+
+const githubPass = await vault.get("github-password");
+console.log("GitHub password:", githubPass?.data);
+
+const stripeKey = await vault.get("stripe-api-key");
+console.log("Stripe API key:", stripeKey?.data);
+
+// ============================================
+// 6. LIST RECORDS
+// ============================================
+
+const allRecords = await vault.list();
+console.log("All records:", allRecords);
+
+const passwordRecords = await vault.list({ filterByType: "password" });
+console.log("Password records:", passwordRecords);
+
+// ============================================
+// 7. UPDATE RECORD
+// ============================================
+
+await vault.update("github-password", "new_super_secret_pass");
+console.log("✅ Password updated");
+
+// ============================================
+// 8. DELETE RECORD (SOFT DELETE)
+// ============================================
+
+await vault.delete("old-api-key");
+console.log("✅ Record soft-deleted");
+
+// ============================================
+// 9. EXECUTABLE CODE STORAGE
+// ============================================
+
+// Store executable code
+await vault.putCode("password-generator", `
+  function generatePassword(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+  return generatePassword(length);
+`, {
+  type: "code",
+  description: "Password generator utility",
+  tags: ["utility", "security"],
+});
+
+// Execute stored code
+const newPassword = await vault.executeCode("password-generator", {
+  length: 20,
+});
+console.log("Generated password:", newPassword);
+
+// ============================================
+// 10. BACKUP & RESTORE
+// ============================================
+
+// Export vault
+const backup = await vault.export("backup-password-123");
+console.log("✅ Vault exported");
+console.log("Backup size:", backup.length, "characters");
+
+// Import vault (on another device)
+await vault.import(backup, "backup-password-123", {
+  merge: true,
+});
+console.log("✅ Vault imported");
+
+// ============================================
+// 11. STATISTICS
+// ============================================
+
+const stats = await vault.getStats();
+console.log("Vault statistics:", stats);
 ```
 
 ---
 
 ## Use Cases
 
-### 1. Gaming Chat
+### 1. Password Manager
 
 ```typescript
-// Game lobby chat
-const lobby = new SHIP_06(identity, `game-lobby-${gameId}`);
-await lobby.connect();
-
-lobby.onMessage((msg) => {
-  displayChatMessage(msg.content);
+// Store passwords securely
+await vault.put("gmail-password", "mySecurePass123!", {
+  type: "password",
+  description: "Gmail account",
+  tags: ["email", "personal"],
 });
 
-// Player sends message
-await lobby.sendBroadcast("Ready to play!");
+// Retrieve password
+const gmailPass = await vault.get("gmail-password");
+console.log("Gmail password:", gmailPass?.data);
+
+// Auto-fill form
+document.getElementById("password").value = gmailPass?.data;
 ```
 
-**Benefits**:
-- ⚡ Ultra-low latency for real-time chat
-- 💾 No storage costs for chat history
-- 🔒 Chat disappears when game ends
-- 🎮 Perfect for in-game communication
-
-### 2. Live Streaming Chat
+### 2. API Key Storage
 
 ```typescript
-// Streamer creates ephemeral room
-const streamChat = new SHIP_06(identity, `stream-${streamId}`);
-await streamChat.connect();
-
-streamChat.onMessage((msg) => {
-  addMessageToLiveChat(msg.content);
+// Store API keys
+await vault.put("openai-api-key", process.env.OPENAI_API_KEY, {
+  type: "apiKey",
+  description: "OpenAI GPT-4 API key",
+  tags: ["openai", "ai"],
 });
 
-// Viewer sends message
-await streamChat.sendBroadcast("Great stream! 🎉");
+// Use API key in application
+const apiKey = await vault.get("openai-api-key");
+const openai = new OpenAI({ apiKey: apiKey?.data });
 ```
 
-**Use Case**: Twitch-like live chat without persistent storage
-
-### 3. Temporary Meeting Rooms
+### 3. Private Key Storage
 
 ```typescript
-// Create temporary meeting room
-const meetingId = generateMeetingId();
-const meeting = new SHIP_06(identity, `meeting-${meetingId}`);
-await meeting.connect();
+// Store crypto wallet private key
+await vault.put("eth-wallet", wallet.privateKey, {
+  type: "privateKey",
+  description: "Main Ethereum wallet",
+  tags: ["ethereum", "wallet", "production"],
+});
 
-// Share meeting ID with participants
-console.log("Meeting room:", meetingId);
-console.log("Participants can join with this ID");
-
-// When meeting ends, room disappears
-meeting.disconnect();
+// Recover wallet
+const privateKey = await vault.get("eth-wallet");
+const recoveredWallet = new ethers.Wallet(privateKey?.data);
 ```
 
-**Use Case**: Private meetings with no message trail
-
-### 4. Anonymous Chat Rooms
+### 4. Application Secrets
 
 ```typescript
-// Public anonymous room
-const anonChat = new SHIP_06(identity, "public-chat");
-await anonChat.connect();
+// Store application secrets
+await vault.put("app-config", {
+  databaseUrl: "mongodb://...",
+  jwtSecret: "secret-key-123",
+  apiKeys: {
+    stripe: "sk_live_...",
+    sendgrid: "SG.xxx...",
+  },
+}, {
+  type: "config",
+  description: "Production app configuration",
+});
 
-// Messages are encrypted but room is public
-anonChat.onMessage((msg) => {
-  console.log(`Anonymous: ${msg.content}`);
+// Load configuration
+const config = await vault.get("app-config");
+process.env.DATABASE_URL = config?.data.databaseUrl;
+```
+
+### 5. Secure Notes
+
+```typescript
+// Store secure notes
+await vault.put("recovery-codes", "Code 1: 123-456\nCode 2: 789-012", {
+  type: "note",
+  description: "2FA recovery codes",
+  tags: ["security", "backup"],
 });
 ```
 
@@ -556,82 +661,75 @@ anonChat.onMessage((msg) => {
 
 ### ✅ Security Strengths
 
-1. **End-to-End Encryption**: All messages encrypted with ECDH
-2. **Perfect Forward Secrecy**: New SEA pair per session
-3. **No Persistence**: Messages never stored on disk
-4. **Room Privacy**: Room names hashed (SHA-256)
-5. **Direct P2P**: No intermediate servers
+1. **Triple Encryption**:
+   - User's data encrypted with SEA
+   - Gun user node encrypted
+   - Transport layer encryption (TLS)
+
+2. **Zero Knowledge**: 
+   - Server cannot read data
+   - Only user with credentials can decrypt
+
+3. **Decentralized**:
+   - No single point of failure
+   - Data replicated across peers
+
+4. **Perfect Forward Secrecy**:
+   - Compromise of one record doesn't affect others
 
 ### ⚠️ Security Limitations
 
-1. **No Message History**: Cannot verify past messages
-2. **Relay-based**: Messages pass through Gun relay nodes (encrypted, but visible metadata)
-3. **No Authentication in Standalone**: Anyone with room ID can join
-4. **Ephemeral Keys**: Lost on disconnect/refresh
-5. **Room Discovery**: Anyone knowing the room name can compute the hash and join
+1. **Password Strength**: Security depends on password strength
+2. **Key Loss**: Lost password = lost data (no recovery)
+3. **Local Storage**: Data cached locally (encrypted)
+4. **Executable Code**: Code execution can be dangerous if not sandboxed properly
 
 ### 🔒 Best Practices
 
 ```typescript
-// 1. Use strong room identifiers
-const roomId = await identity.deriveEthereumAddress(); // Unique per user
+// 1. Use strong passwords
+await identity.login("alice", "VeryStr0ng!P@ssw0rd#2024");
 
-// 2. Verify peer identities
-ephemeral.onPeerSeen(async (address) => {
-  const pubKey = await getPeerPublicKey(address);
-  if (!isAuthorizedPeer(pubKey)) {
-    console.warn("Unknown peer:", address);
-  }
+// 2. Regular backups
+const backup = await vault.export("strong-backup-password");
+fs.writeFileSync("vault-backup.enc", backup);
+
+// 3. Set expiration for sensitive data
+await vault.put("temp-token", "token-123", {
+  expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
 });
 
-// 3. Implement rate limiting
-const rateLimiter = new Map();
-ephemeral.onMessage((msg) => {
-  if (isRateLimited(msg.from)) {
-    return; // Ignore spam
-  }
-  processMessage(msg);
+// 4. Use metadata for organization
+await vault.put("data", "value", {
+  tags: ["production", "critical"],
+  type: "apiKey",
+});
+
+// 5. Be careful with executable code
+await vault.executeCode("script", context, {
+  timeout: 5000, // 5 second timeout
+  useGlobal: false, // Don't use eval (safer)
 });
 ```
 
 ---
 
-## Comparison with Bugoff
+## Comparison with Gunsafe
 
-SHIP-06 is inspired by [Bugoff](https://github.com/draeder/bugoff) but simplified for easier use:
+SHIP-06 is inspired by [Gunsafe](https://github.com/draeder/gunsafe) but adapted for the Shogun ecosystem:
 
-| Feature                | Bugoff              | SHIP-06                  |
-| ---------------------- | ------------------- | ------------------------ |
-| **Identity**           | Required SEA pair   | Optional (standalone!)   |
-| **Transport**          | WebRTC/WebTorrent   | Gun Relay (WebSocket)    |
-| **Room Discovery**     | WebTorrent swarm    | Deterministic SHA-256    |
-| **Encryption**         | SEA encrypt/decrypt | ECDH + AES-GCM (same)    |
-| **Message Types**      | Broadcast + Direct  | Broadcast + Direct       |
-| **Node.js Support**    | Limited (needs wrtc)| ✅ Full support          |
-| **Dependencies**       | Bugout + WebTorrent | Gun only                 |
-| **Setup Complexity**   | Medium              | Minimal (2 lines!)       |
-| **TypeScript Support** | Partial             | Full TypeScript          |
+| Feature              | Gunsafe           | SHIP-06                  |
+| -------------------- | ----------------- | ------------------------ |
+| **Identity**         | Custom key pair   | SHIP-00 integration      |
+| **Storage**          | Gun.user()        | Gun.user().get('vault')  |
+| **Encryption**       | SEA encrypt       | SEA encrypt              |
+| **Code Execution**   | Function/eval     | Sandboxed execution      |
+| **TypeScript**       | No                | Full TypeScript support  |
+| **Backup/Restore**   | Manual            | Built-in export/import   |
+| **Metadata**         | Limited           | Rich metadata support    |
+| **Soft Delete**      | Yes               | Yes                      |
 
-**Why Gun Relay instead of WebRTC/Bugout?**
-- ✅ Works perfectly in Node.js (no `wrtc` needed!)
-- ✅ Simpler setup - just provide Gun peers
-- ✅ No WebTorrent trackers needed
-- ✅ Uses ShogunCore with `silent: true` for zero logs
-- ✅ Relay-only ensures no local storage (`radisk: false`)
-- ✅ Same encryption (Gun SEA) - still E2E encrypted!
-- ✅ Deterministic SHA-256 room hashing via Web Crypto API
-
-**Trade-offs:**
-- ⚠️ Messages pass through Gun relays (still encrypted!)
-- ⚠️ Requires active Gun relay peers
-- ✅ But: Simpler, more reliable, works everywhere
-
-**Technical Implementation:**
-- Uses `ShogunCore` in standalone mode with `silent: true` and `disableAutoRecall: true`
-- SHA-256 hashing via `crypto.subtle.digest()` for deterministic room IDs
-- Gun config: `radisk: false`, `localStorage: false`, `multicast: false`, `axe: false`
-
-**Credits**: Thanks to [@draeder](https://github.com/draeder) for the original Bugoff concept!
+**Credits**: Thanks to [@draeder](https://github.com/draeder) for the original Gunsafe implementation!
 
 ---
 
@@ -639,67 +737,41 @@ SHIP-06 is inspired by [Bugoff](https://github.com/draeder/bugoff) but simplifie
 
 ### SHIP-06.1 (Minor Update)
 
-- [ ] Voice messages (WebRTC audio)
-- [ ] File sharing (P2P file transfer)
-- [ ] Peer presence indicators
-- [ ] Typing indicators
-- [ ] Message reactions
+- [ ] Record versioning (history)
+- [ ] Sharing encrypted records with other users
+- [ ] Record templates
+- [ ] Auto-expiration of records
+- [ ] Encrypted file attachments
 
 ### Related SHIPs
 
 - ✅ **SHIP-00**: Identity (required)
-- ✅ **SHIP-01**: Persistent Messaging (alternative)
-- 💡 **SHIP-07**: Secure Vault (proposed)
+- ✅ **SHIP-05**: File Storage (related)
 
 ---
 
 ## Testing
 
-### Standalone Mode (No authentication!)
-
 ```bash
-# Terminal 1: Alice joins room
-cd shogun-core
-yarn ephemeral alice test-room
+# Terminal: Test vault operations
+yarn vault alice pass123
 
-# Terminal 2: Bob joins same room
-cd shogun-core
-yarn ephemeral bob test-room
-
-# They can now chat in real-time! 🎉
-```
-
-**Output:**
-```
-🗡️  SHOGUN EPHEMERAL CHAT
-======================================================================
-✅ Welcome alice!
-📡 Connecting to room: test-room...
-🔑 Room ID: "test-room"
-🔒 Swarm ID (hashed): 876af21d3bdac6d39b02...
-📡 Announcing presence: DX2n8toeuNApB1z_
-👂 Listening for peers on: ephemeral/876af21d3bdac6d39b02...
-✅ Connected!
-
-💬 COMMANDS: /peers /direct /help /exit
-======================================================================
-
-👋 Peer joined: SuDyEPhYh... (Total: 1)
-
-alice> hello bob!
-📢 [15:30:00] You: hello bob!
-
-📢 [15:30:05] SuDyEPhYh...: hi alice!
+# Commands:
+> put github-password mySecretPass123
+> get github-password
+> list
+> delete github-password
+> export
 ```
 
 ---
 
 ## References
 
-- **Bugoff**: https://github.com/draeder/bugoff
-- **WebTorrent**: https://webtorrent.io/
-- **WebRTC**: https://webrtc.org/
+- **Gunsafe**: https://github.com/draeder/gunsafe
+- **GunDB**: https://gun.eco/
 - **GUN SEA**: https://gun.eco/docs/SEA
+- **AES-GCM**: https://en.wikipedia.org/wiki/Galois/Counter_Mode
 
 ---
 
@@ -711,10 +783,11 @@ MIT License - see [LICENSE](../../LICENSE)
 
 <div align="center">
 
-**SHIP-06: Ephemeral P2P Messaging**
+**SHIP-06: Secure Vault**
 
-_Zero Storage. Maximum Privacy. Real-Time Only._
+_Decentralized. Encrypted. Zero Knowledge._
 
 🗡️ Built with Shogun Core 🗡️
 
 </div>
+

@@ -118,9 +118,6 @@ class DataBase {
     ) {
       this.user = this.gun.user().recall({ sessionStorage: true });
     } else {
-      if (!this.silent && !this.disableAutoRecall) {
-        console.log("No pair found in sessionStorage, using gun.user()");
-      }
       this.user = this.gun.user();
     }
 
@@ -183,7 +180,6 @@ class DataBase {
    */
   addPeer(peer: string): void {
     this.gun.opt({ peers: [peer] });
-    console.log(`Added new peer: ${peer}`);
   }
 
   /**
@@ -205,10 +201,8 @@ class DataBase {
         if (peerConnection && typeof peerConnection.close === "function") {
           peerConnection.close();
         }
-
-        console.log(`Removed peer: ${peer}`);
       } else {
-        console.log(`Peer not found in current connections: ${peer}`);
+        console.error(`Peer not found in current connections: ${peer}`);
       }
     } catch (error) {
       console.error(`Error removing peer ${peer}:`, error);
@@ -306,7 +300,6 @@ class DataBase {
 
       // Add it back immediately instead of with timeout
       this.addPeer(peer);
-      console.log(`Reconnected to peer: ${peer}`);
     } catch (error) {
       console.error(`Error reconnecting to peer ${peer}:`, error);
     }
@@ -333,10 +326,6 @@ class DataBase {
             this.addPeer(peer);
           });
         }
-
-        console.log(
-          `Gun database reset with ${newPeers ? newPeers.length : 0} peers: ${newPeers ? newPeers.join(", ") : "none"}`,
-        );
       }
     } catch (error) {
       console.error("Error resetting peers:", error);
@@ -594,7 +583,6 @@ class DataBase {
           } else {
             const recallResult = userInstance;
           }
-          // console.log("recallResult", recallResult);
         } catch (recallError) {
           console.error("Error during recall:", recallError);
         }
@@ -636,7 +624,6 @@ class DataBase {
     try {
       const currentUser = this.gun.user();
       if (!currentUser || !currentUser.is) {
-        console.log("No user logged in, skipping logout");
         return;
       }
 
@@ -838,7 +825,6 @@ class DataBase {
                 error: "User creation successful but no userPub returned",
               });
             } else {
-              console.log(`User created successfully with userPub: ${userPub}`);
               resolve({ success: true, userPub: userPub });
             }
           }
@@ -888,7 +874,6 @@ class DataBase {
 
         if (pair) {
           this.gun.user().auth(pair, (ack: any) => {
-            console.log(`Pair authentication after creation result:`, ack);
             if (ack.err) {
               console.error(`Authentication after creation failed: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -898,9 +883,6 @@ class DataBase {
                 // Extract userPub from multiple possible sources
                 const userPub =
                   ack.pub || this.gun.user().is?.pub || ack.user?.pub;
-                console.log(`Extracted userPub after pair auth: ${userPub}`);
-                console.log(`User object after pair auth:`, this.gun.user());
-                console.log(`User.is after pair auth:`, this.gun.user().is);
 
                 if (!userPub) {
                   console.error(
@@ -918,7 +900,6 @@ class DataBase {
           });
         } else {
           this.gun.user().auth(normalizedUsername, password, (ack: any) => {
-            console.log(`Password authentication after creation result:`, ack);
             if (ack.err) {
               console.error(`Authentication after creation failed: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -928,14 +909,6 @@ class DataBase {
                 // Extract userPub from multiple possible sources
                 const userPub =
                   ack.pub || this.gun.user().is?.pub || ack.user?.pub;
-                console.log(
-                  `Extracted userPub after password auth: ${userPub}`,
-                );
-                console.log(
-                  `User object after password auth:`,
-                  this.gun.user(),
-                );
-                console.log(`User.is after password auth:`, this.gun.user().is);
 
                 if (!userPub) {
                   console.error(
@@ -1028,9 +1001,6 @@ class DataBase {
 
       // Run post-authentication tasks
       try {
-        console.log(
-          `Running post-auth setup with userPub: ${authResult.userPub}`,
-        );
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
@@ -1100,9 +1070,7 @@ class DataBase {
         // For pair-based authentication, we don't need to call gun.user().create()
         // because the pair already contains the cryptographic credentials
         // We just need to validate that the pair is valid and return success
-        console.log(
-          `User created successfully with pair for: ${normalizedUsername}`,
-        );
+
         resolve({ success: true, userPub: pair.pub });
       },
     );
@@ -1149,10 +1117,6 @@ class DataBase {
       if (normalizedUsername.length === 0) {
         throw new Error("Username cannot be empty");
       }
-
-      console.log(
-        `Setting up user profile for ${normalizedUsername} with userPub: ${userPub}`,
-      );
 
       const existingUser = await this.gun.get(userPub).then();
 
@@ -1270,9 +1234,6 @@ class DataBase {
         return false;
       }
 
-      console.log(
-        `Comprehensive user tracking setup completed for ${username}`,
-      );
       return true;
     } catch (error) {
       console.error(`Error in comprehensive user tracking setup: ${error}`);
@@ -1298,7 +1259,6 @@ class DataBase {
         console.error(`Error creating alias index: ${ack.err}`);
         return false;
       } else {
-        console.log(`Alias index created: ~@${username} -> ${userPub}`);
         return true;
       }
     } catch (error) {
@@ -1325,7 +1285,6 @@ class DataBase {
         console.error(`Error creating username mapping: ${ack.err}`);
         return false;
       } else {
-        console.log(`Username mapping created: ${username} -> ${userPub}`);
         return true;
       }
     } catch (error) {
@@ -1361,7 +1320,6 @@ class DataBase {
         console.error(`Error creating user registry: ${ack.err}`);
         return false;
       } else {
-        console.log(`User registry created: ${userPub}`);
         return true;
       }
     } catch (error) {
@@ -1388,7 +1346,6 @@ class DataBase {
         console.error(`Error creating reverse lookup: ${ack.err}`);
         return false;
       } else {
-        console.log(`Reverse lookup created: ${userPub} -> ${username}`);
         return true;
       }
     } catch (error) {
@@ -1411,7 +1368,6 @@ class DataBase {
         console.error(`Error creating epub index: ${ack.err}`);
         return false;
       } else {
-        console.log(`Epub index created: ${epub} -> ${userPub}`);
         return true;
       }
     } catch (error) {
@@ -1442,7 +1398,6 @@ class DataBase {
         console.error(`Error creating user metadata: ${ack.err}`);
         return false;
       } else {
-        console.log(`User metadata created for ${userPub}`);
         return true;
       }
     } catch (error) {
@@ -1483,7 +1438,10 @@ class DataBase {
           }
         }
       } catch (error) {
-        console.log(`GunDB alias lookup failed for ${normalizedAlias}:`, error);
+        console.error(
+          `GunDB alias lookup failed for ${normalizedAlias}:`,
+          error,
+        );
       }
 
       // Method 2: Try username mapping (usernames/alias -> userPub)
@@ -1500,7 +1458,7 @@ class DataBase {
           }
         }
       } catch (error) {
-        console.log(
+        console.error(
           `Username mapping lookup failed for ${normalizedAlias}:`,
           error,
         );
@@ -1544,7 +1502,7 @@ class DataBase {
           };
         }
       } catch (error) {
-        console.log(`User registry lookup failed for ${userPub}:`, error);
+        console.error(`User registry lookup failed for ${userPub}:`, error);
       }
 
       // Method 2: Try user's own node
@@ -1560,7 +1518,7 @@ class DataBase {
           };
         }
       } catch (error) {
-        console.log(`User node lookup failed for ${userPub}:`, error);
+        console.error(`User node lookup failed for ${userPub}:`, error);
       }
 
       return null;
@@ -1666,14 +1624,14 @@ class DataBase {
           .put(timestamp)
           .then();
       } catch (error) {
-        console.log(`Failed to update lastSeen in user registry:`, error);
+        console.error(`Failed to update lastSeen in user registry:`, error);
       }
 
       // Update in user's own node
       try {
         await this.gun.get(userPub).get("lastSeen").put(timestamp).then();
       } catch (error) {
-        console.log(`Failed to update lastSeen in user node:`, error);
+        console.error(`Failed to update lastSeen in user node:`, error);
       }
     } catch (error) {
       console.error(`Error updating user last seen for ${userPub}:`, error);
@@ -1690,11 +1648,8 @@ class DataBase {
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
-        console.log(`Attempting authentication for user: ${username}`);
-
         if (pair) {
           this.gun.user().auth(pair, (ack: any) => {
-            console.log(`Pair authentication result:`, ack);
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1704,7 +1659,6 @@ class DataBase {
           });
         } else {
           this.gun.user().auth(username, password, (ack: any) => {
-            console.log(`Password authentication result:`, ack);
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1769,12 +1723,6 @@ class DataBase {
       if (!alias) {
         alias = username;
       }
-
-      console.log(
-        `Login authentication successful, extracted userPub: ${userPub}`,
-      );
-      console.log(`User object:`, this.gun.user());
-      console.log(`User.is:`, this.gun.user().is);
 
       if (!userPub) {
         return {
@@ -1965,7 +1913,6 @@ class DataBase {
       if (!userPub) {
         return { success: false, error: "User not found" };
       }
-      // console.log(`Found user public key for password recovery: ${userPub}`);
 
       // Access the user's security data directly from their public key node
       const securityData = await (this.node.get(userPub) as any)
@@ -2200,16 +2147,8 @@ class DataBase {
 }
 
 const createGun = (config: any, silent?: boolean) => {
-  if (!silent) {
-    console.log("Creating Gun instance with config:", config);
-    console.log("Config peers:", config?.peers);
-  }
-
   const gunInstance = Gun(config);
 
-  if (!silent) {
-    console.log("Created Gun instance:", gunInstance);
-  }
   return gunInstance;
 };
 

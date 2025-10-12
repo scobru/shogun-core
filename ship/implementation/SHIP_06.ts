@@ -1,423 +1,771 @@
 /**
- * SHIP-06: Ephemeral P2P Messaging Implementation
+ * SHIP-06: Secure Vault Implementation
  *
- * Two modes:
- * 1. Standalone: new SHIP_06(gunPeers[], roomId) - NO authentication!
- *    - Uses ShogunCore internally with silent: true, disableAutoRecall: true
- *    - Zero logs, zero storage, pure relay communication
- *    - Room hashed with Web Crypto API SHA-256 for deterministic IDs
- * 
- * 2. With Identity: new SHIP_06(ISHIP_00, roomId) - Authenticated sessions
- *    - Uses existing Gun instance from SHIP-00
- *    - All ShogunCore features available
- * 
- * Architecture:
- * - Gun Relay for P2P communication (no WebRTC complexity!)
- * - SEA for ephemeral key generation and ECDH encryption
- * - Pure relay mode: radisk: false, localStorage: false, multicast: false
+ * Vault crittografato decentralizzato che dipende da SHIP-00 per l'identità.
+ *
+ * Dipendenze:
+ * - SHIP-00 (Identity & Authentication) - per gestione utenti e chiavi
+ * - GunDB - per storage decentralizzato P2P
+ * - SEA - per crittografia AES-256-GCM
+ *
+ * Ispirato a: https://github.com/draeder/gunsafe
  */
 
-import type { ISHIP_00 } from "../interfaces/ISHIP_00";
+import type { ISHIP_00, SEAPair } from "../interfaces/ISHIP_00";
 import type {
   ISHIP_06,
-  EphemeralMessage,
-  EphemeralConfig,
-  PeerInfo,
+  VaultRecord,
+  VaultResult,
+  VaultStats,
+  RecordMetadata,
+  GetOptions,
+  ListOptions,
+  ImportOptions,
+  ExportOptions,
+  EncryptedRecord,
 } from "../interfaces/ISHIP_06";
-import type { SEAPair } from "../interfaces/ISHIP_00";
-
-import { ShogunCore } from "../../src/core";  // ← Import diretto, NON da index!
 
 // ============================================================================
-// IMPLEMENTATION - STANDALONE VERSION (No ShogunCore dependency!)
+// IMPLEMENTATION
 // ============================================================================
 
+/**
+ * SHIP-06 Reference Implementation
+ * 
+ * Questa implementazione dipende da ISHIP_00 per tutte le operazioni di identità.
+ * Si concentra esclusivamente sulla logica del vault crittografato.
+ */
 class SHIP_06 implements ISHIP_06 {
-  private identity: ISHIP_00 | null = null;
-  private roomId: string;
-  private config: Partial<EphemeralConfig>;
-
-  // State
-  private connected: boolean = false;
-  private swarmId: string = "";
-  private myAddress: string = "";
-  private myPair: SEAPair | null = null;
-
+  private identity: ISHIP_00;
+  private initialized: boolean = false;
+  private vaultNodeName: string;
+  
   // Gun nodes
-  private gun: any = null;
-  private sea: any = null;
-  private roomNode: any = null;
-  private presenceNode: any = null;
-  private messagesNode: any = null;
+  private vaultNode: any = null;
+  private recordsNode: any = null;
+  private metadataNode: any = null;
 
-  // Peers
-  private peers: Map<string, PeerInfo & { pub: string; epub: string }> =
-    new Map();
+  // Constants
+  private static readonly VAULT_VERSION = "1.0.0";
+  private static readonly DEFAULT_NODE_NAME = "vault";
 
-  // Event handlers
-  private messageHandlers: ((msg: EphemeralMessage) => void)[] = [];
-  private encryptedMessageHandlers: ((address: string, data: any) => void)[] =
-    [];
-  private peerSeenHandlers: ((address: string) => void)[] = [];
-  private peerLeftHandlers: ((address: string) => void)[] = [];
-
-  // Heartbeat & cleanup
-  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-  private processedMessages = new Set<string>();
-
-  // Constructor overload: with identity OR standalone
-  constructor(
-    identityOrPeers: ISHIP_00 | string[],
-    roomId: string,
-    config?: Partial<EphemeralConfig> | { debug?: boolean }
-  ) {
-    this.roomId = roomId;
-    this.config = {
-      debug: config?.debug || false,
-      timeout: 30000,
-    };
-
-    if (Array.isArray(identityOrPeers)) {
-      // STANDALONE MODE - ShogunCore with silent mode
-      const shogunCore = new ShogunCore({
-        gunOptions: {
-          peers: identityOrPeers,
-          radisk: false,
-          localStorage: false,
-          multicast: false,
-          axe: false,
-        },
-        silent: true,
-        disableAutoRecall: true,
-      });
-
-      this.gun = shogunCore.db.gun;
-      this.sea = shogunCore.db.sea;
-      this.identity = null;
-    } else {
-      // WITH IDENTITY MODE - use existing Gun from SHIP-00
-      if (!identityOrPeers.isLoggedIn()) {
-        throw new Error("User must be authenticated via SHIP-00");
-      }
-      this.identity = identityOrPeers;
-      const shogun = identityOrPeers.getShogun();
-      this.gun = shogun.db.gun;
+  /**
+   * Constructor
+   * @param identity ISHIP_00 instance for identity operations
+   * @param vaultNodeName Optional custom vault node name
+   */
+  constructor(identity: ISHIP_00, vaultNodeName?: string) {
+    if (!identity.isLoggedIn()) {
+      throw new Error("User must be authenticated via SHIP-00 before using SHIP-06");
     }
+    
+    this.identity = identity;
+    this.vaultNodeName = vaultNodeName || SHIP_06.DEFAULT_NODE_NAME;
+    
+    console.log("✅ SHIP-06 initialized");
   }
 
+  /**
+   * Get identity provider
+   */
   getIdentity(): ISHIP_00 {
-    if (!this.identity) {
-      throw new Error("No identity - SHIP-06 running in standalone mode");
-    }
     return this.identity;
   }
 
-  async connect(): Promise<void> {
-    if (this.connected) return;
-
-    // Generate ephemeral pair
-    this.myPair = await this.sea.pair();
-
-    if (!this.myPair) {
-      throw new Error("Failed to generate SEA pair");
-    }
-
-    this.myAddress = this.myPair.pub.substring(0, 16);
-
-    // Hash room ID DETERMINISTICAMENTE - Simple SHA256 hash
-    if (this.identity) {
-      const shogun = this.identity.getShogun();
-      this.swarmId = await shogun.db.crypto.hashText(this.roomId);
-    } else {
-      // Standalone: use simple deterministic hash
-      // SEA.work with different calls produces different results, so we use a simple hash
-      const encoder = new TextEncoder();
-      const data = encoder.encode(this.roomId);
-
-      // Use Web Crypto API for deterministic SHA-256 hash
-      if (typeof crypto !== "undefined" && crypto.subtle) {
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        this.swarmId = hashArray
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-      } else {
-        // Fallback: simple deterministic hash
-        let hash = "";
-        for (let i = 0; i < this.roomId.length; i++) {
-          hash += this.roomId.charCodeAt(i).toString(16);
-        }
-        this.swarmId = hash;
-      }
-    }
-
-    if (this.config.debug) {
-      console.log(`🔑 Room ID: "${this.roomId}"`);
-      console.log(`🔒 Swarm ID (hashed): ${this.swarmId.substring(0, 32)}...`);
-    }
-
-    // Setup Gun nodes
-    this.roomNode = this.gun.get("ephemeral").get(this.swarmId);
-    this.presenceNode = this.roomNode.get("presence");
-    this.messagesNode = this.roomNode.get("messages");
-
-    // Announce presence
-    await this.announcePresence();
-
-    // Start listening
-    this.listenForPeers();
-    this.listenForMessages();
-
-    // Start heartbeat
-    this.startHeartbeat();
-
-    this.connected = true;
-  }
-
-  disconnect(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-    if (this.presenceNode && this.myAddress) {
-      this.presenceNode.get(this.myAddress).put(null);
-    }
-    this.connected = false;
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  getSwarmId(): string {
-    return this.swarmId;
-  }
-
-  getAddress(): string {
-    return this.myAddress;
-  }
-
   // ========================================================================
-  // PRESENCE
+  // INITIALIZATION
   // ========================================================================
 
-  private async announcePresence(): Promise<void> {
-    if (!this.myPair) return;
-
-    const presenceData = {
-      address: this.myAddress,
-      pub: this.myPair.pub,
-      epub: this.myPair.epub,
-      timestamp: Date.now(),
-    };
-
-    if (this.config.debug) {
-      console.log(`📡 Announcing presence: ${this.myAddress}`);
-    }
-    await this.presenceNode.get(this.myAddress).put(presenceData);
-  }
-
-  private startHeartbeat(): void {
-    this.heartbeatInterval = setInterval(() => {
-      if (this.myPair) {
-        this.presenceNode.get(this.myAddress).put({
-          address: this.myAddress,
-          pub: this.myPair.pub,
-          epub: this.myPair.epub,
-          timestamp: Date.now(),
-        });
-      }
-    }, 3000);
-  }
-
-  private listenForPeers(): void {
-    if (this.config.debug) {
-      console.log(
-        `👂 Listening for peers on: ephemeral/${this.swarmId.substring(0, 20)}...`
-      );
-    }
-
-    this.presenceNode.map().on((data: any, address: string) => {
-      if (!data || !address || address === "_" || address === this.myAddress) {
-        return;
-      }
-      if (!data.pub || !data.epub || !data.timestamp) {
-        return;
-      }
-
-      const age = Date.now() - (data.timestamp || 0);
-      const isOnline = age < 10000;
-
-      if (!this.peers.has(address)) {
-        this.peers.set(address, {
-          address,
-          pubKey: data.pub,
-          epub: data.epub,
-          pub: data.pub,
-          connectedAt: data.timestamp,
-        });
-
-        if (isOnline) {
-          this.peerSeenHandlers.forEach((h) => h(address));
-        }
-      } else {
-        const peer = this.peers.get(address);
-        if (peer && data.timestamp > peer.connectedAt) {
-          peer.connectedAt = data.timestamp;
-          peer.pubKey = data.pub;
-          peer.epub = data.epub;
-          peer.pub = data.pub;
-        }
-      }
-    });
-  }
-
-  // ========================================================================
-  // MESSAGING
-  // ========================================================================
-
-  async sendBroadcast(message: string): Promise<void> {
-    if (!this.connected || !this.myPair) {
-      throw new Error("Not connected");
-    }
-
-    if (this.peers.size === 0) {
-      console.warn("⚠️  No peers connected");
+  /**
+   * Initialize vault
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      console.warn("⚠️  Vault already initialized");
       return;
     }
 
-    for (const [address, peer] of this.peers.entries()) {
-      try {
-        const secret = await this.sea.secret(peer.epub, this.myPair);
-        const encrypted = await this.sea.encrypt(message, secret as string);
-        const msgId = `${Date.now()}-${this.myAddress}-${Math.random().toString(36).substring(2, 9)}`;
-
-        await this.messagesNode.get(msgId).put({
-          from: this.myAddress,
-          fromPub: this.myPair.pub,
-          fromEpub: this.myPair.epub,
-          to: address,
-          content: encrypted,
-          timestamp: Date.now(),
-          type: "broadcast",
-        });
-      } catch (error) {
-        console.error(
-          `   ❌ Error sending to ${address.substring(0, 8)}:`,
-          error
-        );
+    try {
+      // Get Gun instance from identity
+      const shogun = this.identity.getShogun();
+      if (!shogun || !shogun.db) {
+        throw new Error("Cannot access ShogunCore from identity");
       }
+
+      const gun = shogun.db.gun;
+      if (!gun) {
+        throw new Error("Cannot access GunDB");
+      }
+
+      // Get user node
+      const userNode = gun.user();
+      if (!userNode || !userNode.is) {
+        throw new Error("User not authenticated in Gun");
+      }
+
+      // Setup vault nodes
+      this.vaultNode = userNode.get(this.vaultNodeName);
+      this.recordsNode = this.vaultNode.get("records");
+      this.metadataNode = this.vaultNode.get("metadata");
+
+      // Initialize metadata
+      const existingMetadata = await this.metadataNode.then();
+      
+      if (!existingMetadata || !existingMetadata.version) {
+        await this.metadataNode.put({
+          version: SHIP_06.VAULT_VERSION,
+          created: Date.now().toString(),
+          recordCount: "0",
+        }).then();
+        
+        console.log("📦 Vault metadata initialized");
+      } else {
+        console.log("📦 Existing vault found");
+      }
+
+      this.initialized = true;
+      console.log("✅ Vault initialized successfully");
+
+    } catch (error: any) {
+      console.error("❌ Error initializing vault:", error);
+      throw error;
     }
   }
 
-  async sendDirect(peerAddress: string, message: string): Promise<void> {
-    const peer = this.peers.get(peerAddress);
-    if (!peer) throw new Error(`Peer ${peerAddress} not found`);
-    if (!this.myPair) throw new Error("No SEA pair");
-
-    const secret = await this.sea.secret(peer.epub, this.myPair);
-    const encrypted = await this.sea.encrypt(message, secret as string);
-    const msgId = `${Date.now()}-${this.myAddress}-${Math.random().toString(36).substring(2, 9)}`;
-
-    await this.messagesNode.get(msgId).put({
-      from: this.myAddress,
-      fromPub: this.myPair.pub,
-      fromEpub: this.myPair.epub,
-      to: peerAddress,
-      content: encrypted,
-      timestamp: Date.now(),
-      type: "direct",
-    });
+  /**
+   * Check if vault is initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized;
   }
 
-  private listenForMessages(): void {
-    this.messagesNode.map().on(async (data: any, msgId: string) => {
-      if (!data || msgId === "_" || this.processedMessages.has(msgId)) return;
-      if (data.to !== this.myAddress || data.from === this.myAddress) return;
+  // ========================================================================
+  // CRUD OPERATIONS
+  // ========================================================================
 
-      this.processedMessages.add(msgId);
+  /**
+   * Store encrypted record in vault
+   */
+  async put(
+    name: string,
+    data: any,
+    metadata?: RecordMetadata
+  ): Promise<VaultResult> {
+    if (!this.initialized) {
+      return { success: false, error: "Vault not initialized" };
+    }
 
-      console.log(`\n📬 MESSAGE RECEIVED!`);
-      console.log(`   From: ${data.from.substring(0, 12)}...`);
+    if (!name || name.trim() === "") {
+      return { success: false, error: "Record name cannot be empty" };
+    }
 
+    try {
+      // Get crypto and key pair
+      const shogun = this.identity.getShogun();
+      const crypto = shogun?.db?.crypto;
+      const pair = this.identity.getKeyPair();
+      
+      if (!crypto || !pair) {
+        return { success: false, error: "Cannot access encryption" };
+      }
+
+      // Encrypt data
+      const dataString = JSON.stringify(data);
+      const encryptedData = await crypto.encrypt(dataString, pair.epriv);
+
+      // Encrypt metadata if provided
+      let encryptedMetadata: string | undefined;
+      if (metadata) {
+        const metadataString = JSON.stringify(metadata);
+        encryptedMetadata = await crypto.encrypt(metadataString, pair.epriv);
+      }
+
+      // Create encrypted record
+      const record: EncryptedRecord = {
+        data: encryptedData,
+        created: Date.now().toString(),
+        updated: Date.now().toString(),
+        deleted: false,
+        metadata: encryptedMetadata,
+      };
+
+      // Store in vault
+      await this.recordsNode.get(name).put(record).then();
+
+      // Update vault metadata
+      await this.updateRecordCount();
+
+      console.log(`✅ Record stored: ${name}`);
+
+      return {
+        success: true,
+        recordName: name,
+      };
+
+    } catch (error: any) {
+      console.error("❌ Error storing record:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Retrieve and decrypt record from vault
+   */
+  async get(name: string, options?: GetOptions): Promise<VaultRecord | null> {
+    if (!this.initialized) {
+      console.error("❌ Vault not initialized");
+      return null;
+    }
+
+    try {
+      // Retrieve encrypted record
+      const encryptedRecord = await this.recordsNode.get(name).then();
+      
+      if (!encryptedRecord || !encryptedRecord.data) {
+        return null;
+      }
+
+      // Check if deleted (unless includeDeleted)
+      if (encryptedRecord.deleted && !options?.includeDeleted) {
+        return null;
+      }
+
+      // Get crypto and key pair
+      const shogun = this.identity.getShogun();
+      const crypto = shogun?.db?.crypto;
+      const pair = this.identity.getKeyPair();
+      
+      if (!crypto || !pair) {
+        console.error("❌ Cannot access encryption");
+        return null;
+      }
+
+      // Decrypt data
+      const decryptedDataString = await crypto.decrypt(
+        encryptedRecord.data,
+        pair.epriv
+      );
+      
+      // Try to parse JSON, if it fails, use the string as-is
+      let decryptedData: any;
       try {
-        let peer = this.peers.get(data.from);
-        if (!peer && data.fromPub && data.fromEpub) {
-          peer = {
-            address: data.from,
-            pubKey: data.fromPub,
-            epub: data.fromEpub,
-            pub: data.fromPub,
-            connectedAt: data.timestamp,
-          };
-          this.peers.set(data.from, peer);
-        }
+        decryptedData = JSON.parse(decryptedDataString);
+      } catch (parseError) {
+        // If JSON.parse fails, the data is likely a plain string
+        // This can happen if the data was already a string value
+        decryptedData = decryptedDataString;
+      }
 
-        if (!peer || !this.myPair) return;
-
-        const senderEpub = data.fromEpub || peer.epub;
-        const secret = await this.sea.secret(senderEpub, this.myPair);
-        const decrypted = await this.sea.decrypt(
-          data.content,
-          secret as string
-        );
-
-        if (!decrypted) return;
-
-        console.log(`   Content: "${decrypted}"`);
-
-        const ephemeralMsg: EphemeralMessage = {
-          from: data.from,
-          fromPubKey: data.fromPub || peer.pubKey || "",
-          content: decrypted,
-          timestamp: data.timestamp,
-          type: data.type,
-        };
-
-        this.messageHandlers.forEach((h) => h(ephemeralMsg));
-      } catch (error) {
-        if (this.config.debug) {
-          console.error(`   ❌ Error:`, error);
+      // Decrypt metadata if present
+      let decryptedMetadata: RecordMetadata | undefined;
+      if (encryptedRecord.metadata) {
+        try {
+          const metadataString = await crypto.decrypt(
+            encryptedRecord.metadata,
+            pair.epriv
+          );
+          decryptedMetadata = JSON.parse(metadataString);
+        } catch (error) {
+          // Metadata decryption failed, continue without it
+          console.warn("⚠️  Could not decrypt metadata");
         }
       }
-    });
+
+      // Create vault record
+      const vaultRecord: VaultRecord = {
+        name,
+        data: decryptedData,
+        created: parseInt(encryptedRecord.created),
+        updated: parseInt(encryptedRecord.updated),
+        deleted: encryptedRecord.deleted,
+        metadata: decryptedMetadata,
+      };
+
+      return vaultRecord;
+
+    } catch (error) {
+      console.error("❌ Error retrieving record:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete record from vault (soft delete)
+   */
+  async delete(name?: string): Promise<VaultResult> {
+    if (!this.initialized) {
+      return { success: false, error: "Vault not initialized" };
+    }
+
+    try {
+      if (name) {
+        // Delete specific record (soft delete)
+        const existingRecord = await this.recordsNode.get(name).then();
+        
+        if (!existingRecord) {
+          return { success: false, error: `Record ${name} not found` };
+        }
+
+        // Mark as deleted
+        await this.recordsNode.get(name).get("deleted").put(true).then();
+        await this.recordsNode.get(name).get("updated").put(Date.now().toString()).then();
+
+        console.log(`🗑️  Record soft-deleted: ${name}`);
+
+        return {
+          success: true,
+          recordName: name,
+        };
+
+      } else {
+        // Delete all records (soft delete)
+        const allRecords = await this.list({ includeDeleted: false });
+        let deletedCount = 0;
+
+        for (const recordName of allRecords) {
+          const result = await this.delete(recordName);
+          if (result.success) {
+            deletedCount++;
+          }
+        }
+
+        console.log(`🗑️  ${deletedCount} records soft-deleted`);
+
+        return {
+          success: true,
+          recordCount: deletedCount,
+        };
+      }
+
+    } catch (error: any) {
+      console.error("❌ Error deleting record:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * List all record names in vault
+   */
+  async list(options?: ListOptions): Promise<string[]> {
+    if (!this.initialized) {
+      console.error("❌ Vault not initialized");
+      return [];
+    }
+
+    try {
+      return new Promise<string[]>((resolve) => {
+        const recordNames: string[] = [];
+
+        this.recordsNode.map().once(async (record: any, key: string) => {
+          // Skip metadata
+          if (!record || typeof record !== "object" || key === "_") {
+            return;
+          }
+
+          // Skip deleted records (unless includeDeleted)
+          if (record.deleted && !options?.includeDeleted) {
+            return;
+          }
+
+          // Apply filters if provided
+          if (options?.filterByType || options?.filterByTag) {
+      try {
+            // Need to decrypt metadata to filter
+            const shogun = this.identity.getShogun();
+            const crypto = shogun?.db?.crypto;
+            const pair = this.identity.getKeyPair();
+              
+              if (crypto && pair && record.metadata) {
+                const metadataString = await crypto.decrypt(record.metadata, pair.epriv);
+                const metadata: RecordMetadata = JSON.parse(metadataString);
+
+                // Filter by type
+                if (options.filterByType && metadata.type !== options.filterByType) {
+                  return;
+                }
+
+                // Filter by tag
+                if (options.filterByTag) {
+                  if (!metadata.tags || !metadata.tags.includes(options.filterByTag)) {
+                    return;
+                  }
+                }
+              }
+            } catch (error) {
+              // Decryption failed, skip
+              return;
+            }
+          }
+
+          recordNames.push(key);
+        });
+
+        // Wait for Gun to return all records
+        setTimeout(() => {
+          // Sort if requested
+          if (options?.sortBy) {
+            // For now, just sort by name
+            recordNames.sort();
+            if (options.sortDesc) {
+              recordNames.reverse();
+            }
+          }
+
+          resolve(recordNames);
+        }, 1000);
+      });
+
+    } catch (error) {
+      console.error("❌ Error listing records:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if record exists
+   */
+  async exists(name: string): Promise<boolean> {
+    const record = await this.get(name);
+    return record !== null;
+  }
+
+  /**
+   * Update existing record
+   */
+  async update(name: string, data: any): Promise<VaultResult> {
+    if (!this.initialized) {
+      return { success: false, error: "Vault not initialized" };
+    }
+
+    try {
+      // Check if record exists
+      const existingRecord = await this.get(name);
+      if (!existingRecord) {
+        return { success: false, error: `Record ${name} not found` };
+      }
+
+      // Keep existing metadata
+      return await this.put(name, data, existingRecord.metadata);
+
+    } catch (error: any) {
+      console.error("❌ Error updating record:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+
+  // ========================================================================
+  // BACKUP & RESTORE
+  // ========================================================================
+
+  /**
+   * Export entire vault (encrypted)
+   */
+  async export(password?: string, options?: ExportOptions): Promise<string> {
+    if (!this.initialized) {
+      throw new Error("Vault not initialized");
+    }
+
+    try {
+      // Get all records
+      const recordNames = await this.list({
+        includeDeleted: options?.includeDeleted || false,
+        filterByTag: options?.filterByTag,
+        filterByType: options?.filterByType,
+      });
+
+      const records: Record<string, VaultRecord> = {};
+
+      for (const name of recordNames) {
+        const record = await this.get(name, {
+          includeDeleted: options?.includeDeleted || false,
+        });
+        
+        if (record) {
+          records[name] = record;
+        }
+      }
+
+      // Create export data
+      const exportData = {
+        version: SHIP_06.VAULT_VERSION,
+        exportedAt: Date.now(),
+        exportedBy: this.identity.getCurrentUser()?.pub,
+        recordCount: Object.keys(records).length,
+        records,
+      };
+
+      // Serialize to JSON
+      const jsonString = options?.pretty
+        ? JSON.stringify(exportData, null, 2)
+        : JSON.stringify(exportData);
+
+      // Optionally encrypt with password
+      if (password) {
+        const crypto = (this.identity as any).shogun?.db?.crypto;
+        if (!crypto) {
+          throw new Error("Cannot access crypto");
+        }
+
+        const encryptedJson = await crypto.encrypt(jsonString, password);
+        const base64 = Buffer.from(encryptedJson).toString("base64");
+        
+        console.log(`✅ Vault exported (encrypted, ${base64.length} chars)`);
+        return base64;
+      }
+
+      // Otherwise, return as base64
+      const base64 = Buffer.from(jsonString).toString("base64");
+      console.log(`✅ Vault exported (${base64.length} chars)`);
+      return base64;
+
+    } catch (error: any) {
+      console.error("❌ Error exporting vault:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Import vault from backup
+   */
+  async import(
+    backupData: string,
+    password?: string,
+    options?: ImportOptions
+  ): Promise<VaultResult> {
+    if (!this.initialized) {
+      return { success: false, error: "Vault not initialized" };
+    }
+
+    try {
+      // Decode base64
+      let jsonString = Buffer.from(backupData, "base64").toString("utf-8");
+
+      // Decrypt if password provided
+      if (password) {
+        const crypto = (this.identity as any).shogun?.db?.crypto;
+        if (!crypto) {
+          return { success: false, error: "Cannot access crypto" };
+        }
+
+        jsonString = await crypto.decrypt(jsonString, password);
+      }
+
+      // Parse JSON
+      const importData = JSON.parse(jsonString);
+
+      // Validate version
+      if (importData.version !== SHIP_06.VAULT_VERSION) {
+        console.warn(`⚠️  Version mismatch: ${importData.version} vs ${SHIP_06.VAULT_VERSION}`);
+      }
+
+      // Import records
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      for (const [name, record] of Object.entries(importData.records)) {
+        const vaultRecord = record as VaultRecord;
+
+        // Skip deleted records if requested
+        if (options?.skipDeleted && vaultRecord.deleted) {
+          skippedCount++;
+          continue;
+        }
+
+        // Check if exists (if merge mode)
+        const exists = await this.exists(name);
+        
+        if (exists) {
+          if (options?.overwrite) {
+            // Overwrite existing
+            await this.put(name, vaultRecord.data, vaultRecord.metadata);
+            importedCount++;
+          } else if (!options?.merge) {
+            // Skip if not merge and not overwrite
+            skippedCount++;
+            continue;
+          } else {
+            // Merge mode: skip existing
+            skippedCount++;
+            continue;
+          }
+        } else {
+          // Import new record
+          await this.put(name, vaultRecord.data, vaultRecord.metadata);
+          importedCount++;
+        }
+      }
+
+      console.log(`✅ Vault imported: ${importedCount} records (${skippedCount} skipped)`);
+
+      return {
+        success: true,
+        recordCount: importedCount,
+      };
+
+    } catch (error: any) {
+      console.error("❌ Error importing vault:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 
   // ========================================================================
-  // EVENT HANDLERS
+  // UTILITIES
   // ========================================================================
 
-  onMessage(callback: (message: EphemeralMessage) => void): void {
-    this.messageHandlers.push(callback);
+  /**
+   * Get vault statistics
+   */
+  async getStats(): Promise<VaultStats> {
+    if (!this.initialized) {
+      throw new Error("Vault not initialized");
+    }
+
+    try {
+      const allRecords = await this.list({ includeDeleted: true });
+      const activeRecords = await this.list({ includeDeleted: false });
+
+      // Get metadata
+      const metadata = await this.metadataNode.then();
+
+      const stats: VaultStats = {
+        totalRecords: allRecords.length,
+        activeRecords: activeRecords.length,
+        deletedRecords: allRecords.length - activeRecords.length,
+        totalSize: 0, // TODO: Calculate actual size
+        created: metadata?.created ? parseInt(metadata.created) : Date.now(),
+        lastModified: Date.now(),
+        recordsByType: {},
+      };
+
+      // Count by type
+      for (const name of activeRecords) {
+        const record = await this.get(name);
+        if (record && record.metadata?.type) {
+          const type = record.metadata.type;
+          stats.recordsByType![type] = (stats.recordsByType![type] || 0) + 1;
+        }
+      }
+
+      return stats;
+
+    } catch (error) {
+      console.error("❌ Error getting stats:", error);
+      throw error;
+    }
   }
 
-  onPeerSeen(callback: (address: string) => void): void {
-    this.peerSeenHandlers.push(callback);
+  /**
+   * Clear all records (soft delete all)
+   */
+  async clear(): Promise<VaultResult> {
+    return await this.delete(); // Delete without name = delete all
   }
 
-  onPeerLeft(callback: (address: string) => void): void {
-    this.peerLeftHandlers.push(callback);
+  /**
+   * Compact vault (remove deleted records permanently)
+   */
+  async compact(): Promise<VaultResult> {
+    if (!this.initialized) {
+      return { success: false, error: "Vault not initialized" };
+    }
+
+    try {
+      // Get all deleted records
+      const allRecords = await this.list({ includeDeleted: true });
+      let compactedCount = 0;
+
+      for (const name of allRecords) {
+        const record = await this.get(name, { includeDeleted: true });
+        
+        if (record && record.deleted) {
+          // Permanently remove
+          await this.recordsNode.get(name).put(null).then();
+          compactedCount++;
+        }
+      }
+
+      // Update metadata
+      await this.updateRecordCount();
+
+      console.log(`✅ Vault compacted: ${compactedCount} records permanently removed`);
+
+      return {
+        success: true,
+        recordCount: compactedCount,
+      };
+
+    } catch (error: any) {
+      console.error("❌ Error compacting vault:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 
-  onEncryptedMessage(callback: (address: string, data: any) => void): void {
-    this.encryptedMessageHandlers.push(callback);
+  /**
+   * Search records by content
+   */
+  async search(query: string): Promise<string[]> {
+    if (!this.initialized) {
+      return [];
+    }
+
+    try {
+      const allRecords = await this.list({ includeDeleted: false });
+      const matches: string[] = [];
+
+      for (const name of allRecords) {
+        const record = await this.get(name);
+        
+        if (record) {
+          // Search in data (converted to string)
+          const dataString = JSON.stringify(record.data).toLowerCase();
+          const queryLower = query.toLowerCase();
+          
+          if (dataString.includes(queryLower) || name.toLowerCase().includes(queryLower)) {
+            matches.push(name);
+          }
+        }
+      }
+
+      return matches;
+
+    } catch (error) {
+      console.error("❌ Error searching records:", error);
+      return [];
+    }
   }
 
-  getPeers(): string[] {
-    return Array.from(this.peers.keys());
-  }
+  // ========================================================================
+  // PRIVATE HELPERS
+  // ========================================================================
 
-  getPeerInfo(address: string): PeerInfo | null {
-    return this.peers.get(address) || null;
-  }
-
-  async getEphemeralPair(): Promise<SEAPair> {
-    if (!this.myPair) throw new Error("No ephemeral pair");
-    return this.myPair;
-  }
-
-  async setEphemeralPair(pair: SEAPair): Promise<void> {
-    this.myPair = pair;
+  /**
+   * Update record count in metadata
+   */
+  private async updateRecordCount(): Promise<void> {
+    try {
+      const activeRecords = await this.list({ includeDeleted: false });
+      await this.metadataNode.get("recordCount").put(activeRecords.length.toString()).then();
+    } catch (error) {
+      console.error("❌ Error updating record count:", error);
+    }
   }
 }
 
 export { SHIP_06 };
+

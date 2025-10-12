@@ -20,6 +20,8 @@ import { SHIP_00 } from "../implementation/SHIP_00";
 import * as readline from "readline";
 import * as fs from "fs";
 
+import figlet from "figlet";
+
 // ============================================================================
 // CLI Interface
 // ============================================================================
@@ -48,6 +50,8 @@ class IdentityCLI {
       input: process.stdin,
       output: process.stdout,
     });
+
+    
   }
 
   // ==========================================================================
@@ -82,7 +86,9 @@ class IdentityCLI {
         console.log("\n✅ Authentication Successful!");
         console.log("━".repeat(60));
         console.log(`  Username:        ${username}`);
-        console.log(`  Public Key:      ${result.userPub?.substring(0, 40)}...`);
+        console.log(
+          `  Public Key:      ${result.userPub?.substring(0, 40)}...`
+        );
         console.log(`  Derived Address: ${result.derivedAddress}`);
         console.log("━".repeat(60));
 
@@ -107,16 +113,16 @@ class IdentityCLI {
     console.log("\n🔑 Login with Key Pair");
     console.log("━".repeat(60));
 
-    const keypairStr = await this.prompt(
-      "Enter key pair (base64 or JSON): "
-    );
+    const keypairStr = await this.prompt("Enter key pair (base64 or JSON): ");
 
     try {
       let seaPair;
 
       // Try base64 decode
       try {
-        const decoded = Buffer.from(keypairStr.trim(), "base64").toString("utf-8");
+        const decoded = Buffer.from(keypairStr.trim(), "base64").toString(
+          "utf-8"
+        );
         seaPair = JSON.parse(decoded);
       } catch {
         // Try direct JSON parse
@@ -276,11 +282,15 @@ class IdentityCLI {
       console.log(`  Encryption Key: ${userData.epub || "Not published"}`);
 
       if (userData.registeredAt) {
-        console.log(`  Registered:    ${new Date(userData.registeredAt).toLocaleString()}`);
+        console.log(
+          `  Registered:    ${new Date(userData.registeredAt).toLocaleString()}`
+        );
       }
 
       if (userData.lastSeen) {
-        console.log(`  Last Seen:     ${new Date(userData.lastSeen).toLocaleString()}`);
+        console.log(
+          `  Last Seen:     ${new Date(userData.lastSeen).toLocaleString()}`
+        );
       }
     }
 
@@ -293,7 +303,9 @@ class IdentityCLI {
       console.log(`  Encryption: ${publicKey.epub.substring(0, 40)}...`);
 
       if (publicKey.timestamp) {
-        console.log(`  Published:  ${new Date(parseInt(publicKey.timestamp)).toLocaleString()}`);
+        console.log(
+          `  Published:  ${new Date(parseInt(publicKey.timestamp)).toLocaleString()}`
+        );
       }
     } else {
       console.log("\n⚠️  User has not published public keys yet");
@@ -402,7 +414,9 @@ class IdentityCLI {
 
     const address = await this.identity.deriveEthereumAddress();
     console.log(`\n✅ Ethereum Address: ${address}`);
-    console.log("\n💡 This address is deterministically derived from your SHIP-00 identity");
+    console.log(
+      "\n💡 This address is deterministically derived from your SHIP-00 identity"
+    );
     console.log("💡 Same identity = same address (always)");
     console.log("━".repeat(60));
   }
@@ -420,7 +434,9 @@ class IdentityCLI {
 
     if (result.success) {
       console.log("✅ Public key published to Gun network!");
-      console.log("💡 Other users can now discover you and send encrypted messages");
+      console.log(
+        "💡 Other users can now discover you and send encrypted messages"
+      );
     } else {
       console.error(`❌ Error: ${result.error}`);
     }
@@ -449,10 +465,15 @@ class IdentityCLI {
   // ==========================================================================
 
   private printHeader(): void {
-    console.log("\n╔" + "═".repeat(58) + "╗");
-    console.log("║" + " ".repeat(12) + "🗡️  SHOGUN IDENTITY 🗡️" + " ".repeat(15) + "║");
-    console.log("║" + " ".repeat(10) + "SHIP-00: Decentralized Identity" + " ".repeat(10) + "║");
-    console.log("╚" + "═".repeat(58) + "╝");
+    figlet("SHOGUN IDENTITY", { font: 'Standard' }, function (err, data) {
+      if (err) {
+        console.log('Qualcosa è andato storto...');
+        console.dir(err);
+        return;
+      }
+      console.log(data);
+    });
+
   }
 
   async prompt(question: string): Promise<string> {
@@ -488,7 +509,9 @@ class IdentityCLI {
       console.log("  yarn identity <username> <password> - Auto-login");
       console.log("  yarn identity                        - Manual login");
 
-      const choice = await this.prompt("\n1. Login\n2. Login with Keypair\n3. Exit\n\nChoose option: ");
+      const choice = await this.prompt(
+        "\n1. Login\n2. Login with Keypair\n3. Exit\n\nChoose option: "
+      );
 
       switch (choice.trim()) {
         case "1":
@@ -552,4 +575,3 @@ if (require.main === module) {
 }
 
 export { IdentityCLI };
-

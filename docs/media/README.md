@@ -17,7 +17,7 @@ This folder contains the **SHIP (Shogun Interface Proposals)** specifications de
 | [**SHIP-03**](./SHIP_03.md) | Dual-Key Stealth Addresses | ✅ Implemented | ERC-5564 privacy-preserving stealth addresses |
 | [**SHIP-04**](./SHIP_04.md) | Multi-Modal Authentication | ✅ Implemented | OAuth, WebAuthn, Nostr, Web3 auth (extends SHIP-00) |
 | [**SHIP-05**](./SHIP_05.md) | Decentralized File Storage | ✅ Implemented | Encrypted IPFS storage (depends on SHIP-00) |
-| **SHIP-06** | On-Chain Storage Tracking | 💡 Proposed | Smart contract relay network, subscriptions, MB tracking |
+| [**SHIP-06**](./SHIP_06.md) | Secure Vault | ✅ Implemented | Encrypted key-value storage (depends on SHIP-00) |
 
 ---
 
@@ -138,7 +138,42 @@ const data = await storage.downloadFile(result.hash, { decrypt: true });
 
 **Read the complete specification**: [SHIP_05.md](./SHIP_05.md)
 
-**Note**: On-chain storage tracking (payments, subscriptions, relay network) will be in SHIP-06.
+### SHIP-06: Secure Vault
+
+```bash
+cd shogun-core
+yarn install
+yarn vault alice password123
+
+# Features:
+# - Encrypted key-value storage on GunDB
+# - Uses SHIP-00 SEA encryption
+# - Secure backup and restore
+# - Import/export functionality
+# - Metadata tracking
+
+# Use in your app
+import { SHIP_00, SHIP_06 } from 'shogun-core';
+
+const identity = new SHIP_00(config);
+await identity.login('alice', 'password123');
+
+const vault = new SHIP_06(identity);
+await vault.initialize();
+
+// Store encrypted data
+await vault.set('api-key', 'secret123');
+await vault.set('notes', 'Private notes here');
+
+// Retrieve data
+const apiKey = await vault.get('api-key');
+const notes = await vault.get('notes');
+
+// Export for backup
+const backup = await vault.export();
+```
+
+**Read the complete specification**: [SHIP_06.md](./SHIP_06.md)
 
 ---
 
@@ -159,20 +194,23 @@ ship/
 │   ├── ISHIP_02.ts                   # HD Wallet interface
 │   ├── ISHIP_03.ts                   # Stealth addresses interface
 │   ├── ISHIP_04.ts                   # Multi-modal auth interface
-│   └── ISHIP_05.ts                   # File storage interface
+│   ├── ISHIP_05.ts                   # File storage interface
+│   └── ISHIP_06.ts                   # Secure vault interface
 ├── implementation/
 │   ├── SHIP_00.ts                    # Identity implementation
 │   ├── SHIP_01.ts                    # Messaging implementation
 │   ├── SHIP_02.ts                    # HD Wallet implementation
 │   ├── SHIP_03.ts                    # Stealth addresses implementation
 │   ├── SHIP_04.ts                    # Multi-modal auth implementation
-│   └── SHIP_05.ts                    # File storage implementation
+│   ├── SHIP_05.ts                    # File storage implementation
+│   └── SHIP_06.ts                    # Secure vault implementation
 └── examples/
     ├── identity-cli.ts               # Identity CLI example (SHIP-00)
     ├── messenger-cli.ts              # Messaging CLI example (SHIP-01)
     ├── wallet-cli.ts                 # Wallet CLI example (SHIP-02)
     ├── stealth-cli.ts                # Stealth CLI example (SHIP-03)
-    └── storage-cli.ts                # Storage CLI example (SHIP-05)
+    ├── storage-cli.ts                # Storage CLI example (SHIP-05)
+    └── vault-cli.ts                  # Vault CLI example (SHIP-06)
 ```
 
 ---
@@ -190,6 +228,7 @@ ship/
 - **SHIP-03 (Stealth Addresses)**: [SHIP_03.md](./SHIP_03.md)
 - **SHIP-04 (Multi-Modal Auth)**: [SHIP_04.md](./SHIP_04.md)
 - **SHIP-05 (File Storage)**: [SHIP_05.md](./SHIP_05.md)
+- **SHIP-06 (Secure Vault)**: [SHIP_06.md](./SHIP_06.md)
 
 ---
 
@@ -232,10 +271,10 @@ Each SHIP must include:
 
 | Metric | Value |
 |---------|--------|
-| Total SHIPs | 7 (6 implemented, 1 proposed) |
+| Total SHIPs | 7 (all implemented) |
 | Contributors | Open to everyone! |
-| Lines of Code | ~12,000+ (SHIP-00 through SHIP-05 + examples) |
-| CLI Examples | 5 (identity, messenger, wallet, stealth, storage) |
+| Lines of Code | ~15,000+ (SHIP-00 through SHIP-06 + examples) |
+| CLI Examples | 6 (identity, messenger, wallet, stealth, storage, vault) |
 | Status | Active Development 🚀 |
 
 ## 🏗️ SHIP Architecture
@@ -250,8 +289,7 @@ SHIP-00 (Identity Foundation)
    │
    ├─► SHIP-04 (Multi-Modal Auth) ✅
    ├─► SHIP-05 (File Storage) ✅
-   │      │
-   │      └─► SHIP-06 (On-Chain Storage Tracking) 💡
+   └─► SHIP-06 (Secure Vault) ✅
 ```
 
 ### **Inclusive Hierarchy Principle** 🗡️

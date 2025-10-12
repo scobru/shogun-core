@@ -1,71 +1,134 @@
 /**
- * SHIP-06: Ephemeral P2P Messaging Interface
+ * SHIP-06: Secure Vault Interface
  * 
- * @title ISHIP_06 - Ephemeral P2P Messaging
- * @notice Interface for ephemeral peer-to-peer messaging via Gun Relay
- * @dev Can work standalone OR with ISHIP_00 for authenticated sessions
+ * @title ISHIP_06 - Secure Encrypted Vault
+ * @notice Interface for secure encrypted key-value storage on GunDB
+ * @dev This interface depends on ISHIP_00 for identity and encryption
  * 
  * ## Abstract
  * 
- * This standard defines an interface for ephemeral P2P messaging that allows:
- * - Relay-based connections via Gun network
- * - End-to-end encrypted messages (no storage)
- * - Broadcast and direct messaging
- * - Deterministic room discovery (SHA-256)
- * - Standalone mode (no authentication needed!)
+ * This standard defines an interface for secure vault storage that allows:
+ * - End-to-end encrypted key-value storage
+ * - Soft delete with recovery
+ * - Export/import for backup
+ * - Rich metadata support
+ * - Simple, secure, focused on storage only
  * 
  * ## Dependencies
  * 
- * - Gun: Relay-based P2P database
- * - Gun SEA: Cryptography (ECDH + AES-GCM)
- * - ISHIP_00 (OPTIONAL): For authenticated sessions
- * 
- * ## Modes
- * 
- * **Standalone**: new SHIP_06(gunPeers[], roomId)
- * **With Identity**: new SHIP_06(ISHIP_00, roomId)
+ * - ISHIP_00: Identity and authentication layer
+ * - GunDB: P2P storage
+ * - SEA: Cryptography (AES-256-GCM)
  * 
  * ## Inspiration
  * 
- * Based on Bugoff (https://github.com/draeder/bugoff)
- * Simplified for Gun relay instead of WebRTC
+ * Based on Gunsafe (https://github.com/draeder/gunsafe)
+ * Adapted for Shogun ecosystem with SHIP-00 integration
  */
 
-import type { ISHIP_00, SEAPair } from "./ISHIP_00";
+import type { ISHIP_00 } from "./ISHIP_00";
 
 // ============================================================================
 // CORE TYPES
 // ============================================================================
 
 /**
- * @notice Ephemeral message structure
+ * @notice Vault record structure
  */
-export interface EphemeralMessage {
-    from: string;           // Sender peer address
-    fromPubKey: string;     // Sender's SEA public key
-    content: string;        // Decrypted plain text content
-    timestamp: number;      // Unix timestamp (ms)
-    type: "broadcast" | "direct"; // Message type
+export interface VaultRecord {
+    name: string;           // Record name/key
+    data: any;              // Decrypted data (any type)
+    created: number;        // Creation timestamp (Unix ms)
+    updated: number;        // Last update timestamp (Unix ms)
+    deleted: boolean;       // Soft delete flag
+    metadata?: RecordMetadata; // Optional metadata
 }
 
 /**
- * @notice Encrypted message data (internal)
+ * @notice Encrypted record (stored in GunDB)
  */
-export interface EncryptedMessageData {
-    content: string;        // Encrypted content
-    fromPubKey: string;     // Sender's public key
-    timestamp: string;      // Timestamp as string
-    type: "broadcast" | "direct";
+export interface EncryptedRecord {
+    data: string;           // Encrypted data (SEA encrypted)
+    created: string;        // Creation timestamp as string
+    updated: string;        // Update timestamp as string
+    deleted: boolean;       // Soft delete flag
+    metadata?: string;      // Encrypted metadata
 }
 
 /**
- * @notice Peer information
+ * @notice Record metadata
  */
-export interface PeerInfo {
-    address: string;        // Peer address in swarm
-    pubKey?: string;        // Peer's SEA public key
-    epub?: string;          // Peer's encryption public key
-    connectedAt: number;    // Connection timestamp
+export interface RecordMetadata {
+    type?: string;          // Data type (password, apiKey, privateKey, code, etc.)
+    description?: string;   // Human-readable description
+    tags?: string[];        // Tags for categorization
+    expiresAt?: number;     // Expiration timestamp (Unix ms)
+    [key: string]: any;     // Custom metadata fields
+}
+
+/**
+ * @notice Vault operation result
+ */
+export interface VaultResult {
+    success: boolean;
+    error?: string;
+    recordName?: string;
+    recordCount?: number;
+}
+
+/**
+ * @notice Vault statistics
+ */
+export interface VaultStats {
+    totalRecords: number;       // Total records (including deleted)
+    activeRecords: number;      // Non-deleted records
+    deletedRecords: number;     // Soft-deleted records
+    totalSize: number;          // Approximate size in bytes
+    created: number;            // Vault creation timestamp
+    lastModified: number;       // Last modification timestamp
+    recordsByType?: Record<string, number>; // Count by type
+}
+
+// ============================================================================
+// OPTIONS
+// ============================================================================
+
+/**
+ * @notice Options for retrieving records
+ */
+export interface GetOptions {
+    includeDeleted?: boolean;   // Include soft-deleted records (default: false)
+    decrypt?: boolean;          // Return decrypted data (default: true)
+}
+
+/**
+ * @notice Options for listing records
+ */
+export interface ListOptions {
+    includeDeleted?: boolean;   // Include deleted records (default: false)
+    filterByTag?: string;       // Filter by tag
+    filterByType?: string;      // Filter by metadata type
+    sortBy?: "name" | "created" | "updated"; // Sort order
+    sortDesc?: boolean;         // Sort descending (default: false)
+}
+
+/**
+ * @notice Options for importing vault
+ */
+export interface ImportOptions {
+    merge?: boolean;            // Merge with existing records (default: false)
+    overwrite?: boolean;        // Overwrite existing records (default: false)
+    skipDeleted?: boolean;      // Skip deleted records (default: false)
+}
+
+/**
+ * @notice Options for exporting vault
+ */
+export interface ExportOptions {
+    includeDeleted?: boolean;   // Include deleted records (default: false)
+    pretty?: boolean;           // Pretty print JSON (default: false)
+    filterByTag?: string;       // Export only records with tag
+    filterByType?: string;      // Export only records of type
 }
 
 // ============================================================================
@@ -73,191 +136,227 @@ export interface PeerInfo {
 // ============================================================================
 
 /**
- * @title ISHIP_06 - Ephemeral P2P Messaging
- * @notice Main interface for ephemeral messaging system
- * @dev Can work standalone (array of peers) OR with ISHIP_00 identity
+ * @title ISHIP_07 - Secure Vault
+ * @notice Main interface for secure encrypted vault
+ * @dev Depends on ISHIP_00 for all identity and encryption operations
  * 
- * Constructor patterns:
+ * Constructor pattern:
  * ```typescript
- * // Standalone mode (no authentication)
- * class EphemeralMessaging implements ISHIP_06 {
- *     constructor(
- *         peers: string[],           // Gun relay peers
- *         roomId: string,
- *         config?: { debug?: boolean }
- *     ) {}
- * }
- * 
- * // Identity mode (with SHIP-00)
- * class EphemeralMessaging implements ISHIP_06 {
- *     constructor(
- *         identity: ISHIP_00,        // Authenticated identity
- *         roomId: string,
- *         config?: EphemeralConfig
- *     ) {}
+ * class SecureVault implements ISHIP_07 {
+ *     constructor(private identity: ISHIP_00) {}
  * }
  * ```
  */
 export interface ISHIP_06 {
     
+    /**
+     * @notice Get the identity provider
+     * @dev Returns the ISHIP_00 instance used for identity operations
+     * @return Identity provider instance
+     */
+    getIdentity(): ISHIP_00;
+    
     // ========================================================================
-    // CONNECTION MANAGEMENT
-    // ========================================================================
-
-    /**
-     * @notice Connect to ephemeral swarm
-     * @dev Joins WebTorrent swarm and establishes P2P connections
-     * 
-     * Flow:
-     * 1. Hash room ID with SHA-256 for swarm identifier
-     * 2. Join WebTorrent swarm with hashed ID
-     * 3. Listen for peer connections
-     * 4. Exchange SEA public keys with peers
-     * 5. Establish encrypted channels
-     */
-    connect(): Promise<void>;
-
-    /**
-     * @notice Disconnect from swarm
-     * @dev Closes all P2P connections and leaves swarm
-     */
-    disconnect(): void;
-
-    /**
-     * @notice Check if connected to swarm
-     * @return True if connected
-     */
-    isConnected(): boolean;
-
-    /**
-     * @notice Get swarm identifier (SHA-256 hash of room ID)
-     * @return Hashed swarm identifier
-     */
-    getSwarmId(): string;
-
-    /**
-     * @notice Get own peer address in swarm
-     * @return Peer address
-     */
-    getAddress(): string;
-
-    // ========================================================================
-    // MESSAGING - Send
+    // INITIALIZATION
     // ========================================================================
 
     /**
-     * @notice Send broadcast message to all peers in swarm
-     * @dev Message is encrypted with each peer's public key
-     * @param message Plain text message content
+     * @notice Initialize vault
+     * @dev Sets up vault node structure in user's Gun space
      * 
      * Prerequisites:
-     * - Must be connected to swarm
      * - User must be authenticated (via ISHIP_00)
      * 
      * Flow:
-     * 1. Get all connected peers
-     * 2. For each peer:
-     *    a. Derive shared secret (ECDH)
-     *    b. Encrypt message
-     *    c. Send via WebRTC data channel
+     * 1. Verify user authentication
+     * 2. Create vault node structure
+     * 3. Initialize metadata
      */
-    sendBroadcast(message: string): Promise<void>;
+    initialize(): Promise<void>;
 
     /**
-     * @notice Send direct message to specific peer
-     * @dev Message encrypted only for target peer
-     * @param peerAddress Target peer address
-     * @param message Plain text message content
+     * @notice Check if vault is initialized
+     * @return True if vault is initialized
+     */
+    isInitialized(): boolean;
+
+    // ========================================================================
+    // CRUD OPERATIONS
+    // ========================================================================
+
+    /**
+     * @notice Store encrypted record in vault
+     * @dev Encrypts data with SEA and stores in user's vault node
+     * @param name Record name/key (must be unique)
+     * @param data Data to encrypt and store (any type)
+     * @param metadata Optional metadata
+     * @return Operation result
      * 
      * Prerequisites:
-     * - Must be connected to swarm
-     * - Target peer must be connected
-     * - User must be authenticated (via ISHIP_00)
+     * - Vault must be initialized
+     * - User must be authenticated
      * 
      * Flow:
-     * 1. Get target peer's public key
-     * 2. Derive shared secret (ECDH)
-     * 3. Encrypt message
-     * 4. Send via WebRTC data channel
+     * 1. Validate record name
+     * 2. Encrypt data with SEA
+     * 3. Encrypt metadata if provided
+     * 4. Store in gun.user().get('vault').get('records').get(name)
+     * 5. Update vault metadata
      */
-    sendDirect(peerAddress: string, message: string): Promise<void>;
-
-    // ========================================================================
-    // MESSAGING - Receive
-    // ========================================================================
+    put(
+        name: string,
+        data: any,
+        metadata?: RecordMetadata
+    ): Promise<VaultResult>;
 
     /**
-     * @notice Listen for decrypted messages
-     * @dev Automatically decrypts received messages
-     * @param callback Called for each received message
+     * @notice Retrieve and decrypt record from vault
+     * @dev Retrieves and decrypts record from user's vault node
+     * @param name Record name/key
+     * @param options Retrieval options
+     * @return Decrypted record or null if not found
      * 
      * Prerequisites:
-     * - Must be connected to swarm
+     * - Vault must be initialized
+     * - User must be authenticated
      * 
-     * Decryption flow:
-     * 1. Receive encrypted message via WebRTC
-     * 2. Retrieve sender's epub from message
-     * 3. Derive shared secret (ECDH)
-     * 4. Decrypt message content
-     * 5. Call callback with decrypted message
+     * Flow:
+     * 1. Retrieve encrypted record from Gun
+     * 2. Decrypt data with SEA
+     * 3. Decrypt metadata if present
+     * 4. Return decrypted record
      */
-    onMessage(callback: (message: EphemeralMessage) => void): void;
+    get(name: string, options?: GetOptions): Promise<VaultRecord | null>;
 
     /**
-     * @notice Listen for encrypted messages (debugging)
-     * @dev Raw encrypted messages before decryption
-     * @param callback Called for each encrypted message
+     * @notice Delete record from vault (soft delete)
+     * @dev Marks record as deleted without removing data
+     * @param name Record name/key (optional - deletes all if omitted)
+     * @return Operation result
+     * 
+     * Soft Delete:
+     * - Record data remains encrypted in Gun
+     * - Marked as deleted (deleted: true)
+     * - Can be recovered before compaction
+     * - Not returned by default in list/get
      */
-    onEncryptedMessage(callback: (address: string, data: any) => void): void;
+    delete(name?: string): Promise<VaultResult>;
+
+    /**
+     * @notice List all record names in vault
+     * @dev Returns array of record names matching criteria
+     * @param options List options
+     * @return Array of record names
+     * 
+     * Flow:
+     * 1. Retrieve all records from vault node
+     * 2. Apply filters (deleted, tags, type)
+     * 3. Sort if requested
+     * 4. Return record names
+     */
+    list(options?: ListOptions): Promise<string[]>;
+
+    /**
+     * @notice Check if record exists
+     * @param name Record name/key
+     * @return True if record exists (and not deleted)
+     */
+    exists(name: string): Promise<boolean>;
+
+    /**
+     * @notice Update existing record
+     * @dev Updates record data and timestamp
+     * @param name Record name/key
+     * @param data New data
+     * @return Operation result
+     * 
+     * Flow:
+     * 1. Check if record exists
+     * 2. Encrypt new data
+     * 3. Update record with new data
+     * 4. Update timestamp
+     */
+    update(name: string, data: any): Promise<VaultResult>;
 
     // ========================================================================
-    // PEER MANAGEMENT
+    // BACKUP & RESTORE
     // ========================================================================
 
     /**
-     * @notice Listen for peer join events
-     * @dev Called when a new peer connects to swarm
-     * @param callback Called with peer address
+     * @notice Export entire vault (encrypted)
+     * @dev Exports all vault records as encrypted JSON string
+     * @param password Optional additional encryption password
+     * @param options Export options
+     * @return Encrypted vault backup as string
+     * 
+     * Flow:
+     * 1. Retrieve all records
+     * 2. Optionally filter records
+     * 3. Serialize to JSON
+     * 4. Optionally encrypt with additional password
+     * 5. Return as base64 string
      */
-    onPeerSeen(callback: (address: string) => void): void;
+    export(password?: string, options?: ExportOptions): Promise<string>;
 
     /**
-     * @notice Listen for peer leave events
-     * @dev Called when a peer disconnects from swarm
-     * @param callback Called with peer address
+     * @notice Import vault from backup
+     * @dev Imports and decrypts vault backup
+     * @param backupData Exported vault data
+     * @param password Optional decryption password
+     * @param options Import options
+     * @return Operation result
+     * 
+     * Flow:
+     * 1. Decode base64 backup
+     * 2. Decrypt with password if provided
+     * 3. Parse JSON
+     * 4. For each record:
+     *    - Check if exists (if merge mode)
+     *    - Import or skip based on options
+     * 5. Update vault metadata
      */
-    onPeerLeft(callback: (address: string) => void): void;
-
-    /**
-     * @notice Get list of connected peers
-     * @return Array of peer addresses
-     */
-    getPeers(): string[];
-
-    /**
-     * @notice Get detailed peer information
-     * @param address Peer address
-     * @return Peer info or null if not found
-     */
-    getPeerInfo(address: string): PeerInfo | null;
+    import(
+        backupData: string,
+        password?: string,
+        options?: ImportOptions
+    ): Promise<VaultResult>;
 
     // ========================================================================
-    // ENCRYPTION
+    // UTILITIES
     // ========================================================================
 
     /**
-     * @notice Get current ephemeral SEA pair
-     * @dev New pair generated per session for perfect forward secrecy
-     * @return SEA key pair
+     * @notice Get vault statistics
+     * @dev Returns statistics about vault contents
+     * @return Vault statistics
      */
-    getEphemeralPair(): Promise<SEAPair>;
+    getStats(): Promise<VaultStats>;
 
     /**
-     * @notice Manually set SEA pair (optional)
-     * @dev By default, SHIP-06 generates ephemeral pair automatically
-     * @param pair SEA key pair
+     * @notice Clear all records (soft delete all)
+     * @dev Marks all records as deleted
+     * @return Operation result
      */
-    setEphemeralPair(pair: SEAPair): Promise<void>;
+    clear(): Promise<VaultResult>;
+
+    /**
+     * @notice Compact vault (remove deleted records permanently)
+     * @dev Permanently removes soft-deleted records
+     * @return Operation result
+     * 
+     * ⚠️ WARNING:
+     * - This operation is irreversible
+     * - Deleted records cannot be recovered after compaction
+     */
+    compact(): Promise<VaultResult>;
+
+    /**
+     * @notice Search records by content
+     * @dev Searches decrypted content (expensive operation)
+     * @param query Search query
+     * @return Array of matching record names
+     */
+    search(query: string): Promise<string[]>;
 }
 
 // ============================================================================
@@ -265,15 +364,18 @@ export interface ISHIP_06 {
 // ============================================================================
 
 /**
- * @notice Ephemeral messaging configuration
+ * @notice Vault configuration
  */
-export interface EphemeralConfig {
-  
+export interface VaultConfig {
+    /**
+     * @notice Identity provider (SHIP-00 instance)
+     */
+    identity: ISHIP_00;
 
     /**
-     * @notice Room identifier (will be hashed)
+     * @notice Vault node name in Gun (default: "vault")
      */
-    roomId: string;
+    vaultNodeName?: string;
 
     /**
      * @notice Enable debug logging
@@ -284,6 +386,16 @@ export interface EphemeralConfig {
      * @notice Operation timeout (ms)
      */
     timeout?: number;
+
+    /**
+     * @notice Enable automatic backup
+     */
+    autoBackup?: boolean;
+
+    /**
+     * @notice Backup interval (ms)
+     */
+    backupInterval?: number;
 }
 
 // ============================================================================
@@ -291,38 +403,38 @@ export interface EphemeralConfig {
 // ============================================================================
 
 /**
- * @notice Event emitter interface for SHIP-06
+ * @notice Event emitter interface for SHIP-07
  */
-export interface ISHIP_06Events {
+export interface ISHIP_07Events {
     /**
-     * Emitted when connected to swarm
+     * Emitted when vault is initialized
      */
-    connected: () => void;
+    initialized: () => void;
 
     /**
-     * Emitted when disconnected from swarm
+     * Emitted when record is added
      */
-    disconnected: () => void;
+    recordAdded: (name: string) => void;
 
     /**
-     * Emitted when a peer joins
+     * Emitted when record is updated
      */
-    peerSeen: (address: string) => void;
+    recordUpdated: (name: string) => void;
 
     /**
-     * Emitted when a peer leaves
+     * Emitted when record is deleted
      */
-    peerLeft: (address: string) => void;
+    recordDeleted: (name: string) => void;
 
     /**
-     * Emitted when a message is received and decrypted
+     * Emitted when vault is exported
      */
-    message: (message: EphemeralMessage) => void;
+    exported: (size: number) => void;
 
     /**
-     * Emitted when an encrypted message is received (before decryption)
+     * Emitted when vault is imported
      */
-    encryptedMessage: (address: string, data: any) => void;
+    imported: (recordCount: number) => void;
 
     /**
      * Emitted on error
@@ -335,24 +447,17 @@ export interface ISHIP_06Events {
 // ============================================================================
 
 /**
- * Example of how to implement ISHIP_06 with ISHIP_00 dependency
+ * Example of how to implement ISHIP_07 with ISHIP_00 dependency
  * 
  * ```typescript
  * import { ISHIP_00 } from './ISHIP_00';
- * import { ISHIP_06, EphemeralMessage } from './ISHIP_06';
- * import Bugout from 'bugout';
+ * import { ISHIP_07, VaultRecord, VaultResult } from './ISHIP_07';
  * 
- * class EphemeralMessaging implements ISHIP_06 {
- *     private bugout: any;
- *     private ephemeralPair: SEAPair | null = null;
- *     private peers: Map<string, PeerInfo> = new Map();
- *     private messageCallbacks: ((msg: EphemeralMessage) => void)[] = [];
+ * class SecureVault implements ISHIP_07 {
+ *     private vaultNode: any;
+ *     private initialized: boolean = false;
  * 
- *     constructor(
- *         private identity: ISHIP_00,
- *         private roomId: string,
- *         private config?: EphemeralConfig
- *     ) {
+ *     constructor(private identity: ISHIP_00) {
  *         if (!identity.isLoggedIn()) {
  *             throw new Error('User must be authenticated via SHIP-00');
  *         }
@@ -362,83 +467,145 @@ export interface ISHIP_06Events {
  *         return this.identity;
  *     }
  * 
- *     async connect(): Promise<void> {
- *         // 1. Generate ephemeral SEA pair
- *         const crypto = this.identity.shogun.db.crypto;
- *         this.ephemeralPair = await crypto.pair();
+ *     async initialize(): Promise<void> {
+ *         // Get Gun user node
+ *         const gun = this.identity.shogun.db.gun;
+ *         this.vaultNode = gun.user().get('vault').get('records');
  *         
- *         // 2. Hash room ID
- *         const swarmId = await crypto.hashText(this.roomId);
- *         
- *         // 3. Create Bugout swarm
- *         this.bugout = new Bugout(swarmId, {
- *             iceServers: this.config?.iceServers
+ *         // Initialize vault metadata
+ *         await gun.user().get('vault').get('metadata').put({
+ *             version: '1.0.0',
+ *             created: Date.now().toString()
  *         });
  *         
- *         // 4. Set SEA pair
- *         await this.bugout.SEA(this.ephemeralPair);
- *         
- *         // 5. Listen for events
- *         this.bugout.on('seen', (address: string) => {
- *             this.handlePeerSeen(address);
- *         });
- *         
- *         this.bugout.on('decrypted', (address: string, pubkeys: any, message: string) => {
- *             this.handleMessage(address, pubkeys, message);
- *         });
+ *         this.initialized = true;
  *     }
  * 
- *     disconnect(): void {
- *         if (this.bugout) {
- *             this.bugout.destroy();
+ *     isInitialized(): boolean {
+ *         return this.initialized;
+ *     }
+ * 
+ *     async put(name: string, data: any, metadata?: RecordMetadata): Promise<VaultResult> {
+ *         if (!this.initialized) {
+ *             return { success: false, error: 'Vault not initialized' };
+ *         }
+ *         
+ *         try {
+ *             // Get SEA crypto
+ *             const crypto = this.identity.shogun.db.crypto;
+ *             const pair = this.identity.getKeyPair();
+ *             
+ *             if (!pair) {
+ *                 return { success: false, error: 'Cannot access key pair' };
+ *             }
+ *             
+ *             // Encrypt data
+ *             const encryptedData = await crypto.encrypt(
+ *                 JSON.stringify(data),
+ *                 pair.epriv
+ *             );
+ *             
+ *             // Encrypt metadata if provided
+ *             const encryptedMetadata = metadata
+ *                 ? await crypto.encrypt(JSON.stringify(metadata), pair.epriv)
+ *                 : undefined;
+ *             
+ *             // Store in vault
+ *             const record = {
+ *                 data: encryptedData,
+ *                 created: Date.now().toString(),
+ *                 updated: Date.now().toString(),
+ *                 deleted: false,
+ *                 metadata: encryptedMetadata
+ *             };
+ *             
+ *             await this.vaultNode.get(name).put(record);
+ *             
+ *             return { success: true, recordName: name };
+ *         } catch (error: any) {
+ *             return { success: false, error: error.message };
  *         }
  *     }
  * 
- *     async sendBroadcast(message: string): Promise<void> {
- *         if (!this.bugout) {
- *             throw new Error('Not connected to swarm');
+ *     async get(name: string, options?: GetOptions): Promise<VaultRecord | null> {
+ *         if (!this.initialized) {
+ *             return null;
  *         }
  *         
- *         this.bugout.send(message);
- *     }
- * 
- *     async sendDirect(peerAddress: string, message: string): Promise<void> {
- *         if (!this.bugout) {
- *             throw new Error('Not connected to swarm');
+ *         try {
+ *             // Retrieve from vault
+ *             const encryptedRecord = await this.vaultNode.get(name).then();
+ *             
+ *             if (!encryptedRecord || !encryptedRecord.data) {
+ *                 return null;
+ *             }
+ *             
+ *             // Skip if deleted (unless includeDeleted)
+ *             if (encryptedRecord.deleted && !options?.includeDeleted) {
+ *                 return null;
+ *             }
+ *             
+ *             // Decrypt data
+ *             const crypto = this.identity.shogun.db.crypto;
+ *             const pair = this.identity.getKeyPair();
+ *             
+ *             if (!pair) {
+ *                 return null;
+ *             }
+ *             
+ *             const decryptedData = await crypto.decrypt(
+ *                 encryptedRecord.data,
+ *                 pair.epriv
+ *             );
+ *             
+ *             // Decrypt metadata if present
+ *             const decryptedMetadata = encryptedRecord.metadata
+ *                 ? JSON.parse(await crypto.decrypt(encryptedRecord.metadata, pair.epriv))
+ *                 : undefined;
+ *             
+ *             return {
+ *                 name,
+ *                 data: JSON.parse(decryptedData),
+ *                 created: parseInt(encryptedRecord.created),
+ *                 updated: parseInt(encryptedRecord.updated),
+ *                 deleted: encryptedRecord.deleted,
+ *                 metadata: decryptedMetadata
+ *             };
+ *         } catch (error) {
+ *             console.error('Error retrieving record:', error);
+ *             return null;
  *         }
- *         
- *         this.bugout.send(peerAddress, message);
  *     }
  * 
- *     onMessage(callback: (message: EphemeralMessage) => void): void {
- *         this.messageCallbacks.push(callback);
+ *     async delete(name?: string): Promise<VaultResult> {
+ *         // Implementation here
+ *         return { success: true };
  *     }
  * 
- *     private handleMessage(address: string, pubkeys: any, content: string) {
- *         const message: EphemeralMessage = {
- *             from: address,
- *             fromPubKey: pubkeys.pub,
- *             content,
- *             timestamp: Date.now(),
- *             type: 'broadcast'
- *         };
- *         
- *         this.messageCallbacks.forEach(cb => cb(message));
+ *     async list(options?: ListOptions): Promise<string[]> {
+ *         // Implementation here
+ *         return [];
  *     }
+ * 
+ *     // ... implement other methods
  * }
  * 
  * // Usage
  * const identity = new SHIP_00(config);
  * await identity.login('alice', 'password123');
  * 
- * const ephemeral = new EphemeralMessaging(identity, 'my-room');
- * await ephemeral.connect();
+ * const vault = new SecureVault(identity);
+ * await vault.initialize();
  * 
- * ephemeral.onMessage((msg) => {
- *     console.log(`${msg.from}: ${msg.content}`);
+ * // Store encrypted data
+ * await vault.put('my-password', 'super_secret', {
+ *     type: 'password',
+ *     description: 'GitHub password'
  * });
  * 
- * await ephemeral.sendBroadcast('Hello everyone!');
+ * // Retrieve decrypted data
+ * const record = await vault.get('my-password');
+ * console.log('Password:', record?.data);
  * ```
  */
 

@@ -31,6 +31,8 @@ module.exports = {
       "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
       "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
       gun: path.resolve(__dirname, "node_modules/gun"),
+      // Fix axios process/browser requirement
+      "process/browser": require.resolve("process/browser"),
     },
     fallback: {
       crypto: require.resolve("crypto-browserify"),
@@ -43,6 +45,7 @@ module.exports = {
       assert: require.resolve("assert/"),
       constants: require.resolve("constants-browserify"),
       gun: path.resolve(__dirname, "node_modules/gun/gun.js"),
+      zlib: false, // winston/file.js - not needed in browser
       // Add Node.js core modules that should be ignored in browser builds
       http: false,
       https: false,
