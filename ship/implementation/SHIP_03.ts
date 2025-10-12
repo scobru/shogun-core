@@ -126,8 +126,8 @@ class SHIP_03 implements ISHIP_03 {
 
   // GunDB Node Names for SHIP-03 storage
   public static readonly NODES = {
-    STEALTH_KEYS_PUBLIC: "ship03_stealth_keys_public",
-    STEALTH_ANNOUNCEMENTS: "ship03_stealth_announcements",
+    STEALTH_KEYS_PUBLIC: "stealth_keys_public",
+    STEALTH_ANNOUNCEMENTS: "stealth_announcements",
   } as const;
 
   // Stealth keys (derived from SHIP-00)
@@ -248,7 +248,8 @@ class SHIP_03 implements ISHIP_03 {
   } | null> {
     try {
       // Access Gun through identity
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         console.warn("Gun not available");
         return null;
@@ -311,7 +312,8 @@ class SHIP_03 implements ISHIP_03 {
     timestamp?: number;
   }>> {
     try {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         console.warn("Gun not available");
         return [];
@@ -337,8 +339,8 @@ class SHIP_03 implements ISHIP_03 {
     const keys = await this.getStealthKeys();
 
     // Encrypt keys using SHIP-00 SEA
-    const gun = (this.identity as any).shogun?.db?.gun;
-    const crypto = (this.identity as any).shogun?.db?.crypto;
+    const shogun = this.identity.getShogun();
+    const crypto = shogun?.db?.crypto;
     const keyPair = this.identity.getKeyPair();
 
     if (!crypto || !keyPair) {
@@ -356,7 +358,8 @@ class SHIP_03 implements ISHIP_03 {
     this.ensureInitialized();
 
     // Decrypt if needed
-    const crypto = (this.identity as any).shogun?.db?.crypto;
+    const shogun = this.identity.getShogun();
+    const crypto = shogun?.db?.crypto;
     const keyPair = this.identity.getKeyPair();
 
     let keys: StealthKeys;
@@ -989,7 +992,8 @@ class SHIP_03 implements ISHIP_03 {
       }
 
       // Access Gun through identity
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         console.warn("Gun not available, skipping key publication");
         return;

@@ -241,6 +241,8 @@ export interface ShogunCoreConfig {
   plugins?: {
     autoRegister?: ShogunPlugin[];
   };
+  disableAutoRecall?: boolean; // 🔧 Disable automatic session recall on init
+  silent?: boolean; // 🔧 Disable console logs
 }
 
 export interface ShogunEvents {

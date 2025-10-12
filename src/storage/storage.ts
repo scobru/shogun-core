@@ -7,36 +7,46 @@ export class ShogunStorage {
   private store: Map<string, any>;
   private isTestMode: boolean;
   private useLocalStorage: boolean;
+  private silent: boolean;
 
   /**
    * Initializes storage and loads any existing keypair from localStorage if available
    */
-  constructor() {
+  constructor(silent: boolean = false) {
     this.store = new Map<string, any>();
+    this.silent = silent;
 
     this.isTestMode = process.env.NODE_ENV === "test";
     this.useLocalStorage = false;
 
-    // Debug: log the environment
-    console.log("ShogunStorage: NODE_ENV =", process.env.NODE_ENV);
-    console.log("ShogunStorage: isTestMode =", this.isTestMode);
+    // Debug: log the environment (only if not silent)
+    if (!this.silent) {
+      console.log("ShogunStorage: NODE_ENV =", process.env.NODE_ENV);
+      console.log("ShogunStorage: isTestMode =", this.isTestMode);
+    }
 
     // In test mode, don't use localStorage to avoid test pollution
     if (this.isTestMode) {
       this.useLocalStorage = false;
-      console.log("ShogunStorage: Test mode detected, localStorage disabled");
+      if (!this.silent) {
+        console.log("ShogunStorage: Test mode detected, localStorage disabled");
+      }
       return;
     }
 
     if (typeof localStorage !== "undefined") {
-      console.log("ShogunStorage: localStorage is defined");
+      if (!this.silent) {
+        console.log("ShogunStorage: localStorage is defined");
+      }
       try {
         // Probe localStorage without polluting expectations in tests
         const testKey = "_shogun_test";
         localStorage.setItem(testKey, testKey);
         localStorage.removeItem(testKey);
         this.useLocalStorage = true;
-        console.log("ShogunStorage: localStorage enabled");
+        if (!this.silent) {
+          console.log("ShogunStorage: localStorage enabled");
+        }
 
         const storedPair = localStorage.getItem("shogun_keypair");
         if (storedPair) {
@@ -45,13 +55,17 @@ export class ShogunStorage {
       } catch (error) {
         this.useLocalStorage = false;
         // Silence logs in tests; tests expect no console.error during constructor
-        console.log(
-          "ShogunStorage: localStorage error:",
-          (error as Error).message,
-        );
+        if (!this.silent) {
+          console.log(
+            "ShogunStorage: localStorage error:",
+            (error as Error).message,
+          );
+        }
       }
     } else {
-      console.log("ShogunStorage: localStorage is undefined");
+      if (!this.silent) {
+        console.log("ShogunStorage: localStorage is undefined");
+      }
     }
   }
 

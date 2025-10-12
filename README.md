@@ -1010,6 +1010,18 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## SHIP Standards (Shogun Interface Proposals)
+
+Shogun Core implements **SHIP standards** - modular, composable protocols for decentralized applications:
+
+- **[SHIP-00](./ship/SHIP_00.md)**: Identity & Authentication Foundation
+- **[SHIP-01](./ship/SHIP_01.md)**: Decentralized Encrypted Messaging
+- **[SHIP-02](./ship/SHIP_02.md)**: Ethereum HD Wallet & Transaction Sending
+- **[SHIP-03](./ship/SHIP_03.md)**: Dual-Key Stealth Addresses (ERC-5564)
+- **[SHIP-04](./ship/SHIP_04.md)**: Multi-Modal Authentication (OAuth/WebAuthn/Web3/Nostr)
+
+See [ship/README.md](./ship/README.md) for complete SHIP documentation and examples.
+
 ## Advanced Features
 
 For advanced use cases and comprehensive API coverage, see the [Advanced API Features](./API.md#advanced-api-features) section which includes:

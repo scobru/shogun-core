@@ -147,6 +147,8 @@ export interface ShogunSDKConfig {
   plugins?: PluginsConfig;
   appToken?: string;
   gunOptions?: any;
+  disableAutoRecall?: boolean;
+  silent?: boolean;
 }
 
 export interface ShogunEvents {

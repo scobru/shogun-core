@@ -64,9 +64,20 @@ class DataBase {
   // Integrated modules
   private _rxjs?: RxJS;
 
-  constructor(gun: IGunInstance, appScope: string = "shogun") {
+  private disableAutoRecall: boolean = false;
+  private silent: boolean = false;
+
+  constructor(
+    gun: IGunInstance,
+    appScope: string = "shogun",
+    options?: { disableAutoRecall?: boolean; silent?: boolean },
+  ) {
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
+
+    // Set options
+    this.disableAutoRecall = options?.disableAutoRecall || false;
+    this.silent = options?.silent || false;
 
     // Validate Gun instance
     if (!gun) {
@@ -99,7 +110,19 @@ class DataBase {
 
     this.gun = gun;
 
-    this.user = this.gun.user().recall({ sessionStorage: true });
+    // Recall only if NOT disabled and there's a "pair" in sessionStorage
+    if (
+      !this.disableAutoRecall &&
+      typeof sessionStorage !== "undefined" &&
+      sessionStorage.getItem("pair")
+    ) {
+      this.user = this.gun.user().recall({ sessionStorage: true });
+    } else {
+      if (!this.silent && !this.disableAutoRecall) {
+        console.log("No pair found in sessionStorage, using gun.user()");
+      }
+      this.user = this.gun.user();
+    }
 
     this.subscribeToAuthEvents();
 
@@ -563,7 +586,14 @@ class DataBase {
 
         // Attempt to recall user session
         try {
-          const recallResult = userInstance.recall({ sessionStorage: true });
+          if (
+            typeof sessionStorage !== "undefined" &&
+            sessionStorage.getItem("pair")
+          ) {
+            const recallResult = userInstance.recall({ sessionStorage: true });
+          } else {
+            const recallResult = userInstance;
+          }
           // console.log("recallResult", recallResult);
         } catch (recallError) {
           console.error("Error during recall:", recallError);
@@ -2046,9 +2076,16 @@ class DataBase {
   /**
    * Recall user session
    */
-  public recall(): void {
+  public recall(options?: { sessionStorage?: boolean }): void {
     if (this.user) {
-      this.user.recall({ sessionStorage: true });
+      if (
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pair")
+      ) {
+        this.user.recall({ sessionStorage: true });
+      } else {
+        this.user;
+      }
     }
   }
 
@@ -2100,7 +2137,14 @@ class DataBase {
    */
   public saveSession(session: any): void {
     if (this.user) {
-      this.user.recall({ sessionStorage: true });
+      if (
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pair")
+      ) {
+        this.user.recall({ sessionStorage: true });
+      } else {
+        this.user;
+      }
     }
   }
 
@@ -2109,7 +2153,14 @@ class DataBase {
    */
   public loadSession(): any {
     if (this.user) {
-      return this.user.recall({ sessionStorage: true });
+      if (
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pair")
+      ) {
+        return this.user.recall({ sessionStorage: true });
+      } else {
+        return this.user;
+      }
     }
     return null;
   }
@@ -2148,13 +2199,17 @@ class DataBase {
   }
 }
 
-const createGun = (config: any) => {
-  console.log("Creating Gun instance with config:", config);
-  console.log("Config peers:", config?.peers);
+const createGun = (config: any, silent?: boolean) => {
+  if (!silent) {
+    console.log("Creating Gun instance with config:", config);
+    console.log("Config peers:", config?.peers);
+  }
 
   const gunInstance = Gun(config);
 
-  console.log("Created Gun instance:", gunInstance);
+  if (!silent) {
+    console.log("Created Gun instance:", gunInstance);
+  }
   return gunInstance;
 };
 

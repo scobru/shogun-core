@@ -57,9 +57,9 @@ class SHIP_02 implements ISHIP_02 {
 
   // GunDB Node Names for SHIP-02 storage
   public static readonly NODES = {
-    ADDRESS_BOOK: "ship02_addressbook",
-    MNEMONIC: "ship02_mnemonic",
-    WALLET_PATHS: "ship02_wallet_paths",
+    ADDRESS_BOOK: "addressbook",
+    MNEMONIC: "mnemonic",
+    WALLET_PATHS: "wallet_paths",
   } as const;
 
   // Master seed derived from SHIP-00 identity OR from mnemonic
@@ -615,7 +615,8 @@ class SHIP_02 implements ISHIP_02 {
   private async saveAddressBookToGun(addressBook: AddressBook): Promise<void> {
     try {
       // Access Gun through identity
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         console.warn("Gun not available, skipping persistence");
         return;
@@ -642,7 +643,8 @@ class SHIP_02 implements ISHIP_02 {
     try {
       this.ensureInitialized();
 
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         console.warn("Gun not available");
         return null;
@@ -858,7 +860,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   private async saveMnemonicToGun(mnemonic: string): Promise<void> {
     try {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) return;
 
       const user = gun.user();
@@ -878,7 +881,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   private async loadMnemonicFromGun(): Promise<string | null> {
     try {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) return null;
 
       const user = gun.user();
@@ -928,7 +932,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   async encryptSensitiveData(text: string): Promise<string> {
     try {
-      const crypto = (this.identity as any).shogun?.db?.crypto;
+      const shogun = this.identity.getShogun();
+      const crypto = shogun?.db?.crypto;
       const keyPair = this.identity.getKeyPair();
 
       if (!crypto || !keyPair) {
@@ -954,7 +959,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   async decryptSensitiveData(encryptedText: string): Promise<string | null> {
     try {
-      const crypto = (this.identity as any).shogun?.db?.crypto;
+      const shogun = this.identity.getShogun();
+      const crypto = shogun?.db?.crypto;
       const keyPair = this.identity.getKeyPair();
 
       if (!crypto || !keyPair) {
@@ -1129,7 +1135,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   getMainWallet(): ethers.Wallet {
     if (!this.mainWallet) {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         throw new Error("Gun not available");
       }
@@ -1176,7 +1183,8 @@ class SHIP_02 implements ISHIP_02 {
   async createWallet(): Promise<WalletInfo> {
     this.ensureInitialized();
 
-    const gun = (this.identity as any).shogun?.db?.gun;
+    const shogun = this.identity.getShogun();
+    const gun = shogun?.db?.gun;
     const user = gun?.user();
     
     if (!user || !user.is) {
@@ -1533,7 +1541,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   private async saveWalletPathsToGun(): Promise<void> {
     try {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) return;
 
       const user = gun.user();
@@ -1551,7 +1560,8 @@ class SHIP_02 implements ISHIP_02 {
    */
   private async loadWalletPathsFromGun(): Promise<void> {
     try {
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) return;
 
       const user = gun.user();

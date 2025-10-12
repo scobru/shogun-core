@@ -102,17 +102,17 @@ class SHIP_01 implements ISHIP_01 {
         return { success: false, error: "No current user" };
       }
 
-      // 4. Access GunDB through identity provider's internal shogun instance
-      // Note: This is a temporary solution. In production, GunDB access should be
-      // provided through a separate interface or passed to constructor.
-      const gun = (this.identity as any).shogun?.db?.gun;
-      if (!gun) {
-        return { success: false, error: "Cannot access GunDB" };
+      // 4. Access GunDB through identity provider
+      const shogun = this.identity.getShogun();
+      if (!shogun || !shogun.db) {
+        return { success: false, error: "Cannot access ShogunCore" };
       }
 
-      const crypto = (this.identity as any).shogun?.db?.crypto;
-      if (!crypto) {
-        return { success: false, error: "Cannot access crypto" };
+      const gun = shogun.db.gun;
+      const crypto = shogun.db.crypto;
+      
+      if (!gun || !crypto) {
+        return { success: false, error: "Cannot access GunDB or crypto" };
       }
 
       // 5. Encrypt message using ECDH
@@ -181,7 +181,8 @@ class SHIP_01 implements ISHIP_01 {
     const username = currentUser.alias;
 
     // Access GunDB
-    const gun = (this.identity as any).shogun?.db?.gun;
+    const shogun = this.identity.getShogun();
+    const gun = shogun?.db?.gun;
     if (!gun) {
       console.error("❌ Cannot access GunDB");
       return;
@@ -259,7 +260,8 @@ class SHIP_01 implements ISHIP_01 {
     const otherUserPub = otherUserData?.userPub;
 
     // Access GunDB
-    const gun = (this.identity as any).shogun?.db?.gun;
+    const shogun = this.identity.getShogun();
+    const gun = shogun?.db?.gun;
     if (!gun) {
       console.error("❌ Cannot access GunDB");
       return [];
@@ -339,7 +341,8 @@ class SHIP_01 implements ISHIP_01 {
     }
 
     // Access crypto
-    const crypto = (this.identity as any).shogun?.db?.crypto;
+    const shogun = this.identity.getShogun();
+    const crypto = shogun?.db?.crypto;
     if (!crypto) {
       throw new Error("Cannot access crypto");
     }
@@ -364,7 +367,8 @@ class SHIP_01 implements ISHIP_01 {
   } | null> {
     try {
       // Access GunDB
-      const gun = (this.identity as any).shogun?.db?.gun;
+      const shogun = this.identity.getShogun();
+      const gun = shogun?.db?.gun;
       if (!gun) {
         return null;
       }
@@ -417,10 +421,13 @@ class SHIP_01 implements ISHIP_01 {
         return { success: false, error: "No current user" };
       }
 
-      // Access crypto
-      const crypto = (this.identity as any).shogun?.db?.crypto;
-      if (!crypto) {
-        return { success: false, error: "Cannot access crypto" };
+      // Access crypto and GunDB
+      const shogun = this.identity.getShogun();
+      const crypto = shogun?.db?.crypto;
+      const gun = shogun?.db?.gun;
+      
+      if (!crypto || !gun) {
+        return { success: false, error: "Cannot access crypto or GunDB" };
       }
 
       // Hash token for key derivation (more secure)
@@ -431,12 +438,6 @@ class SHIP_01 implements ISHIP_01 {
 
       // Generate message ID
       const messageId = this.generateMessageId();
-
-      // Access GunDB
-      const gun = (this.identity as any).shogun?.db?.gun;
-      if (!gun) {
-        return { success: false, error: "Cannot access GunDB" };
-      }
 
       // Save encrypted message
       const messageData = {
@@ -484,8 +485,9 @@ class SHIP_01 implements ISHIP_01 {
     }
 
     // Access GunDB and crypto
-    const gun = (this.identity as any).shogun?.db?.gun;
-    const crypto = (this.identity as any).shogun?.db?.crypto;
+    const shogun = this.identity.getShogun();
+    const gun = shogun?.db?.gun;
+    const crypto = shogun?.db?.crypto;
 
     if (!gun || !crypto) {
       console.error("❌ Cannot access GunDB or crypto");

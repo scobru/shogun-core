@@ -4,6 +4,17 @@
 
 Comprehensive API documentation for Shogun Core with unified type system, consistent authentication interfaces, and simplified API layer.
 
+### Quick Links
+
+- **[Shogun Core Main Docs](./README.md)** - Getting started and installation
+- **[SHIP Standards](./ship/README.md)** - Protocol specifications
+  - [SHIP-00: Identity](./ship/SHIP_00.md)
+  - [SHIP-01: Messaging](./ship/SHIP_01.md)
+  - [SHIP-02: HD Wallet](./ship/SHIP_02.md)
+  - [SHIP-03: Stealth Addresses](./ship/SHIP_03.md)
+  - [SHIP-04: Multi-Modal Auth](./ship/SHIP_04.md)
+- **[LLM.md](./LLM.md)** - Legacy doc (see API.md instead)
+
 ## ⚠️ **BREAKING CHANGES & MIGRATION**
 
 ### Removed Functions (v2.0.0)

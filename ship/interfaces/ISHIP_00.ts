@@ -182,6 +182,24 @@ export interface ISHIP_00 {
     isLoggedIn(): boolean;
 
     // ========================================================================
+    // CORE ACCESS
+    // ========================================================================
+
+    /**
+     * @notice Get underlying ShogunCore instance
+     * @dev Provides access to Gun, SEA, and crypto utilities
+     * @return ShogunCore instance
+     * 
+     * Use cases:
+     * - Access Gun database directly
+     * - Use SEA encryption utilities
+     * - Use crypto helpers (hash, encrypt, etc.)
+     * 
+     * Note: This is used by other SHIP implementations (SHIP-01, SHIP-06, etc.)
+     */
+    getShogun(): any; // ShogunCore type
+
+    // ========================================================================
     // KEY MANAGEMENT
     // ========================================================================
 

@@ -37,7 +37,7 @@ export class CoreInitializer {
     }
 
     // Initialize storage
-    this.core.storage = new ShogunStorage();
+    this.core.storage = new ShogunStorage(config.silent);
 
     // Setup error handler
     ErrorHandler.addListener((error: ShogunError) => {
@@ -74,27 +74,40 @@ export class CoreInitializer {
    * Initialize Gun instance
    */
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
-    console.log("Initialize Gun instance", config);
+    if (!config.silent) {
+      console.log("Initialize Gun instance", config);
+    }
 
     try {
       if (config.gunInstance && config.gunOptions === undefined) {
-        console.log("Using provided Gun instance");
+        if (!config.silent) {
+          console.log("Using provided Gun instance");
+        }
         this.core._gun = config.gunInstance;
       } else if (config.gunOptions && config.gunInstance === undefined) {
-        console.log("Creating new Gun instance");
-        this.core._gun = createGun(config.gunOptions);
+        if (!config.silent) {
+          console.log("Creating new Gun instance");
+        }
+        this.core._gun = createGun(config.gunOptions, config.silent);
       } else if (config.gunInstance && config.gunOptions) {
         // Both provided, prefer gunInstance
-        console.log(
-          "Both gunInstance and gunOptions provided, using gunInstance",
-        );
+        if (!config.silent) {
+          console.log(
+            "Both gunInstance and gunOptions provided, using gunInstance",
+          );
+        }
         this.core._gun = config.gunInstance;
       } else {
         // Neither provided, create a default Gun instance for testing
-        console.log(
-          "No Gun instance or options provided, creating default instance",
+        if (!config.silent) {
+          console.log(
+            "No Gun instance or options provided, creating default instance",
+          );
+        }
+        this.core._gun = createGun(
+          { peers: config.gunOptions?.peers || [] },
+          config.silent,
         );
-        this.core._gun = createGun({ peers: config.gunOptions?.peers || [] });
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -104,11 +117,14 @@ export class CoreInitializer {
     }
 
     try {
-      console.log("Initialize Gun instance", this.core.gun);
+      if (!config.silent) {
+        console.log("Initialize Gun instance", this.core.gun);
+      }
 
       this.core.db = new DataBase(
         this.core._gun,
         config.gunOptions?.scope || "",
+        { disableAutoRecall: config.disableAutoRecall, silent: config.silent },
       );
       // Note: user is a getter that returns _user, so we don't need to assign it
     } catch (error) {
@@ -124,7 +140,16 @@ export class CoreInitializer {
    */
   private async initializeGunUser(): Promise<void> {
     try {
-      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+      // Skip recall if disabled in config
+      if (
+        !this.core.config.disableAutoRecall &&
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pair")
+      ) {
+        this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+      } else {
+        this.core._user = this.core.gun.user();
+      }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing Gun user:", error);
@@ -133,7 +158,16 @@ export class CoreInitializer {
     }
 
     this.core.gun.on("auth", (user: any) => {
-      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+      // Skip recall if disabled in config
+      if (
+        !this.core.config.disableAutoRecall &&
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pair")
+      ) {
+        this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+      } else {
+        this.core._user = this.core.gun.user();
+      }
       this.core.emit("auth:login", {
         userPub: user.pub,
         method: "password" as const,
@@ -171,9 +205,9 @@ export class CoreInitializer {
    */
   private setupWalletDerivation(): void {
     this.core.gun.on("auth", async (user: any) => {
-      if (!user) return;
-      const priv = (user as any)._?.sea?.epriv;
-      const pub = (user as any)._?.sea?.epub;
+      if (!user.is) return;
+      const priv = user._?.sea?.epriv;
+      const pub = user._?.sea?.epub;
       this.core.wallets = await derive(priv, pub, {
         includeSecp256k1Bitcoin: true,
         includeSecp256k1Ethereum: true,
