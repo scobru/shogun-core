@@ -116,7 +116,6 @@ export class CoreInitializer {
       this.core.db = new DataBase(
         this.core._gun,
         config.gunOptions?.scope || "",
-        { disableAutoRecall: config.disableAutoRecall, silent: config.silent },
       );
       // Note: user is a getter that returns _user, so we don't need to assign it
     } catch (error) {

@@ -322,8 +322,8 @@ export class ShogunCore implements IShogunCore {
    * @description Authenticates user using a GunDB pair directly.
    * Emits login event on success.
    */
-  async loginWithPair(pair: ISEAPair): Promise<AuthResult> {
-    return this.authManager.loginWithPair(pair);
+  async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
+    return this.authManager.loginWithPair(username, pair);
   }
 
   /**

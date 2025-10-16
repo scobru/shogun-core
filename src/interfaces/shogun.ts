@@ -187,7 +187,7 @@ export interface IShogunCore extends PluginManager {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult>;
-  loginWithPair(pair: ISEAPair): Promise<AuthResult>;
+  loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult>;
   signUp(
     username: string,
     password?: string,

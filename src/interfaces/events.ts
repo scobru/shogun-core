@@ -11,7 +11,14 @@ import { EventEmitter } from "../utils/eventEmitter";
 export interface AuthEventData {
   userPub?: string;
   username?: string;
-  method: "password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" | "pair";
+  method:
+    | "password"
+    | "webauthn"
+    | "web3"
+    | "nostr"
+    | "oauth"
+    | "bitcoin"
+    | "pair";
   provider?: string;
 }
 
