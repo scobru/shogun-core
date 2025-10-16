@@ -111,7 +111,7 @@ export class AuthManager {
    * @description Authenticates user using a GunDB pair directly.
    * Emits login event on success.
    */
-  async loginWithPair(pair: ISEAPair): Promise<AuthResult> {
+  async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
     try {
       if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
         return {
@@ -121,7 +121,7 @@ export class AuthManager {
       }
 
       // Use the new loginWithPair method from GunInstance
-      const result = await this.core.db.login("", "", pair);
+      const result = await this.core.db.loginWithPair(username, pair);
 
       if (result.success) {
         // Include SEA pair in the response
@@ -133,7 +133,8 @@ export class AuthManager {
         this.currentAuthMethod = "pair";
         this.core.emit("auth:login", {
           userPub: result.userPub ?? "",
-          method: "password",
+          method: "pair",
+          username,
         });
       } else {
         result.error =

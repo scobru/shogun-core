@@ -70,7 +70,7 @@ class DataBase {
   constructor(
     gun: IGunInstance,
     appScope: string = "shogun",
-    options?: { disableAutoRecall?: boolean; silent?: boolean },
+    options?: { disableAutoRecall?: boolean; silent?: boolean }
   ) {
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
@@ -86,25 +86,25 @@ class DataBase {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`,
+        `Gun instance must be an object, received: ${typeof gun}`
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
       );
     }
 
@@ -161,7 +161,7 @@ class DataBase {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -719,7 +719,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): { valid: boolean; error?: string } {
     // Validate username
     if (!username || username.length < 1) {
@@ -771,7 +771,7 @@ class DataBase {
    */
   private async createNewUser(
     username: string,
-    password: string,
+    password: string
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -818,7 +818,7 @@ class DataBase {
             ) {
               console.error(
                 "User creation successful but no userPub returned:",
-                ack,
+                ack
               );
               resolve({
                 success: false,
@@ -829,7 +829,7 @@ class DataBase {
             }
           }
         });
-      },
+      }
     );
   }
 
@@ -839,7 +839,7 @@ class DataBase {
   private async authenticateNewUser(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -886,7 +886,7 @@ class DataBase {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found",
+                    "Authentication successful but no userPub found"
                   );
                   resolve({
                     success: false,
@@ -912,7 +912,7 @@ class DataBase {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found",
+                    "Authentication successful but no userPub found"
                   );
                   resolve({
                     success: false,
@@ -925,7 +925,7 @@ class DataBase {
             }
           });
         }
-      },
+      }
     );
   }
 
@@ -939,14 +939,14 @@ class DataBase {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<SignUpResult> {
     try {
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
         username,
         password,
-        pair,
+        pair
       );
       if (!validation.valid) {
         return { success: false, error: validation.error };
@@ -973,7 +973,7 @@ class DataBase {
       const authResult = await this.authenticateNewUser(
         username,
         password,
-        pair,
+        pair
       );
 
       if (!authResult.success) {
@@ -988,7 +988,7 @@ class DataBase {
       ) {
         console.error(
           "Authentication successful but no valid userPub returned:",
-          authResult,
+          authResult
         );
         return {
           success: false,
@@ -1004,7 +1004,7 @@ class DataBase {
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
-          authResult,
+          authResult
         );
 
         // Return the post-auth result which includes the complete user data
@@ -1038,7 +1038,7 @@ class DataBase {
    */
   private async createNewUserWithPair(
     username: string,
-    pair: ISEAPair,
+    pair: ISEAPair
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1072,14 +1072,14 @@ class DataBase {
         // We just need to validate that the pair is valid and return success
 
         resolve({ success: true, userPub: pair.pub });
-      },
+      }
     );
   }
 
   private async runPostAuthOnAuthResult(
     username: string,
     userPub: string,
-    authResult: any,
+    authResult: any
   ): Promise<SignUpResult> {
     // Setting up user profile after authentication
 
@@ -1132,7 +1132,7 @@ class DataBase {
       const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
-        epub,
+        epub
       );
 
       if (!trackingResult) {
@@ -1173,7 +1173,7 @@ class DataBase {
   private async setupComprehensiveUserTracking(
     username: string,
     userPub: string,
-    epub: string,
+    epub: string
   ): Promise<boolean> {
     try {
       // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
@@ -1186,7 +1186,7 @@ class DataBase {
       // 2. Create username mapping: usernames/alias -> userPub
       const usernameMappingResult = await this.createUsernameMapping(
         username,
-        userPub,
+        userPub
       );
 
       if (!usernameMappingResult) {
@@ -1197,7 +1197,7 @@ class DataBase {
       const userRegistryResult = await this.createUserRegistry(
         username,
         userPub,
-        epub,
+        epub
       );
 
       if (!userRegistryResult) {
@@ -1207,7 +1207,7 @@ class DataBase {
       // 4. Create reverse lookup: userPub -> alias
       const reverseLookupResult = await this.createReverseLookup(
         username,
-        userPub,
+        userPub
       );
 
       if (!reverseLookupResult) {
@@ -1227,7 +1227,7 @@ class DataBase {
       const userMetadataResult = await this.createUserMetadata(
         username,
         userPub,
-        epub,
+        epub
       );
 
       if (!userMetadataResult) {
@@ -1247,7 +1247,7 @@ class DataBase {
    */
   private async createAliasIndex(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
       const aliasNode = this.gun.get(`~@${username}`);
@@ -1272,7 +1272,7 @@ class DataBase {
    */
   private async createUsernameMapping(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
       const ack = await this.node
@@ -1299,7 +1299,7 @@ class DataBase {
   private async createUserRegistry(
     username: string,
     userPub: string,
-    epub: string | null,
+    epub: string | null
   ): Promise<boolean> {
     try {
       const userData = {
@@ -1333,7 +1333,7 @@ class DataBase {
    */
   private async createReverseLookup(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
       const ack = await this.node
@@ -1359,7 +1359,7 @@ class DataBase {
    */
   private async createEpubIndex(
     epub: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
       const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
@@ -1382,7 +1382,7 @@ class DataBase {
   private async createUserMetadata(
     username: string,
     userPub: string,
-    epub: string | null,
+    epub: string | null
   ): Promise<boolean> {
     try {
       const userMetadata = {
@@ -1440,7 +1440,7 @@ class DataBase {
       } catch (error) {
         console.error(
           `GunDB alias lookup failed for ${normalizedAlias}:`,
-          error,
+          error
         );
       }
 
@@ -1460,7 +1460,7 @@ class DataBase {
       } catch (error) {
         console.error(
           `Username mapping lookup failed for ${normalizedAlias}:`,
-          error,
+          error
         );
       }
 
@@ -1644,7 +1644,7 @@ class DataBase {
   private async performAuthentication(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
@@ -1667,7 +1667,7 @@ class DataBase {
             }
           });
         }
-      },
+      }
     );
   }
 
@@ -1694,16 +1694,23 @@ class DataBase {
     };
   }
 
+  /**
+   * Performs login with username and password
+   * @param username Username
+   * @param password Password
+   * @param pair SEA pair (optional)
+   * @returns Promise resolving to AuthResult object
+   */
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<AuthResult> {
     try {
       const loginResult = await this.performAuthentication(
         username,
         password,
-        pair,
+        pair
       );
 
       if (!loginResult.success) {
@@ -1770,6 +1777,28 @@ class DataBase {
     }
   }
 
+  /**
+   * Performs login with GunDB pair directly
+   * @param username Username
+   * @param pair SEA pair
+   * @returns Promise resolving to AuthResult object
+   */
+  async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
+    try {
+      const loginResult = await this.performAuthentication(username, "", pair);
+      if (!loginResult.success) {
+        return {
+          success: false,
+          error: `User '${username}' not found. Please check your username or register first.`,
+        };
+      }
+      return this.buildLoginResult(username, this.gun.user().is?.pub || "");
+    } catch (error) {
+      console.error(`Exception during login with pair: ${error}`);
+      return { success: false, error: String(error) };
+    }
+  }
+
   private saveCredentials(userInfo: {
     alias: string;
     pair: ISEAPair | null;
@@ -1807,7 +1836,7 @@ class DataBase {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; error?: string }> {
     // Setting password hint for
 
@@ -1899,7 +1928,7 @@ class DataBase {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     // Attempting password recovery for
 

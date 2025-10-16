@@ -50,6 +50,13 @@ export type AuthMethod =
   | "oauth"
   | "pair";
 
+export interface AuthEventData {
+  userPub?: string;
+  username?: string;
+  method: "password" | "webauthn" | "web3" | "nostr" | "oauth" | "pair";
+  provider?: string;
+}
+
 // Authentication result interfaces
 export interface AuthResult {
   success: boolean;
