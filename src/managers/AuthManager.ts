@@ -257,8 +257,6 @@ export class AuthManager {
         return this.core.getPlugin("web3");
       case "nostr":
         return this.core.getPlugin("nostr");
-      case "oauth":
-        return this.core.getPlugin("oauth");
       case "password":
       default:
         return {

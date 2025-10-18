@@ -62,3 +62,14 @@ export {
   AutoQuickStart,
   autoQuickStart,
 };
+
+// Export seed phrase utilities for WebAuthn multi-device support
+export {
+  generateSeedPhrase,
+  validateSeedPhrase,
+  mnemonicToSeed,
+  seedToPassword,
+  deriveCredentialsFromMnemonic,
+  formatSeedPhrase,
+  normalizeSeedPhrase,
+} from "./utils/seedPhrase";

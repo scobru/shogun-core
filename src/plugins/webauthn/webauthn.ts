@@ -19,6 +19,7 @@ import {
 } from "./types";
 import { IGunInstance } from "gun";
 import derive from "../../gundb/derive";
+import { deriveCredentialsFromMnemonic } from "../../utils/seedPhrase";
 
 /**
  * Extends Window interface to include WebauthnAuth
@@ -631,15 +632,34 @@ if (typeof window !== "undefined") {
 
 export type { WebAuthnCredentials, DeviceInfo, CredentialResult };
 
-// Funzione helper per derivare chiavi WebAuthn (come per Web3)
+// Funzione helper per derivare chiavi WebAuthn
+// Supporta sia credentialId (legacy) che seed phrase (nuovo, multi-device)
 export async function deriveWebauthnKeys(
   username: string,
-  credentialId: string,
+  credentialIdOrSeedPhrase: string,
+  useSeedPhrase: boolean = false,
 ) {
-  const hashedCredentialId = ethers.keccak256(ethers.toUtf8Bytes(credentialId));
-  const salt = `${username}_${credentialId}`;
+  if (useSeedPhrase) {
+    // New method: derive from BIP39 seed phrase for multi-device support
 
-  return await derive(hashedCredentialId, salt, {
-    includeP256: true,
-  });
+    const { password, seed } = deriveCredentialsFromMnemonic(
+      credentialIdOrSeedPhrase,
+      username,
+    );
+
+    // Use the seed phrase-derived password for Gun key derivation
+    return await derive(password, username, {
+      includeP256: true,
+    });
+  } else {
+    // Legacy method: derive from credentialId (device-bound)
+    const hashedCredentialId = ethers.keccak256(
+      ethers.toUtf8Bytes(credentialIdOrSeedPhrase),
+    );
+    const salt = `${username}_${credentialIdOrSeedPhrase}`;
+
+    return await derive(hashedCredentialId, salt, {
+      includeP256: true,
+    });
+  }
 }

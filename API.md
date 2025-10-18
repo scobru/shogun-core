@@ -3,56 +3,6 @@
 ## Overview
 
 Comprehensive API documentation for Shogun Core with unified type system, consistent authentication interfaces, and simplified API layer.
-
-### Quick Links
-
-- **[Shogun Core Main Docs](./README.md)** - Getting started and installation
-- **[SHIP Standards](./ship/README.md)** - Protocol specifications
-  - [SHIP-00: Identity](./ship/SHIP_00.md)
-  - [SHIP-01: Messaging](./ship/SHIP_01.md)
-  - [SHIP-02: HD Wallet](./ship/SHIP_02.md)
-  - [SHIP-03: Stealth Addresses](./ship/SHIP_03.md)
-  - [SHIP-04: Multi-Modal Auth](./ship/SHIP_04.md)
-- **[LLM.md](./LLM.md)** - Legacy doc (see API.md instead)
-
-## ⚠️ **BREAKING CHANGES & MIGRATION**
-
-### Removed Functions (v2.0.0)
-The following array functions have been **REMOVED** due to GunDB compatibility issues:
-- `putUserArray()`, `getUserArray()`, `addToUserArray()`, `removeFromUserArray()`, `updateInUserArray()`
-
-### Deprecated Functions
-These functions are deprecated and show warnings:
-- `putArray()`, `getArray()`, `addToArray()`, `removeFromArray()`, `updateInArray()`
-
-### Migration Guide
-
-**❌ Old (Removed):**
-```typescript
-// These functions no longer exist
-await api.putUserArray('todos', todos);
-const todos = await api.getUserArray('todos');
-await api.addToUserArray('todos', newTodo);
-await api.updateInUserArray('todos', '1', { done: true });
-await api.removeFromUserArray('todos', '2');
-```
-
-**✅ New (Recommended):**
-```typescript
-// Option 1: Use Collections (recommended)
-await api.createCollection('todos', {
-  '1': { text: 'Learn Shogun Core', done: false },
-  '2': { text: 'Build dApp', done: false }
-});
-const todos = await api.getCollection('todos');
-await api.addToCollection('todos', '3', { text: 'Deploy', done: false });
-await api.removeFromCollection('todos', '2');
-
-// Option 2: Direct GunDB Operations
-await api.node('users').get('alice').get('todos').get('1').put({ 
-  text: 'Learn Shogun Core', 
-  done: false 
-});
 ```
 
 ### Recent Improvements (v2.0.0)
@@ -66,7 +16,7 @@ await api.node('users').get('alice').get('todos').get('1').put({
 - **🔧 IMPROVED: User Data Operations**: All user data methods now use direct Gun user node for better reliability
 - Type consistency across all plugins: unified `AuthResult` and `SignUpResult`
 - Typed event system with `ShogunEventMap` for safer listeners
-- OAuth hardening: PKCE support, improved Google flow, richer user profile
+- Enhanced authentication security and error handling
 - Simplified public surface area to focus on core auth + GunDB storage
 - Password recovery via security questions retained and documented
 
@@ -581,56 +531,6 @@ class NostrConnectorPlugin
 }
 ```
 
-### OAuth Plugin (oauthPlugin.ts)
-
-Social login with external providers using secure PKCE flow.
-
-```typescript
-class OAuthPlugin extends BasePlugin implements OAuthPluginInterface {
-  name = "oauth";
-  version = "1.0.0";
-  description = "OAuth authentication for ShogunCore with PKCE support";
-
-  // Core Authentication - ✅ CORRECT TYPES
-  async login(provider: OAuthProvider): Promise<AuthResult>;
-  async signUp(provider: OAuthProvider): Promise<SignUpResult>;
-
-  // OAuth Flow Management
-  isSupported(): boolean;
-  getAvailableProviders(): OAuthProvider[];
-  async initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
-  async completeOAuth(
-    provider: OAuthProvider,
-    authCode: string,
-    state?: string
-  ): Promise<OAuthConnectionResult>;
-  async handleOAuthCallback(
-    provider: OAuthProvider,
-    authCode: string,
-    state: string
-  ): Promise<AuthResult>;
-
-  // Credential & User Management
-  async generateCredentials(
-    userInfo: OAuthUserInfo,
-    provider: OAuthProvider
-  ): Promise<OAuthCredentials>;
-  getCachedUserInfo(
-    userId: string,
-    provider: OAuthProvider
-  ): OAuthUserInfo | null;
-  clearUserCache(userId?: string, provider?: OAuthProvider): void;
-
-  // Configuration
-  configure(config: Partial<OAuthConfig>): void;
-
-
-  // Lifecycle
-  initialize(core: ShogunCore): void;
-  destroy(): void;
-}
-```
-
 ## Type Definitions
 
 ### Core Authentication Types
@@ -718,12 +618,8 @@ type AuthMethod =
   | "webauthn"
   | "web3"
   | "nostr"
-  | "oauth"
   | "bitcoin"
   | "pair";
-
-// OAuth providers
-type OAuthProvider = "google" | "github" | "discord" | "twitter" | "custom";
 ```
 
 ### Event System Types

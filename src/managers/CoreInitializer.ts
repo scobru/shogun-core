@@ -4,7 +4,6 @@ import { ErrorHandler, ShogunError } from "../utils/errorHandler";
 import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
-import { OAuthPlugin } from "../plugins/oauth/oauthPlugin";
 import { DataBase, RxJS, createGun, derive } from "../gundb";
 
 /**
@@ -211,21 +210,6 @@ export class CoreInitializer {
    */
   private registerBuiltinPlugins(config: ShogunCoreConfig): void {
     try {
-      // Register OAuth plugin if configuration is provided
-      if (config.oauth) {
-        if (typeof console !== "undefined" && console.warn) {
-          console.warn(
-            "OAuth plugin will be registered with provided configuration",
-          );
-        }
-
-        const oauthPlugin = new OAuthPlugin();
-        if (typeof (oauthPlugin as any).configure === "function") {
-          (oauthPlugin as any).configure(config.oauth);
-        }
-        this.core.pluginManager.register(oauthPlugin);
-      }
-
       // Register WebAuthn plugin if configuration is provided
       if (config.webauthn) {
         if (typeof console !== "undefined" && console.warn) {

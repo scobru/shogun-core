@@ -187,9 +187,35 @@ export interface WebauthnPluginInterface {
   /**
    * Signup con WebAuthn
    * @param username Nome utente
+   * @param options Optional signup options
    * @returns Promise con il risultato dell'operazione
    */
-  signUp(username: string): Promise<SignUpResult>;
+  signUp(
+    username: string,
+    options?: WebAuthnSignUpOptions,
+  ): Promise<SignUpResult>;
+
+  /**
+   * Import account from seed phrase
+   * @param username Nome utente
+   * @param seedPhrase BIP39 mnemonic seed phrase (12 words)
+   * @returns Promise con il risultato dell'operazione
+   */
+  importFromSeed(username: string, seedPhrase: string): Promise<SignUpResult>;
+
+  /**
+   * Get seed phrase for current user (if available)
+   * @param username Nome utente
+   * @returns Seed phrase or null
+   */
+  getSeedPhrase(username: string): Promise<string | null>;
+}
+
+export interface WebAuthnSignUpOptions {
+  /** Use existing seed phrase instead of generating new one */
+  seedPhrase?: string;
+  /** Generate and return seed phrase for multi-device support */
+  generateSeedPhrase?: boolean;
 }
 
 export interface WebAuthnUniformCredentials {
@@ -199,4 +225,5 @@ export interface WebAuthnUniformCredentials {
   credentialId: string;
   publicKey?: ArrayBuffer | null;
   error?: string;
+  seedPhrase?: string; // BIP39 mnemonic for multi-device support
 }

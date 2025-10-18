@@ -1,7 +1,5 @@
 // Utility di validazione e generazione credenziali per ShogunCore
 
-import { OAuthProvider } from "../plugins/oauth/types";
-
 // --- VALIDAZIONE ---
 
 /**
@@ -25,11 +23,11 @@ export function validateEmail(email: string): boolean {
 
 /**
  * Valida un provider OAuth supportato
+ * @deprecated OAuth has been removed from Shogun Core
  */
-export function validateProvider(provider: string): provider is OAuthProvider {
-  return ["google", "github", "discord", "twitter", "custom"].includes(
-    provider,
-  );
+export function validateProvider(provider: string): boolean {
+  console.warn("[validation] OAuth has been removed from Shogun Core");
+  return false;
 }
 
 // --- GENERAZIONE USERNAME ---

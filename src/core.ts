@@ -460,7 +460,7 @@ export class ShogunCore implements IShogunCore {
 // Global declarations are handled in the original core.ts file
 // to avoid conflicts, we only set the window properties here
 if (typeof window !== "undefined") {
-  (window as any).ShogunCore = (config: ShogunCoreConfig): ShogunCore => {
+  (window as any).Shogun = (config: ShogunCoreConfig): ShogunCore => {
     return new ShogunCore(config);
   };
 }

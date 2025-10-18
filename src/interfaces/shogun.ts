@@ -38,22 +38,14 @@ export enum CorePlugins {
   Web3 = "web3",
   /** Bitcoin wallet plugin */
   Nostr = "nostr",
-  /** OAuth plugin */
-  OAuth = "oauth",
 }
 
-export type AuthMethod =
-  | "password"
-  | "webauthn"
-  | "web3"
-  | "nostr"
-  | "oauth"
-  | "pair";
+export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "pair";
 
 export interface AuthEventData {
   userPub?: string;
   username?: string;
-  method: "password" | "webauthn" | "web3" | "nostr" | "oauth" | "pair";
+  method: "password" | "webauthn" | "web3" | "nostr" | "pair";
   provider?: string;
 }
 
@@ -117,11 +109,13 @@ export interface SignUpResult {
     epub: string;
     epriv: string;
   };
-  // Properties for OAuth flow
+  // Multi-device support (WebAuthn with seed phrase)
+  seedPhrase?: string; // BIP39 mnemonic for account recovery and multi-device access
+  // Properties for external auth flow
   redirectUrl?: string;
   pendingAuth?: boolean;
   provider?: string;
-  // OAuth user data
+  // User data
   user?: {
     userPub?: string;
     username?: string;
@@ -233,12 +227,6 @@ export interface ShogunCoreConfig {
   };
   nostr?: {
     enabled?: boolean;
-  };
-  oauth?: {
-    enabled?: boolean;
-    usePKCE?: boolean;
-    allowUnsafeClientSecret?: boolean;
-    providers?: Record<string, any>;
   };
   timeouts?: {
     login?: number;

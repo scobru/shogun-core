@@ -11,7 +11,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 
 ## Features
 
-- 🔐 **Multiple Authentication Methods**: Traditional username/password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, and OAuth
+- 🔐 **Multiple Authentication Methods**: Traditional username/password, WebAuthn (biometrics), Web3 (MetaMask), and Nostr
 - 🌐 **Decentralized Storage**: Built on GunDB for peer-to-peer data synchronization
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins for various authentication methods
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
@@ -70,7 +70,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 ### ✅ **Type System Fixes**
 
 - **Unified Return Types**: All authentication methods now use consistent `AuthResult` and `SignUpResult` types
-- **Enhanced SignUpResult**: Extended to support OAuth redirects and provider-specific data
+- **Enhanced SignUpResult**: Extended to support provider-specific authentication data
 - **Type Safety**: Fixed TypeScript inconsistencies across all plugins
 - **API Standardization**: All plugins implement unified `login()` and `signUp()` interfaces
 
@@ -155,21 +155,6 @@ const shogun = new ShogunCore({
   // Enable and configure Nostr
   nostr: {
     enabled: true,
-  },
-
-  // Enable and configure OAuth providers
-  oauth: {
-    enabled: true,
-    usePKCE: true, // Recommended for SPAs
-    allowUnsafeClientSecret: true, // Required for Google OAuth
-    providers: {
-      google: {
-        clientId: "YOUR_GOOGLE_CLIENT_ID",
-        clientSecret: "YOUR_GOOGLE_CLIENT_SECRET", // Required for Google even with PKCE
-        redirectUri: "http://localhost:3000/auth/callback",
-        scope: ["openid", "email", "profile"],
-      },
-    },
   },
 });
 
@@ -428,7 +413,6 @@ type AuthMethod =
   | "webauthn"
   | "web3"
   | "nostr"
-  | "oauth"
   | "bitcoin"
   | "pair";
 ```
@@ -505,17 +489,37 @@ interface Web3ConnectorPluginInterface {
 
 ### 3. WebAuthn Plugin API
 
-Biometric and hardware key authentication:
+Biometric and hardware key authentication with **multi-device support via seed phrase**:
 
 ```typescript
 const webauthnPlugin = shogun.getPlugin<WebauthnPlugin>("webauthn");
 
 if (webauthnPlugin && webauthnPlugin.isSupported()) {
-  // Register new user with WebAuthn - Returns SignUpResult ✅
-  const signUpResult: SignUpResult = await webauthnPlugin.signUp("username");
+  // ⭐ NEW: Register with seed phrase for multi-device support
+  const signUpResult: SignUpResult = await webauthnPlugin.signUp("username", {
+    generateSeedPhrase: true // Generate BIP39 seed phrase (default: true)
+  });
+  
   if (signUpResult.success) {
     console.log("WebAuthn registration successful");
     console.log("User public key:", signUpResult.userPub);
+    
+    // ⚠️ CRITICAL: Display seed phrase to user for backup
+    if (signUpResult.seedPhrase) {
+      console.log("🔑 SAVE THESE 12 WORDS:");
+      console.log(signUpResult.seedPhrase);
+      alert(`IMPORTANT: Write down these 12 words to access your account from other devices:\n\n${signUpResult.seedPhrase}`);
+    }
+  }
+
+  // ⭐ NEW: Import account on another device using seed phrase
+  const importResult = await webauthnPlugin.importFromSeed(
+    "username",
+    "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
+  );
+  
+  if (importResult.success) {
+    console.log("Account imported successfully!");
   }
 
   // Authenticate existing user - Returns AuthResult ✅
@@ -604,67 +608,131 @@ interface NostrConnectorPluginInterface {
 }
 ```
 
-### 5. OAuth Plugin API
+## ⭐ Multi-Device Support with Seed Phrases
 
-Social login with external providers (Google, GitHub, etc.):
+WebAuthn authentication now supports **multi-device access** through BIP39 seed phrases, solving the device-bound limitation of traditional WebAuthn.
+
+### The Problem with Traditional WebAuthn
+
+WebAuthn credentials are **device-specific** by design:
+- Each device generates unique, non-exportable credentials
+- Cannot transfer credentials between devices
+- Changing devices means losing access to your account
+
+### The Shogun Core Solution: Seed Phrases
+
+When you register with WebAuthn, Shogun Core generates a **12-word BIP39 mnemonic** (seed phrase):
 
 ```typescript
-const oauthPlugin = shogun.getPlugin<OAuthPlugin>("oauth");
+const signUpResult = await webauthnPlugin.signUp("alice", {
+  generateSeedPhrase: true  // Default: true
+});
 
-if (oauthPlugin && oauthPlugin.isSupported()) {
-  // Get available providers
-  const providers = oauthPlugin.getAvailableProviders(); // ["google", "github", ...]
+// ⚠️ CRITICAL: User MUST save these words!
+console.log("Your seed phrase:", signUpResult.seedPhrase);
+// Example: "abandon ability able about above absent absorb abstract absurd abuse access accident"
+```
 
-  // Initiate signup with OAuth - Returns SignUpResult with redirect ✅
-  const signUpResult: SignUpResult = await oauthPlugin.signUp("google");
-  if (signUpResult.success && signUpResult.redirectUrl) {
-    // Redirect user to OAuth provider
-    window.location.href = signUpResult.redirectUrl;
-  }
+### Benefits
 
-  // Handle OAuth callback (after redirect back from provider) - Returns AuthResult ✅
-  const callbackResult: AuthResult = await oauthPlugin.handleOAuthCallback(
-    "google",
-    authCode, // From URL params
-    state // From URL params
+✅ **Same Account, Multiple Devices**: Access your account from any device
+✅ **Account Recovery**: Restore access if you lose your device
+✅ **Decentralized**: No need for password reset emails or centralized recovery
+✅ **Compatible**: Works with any BIP39-compatible wallet
+✅ **Secure**: 128-bit entropy, cryptographically secure
+
+### Usage Examples
+
+#### Registration on First Device (iPhone)
+
+```typescript
+const webauthnPlugin = shogun.getPlugin<WebauthnPlugin>("webauthn");
+
+// Register with Face ID
+const result = await webauthnPlugin.signUp("alice", {
+  generateSeedPhrase: true
+});
+
+if (result.success && result.seedPhrase) {
+  // Display to user with clear warning
+  showSeedPhraseBackupUI(result.seedPhrase);
+  // Example: "ability abandon about above absent absorb abstract absurd abuse access accident account"
+}
+```
+
+#### Import on Second Device (Windows PC)
+
+```typescript
+// User enters their 12-word seed phrase
+const seedPhrase = getUserInputSeedPhrase();
+
+// Import account using seed phrase
+const result = await webauthnPlugin.importFromSeed("alice", seedPhrase);
+
+if (result.success) {
+  console.log("Account imported! You can now use Windows Hello.");
+}
+```
+
+### User Interface Example
+
+```tsx
+// React component for seed phrase backup
+function SeedPhraseBackup({ seedPhrase }: { seedPhrase: string }) {
+  const words = seedPhrase.split(' ');
+  
+  return (
+    <div className="seed-phrase-backup">
+      <h2>🔑 Save Your Recovery Phrase</h2>
+      <p><strong>Write down these 12 words in order</strong></p>
+      <p className="warning">
+        ⚠️ Without these words, you cannot recover your account or access it from other devices!
+      </p>
+      
+      <div className="word-grid">
+        {words.map((word, index) => (
+          <div key={index} className="word-item">
+            <span className="word-number">{index + 1}.</span>
+            <span className="word-text">{word}</span>
+          </div>
+        ))}
+      </div>
+      
+      <div className="actions">
+        <button onClick={() => downloadSeedPhrase(seedPhrase)}>
+          📥 Download as Text File
+        </button>
+        <button onClick={() => printSeedPhrase(seedPhrase)}>
+          🖨️ Print on Paper
+        </button>
+      </div>
+      
+      <label>
+        <input type="checkbox" required />
+        I have safely stored my 12-word recovery phrase
+      </label>
+    </div>
   );
-
-  if (callbackResult.success) {
-    console.log("OAuth authentication successful");
-    if (callbackResult.user) {
-      console.log("User email:", callbackResult.user.email);
-      console.log("User name:", callbackResult.user.name);
-    }
-  }
 }
+```
 
-// Plugin Interface - ✅ FIXED TYPES
-interface OAuthPluginInterface {
-  // Authentication methods
-  login(provider: OAuthProvider): Promise<AuthResult>; // ✅ CORRECT
-  signUp(provider: OAuthProvider): Promise<SignUpResult>; // ✅ FIXED
+### Security Best Practices
 
-  // OAuth flow management
-  isSupported(): boolean;
-  getAvailableProviders(): OAuthProvider[];
-  initiateOAuth(provider: OAuthProvider): Promise<OAuthConnectionResult>;
-  completeOAuth(
-    provider: OAuthProvider,
-    authCode: string,
-    state?: string
-  ): Promise<OAuthConnectionResult>;
-  handleOAuthCallback(
-    provider: OAuthProvider,
-    authCode: string,
-    state: string
-  ): Promise<AuthResult>;
+1. **Never store seed phrases digitally** - Write them on paper
+2. **Keep multiple backups** - Store in different secure locations
+3. **Never share your seed phrase** - Anyone with it can access your account
+4. **Verify before moving on** - Double-check you wrote it correctly
+5. **Use steel backup** - For maximum durability (fire/water proof)
 
-  // Credential management
-  generateCredentials(
-    userInfo: OAuthUserInfo,
-    provider: OAuthProvider
-  ): Promise<OAuthCredentials>;
-}
+### Legacy Device-Bound Mode
+
+If you don't need multi-device support, you can disable seed phrase generation:
+
+```typescript
+const result = await webauthnPlugin.signUp("alice", {
+  generateSeedPhrase: false  // Device-bound only
+});
+// No seed phrase returned - traditional WebAuthn behavior
 ```
 
 ### Browser Usage (via CDN)
@@ -853,12 +921,6 @@ interface ShogunCoreConfig {
     enabled?: boolean;
   };
 
-  oauth?: {
-    enabled?: boolean;
-    usePKCE?: boolean;
-    allowUnsafeClientSecret?: boolean;
-    providers?: Record<string, any>;
-  };
 
   // Timeouts
   timeouts?: {

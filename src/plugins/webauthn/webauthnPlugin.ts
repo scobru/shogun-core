@@ -11,6 +11,13 @@ import {
 import { AuthResult, SignUpResult } from "../../interfaces/shogun";
 import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 import { ISEAPair } from "gun";
+import {
+  generateSeedPhrase,
+  deriveCredentialsFromMnemonic,
+  validateSeedPhrase,
+  normalizeSeedPhrase,
+} from "../../utils/seedPhrase";
+import { deriveWebauthnKeys } from "./webauthn";
 
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -513,11 +520,16 @@ export class WebauthnPlugin
    * Register new user with WebAuthn
    * This is the recommended method for WebAuthn registration
    * @param username - Username
-   * @returns {Promise<SignUpResult>} Registration result
+   * @param options - Optional signup options (seed phrase support)
+   * @returns {Promise<SignUpResult>} Registration result with optional seed phrase
    * @description Creates a new user account using WebAuthn credentials.
    * Requires browser support for WebAuthn.
+   * If generateSeedPhrase is true, returns a BIP39 mnemonic for multi-device support.
    */
-  async signUp(username: string): Promise<SignUpResult> {
+  async signUp(
+    username: string,
+    options?: { seedPhrase?: string; generateSeedPhrase?: boolean },
+  ): Promise<SignUpResult> {
     try {
       const core = this.assertInitialized();
 
@@ -529,36 +541,82 @@ export class WebauthnPlugin
         throw new Error("WebAuthn is not supported by this browser");
       }
 
-      // Prefer the oneshot consistent signing flow (tests mock this)
-      const { authenticator, pub } = (await this.setupConsistentOneshotSigning(
-        username,
-      )) as any;
+      // Determine seed phrase to use
+      let seedPhrase: string | undefined;
+      const shouldGenerateSeed = options?.generateSeedPhrase !== false; // Default to true
 
-      if ((core as any).signUp) {
-        // Some tests stub signUp directly
-        return await (core as any).signUp(username, authenticator, pub);
-      }
-
-      // Fallback to credentials-based flow
-      const credentials: WebAuthnUniformCredentials =
-        await this.generateCredentials(username, null, false);
-      if (!credentials?.success) {
-        throw new Error(
-          credentials?.error || "Unable to generate WebAuthn credentials",
+      if (options?.seedPhrase) {
+        // Use provided seed phrase
+        if (!validateSeedPhrase(options.seedPhrase)) {
+          throw new Error("Invalid seed phrase provided");
+        }
+        seedPhrase = options.seedPhrase;
+      } else if (shouldGenerateSeed) {
+        // Generate new seed phrase for multi-device support
+        seedPhrase = generateSeedPhrase();
+        console.log(
+          "[webauthnPlugin] Generated seed phrase for multi-device support",
         );
       }
+
+      // Derive Gun credentials from seed phrase if available
+      let pair: ISEAPair;
+
+      if (seedPhrase) {
+        // Use seed phrase derivation
+        const { password } = deriveCredentialsFromMnemonic(
+          seedPhrase,
+          username,
+        );
+        const derivedKeys = await deriveWebauthnKeys(
+          username,
+          seedPhrase,
+          true,
+        );
+
+        pair = {
+          pub: derivedKeys.pub,
+          priv: derivedKeys.priv,
+          epub: derivedKeys.epub,
+          epriv: derivedKeys.epriv,
+        };
+      } else {
+        // Legacy WebAuthn credential-based flow (device-bound)
+        const credentials: WebAuthnUniformCredentials =
+          await this.generateCredentials(username, null, false);
+        if (!credentials?.success) {
+          throw new Error(
+            credentials?.error || "Unable to generate WebAuthn credentials",
+          );
+        }
+
+        const generatedPair =
+          await this.generatePairFromCredentials(credentials);
+        if (!generatedPair) {
+          throw new Error(
+            "Failed to generate SEA pair from WebAuthn credentials",
+          );
+        }
+        pair = generatedPair;
+      }
+
       core.setAuthMethod("webauthn");
 
-      // Convert WebAuthn credentials to SEA pair
-      const pair = await this.generatePairFromCredentials(credentials);
-      if (!pair) {
-        throw new Error(
-          "Failed to generate SEA pair from WebAuthn credentials",
-        );
+      // Register user with Gun (using email parameter slot for pair)
+      const result = await core.signUp(username, undefined, pair);
+
+      // Add seed phrase to result if generated
+      if (seedPhrase && shouldGenerateSeed) {
+        return {
+          ...result,
+          message: seedPhrase
+            ? "🔑 IMPORTANT: Save your 12-word seed phrase to access your account from other devices!"
+            : result.message,
+          seedPhrase: seedPhrase,
+        };
       }
 
-      // Use pair-based authentication instead of password
-      return await core.signUp(username, undefined, pair);
+      return result;
     } catch (error: any) {
       console.error(`Error during WebAuthn registration: ${error}`);
       ErrorHandler.handle(
@@ -572,6 +630,68 @@ export class WebauthnPlugin
         error: error.message || "Error during WebAuthn registration",
       };
     }
+  }
+
+  /**
+   * Import existing account from seed phrase
+   * Allows accessing the same account across multiple devices
+   * @param username - Username
+   * @param seedPhrase - 12-word BIP39 mnemonic seed phrase
+   * @returns {Promise<SignUpResult>} Registration result
+   */
+  async importFromSeed(
+    username: string,
+    seedPhrase: string,
+  ): Promise<SignUpResult> {
+    try {
+      if (!username) {
+        throw new Error("Username required");
+      }
+
+      // Normalize and validate seed phrase
+      const normalizedSeed = normalizeSeedPhrase(seedPhrase);
+
+      if (!validateSeedPhrase(normalizedSeed)) {
+        throw new Error("Invalid seed phrase. Please check and try again.");
+      }
+
+      console.log("[webauthnPlugin] Importing account from seed phrase");
+
+      // Use signUp with existing seed phrase
+      return await this.signUp(username, {
+        seedPhrase: normalizedSeed,
+        generateSeedPhrase: false, // Don't generate new seed
+      });
+    } catch (error: any) {
+      console.error(`Error importing from seed: ${error.message}`);
+      ErrorHandler.handle(
+        ErrorType.WEBAUTHN,
+        "WEBAUTHN_IMPORT_ERROR",
+        error.message || "Error importing from seed phrase",
+        error,
+      );
+      return {
+        success: false,
+        error: error.message || "Error importing from seed phrase",
+      };
+    }
+  }
+
+  /**
+   * Get seed phrase for current user (if stored)
+   * Note: Seed phrases are NOT stored by default for security
+   * Users should save their seed phrase during registration
+   * @param username - Username
+   * @returns {Promise<string | null>} Seed phrase or null
+   */
+  async getSeedPhrase(username: string): Promise<string | null> {
+    console.warn(
+      "[webauthnPlugin] Seed phrases are not stored for security reasons",
+    );
+    console.warn(
+      "[webauthnPlugin] Users must save their seed phrase during registration",
+    );
+    return null;
   }
 }
 

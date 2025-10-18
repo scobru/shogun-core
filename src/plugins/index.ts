@@ -23,8 +23,3 @@ export type {
   AlbyProvider,
   NostrProvider,
 } from "./nostr/types";
-
-// OAuth plugin exports
-export { OAuthConnector } from "./oauth/oauthConnector";
-export { OAuthPlugin } from "./oauth/oauthPlugin";
-export * from "./oauth/types";
