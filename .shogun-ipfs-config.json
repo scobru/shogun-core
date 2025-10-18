@@ -1,7 +1,0 @@
-{
-  "service": "CUSTOM",
-  "config": {
-    "customApiUrl": "https://relay.shogun-eco.xyz/api/v1/ipfs",
-    "customToken": "shogun2025"
-  }
-}

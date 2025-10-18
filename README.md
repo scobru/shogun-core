@@ -35,21 +35,21 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - **🔧 IMPROVED: User Data Operations**: Rewrote all user data methods to use direct Gun user node for better reliability and error handling
 - **🔧 ENHANCED: Error Handling**: Added proper null checking and improved error logging throughout the user data operations
 
-### ✅ **Major API Improvements & Simplification (v2.0.0)**
+### ✅ **Major API Improvements & Simplification (v2.1.0)**
 
-- **⭐ NEW: Simple API Layer**: Added `SimpleGunAPI` with simplified methods for common operations
-- **⭐ NEW: Advanced Chaining**: Added `node()`, `chain()`, and `getNode()` methods for powerful data chaining
-- **⭐ NEW: User Space Management**: Complete CRUD operations for user-specific data storage
-- **⭐ NEW: Quick Start Functions**: `quickStart()` and `QuickStart` class for rapid initialization
+- **⭐ STREAMLINED: Simple API Layer**: Simplified `SimpleGunAPI` to focus on high-level helpers only
+  - Direct database access via `api.database` for basic operations (get, put, auth, etc.)
+  - Helper methods for standardized data: profile, settings, preferences, collections
+  - Array/Object conversion utilities for GunDB
+  - Removed redundant wrapper methods to reduce complexity
+- **⭐ NEW: Quick Start Functions**: `quickStart()`, `autoQuickStart()` classes for rapid initialization
 - **⭐ NEW: Improved Type System**: Reduced `any` usage with better TypeScript types
 - **⭐ NEW: Configuration Presets**: Pre-built configurations for common use cases
 - **⭐ NEW: Advanced API Features**: Comprehensive plugin management, peer network control, advanced user management, and security systems
-- **Removed Non-Essential Functions**: Eliminated debug/testing functions, rate limiting system, frozen space system, and complex username management
 - **Enhanced Advanced Features**: Maintained and improved advanced plugin management, peer network management, and user tracking systems
 - **Streamlined Event System**: Enhanced event system with better type safety and comprehensive event handling
-- **Enhanced Core Focus**: Maintained password hint system with security questions and comprehensive user management
-- **Improved Maintainability**: Better organized codebase with clear separation between simple and advanced APIs
-- **Better Performance**: Optimized operations with advanced peer management and user tracking
+- **Improved Maintainability**: Better organized codebase with clear separation of concerns
+- **Better Performance**: Optimized operations with reduced abstraction layers
 
 ### 🔧 **Bug Fixes & Improvements**
 
@@ -192,92 +192,76 @@ const gun = Gun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
 const shogun = quickStart(gun, 'my-app');
 await shogun.init();
 
+const api = shogun.api;
+const db = api.database; // Access database directly for basic operations
+
+// ===== BASIC OPERATIONS (use database) =====
+
 // Authentication
-const user = await shogun.api.signup('username', 'password');
-const loginResult = await shogun.api.login('username', 'password');
-shogun.api.logout();
-const isLoggedIn = shogun.api.isLoggedIn();
+const user = await db.signUp('username', 'password');
+const loginResult = await db.login('username', 'password');
+db.logout();
+const isLoggedIn = db.isLoggedIn();
 
 // Basic data operations
-await shogun.api.put('path/to/data', { value: 'hello' });
-const data = await shogun.api.get('path/to/data');
-await shogun.api.set('path/to/data', { value: 'updated' });
-await shogun.api.remove('path/to/data');
+await db.put('path/to/data', { value: 'hello' });
+const data = await db.getData('path/to/data');
+await db.set('path/to/data', { value: 'updated' });
+await db.remove('path/to/data');
 
-// Advanced chaining operations (NEW!)
-// Direct Gun node chaining - recommended for complex operations
-await shogun.api.node('users').get('alice').get('profile').put({ name: 'Alice' });
-const profile = await shogun.api.node('users').get('alice').get('profile').once();
-
-// Simplified chaining wrapper
-await shogun.api.chain('users').get('alice').get('settings').put({ theme: 'dark' });
-const settings = await shogun.api.chain('users').get('alice').get('settings').once();
-
-// Get Gun node for advanced operations like .map()
-const userNode = shogun.api.getNode('users');
+// Gun node for advanced operations like .map()
+const userNode = db.get('users');
 userNode.map((user, userId) => console.log(`User ${userId}:`, user));
 
-// User space operations (requires login)
-await shogun.api.putUserData('preferences', { theme: 'dark' });
-const prefs = await shogun.api.getUserData('preferences');
-await shogun.api.removeUserData('preferences');
+// ===== HELPER METHODS (use api) =====
 
-// Profile management
-await shogun.api.updateProfile({ 
+// Profile management (standardized location)
+await api.updateProfile({ 
   name: 'John Doe', 
   email: 'john@example.com',
   bio: 'Developer' 
 });
-const profile = await shogun.api.getProfile();
+const profile = await api.getProfile();
 
-// Settings and preferences
-await shogun.api.saveSettings({ language: 'en', notifications: true });
-const settings = await shogun.api.getSettings();
+// Settings and preferences (standardized locations)
+await api.saveSettings({ language: 'en', notifications: true });
+const settings = await api.getSettings();
 
-await shogun.api.savePreferences({ theme: 'dark', fontSize: 14 });
-const preferences = await shogun.api.getPreferences();
+await api.savePreferences({ theme: 'dark', fontSize: 14 });
+const preferences = await api.getPreferences();
 
-// Collections (recommended for structured data)
-// Note: Array functions (putUserArray, getUserArray, etc.) have been removed due to GunDB compatibility issues
-// Use collections or direct GunDB operations instead:
-
-// Option 1: Collections (recommended for most use cases)
-await shogun.api.createCollection('todos', {
+// Collections (standardized location for user collections)
+await api.createCollection('todos', {
   '1': { text: 'Learn Shogun Core', done: false },
   '2': { text: 'Build dApp', done: false }
 });
 
-await shogun.api.addToCollection('todos', '3', { 
+await api.addToCollection('todos', '3', { 
   text: 'Deploy to production', 
   done: false 
 });
 
-const todos = await shogun.api.getCollection('todos');
-await shogun.api.removeFromCollection('todos', '2');
+const todos = await api.getCollection('todos');
+await api.removeFromCollection('todos', '2');
 
-// Option 2: Direct GunDB operations for complex nested data
-await shogun.api.node('users').get('alice').get('todos').get('1').put({ 
-  text: 'Learn Shogun Core', 
-  done: false 
-});
-
-// Utility methods
-const currentUser = shogun.api.getCurrentUser();
-const userExists = await shogun.api.userExists('username');
-const user = await shogun.api.getUser('username');
+// Array utilities for GunDB
+const items = [
+  { id: '1', name: 'Item 1' },
+  { id: '2', name: 'Item 2' }
+];
+const indexed = api.arrayToIndexedObject(items); // Convert for GunDB storage
+const restored = api.indexedObjectToArray(indexed); // Convert back
 ```
 
-## 🔗 **NEW: Advanced Chaining Operations**
+## 🔗 **Advanced Gun Operations**
 
-Shogun Core now supports powerful chaining operations for complex data structures. You have three options depending on your needs:
-
-### 1. **Direct Gun Node Chaining (Recommended)**
-
-Use `node()` for full Gun.js functionality with chaining:
+For advanced Gun.js operations, use the database instance directly via `api.database` or `shogun.database`:
 
 ```typescript
-// Store nested data
-await shogun.api.node('users').get('alice').get('profile').put({
+const db = api.database; // or shogun.database
+
+// Store nested data with Gun chaining
+await db.get('users').get('alice').get('profile').put({
   name: 'Alice Smith',
   email: 'alice@example.com',
   preferences: {
@@ -287,66 +271,37 @@ await shogun.api.node('users').get('alice').get('profile').put({
 });
 
 // Read nested data
-const profile = await shogun.api.node('users').get('alice').get('profile').once();
+const profile = await db.get('users').get('alice').get('profile').once().then();
 
 // Update specific fields
-await shogun.api.node('users').get('alice').get('profile').get('preferences').get('theme').put('light');
+await db.get('users').get('alice').get('profile').get('preferences').get('theme').put('light');
 
-// Iterate over collections
-shogun.api.node('users').map((user, userId) => {
+// Iterate over collections with .map()
+db.get('users').map((user, userId) => {
   console.log(`User ${userId}:`, user);
 });
 
-// Complex chaining
-await shogun.api.node('projects').get('my-app').get('tasks').get('1').put({
+// Complex chaining for nested structures
+await db.get('projects').get('my-app').get('tasks').get('1').put({
   title: 'Implement authentication',
   status: 'completed',
   assignee: 'alice'
 });
-```
 
-### 2. **Simplified Chaining Wrapper**
-
-Use `chain()` for simplified chaining with error handling:
-
-```typescript
-// Simplified chaining with built-in error handling
-const success = await shogun.api.chain('users').get('alice').get('settings').put({
-  notifications: true,
-  privacy: 'private'
+// Access Gun instance directly if needed
+const gunInstance = db.gun;
+gunInstance.get('some-path').on((data) => {
+  console.log('Real-time data:', data);
 });
-
-if (success) {
-  console.log('Settings saved successfully');
-}
-
-// Read with simplified chaining
-const settings = await shogun.api.chain('users').get('alice').get('settings').once();
-```
-
-### 3. **Get Gun Node for Advanced Operations**
-
-Use `getNode()` for advanced Gun.js operations:
-
-```typescript
-// Get node for advanced operations
-const usersNode = shogun.api.getNode('users');
-
-// Use all Gun.js methods
-usersNode.map((user, userId) => {
-  console.log(`Processing user ${userId}`);
-  return user;
-});
-
-// Chain from the node
-const aliceProfile = await usersNode.get('alice').get('profile').once();
 ```
 
 ### Chaining Examples
 
 ```typescript
+const db = shogun.database; // or api.database
+
 // User management system
-await shogun.api.node('users').get('alice').put({
+await db.get('users').get('alice').put({
   profile: {
     name: 'Alice',
     email: 'alice@example.com'
@@ -362,7 +317,7 @@ await shogun.api.node('users').get('alice').put({
 });
 
 // Blog system
-await shogun.api.node('blog').get('posts').get('2024-01-15').put({
+await db.get('blog').get('posts').get('2024-01-15').put({
   title: 'Getting Started with Shogun Core',
   author: 'alice',
   content: 'Shogun Core makes decentralized apps easy...',
@@ -374,7 +329,7 @@ await shogun.api.node('blog').get('posts').get('2024-01-15').put({
 });
 
 // E-commerce system
-await shogun.api.node('shop').get('products').get('laptop-001').put({
+await db.get('shop').get('products').get('laptop-001').put({
   name: 'Gaming Laptop',
   price: 1299.99,
   stock: 15,
@@ -385,21 +340,21 @@ await shogun.api.node('shop').get('products').get('laptop-001').put({
 });
 
 // Read complex nested data
-const product = await shogun.api.node('shop').get('products').get('laptop-001').once();
+const product = await db.get('shop').get('products').get('laptop-001').once().then();
 console.log('Product:', product.name);
 console.log('Reviews:', product.reviews);
 
 // Update nested data
-await shogun.api.node('shop').get('products').get('laptop-001').get('stock').put(12);
+await db.get('shop').get('products').get('laptop-001').get('stock').put(12);
 ```
 
-### Best Practices for Chaining
+### Best Practices
 
-1. **Use `node()` for most operations** - It provides full Gun.js functionality
-2. **Use `chain()` for simplified error handling** - Good for beginners
-3. **Use `getNode()` for advanced operations** - When you need Gun.js methods like `.map()`
-4. **Keep paths descriptive** - Use meaningful path segments like `users/alice/profile`
-5. **Handle errors appropriately** - Chaining operations can fail, always check results
+1. **Use `api.database` or `shogun.database` for direct Gun operations**
+2. **Use `api` helper methods for standardized data** - profile, settings, collections
+3. **Keep paths descriptive** - Use meaningful path segments like `users/alice/profile`
+4. **Handle errors appropriately** - Chaining operations can fail, always check results
+5. **Use helper methods for conventions** - updateProfile(), saveSettings(), etc. provide standardized locations
 
 ## Plugin Authentication APIs
 

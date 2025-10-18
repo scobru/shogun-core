@@ -127,46 +127,28 @@ async removeUserData(path: string): Promise<boolean> {
 
 ## ⭐ **NEW: Simple API Components**
 
-### SimpleGunAPI (simple-api.ts)
+### SimpleGunAPI (api.ts)
 
-Easy-to-use wrapper for common GunDB operations with minimal complexity.
+Simplified API wrapper focused on high-level helper methods.
+
+**For basic operations (get, put, set, remove, authentication), use `api.database` directly** to access the full DataBase instance.
+
+**SimpleGunAPI provides:**
+- Direct database access via `database` property
+- Array/Object conversion utilities for GunDB
+- High-level user data helpers (profile, settings, collections)
 
 ```typescript
 class SimpleGunAPI {
-  // Authentication
-  async signup(username: string, password: string): Promise<{ userPub: string; username: string } | null>;
-  async login(username: string, password: string): Promise<{ userPub: string; username: string } | null>;
-  logout(): void;
-  isLoggedIn(): boolean;
+  // Direct database access
+  get database(): DataBase; // Use this for basic operations: get, put, set, remove, login, etc.
 
-  // Basic data operations
-  async get<T = unknown>(path: string): Promise<T | null>;
-  async put<T = unknown>(path: string, data: T): Promise<boolean>;
-  async set<T = unknown>(path: string, data: T): Promise<boolean>;
-  async remove(path: string): Promise<boolean>;
-
-  // Advanced chaining operations
-  getNode(path: string): any; // Get Gun node for advanced operations like .map()
-  node(path: string): any; // Get Gun node for direct chaining (recommended)
-  chain(path: string): ChainingWrapper; // Get simplified chaining wrapper
-
-  // User space operations
-  async putUserData<T = unknown>(path: string, data: T): Promise<boolean>;
-  async getUserData<T = unknown>(path: string): Promise<T | null>;
-  async setUserData<T = unknown>(path: string, data: T): Promise<boolean>;
-  async removeUserData(path: string): Promise<boolean>;
-  async getAllUserData(): Promise<Record<string, unknown> | null>;
-
-  // Array utilities (helper functions only)
+  // Array utilities for GunDB
   arrayToIndexedObject<T extends { id: string | number }>(arr: T[]): Record<string, T>;
   indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[];
 
-  // ⚠️ REMOVED: User array operations (putUserArray, getUserArray, addToUserArray, removeFromUserArray, updateInUserArray)
-  // These functions have been REMOVED due to GunDB compatibility issues.
-  // Use collections or direct GunDB operations instead.
-
-  // ⚠️ DEPRECATED: Global array operations (putArray, getArray, addToArray, removeFromArray, updateInArray)
-  // These functions are deprecated and show warnings. Use direct GunDB operations instead.
+  // High-level user data helpers
+  async getAllUserData(): Promise<Record<string, unknown> | null>;
 
   // Profile management
   async updateProfile(profileData: {
@@ -189,16 +171,25 @@ class SimpleGunAPI {
   async addToCollection<T = unknown>(collectionName: string, itemId: string, item: T): Promise<boolean>;
   async getCollection(collectionName: string): Promise<Record<string, unknown> | null>;
   async removeFromCollection(collectionName: string, itemId: string): Promise<boolean>;
-
-  // Path utilities
-  getUserNode(path: string): any; // Get deconstructed path node for user space
-  getGlobalNode(path: string): any; // Get deconstructed path node for global space
-
-  // Utility methods
-  getCurrentUser(): { pub: string; username?: string } | null;
-  async userExists(alias: string): Promise<boolean>;
-  async getUser(alias: string): Promise<{ userPub: string; username: string } | null>;
 }
+```
+
+**Usage Example:**
+```typescript
+const quickStart = new AutoQuickStart({ peers: ['...'], appScope: 'myapp' });
+await quickStart.init();
+
+const api = quickStart.api;
+const db = api.database; // Direct access to DataBase
+
+// Basic operations - use database directly
+await db.put('path/to/data', { value: 123 });
+const data = await db.getData('path/to/data');
+await db.login('username', 'password');
+
+// High-level helpers - use api methods
+await api.updateProfile({ name: 'John', email: 'john@example.com' });
+const profile = await api.getProfile();
 ```
 
 ### QuickStart (simple-api.ts)

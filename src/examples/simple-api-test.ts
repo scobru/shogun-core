@@ -1,114 +1,140 @@
 /**
- * Esempio semplice che mostra le differenze principali tra i metodi API
+ * Example showing how to use the simplified ShogunCore API
+ *
+ * The API has been streamlined:
+ * - AutoQuickStart: Quick initialization helper
+ * - api.database: Direct access to DataBase for basic operations (get, put, set, remove, auth)
+ * - api helper methods: High-level helpers for profile, settings, collections, and array utilities
  */
 
 import { AutoQuickStart } from "../gundb/api";
 
 async function simpleAPITest() {
-  console.log("🚀 Test semplice API ShogunCore\n");
+  console.log("🚀 ShogunCore Simplified API Example\n");
 
-  // Setup
+  // === QUICK START ===
+  console.log("📦 === INITIALIZATION ===\n");
+
+  // Use AutoQuickStart for easy setup
   const quickStart = new AutoQuickStart({
     peers: ["https://peer.wallie.io/gun"],
     appScope: "simple-test",
   });
 
   await quickStart.init();
+
+  // Access the API and database
   const api = quickStart.api;
+  const db = api.database; // Direct access to DataBase for basic operations
 
-  // === DIFFERENZE PRINCIPALI ===
+  console.log("Initialized successfully!");
+  console.log("- api: provides helper methods");
+  console.log("- db (api.database): provides full DataBase functionality\n");
 
-  console.log("📊 === DIFFERENZE GET ===\n");
-
-  // 1. get() - restituisce dati direttamente
-  const data1 = await api.get("test/path");
-  console.log('get("test/path"):', data1); // null o dati
-
-  // 2. getNode() - restituisce nodo Gun per chaining
-  const node1 = api.getNode("test/path");
-  console.log('getNode("test/path"):', typeof node1); // "object" (Gun node)
-
-  // 3. node() - alias di getNode()
-  const node2 = api.node("test/path");
-  console.log('node("test/path"):', typeof node2); // "object" (Gun node)
-
-  // 4. chain() - wrapper con metodi di convenienza
-  const chain1 = api.chain("test/path");
-  console.log('chain("test/path"):', Object.keys(chain1)); // ['get', 'put', 'set', 'once', 'then', 'map']
-
-  console.log("\n💾 === DIFFERENZE PUT/SET ===\n");
+  // === BASIC OPERATIONS (via database) ===
+  console.log("💾 === BASIC OPERATIONS (use api.database) ===\n");
 
   const testData = { message: "Hello World", timestamp: Date.now() };
 
-  // 1. put() - salva dati globali
-  const putResult = await api.put("global/data", testData);
-  console.log("put() result:", putResult); // true/false
+  // Use db for basic operations
+  await db.put("global/data", testData);
+  console.log("✓ Saved data with db.put()");
 
-  // 2. set() - come put() ma semantica diversa
-  const setResult = await api.set("global/data2", {
-    ...testData,
-    method: "set",
-  });
-  console.log("set() result:", setResult); // true/false
+  const retrieved = await db.getData("global/data");
+  console.log("✓ Retrieved data with db.getData():", retrieved);
 
-  // Verifica
-  const retrieved1 = await api.get("global/data");
-  const retrieved2 = await api.get("global/data2");
-  console.log("Retrieved put data:", retrieved1);
-  console.log("Retrieved set data:", retrieved2);
+  await db.remove("global/data");
+  console.log("✓ Removed data with db.remove()\n");
 
-  console.log("\n🗑️ === DIFFERENZE REMOVE ===\n");
+  // === AUTHENTICATION (via database) ===
+  console.log("🔐 === AUTHENTICATION (use api.database) ===\n");
 
-  // remove() - rimuove dati globali
-  const removeResult = await api.remove("global/data2");
-  console.log("remove() result:", removeResult); // true/false
-
-  const afterRemove = await api.get("global/data2");
-  console.log("Data after remove:", afterRemove); // null
-
-  console.log("\n🔐 === TEST AUTENTICAZIONE ===\n");
-
-  // Signup e login
   const username = "testuser_" + Date.now();
   const password = "testpass123";
 
-  const signupResult = await api.signup(username, password);
-  console.log("Signup result:", signupResult);
+  const signupResult = await db.signUp(username, password);
+  console.log("✓ Signup:", signupResult.success ? "Success" : "Failed");
 
-  if (signupResult) {
-    const loginResult = await api.login(username, password);
-    console.log("Login result:", loginResult);
+  if (signupResult.success) {
+    const loginResult = await db.login(username, password);
+    console.log("✓ Login:", loginResult.success ? "Success" : "Failed");
 
-    if (loginResult) {
-      console.log("\n👤 === OPERAZIONI UTENTE ===\n");
+    if (loginResult.success) {
+      console.log("✓ Current user:", db.getCurrentUser()?.alias, "\n");
 
-      // getUserData() - per dati utente
-      const userData = await api.getUserData("profile");
-      console.log('getUserData("profile"):', userData); // null o dati utente
+      // === HELPER METHODS (via api) ===
+      console.log("⭐ === HELPER METHODS (use api helpers) ===\n");
 
-      // putUserData() - salva dati utente
-      const profileData = { name: "Test User", email: "test@example.com" };
-      const putUserResult = await api.putUserData("profile", profileData);
-      console.log("putUserData() result:", putUserResult); // true/false
+      // Profile helper
+      await api.updateProfile({
+        name: "Test User",
+        email: "test@example.com",
+        bio: "Testing the simplified API",
+      });
+      console.log("✓ Profile updated with api.updateProfile()");
 
-      // Verifica dati utente
-      const retrievedProfile = await api.getUserData("profile");
-      console.log("Retrieved profile:", retrievedProfile);
+      const profile = await api.getProfile();
+      console.log("✓ Profile retrieved:", profile);
 
-      // removeUserData() - rimuove dati utente
-      const removeUserResult = await api.removeUserData("profile");
-      console.log("removeUserData() result:", removeUserResult); // true/false
+      // Settings helper
+      await api.saveSettings({
+        theme: "dark",
+        language: "en",
+        notifications: true,
+      });
+      console.log("✓ Settings saved with api.saveSettings()");
 
-      const afterRemoveUser = await api.getUserData("profile");
-      console.log("User data after remove:", afterRemoveUser); // null
+      const settings = await api.getSettings();
+      console.log("✓ Settings retrieved:", settings);
+
+      // Collections helper
+      await api.createCollection("favorites", {
+        item1: { id: "item1", title: "First Item" },
+        item2: { id: "item2", title: "Second Item" },
+      });
+      console.log("✓ Collection created with api.createCollection()");
+
+      await api.addToCollection("favorites", "item3", {
+        id: "item3",
+        title: "Third Item",
+      });
+      console.log("✓ Item added with api.addToCollection()");
+
+      const collection = await api.getCollection("favorites");
+      console.log("✓ Collection retrieved:", collection);
+
+      // === ARRAY UTILITIES ===
+      console.log("\n🔧 === ARRAY UTILITIES ===\n");
+
+      const items = [
+        { id: "1", name: "Item 1", value: 100 },
+        { id: "2", name: "Item 2", value: 200 },
+        { id: "3", name: "Item 3", value: 300 },
+      ];
+
+      // Convert array to GunDB-friendly indexed object
+      const indexed = api.arrayToIndexedObject(items);
+      console.log("✓ Array converted to indexed object:", indexed);
+
+      // Convert back to array
+      const restored = api.indexedObjectToArray(indexed);
+      console.log("✓ Indexed object converted back to array:", restored);
 
       // Logout
-      api.logout();
-      console.log("Logged out");
+      db.logout();
+      console.log("\n✓ Logged out");
     }
   }
 
-  console.log("\n✅ Test completato!");
+  console.log("\n✅ Example completed!");
+  console.log("\nSummary:");
+  console.log("- Use AutoQuickStart for easy initialization");
+  console.log("- Use api.database for basic operations (get, put, auth, etc.)");
+  console.log("- Use api helper methods for high-level operations:");
+  console.log("  • updateProfile(), getProfile()");
+  console.log("  • saveSettings(), getSettings()");
+  console.log("  • createCollection(), addToCollection(), getCollection()");
+  console.log("  • arrayToIndexedObject(), indexedObjectToArray()");
 }
 
 // Esegui il test

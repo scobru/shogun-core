@@ -1,13 +1,19 @@
 /**
- * Simplified API layer to reduce complexity for common use cases.
- * Provides quick-start methods that wrap the full DataBase functionality.
+ * Simplified API layer focused on valuable helper methods.
+ * Provides quick-start initialization and high-level convenience methods.
+ *
+ * For basic operations (get, put, set, remove, auth), use DataBase directly.
+ * This class provides:
+ * - Quick initialization helpers (QuickStart, AutoQuickStart)
+ * - Array/Object conversion utilities for GunDB
+ * - High-level user data helpers (profile, settings, collections)
  */
 
-import { GunMessageGet, GunMessagePut } from "gun";
 import { DataBase, createGun } from "./db";
 
 /**
- * Simple API wrapper that provides common operations with minimal complexity.
+ * Simple API wrapper that provides high-level helper methods.
+ * For basic operations, use the DataBase instance directly via the `database` property.
  */
 export class SimpleGunAPI {
   private db: DataBase;
@@ -20,320 +26,12 @@ export class SimpleGunAPI {
     this.db = db;
   }
 
-  // =========================
-  // Quick data operations
-  // =========================
-
   /**
-   * Get data at a given path.
-   * @param path The path to retrieve data from.
-   * @returns The data at the path, or null if not found or on error.
+   * Get direct access to the DataBase instance for full control.
+   * Use this for basic operations like get, put, set, remove, login, etc.
    */
-  async get<T = unknown>(path: string): Promise<T | null> {
-    try {
-      const result = await this.db.getData(path);
-      return result as T;
-    } catch (error) {
-      console.warn(`Failed to get data from ${path}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Get the Gun node at a given path for chaining operations.
-   * @param path The path to the node.
-   * @returns The Gun node.
-   */
-  getNode(path: string): any {
-    return this.db.get(path);
-  }
-
-  /**
-   * Get the Gun node at a given path for direct chaining.
-   * @param path The path to the node.
-   * @returns The Gun node.
-   */
-  node(path: string): any {
-    return this.db.get(path);
-  }
-
-  /**
-   * Get a chainable wrapper for a Gun node at a given path.
-   * @param path The path to the node.
-   * @returns An object with chainable methods: get, put, set, once, then, map.
-   */
-  chain(path: string): {
-    get: (subPath: string) => GunMessageGet<any, any>;
-    put: (data: any) => Promise<GunMessagePut>;
-    set: (data: any) => Promise<GunMessagePut>;
-    once: () => Promise<any>;
-    then: () => Promise<any>;
-    map: (callback: (value: any, key: string) => any) => any;
-  } {
-    const node = this.db.get(path);
-
-    return {
-      get: (subPath: string) => this.chain(`${path}/${subPath}`),
-      put: async (data: any) => {
-        try {
-          const result = await this.db.put(path, data);
-          return result;
-        } catch (error) {
-          console.warn(`Failed to put data to ${path}:`, error);
-          return { err: String(error) };
-        }
-      },
-      set: async (data: any) => {
-        try {
-          const result = await this.db.set(path, data);
-          return result;
-        } catch (error) {
-          console.warn(`Failed to set data to ${path}:`, error);
-          return { err: String(error) };
-        }
-      },
-      once: async () => {
-        try {
-          return await this.db.getData(path);
-        } catch (error) {
-          console.warn(`Failed to get data from ${path}:`, error);
-          return null;
-        }
-      },
-      then: async () => {
-        try {
-          return await this.db.getData(path);
-        } catch (error) {
-          console.warn(`Failed to get data from ${path}:`, error);
-          return null;
-        }
-      },
-      map: (callback: (value: any, key: string) => any) => {
-        return node.map ? node.map(callback) : null;
-      },
-    };
-  }
-
-  /**
-   * Put data at a given path.
-   * @param path The path to put data to.
-   * @param data The data to put.
-   * @returns The GunMessagePut result.
-   */
-  async put<T = unknown>(path: string, data: T): Promise<GunMessagePut> {
-    try {
-      const result = await this.db.put(path, data);
-      return result;
-    } catch (error) {
-      console.warn(`Failed to put data to ${path}:`, error);
-      return { err: String(error) };
-    }
-  }
-
-  /**
-   * Set data at a given path (alternative to put).
-   * @param path The path to set data to.
-   * @param data The data to set.
-   * @returns The GunMessagePut result.
-   */
-  async set<T = unknown>(path: string, data: T): Promise<GunMessagePut> {
-    try {
-      const result = await this.db.set(path, data);
-      return result;
-    } catch (error) {
-      console.warn(`Failed to set data to ${path}:`, error);
-      return { err: String(error) };
-    }
-  }
-
-  /**
-   * Remove data at a given path.
-   * @param path The path to remove data from.
-   * @returns The GunMessagePut result.
-   */
-  async remove(path: string): Promise<GunMessagePut> {
-    try {
-      const result = await this.db.remove(path);
-      return result;
-    } catch (error) {
-      console.warn(`Failed to remove data from ${path}:`, error);
-      return { err: String(error) };
-    }
-  }
-
-  // =========================
-  // Quick authentication
-  // =========================
-
-  /**
-   * Log in a user.
-   * @param username The username.
-   * @param password The password.
-   * @returns The user info if successful, or null.
-   */
-  async login(
-    username: string,
-    password: string,
-  ): Promise<{ userPub: string; username: string } | null> {
-    try {
-      const result = await this.db.login(username, password);
-      if (result.success && result.userPub) {
-        return {
-          userPub: result.userPub,
-          username: result.username || username,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.warn(`Login failed for ${username}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Sign up a new user.
-   * @param username The username.
-   * @param password The password.
-   * @returns The user info if successful, or null.
-   */
-  async signup(
-    username: string,
-    password: string,
-  ): Promise<{ userPub: string; username: string } | null> {
-    try {
-      const result = await this.db.signUp(username, password);
-      if (result.success && result.userPub) {
-        return {
-          userPub: result.userPub,
-          username: result.username || username,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.warn(`Signup failed for ${username}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Log out the current user.
-   */
-  logout(): void {
-    this.db.logout();
-  }
-
-  /**
-   * Check if a user is currently logged in.
-   * @returns True if logged in, false otherwise.
-   */
-  isLoggedIn(): boolean {
-    return this.db.isLoggedIn();
-  }
-
-  // =========================
-  // Quick user data operations
-  // =========================
-
-  /**
-   * Get user data at a given path (requires login).
-   * @param path The path to the user data.
-   * @returns The user data, or null if not found or on error.
-   */
-  async getUserData<T = unknown>(path: string): Promise<T | null> {
-    try {
-      if (!this.isLoggedIn()) {
-        console.warn("User not logged in");
-        return null;
-      }
-
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return null;
-      }
-
-      const data = await this.db.user.get(path).once().then();
-      return data as T;
-    } catch (error) {
-      console.warn(`Failed to get user data from ${path}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Put user data at a given path (requires login).
-   * @param path The path to put data to.
-   * @param data The data to put.
-   * @returns True if successful, false otherwise.
-   */
-  async putUserData<T = unknown>(path: string, data: T): Promise<boolean> {
-    try {
-      if (!this.isLoggedIn()) {
-        console.warn("User not logged in");
-        return false;
-      }
-
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get(path).put(data).then();
-      return true;
-    } catch (error) {
-      console.warn(`Failed to put user data to ${path}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Set user data at a given path (alternative to put, requires login).
-   * @param path The path to set data to.
-   * @param data The data to set.
-   * @returns True if successful, false otherwise.
-   */
-  async setUserData<T = unknown>(path: string, data: T): Promise<boolean> {
-    try {
-      if (!this.isLoggedIn()) {
-        console.warn("User not logged in");
-        return false;
-      }
-
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get(path).put(data).then();
-      return true;
-    } catch (error) {
-      console.warn(`Failed to set user data to ${path}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Remove user data at a given path (requires login).
-   * @param path The path to remove data from.
-   * @returns True if successful, false otherwise.
-   */
-  async removeUserData(path: string): Promise<boolean> {
-    try {
-      if (!this.isLoggedIn()) {
-        console.warn("User not logged in");
-        return false;
-      }
-
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get(path).put(null).then();
-      return true;
-    } catch (error) {
-      console.warn(`Failed to remove user data from ${path}:`, error);
-      return false;
-    }
+  get database(): DataBase {
+    return this.db;
   }
 
   // =========================
@@ -342,12 +40,12 @@ export class SimpleGunAPI {
 
   /**
    * Convert an array to an indexed object for GunDB storage.
+   * GunDB doesn't store arrays natively, so this converts them to objects indexed by ID.
    * Example: [{id: '1', ...}, {id: '2', ...}] => { "1": {...}, "2": {...} }
-   * @param arr The array to convert.
-   * @returns The indexed object.
-   * @private
+   * @param arr The array to convert (each item must have an 'id' property).
+   * @returns The indexed object suitable for GunDB storage.
    */
-  private getIndexedObjectFromArray<T extends { id: string | number }>(
+  arrayToIndexedObject<T extends { id: string | number }>(
     arr: T[],
   ): Record<string, T> {
     // Filter out null/undefined items and ensure they have valid id
@@ -372,14 +70,12 @@ export class SimpleGunAPI {
 
   /**
    * Convert an indexed object back to an array.
+   * Reverses the arrayToIndexedObject conversion.
    * Example: { "1": {...}, "2": {...} } => [{id: '1', ...}, {id: '2', ...}]
    * @param indexedObj The indexed object to convert.
-   * @returns The array.
-   * @private
+   * @returns The array of items.
    */
-  private getArrayFromIndexedObject<T>(
-    indexedObj: Record<string, T> | null,
-  ): T[] {
+  indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[] {
     if (!indexedObj || typeof indexedObj !== "object") {
       return [];
     }
@@ -394,121 +90,18 @@ export class SimpleGunAPI {
     );
   }
 
-  /**
-   * Convert an array to an indexed object for GunDB storage (public method).
-   * @param arr The array to convert.
-   * @returns The indexed object.
-   */
-  arrayToIndexedObject<T extends { id: string | number }>(
-    arr: T[],
-  ): Record<string, T> {
-    return this.getIndexedObjectFromArray(arr);
-  }
-
-  /**
-   * Convert an indexed object to an array (public method).
-   * @param indexedObj The indexed object to convert.
-   * @returns The array.
-   */
-  indexedObjectToArray<T>(indexedObj: Record<string, T> | null): T[] {
-    return this.getArrayFromIndexedObject(indexedObj);
-  }
-
   // =========================
-  // Path utilities
+  // High-level user data helpers
   // =========================
 
   /**
-   * Get the GunDB user node at a given path (requires login).
-   * Useful for advanced operations that need direct GunDB node access.
-   * @param path The path to the user node.
-   * @returns The Gun node.
-   * @throws If not logged in.
+   * Get all user data (returns user's entire data tree).
+   * Requires user to be logged in.
+   * @returns The complete user data tree, or null if not logged in or on error.
    */
-  getUserNode(path: string): any {
-    if (!this.isLoggedIn()) {
-      throw new Error("User not logged in");
-    }
-    // Use the database's path deconstruction
-    return this.db.getUser().get(path);
-  }
-
-  /**
-   * Get the GunDB global node at a given path.
-   * Useful for advanced operations that need direct GunDB node access.
-   * @param path The path to the global node.
-   * @returns The Gun node.
-   */
-  getGlobalNode(path: string): any {
-    // Use the database's path deconstruction
-    return this.db.get(path);
-  }
-
-  // =========================
-  // Quick utility methods
-  // =========================
-
-  /**
-   * Get the current user info.
-   * @returns The current user info, or null if not logged in.
-   */
-  getCurrentUser(): { pub: string; username?: string } | null {
-    const user = this.db.getCurrentUser();
-    if (user) {
-      return {
-        pub: user.pub,
-        username: user.alias,
-      };
-    }
-    return null;
-  }
-
-  /**
-   * Check if a user exists by alias.
-   * @param alias The user alias.
-   * @returns True if the user exists, false otherwise.
-   */
-  async userExists(alias: string): Promise<boolean> {
-    try {
-      const user = await this.db.getUserByAlias(alias);
-      return user !== null;
-    } catch (error) {
-      console.warn(`Failed to check if user exists: ${alias}`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Get user info by alias.
-   * @param alias The user alias.
-   * @returns The user info, or null if not found.
-   */
-  async getUser(
-    alias: string,
-  ): Promise<{ userPub: string; username: string } | null> {
-    try {
-      const user = await this.db.getUserByAlias(alias);
-      if (user) {
-        return {
-          userPub: user.userPub,
-          username: user.username,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.warn(`Failed to get user: ${alias}`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Advanced user space operations
-   */
-
-  // Get all user data (returns user's entire data tree)
   async getAllUserData(): Promise<Record<string, unknown> | null> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
@@ -532,7 +125,12 @@ export class SimpleGunAPI {
     }
   }
 
-  // Update user profile (common use case) - using direct user node
+  /**
+   * Update user profile with common fields.
+   * Provides a standardized location for user profile data.
+   * @param profileData Profile data to save (name, email, bio, avatar, etc.)
+   * @returns True if successful, false otherwise.
+   */
   async updateProfile(profileData: {
     name?: string;
     email?: string;
@@ -541,17 +139,13 @@ export class SimpleGunAPI {
     [key: string]: unknown;
   }): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get("profile").put(profileData).then();
+      const user = this.db.getUser();
+      await user.get("profile").put(profileData).then();
       return true;
     } catch (error) {
       console.warn("Failed to update profile:", error);
@@ -559,20 +153,19 @@ export class SimpleGunAPI {
     }
   }
 
-  // Get user profile - using direct user node
+  /**
+   * Get user profile data.
+   * @returns The user profile data, or null if not found or not logged in.
+   */
   async getProfile(): Promise<Record<string, unknown> | null> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return null;
-      }
-
-      const profileData = await this.db.user.get("profile").once().then();
+      const user = this.db.getUser();
+      const profileData = await user.get("profile").once().then();
       return profileData;
     } catch (error) {
       console.warn("Failed to get profile:", error);
@@ -580,20 +173,21 @@ export class SimpleGunAPI {
     }
   }
 
-  // Save user settings - using direct user node
+  /**
+   * Save user settings.
+   * Provides a standardized location for application settings.
+   * @param settings Settings object to save.
+   * @returns True if successful, false otherwise.
+   */
   async saveSettings(settings: Record<string, unknown>): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get("settings").put(settings).then();
+      const user = this.db.getUser();
+      await user.get("settings").put(settings).then();
       return true;
     } catch (error) {
       console.warn("Failed to save settings:", error);
@@ -601,20 +195,19 @@ export class SimpleGunAPI {
     }
   }
 
-  // Get user settings - using direct user node
+  /**
+   * Get user settings.
+   * @returns The user settings, or null if not found or not logged in.
+   */
   async getSettings(): Promise<Record<string, unknown> | null> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return null;
-      }
-
-      const settingsData = await this.db.user.get("settings").once().then();
+      const user = this.db.getUser();
+      const settingsData = await user.get("settings").once().then();
       return settingsData;
     } catch (error) {
       console.warn("Failed to get settings:", error);
@@ -622,22 +215,23 @@ export class SimpleGunAPI {
     }
   }
 
-  // Save user preferences - using direct user node
+  /**
+   * Save user preferences.
+   * Provides a standardized location for user preferences (distinct from settings).
+   * @param preferences Preferences object to save.
+   * @returns True if successful, false otherwise.
+   */
   async savePreferences(
     preferences: Record<string, unknown>,
   ): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get("preferences").put(preferences).then();
+      const user = this.db.getUser();
+      await user.get("preferences").put(preferences).then();
       return true;
     } catch (error) {
       console.warn("Failed to save preferences:", error);
@@ -645,23 +239,19 @@ export class SimpleGunAPI {
     }
   }
 
-  // Get user preferences - using direct user node
+  /**
+   * Get user preferences.
+   * @returns The user preferences, or null if not found or not logged in.
+   */
   async getPreferences(): Promise<Record<string, unknown> | null> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return null;
-      }
-
-      const preferencesData = await this.db.user
-        .get("preferences")
-        .once()
-        .then();
+      const user = this.db.getUser();
+      const preferencesData = await user.get("preferences").once().then();
       return preferencesData;
     } catch (error) {
       console.warn("Failed to get preferences:", error);
@@ -669,23 +259,25 @@ export class SimpleGunAPI {
     }
   }
 
-  // Create a user collection - using direct user node
+  /**
+   * Create a user collection with initial items.
+   * Provides a standardized location for user collections.
+   * @param collectionName The name of the collection.
+   * @param items The initial items for the collection.
+   * @returns True if successful, false otherwise.
+   */
   async createCollection<T = unknown>(
     collectionName: string,
     items: Record<string, T>,
   ): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user.get(`collections/${collectionName}`).put(items).then();
+      const user = this.db.getUser();
+      await user.get(`collections/${collectionName}`).put(items).then();
       return true;
     } catch (error) {
       console.warn(`Failed to create collection ${collectionName}:`, error);
@@ -693,24 +285,26 @@ export class SimpleGunAPI {
     }
   }
 
-  // Add item to collection - using direct user node
+  /**
+   * Add an item to a user collection.
+   * @param collectionName The name of the collection.
+   * @param itemId The ID of the item to add.
+   * @param item The item data.
+   * @returns True if successful, false otherwise.
+   */
   async addToCollection<T = unknown>(
     collectionName: string,
     itemId: string,
     item: T,
   ): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user
+      const user = this.db.getUser();
+      await user
         .get(`collections/${collectionName}/${itemId}`)
         .put(item)
         .then();
@@ -724,22 +318,22 @@ export class SimpleGunAPI {
     }
   }
 
-  // Get collection - using direct user node
+  /**
+   * Get a user collection.
+   * @param collectionName The name of the collection.
+   * @returns The collection data, or null if not found or not logged in.
+   */
   async getCollection(
     collectionName: string,
   ): Promise<Record<string, unknown> | null> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return null;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return null;
-      }
-
-      const collectionData = await this.db.user
+      const user = this.db.getUser();
+      const collectionData = await user
         .get(`collections/${collectionName}`)
         .once()
         .then();
@@ -750,23 +344,24 @@ export class SimpleGunAPI {
     }
   }
 
-  // Remove item from collection - using direct user node
+  /**
+   * Remove an item from a user collection.
+   * @param collectionName The name of the collection.
+   * @param itemId The ID of the item to remove.
+   * @returns True if successful, false otherwise.
+   */
   async removeFromCollection(
     collectionName: string,
     itemId: string,
   ): Promise<boolean> {
     try {
-      if (!this.isLoggedIn()) {
+      if (!this.db.isLoggedIn()) {
         console.warn("User not logged in");
         return false;
       }
 
-      if (!this.db.user) {
-        console.warn("User node not available");
-        return false;
-      }
-
-      await this.db.user
+      const user = this.db.getUser();
+      await user
         .get(`collections/${collectionName}/${itemId}`)
         .put(null)
         .then();

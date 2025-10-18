@@ -34,7 +34,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^3.0.11";
+  public static readonly API_VERSION = "^3.3.8";
   public db!: DataBase;
   public storage!: ShogunStorage;
   public provider?: ethers.Provider;
@@ -460,10 +460,9 @@ export class ShogunCore implements IShogunCore {
 // Global declarations are handled in the original core.ts file
 // to avoid conflicts, we only set the window properties here
 if (typeof window !== "undefined") {
-  (window as any).SHOGUN_CORE = (config: ShogunCoreConfig): ShogunCore => {
+  (window as any).ShogunCore = (config: ShogunCoreConfig): ShogunCore => {
     return new ShogunCore(config);
   };
-  (window as any).SHOGUN_CORE_CLASS = ShogunCore;
 }
 
 export default ShogunCore;

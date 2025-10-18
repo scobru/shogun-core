@@ -65,263 +65,18 @@ describe("SimpleGunAPI", () => {
 
     // Create mock database
     mockDb = {
-      getData: jest.fn(),
       get: jest.fn(),
-      put: jest.fn(),
-      set: jest.fn(),
-      remove: jest.fn(),
-      login: jest.fn(),
-      signUp: jest.fn(),
-      logout: jest.fn(),
       isLoggedIn: jest.fn(),
-      getUserData: jest.fn(),
-      putUserData: jest.fn(),
-      removeUserData: jest.fn(),
       getUser: jest.fn(),
-      getCurrentUser: jest.fn(),
-      getUserByAlias: jest.fn(),
       initialize: jest.fn(),
     };
 
     api = new SimpleGunAPI(mockDb);
   });
 
-  describe("Basic Data Operations", () => {
-    it("should get data successfully", async () => {
-      const testData = { name: "test", value: 123 };
-      mockDb.getData.mockResolvedValue(testData);
-
-      const result = await api.get("test/path");
-
-      expect(mockDb.getData).toHaveBeenCalledWith("test/path");
-      expect(result).toEqual(testData);
-    });
-
-    it("should return null when get fails", async () => {
-      mockDb.getData.mockRejectedValue(new Error("Get failed"));
-
-      const result = await api.get("test/path");
-
-      expect(result).toBeNull();
-    });
-
-    it("should get node for chaining", () => {
-      const mockNode = { get: jest.fn(), put: jest.fn() };
-      mockDb.get.mockReturnValue(mockNode);
-
-      const result = api.getNode("test/path");
-
-      expect(mockDb.get).toHaveBeenCalledWith("test/path");
-      expect(result).toBe(mockNode);
-    });
-
-    it("should get node for direct chaining", () => {
-      const mockNode = { get: jest.fn(), put: jest.fn() };
-      mockDb.get.mockReturnValue(mockNode);
-
-      const result = api.node("test/path");
-
-      expect(mockDb.get).toHaveBeenCalledWith("test/path");
-      expect(result).toBe(mockNode);
-    });
-
-    it("should put data successfully", async () => {
-      const testData = { name: "test" };
-      mockDb.put.mockResolvedValue({ success: true });
-
-      const result = await api.put("test/path", testData);
-
-      expect(mockDb.put).toHaveBeenCalledWith("test/path", testData);
-      expect(result).toBe(true);
-    });
-
-    it("should return false when put fails", async () => {
-      mockDb.put.mockRejectedValue(new Error("Put failed"));
-
-      const result = await api.put("test/path", { data: "test" });
-
-      expect(result).toBe(false);
-    });
-
-    it("should set data successfully", async () => {
-      const testData = { name: "test" };
-      mockDb.set.mockResolvedValue({ success: true });
-
-      const result = await api.set("test/path", testData);
-
-      expect(mockDb.set).toHaveBeenCalledWith("test/path", testData);
-      expect(result).toBe(true);
-    });
-
-    it("should remove data successfully", async () => {
-      mockDb.remove.mockResolvedValue({ success: true });
-
-      const result = await api.remove("test/path");
-
-      expect(mockDb.remove).toHaveBeenCalledWith("test/path");
-      expect(result).toBe(true);
-    });
-  });
-
-  describe("Chain Operations", () => {
-    it("should create chain with proper methods", () => {
-      const mockNode = { map: jest.fn() };
-      mockDb.get.mockReturnValue(mockNode);
-
-      const chain = api.chain("test/path");
-
-      expect(chain).toHaveProperty("get");
-      expect(chain).toHaveProperty("put");
-      expect(chain).toHaveProperty("set");
-      expect(chain).toHaveProperty("once");
-      expect(chain).toHaveProperty("then");
-      expect(chain).toHaveProperty("map");
-    });
-
-    it("should handle chain put operation", async () => {
-      const mockNode = { map: jest.fn() };
-      mockDb.get.mockReturnValue(mockNode);
-      mockDb.put.mockResolvedValue({ success: true });
-
-      const chain = api.chain("test/path");
-      const result = await chain.put({ data: "test" });
-
-      expect(mockDb.put).toHaveBeenCalledWith("test/path", { data: "test" });
-      expect(result).toBe(true);
-    });
-
-    it("should handle chain get operation", () => {
-      const mockNode = { map: jest.fn() };
-      mockDb.get.mockReturnValue(mockNode);
-
-      const chain = api.chain("test/path");
-      const subChain = chain.get("subpath");
-
-      expect(subChain).toBeDefined();
-    });
-
-    it("should handle chain map operation", () => {
-      const mockMap = jest.fn();
-      const mockNode = { map: mockMap };
-      mockDb.get.mockReturnValue(mockNode);
-
-      const chain = api.chain("test/path");
-      const callback = (value: any, key: string) => value;
-      chain.map(callback);
-
-      expect(mockMap).toHaveBeenCalledWith(callback);
-    });
-  });
-
-  describe("Authentication Operations", () => {
-    it("should login successfully", async () => {
-      const loginResult = {
-        success: true,
-        userPub: "user123",
-        username: "testuser",
-      };
-      mockDb.login.mockResolvedValue(loginResult);
-
-      const result = await api.login("testuser", "password");
-
-      expect(mockDb.login).toHaveBeenCalledWith("testuser", "password");
-      expect(result).toEqual({
-        userPub: "user123",
-        username: "testuser",
-      });
-    });
-
-    it("should return null when login fails", async () => {
-      mockDb.login.mockResolvedValue({ success: false });
-
-      const result = await api.login("testuser", "wrongpassword");
-
-      expect(result).toBeNull();
-    });
-
-    it("should signup successfully", async () => {
-      const signupResult = {
-        success: true,
-        userPub: "user123",
-        username: "newuser",
-      };
-      mockDb.signUp.mockResolvedValue(signupResult);
-
-      const result = await api.signup("newuser", "password");
-
-      expect(mockDb.signUp).toHaveBeenCalledWith("newuser", "password");
-      expect(result).toEqual({
-        userPub: "user123",
-        username: "newuser",
-      });
-    });
-
-    it("should logout", () => {
-      api.logout();
-
-      expect(mockDb.logout).toHaveBeenCalled();
-    });
-
-    it("should check if logged in", () => {
-      mockDb.isLoggedIn.mockReturnValue(true);
-
-      const result = api.isLoggedIn();
-
-      expect(mockDb.isLoggedIn).toHaveBeenCalled();
-      expect(result).toBe(true);
-    });
-  });
-
-  describe("User Data Operations", () => {
-    beforeEach(() => {
-      mockDb.isLoggedIn.mockReturnValue(true);
-    });
-
-    it("should get user data successfully", async () => {
-      const userData = { profile: { name: "test" } };
-      mockDb.getUserData.mockResolvedValue(userData);
-
-      const result = await api.getUserData("profile");
-
-      expect(mockDb.getUserData).toHaveBeenCalledWith("profile");
-      expect(result).toEqual(userData);
-    });
-
-    it("should return null when user not logged in", async () => {
-      mockDb.isLoggedIn.mockReturnValue(false);
-
-      const result = await api.getUserData("profile");
-
-      expect(result).toBeNull();
-    });
-
-    it("should put user data successfully", async () => {
-      const userData = { name: "test" };
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.putUserData("profile", userData);
-
-      expect(mockDb.putUserData).toHaveBeenCalledWith("profile", userData);
-      expect(result).toBe(true);
-    });
-
-    it("should set user data successfully", async () => {
-      const userData = { name: "test" };
-      mockDb.putUserData.mockResolvedValue(undefined);
-
-      const result = await api.setUserData("profile", userData);
-
-      expect(mockDb.putUserData).toHaveBeenCalledWith("profile", userData);
-      expect(result).toBe(true);
-    });
-
-    it("should remove user data successfully", async () => {
-      mockDb.removeUserData.mockResolvedValue(undefined);
-
-      const result = await api.removeUserData("profile");
-
-      expect(mockDb.removeUserData).toHaveBeenCalledWith("profile");
-      expect(result).toBe(true);
+  describe("Database Access", () => {
+    it("should provide access to database instance", () => {
+      expect(api.database).toBe(mockDb);
     });
   });
 
@@ -408,93 +163,97 @@ describe("SimpleGunAPI", () => {
     });
   });
 
-  describe("User Management", () => {
-    it("should get current user", () => {
-      const user = { pub: "user123", alias: "testuser" };
-      mockDb.getCurrentUser.mockReturnValue(user);
-
-      const result = api.getCurrentUser();
-
-      expect(mockDb.getCurrentUser).toHaveBeenCalled();
-      expect(result).toEqual({
-        pub: "user123",
-        username: "testuser",
-      });
-    });
-
-    it("should check if user exists", async () => {
-      const user = { userPub: "user123", username: "testuser" };
-      mockDb.getUserByAlias.mockResolvedValue(user);
-
-      const result = await api.userExists("testuser");
-
-      expect(mockDb.getUserByAlias).toHaveBeenCalledWith("testuser");
-      expect(result).toBe(true);
-    });
-
-    it("should get user by alias", async () => {
-      const user = { userPub: "user123", username: "testuser" };
-      mockDb.getUserByAlias.mockResolvedValue(user);
-
-      const result = await api.getUser("testuser");
-
-      expect(mockDb.getUserByAlias).toHaveBeenCalledWith("testuser");
-      expect(result).toEqual({
-        userPub: "user123",
-        username: "testuser",
-      });
-    });
-  });
-
   describe("Profile and Settings", () => {
+    let mockUserNode: any;
+
     beforeEach(() => {
       mockDb.isLoggedIn.mockReturnValue(true);
+
+      // Mock user node with chaining methods
+      mockUserNode = {
+        get: jest.fn().mockReturnThis(),
+        put: jest.fn().mockReturnThis(),
+        once: jest.fn().mockReturnThis(),
+        then: jest.fn(),
+      };
+
+      mockDb.getUser.mockReturnValue(mockUserNode);
     });
 
     it("should update profile", async () => {
       const profileData = { name: "Test User", email: "test@example.com" };
-      mockDb.putUserData.mockResolvedValue(undefined);
+      mockUserNode.then.mockResolvedValue(undefined);
 
       const result = await api.updateProfile(profileData);
 
-      expect(mockDb.putUserData).toHaveBeenCalledWith("profile", profileData);
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockDb.getUser).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("profile");
+      expect(mockUserNode.put).toHaveBeenCalledWith(profileData);
       expect(result).toBe(true);
     });
 
     it("should get profile", async () => {
       const profile = { name: "Test User", email: "test@example.com" };
-      mockDb.getUserData.mockResolvedValue(profile);
+      mockUserNode.then.mockResolvedValue(profile);
 
       const result = await api.getProfile();
 
-      expect(mockDb.getUserData).toHaveBeenCalledWith("profile");
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockDb.getUser).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("profile");
       expect(result).toEqual(profile);
     });
 
     it("should save settings", async () => {
       const settings = { theme: "dark", language: "en" };
-      mockDb.putUserData.mockResolvedValue(undefined);
+      mockUserNode.then.mockResolvedValue(undefined);
 
       const result = await api.saveSettings(settings);
 
-      expect(mockDb.putUserData).toHaveBeenCalledWith("settings", settings);
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockDb.getUser).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("settings");
+      expect(mockUserNode.put).toHaveBeenCalledWith(settings);
       expect(result).toBe(true);
     });
 
     it("should get settings", async () => {
       const settings = { theme: "dark", language: "en" };
-      mockDb.getUserData.mockResolvedValue(settings);
+      mockUserNode.then.mockResolvedValue(settings);
 
       const result = await api.getSettings();
 
-      expect(mockDb.getUserData).toHaveBeenCalledWith("settings");
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockDb.getUser).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("settings");
       expect(result).toEqual(settings);
+    });
+
+    it("should return null when not logged in", async () => {
+      mockDb.isLoggedIn.mockReturnValue(false);
+
+      const result = await api.getProfile();
+
+      expect(result).toBeNull();
     });
   });
 
   describe("Collections", () => {
+    let mockUserNode: any;
+
     beforeEach(() => {
       mockDb.isLoggedIn.mockReturnValue(true);
+
+      // Mock user node with chaining methods
+      mockUserNode = {
+        get: jest.fn().mockReturnThis(),
+        put: jest.fn().mockReturnThis(),
+        once: jest.fn().mockReturnThis(),
+        then: jest.fn(),
+      };
+
+      mockDb.getUser.mockReturnValue(mockUserNode);
     });
 
     it("should create collection", async () => {
@@ -502,29 +261,32 @@ describe("SimpleGunAPI", () => {
         item1: { id: "item1", name: "Item 1" },
         item2: { id: "item2", name: "Item 2" },
       };
-      mockDb.putUserData.mockResolvedValue(undefined);
+      mockUserNode.then.mockResolvedValue(undefined);
 
       const result = await api.createCollection("myCollection", items);
 
-      expect(mockDb.putUserData).toHaveBeenCalledWith(
-        "collections/myCollection",
-        items,
-      );
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("collections/myCollection");
+      expect(mockUserNode.put).toHaveBeenCalledWith(items);
       expect(result).toBe(true);
     });
 
     it("should add item to collection", async () => {
-      mockDb.putUserData.mockResolvedValue(undefined);
+      mockUserNode.then.mockResolvedValue(undefined);
 
       const result = await api.addToCollection("myCollection", "item1", {
         id: "item1",
         name: "Item 1",
       });
 
-      expect(mockDb.putUserData).toHaveBeenCalledWith(
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith(
         "collections/myCollection/item1",
-        { id: "item1", name: "Item 1" },
       );
+      expect(mockUserNode.put).toHaveBeenCalledWith({
+        id: "item1",
+        name: "Item 1",
+      });
       expect(result).toBe(true);
     });
 
@@ -533,24 +295,25 @@ describe("SimpleGunAPI", () => {
         item1: { id: "item1", name: "Item 1" },
         item2: { id: "item2", name: "Item 2" },
       };
-      mockDb.getUserData.mockResolvedValue(collection);
+      mockUserNode.then.mockResolvedValue(collection);
 
       const result = await api.getCollection("myCollection");
 
-      expect(mockDb.getUserData).toHaveBeenCalledWith(
-        "collections/myCollection",
-      );
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith("collections/myCollection");
       expect(result).toEqual(collection);
     });
 
     it("should remove item from collection", async () => {
-      mockDb.removeUserData.mockResolvedValue(undefined);
+      mockUserNode.then.mockResolvedValue(undefined);
 
       const result = await api.removeFromCollection("myCollection", "item1");
 
-      expect(mockDb.removeUserData).toHaveBeenCalledWith(
+      expect(mockDb.isLoggedIn).toHaveBeenCalled();
+      expect(mockUserNode.get).toHaveBeenCalledWith(
         "collections/myCollection/item1",
       );
+      expect(mockUserNode.put).toHaveBeenCalledWith(null);
       expect(result).toBe(true);
     });
   });
@@ -641,58 +404,52 @@ describe("Helper Functions", () => {
 
 describe("Error Handling", () => {
   let mockDb: any;
+  let mockUserNode: any;
   let api: SimpleGunAPI;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
+    mockUserNode = {
+      get: jest.fn().mockReturnThis(),
+      put: jest.fn().mockReturnThis(),
+      once: jest.fn().mockReturnThis(),
+      then: jest.fn(),
+    };
+
     mockDb = {
-      getData: jest.fn(),
-      put: jest.fn(),
-      set: jest.fn(),
-      remove: jest.fn(),
-      login: jest.fn(),
-      signUp: jest.fn(),
-      getUserData: jest.fn(),
-      putUserData: jest.fn(),
-      removeUserData: jest.fn(),
-      getCurrentUser: jest.fn(),
-      getUserByAlias: jest.fn(),
+      get: jest.fn(),
       isLoggedIn: jest.fn(),
+      getUser: jest.fn().mockReturnValue(mockUserNode),
+      initialize: jest.fn(),
     };
 
     api = new SimpleGunAPI(mockDb);
   });
 
-  it("should handle get errors gracefully", async () => {
-    mockDb.getData.mockRejectedValue(new Error("Network error"));
+  it("should handle profile get errors gracefully", async () => {
+    mockDb.isLoggedIn.mockReturnValue(true);
+    mockUserNode.then.mockRejectedValue(new Error("Get profile failed"));
 
-    const result = await api.get("test/path");
+    const result = await api.getProfile();
 
     expect(result).toBeNull();
   });
 
-  it("should handle put errors gracefully", async () => {
-    mockDb.put.mockRejectedValue(new Error("Put failed"));
+  it("should handle profile update errors gracefully", async () => {
+    mockDb.isLoggedIn.mockReturnValue(true);
+    mockUserNode.then.mockRejectedValue(new Error("Update failed"));
 
-    const result = await api.put("test/path", { data: "test" });
+    const result = await api.updateProfile({ name: "Test" });
 
     expect(result).toBe(false);
   });
 
-  it("should handle login errors gracefully", async () => {
-    mockDb.login.mockRejectedValue(new Error("Login failed"));
-
-    const result = await api.login("user", "pass");
-
-    expect(result).toBeNull();
-  });
-
-  it("should handle user data errors gracefully", async () => {
+  it("should handle collection errors gracefully", async () => {
     mockDb.isLoggedIn.mockReturnValue(true);
-    mockDb.getUserData.mockRejectedValue(new Error("Get user data failed"));
+    mockUserNode.then.mockRejectedValue(new Error("Collection failed"));
 
-    const result = await api.getUserData("profile");
+    const result = await api.getCollection("test");
 
     expect(result).toBeNull();
   });
