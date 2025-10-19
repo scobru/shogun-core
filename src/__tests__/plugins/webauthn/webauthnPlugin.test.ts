@@ -984,7 +984,9 @@ describe("WebauthnPlugin", () => {
       } as any);
 
       // Mock generatePairFromCredentials
-      jest.spyOn(plugin, "generatePairFromCredentials").mockResolvedValue(mockPair as any);
+      jest
+        .spyOn(plugin, "generatePairFromCredentials")
+        .mockResolvedValue(mockPair as any);
 
       // Mock the core signUp method
       plugin["core"] = {

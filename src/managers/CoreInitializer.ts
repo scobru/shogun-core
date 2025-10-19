@@ -6,6 +6,7 @@ import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
 import { DataBase, RxJS, createGun, derive } from "../gundb";
+import { forceListUpdate } from "shogun-relays";
 
 /**
  * Handles initialization of ShogunCore components
@@ -75,35 +76,23 @@ export class CoreInitializer {
    */
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
     try {
+      let peers: string[] = [];
+
+      if (config.gunOptions?.peers && config.gunOptions?.relays.length === 0) {
+        peers = await forceListUpdate();
+        config.gunOptions.peers = peers;
+      }
+
       if (config.gunInstance && config.gunOptions === undefined) {
-        if (!config.silent) {
-          console.log("Using provided Gun instance");
-        }
         this.core._gun = config.gunInstance;
       } else if (config.gunOptions && config.gunInstance === undefined) {
-        if (!config.silent) {
-          console.log("Creating new Gun instance");
-        }
-        this.core._gun = createGun(config.gunOptions, config.silent);
+        this.core._gun = createGun(config.gunOptions);
       } else if (config.gunInstance && config.gunOptions) {
-        // Both provided, prefer gunInstance
-        if (!config.silent) {
-          console.log(
-            "Both gunInstance and gunOptions provided, using gunInstance",
-          );
-        }
         this.core._gun = config.gunInstance;
       } else {
-        // Neither provided, create a default Gun instance for testing
-        if (!config.silent) {
-          console.log(
-            "No Gun instance or options provided, creating default instance",
-          );
-        }
-        this.core._gun = createGun(
-          { peers: config.gunOptions?.peers || [] },
-          config.silent,
-        );
+        this.core._gun = createGun({
+          peers: config.gunOptions?.peers || peers,
+        });
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -131,16 +120,7 @@ export class CoreInitializer {
    */
   private async initializeGunUser(): Promise<void> {
     try {
-      // Skip recall if disabled in config
-      if (
-        !this.core.config.disableAutoRecall &&
-        typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem("pair")
-      ) {
-        this.core._user = this.core.gun.user().recall({ sessionStorage: true });
-      } else {
-        this.core._user = this.core.gun.user();
-      }
+      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing Gun user:", error);
@@ -149,16 +129,7 @@ export class CoreInitializer {
     }
 
     this.core.gun.on("auth", (user: any) => {
-      // Skip recall if disabled in config
-      if (
-        !this.core.config.disableAutoRecall &&
-        typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem("pair")
-      ) {
-        this.core._user = this.core.gun.user().recall({ sessionStorage: true });
-      } else {
-        this.core._user = this.core.gun.user();
-      }
+      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
       this.core.emit("auth:login", {
         userPub: user.pub,
         method: "password" as const,
