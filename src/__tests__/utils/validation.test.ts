@@ -19,7 +19,7 @@ import {
   generateUsernameFromIdentity,
   generateDeterministicPassword,
 } from "../../utils/validation";
-import { OAuthProvider } from "../../plugins/oauth/types";
+// OAuth has been removed from Shogun Core
 
 describe("Validation Module", () => {
   beforeEach(() => {
@@ -156,12 +156,13 @@ describe("Validation Module", () => {
   });
 
   describe("validateProvider", () => {
-    it("should validate supported OAuth providers", () => {
-      expect(validateProvider("google")).toBe(true);
-      expect(validateProvider("github")).toBe(true);
-      expect(validateProvider("discord")).toBe(true);
-      expect(validateProvider("twitter")).toBe(true);
-      expect(validateProvider("custom")).toBe(true);
+    it("should reject all providers since OAuth has been removed", () => {
+      // OAuth has been deprecated and removed from Shogun Core
+      expect(validateProvider("google")).toBe(false);
+      expect(validateProvider("github")).toBe(false);
+      expect(validateProvider("discord")).toBe(false);
+      expect(validateProvider("twitter")).toBe(false);
+      expect(validateProvider("custom")).toBe(false);
     });
 
     it("should reject unsupported providers", () => {
@@ -190,23 +191,7 @@ describe("Validation Module", () => {
       expect(validateProvider("Discord")).toBe(false);
     });
 
-    it("should have correct type guard behavior", () => {
-      const providers: string[] = [
-        "google",
-        "github",
-        "discord",
-        "twitter",
-        "custom",
-      ];
-
-      providers.forEach((provider) => {
-        if (validateProvider(provider)) {
-          // TypeScript should know this is OAuthProvider
-          const typedProvider: OAuthProvider = provider;
-          expect(typedProvider).toBe(provider);
-        }
-      });
-    });
+    // OAuth type guard test removed - OAuth has been deprecated
   });
 
   describe("generateUsernameFromIdentity", () => {
@@ -432,20 +417,20 @@ describe("Validation Module", () => {
 
   describe("Integration tests", () => {
     it("should work together for a complete user registration flow", () => {
-      // Simulate OAuth login
-      const provider = "google";
+      // OAuth has been removed - testing with non-OAuth providers
+      const provider = "web3";
       const userInfo = {
-        id: "12345",
+        id: "0x1234567890abcdef",
         email: "test@example.com",
         name: "John Doe",
       };
 
-      // Validate provider
-      expect(validateProvider(provider)).toBe(true);
+      // OAuth provider validation should fail
+      expect(validateProvider("google")).toBe(false);
 
-      // Generate username
+      // Generate username for web3
       const username = generateUsernameFromIdentity(provider, userInfo);
-      expect(username).toBe("google_test");
+      expect(username).toBe("web3_0x1234567890abcdef");
 
       // Validate generated username
       expect(validateUsername(username)).toBe(true);

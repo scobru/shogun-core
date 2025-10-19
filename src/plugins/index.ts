@@ -23,3 +23,23 @@ export type {
   AlbyProvider,
   NostrProvider,
 } from "./nostr/types";
+
+// ZK-Proof plugin exports
+export { ZkProofConnector } from "./zkproof/zkProofConnector";
+export { ZkProofPlugin } from "./zkproof/zkProofPlugin";
+export { ZkCredentials, CredentialType } from "./zkproof/zkCredentials";
+export type {
+  ZkProofPluginInterface,
+  ZkIdentityData,
+  ZkProofAuthResult,
+  ZkProofGenerationOptions,
+  ZkProofVerificationResult,
+  ZkProofCredential,
+  ZkProofConfig,
+  SemaphoreProof,
+} from "./zkproof/types";
+export type {
+  CredentialClaim,
+  VerifiableCredentialProof,
+  CredentialVerificationResult,
+} from "./zkproof/zkCredentials";

@@ -491,7 +491,7 @@ export class NostrConnectorPlugin
       core.emit("auth:login", {
         userPub: loginResult.userPub || "",
         username: credentials.username,
-        method: "bitcoin",
+        method: "nostr",
       });
 
       return loginResult;
@@ -596,7 +596,7 @@ export class NostrConnectorPlugin
           core.emit("auth:signup", {
             userPub: authResult.userPub || "",
             username: credentials.username,
-            method: "bitcoin",
+            method: "nostr",
           });
           return { ...authResult };
         } else {

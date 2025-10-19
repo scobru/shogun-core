@@ -1,8 +1,8 @@
 import { ShogunCore } from "../../index";
 import { CorePlugins, ShogunSDKConfig } from "../../interfaces/shogun";
-import { OAuthPlugin } from "../../plugins/oauth/oauthPlugin";
 import { Web3ConnectorPlugin } from "../../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../../plugins/nostr/nostrConnectorPlugin";
+// OAuth has been removed from Shogun Core
 
 // Mock delle dipendenze di GunDB per evitare side-effects e ambiente browser
 jest.mock("../../gundb", () => {
@@ -62,48 +62,8 @@ jest.mock("../../gundb", () => {
   };
 });
 
-// Mock dei connector dei plugin per evitare dipendenze reali (OAuth/Web3/Nostr)
-jest.mock("../../plugins/oauth/oauthConnector", () => {
-  return {
-    OAuthConnector: class MockOAuthConnector {
-      private cfg: any;
-      constructor(cfg?: any) {
-        this.cfg = cfg || {};
-      }
-      updateConfig(cfg: any) {
-        this.cfg = { ...this.cfg, ...cfg };
-      }
-      isSupported() {
-        return true;
-      }
-      getAvailableProviders() {
-        return ["google", "github"];
-      }
-      async initiateOAuth(provider: string) {
-        return { success: true, authUrl: `https://auth.example/${provider}` };
-      }
-      async completeOAuth(provider: string, code: string, state?: string) {
-        return {
-          success: true,
-          userInfo: {
-            id: "123",
-            email: "user@example.com",
-            name: "Test User",
-            picture: "https://example.com/pic.png",
-          },
-        };
-      }
-      async generateCredentials(userInfo: any, provider: string) {
-        return {
-          username: `${provider}:${userInfo.email}`,
-          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
-        };
-      }
-      cleanup() {}
-      clearUserCache() {}
-    },
-  };
-});
+// Mock dei connector dei plugin per evitare dipendenze reali (Web3/Nostr)
+// OAuth has been removed from Shogun Core
 
 jest.mock("../../plugins/web3/web3Connector", () => {
   return {
@@ -205,30 +165,22 @@ describe("Plugin system and plugin functionality", () => {
   });
 
   it("registers built-in plugins when config provided", () => {
-    expect(core.hasPlugin(CorePlugins.OAuth)).toBe(true);
+    // OAuth has been removed from Shogun Core
     expect(core.hasPlugin(CorePlugins.WebAuthn)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Nostr)).toBe(true);
   });
 
   it("getPlugin returns correct instances", () => {
-    const oauth = core.getPlugin<OAuthPlugin>(CorePlugins.OAuth);
+    // OAuth has been removed from Shogun Core
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3);
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr);
 
-    expect(oauth?.name).toBe("oauth");
     expect(web3?.name).toBe("web3");
     expect(nostr?.name).toBe("nostr");
   });
 
-  it("OAuthPlugin login returns redirect flow (pendingAuth)", async () => {
-    const oauth = core.getPlugin<OAuthPlugin>(CorePlugins.OAuth)!;
-    const result = await oauth.login("google" as any);
-    expect(result.success).toBe(true);
-    expect(result.pendingAuth).toBe(true);
-    expect(typeof result.redirectUrl).toBe("string");
-    expect(result.provider).toBe("google");
-  });
+  // OAuth has been removed from Shogun Core - test removed
 
   it("Web3 plugin exposes availability and connection", async () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
@@ -262,12 +214,13 @@ describe("Plugin system and plugin functionality", () => {
   });
 
   it("unregister destroys plugin and removes it", async () => {
-    const oauth = core.getPlugin<OAuthPlugin>(CorePlugins.OAuth)!;
+    // OAuth has been removed - testing with Web3 instead
+    const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
     const destroyedSpy = jest.fn();
-    oauth.on("destroyed", destroyedSpy);
+    web3.on("destroyed", destroyedSpy);
 
-    core.unregister(CorePlugins.OAuth);
-    expect(core.hasPlugin(CorePlugins.OAuth)).toBe(false);
+    core.unregister(CorePlugins.Web3);
+    expect(core.hasPlugin(CorePlugins.Web3)).toBe(false);
     // L'evento è sincrono, ma lasciamo un microtask per sicurezza
     await Promise.resolve();
     expect(destroyedSpy).toHaveBeenCalledTimes(1);
@@ -276,7 +229,7 @@ describe("Plugin system and plugin functionality", () => {
   it("reports initialization status for registered plugins", () => {
     const status = core.getPluginsInitializationStatus();
     // I plugin registrati devono comparire nello status
-    expect(status[CorePlugins.OAuth]?.initialized).toBe(true);
+    // OAuth has been removed from Shogun Core
     expect(status[CorePlugins.Web3]?.initialized).toBe(true);
     expect(status[CorePlugins.Nostr]?.initialized).toBe(true);
     // WebAuthn è inizializzato a livello di core reference anche se in Node non attiva moduli
@@ -284,15 +237,12 @@ describe("Plugin system and plugin functionality", () => {
   });
 
   it("getAuthenticationMethod returns plugin-backed handlers", () => {
-    const oauthMethod = core.getAuthenticationMethod("oauth");
+    // OAuth has been removed from Shogun Core
     const web3Method = core.getAuthenticationMethod("web3");
     const nostrMethod = core.getAuthenticationMethod("nostr");
 
     // Check that methods are defined (plugins exist)
     // Note: Some plugins might not be fully initialized in test environment
-    if (oauthMethod) {
-      expect((oauthMethod as any)?.name).toBe("oauth");
-    }
     if (web3Method) {
       expect((web3Method as any)?.name).toBe("web3");
     }
@@ -301,6 +251,6 @@ describe("Plugin system and plugin functionality", () => {
     }
 
     // At least one method should be defined
-    expect(oauthMethod || web3Method || nostrMethod).toBeDefined();
+    expect(web3Method || nostrMethod).toBeDefined();
   });
 });

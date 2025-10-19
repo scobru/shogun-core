@@ -326,7 +326,13 @@ export type GunOperation =
   | "once"
   | "on"
   | "off";
-export type GunAuthMethod = "password" | "pair" | "webauthn" | "web3" | "nostr";
+export type GunAuthMethod =
+  | "password"
+  | "pair"
+  | "webauthn"
+  | "web3"
+  | "nostr"
+  | "zkproof";
 
 // Generic wrapper for Gun operations
 export interface TypedGunWrapper<T = Record<string, unknown>> {

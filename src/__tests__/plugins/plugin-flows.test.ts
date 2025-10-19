@@ -1,6 +1,6 @@
 import { ShogunCore } from "../../index";
 import { CorePlugins, ShogunSDKConfig } from "../../interfaces/shogun";
-import { OAuthPlugin } from "../../plugins/oauth/oauthPlugin";
+// OAuth plugin removed - no longer supported
 import { Web3ConnectorPlugin } from "../../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../../plugins/nostr/nostrConnectorPlugin";
 
@@ -70,53 +70,7 @@ jest.mock("../../gundb", () => {
   };
 });
 
-// OAuth connector mock with full flow
-jest.mock("../../plugins/oauth/oauthConnector", () => {
-  return {
-    OAuthConnector: class MockOAuthConnector {
-      private cfg: any;
-      private cache: Record<string, any> = {};
-      constructor(cfg?: any) {
-        this.cfg = cfg || {};
-      }
-      updateConfig(cfg: any) {
-        this.cfg = { ...this.cfg, ...cfg };
-      }
-      isSupported() {
-        return true;
-      }
-      getAvailableProviders() {
-        return ["google", "github"];
-      }
-      async initiateOAuth(provider: string) {
-        return { success: true, authUrl: `https://auth.example/${provider}` };
-      }
-      async completeOAuth(provider: string, code: string, state?: string) {
-        const userInfo = {
-          id: "123",
-          email: "user@example.com",
-          name: "Test User",
-          picture: "https://example.com/pic.png",
-        };
-        this.cache[`${provider}:123`] = userInfo;
-        return { success: true, userInfo };
-      }
-      async generateCredentials(userInfo: any, provider: string) {
-        return {
-          username: `${provider}:${userInfo.email}`,
-          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
-        };
-      }
-      getCachedUserInfo(userId: string, provider: string) {
-        return this.cache[`${provider}:${userId}`] || null;
-      }
-      clearUserCache() {
-        this.cache = {};
-      }
-      cleanup() {}
-    },
-  };
-});
+// OAuth plugin removed - no longer supported in current version
 
 // Web3 connector mock
 jest.mock("../../plugins/web3/web3Connector", () => {
@@ -292,13 +246,10 @@ describe("Plugin end-to-end flows", () => {
 
   beforeEach(() => {
     config = {
-      oauth: {
-        enabled: true,
-        providers: { google: { clientId: "id", usePKCE: true } },
-      },
       webauthn: { enabled: true },
       web3: { enabled: true },
       nostr: { enabled: true },
+      zkproof: { enabled: true },
       peers: ["http://localhost:8765/gun"],
     } as any;
     // Simula ambiente browser per WebAuthn
@@ -311,34 +262,6 @@ describe("Plugin end-to-end flows", () => {
     // Ripristina window
     (global as any).window = originalWindow;
   });
-
-  it("OAuth handleOAuthCallback completes login and enriches user", async () => {
-    const oauth = core.getPlugin<OAuthPlugin>(CorePlugins.OAuth)!;
-
-    // Use Promise.race to timeout the test if it takes too long
-    const testPromise = oauth.handleOAuthCallback(
-      "google" as any,
-      "code",
-      "state",
-    );
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Test timeout")), 5000),
-    );
-
-    try {
-      const res = await Promise.race([testPromise, timeoutPromise]);
-      expect(res.success).toBe(true);
-      expect(res.user?.oauth?.provider).toBe("google");
-    } catch (error) {
-      // If the test times out or fails, just skip it
-      console.warn(
-        "OAuth callback test skipped due to timeout or error:",
-        error,
-      );
-      expect(true).toBe(true); // Pass the test
-    }
-  }, 10000); // Reduce timeout to 10 seconds
 
   it("Web3 login emits auth:login and succeeds", async () => {
     const loginSpy = jest.fn();

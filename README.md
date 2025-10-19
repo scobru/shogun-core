@@ -11,7 +11,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 
 ## Features
 
-- 🔐 **Multiple Authentication Methods**: Traditional username/password, WebAuthn (biometrics), Web3 (MetaMask), and Nostr
+- 🔐 **Multiple Authentication Methods**: Traditional username/password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, and ZK-Proof (anonymous)
 - 🌐 **Decentralized Storage**: Built on GunDB for peer-to-peer data synchronization
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins for various authentication methods
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
@@ -156,10 +156,13 @@ const shogun = new ShogunCore({
   nostr: {
     enabled: true,
   },
-});
 
-// Initialize the SDK
-await shogun.initialize();
+  // Enable and configure ZK-Proof (anonymous authentication)
+  zkproof: {
+    enabled: true,
+    defaultGroupId: "my-app-users",
+  },
+});
 
 console.log("Shogun Core initialized!");
 ```
@@ -363,27 +366,19 @@ interface AuthResult {
     epub: string;
     epriv: string;
   };
-  // OAuth-specific properties
-  redirectUrl?: string; // OAuth redirect URL
-  pendingAuth?: boolean; // Indicates pending OAuth flow
+  // External auth flow properties
+  redirectUrl?: string; // Redirect URL for external auth
+  pendingAuth?: boolean; // Indicates pending auth flow
   message?: string; // Status message
-  provider?: string; // OAuth provider name
+  provider?: string; // Provider name
   isNewUser?: boolean; // True if this was a registration
   user?: {
-    // OAuth user data
+    // User data
     userPub?: string;
     username?: string;
     email?: string;
     name?: string;
     picture?: string;
-    oauth?: {
-      provider: string;
-      id: string;
-      email?: string;
-      name?: string;
-      picture?: string;
-      lastLogin: number;
-    };
   };
 }
 
@@ -400,11 +395,12 @@ interface SignUpResult {
   authMethod?: AuthMethod; // ✅ ADDED
   sessionToken?: string; // ✅ ADDED
   sea?: { pub: string; priv: string; epub: string; epriv: string }; // SEA pair for session persistence
-  // OAuth flow support - ✅ ADDED
+  // Multi-device support (WebAuthn and ZK-Proof)
+  seedPhrase?: string; // BIP39 mnemonic or trapdoor for account recovery
+  // External auth flow support
   redirectUrl?: string;
   pendingAuth?: boolean;
   provider?: string;
-  user?: OAuthUserInfo; // ✅ ADDED
 }
 
 // Supported authentication methods
@@ -413,7 +409,7 @@ type AuthMethod =
   | "webauthn"
   | "web3"
   | "nostr"
-  | "bitcoin"
+  | "zkproof"
   | "pair";
 ```
 
@@ -606,6 +602,146 @@ interface NostrConnectorPluginInterface {
   ): Promise<boolean>;
   generatePassword(signature: string): Promise<string>;
 }
+```
+
+### 5. ZK-Proof Plugin API
+
+Zero-Knowledge Proof authentication for **anonymous, privacy-preserving authentication**:
+
+```typescript
+const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+
+if (zkPlugin && zkPlugin.isAvailable()) {
+  // Sign up with ZK-Proof (creates anonymous identity)
+  const signUpResult: SignUpResult = await zkPlugin.signUp();
+  
+  if (signUpResult.success) {
+    console.log("ZK-Proof registration successful");
+    console.log("Public commitment:", signUpResult.username);
+    
+    // ⚠️ CRITICAL: Display trapdoor to user for backup
+    if (signUpResult.seedPhrase) {
+      console.log("🔑 SAVE THIS TRAPDOOR:");
+      console.log(signUpResult.seedPhrase);
+      alert(`IMPORTANT: Save this trapdoor to access your account:\n\n${signUpResult.seedPhrase}`);
+    }
+  }
+
+  // Login with trapdoor (anonymous authentication)
+  const loginResult: AuthResult = await zkPlugin.login(trapdoor);
+  if (loginResult.success) {
+    console.log("ZK-Proof login successful (anonymous)");
+    console.log("Auth method:", loginResult.authMethod); // "zkproof"
+  }
+}
+
+// Plugin Interface
+interface ZkProofPluginInterface {
+  // Authentication methods
+  login(trapdoor: string): Promise<AuthResult>;
+  signUp(seed?: string): Promise<SignUpResult>;
+
+  // ZK identity management
+  generateIdentity(seed?: string): Promise<ZkIdentityData>;
+  restoreIdentity(trapdoor: string): Promise<ZkIdentityData>;
+  generateCredentials(identityData: ZkIdentityData): Promise<ISEAPair>;
+
+  // ZK proof operations
+  generateProof(identityData: ZkIdentityData, options?: ZkProofGenerationOptions): Promise<any>;
+  verifyProof(proof: any, treeDepth?: number): Promise<ZkProofVerificationResult>;
+  
+  // Group management
+  addToGroup(commitment: string, groupId?: string): void;
+  isAvailable(): boolean;
+}
+```
+
+**Advanced: Verifiable Credentials**
+
+ZK-Proof can also be used to prove attributes without revealing sensitive data:
+
+```typescript
+import { ZkCredentials, CredentialType } from "shogun-core";
+
+const zkCreds = new ZkCredentials();
+const identity = await zkPlugin.generateIdentity();
+
+// Prove age without revealing birthdate
+const ageProof = await zkCreds.proveAge(
+  identity,
+  new Date("1990-01-01"),
+  18
+);
+// ✅ Proves: "I am 18 or older"
+// ❌ Does NOT reveal: actual birthdate or exact age
+
+// Prove citizenship without revealing country
+const citizenshipProof = await zkCreds.proveCitizenship(
+  identity,
+  "Italy",
+  "EU"
+);
+// ✅ Proves: "I am an EU citizen"
+// ❌ Does NOT reveal: specific country or passport number
+
+// Prove education without revealing institution
+const eduProof = await zkCreds.proveEducation(
+  identity,
+  "Bachelor of Science",
+  "MIT",
+  2020
+);
+// ✅ Proves: "I have a Bachelor of Science degree"
+// ❌ Does NOT reveal: university name or grades
+
+// Prove income without revealing exact amount
+const incomeProof = await zkCreds.proveIncome(
+  identity,
+  75000,
+  50000,
+  "USD"
+);
+// ✅ Proves: "Income ≥ $50,000"
+// ❌ Does NOT reveal: exact salary or employer
+```
+
+**Use Cases:**
+- Anonymous authentication
+- Age verification (18+, 21+, etc.)
+- Citizenship/residency proofs
+- Education credentials
+- Income verification for loans
+- Employment status
+- KYC compliance without revealing PII
+- Anonymous voting and polls
+
+See `src/examples/zkproof-credentials-example.ts` for complete examples.
+
+### Comparison of Authentication Methods
+
+| Feature | Password | WebAuthn | Web3 | Nostr | ZK-Proof |
+|---------|----------|----------|------|-------|----------|
+| **Anonymous** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Multi-device** | ✅ | ✅ (seed) | ✅ | ✅ | ✅ (trapdoor) |
+| **Hardware-free** | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **Privacy** | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| **No wallet needed** | ✅ | ✅ | ❌ | ❌ | ✅ |
+| **Verifiable credentials** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Group membership proofs** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Ease of use** | ✅✅✅ | ✅✅ | ✅✅ | ✅✅ | ✅✅ |
+
+**Quick Setup:**
+```bash
+# Install dependencies
+yarn add shogun-core
+
+# For ZK-Proof circuit files (optional, for advanced proofs)
+cd shogun-core
+yarn setup:zkproof
+
+# Run examples
+yarn zkproof:example
+yarn zkproof:credentials
 ```
 
 ## ⭐ Multi-Device Support with Seed Phrases
@@ -921,6 +1057,11 @@ interface ShogunCoreConfig {
     enabled?: boolean;
   };
 
+  zkproof?: {
+    enabled?: boolean;
+    defaultGroupId?: string;
+    deterministic?: boolean;
+  };
 
   // Timeouts
   timeouts?: {
@@ -952,7 +1093,7 @@ shogun.on("auth:login", (data) => {
   console.log("User logged in:", data.username);
   console.log("Authentication method:", data.method);
   if (data.provider) {
-    console.log("OAuth provider:", data.provider);
+    console.log("Provider:", data.provider);
   }
 });
 
@@ -1035,7 +1176,7 @@ Shogun Core implements **SHIP standards** - modular, composable protocols for de
 - **[SHIP-01](./ship/SHIP_01.md)**: Decentralized Encrypted Messaging
 - **[SHIP-02](./ship/SHIP_02.md)**: Ethereum HD Wallet & Transaction Sending
 - **[SHIP-03](./ship/SHIP_03.md)**: Dual-Key Stealth Addresses (ERC-5564)
-- **[SHIP-04](./ship/SHIP_04.md)**: Multi-Modal Authentication (OAuth/WebAuthn/Web3/Nostr)
+- **[SHIP-04](./ship/SHIP_04.md)**: Multi-Modal Authentication (WebAuthn/Web3/Nostr/ZK-Proof)
 
 See [ship/README.md](./ship/README.md) for complete SHIP documentation and examples.
 
@@ -1068,9 +1209,9 @@ This project includes a comprehensive test suite that covers all major functiona
 
 ### ✅ **Test Suite Status (Updated)**
 
-- **✅ All Tests Passing**: 659/659 tests pass successfully
+- **✅ All Tests Passing**: 696+ tests pass successfully
 - **✅ Plugin System**: Complete plugin functionality testing
-- **✅ Authentication Methods**: All auth methods (WebAuthn, Web3, Nostr, OAuth) tested
+- **✅ Authentication Methods**: All auth methods (WebAuthn, Web3, Nostr, ZK-Proof) tested
 - **✅ Simple API**: Full coverage of SimpleGunAPI functionality
 - **✅ Error Handling**: Comprehensive error handling and edge case testing
 - **✅ Browser Compatibility**: Cross-browser support validation
@@ -1085,7 +1226,6 @@ This project includes a comprehensive test suite that covers:
 - **Validation Utils** (`src/__tests__/utils/validation.test.ts`)
   - Username validation
   - Email validation
-  - OAuth provider validation
   - Username generation from identity
   - Deterministic password generation
 

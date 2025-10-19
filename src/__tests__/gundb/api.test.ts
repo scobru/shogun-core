@@ -66,6 +66,8 @@ describe("SimpleGunAPI", () => {
     // Create mock database
     mockDb = {
       get: jest.fn(),
+      getData: jest.fn(),
+      put: jest.fn(),
       isLoggedIn: jest.fn(),
       getUser: jest.fn(),
       initialize: jest.fn(),

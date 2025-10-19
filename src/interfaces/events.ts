@@ -5,20 +5,13 @@ import { EventEmitter } from "../utils/eventEmitter";
  * @interface AuthEventData
  * @property {string} [userPub] - The user's public key (optional)
  * @property {string} [username] - Optional username
- * @property {"password" | "webauthn" | "web3" | "nostr" | "oauth" | "bitcoin" } method - Authentication method used
- * @property {string} [provider] - Optional provider name (for OAuth)
+ * @property {"password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair" } method - Authentication method used
+ * @property {string} [provider] - Optional provider name
  */
 export interface AuthEventData {
   userPub?: string;
   username?: string;
-  method:
-    | "password"
-    | "webauthn"
-    | "web3"
-    | "nostr"
-    | "oauth"
-    | "bitcoin"
-    | "pair";
+  method: "password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair";
   provider?: string;
 }
 

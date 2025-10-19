@@ -90,6 +90,49 @@ export class SimpleGunAPI {
     );
   }
 
+  /**
+   * @deprecated This method is unreliable with GunDB. Use direct GunDB operations instead.
+   * Store an array at a global path by converting it to an indexed object.
+   * @param path The global path to store the array at
+   * @param arr The array to store (each item must have an 'id' property)
+   * @returns True if successful, false otherwise
+   */
+  async putArray<T extends { id: string | number }>(
+    path: string,
+    arr: T[],
+  ): Promise<boolean> {
+    console.warn(
+      "DEPRECATED: putArray() is unreliable with GunDB. Use direct GunDB operations instead.",
+    );
+    try {
+      const indexed = this.arrayToIndexedObject(arr);
+      await this.db.put(path, indexed);
+      return true;
+    } catch (error) {
+      console.warn("Failed to put array:", error);
+      return false;
+    }
+  }
+
+  /**
+   * @deprecated This method is unreliable with GunDB. Use direct GunDB operations instead.
+   * Retrieve an array from a global path by converting from indexed object.
+   * @param path The global path to retrieve the array from
+   * @returns The array of items, or empty array on error
+   */
+  async getArray<T>(path: string): Promise<T[]> {
+    console.warn(
+      "DEPRECATED: getArray() is unreliable with GunDB. Use direct GunDB operations instead.",
+    );
+    try {
+      const indexedObj = await this.db.getData(path);
+      return this.indexedObjectToArray<T>(indexedObj);
+    } catch (error) {
+      console.warn("Failed to get array:", error);
+      return [];
+    }
+  }
+
   // =========================
   // High-level user data helpers
   // =========================

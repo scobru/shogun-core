@@ -59,16 +59,15 @@ describe("Shogun Types", () => {
       expect(CorePlugins.Nostr).toBe("nostr");
     });
 
-    it("should have correct oauth plugin", () => {
-      expect(CorePlugins.OAuth).toBe("oauth");
-    });
+    // OAuth has been removed from Shogun Core
 
     it("should have all expected plugins", () => {
       const plugins = Object.values(CorePlugins);
       expect(plugins).toContain("webauthn");
       expect(plugins).toContain("web3");
       expect(plugins).toContain("nostr");
-      expect(plugins).toContain("oauth");
+      expect(plugins).toContain("zkproof");
+      // OAuth has been removed from Shogun Core
       expect(plugins).toHaveLength(4);
     });
   });
@@ -486,13 +485,14 @@ describe("Shogun Types", () => {
         CorePlugins.WebAuthn,
         CorePlugins.Web3,
         CorePlugins.Nostr,
-        CorePlugins.OAuth,
+        CorePlugins.ZkProof,
       ];
 
       expect(pluginNames).toContain("webauthn");
       expect(pluginNames).toContain("web3");
       expect(pluginNames).toContain("nostr");
-      expect(pluginNames).toContain("oauth");
+      expect(pluginNames).toContain("zkproof");
+      // OAuth has been removed from Shogun Core
     });
   });
 });

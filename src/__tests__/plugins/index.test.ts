@@ -16,8 +16,6 @@ import {
   NostrConnectorConfig,
   AlbyProvider,
   NostrProvider,
-  OAuthConnector,
-  OAuthPlugin,
 } from "../../plugins/index";
 
 describe("Plugins Index", () => {
@@ -184,17 +182,7 @@ describe("Plugins Index", () => {
     });
   });
 
-  describe("OAuth exports", () => {
-    it("should export OAuthConnector class", () => {
-      expect(OAuthConnector).toBeDefined();
-      expect(typeof OAuthConnector).toBe("function");
-    });
-
-    it("should export OAuthPlugin class", () => {
-      expect(OAuthPlugin).toBeDefined();
-      expect(typeof OAuthPlugin).toBe("function");
-    });
-  });
+  // OAuth has been removed from Shogun Core
 
   describe("Module structure", () => {
     it("should export all expected classes and types", () => {
@@ -229,9 +217,7 @@ describe("Plugins Index", () => {
       // expect(moduleExports.AlbyProvider).toBeDefined();
       // expect(moduleExports.NostrProvider).toBeDefined();
 
-      // OAuth exports
-      expect(moduleExports.OAuthConnector).toBeDefined();
-      expect(moduleExports.OAuthPlugin).toBeDefined();
+      // OAuth has been removed from Shogun Core
     });
   });
 
@@ -275,13 +261,7 @@ describe("Plugins Index", () => {
         new NostrConnectorPlugin();
       }).not.toThrow();
 
-      expect(() => {
-        new OAuthConnector();
-      }).not.toThrow();
-
-      expect(() => {
-        new OAuthPlugin();
-      }).not.toThrow();
+      // OAuth has been removed from Shogun Core
     });
   });
 });

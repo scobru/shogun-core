@@ -5,7 +5,13 @@ import { WebAuthnSigner } from "../../../plugins/webauthn/webauthnSigner";
 import { ErrorHandler, ErrorType } from "../../../utils/errorHandler";
 
 // Mock dependencies
-jest.mock("../../../plugins/webauthn/webauthn");
+jest.mock("../../../plugins/webauthn/webauthn", () => {
+  const actual = jest.requireActual("../../../plugins/webauthn/webauthn");
+  return {
+    ...actual,
+    Webauthn: jest.fn(),
+  };
+});
 jest.mock("../../../plugins/webauthn/webauthnSigner");
 jest.mock("../../../utils/errorHandler");
 
@@ -81,6 +87,7 @@ describe("WebauthnPlugin", () => {
 
     mockCore = {
       gun: {},
+      setAuthMethod: jest.fn(),
     } as any;
 
     plugin = new WebauthnPlugin();
@@ -962,24 +969,33 @@ describe("WebauthnPlugin", () => {
         user: { id: "testuser", username: "testuser" },
       };
 
-      jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
-        credential: {
-          credentialId: "credential_id_123",
-          username: "testuser",
-          publicKey: "public_key_123",
-        },
-        authenticator: jest.fn(),
-        gunUser: { success: true, userPub: "gun_pub_123" },
+      const mockPair = {
         pub: "pub_123",
-        hashedCredentialId: "hashed_id_123",
-      });
+        priv: "priv_123",
+        epub: "epub_123",
+        epriv: "epriv_123",
+      };
+
+      // Mock generateCredentials for the legacy flow
+      jest.spyOn(plugin, "generateCredentials").mockResolvedValue({
+        success: true,
+        credentialId: "credential_id_123",
+        key: mockPair,
+      } as any);
+
+      // Mock generatePairFromCredentials
+      jest.spyOn(plugin, "generatePairFromCredentials").mockResolvedValue(mockPair as any);
 
       // Mock the core signUp method
       plugin["core"] = {
         signUp: jest.fn().mockResolvedValue(mockSignUpResult),
+        setAuthMethod: jest.fn(),
       } as any;
 
-      const result = await plugin.signUp("testuser");
+      // Pass generateSeedPhrase: false to avoid seed phrase complexity in this test
+      const result = await plugin.signUp("testuser", {
+        generateSeedPhrase: false,
+      });
 
       expect(result).toEqual(mockSignUpResult);
     });

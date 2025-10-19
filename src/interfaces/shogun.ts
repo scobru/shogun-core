@@ -38,14 +38,22 @@ export enum CorePlugins {
   Web3 = "web3",
   /** Bitcoin wallet plugin */
   Nostr = "nostr",
+  /** Zero-Knowledge Proof plugin */
+  ZkProof = "zkproof",
 }
 
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "pair";
+export type AuthMethod =
+  | "password"
+  | "webauthn"
+  | "web3"
+  | "nostr"
+  | "zkproof"
+  | "pair";
 
 export interface AuthEventData {
   userPub?: string;
   username?: string;
-  method: "password" | "webauthn" | "web3" | "nostr" | "pair";
+  method: "password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair";
   provider?: string;
 }
 
@@ -64,27 +72,19 @@ export interface AuthResult {
     epub: string;
     epriv: string;
   };
-  // Properties for OAuth flow
+  // Properties for external auth flows
   redirectUrl?: string;
   pendingAuth?: boolean;
   message?: string;
   provider?: string;
   isNewUser?: boolean;
-  // OAuth user data
+  // User data (extended for compatibility)
   user?: {
     userPub?: string;
     username?: string;
     email?: string;
     name?: string;
     picture?: string;
-    oauth?: {
-      provider: string;
-      id: string;
-      email?: string;
-      name?: string;
-      picture?: string;
-      lastLogin: number;
-    };
   };
 }
 
@@ -109,27 +109,19 @@ export interface SignUpResult {
     epub: string;
     epriv: string;
   };
-  // Multi-device support (WebAuthn with seed phrase)
-  seedPhrase?: string; // BIP39 mnemonic for account recovery and multi-device access
-  // Properties for external auth flow
+  // Multi-device support (WebAuthn and ZK-Proof with seed phrase)
+  seedPhrase?: string; // BIP39 mnemonic or trapdoor for account recovery and multi-device access
+  // Properties for external auth flows
   redirectUrl?: string;
   pendingAuth?: boolean;
   provider?: string;
-  // User data
+  // User data (extended for compatibility)
   user?: {
     userPub?: string;
     username?: string;
     email?: string;
     name?: string;
     picture?: string;
-    oauth?: {
-      provider: string;
-      id: string;
-      email?: string;
-      name?: string;
-      picture?: string;
-      lastLogin: number;
-    };
   };
 }
 
@@ -227,6 +219,12 @@ export interface ShogunCoreConfig {
   };
   nostr?: {
     enabled?: boolean;
+  };
+  zkproof?: {
+    enabled?: boolean;
+    defaultGroupId?: string;
+    deterministic?: boolean;
+    minEntropy?: number;
   };
   timeouts?: {
     login?: number;

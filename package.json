@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "3.3.8",
+  "version": "4.0.0",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -32,6 +32,9 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "docs": "yarn typedoc --options typedoc.json",
     "prebuild": "rimraf dist",
+    "setup:zkproof": "node scripts/setup-zkproof.js",
+    "zkproof:example": "yarn build && yarn tsx src/examples/zkproof-example.ts",
+    "zkproof:credentials": "yarn build && yarn tsx src/examples/zkproof-credentials-example.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -53,14 +56,19 @@
     "@noble/curves": "^1.9.1",
     "@noble/hashes": "^1.5.0",
     "@scure/bip39": "^1.5.0",
+    "@semaphore-protocol/group": "^3.15.0",
+    "@semaphore-protocol/identity": "^3.15.0",
+    "@semaphore-protocol/proof": "^3.15.0",
     "assert": "^2.1.0",
     "buffer": "^6.0.3",
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
     "ethers": "^6.13.5",
     "gun": "git+https://github.com/amark/gun.git",
+    "gun-relays": "git+https://github.com/scobru/shogun-relays.git",
     "nostr-tools": "^2.15.0",
     "rxjs": "^7.8.2",
+    "shogun-relays": "git+https://github.com/scobru/shogun-relays.git",
     "uuid": "^11.1.0",
     "vm-browserify": "^1.1.2"
   },
@@ -117,6 +125,9 @@
     "transform": {
       "^.+\\.ts$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@zk-kit|@semaphore-protocol|ffjavascript)/)"
+    ],
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/**/*.d.ts",

@@ -13,6 +13,9 @@ dist
 
 
 node_modules
+
+# ZK Circuit files (large binary files)
+circuits/
 *.local
 
 # Editor directories and files
