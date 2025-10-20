@@ -6,7 +6,7 @@ import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
 import { DataBase, RxJS, createGun, derive } from "../gundb";
-import { forceListUpdate } from "shogun-relays";
+import Relays from "shogun-relays";
 
 /**
  * Handles initialization of ShogunCore components
@@ -74,25 +74,26 @@ export class CoreInitializer {
   /**
    * Initialize Gun instance
    */
+  // Sì, è corretto.
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
     try {
-      let peers: string[] = [];
+      let peers: string[] = await Relays();
 
-      if (config.gunOptions?.peers && config.gunOptions?.relays.length === 0) {
-        peers = await forceListUpdate();
+      if (!config.gunOptions?.peers && !config.gunInstance) {
+        console.log("Using peers from forceListUpdate", peers);
         config.gunOptions.peers = peers;
       }
 
-      if (config.gunInstance && config.gunOptions === undefined) {
+      if (config.gunInstance) {
+        console.log("Using existing Gun instance:", config.gunInstance);
         this.core._gun = config.gunInstance;
       } else if (config.gunOptions && config.gunInstance === undefined) {
+        console.log("Creating Gun instance with config:", config.gunOptions);
         this.core._gun = createGun(config.gunOptions);
       } else if (config.gunInstance && config.gunOptions) {
-        this.core._gun = config.gunInstance;
-      } else {
-        this.core._gun = createGun({
-          peers: config.gunOptions?.peers || peers,
-        });
+        throw new Error(
+          "Gun instance and gun options cannot be provided together",
+        );
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
@@ -106,7 +107,6 @@ export class CoreInitializer {
         this.core._gun,
         config.gunOptions?.scope || "",
       );
-      // Note: user is a getter that returns _user, so we don't need to assign it
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing GunInstance:", error);
