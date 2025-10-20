@@ -3279,14 +3279,6 @@ graceful-fs@^4.1.2, graceful-fs@^4.2.11, graceful-fs@^4.2.4, graceful-fs@^4.2.6,
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
-"gun-relays@git+https://github.com/scobru/shogun-relays.git":
-  version "1.0.0"
-  resolved "git+https://github.com/scobru/shogun-relays.git#e26664b2df851214fb20902e311a231520b4c039"
-  dependencies:
-    get-urls "^10.0.1"
-    node-fetch "^3.1.0"
-    shogun-core "^3.3.8"
-
 "gun@git+https://github.com/amark/gun.git":
   version "0.2020.1239"
   resolved "git+https://github.com/amark/gun.git#58d0318f3dc0f512cf717fdcdb233da2177d73ca"
@@ -5102,9 +5094,10 @@ shogun-core@^3.3.8:
     uuid "^11.1.0"
     vm-browserify "^1.1.2"
 
-"shogun-relays@git+https://github.com/scobru/shogun-relays.git":
-  version "1.0.0"
-  resolved "git+https://github.com/scobru/shogun-relays.git#e26664b2df851214fb20902e311a231520b4c039"
+shogun-relays@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/shogun-relays/-/shogun-relays-1.0.4.tgz#88a652e0fbf4806b9fb516fcdf5c1977984fbf91"
+  integrity sha512-OsCmCLGoA9gMlRXLuRQUDSnD5qGtEKfeFLoqTV9HqmNU7u4gq6C+JlvHe0Oz4+4lmtvVJVA+jMemQgct3wO58Q==
   dependencies:
     get-urls "^10.0.1"
     node-fetch "^3.1.0"

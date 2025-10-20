@@ -34,6 +34,7 @@ import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
+
 import Relays, { forceListUpdate } from "shogun-relays";
 
 /**
