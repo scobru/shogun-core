@@ -6,7 +6,6 @@ import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
 import { DataBase, RxJS, createGun, derive } from "../gundb";
-import Relays from "shogun-relays";
 
 /**
  * Handles initialization of ShogunCore components
@@ -77,13 +76,6 @@ export class CoreInitializer {
   // Sì, è corretto.
   private async initializeGun(config: ShogunCoreConfig): Promise<void> {
     try {
-      let peers: string[] = await Relays();
-
-      if (!config.gunOptions?.peers && !config.gunInstance) {
-        console.log("Using peers from forceListUpdate", peers);
-        config.gunOptions.peers = peers;
-      }
-
       if (config.gunInstance) {
         console.log("Using existing Gun instance:", config.gunInstance);
         this.core._gun = config.gunInstance;

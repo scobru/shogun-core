@@ -13,7 +13,6 @@ import {
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
 import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
-
 import { DataBase, RxJS } from "./gundb";
 
 // Import managers
@@ -34,7 +33,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^3.3.8";
+  public static readonly API_VERSION = "^4.0.7";
   public db!: DataBase;
   public storage!: ShogunStorage;
   public provider?: ethers.Provider;
