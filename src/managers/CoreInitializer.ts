@@ -49,10 +49,10 @@ export class CoreInitializer {
     });
 
     // Setup Gun instance
-    await this.initializeGun(config);
+    this.initializeGun(config);
 
     // Setup Gun user
-    await this.initializeGunUser();
+    this.initializeGunUser();
 
     // Setup Gun event forwarding
     this.setupGunEventForwarding();
@@ -67,14 +67,14 @@ export class CoreInitializer {
     this.registerBuiltinPlugins(config);
 
     // Initialize async components
-    await this.initializeAsync();
+    this.initializeDb();
   }
 
   /**
    * Initialize Gun instance
    */
   // Sì, è corretto.
-  private async initializeGun(config: ShogunCoreConfig): Promise<void> {
+  private initializeGun(config: ShogunCoreConfig): boolean {
     try {
       if (config.gunInstance) {
         console.log("Using existing Gun instance:", config.gunInstance);
@@ -86,12 +86,13 @@ export class CoreInitializer {
         throw new Error(
           "Gun instance and gun options cannot be provided together",
         );
+        return false;
       }
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error creating Gun instance:", error);
       }
-      throw new Error(`Failed to create Gun instance: ${error}`);
+      return false;
     }
 
     try {
@@ -99,6 +100,7 @@ export class CoreInitializer {
         this.core._gun,
         config.gunOptions?.scope || "",
       );
+      return true;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error initializing GunInstance:", error);
@@ -110,7 +112,7 @@ export class CoreInitializer {
   /**
    * Initialize Gun user
    */
-  private async initializeGunUser(): Promise<void> {
+  private initializeGunUser(): void {
     try {
       this.core._user = this.core.gun.user().recall({ sessionStorage: true });
     } catch (error) {
@@ -240,19 +242,20 @@ export class CoreInitializer {
   /**
    * Initialize async components
    */
-  private async initializeAsync(): Promise<void> {
+  private initializeDb(): boolean {
     try {
-      await this.core.db.initialize();
+      this.core.db.initialize();
 
       this.core.emit("debug", {
         action: "core_initialized",
         timestamp: Date.now(),
       });
+      return true;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
         console.error("Error during Shogun Core initialization:", error);
       }
-      throw error;
+      return false;
     }
   }
 }

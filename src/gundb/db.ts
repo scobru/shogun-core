@@ -119,7 +119,7 @@ class DataBase {
    * Initialize the GunInstance asynchronously
    * This method should be called after construction to perform async operations
    */
-  async initialize(appScope: string = "shogun"): Promise<void> {
+  initialize(appScope: string = "shogun"): void {
     try {
       const sessionResult = this.restoreSession();
 
