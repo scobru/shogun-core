@@ -31,26 +31,30 @@
     <h1>ShogunCore Vanilla Test</h1>
     <pre id="output">Loading...</pre>
     <!-- Load Gun.js first -->
+
     <script src="../dist/browser/shogun-core.js"></script>
-    <script>
+    <script src="https://cdn.jsdelivr.net/npm/shogun-relays@1.0.3/browser.js"></script>
+    <script type="module">
       function log(msg, cls) {
         const el = document.getElementById("output");
         el.innerHTML += `<div class="${cls || ""}">${msg}</div>`;
       }
       document.getElementById("output").textContent = "";
 
+      // Check if ShogunRelays is available
+
+      log("✓ <b>ShogunRelays</b> loaded successfully", "ok");
+
       log("✓ <b>ShogunCore</b> found on window", "ok");
+      
       const config = {
         gunOptions: {
           radisk: false,
           localStorage: true,
-          peers: [
-            "https://5eh4twk2f62autunsje4panime.srv.us/gun",
-            "https://v5g5jseqhgkp43lppgregcfbvi.srv.us/gun",
-            "https://peer.wallie.io/gun",
-          ],
+          peers: await window.ShogunRelays.getRelays(),
         },
       };
+
       const shogun = window.Shogun(config);
 
       if (window !== undefined && shogun !== undefined) {
