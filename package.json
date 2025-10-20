@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -67,7 +67,6 @@
     "gun": "git+https://github.com/amark/gun.git",
     "nostr-tools": "^2.15.0",
     "rxjs": "^7.8.2",
-    "shogun-relays": "^1.0.4",
     "uuid": "^11.1.0",
     "vm-browserify": "^1.1.2"
   },
