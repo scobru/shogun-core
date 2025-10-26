@@ -935,7 +935,9 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
-    console.log(`[DEBUG] DataBase.signUp called for username: ${username}, hasPair: ${!!pair}`);
+    console.log(
+      `[DEBUG] DataBase.signUp called for username: ${username}, hasPair: ${!!pair}`,
+    );
     try {
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
@@ -1105,8 +1107,10 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
-    console.log(`[DEBUG] performAuthentication called for username: ${username}, hasPair: ${!!pair}`);
-    
+    console.log(
+      `[DEBUG] performAuthentication called for username: ${username}, hasPair: ${!!pair}`,
+    );
+
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
         if (pair) {
@@ -1121,9 +1125,14 @@ class DataBase {
             }
           });
         } else {
-          console.log(`[DEBUG] Authenticating with username/password for user: ${username}`);
+          console.log(
+            `[DEBUG] Authenticating with username/password for user: ${username}`,
+          );
           this.gun.user().auth(username, password, (ack: any) => {
-            console.log(`[DEBUG] Username/password auth callback received:`, ack);
+            console.log(
+              `[DEBUG] Username/password auth callback received:`,
+              ack,
+            );
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1171,7 +1180,9 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
-    console.log(`[DEBUG] DataBase.login called for username: ${username}, hasPair: ${!!pair}`);
+    console.log(
+      `[DEBUG] DataBase.login called for username: ${username}, hasPair: ${!!pair}`,
+    );
     try {
       const loginResult = await this.performAuthentication(
         username,

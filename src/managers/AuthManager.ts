@@ -63,7 +63,9 @@ export class AuthManager {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
-    console.log(`[DEBUG] AuthManager.login called for username: ${username}, hasPair: ${!!pair}`);
+    console.log(
+      `[DEBUG] AuthManager.login called for username: ${username}, hasPair: ${!!pair}`,
+    );
     try {
       if (!this.currentAuthMethod) {
         this.currentAuthMethod = "password";
@@ -175,7 +177,9 @@ export class AuthManager {
     password?: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
-    console.log(`[DEBUG] AuthManager.signUp called for username: ${username}, hasPair: ${!!pair}`);
+    console.log(
+      `[DEBUG] AuthManager.signUp called for username: ${username}, hasPair: ${!!pair}`,
+    );
     try {
       if (!this.core.db) {
         throw new Error("Database not initialized");
