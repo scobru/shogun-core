@@ -1235,14 +1235,17 @@ class DataBase {
       const aliasNode = this.gun.get(`~@${username}`);
       // For Gun.js alias validation to pass, the data must be exactly equal to the key
       // The key is `~@${username}`, so we store that as the data
-      const ack = await aliasNode.put(`~@${username}`).then();
 
-      if (ack.err) {
-        console.error(`Error creating alias index: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      return new Promise<boolean>((resolve) => {
+        aliasNode.put(`~@${username}`, (ack: any) => {
+          if (ack && ack.err) {
+            console.error(`Error creating alias index: ${ack.err}`);
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
+      });
     } catch (error) {
       console.error(`Error creating alias index: ${error}`);
       return false;
@@ -1257,18 +1260,19 @@ class DataBase {
     userPub: string,
   ): Promise<boolean> {
     try {
-      const ack = await this.node
-        .get("usernames")
-        .get(username)
-        .put(userPub)
-        .then();
-
-      if (ack.err) {
-        console.error(`Error creating username mapping: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      return new Promise<boolean>((resolve) => {
+        this.node
+          .get("usernames")
+          .get(username)
+          .put(userPub, (ack: any) => {
+            if (ack && ack.err) {
+              console.error(`Error creating username mapping: ${ack.err}`);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+      });
     } catch (error) {
       console.error(`Error creating username mapping: ${error}`);
       return false;
@@ -1292,18 +1296,19 @@ class DataBase {
         lastSeen: Date.now().toString(),
       };
 
-      const ack = await this.node
-        .get("users")
-        .get(userPub)
-        .put(userData)
-        .then();
-
-      if (ack.err) {
-        console.error(`Error creating user registry: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      return new Promise<boolean>((resolve) => {
+        this.node
+          .get("users")
+          .get(userPub)
+          .put(userData, (ack: any) => {
+            if (ack && ack.err) {
+              console.error(`Error creating user registry: ${ack.err}`);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+      });
     } catch (error) {
       console.error(`Error creating user registry: ${error}`);
       return false;
@@ -1344,14 +1349,19 @@ class DataBase {
     userPub: string,
   ): Promise<boolean> {
     try {
-      const ack = await this.node.get("epubKeys").get(epub).put(userPub).then();
-
-      if (ack.err) {
-        console.error(`Error creating epub index: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      return new Promise<boolean>((resolve) => {
+        this.node
+          .get("epubKeys")
+          .get(epub)
+          .put(userPub, (ack: any) => {
+            if (ack && ack.err) {
+              console.error(`Error creating epub index: ${ack.err}`);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+      });
     } catch (error) {
       console.error(`Error creating epub index: ${error}`);
       return false;
@@ -1374,14 +1384,16 @@ class DataBase {
         lastSeen: Date.now(),
       };
 
-      const ack = await this.gun.get(userPub).put(userMetadata).then();
-
-      if (ack.err) {
-        console.error(`Error creating user metadata: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      return new Promise<boolean>((resolve) => {
+        this.gun.get(userPub).put(userMetadata, (ack: any) => {
+          if (ack && ack.err) {
+            console.error(`Error creating user metadata: ${ack.err}`);
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
+      });
     } catch (error) {
       console.error(`Error creating user metadata: ${error}`);
       return false;
