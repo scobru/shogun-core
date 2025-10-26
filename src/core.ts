@@ -13,7 +13,8 @@ import {
 import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
 import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
-import { DataBase, RxJS } from "./gundb";
+import { DataBase2 as DataBase } from "./gundb/db2.js";
+import { RxJS } from "./gundb/db";
 
 // Import managers
 import { PluginManager } from "./managers/PluginManager";

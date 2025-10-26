@@ -63,12 +63,15 @@ export class AuthManager {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
+    console.log(`[DEBUG] AuthManager.login called for username: ${username}, hasPair: ${!!pair}`);
     try {
       if (!this.currentAuthMethod) {
         this.currentAuthMethod = "password";
       }
 
+      console.log(`[DEBUG] Calling core.db.login for username: ${username}`);
       const result = await this.core.db.login(username, password, pair);
+      console.log(`[DEBUG] core.db.login result:`, result);
 
       if (result.success) {
         // Include SEA pair in the response
@@ -172,6 +175,7 @@ export class AuthManager {
     password?: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
+    console.log(`[DEBUG] AuthManager.signUp called for username: ${username}, hasPair: ${!!pair}`);
     try {
       if (!this.core.db) {
         throw new Error("Database not initialized");
@@ -182,7 +186,9 @@ export class AuthManager {
         throw new Error("Password is required for password-based signup");
       }
 
+      console.log(`[DEBUG] Calling core.db.signUp for username: ${username}`);
       const result = await this.core.db.signUp(username, password || "", pair);
+      console.log(`[DEBUG] core.db.signUp result:`, result);
 
       if (result.success) {
         // Update current authentication method

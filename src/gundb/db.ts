@@ -935,6 +935,7 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
+    console.log(`[DEBUG] DataBase.signUp called for username: ${username}, hasPair: ${!!pair}`);
     try {
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
@@ -993,34 +994,25 @@ class DataBase {
       // Set the user instance
       this.user = this.gun.user();
 
-      // Run post-authentication tasks
-      try {
-        const postAuthResult = await this.runPostAuthOnAuthResult(
-          username,
-          authResult.userPub,
-          authResult,
-        );
+      console.log(
+        `[SIGNUP] Signup completed successfully for user: ${username}`,
+      );
 
-        // Return the post-auth result which includes the complete user data
-        return postAuthResult;
-      } catch (postAuthError) {
-        console.error(`Post-auth error: ${postAuthError}`);
-        // Even if post-auth fails, the user was created and authenticated successfully
-        return {
-          success: true,
-          userPub: authResult.userPub,
-          username: username,
-          isNewUser: true,
-          sea: (this.gun.user() as any)?._?.sea
-            ? {
-                pub: (this.gun.user() as any)._?.sea.pub,
-                priv: (this.gun.user() as any)._?.sea.priv,
-                epub: (this.gun.user() as any)._?.sea.epub,
-                epriv: (this.gun.user() as any)._?.sea.epriv,
-              }
-            : undefined,
-        };
-      }
+      // Return the signup result
+      return {
+        success: true,
+        userPub: authResult.userPub,
+        username: username,
+        isNewUser: true,
+        sea: (this.gun.user() as any)?._?.sea
+          ? {
+              pub: (this.gun.user() as any)._?.sea.pub,
+              priv: (this.gun.user() as any)._?.sea.priv,
+              epub: (this.gun.user() as any)._?.sea.epub,
+              epriv: (this.gun.user() as any)._?.sea.epriv,
+            }
+          : undefined,
+      };
     } catch (error) {
       console.error(`Exception during signup for ${username}: ${error}`);
       return { success: false, error: `Signup failed: ${error}` };
@@ -1070,659 +1062,6 @@ class DataBase {
     );
   }
 
-  private async runPostAuthOnAuthResult(
-    username: string,
-    userPub: string,
-    authResult: any,
-  ): Promise<SignUpResult> {
-    console.log(
-      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`,
-    );
-
-    try {
-      console.log(`[POSTAUTH] Validating parameters for user: ${username}`);
-
-      // Validate required parameters
-      if (
-        !username ||
-        typeof username !== "string" ||
-        username.trim().length === 0
-      ) {
-        console.error(`[POSTAUTH] Invalid username provided: ${username}`);
-        throw new Error("Invalid username provided");
-      }
-
-      if (
-        !userPub ||
-        typeof userPub !== "string" ||
-        userPub.trim().length === 0
-      ) {
-        console.error("[POSTAUTH] Invalid userPub provided:", {
-          userPub,
-          type: typeof userPub,
-          authResult,
-        });
-        throw new Error("Invalid userPub provided");
-      }
-
-      // Additional validation for userPub format
-      if (!userPub.includes(".") || userPub.length < 10) {
-        console.error(`[POSTAUTH] Invalid userPub format: ${userPub}`);
-        throw new Error("Invalid userPub format");
-      }
-
-      console.log(`[POSTAUTH] Parameters validated for user: ${username}`);
-
-      // Normalize username to prevent path issues
-      const normalizedUsername = username.trim().toLowerCase();
-      if (normalizedUsername.length === 0) {
-        console.error(
-          `[POSTAUTH] Normalized username is empty for user: ${username}`,
-        );
-        throw new Error("Username cannot be empty");
-      }
-
-      console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
-
-      console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
-
-      // Add timeout to prevent hanging
-      const existingUser = await Promise.race([
-        this.gun.get(userPub).then(),
-        new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Timeout checking user existence")),
-            5000,
-          ),
-        ),
-      ]).catch((error) => {
-        console.error(
-          `[POSTAUTH] Error or timeout checking user existence:`,
-          error,
-        );
-        return null;
-      });
-
-      console.log(
-        `[POSTAUTH] User existence check completed, existingUser:`,
-        existingUser,
-      );
-
-      const isNewUser = !existingUser || !existingUser.alias;
-      console.log(
-        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`,
-      );
-
-      // Get user's encryption public key (epub) for comprehensive tracking
-      const userInstance = this.gun.user();
-      const userSea = (userInstance as any)?._?.sea;
-      const epub = userSea?.epub;
-
-      console.log(`[POSTAUTH] User epub retrieved: ${epub ? "yes" : "no"}`);
-
-      // Enhanced user tracking system
-      console.log(
-        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`,
-      );
-      const trackingResult = await this.setupComprehensiveUserTracking(
-        normalizedUsername,
-        userPub,
-        epub,
-      );
-
-      if (!trackingResult) {
-        console.error(
-          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`,
-        );
-        return {
-          success: false,
-          error: "Comprehensive user tracking setup failed",
-        };
-      }
-
-      console.log(
-        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
-      );
-
-      const result = {
-        success: true,
-        userPub: userPub,
-        username: normalizedUsername,
-        isNewUser: isNewUser,
-        // Get the SEA pair from the user object
-        sea: userSea
-          ? {
-              pub: userSea.pub,
-              priv: userSea.priv,
-              epub: userSea.epub,
-              epriv: userSea.epriv,
-            }
-          : undefined,
-      };
-
-      console.log(
-        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`,
-      );
-      return result;
-    } catch (error) {
-      console.error(
-        `[POSTAUTH] Error in post-authentication setup for ${username}:`,
-        error,
-      );
-      return {
-        success: false,
-        error: `Post-authentication setup failed: ${error}`,
-      };
-    }
-  }
-
-  /**
-   * Sets up comprehensive user tracking system for agile user lookup
-   * Creates multiple indexes for efficient user discovery
-   */
-  private async setupComprehensiveUserTracking(
-    username: string,
-    userPub: string,
-    epub: string,
-  ): Promise<boolean> {
-    console.log(
-      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`,
-    );
-
-    try {
-      // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
-      console.log(`[TRACKING] Step 1: Creating alias index for ${username}`);
-      const aliasIndexResult = await this.createAliasIndex(username, userPub);
-
-      if (!aliasIndexResult) {
-        console.error(
-          `[TRACKING] Failed to create alias index for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 1 completed: Alias index created for ${username}`,
-      );
-
-      // 2. Create username mapping: usernames/alias -> userPub
-      console.log(
-        `[TRACKING] Step 2: Creating username mapping for ${username}`,
-      );
-      const usernameMappingResult = await this.createUsernameMapping(
-        username,
-        userPub,
-      );
-
-      if (!usernameMappingResult) {
-        console.error(
-          `[TRACKING] Failed to create username mapping for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 2 completed: Username mapping created for ${username}`,
-      );
-
-      // 3. Create user registry: users/userPub -> user data
-      console.log(`[TRACKING] Step 3: Creating user registry for ${username}`);
-      const userRegistryResult = await this.createUserRegistry(
-        username,
-        userPub,
-        epub,
-      );
-
-      if (!userRegistryResult) {
-        console.error(
-          `[TRACKING] Failed to create user registry for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 3 completed: User registry created for ${username}`,
-      );
-
-      // 4. Create reverse lookup: userPub -> alias
-      console.log(`[TRACKING] Step 4: Creating reverse lookup for ${username}`);
-      const reverseLookupResult = await this.createReverseLookup(
-        username,
-        userPub,
-      );
-
-      if (!reverseLookupResult) {
-        console.error(
-          `[TRACKING] Failed to create reverse lookup for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`,
-      );
-
-      // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
-      if (epub) {
-        console.log(`[TRACKING] Step 5: Creating epub index for ${username}`);
-        const epubIndexResult = await this.createEpubIndex(epub, userPub);
-
-        if (!epubIndexResult) {
-          console.error(
-            `[TRACKING] Failed to create epub index for ${username}`,
-          );
-          return false;
-        }
-        console.log(
-          `[TRACKING] Step 5 completed: Epub index created for ${username}`,
-        );
-      } else {
-        console.log(
-          `[TRACKING] Step 5 skipped: No epub available for ${username}`,
-        );
-      }
-
-      // 6. Create user metadata in user's own node
-      console.log(`[TRACKING] Step 6: Creating user metadata for ${username}`);
-      const userMetadataResult = await this.createUserMetadata(
-        username,
-        userPub,
-        epub,
-      );
-
-      if (!userMetadataResult) {
-        console.error(
-          `[TRACKING] Failed to create user metadata for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 6 completed: User metadata created for ${username}`,
-      );
-
-      console.log(
-        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`,
-      );
-      return true;
-    } catch (error) {
-      console.error(
-        `[TRACKING] Error in comprehensive user tracking setup for ${username}:`,
-        error,
-      );
-      // Don't throw - continue with other operations
-      return false;
-    }
-  }
-
-  /**
-   * Creates alias index following GunDB pattern: ~@alias -> userPub
-   */
-  private async createAliasIndex(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      const aliasNode = this.gun.get(`~@${username}`);
-      // For Gun.js alias validation to pass, the data must be exactly equal to the key
-      // The key is `~@${username}`, so we store that as the data
-
-      return new Promise<boolean>((resolve) => {
-        aliasNode.put(`~@${username}`, (ack: any) => {
-          if (ack && ack.err) {
-            console.error(`Error creating alias index: ${ack.err}`);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
-      });
-    } catch (error) {
-      console.error(`Error creating alias index: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates username mapping: usernames/alias -> userPub
-   */
-  private async createUsernameMapping(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("usernames")
-          .get(username)
-          .put(userPub, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating username mapping: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
-    } catch (error) {
-      console.error(`Error creating username mapping: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates user registry: users/userPub -> user data
-   */
-  private async createUserRegistry(
-    username: string,
-    userPub: string,
-    epub: string | null,
-  ): Promise<boolean> {
-    try {
-      const userData = {
-        username: username,
-        userPub: userPub,
-        epub: epub,
-        registeredAt: Date.now().toString(),
-        lastSeen: Date.now().toString(),
-      };
-
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("users")
-          .get(userPub)
-          .put(userData, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating user registry: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
-    } catch (error) {
-      console.error(`Error creating user registry: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates reverse lookup: userPub -> alias
-   */
-  private async createReverseLookup(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      const ack = await this.node
-        .get("userAliases")
-        .get(userPub)
-        .put(username)
-        .then();
-
-      if (ack.err) {
-        console.error(`Error creating reverse lookup: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
-    } catch (error) {
-      console.error(`Error creating reverse lookup: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates epub index: epubKeys/epub -> userPub
-   */
-  private async createEpubIndex(
-    epub: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("epubKeys")
-          .get(epub)
-          .put(userPub, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating epub index: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
-    } catch (error) {
-      console.error(`Error creating epub index: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates user metadata in user's own node
-   */
-  private async createUserMetadata(
-    username: string,
-    userPub: string,
-    epub: string | null,
-  ): Promise<boolean> {
-    try {
-      const userMetadata = {
-        username: username,
-        epub: epub,
-        registeredAt: Date.now(),
-        lastSeen: Date.now(),
-      };
-
-      return new Promise<boolean>((resolve) => {
-        this.gun.get(userPub).put(userMetadata, (ack: any) => {
-          if (ack && ack.err) {
-            console.error(`Error creating user metadata: ${ack.err}`);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
-      });
-    } catch (error) {
-      console.error(`Error creating user metadata: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Gets user information by alias using the comprehensive tracking system
-   * @param alias Username/alias to lookup
-   * @returns Promise resolving to user information or null if not found
-   */
-  async getUserByAlias(alias: string): Promise<{
-    userPub: string;
-    epub: string | null;
-    username: string;
-    registeredAt: number;
-    lastSeen: number;
-  } | null> {
-    try {
-      const normalizedAlias = alias.trim().toLowerCase();
-      if (!normalizedAlias) {
-        return null;
-      }
-
-      // Method 1: Try GunDB standard alias lookup (~@alias)
-      try {
-        const aliasData = await this.gun.get(`~@${normalizedAlias}`).then();
-        if (aliasData && aliasData["~pubKeyOfUser"]) {
-          const userPub =
-            aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
-          if (userPub) {
-            const userData = await this.getUserDataByPub(userPub);
-            if (userData) {
-              return userData;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(
-          `GunDB alias lookup failed for ${normalizedAlias}:`,
-          error,
-        );
-      }
-
-      // Method 2: Try username mapping (usernames/alias -> userPub)
-      try {
-        const userPub = await this.node
-          .get("usernames")
-          .get(normalizedAlias)
-          .then();
-
-        if (userPub) {
-          const userData = await this.getUserDataByPub(userPub);
-          if (userData) {
-            return userData;
-          }
-        }
-      } catch (error) {
-        console.error(
-          `Username mapping lookup failed for ${normalizedAlias}:`,
-          error,
-        );
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error looking up user by alias ${alias}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user information by public key
-   * @param userPub User's public key
-   * @returns Promise resolving to user information or null if not found
-   */
-  async getUserDataByPub(userPub: string): Promise<{
-    userPub: string;
-    epub: string | null;
-    username: string;
-    registeredAt: number;
-    lastSeen: number;
-  } | null> {
-    try {
-      if (!userPub || typeof userPub !== "string") {
-        return null;
-      }
-
-      // Method 1: Try user registry (users/userPub -> user data)
-      try {
-        const userData = await this.node.get("users").get(userPub).then();
-
-        if (userData && userData.username) {
-          return {
-            userPub: userData.userPub || userPub,
-            epub: userData.epub || null,
-            username: userData.username,
-            registeredAt: userData.registeredAt || 0,
-            lastSeen: userData.lastSeen || 0,
-          };
-        }
-      } catch (error) {
-        console.error(`User registry lookup failed for ${userPub}:`, error);
-      }
-
-      // Method 2: Try user's own node
-      try {
-        const userNodeData = await this.gun.get(userPub).then();
-        if (userNodeData && userNodeData.username) {
-          return {
-            userPub: userPub,
-            epub: userNodeData.epub || null,
-            username: userNodeData.username,
-            registeredAt: userNodeData.registeredAt || 0,
-            lastSeen: userNodeData.lastSeen || 0,
-          };
-        }
-      } catch (error) {
-        console.error(`User node lookup failed for ${userPub}:`, error);
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error looking up user data by pub ${userPub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user public key by encryption public key (epub)
-   * @param epub User's encryption public key
-   * @returns Promise resolving to user public key or null if not found
-   */
-  async getUserPubByEpub(epub: string): Promise<string | null> {
-    try {
-      if (!epub || typeof epub !== "string") {
-        return null;
-      }
-
-      const userPub = await this.node.get("epubKeys").get(epub).then();
-
-      return userPub || null;
-    } catch (error) {
-      console.error(`Error looking up user pub by epub ${epub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user alias by public key
-   * @param userPub User's public key
-   * @returns Promise resolving to user alias or null if not found
-   */
-  async getUserAliasByPub(userPub: string): Promise<string | null> {
-    try {
-      if (!userPub || typeof userPub !== "string") {
-        return null;
-      }
-
-      const alias = await this.node.get("userAliases").get(userPub).then();
-
-      return alias || null;
-    } catch (error) {
-      console.error(`Error looking up user alias by pub ${userPub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets all registered users (for admin purposes)
-   * @returns Promise resolving to array of user information
-   */
-  async getAllRegisteredUsers(): Promise<
-    Array<{
-      userPub: string;
-      epub: string | null;
-      username: string;
-      registeredAt: number;
-      lastSeen: number;
-    }>
-  > {
-    try {
-      const users: Array<{
-        userPub: string;
-        epub: string | null;
-        username: string;
-        registeredAt: number;
-        lastSeen: number;
-      }> = [];
-
-      // Get all users from the users registry
-      const usersNode = this.node.get("users");
-
-      // Note: This is a simplified approach. In a real implementation,
-      // you might want to use Gun's map functionality or iterate through
-      // known user public keys
-      return users;
-    } catch (error) {
-      console.error(`Error getting all registered users:`, error);
-      return [];
-    }
-  }
-
   /**
    * Updates user's last seen timestamp
    * @param userPub User's public key
@@ -1766,10 +1105,14 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
+    console.log(`[DEBUG] performAuthentication called for username: ${username}, hasPair: ${!!pair}`);
+    
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
         if (pair) {
+          console.log(`[DEBUG] Authenticating with pair for user: ${username}`);
           this.gun.user().auth(pair, (ack: any) => {
+            console.log(`[DEBUG] Pair auth callback received:`, ack);
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1778,7 +1121,9 @@ class DataBase {
             }
           });
         } else {
+          console.log(`[DEBUG] Authenticating with username/password for user: ${username}`);
           this.gun.user().auth(username, password, (ack: any) => {
+            console.log(`[DEBUG] Username/password auth callback received:`, ack);
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1826,6 +1171,7 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
   ): Promise<AuthResult> {
+    console.log(`[DEBUG] DataBase.login called for username: ${username}, hasPair: ${!!pair}`);
     try {
       const loginResult = await this.performAuthentication(
         username,
@@ -1859,16 +1205,7 @@ class DataBase {
         };
       }
 
-      // Pass the userPub to runPostAuthOnAuthResult
-      try {
-        await this.runPostAuthOnAuthResult(alias, userPub, {
-          success: true,
-          userPub: userPub,
-        });
-      } catch (postAuthError) {
-        console.error(`Post-auth error during login: ${postAuthError}`);
-        // Continue with login even if post-auth fails
-      }
+      console.log(`[LOGIN] Login completed successfully for user: ${username}`);
 
       // Update user's last seen timestamp
       try {
@@ -1914,10 +1251,7 @@ class DataBase {
         };
       }
 
-      await this.runPostAuthOnAuthResult(username, pair.pub || "", {
-        success: true,
-        userPub: pair.pub,
-      });
+      console.log(`[LOGIN] Login with pair completed for user: ${username}`);
 
       try {
         await this.updateUserLastSeen(pair.pub);
