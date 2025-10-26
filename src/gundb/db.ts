@@ -65,6 +65,8 @@ class DataBase {
   private _rxjs?: RxJS;
 
   constructor(gun: IGunInstance, appScope: string = "shogun") {
+    console.log("[DB] Initializing DataBase");
+
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
@@ -98,20 +100,21 @@ class DataBase {
     }
 
     this.gun = gun;
+    console.log("[DB] Gun instance validated");
 
     // Recall only if NOT disabled and there's a "pair" in sessionStorage
-
     this.user = this.gun.user().recall({ sessionStorage: true });
+    console.log("[DB] User recall completed");
 
     this.subscribeToAuthEvents();
+    console.log("[DB] Auth events subscribed");
 
     this.crypto = crypto;
-
     this.sea = SEA;
-
     this._rxjs = new RxJS(this.gun);
-
     this.node = null as unknown as IGunChain<any, any, any, any>;
+
+    console.log("[DB] DataBase initialization completed");
   }
 
   /**
@@ -119,18 +122,23 @@ class DataBase {
    * This method should be called after construction to perform async operations
    */
   initialize(appScope: string = "shogun"): void {
+    console.log(`[DB] Initializing with appScope: ${appScope}`);
     try {
       const sessionResult = this.restoreSession();
+      console.log(
+        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`,
+      );
 
       this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
+      console.log("[DB] App scope node initialized");
 
       if (sessionResult.success) {
-        // Session automatically restored
+        console.log("[DB] Session automatically restored");
       } else {
-        // No previous session to restore
+        console.log("[DB] No previous session to restore");
       }
     } catch (error) {
-      console.error("Error during automatic session restoration:", error);
+      console.error("[DB] Error during automatic session restoration:", error);
     }
   }
 
@@ -161,7 +169,9 @@ class DataBase {
    * @param peer URL of the peer to add
    */
   addPeer(peer: string): void {
+    console.log(`[PEER] Adding peer: ${peer}`);
     this.gun.opt({ peers: [peer] });
+    console.log(`[PEER] Peer added successfully`);
   }
 
   /**
@@ -169,6 +179,7 @@ class DataBase {
    * @param peer URL of the peer to remove
    */
   removePeer(peer: string): void {
+    console.log(`[PEER] Removing peer: ${peer}`);
     try {
       // Get current peers from Gun instance
       const gunOpts = this.gun._.opt as unknown as {
@@ -183,11 +194,12 @@ class DataBase {
         if (peerConnection && typeof peerConnection.close === "function") {
           peerConnection.close();
         }
+        console.log(`[PEER] Peer removed successfully`);
       } else {
-        console.error(`Peer not found in current connections: ${peer}`);
+        console.error(`[PEER] Peer not found in current connections: ${peer}`);
       }
     } catch (error) {
-      console.error(`Error removing peer ${peer}:`, error);
+      console.error(`[PEER] Error removing peer ${peer}:`, error);
     }
   }
 
@@ -1063,15 +1075,20 @@ class DataBase {
     userPub: string,
     authResult: any,
   ): Promise<SignUpResult> {
-    // Setting up user profile after authentication
+    console.log(
+      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`,
+    );
 
     try {
+      console.log(`[POSTAUTH] Validating parameters for user: ${username}`);
+
       // Validate required parameters
       if (
         !username ||
         typeof username !== "string" ||
         username.trim().length === 0
       ) {
+        console.error(`[POSTAUTH] Invalid username provided: ${username}`);
         throw new Error("Invalid username provided");
       }
 
@@ -1080,7 +1097,7 @@ class DataBase {
         typeof userPub !== "string" ||
         userPub.trim().length === 0
       ) {
-        console.error("Invalid userPub provided:", {
+        console.error("[POSTAUTH] Invalid userPub provided:", {
           userPub,
           type: typeof userPub,
           authResult,
@@ -1090,27 +1107,42 @@ class DataBase {
 
       // Additional validation for userPub format
       if (!userPub.includes(".") || userPub.length < 10) {
-        console.error("Invalid userPub format:", userPub);
+        console.error(`[POSTAUTH] Invalid userPub format: ${userPub}`);
         throw new Error("Invalid userPub format");
       }
+
+      console.log(`[POSTAUTH] Parameters validated for user: ${username}`);
 
       // Normalize username to prevent path issues
       const normalizedUsername = username.trim().toLowerCase();
       if (normalizedUsername.length === 0) {
+        console.error(
+          `[POSTAUTH] Normalized username is empty for user: ${username}`,
+        );
         throw new Error("Username cannot be empty");
       }
 
+      console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
+
+      console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
       const existingUser = await this.gun.get(userPub).then();
 
       const isNewUser = !existingUser || !existingUser.alias;
-      // const isNewUser = true;
+      console.log(
+        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`,
+      );
 
       // Get user's encryption public key (epub) for comprehensive tracking
       const userInstance = this.gun.user();
       const userSea = (userInstance as any)?._?.sea;
       const epub = userSea?.epub;
 
+      console.log(`[POSTAUTH] User epub retrieved: ${epub ? "yes" : "no"}`);
+
       // Enhanced user tracking system
+      console.log(
+        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`,
+      );
       const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
@@ -1118,13 +1150,20 @@ class DataBase {
       );
 
       if (!trackingResult) {
+        console.error(
+          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`,
+        );
         return {
           success: false,
           error: "Comprehensive user tracking setup failed",
         };
       }
 
-      return {
+      console.log(
+        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
+      );
+
+      const result = {
         success: true,
         userPub: userPub,
         username: normalizedUsername,
@@ -1139,8 +1178,16 @@ class DataBase {
             }
           : undefined,
       };
+
+      console.log(
+        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`,
+      );
+      return result;
     } catch (error) {
-      console.error(`Error in post-authentication setup: ${error}`);
+      console.error(
+        `[POSTAUTH] Error in post-authentication setup for ${username}:`,
+        error,
+      );
       return {
         success: false,
         error: `Post-authentication setup failed: ${error}`,
@@ -1157,25 +1204,46 @@ class DataBase {
     userPub: string,
     epub: string,
   ): Promise<boolean> {
+    console.log(
+      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`,
+    );
+
     try {
       // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
+      console.log(`[TRACKING] Step 1: Creating alias index for ${username}`);
       const aliasIndexResult = await this.createAliasIndex(username, userPub);
 
       if (!aliasIndexResult) {
+        console.error(
+          `[TRACKING] Failed to create alias index for ${username}`,
+        );
         return false;
       }
+      console.log(
+        `[TRACKING] Step 1 completed: Alias index created for ${username}`,
+      );
 
       // 2. Create username mapping: usernames/alias -> userPub
+      console.log(
+        `[TRACKING] Step 2: Creating username mapping for ${username}`,
+      );
       const usernameMappingResult = await this.createUsernameMapping(
         username,
         userPub,
       );
 
       if (!usernameMappingResult) {
+        console.error(
+          `[TRACKING] Failed to create username mapping for ${username}`,
+        );
         return false;
       }
+      console.log(
+        `[TRACKING] Step 2 completed: Username mapping created for ${username}`,
+      );
 
       // 3. Create user registry: users/userPub -> user data
+      console.log(`[TRACKING] Step 3: Creating user registry for ${username}`);
       const userRegistryResult = await this.createUserRegistry(
         username,
         userPub,
@@ -1183,29 +1251,54 @@ class DataBase {
       );
 
       if (!userRegistryResult) {
+        console.error(
+          `[TRACKING] Failed to create user registry for ${username}`,
+        );
         return false;
       }
+      console.log(
+        `[TRACKING] Step 3 completed: User registry created for ${username}`,
+      );
 
       // 4. Create reverse lookup: userPub -> alias
+      console.log(`[TRACKING] Step 4: Creating reverse lookup for ${username}`);
       const reverseLookupResult = await this.createReverseLookup(
         username,
         userPub,
       );
 
       if (!reverseLookupResult) {
+        console.error(
+          `[TRACKING] Failed to create reverse lookup for ${username}`,
+        );
         return false;
       }
+      console.log(
+        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`,
+      );
 
       // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
       if (epub) {
+        console.log(`[TRACKING] Step 5: Creating epub index for ${username}`);
         const epubIndexResult = await this.createEpubIndex(epub, userPub);
 
         if (!epubIndexResult) {
+          console.error(
+            `[TRACKING] Failed to create epub index for ${username}`,
+          );
           return false;
         }
+        console.log(
+          `[TRACKING] Step 5 completed: Epub index created for ${username}`,
+        );
+      } else {
+        console.log(
+          `[TRACKING] Step 5 skipped: No epub available for ${username}`,
+        );
       }
 
       // 6. Create user metadata in user's own node
+      console.log(`[TRACKING] Step 6: Creating user metadata for ${username}`);
       const userMetadataResult = await this.createUserMetadata(
         username,
         userPub,
@@ -1213,12 +1306,24 @@ class DataBase {
       );
 
       if (!userMetadataResult) {
+        console.error(
+          `[TRACKING] Failed to create user metadata for ${username}`,
+        );
         return false;
       }
+      console.log(
+        `[TRACKING] Step 6 completed: User metadata created for ${username}`,
+      );
 
+      console.log(
+        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`,
+      );
       return true;
     } catch (error) {
-      console.error(`Error in comprehensive user tracking setup: ${error}`);
+      console.error(
+        `[TRACKING] Error in comprehensive user tracking setup for ${username}:`,
+        error,
+      );
       // Don't throw - continue with other operations
       return false;
     }
