@@ -167,6 +167,9 @@ export interface IShogunCore extends PluginManager {
   // Error handling methods
   getRecentErrors(count?: number): ShogunError[];
 
+  // Initialization method
+  initialize(): Promise<void>;
+
   // Authentication methods
   login(
     username: string,
