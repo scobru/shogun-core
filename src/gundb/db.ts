@@ -35,8 +35,6 @@ import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 
-import Relays, { forceListUpdate } from "shogun-relays";
-
 /**
  * Configuration constants for timeouts and security
  */
@@ -2170,29 +2168,6 @@ class DataBase {
    */
   public isAuthenticated(): boolean {
     return this.user?.is?.pub ? true : false;
-  }
-
-  /**
-   *
-   * @returns Promise resolving with the list of relays
-   */
-  async getRelays(): Promise<string[]> {
-    return Relays();
-  }
-
-  /**
-   *
-   * @returns Promise resolving with the list of relays
-   */
-  async forceListUpdate(): Promise<string[]> {
-    const freshRelays = await forceListUpdate();
-
-    freshRelays.forEach((relay) => {
-      console.log("Adding relay:", relay);
-      this.addPeer(relay);
-    });
-
-    return freshRelays;
   }
 }
 

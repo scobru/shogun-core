@@ -14,6 +14,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🔐 **Multiple Authentication Methods**: Traditional username/password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, and ZK-Proof (anonymous)
 - 🌐 **Decentralized Storage**: Built on GunDB for peer-to-peer data synchronization
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins for various authentication methods
+- 💼 **Smart Wallet (Account Abstraction)**: Custom smart contract wallets with multi-sig, social recovery, and batch transactions
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
@@ -161,6 +162,14 @@ const shogun = new ShogunCore({
   zkproof: {
     enabled: true,
     defaultGroupId: "my-app-users",
+  },
+
+  // Enable Smart Wallet (Account Abstraction)
+  smartwallet: {
+    enabled: true,
+    factoryAddress: "0x...", // Deployed SmartWalletFactory contract address
+    defaultRequiredSignatures: 1,
+    defaultRequiredGuardians: 2,
   },
 });
 
@@ -719,16 +728,19 @@ See `src/examples/zkproof-credentials-example.ts` for complete examples.
 
 ### Comparison of Authentication Methods
 
-| Feature | Password | WebAuthn | Web3 | Nostr | ZK-Proof |
-|---------|----------|----------|------|-------|----------|
-| **Anonymous** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Multi-device** | ✅ | ✅ (seed) | ✅ | ✅ | ✅ (trapdoor) |
-| **Hardware-free** | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **Privacy** | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
-| **No wallet needed** | ✅ | ✅ | ❌ | ❌ | ✅ |
-| **Verifiable credentials** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Group membership proofs** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Ease of use** | ✅✅✅ | ✅✅ | ✅✅ | ✅✅ | ✅✅ |
+| Feature | Password | WebAuthn | Web3 | Nostr | ZK-Proof | Smart Wallet |
+|---------|----------|----------|------|-------|----------|--------------|
+| **Anonymous** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Multi-device** | ✅ | ✅ (seed) | ✅ | ✅ | ✅ (trapdoor) | ✅ (seed) |
+| **Hardware-free** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Privacy** | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| **No wallet needed** | ✅ | ✅ | ❌ | ❌ | ✅ | ⚠️ (needs factory) |
+| **Verifiable credentials** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Group membership proofs** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Multi-sig support** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Social recovery** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Account Abstraction** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Ease of use** | ✅✅✅ | ✅✅ | ✅✅ | ✅✅ | ✅✅ | ✅ |
 
 **Quick Setup:**
 ```bash
@@ -742,6 +754,102 @@ yarn setup:zkproof
 # Run examples
 yarn zkproof:example
 yarn zkproof:credentials
+```
+
+### 6. Smart Wallet Plugin API ⭐ **NEW**
+
+Account Abstraction with custom smart contract wallets supporting **multi-sig, social recovery, and batch transactions**:
+
+```typescript
+const smartWalletPlugin = shogun.getPlugin<SmartWalletPlugin>("smartwallet");
+
+// Configure signer (derive EOA from WebAuthn seed phrase)
+const signUpResult = await webauthnPlugin.signUp("alice", {
+  generateSeedPhrase: true
+});
+
+const wallet = await derive(signUpResult.seedPhrase!, "alice", {
+  includeSecp256k1Ethereum: true
+});
+
+// Set signer with derived private key
+await smartWalletPlugin.setSigner(wallet.secp256k1Ethereum.privateKey);
+
+// Create Smart Wallet with guardians
+const result = await smartWalletPlugin.createWalletWithGuardians(
+  wallet.secp256k1Ethereum.address,
+  [guardian1, guardian2],
+  1,  // 1 signature required
+  2   // 2 guardians for recovery
+);
+
+if (result.success) {
+  console.log("Smart Wallet created:", result.walletAddress);
+}
+
+// Execute transactions
+await smartWalletPlugin.executeTransaction(
+  result.walletAddress!,
+  targetAddress,
+  calldata,
+  "0"
+);
+
+// Social Recovery
+await smartWalletPlugin.initiateRecovery(
+  result.walletAddress!,
+  newOwnerAddress
+);
+```
+
+**Features:**
+- 🔐 **Multi-Signature**: Configure required signatures for transactions
+- 👥 **Social Recovery**: Guardian-based recovery with timelock
+- ⚡ **Batch Transactions**: Save gas with multiple operations
+- 🔑 **Seed Phrase Integration**: Derive EOA from WebAuthn seed phrase
+- 💼 **Account Abstraction**: Smart contract wallets with custom logic
+
+**Full Integration Example:**
+
+```typescript
+import { ShogunCore } from "shogun-core";
+import { derive } from "shogun-core/gundb/derive";
+
+const shogun = new ShogunCore({
+  peers: ["https://gun-manhattan.herokuapp.com/gun"],
+  scope: "my-app",
+  webauthn: { enabled: true },
+  smartwallet: { 
+    enabled: true,
+    factoryAddress: "0x..." // Deployed SmartWalletFactory
+  },
+});
+
+// 1. Register with WebAuthn
+const webauthnPlugin = shogun.getPlugin("webauthn");
+const signUpResult = await webauthnPlugin.signUp("alice", {
+  generateSeedPhrase: true
+});
+
+// 2. Derive Ethereum wallet from seed phrase
+const wallet = await derive(signUpResult.seedPhrase!, "alice", {
+  includeSecp256k1Ethereum: true
+});
+
+// 3. Setup Smart Wallet
+const smartWalletPlugin = shogun.getPlugin("smartwallet");
+await smartWalletPlugin.setSigner(wallet.secp256k1Ethereum.privateKey);
+
+// 4. Create Smart Wallet
+const walletResult = await smartWalletPlugin.createWalletWithGuardians(
+  wallet.secp256k1Ethereum.address,
+  [guardian1, guardian2],
+  1,
+  2
+);
+
+console.log("EOA:", wallet.secp256k1Ethereum.address);
+console.log("Smart Wallet:", walletResult.walletAddress);
 ```
 
 ## ⭐ Multi-Device Support with Seed Phrases

@@ -531,6 +531,129 @@ class NostrConnectorPlugin
 }
 ```
 
+### Smart Wallet Plugin (smartWalletPlugin.ts) ⭐ **NEW**
+
+Account Abstraction with custom smart contract wallets supporting multi-sig, social recovery, and batch transactions.
+
+```typescript
+class SmartWalletPlugin
+  extends BasePlugin
+  implements SmartWalletPluginInterface
+{
+  name = "smartwallet";
+  version = "1.0.0";
+  description = "Smart Wallet integration for Shogun Core with multi-sig and social recovery";
+
+  // Signer Management
+  async setSigner(privateKey: string): Promise<void>;
+  async connectWallet(): Promise<void>;
+
+  // Wallet Creation
+  async createWallet(
+    owner: string,
+    requiredSignatures?: number,
+    requiredGuardians?: number
+  ): Promise<WalletCreateResult>;
+
+  async createWalletWithGuardians(
+    owner: string,
+    guardians: string[],
+    requiredSignatures?: number,
+    requiredGuardians?: number
+  ): Promise<WalletCreateResult>;
+
+  // Wallet Management
+  async getWalletInfo(walletAddress: string): Promise<WalletInfo | null>;
+  async getOwnerWallets(ownerAddress: string): Promise<string[]>;
+
+  // Signer Management
+  async addSigner(walletAddress: string, signer: string): Promise<ExecutionResult>;
+  async removeSigner(walletAddress: string, signer: string): Promise<ExecutionResult>;
+  async setRequiredSignatures(walletAddress: string, required: number): Promise<ExecutionResult>;
+
+  // Guardian Management
+  async addGuardian(walletAddress: string, guardian: string): Promise<ExecutionResult>;
+  async removeGuardian(walletAddress: string, guardian: string): Promise<ExecutionResult>;
+
+  // Execution
+  async executeTransaction(
+    walletAddress: string,
+    target: string,
+    data: string,
+    value?: string
+  ): Promise<ExecutionResult>;
+
+  async executeBatch(
+    walletAddress: string,
+    targets: string[],
+    dataArray: string[],
+    values: string[]
+  ): Promise<ExecutionResult>;
+
+  // Multi-Sig
+  async proposeExecution(walletAddress: string, target: string, data: string): Promise<ExecutionResult>;
+  async approveProposal(walletAddress: string, proposalId: number): Promise<ExecutionResult>;
+  async getProposalInfo(walletAddress: string, proposalId: number): Promise<ProposalInfo | null>;
+
+  // Recovery
+  async initiateRecovery(walletAddress: string, newOwner: string): Promise<ExecutionResult>;
+  async approveRecovery(walletAddress: string): Promise<ExecutionResult>;
+  async executeRecovery(walletAddress: string): Promise<ExecutionResult>;
+  async getRecoveryRequest(walletAddress: string): Promise<RecoveryRequest | null>;
+
+  // Lifecycle
+  initialize(core: ShogunCore): void;
+  destroy(): void;
+}
+```
+
+**Smart Wallet Types:**
+
+```typescript
+interface SmartWalletConfig {
+  enabled?: boolean;
+  factoryAddress?: string;
+  defaultRequiredSignatures?: number;
+  defaultRequiredGuardians?: number;
+  privateKey?: string; // Private key for signer (optional)
+}
+
+interface WalletCreateResult {
+  success: boolean;
+  walletAddress?: string;
+  transactionHash?: string;
+  error?: string;
+}
+
+interface WalletInfo {
+  address: string;
+  owner: string;
+  isSigner: boolean;
+  requiredSignatures: number;
+  requiredGuardians: number;
+}
+
+interface ExecutionResult {
+  success: boolean;
+  transactionHash?: string;
+  error?: string;
+}
+
+interface ProposalInfo {
+  proposalId: number;
+  target: string;
+  proposer: string;
+  approvals: number;
+  executed: boolean;
+}
+
+interface RecoveryRequest {
+  newOwner: string;
+  unlockTime: number;
+  approvals: number;
+}
+```
+
 ## Type Definitions
 
 ### Core Authentication Types
