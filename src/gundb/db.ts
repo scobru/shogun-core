@@ -1125,7 +1125,28 @@ class DataBase {
       console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
 
       console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
-      const existingUser = await this.gun.get(userPub).then();
+
+      // Add timeout to prevent hanging
+      const existingUser = await Promise.race([
+        this.gun.get(userPub).then(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout checking user existence")),
+            5000,
+          ),
+        ),
+      ]).catch((error) => {
+        console.error(
+          `[POSTAUTH] Error or timeout checking user existence:`,
+          error,
+        );
+        return null;
+      });
+
+      console.log(
+        `[POSTAUTH] User existence check completed, existingUser:`,
+        existingUser,
+      );
 
       const isNewUser = !existingUser || !existingUser.alias;
       console.log(
