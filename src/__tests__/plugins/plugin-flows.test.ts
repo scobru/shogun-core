@@ -244,7 +244,7 @@ describe("Plugin end-to-end flows", () => {
   let core: ShogunCore;
   const originalWindow = global.window as any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     config = {
       webauthn: { enabled: true },
       web3: { enabled: true },
@@ -255,6 +255,8 @@ describe("Plugin end-to-end flows", () => {
     // Simula ambiente browser per WebAuthn
     (global as any).window = { PublicKeyCredential: function () {} } as any;
     core = new ShogunCore(config);
+    // Wait for plugins to be registered
+    await core.initialize();
   });
 
   afterEach(() => {

@@ -75,6 +75,18 @@ export class ShogunCore implements IShogunCore {
   }
 
   /**
+   * Manually initialize the Shogun SDK (for testing or delayed initialization)
+   * @returns Promise that resolves when initialization is complete
+   */
+  async initialize(): Promise<void> {
+    // If already initialized, just wait a bit for any pending initialization
+    if (this._gun) {
+      return Promise.resolve();
+    }
+    return this.coreInitializer.initialize(this.config);
+  }
+
+  /**
    * Access to the Gun instance
    * @returns The Gun instance
    */
