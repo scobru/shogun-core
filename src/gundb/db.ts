@@ -1337,19 +1337,35 @@ class DataBase {
     userPub: string,
   ): Promise<boolean> {
     try {
-      const aliasNode = this.gun.get(`~@${username}`);
-      // For Gun.js alias validation to pass, the data must be exactly equal to the key
-      // The key is `~@${username}`, so we store that as the data
+      // Create a simple alias mapping without using GunDB's complex alias system
+      // Store username -> userPub mapping in a simple way
+      const aliasData = {
+        username: username,
+        userPub: userPub,
+        createdAt: Date.now(),
+      };
 
       return new Promise<boolean>((resolve) => {
-        aliasNode.put(`~@${username}`, (ack: any) => {
-          if (ack && ack.err) {
-            console.error(`Error creating alias index: ${ack.err}`);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
+        // Add timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          console.error(`Alias index creation timeout for ${username}`);
+          resolve(false);
+        }, 5000); // 5 second timeout
+
+        // Store alias mapping in a simple way
+        this.node
+          .get("aliases")
+          .get(username)
+          .put(aliasData, (ack: any) => {
+            clearTimeout(timeout); // Clear timeout since callback fired
+            if (ack && ack.err) {
+              console.error(`Error creating alias index: ${ack.err}`);
+              resolve(false);
+            } else {
+              console.log(`✓ Alias index created for ${username}`);
+              resolve(true);
+            }
+          });
       });
     } catch (error) {
       console.error(`Error creating alias index: ${error}`);

@@ -7,46 +7,43 @@ import { NostrConnectorPlugin } from "../../plugins/nostr/nostrConnectorPlugin";
 // Mock GunDB layer with user recall returning an object supporting put()
 jest.mock("../../gundb", () => {
   const originalGundb = jest.requireActual("../../gundb");
-  return {
-    ...originalGundb,
-    Gun: jest.fn(() => ({
-      user: jest.fn(() => ({
-        recall: jest.fn(() => ({
-          put: jest.fn(),
-          _: {
-            sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
-          },
-        })),
-        create: jest.fn(),
-        auth: jest.fn(),
-        leave: jest.fn(),
-        get: jest.fn(),
+
+  // Create a mock Gun instance that matches the expected interface
+  const mockGunInstance = {
+    user: jest.fn(() => ({
+      recall: jest.fn(() => ({
         put: jest.fn(),
-        on: jest.fn(),
-        once: jest.fn(),
-        off: jest.fn(),
+        _: {
+          sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+        },
       })),
-      get: jest.fn(() => ({
-        map: jest.fn(),
-        once: jest.fn(),
-        put: jest.fn(),
-        on: jest.fn(),
-        off: jest.fn(),
-      })),
+      create: jest.fn(),
+      auth: jest.fn(),
+      leave: jest.fn(),
+      get: jest.fn(),
+      put: jest.fn(),
       on: jest.fn(),
       once: jest.fn(),
       off: jest.fn(),
     })),
+    get: jest.fn(() => ({
+      map: jest.fn(),
+      once: jest.fn(),
+      put: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    })),
+    on: jest.fn(),
+    once: jest.fn(),
+    off: jest.fn(),
+  };
+
+  return {
+    ...originalGundb,
+    Gun: jest.fn(() => mockGunInstance),
+    createGun: jest.fn(() => mockGunInstance),
     GunInstance: jest.fn().mockImplementation(() => ({
-      gun: {
-        user: jest.fn(() => ({
-          recall: jest.fn(() => ({
-            put: jest.fn(),
-            _: { sea: { pub: "pub" } },
-          })),
-        })),
-        on: jest.fn(),
-      },
+      gun: mockGunInstance,
       on: jest.fn(),
       isLoggedIn: jest.fn().mockReturnValue(false),
       logout: jest.fn(),
@@ -57,6 +54,27 @@ jest.mock("../../gundb", () => {
       clearGunStorage: jest.fn(),
       initialize: jest.fn(),
       getCurrentUser: jest.fn().mockReturnValue({ pub: "pub" }),
+    })),
+    DataBase: jest.fn().mockImplementation(() => ({
+      user: {
+        recall: jest.fn(() => ({
+          put: jest.fn(),
+          _: { sea: { pub: "pub" } },
+        })),
+      },
+      isLoggedIn: jest.fn().mockReturnValue(false),
+      logout: jest.fn(),
+      login: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      loginWithPair: jest.fn(),
+      signUp: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      updateUserAlias: jest.fn().mockResolvedValue({ success: true }),
+      clearGunStorage: jest.fn(),
+      initialize: jest.fn(),
+      getCurrentUser: jest.fn().mockReturnValue({ pub: "pub" }),
+      on: jest.fn(),
+      once: jest.fn(),
+      off: jest.fn(),
+      emit: jest.fn(),
     })),
     SEA: {
       pair: jest.fn(),
@@ -244,17 +262,50 @@ describe("Plugin end-to-end flows", () => {
   let core: ShogunCore;
   const originalWindow = global.window as any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Create a mock Gun instance that matches the expected interface
+    const mockGunInstance = {
+      user: jest.fn(() => ({
+        recall: jest.fn(() => ({
+          put: jest.fn(),
+          _: {
+            sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          },
+        })),
+        create: jest.fn(),
+        auth: jest.fn(),
+        leave: jest.fn(),
+        get: jest.fn(),
+        put: jest.fn(),
+        on: jest.fn(),
+        once: jest.fn(),
+        off: jest.fn(),
+      })),
+      get: jest.fn(() => ({
+        map: jest.fn(),
+        once: jest.fn(),
+        put: jest.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+      })),
+      on: jest.fn(),
+      once: jest.fn(),
+      off: jest.fn(),
+    };
+
     config = {
       webauthn: { enabled: true },
       web3: { enabled: true },
       nostr: { enabled: true },
       zkproof: { enabled: true },
-      peers: ["http://localhost:8765/gun"],
+      gunInstance: mockGunInstance,
     } as any;
     // Simula ambiente browser per WebAuthn
     (global as any).window = { PublicKeyCredential: function () {} } as any;
     core = new ShogunCore(config);
+
+    // Wait for async initialization to complete
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   afterEach(() => {

@@ -7,18 +7,15 @@
 
 import { ShogunCore } from "../core";
 import { ZkProofPlugin } from "../plugins/zkproof";
-import { forceListUpdate } from "shogun-relays";
 
 // Example 1: Basic ZK-Proof signup and login
 async function basicExample() {
   console.log("=== Basic ZK-Proof Authentication Example ===\n");
 
-  const relays = await forceListUpdate();
-
   // Initialize Shogun with ZK-Proof plugin
   const shogun = new ShogunCore({
     gunOptions: {
-      peers: relays,
+      peers: ["https://peer.wallie.io/gun"],
     },
     zkproof: {
       enabled: true,
@@ -77,10 +74,10 @@ async function basicExample() {
 // Example 2: Deterministic identity generation
 async function deterministicExample() {
   console.log("\n=== Deterministic ZK Identity Example ===\n");
-  const relays = await forceListUpdate();
+
   const shogun = new ShogunCore({
     gunOptions: {
-      peers: relays,
+      peers: ["https://peer.wallie.io/gun"],
     },
     zkproof: {
       enabled: true,
@@ -120,10 +117,10 @@ async function deterministicExample() {
 // Example 3: Generate and verify ZK proofs
 async function proofExample() {
   console.log("\n=== ZK Proof Generation & Verification Example ===\n");
-  const relays = await forceListUpdate();
+
   const shogun = new ShogunCore({
     gunOptions: {
-      peers: relays,
+      peers: ["https://peer.wallie.io/gun"],
     },
     zkproof: {
       enabled: true,
@@ -177,12 +174,12 @@ async function proofExample() {
 // Example 4: Multi-device scenario
 async function multiDeviceExample() {
   console.log("\n=== Multi-Device ZK Authentication Example ===\n");
-  const relays = await forceListUpdate();
+
   // Device 1: Create account
   console.log("📱 DEVICE 1: Creating account...");
   const shogun1 = new ShogunCore({
     gunOptions: {
-      peers: relays,
+      peers: ["https://peer.wallie.io/gun"],
     },
     zkproof: { enabled: true },
   });
@@ -205,7 +202,7 @@ async function multiDeviceExample() {
 
   const shogun2 = new ShogunCore({
     gunOptions: {
-      peers: relays,
+      peers: ["https://peer.wallie.io/gun"],
     },
     zkproof: { enabled: true },
   });

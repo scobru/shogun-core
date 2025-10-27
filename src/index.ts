@@ -73,3 +73,6 @@ export {
   formatSeedPhrase,
   normalizeSeedPhrase,
 } from "./utils/seedPhrase";
+
+// Export crypto module
+export * from "./crypto";
