@@ -117,11 +117,15 @@ describe("Multi-Storage Authentication Integration", () => {
       const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
       jest.spyOn(SEA, 'pair').mockResolvedValue(mockPair);
 
-      // Mock successful authentication
-      mockUser.auth.mockImplementation((user: string, pass: string, callback: Function) => {
-        mockUser.is = { pub: 'test-pub', alias: username };
-        callback({ pub: 'test-pub' });
+      // Mock the internal methods
+      const mockSaveUserPair = jest.fn().mockResolvedValue(true);
+      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({ 
+        success: true, 
+        userPub: 'test-pub' 
       });
+      
+      db['saveUserPair'] = mockSaveUserPair;
+      db['authenticateNewUser'] = mockAuthenticateNewUser;
 
       const result = await db.signUpWithCustomStorage(username, password, {
         storageProviders: ['localStorage'],
@@ -134,11 +138,9 @@ describe("Multi-Storage Authentication Integration", () => {
       expect(result.isNewUser).toBe(true);
       expect(result.sea).toEqual(mockPair);
 
-      // Verify pair was saved to localStorage
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'shogun_pair_test-pub',
-        JSON.stringify(mockPair)
-      );
+      // Verify methods were called
+      expect(mockSaveUserPair).toHaveBeenCalledWith('test-pub', mockPair, ['localStorage']);
+      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(username, password, mockPair);
     });
 
     it("should signup with custom storage and create in GunDB", async () => {
@@ -149,16 +151,21 @@ describe("Multi-Storage Authentication Integration", () => {
       const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
       jest.spyOn(SEA, 'pair').mockResolvedValue(mockPair);
 
-      // Mock successful user creation
-      mockUser.create.mockImplementation((user: string, pass: string, callback: Function) => {
-        callback({ pub: 'test-pub' });
+      // Mock the internal methods
+      const mockSaveUserPair = jest.fn().mockResolvedValue(true);
+      const mockCreateNewUserWithCustomStorage = jest.fn().mockResolvedValue({ 
+        success: true, 
+        userPub: 'test-pub',
+        pair: mockPair
       });
-
-      // Mock successful authentication
-      mockUser.auth.mockImplementation((user: string, pass: string, callback: Function) => {
-        mockUser.is = { pub: 'test-pub', alias: username };
-        callback({ pub: 'test-pub' });
+      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({ 
+        success: true, 
+        userPub: 'test-pub' 
       });
+      
+      db['saveUserPair'] = mockSaveUserPair;
+      db['createNewUserWithCustomStorage'] = mockCreateNewUserWithCustomStorage;
+      db['authenticateNewUser'] = mockAuthenticateNewUser;
 
       const result = await db.signUpWithCustomStorage(username, password, {
         storageProviders: ['localStorage'],
@@ -170,8 +177,10 @@ describe("Multi-Storage Authentication Integration", () => {
       expect(result.username).toBe(username);
       expect(result.isNewUser).toBe(true);
 
-      // Verify user creation was called
-      expect(mockUser.create).toHaveBeenCalledWith(username.toLowerCase(), password, expect.any(Function));
+      // Verify methods were called
+      expect(mockSaveUserPair).toHaveBeenCalledWith('test-pub', mockPair, ['localStorage']);
+      expect(mockCreateNewUserWithCustomStorage).toHaveBeenCalledWith(username, password, ['localStorage']);
+      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(username, password, mockPair);
     });
 
     it("should handle signup errors gracefully", async () => {

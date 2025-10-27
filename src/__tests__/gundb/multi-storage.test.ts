@@ -279,7 +279,8 @@ describe("Multi-Storage System", () => {
       const userPub = "test-user-pub";
       const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
       
-      mockGunDBStorage.savePair.mockRejectedValue(new Error("GunDB error"));
+      // Mock one provider to fail and one to succeed
+      mockGunDBStorage.savePair.mockImplementation(() => Promise.reject(new Error("GunDB error")));
       mockLocalStorage.savePair.mockResolvedValue(true);
 
       const result = await storageManager.savePair(userPub, pair, ['gundb', 'localStorage']);
@@ -422,7 +423,7 @@ describe("Multi-Storage System", () => {
     it("should handle provider errors in loadPair", async () => {
       const mockProvider = {
         name: 'error-provider',
-        loadPair: jest.fn().mockRejectedValue(new Error("Provider error")),
+        loadPair: jest.fn().mockImplementation(() => Promise.reject(new Error("Provider error"))),
         savePair: jest.fn(),
         removePair: jest.fn(),
         save: jest.fn(),
@@ -440,7 +441,7 @@ describe("Multi-Storage System", () => {
     it("should handle provider errors in removePair", async () => {
       const mockProvider = {
         name: 'error-provider',
-        removePair: jest.fn().mockRejectedValue(new Error("Provider error")),
+        removePair: jest.fn().mockImplementation(() => Promise.reject(new Error("Provider error"))),
         savePair: jest.fn(),
         loadPair: jest.fn(),
         save: jest.fn(),
