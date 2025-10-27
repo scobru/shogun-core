@@ -43,6 +43,8 @@ jest.mock("../../gundb/db", () => ({
     remove: jest.fn(),
     login: jest.fn(),
     signUp: jest.fn(),
+    signUpWithCustomStorage: jest.fn(),
+    loginWithCustomStorage: jest.fn(),
     logout: jest.fn(),
     isLoggedIn: jest.fn(),
     getUserData: jest.fn(),
@@ -52,6 +54,12 @@ jest.mock("../../gundb/db", () => ({
     getCurrentUser: jest.fn(),
     getUserByAlias: jest.fn(),
     initialize: jest.fn(),
+    addStorageProvider: jest.fn(),
+    setPrimaryStorageProvider: jest.fn(),
+    getStorageProviders: jest.fn(),
+    savePairToStorage: jest.fn(),
+    loadPairFromStorage: jest.fn(),
+    removePairFromStorage: jest.fn(),
   })),
   createGun: jest.fn(() => createMockGun()),
 }));
@@ -71,6 +79,14 @@ describe("SimpleGunAPI", () => {
       isLoggedIn: jest.fn(),
       getUser: jest.fn(),
       initialize: jest.fn(),
+      signUpWithCustomStorage: jest.fn(),
+      loginWithCustomStorage: jest.fn(),
+      addStorageProvider: jest.fn(),
+      setPrimaryStorageProvider: jest.fn(),
+      getStorageProviders: jest.fn(),
+      savePairToStorage: jest.fn(),
+      loadPairFromStorage: jest.fn(),
+      removePairFromStorage: jest.fn(),
     };
 
     api = new SimpleGunAPI(mockDb);

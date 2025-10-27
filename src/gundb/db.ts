@@ -16,6 +16,23 @@ import type {
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 
+/**
+ * Storage Provider Interfaces
+ */
+export interface StorageProvider {
+  name: string;
+  save(key: string, data: any): Promise<boolean>;
+  load(key: string): Promise<any>;
+  remove(key: string): Promise<boolean>;
+  exists(key: string): Promise<boolean>;
+}
+
+export interface SEAStorageProvider extends StorageProvider {
+  savePair(userPub: string, pair: ISEAPair): Promise<boolean>;
+  loadPair(userPub: string): Promise<ISEAPair | null>;
+  removePair(userPub: string): Promise<boolean>;
+}
+
 import Gun from "gun/gun";
 import SEA from "gun/sea";
 
@@ -34,6 +51,215 @@ import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
+
+/**
+ * GunDB Storage Provider Implementation
+ */
+class GunDBStorage implements SEAStorageProvider {
+  name = 'gundb';
+  
+  constructor(private gun: IGunInstance, private node: IGunChain<any>) {}
+
+  async savePair(userPub: string, pair: ISEAPair): Promise<boolean> {
+    try {
+      await this.node.get(userPub).get('sea').put(pair).then();
+      return true;
+    } catch (error) {
+      console.error('Error saving pair to GunDB:', error);
+      return false;
+    }
+  }
+
+  async loadPair(userPub: string): Promise<ISEAPair | null> {
+    try {
+      const pair = await this.node.get(userPub).get('sea').then();
+      return pair || null;
+    } catch (error) {
+      console.error('Error loading pair from GunDB:', error);
+      return null;
+    }
+  }
+
+  async removePair(userPub: string): Promise<boolean> {
+    try {
+      await this.node.get(userPub).get('sea').put(null).then();
+      return true;
+    } catch (error) {
+      console.error('Error removing pair from GunDB:', error);
+      return false;
+    }
+  }
+
+  async save(key: string, data: any): Promise<boolean> {
+    try {
+      await this.node.get(key).put(data).then();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async load(key: string): Promise<any> {
+    try {
+      return await this.node.get(key).then();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async remove(key: string): Promise<boolean> {
+    try {
+      await this.node.get(key).put(null).then();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      const data = await this.node.get(key).then();
+      return data !== null && data !== undefined;
+    } catch (error) {
+      return false;
+    }
+  }
+}
+
+/**
+ * LocalStorage Provider Implementation
+ */
+class LocalStorageProvider implements SEAStorageProvider {
+  name = 'localStorage';
+  private prefix = 'shogun_';
+
+  async savePair(userPub: string, pair: ISEAPair): Promise<boolean> {
+    try {
+      const key = `${this.prefix}pair_${userPub}`;
+      localStorage.setItem(key, JSON.stringify(pair));
+      return true;
+    } catch (error) {
+      console.error('Error saving pair to localStorage:', error);
+      return false;
+    }
+  }
+
+  async loadPair(userPub: string): Promise<ISEAPair | null> {
+    try {
+      const key = `${this.prefix}pair_${userPub}`;
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error loading pair from localStorage:', error);
+      return null;
+    }
+  }
+
+  async removePair(userPub: string): Promise<boolean> {
+    try {
+      const key = `${this.prefix}pair_${userPub}`;
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async save(key: string, data: any): Promise<boolean> {
+    try {
+      localStorage.setItem(`${this.prefix}${key}`, JSON.stringify(data));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async load(key: string): Promise<any> {
+    try {
+      const data = localStorage.getItem(`${this.prefix}${key}`);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async remove(key: string): Promise<boolean> {
+    try {
+      localStorage.removeItem(`${this.prefix}${key}`);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    return localStorage.getItem(`${this.prefix}${key}`) !== null;
+  }
+}
+
+/**
+ * Multi-Storage Manager
+ */
+class MultiStorageManager {
+  private providers: Map<string, SEAStorageProvider> = new Map();
+  private primaryProvider: string = 'gundb';
+
+  constructor() {}
+
+  addProvider(provider: SEAStorageProvider): void {
+    this.providers.set(provider.name, provider);
+  }
+
+  setPrimaryProvider(name: string): void {
+    if (this.providers.has(name)) {
+      this.primaryProvider = name;
+    }
+  }
+
+  async savePair(userPub: string, pair: ISEAPair, providers?: string[]): Promise<boolean> {
+    const targetProviders = providers || [this.primaryProvider];
+    let success = false;
+
+    for (const providerName of targetProviders) {
+      const provider = this.providers.get(providerName);
+      if (provider) {
+        const result = await provider.savePair(userPub, pair);
+        if (result) success = true;
+      }
+    }
+
+    return success;
+  }
+
+  async loadPair(userPub: string, providers?: string[]): Promise<ISEAPair | null> {
+    const targetProviders = providers || [this.primaryProvider];
+
+    for (const providerName of targetProviders) {
+      const provider = this.providers.get(providerName);
+      if (provider) {
+        const pair = await provider.loadPair(userPub);
+        if (pair) return pair;
+      }
+    }
+
+    return null;
+  }
+
+  async removePair(userPub: string, providers?: string[]): Promise<boolean> {
+    const targetProviders = providers || [this.primaryProvider];
+    let success = false;
+
+    for (const providerName of targetProviders) {
+      const provider = this.providers.get(providerName);
+      if (provider) {
+        const result = await provider.removePair(userPub);
+        if (result) success = true;
+      }
+    }
+
+    return success;
+  }
+}
 
 /**
  * Configuration constants for timeouts and security
@@ -64,7 +290,19 @@ class DataBase {
   // Integrated modules
   private _rxjs?: RxJS;
 
-  constructor(gun: IGunInstance, appScope: string = "shogun") {
+  // Multi-storage support
+  private storageManager: MultiStorageManager;
+  private customPairGenerator?: (username: string) => Promise<ISEAPair>;
+
+  constructor(
+    gun: IGunInstance, 
+    appScope: string = "shogun",
+    storageConfig?: {
+      providers?: SEAStorageProvider[];
+      primaryProvider?: string;
+      customPairGenerator?: (username: string) => Promise<ISEAPair>;
+    }
+  ) {
     console.log("[DB] Initializing DataBase");
 
     // Initialize event emitter
@@ -102,6 +340,27 @@ class DataBase {
     this.gun = gun;
     console.log("[DB] Gun instance validated");
 
+    // Initialize storage manager
+    this.storageManager = new MultiStorageManager();
+    
+    // Add default providers
+    this.storageManager.addProvider(new LocalStorageProvider());
+
+    // Add custom providers if provided
+    if (storageConfig?.providers) {
+      storageConfig.providers.forEach(provider => {
+        this.storageManager.addProvider(provider);
+      });
+    }
+
+    // Set primary provider
+    if (storageConfig?.primaryProvider) {
+      this.storageManager.setPrimaryProvider(storageConfig.primaryProvider);
+    }
+
+    // Set custom pair generator
+    this.customPairGenerator = storageConfig?.customPairGenerator;
+
     // Recall only if NOT disabled and there's a "pair" in sessionStorage
     this.user = this.gun.user().recall({ sessionStorage: true });
     console.log("[DB] User recall completed");
@@ -131,6 +390,9 @@ class DataBase {
 
       this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
       console.log("[DB] App scope node initialized");
+
+      // Add GunDB storage provider now that we have the node
+      this.storageManager.addProvider(new GunDBStorage(this.gun, this.node));
 
       if (sessionResult.success) {
         console.log("[DB] Session automatically restored");
@@ -614,6 +876,48 @@ class DataBase {
     return { success: false, error: "No session data available" };
   }
 
+  /**
+   * Aggiunge un nuovo provider di storage
+   */
+  addStorageProvider(provider: SEAStorageProvider): void {
+    this.storageManager.addProvider(provider);
+  }
+
+  /**
+   * Imposta il provider primario per lo storage
+   */
+  setPrimaryStorageProvider(name: string): void {
+    this.storageManager.setPrimaryProvider(name);
+  }
+
+  /**
+   * Ottiene la lista dei provider di storage disponibili
+   */
+  getStorageProviders(): string[] {
+    return Array.from(this.storageManager['providers'].keys());
+  }
+
+  /**
+   * Salva un pair in storage specifici
+   */
+  async savePairToStorage(userPub: string, pair: ISEAPair, providers?: string[]): Promise<boolean> {
+    return await this.saveUserPair(userPub, pair, providers);
+  }
+
+  /**
+   * Carica un pair da storage specifici
+   */
+  async loadPairFromStorage(userPub: string, providers?: string[]): Promise<ISEAPair | null> {
+    return await this.loadUserPair(userPub, providers);
+  }
+
+  /**
+   * Rimuove un pair da storage specifici
+   */
+  async removePairFromStorage(userPub: string, providers?: string[]): Promise<boolean> {
+    return await this.storageManager.removePair(userPub, providers);
+  }
+
   logout(): void {
     try {
       const currentUser = this.gun.user();
@@ -758,6 +1062,32 @@ class DataBase {
 
     // Validate password strength
     return this.validatePasswordStrength(password);
+  }
+
+  /**
+   * Genera un nuovo pair SEA personalizzato
+   */
+  private async generateCustomPair(username: string): Promise<ISEAPair> {
+    if (this.customPairGenerator) {
+      return await this.customPairGenerator(username);
+    }
+    
+    // Fallback to standard SEA pair generation
+    return await SEA.pair();
+  }
+
+  /**
+   * Salva il pair in tutti gli storage configurati
+   */
+  private async saveUserPair(userPub: string, pair: ISEAPair, storageProviders?: string[]): Promise<boolean> {
+    return await this.storageManager.savePair(userPub, pair, storageProviders);
+  }
+
+  /**
+   * Carica il pair da qualsiasi storage disponibile
+   */
+  private async loadUserPair(userPub: string, storageProviders?: string[]): Promise<ISEAPair | null> {
+    return await this.storageManager.loadPair(userPub, storageProviders);
   }
 
   /**
@@ -1278,6 +1608,198 @@ class DataBase {
     }
   }
 
+  /**
+   * Versione modificata di createNewUser che usa storage personalizzato
+   */
+  private async createNewUserWithCustomStorage(
+    username: string,
+    password: string,
+    storageProviders?: string[]
+  ): Promise<{ success: boolean; error?: string; userPub?: string; pair?: ISEAPair }> {
+    return new Promise(async (resolve) => {
+      try {
+        // Genera pair personalizzato
+        const pair = await this.generateCustomPair(username);
+        
+        // Crea utente senza chiamare gun.user().create() automaticamente
+        // Invece, gestisci manualmente la creazione
+        const normalizedUsername = username.trim().toLowerCase();
+        
+        // Salva il pair negli storage specificati
+        const saveResult = await this.saveUserPair(pair.pub, pair, storageProviders);
+        
+        if (!saveResult) {
+          resolve({ success: false, error: "Failed to save user pair" });
+          return;
+        }
+
+        // Ora crea l'utente in GunDB con il pair personalizzato
+        this.gun.user().create(normalizedUsername, password, (ack: any) => {
+          if (ack.err) {
+            resolve({ success: false, error: ack.err });
+          } else {
+            resolve({ 
+              success: true, 
+              userPub: ack.pub || pair.pub,
+              pair: pair
+            });
+          }
+        });
+        
+      } catch (error) {
+        resolve({ success: false, error: String(error) });
+      }
+    });
+  }
+
+  /**
+   * Versione modificata di signUp che supporta storage multipli
+   */
+  async signUpWithCustomStorage(
+    username: string,
+    password: string,
+    options?: {
+      storageProviders?: string[];
+      skipGunDBCreation?: boolean;
+    }
+  ): Promise<SignUpResult> {
+    console.log(`[DEBUG] signUpWithCustomStorage called for username: ${username}`);
+    
+    try {
+      const validation = this.validateSignupCredentials(username, password);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      // Genera pair personalizzato
+      const pair = await this.generateCustomPair(username);
+      
+      // Salva pair negli storage specificati
+      const saveResult = await this.saveUserPair(pair.pub, pair, options?.storageProviders);
+      
+      if (!saveResult) {
+        return { success: false, error: "Failed to save user credentials" };
+      }
+
+      let createResult;
+      
+      if (options?.skipGunDBCreation) {
+        // Solo salva il pair, non crea utente in GunDB
+        createResult = { success: true, userPub: pair.pub, pair: pair };
+      } else {
+        // Crea utente anche in GunDB
+        createResult = await this.createNewUserWithCustomStorage(
+          username, 
+          password, 
+          options?.storageProviders
+        );
+      }
+
+      if (!createResult.success) {
+        return { success: false, error: createResult.error };
+      }
+
+      // Autentica l'utente
+      const authResult = await this.authenticateNewUser(username, password, pair);
+      
+      if (!authResult.success) {
+        return { success: false, error: authResult.error };
+      }
+
+      this.user = this.gun.user();
+
+      return {
+        success: true,
+        userPub: authResult.userPub || pair.pub,
+        username: username,
+        isNewUser: true,
+        sea: pair
+      };
+      
+    } catch (error) {
+      console.error(`Exception during custom signup for ${username}: ${error}`);
+      return { success: false, error: `Signup failed: ${error}` };
+    }
+  }
+
+  /**
+   * Login che carica pair da storage personalizzato
+   */
+  async loginWithCustomStorage(
+    username: string,
+    password: string,
+    options?: {
+      storageProviders?: string[];
+      loadPairFromStorage?: boolean;
+    }
+  ): Promise<AuthResult> {
+    console.log(`[DEBUG] loginWithCustomStorage called for username: ${username}`);
+    
+    try {
+      let pair: ISEAPair | null = null;
+      
+      // Se richiesto, carica pair da storage personalizzato
+      if (options?.loadPairFromStorage) {
+        // Prima trova il userPub dell'utente
+        const normalizedUsername = username.trim().toLowerCase();
+        const userPub = await this.node.get("usernames").get(normalizedUsername).then();
+        
+        if (userPub) {
+          pair = await this.loadUserPair(userPub, options?.storageProviders);
+        }
+      }
+
+      // Esegui autenticazione
+      const loginResult = await this.performAuthentication(username, password, pair);
+      
+      if (!loginResult.success) {
+        return {
+          success: false,
+          error: `User '${username}' not found. Please check your username or register first.`,
+        };
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const userPub = this.gun.user().is?.pub;
+      const alias = this.gun.user().is?.alias as string || username;
+
+      if (!userPub) {
+        return {
+          success: false,
+          error: "Authentication failed: No user pub returned.",
+        };
+      }
+
+      // Aggiorna last seen
+      try {
+        await this.updateUserLastSeen(userPub);
+      } catch (lastSeenError) {
+        console.error(`Error updating last seen: ${lastSeenError}`);
+      }
+
+      // Salva credenziali se necessario
+      if (pair) {
+        try {
+          const userInfo = {
+            alias: username,
+            pair: pair,
+            userPub: userPub,
+          };
+          this.saveCredentials(userInfo);
+        } catch (saveError) {
+          console.error(`Error saving credentials:`, saveError);
+        }
+      }
+
+      return this.buildLoginResult(username, userPub);
+      
+    } catch (error) {
+      console.error(`Exception during custom login for ${username}: ${error}`);
+      return { success: false, error: String(error) };
+    }
+  }
+
   private saveCredentials(userInfo: {
     alias: string;
     pair: ISEAPair;
@@ -1659,7 +2181,19 @@ const createGun = (config: any) => {
   return gunInstance;
 };
 
-export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
+export { 
+  Gun, 
+  DataBase, 
+  SEA, 
+  RxJS, 
+  crypto, 
+  GunErrors, 
+  derive, 
+  createGun,
+  GunDBStorage,
+  LocalStorageProvider,
+  MultiStorageManager
+};
 
 export default Gun;
 

@@ -70,6 +70,51 @@ jest.mock("../../gundb", () => {
   };
 });
 
+// Mock Gun module
+jest.mock("gun", () => ({
+  default: jest.fn(() => ({
+    user: jest.fn(() => ({
+      recall: jest.fn(() => ({
+        put: jest.fn(),
+        _: {
+          sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+        },
+      })),
+      create: jest.fn(),
+      auth: jest.fn(),
+      leave: jest.fn(),
+      get: jest.fn(),
+      put: jest.fn(),
+      on: jest.fn(),
+      once: jest.fn(),
+      off: jest.fn(),
+    })),
+    get: jest.fn(() => ({
+      map: jest.fn(),
+      on: jest.fn(),
+      once: jest.fn(),
+      off: jest.fn(),
+    })),
+    on: jest.fn(),
+    once: jest.fn(),
+    off: jest.fn(),
+  })),
+  SEA: {
+    pair: jest.fn().mockResolvedValue({
+      pub: "test-pub-key",
+      priv: "test-priv-key",
+      epub: "test-epub-key",
+      epriv: "test-epriv-key",
+    }),
+    sign: jest.fn().mockResolvedValue("signed-data"),
+    verify: jest.fn().mockResolvedValue(true),
+    encrypt: jest.fn().mockResolvedValue("encrypted-data"),
+    decrypt: jest.fn().mockResolvedValue("decrypted-data"),
+    secret: jest.fn().mockResolvedValue("secret"),
+    work: jest.fn().mockResolvedValue("proof"),
+  },
+}));
+
 // OAuth plugin removed - no longer supported in current version
 
 // Web3 connector mock
