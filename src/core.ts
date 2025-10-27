@@ -352,7 +352,12 @@ export class ShogunCore implements IShogunCore {
     password?: string,
     pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
-    return this.authManager.signUp(username, password, pair);
+    console.log(`[DEBUG] ShogunCore.signUp called for username: ${username}, hasPair: ${!!pair}`);
+    console.log(`[DEBUG] ShogunCore.authManager exists:`, !!this.authManager);
+    console.log(`[DEBUG] ShogunCore.authManager.signUp exists:`, typeof this.authManager?.signUp);
+    const result = await this.authManager.signUp(username, password, pair);
+    console.log(`[DEBUG] ShogunCore.signUp result:`, result);
+    return result;
   }
 
   // 📢 EVENT EMITTER 📢
