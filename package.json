@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "4.2.4",
+  "version": "5.1.1",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
