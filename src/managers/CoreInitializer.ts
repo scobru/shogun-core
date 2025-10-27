@@ -6,6 +6,10 @@ import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
 import { DataBase, RxJS, createGun, derive } from "../gundb";
+import {
+  TransportFactory,
+  TransportConfig,
+} from "../gundb/transport/TransportLayer";
 
 /**
  * Handles initialization of ShogunCore components
@@ -48,20 +52,20 @@ export class CoreInitializer {
       });
     });
 
-    // Setup Gun instance
-    this.initializeGun(config);
+    // Setup transport layer
+    this.initializeTransport(config);
 
-    // Setup Gun user
-    this.initializeGunUser();
+    // Setup user
+    this.initializeUser();
 
-    // Setup Gun event forwarding
-    this.setupGunEventForwarding();
+    // Setup event forwarding
+    this.setupEventForwarding();
 
     // Setup wallet derivation
     this.setupWalletDerivation();
 
     // Initialize RxJS
-    this.core.rx = new RxJS(this.core.gun);
+    this.core.rx = new RxJS(this.core.transport as any); // Cast for backward compatibility
 
     // Register built-in plugins
     this.registerBuiltinPlugins(config);
@@ -71,87 +75,106 @@ export class CoreInitializer {
   }
 
   /**
-   * Initialize Gun instance
+   * Initialize transport layer
    */
-  // Sì, è corretto.
-  private initializeGun(config: ShogunCoreConfig): boolean {
+  private initializeTransport(config: ShogunCoreConfig): boolean {
     try {
-      if (config.gunInstance) {
-        console.log("Using existing Gun instance:", config.gunInstance);
-        this.core._gun = config.gunInstance;
-      } else if (config.gunOptions && config.gunInstance === undefined) {
-        console.log("Creating Gun instance with config:", config.gunOptions);
-        this.core._gun = createGun(config.gunOptions);
-      } else if (config.gunInstance && config.gunOptions) {
-        throw new Error(
-          "Gun instance and gun options cannot be provided together",
-        );
-        return false;
-      }
-    } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
-        console.error("Error creating Gun instance:", error);
-      }
-      return false;
-    }
+      let transportConfig: TransportConfig;
 
-    try {
+      if (config.transport) {
+        // Use custom transport configuration
+        transportConfig = config.transport;
+      } else if (config.gunInstance) {
+        // Use existing Gun instance (backward compatibility)
+        transportConfig = {
+          type: "gun",
+          options: { gunInstance: config.gunInstance },
+        };
+      } else if (config.gunOptions) {
+        // Use Gun options (backward compatibility)
+        transportConfig = {
+          type: "gun",
+          options: config.gunOptions,
+        };
+      } else {
+        // Default to Gun transport
+        transportConfig = {
+          type: "gun",
+          options: {},
+        };
+      }
+
+      // Create transport layer
+      this.core.transport = TransportFactory.create(transportConfig);
+
+      // Connect transport
+      this.core.transport.connect(transportConfig.options);
+
+      // Create DataBase with transport
       this.core.db = new DataBase(
-        this.core._gun,
-        config.gunOptions?.scope || "",
+        this.core.transport,
+        config.gunOptions?.scope || "shogun",
       );
+
       return true;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
-        console.error("Error initializing GunInstance:", error);
+        console.error("Error creating transport layer:", error);
       }
-      throw new Error(`Failed to initialize GunInstance: ${error}`);
+      throw new Error(`Failed to initialize transport layer: ${error}`);
     }
   }
 
   /**
-   * Initialize Gun user
+   * Initialize user
    */
-  private initializeGunUser(): void {
+  private initializeUser(): void {
     try {
-      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+      this.core._user = this.core.transport
+        .user()
+        .recall({ sessionStorage: true }) as any;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
-        console.error("Error initializing Gun user:", error);
+        console.error("Error initializing user:", error);
       }
-      throw new Error(`Failed to initialize Gun user: ${error}`);
+      throw new Error(`Failed to initialize user: ${error}`);
     }
 
-    this.core.gun.on("auth", (user: any) => {
-      this.core._user = this.core.gun.user().recall({ sessionStorage: true });
-      this.core.emit("auth:login", {
-        userPub: user.pub,
-        method: "password" as const,
+    // Setup auth event listener
+    if (this.core.transport.on) {
+      this.core.transport.on("auth", (user: any) => {
+        this.core._user = this.core.transport
+          .user()
+          .recall({ sessionStorage: true }) as any;
+        this.core.emit("auth:login", {
+          userPub: user.pub,
+          method: "password" as const,
+        });
       });
-    });
+    }
   }
 
   /**
-   * Setup Gun event forwarding
+   * Setup event forwarding
    */
-  private setupGunEventForwarding(): void {
-    const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"] as const;
-    gunEvents.forEach((eventName) => {
+  private setupEventForwarding(): void {
+    const dataEvents = ["put", "get", "set", "remove"] as const;
+    dataEvents.forEach((eventName) => {
       this.core.db.on(eventName, (data: any) => {
-        this.core.emit(eventName, data);
+        this.core.emit(eventName as any, data);
       });
     });
 
     const peerEvents = [
-      "gun:peer:add",
-      "gun:peer:remove",
-      "gun:peer:connect",
-      "gun:peer:disconnect",
+      "peer:add",
+      "peer:remove",
+      "peer:connect",
+      "peer:disconnect",
     ] as const;
 
     peerEvents.forEach((eventName) => {
       this.core.db.on(eventName, (data: any) => {
-        this.core.emit(eventName, data);
+        this.core.emit(eventName as any, data);
       });
     });
   }
@@ -160,15 +183,17 @@ export class CoreInitializer {
    * Setup wallet derivation
    */
   private setupWalletDerivation(): void {
-    this.core.gun.on("auth", async (user: any) => {
-      if (!user.is) return;
-      const priv = user._?.sea?.epriv;
-      const pub = user._?.sea?.epub;
-      this.core.wallets = await derive(priv, pub, {
-        includeSecp256k1Bitcoin: true,
-        includeSecp256k1Ethereum: true,
+    if (this.core.transport.on) {
+      this.core.transport.on("auth", async (user: any) => {
+        if (!user.is) return;
+        const priv = user._?.sea?.epriv;
+        const pub = user._?.sea?.epub;
+        this.core.wallets = await derive(priv, pub, {
+          includeSecp256k1Bitcoin: true,
+          includeSecp256k1Ethereum: true,
+        });
       });
-    });
+    }
   }
 
   /**

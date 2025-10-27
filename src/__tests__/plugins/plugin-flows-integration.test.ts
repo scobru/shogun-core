@@ -15,9 +15,13 @@ jest.mock("../../storage/storage", () => ({
 }));
 
 jest.mock("../../utils/errorHandler", () => ({
-  ErrorHandler: jest.fn().mockImplementation(() => ({
+  ErrorHandler: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
     handleError: jest.fn(),
-  })),
+    handle: jest.fn(),
+    withRetry: jest.fn(),
+  },
 }));
 
 // Mock per localStorage globale
@@ -118,9 +122,9 @@ describe("Plugin end-to-end flows", () => {
       nostr: { enabled: true },
       zkproof: { enabled: true },
       peers: ["http://localhost:8765/gun"],
-      gun: gun, // Pass the real Gun instance
+      gunInstance: gun, // Pass the real Gun instance with correct property name
     } as any;
-    
+
     // Simula ambiente browser per WebAuthn
     (global as any).window = { PublicKeyCredential: function () {} } as any;
     core = new ShogunCore(config);
@@ -207,7 +211,7 @@ describe("Plugin end-to-end flows", () => {
   it("Plugin events are emitted correctly", async () => {
     const loginSpy = jest.fn();
     const signupSpy = jest.fn();
-    
+
     core.on("auth:login", loginSpy as any);
     core.on("auth:signup", signupSpy as any);
 
@@ -222,10 +226,10 @@ describe("Plugin end-to-end flows", () => {
   it("Plugin error handling works correctly", async () => {
     // Mock Web3 to throw an error
     mockWeb3.request.mockRejectedValueOnce(new Error("Web3 error"));
-    
+
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
     const res = await web3.login("0xAbC");
-    
+
     expect(res.success).toBe(false);
     expect(res.error).toBeDefined();
   });
@@ -241,20 +245,22 @@ describe("Plugin end-to-end flows", () => {
     } as any;
 
     const coreWithDisabledWeb3 = new ShogunCore(configWithDisabledWeb3);
-    
+
     expect(coreWithDisabledWeb3.getPlugin(CorePlugins.Web3)).toBeUndefined();
     expect(coreWithDisabledWeb3.getPlugin(CorePlugins.Nostr)).toBeDefined();
-    expect(coreWithDisabledWeb3.getPlugin(CorePlugins.WebAuthn)).toBeUndefined();
+    expect(
+      coreWithDisabledWeb3.getPlugin(CorePlugins.WebAuthn),
+    ).toBeUndefined();
     expect(coreWithDisabledWeb3.getPlugin(CorePlugins.ZkProof)).toBeUndefined();
   });
 
   it("Plugin lifecycle works correctly", async () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
-    
+
     // Test plugin initialization
     expect(web3).toBeDefined();
     expect(web3.isInitialized).toBe(true);
-    
+
     // Test plugin methods
     expect(typeof web3.login).toBe("function");
     expect(typeof web3.signUp).toBe("function");
@@ -263,14 +269,14 @@ describe("Plugin end-to-end flows", () => {
 
   it("Plugin state management works correctly", async () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
-    
+
     // Test initial state
     expect(web3.isLoggedIn).toBe(false);
-    
+
     // Test login state change
     await web3.login("0xAbC");
     expect(web3.isLoggedIn).toBe(true);
-    
+
     // Test logout state change
     await web3.logout();
     expect(web3.isLoggedIn).toBe(false);

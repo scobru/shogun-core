@@ -7,6 +7,10 @@ import { RxJS } from "../gundb/rxjs";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
 import { ShogunEventMap } from "./events";
+import {
+  TransportLayer,
+  TransportConfig,
+} from "../gundb/transport/TransportLayer";
 
 /**
  * Standard plugin categories in ShogunCore
@@ -126,8 +130,8 @@ export interface SignUpResult {
 }
 
 export interface IShogunCore extends PluginManager {
-  gun: IGunInstance<any>;
-  _gun: IGunInstance<any>; // Internal gun instance
+  transport: TransportLayer;
+  _gun: IGunInstance<any>; // Internal gun instance (for backward compatibility)
   user: IGunUserInstance | null;
   _user: IGunUserInstance | null; // Internal user instance
   db: DataBase;
@@ -214,8 +218,14 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
+  // Transport layer configuration
+  transport?: TransportConfig;
+
+  // Backward compatibility with Gun
   gunInstance?: IGunInstance<any>;
   gunOptions?: any;
+
+  // Plugin configurations
   webauthn?: WebauthnConfig;
   web3?: {
     enabled?: boolean;
@@ -229,14 +239,20 @@ export interface ShogunCoreConfig {
     deterministic?: boolean;
     minEntropy?: number;
   };
+
+  // Timeout configurations
   timeouts?: {
     login?: number;
     signup?: number;
     operation?: number;
   };
+
+  // Plugin management
   plugins?: {
     autoRegister?: ShogunPlugin[];
   };
+
+  // Other options
   disableAutoRecall?: boolean; // 🔧 Disable automatic session recall on init
   silent?: boolean; // 🔧 Disable console logs
 }

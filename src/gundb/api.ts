@@ -208,7 +208,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const profileData = await user.get("profile").once().then();
+      const profileData = await user.get("profile").then();
       return profileData;
     } catch (error) {
       console.warn("Failed to get profile:", error);
@@ -250,7 +250,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const settingsData = await user.get("settings").once().then();
+      const settingsData = await user.get("settings").then();
       return settingsData;
     } catch (error) {
       console.warn("Failed to get settings:", error);
@@ -294,7 +294,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const preferencesData = await user.get("preferences").once().then();
+      const preferencesData = await user.get("preferences").then();
       return preferencesData;
     } catch (error) {
       console.warn("Failed to get preferences:", error);
@@ -378,7 +378,6 @@ export class SimpleGunAPI {
       const user = this.db.getUser();
       const collectionData = await user
         .get(`collections/${collectionName}`)
-        .once()
         .then();
       return collectionData;
     } catch (error) {

@@ -31,9 +31,9 @@ const createMockGun = () => {
     off: jest.fn(),
     _: {
       opt: {
-        peers: {}
-      }
-    }
+        peers: {},
+      },
+    },
   };
 
   return { mockGun, mockUser };
@@ -62,7 +62,7 @@ describe("Multi-Storage Authentication Integration", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     const gunSetup = createMockGun();
     mockGun = gunSetup.mockGun;
     mockUser = gunSetup.mockUser;
@@ -102,11 +102,11 @@ describe("Multi-Storage Authentication Integration", () => {
 
   describe("signUpWithCustomStorage", () => {
     beforeEach(() => {
-      db = new DataBase(mockGun, 'test-scope', {
+      db = new DataBase(mockGun, "test-scope", {
         providers: [new LocalStorageProvider()],
-        primaryProvider: 'localStorage'
+        primaryProvider: "localStorage",
       });
-      db.initialize('test-scope');
+      db.initialize("test-scope");
     });
 
     it("should signup with custom storage and skip GunDB creation", async () => {
@@ -114,33 +114,44 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock successful pair generation
-      const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
-      jest.spyOn(SEA, 'pair').mockResolvedValue(mockPair);
+      const mockPair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+      jest.spyOn(SEA, "pair").mockResolvedValue(mockPair);
 
       // Mock the internal methods
       const mockSaveUserPair = jest.fn().mockResolvedValue(true);
-      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({ 
-        success: true, 
-        userPub: 'test-pub' 
+      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({
+        success: true,
+        userPub: "test-pub",
       });
-      
-      db['saveUserPair'] = mockSaveUserPair;
-      db['authenticateNewUser'] = mockAuthenticateNewUser;
+
+      db["saveUserPair"] = mockSaveUserPair;
+      db["authenticateNewUser"] = mockAuthenticateNewUser;
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: true
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: true,
       });
 
       expect(result.success).toBe(true);
-      expect(result.userPub).toBe('test-pub');
+      expect(result.userPub).toBe("test-pub");
       expect(result.username).toBe(username);
       expect(result.isNewUser).toBe(true);
       expect(result.sea).toEqual(mockPair);
 
       // Verify methods were called
-      expect(mockSaveUserPair).toHaveBeenCalledWith('test-pub', mockPair, ['localStorage']);
-      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(username, password, mockPair);
+      expect(mockSaveUserPair).toHaveBeenCalledWith("test-pub", mockPair, [
+        "localStorage",
+      ]);
+      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(
+        username,
+        password,
+        mockPair,
+      );
     });
 
     it("should signup with custom storage and create in GunDB", async () => {
@@ -148,39 +159,54 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock successful pair generation
-      const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
-      jest.spyOn(SEA, 'pair').mockResolvedValue(mockPair);
+      const mockPair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+      jest.spyOn(SEA, "pair").mockResolvedValue(mockPair);
 
       // Mock the internal methods
       const mockSaveUserPair = jest.fn().mockResolvedValue(true);
-      const mockCreateNewUserWithCustomStorage = jest.fn().mockResolvedValue({ 
-        success: true, 
-        userPub: 'test-pub',
-        pair: mockPair
+      const mockCreateNewUserWithCustomStorage = jest.fn().mockResolvedValue({
+        success: true,
+        userPub: "test-pub",
+        pair: mockPair,
       });
-      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({ 
-        success: true, 
-        userPub: 'test-pub' 
+      const mockAuthenticateNewUser = jest.fn().mockResolvedValue({
+        success: true,
+        userPub: "test-pub",
       });
-      
-      db['saveUserPair'] = mockSaveUserPair;
-      db['createNewUserWithCustomStorage'] = mockCreateNewUserWithCustomStorage;
-      db['authenticateNewUser'] = mockAuthenticateNewUser;
+
+      db["saveUserPair"] = mockSaveUserPair;
+      db["createNewUserWithCustomStorage"] = mockCreateNewUserWithCustomStorage;
+      db["authenticateNewUser"] = mockAuthenticateNewUser;
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: false
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: false,
       });
 
       expect(result.success).toBe(true);
-      expect(result.userPub).toBe('test-pub');
+      expect(result.userPub).toBe("test-pub");
       expect(result.username).toBe(username);
       expect(result.isNewUser).toBe(true);
 
       // Verify methods were called
-      expect(mockSaveUserPair).toHaveBeenCalledWith('test-pub', mockPair, ['localStorage']);
-      expect(mockCreateNewUserWithCustomStorage).toHaveBeenCalledWith(username, password, ['localStorage']);
-      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(username, password, mockPair);
+      expect(mockSaveUserPair).toHaveBeenCalledWith("test-pub", mockPair, [
+        "localStorage",
+      ]);
+      expect(mockCreateNewUserWithCustomStorage).toHaveBeenCalledWith(
+        username,
+        password,
+        ["localStorage"],
+      );
+      expect(mockAuthenticateNewUser).toHaveBeenCalledWith(
+        username,
+        password,
+        mockPair,
+      );
     });
 
     it("should handle signup errors gracefully", async () => {
@@ -188,11 +214,13 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock pair generation failure
-      jest.spyOn(SEA, 'pair').mockRejectedValue(new Error("Pair generation failed"));
+      jest
+        .spyOn(SEA, "pair")
+        .mockRejectedValue(new Error("Pair generation failed"));
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: true
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: true,
       });
 
       expect(result.success).toBe(false);
@@ -204,22 +232,24 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: true
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: true,
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Username must be more than 0 characters long");
+      expect(result.error).toContain(
+        "Username must be more than 0 characters long",
+      );
     });
   });
 
   describe("loginWithCustomStorage", () => {
     beforeEach(() => {
-      db = new DataBase(mockGun, 'test-scope', {
+      db = new DataBase(mockGun, "test-scope", {
         providers: [new LocalStorageProvider()],
-        primaryProvider: 'localStorage'
+        primaryProvider: "localStorage",
       });
-      db.initialize('test-scope');
+      db.initialize("test-scope");
     });
 
     it("should login with pair loaded from custom storage", async () => {
@@ -227,33 +257,40 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock pair in localStorage
-      const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
+      const mockPair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockPair));
 
       // Mock successful authentication
       mockUser.auth.mockImplementation((pair: any, callback: Function) => {
-        mockUser.is = { pub: 'test-pub', alias: username };
-        callback({ pub: 'test-pub' });
+        mockUser.is = { pub: "test-pub", alias: username };
+        callback({ pub: "test-pub" });
       });
 
       // Mock node.get for username lookup
       const mockNode = {
         get: jest.fn().mockReturnThis(),
-        then: jest.fn().mockResolvedValue('test-pub')
+        then: jest.fn().mockResolvedValue("test-pub"),
       };
-      db['node'] = mockNode as any;
+      db["node"] = mockNode as any;
 
       const result = await db.loginWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        loadPairFromStorage: true
+        storageProviders: ["localStorage"],
+        loadPairFromStorage: true,
       });
 
       expect(result.success).toBe(true);
-      expect(result.userPub).toBe('test-pub');
+      expect(result.userPub).toBe("test-pub");
       expect(result.username).toBe(username);
 
       // Verify pair was loaded from localStorage
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('shogun_pair_test-pub');
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith(
+        "shogun_pair_test-pub",
+      );
     });
 
     it("should login without loading pair from storage", async () => {
@@ -261,22 +298,26 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock successful authentication
-      mockUser.auth.mockImplementation((user: string, pass: string, callback: Function) => {
-        mockUser.is = { pub: 'test-pub', alias: username };
-        callback({ pub: 'test-pub' });
-      });
+      mockUser.auth.mockImplementation(
+        (user: string, pass: string, callback: Function) => {
+          mockUser.is = { pub: "test-pub", alias: username };
+          callback({ pub: "test-pub" });
+        },
+      );
 
       const result = await db.loginWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        loadPairFromStorage: false
+        storageProviders: ["localStorage"],
+        loadPairFromStorage: false,
       });
 
       expect(result.success).toBe(true);
-      expect(result.userPub).toBe('test-pub');
+      expect(result.userPub).toBe("test-pub");
       expect(result.username).toBe(username);
 
       // Verify pair was not loaded from localStorage
-      expect(mockLocalStorage.getItem).not.toHaveBeenCalledWith(expect.stringContaining('shogun_pair_'));
+      expect(mockLocalStorage.getItem).not.toHaveBeenCalledWith(
+        expect.stringContaining("shogun_pair_"),
+      );
     });
 
     it("should handle authentication failure", async () => {
@@ -284,13 +325,15 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "wrongpassword";
 
       // Mock authentication failure
-      mockUser.auth.mockImplementation((user: string, pass: string, callback: Function) => {
-        callback({ err: "Invalid credentials" });
-      });
+      mockUser.auth.mockImplementation(
+        (user: string, pass: string, callback: Function) => {
+          callback({ err: "Invalid credentials" });
+        },
+      );
 
       const result = await db.loginWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        loadPairFromStorage: false
+        storageProviders: ["localStorage"],
+        loadPairFromStorage: false,
       });
 
       expect(result.success).toBe(false);
@@ -302,14 +345,16 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock successful authentication but no user pub
-      mockUser.auth.mockImplementation((user: string, pass: string, callback: Function) => {
-        mockUser.is = null;
-        callback({});
-      });
+      mockUser.auth.mockImplementation(
+        (user: string, pass: string, callback: Function) => {
+          mockUser.is = null;
+          callback({});
+        },
+      );
 
       const result = await db.loginWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        loadPairFromStorage: false
+        storageProviders: ["localStorage"],
+        loadPairFromStorage: false,
       });
 
       expect(result.success).toBe(false);
@@ -320,48 +365,48 @@ describe("Multi-Storage Authentication Integration", () => {
   describe("Custom Pair Generator Integration", () => {
     it("should use custom pair generator in signup", async () => {
       const customPairGenerator = jest.fn().mockResolvedValue({
-        pub: 'custom-pub',
-        priv: 'custom-priv',
-        epub: 'custom-epub',
-        epriv: 'custom-epriv'
+        pub: "custom-pub",
+        priv: "custom-priv",
+        epub: "custom-epub",
+        epriv: "custom-epriv",
       });
 
-      db = new DataBase(mockGun, 'test-scope', {
+      db = new DataBase(mockGun, "test-scope", {
         providers: [new LocalStorageProvider()],
-        primaryProvider: 'localStorage',
-        customPairGenerator
+        primaryProvider: "localStorage",
+        customPairGenerator,
       });
-      db.initialize('test-scope');
+      db.initialize("test-scope");
 
       const username = "testuser";
       const password = "testpassword123";
 
       // Mock successful authentication
       mockUser.auth.mockImplementation((pair: any, callback: Function) => {
-        mockUser.is = { pub: 'custom-pub', alias: username };
-        callback({ pub: 'custom-pub' });
+        mockUser.is = { pub: "custom-pub", alias: username };
+        callback({ pub: "custom-pub" });
       });
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: true
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: true,
       });
 
       expect(result.success).toBe(true);
-      expect(result.userPub).toBe('custom-pub');
+      expect(result.userPub).toBe("custom-pub");
       expect(customPairGenerator).toHaveBeenCalledWith(username);
     });
   });
 
   describe("Storage Provider Management", () => {
     beforeEach(() => {
-      db = new DataBase(mockGun, 'test-scope');
-      db.initialize('test-scope');
+      db = new DataBase(mockGun, "test-scope");
+      db.initialize("test-scope");
     });
 
     it("should add custom storage provider", () => {
       const customProvider = {
-        name: 'custom',
+        name: "custom",
         savePair: jest.fn(),
         loadPair: jest.fn(),
         removePair: jest.fn(),
@@ -372,44 +417,58 @@ describe("Multi-Storage Authentication Integration", () => {
       };
 
       db.addStorageProvider(customProvider);
-      
+
       const providers = db.getStorageProviders();
-      expect(providers).toContain('custom');
+      expect(providers).toContain("custom");
     });
 
     it("should set primary storage provider", () => {
-      db.setPrimaryStorageProvider('localStorage');
-      
+      db.setPrimaryStorageProvider("localStorage");
+
       // This is tested indirectly through the storage manager
       expect(db).toBeDefined();
     });
 
     it("should save pair to specific providers", async () => {
       const userPub = "test-pub";
-      const pair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
       // Mock the storage manager
       const mockSavePair = jest.fn().mockResolvedValue(true);
-      db['saveUserPair'] = mockSavePair;
+      db["saveUserPair"] = mockSavePair;
 
-      const result = await db.savePairToStorage(userPub, pair, ['localStorage']);
+      const result = await db.savePairToStorage(userPub, pair, [
+        "localStorage",
+      ]);
 
       expect(result).toBe(true);
-      expect(mockSavePair).toHaveBeenCalledWith(userPub, pair, ['localStorage']);
+      expect(mockSavePair).toHaveBeenCalledWith(userPub, pair, [
+        "localStorage",
+      ]);
     });
 
     it("should load pair from specific providers", async () => {
       const userPub = "test-pub";
-      const pair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
       // Mock the storage manager
       const mockLoadPair = jest.fn().mockResolvedValue(pair);
-      db['loadUserPair'] = mockLoadPair;
+      db["loadUserPair"] = mockLoadPair;
 
-      const result = await db.loadPairFromStorage(userPub, ['localStorage']);
+      const result = await db.loadPairFromStorage(userPub, ["localStorage"]);
 
       expect(result).toEqual(pair);
-      expect(mockLoadPair).toHaveBeenCalledWith(userPub, ['localStorage']);
+      expect(mockLoadPair).toHaveBeenCalledWith(userPub, ["localStorage"]);
     });
 
     it("should remove pair from specific providers", async () => {
@@ -417,32 +476,42 @@ describe("Multi-Storage Authentication Integration", () => {
 
       // Mock the storage manager
       const mockRemovePair = jest.fn().mockResolvedValue(true);
-      db['storageManager']['removePair'] = mockRemovePair;
+      db["storageManager"]["removePair"] = mockRemovePair;
 
-      const result = await db.removePairFromStorage(userPub, ['localStorage']);
+      const result = await db.removePairFromStorage(userPub, ["localStorage"]);
 
       expect(result).toBe(true);
-      expect(mockRemovePair).toHaveBeenCalledWith(userPub, ['localStorage']);
+      expect(mockRemovePair).toHaveBeenCalledWith(userPub, ["localStorage"]);
     });
   });
 
   describe("Error Handling", () => {
     beforeEach(() => {
-      db = new DataBase(mockGun, 'test-scope');
-      db.initialize('test-scope');
+      db = new DataBase(mockGun, "test-scope");
+      db.initialize("test-scope");
     });
 
     it("should handle storage provider errors gracefully", async () => {
       const userPub = "test-pub";
-      const pair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
-      // Mock storage manager to throw error
-      const mockSavePair = jest.fn().mockRejectedValue(new Error("Storage error"));
-      db['saveUserPair'] = mockSavePair;
+      // Mock storage manager to return false (simulating error)
+      const mockSavePair = jest.fn().mockResolvedValue(false);
+      db["storageManager"]["savePair"] = mockSavePair;
 
-      const result = await db.savePairToStorage(userPub, pair, ['localStorage']);
+      const result = await db.savePairToStorage(userPub, pair, [
+        "localStorage",
+      ]);
 
       expect(result).toBe(false);
+      expect(mockSavePair).toHaveBeenCalledWith(userPub, pair, [
+        "localStorage",
+      ]);
     });
 
     it("should handle authentication errors in signup", async () => {
@@ -450,8 +519,13 @@ describe("Multi-Storage Authentication Integration", () => {
       const password = "testpassword123";
 
       // Mock pair generation
-      const mockPair = { pub: 'test-pub', priv: 'test-priv', epub: 'test-epub', epriv: 'test-epriv' };
-      jest.spyOn(SEA, 'pair').mockResolvedValue(mockPair);
+      const mockPair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+      jest.spyOn(SEA, "pair").mockResolvedValue(mockPair);
 
       // Mock authentication failure
       mockUser.auth.mockImplementation((pair: any, callback: Function) => {
@@ -459,8 +533,8 @@ describe("Multi-Storage Authentication Integration", () => {
       });
 
       const result = await db.signUpWithCustomStorage(username, password, {
-        storageProviders: ['localStorage'],
-        skipGunDBCreation: true
+        storageProviders: ["localStorage"],
+        skipGunDBCreation: true,
       });
 
       expect(result.success).toBe(false);

@@ -11,16 +11,16 @@ import {
   ZkCredentials,
   CredentialType,
 } from "../plugins/zkproof/zkCredentials";
-import { forceListUpdate } from "shogun-relays";
+// import { forceListUpdate } from "shogun-relays";
 import { Identity } from "@semaphore-protocol/identity";
 
 // Example 1: Age Verification
 async function ageVerificationExample() {
   console.log("=== Age Verification Example ===\n");
 
-  const relays = await forceListUpdate();
+  // const relays = await forceListUpdate();
   const shogun = new ShogunCore({
-    gunOptions: { peers: relays },
+    gunOptions: { peers: ["https://shogunnode.scobrudot.dev/gun"] },
     zkproof: { enabled: true },
   });
 
@@ -75,9 +75,9 @@ async function ageVerificationExample() {
 async function citizenshipExample() {
   console.log("\n=== Citizenship Verification Example ===\n");
 
-  const relays = await forceListUpdate();
+  // const relays = await forceListUpdate();
   const shogun = new ShogunCore({
-    gunOptions: { peers: relays },
+    gunOptions: { peers: [], radisk: true },
     zkproof: { enabled: true },
   });
 
@@ -116,9 +116,9 @@ async function citizenshipExample() {
 async function educationExample() {
   console.log("\n=== Education Credential Example ===\n");
 
-  const relays = await forceListUpdate();
+  // const relays = await forceListUpdate();
   const shogun = new ShogunCore({
-    gunOptions: { peers: relays },
+    gunOptions: { peers: [], radisk: true },
     zkproof: { enabled: true },
   });
 
@@ -161,9 +161,9 @@ async function educationExample() {
 async function incomeExample() {
   console.log("\n=== Income Verification Example ===\n");
 
-  const relays = await forceListUpdate();
+  // const relays = await forceListUpdate();
   const shogun = new ShogunCore({
-    gunOptions: { peers: relays },
+    gunOptions: { peers: [], radisk: true },
     zkproof: { enabled: true },
   });
 
@@ -207,9 +207,9 @@ async function incomeExample() {
 async function customCredentialExample() {
   console.log("\n=== Custom Credential Example ===\n");
 
-  const relays = await forceListUpdate();
+  // const relays = await forceListUpdate();
   const shogun = new ShogunCore({
-    gunOptions: { peers: relays },
+    gunOptions: { peers: [], radisk: true },
     zkproof: { enabled: true },
   });
 

@@ -15,6 +15,26 @@ import type {
 } from "gun/types";
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
+import type {
+  TransportLayer,
+  IUserInstance,
+  IChain,
+} from "./transport/TransportLayer";
+import Gun from "gun/gun";
+import SEA from "gun/sea";
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
+import derive, { DeriveOptions } from "./derive";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import { EventEmitter } from "../utils/eventEmitter";
+import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
+import { RxJS } from "./rxjs";
+import * as GunErrors from "./errors";
+import * as crypto from "./crypto";
 
 /**
  * Storage Provider Interfaces
@@ -33,59 +53,43 @@ export interface SEAStorageProvider extends StorageProvider {
   removePair(userPub: string): Promise<boolean>;
 }
 
-import Gun from "gun/gun";
-import SEA from "gun/sea";
-
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
-
-import derive, { DeriveOptions } from "./derive";
-
-import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { EventEmitter } from "../utils/eventEmitter";
-import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
-import { RxJS } from "./rxjs";
-import * as GunErrors from "./errors";
-import * as crypto from "./crypto";
-
 /**
  * GunDB Storage Provider Implementation
  */
 class GunDBStorage implements SEAStorageProvider {
-  name = 'gundb';
-  
-  constructor(private gun: IGunInstance, private node: IGunChain<any>) {}
+  name = "gundb";
+
+  constructor(
+    private gun: IGunInstance,
+    private node: IGunChain<any>,
+  ) {}
 
   async savePair(userPub: string, pair: ISEAPair): Promise<boolean> {
     try {
-      await this.node.get(userPub).get('sea').put(pair).then();
+      await this.node.get(userPub).get("sea").put(pair).then();
       return true;
     } catch (error) {
-      console.error('Error saving pair to GunDB:', error);
+      console.error("Error saving pair to GunDB:", error);
       return false;
     }
   }
 
   async loadPair(userPub: string): Promise<ISEAPair | null> {
     try {
-      const pair = await this.node.get(userPub).get('sea').then();
+      const pair = await this.node.get(userPub).get("sea").then();
       return pair || null;
     } catch (error) {
-      console.error('Error loading pair from GunDB:', error);
+      console.error("Error loading pair from GunDB:", error);
       return null;
     }
   }
 
   async removePair(userPub: string): Promise<boolean> {
     try {
-      await this.node.get(userPub).get('sea').put(null).then();
+      await this.node.get(userPub).get("sea").put(null).then();
       return true;
     } catch (error) {
-      console.error('Error removing pair from GunDB:', error);
+      console.error("Error removing pair from GunDB:", error);
       return false;
     }
   }
@@ -130,8 +134,8 @@ class GunDBStorage implements SEAStorageProvider {
  * LocalStorage Provider Implementation
  */
 class LocalStorageProvider implements SEAStorageProvider {
-  name = 'localStorage';
-  private prefix = 'shogun_';
+  name = "localStorage";
+  private prefix = "shogun_";
 
   async savePair(userPub: string, pair: ISEAPair): Promise<boolean> {
     try {
@@ -139,7 +143,7 @@ class LocalStorageProvider implements SEAStorageProvider {
       localStorage.setItem(key, JSON.stringify(pair));
       return true;
     } catch (error) {
-      console.error('Error saving pair to localStorage:', error);
+      console.error("Error saving pair to localStorage:", error);
       return false;
     }
   }
@@ -150,7 +154,7 @@ class LocalStorageProvider implements SEAStorageProvider {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error loading pair from localStorage:', error);
+      console.error("Error loading pair from localStorage:", error);
       return null;
     }
   }
@@ -202,7 +206,7 @@ class LocalStorageProvider implements SEAStorageProvider {
  */
 class MultiStorageManager {
   private providers: Map<string, SEAStorageProvider> = new Map();
-  private primaryProvider: string = 'gundb';
+  private primaryProvider: string = "gundb";
 
   constructor() {}
 
@@ -216,29 +220,46 @@ class MultiStorageManager {
     }
   }
 
-  async savePair(userPub: string, pair: ISEAPair, providers?: string[]): Promise<boolean> {
+  async savePair(
+    userPub: string,
+    pair: ISEAPair,
+    providers?: string[],
+  ): Promise<boolean> {
     const targetProviders = providers || [this.primaryProvider];
     let success = false;
 
     for (const providerName of targetProviders) {
       const provider = this.providers.get(providerName);
       if (provider) {
-        const result = await provider.savePair(userPub, pair);
-        if (result) success = true;
+        try {
+          const result = await provider.savePair(userPub, pair);
+          if (result) success = true;
+        } catch (error) {
+          // Log error but continue with other providers
+          console.warn(`Error saving pair to ${providerName}:`, error);
+        }
       }
     }
 
     return success;
   }
 
-  async loadPair(userPub: string, providers?: string[]): Promise<ISEAPair | null> {
+  async loadPair(
+    userPub: string,
+    providers?: string[],
+  ): Promise<ISEAPair | null> {
     const targetProviders = providers || [this.primaryProvider];
 
     for (const providerName of targetProviders) {
       const provider = this.providers.get(providerName);
       if (provider) {
-        const pair = await provider.loadPair(userPub);
-        if (pair) return pair;
+        try {
+          const pair = await provider.loadPair(userPub);
+          if (pair) return pair;
+        } catch (error) {
+          // Log error but continue with other providers
+          console.warn(`Error loading pair from ${providerName}:`, error);
+        }
       }
     }
 
@@ -252,8 +273,13 @@ class MultiStorageManager {
     for (const providerName of targetProviders) {
       const provider = this.providers.get(providerName);
       if (provider) {
-        const result = await provider.removePair(userPub);
-        if (result) success = true;
+        try {
+          const result = await provider.removePair(userPub);
+          if (result) success = true;
+        } catch (error) {
+          // Log error but continue with other providers
+          console.warn(`Error removing pair from ${providerName}:`, error);
+        }
       }
     }
 
@@ -278,11 +304,11 @@ const CONFIG = {
 } as const;
 
 class DataBase {
-  public gun: IGunInstance;
-  public user: IGunUserInstance | null = null;
+  public transport: TransportLayer;
+  public user: IUserInstance | null = null;
   public crypto: typeof crypto;
   public sea: typeof SEA;
-  public node: IGunChain<any, any, any, any>;
+  public node: IChain;
 
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
   private readonly eventEmitter: EventEmitter;
@@ -295,60 +321,54 @@ class DataBase {
   private customPairGenerator?: (username: string) => Promise<ISEAPair>;
 
   constructor(
-    gun: IGunInstance, 
+    transport: TransportLayer,
     appScope: string = "shogun",
     storageConfig?: {
       providers?: SEAStorageProvider[];
       primaryProvider?: string;
       customPairGenerator?: (username: string) => Promise<ISEAPair>;
-    }
+    },
   ) {
-    console.log("[DB] Initializing DataBase");
+    console.log("[DB] Initializing DataBase with transport:", transport.name);
 
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
-    // Validate Gun instance
-    if (!gun) {
-      throw new Error("Gun instance is required but was not provided");
+    // Validate transport instance
+    if (!transport) {
+      throw new Error("Transport layer is required but was not provided");
     }
 
-    if (typeof gun !== "object") {
+    if (typeof transport !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`,
+        `Transport layer must be an object, received: ${typeof transport}`,
       );
     }
 
-    if (typeof gun.user !== "function") {
+    if (typeof transport.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
+        `Transport layer is invalid: transport.user is not a function. Received transport.user type: ${typeof transport.user}`,
       );
     }
 
-    if (typeof gun.get !== "function") {
+    if (typeof transport.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
+        `Transport layer is invalid: transport.get is not a function. Received transport.get type: ${typeof transport.get}`,
       );
     }
 
-    if (typeof gun.on !== "function") {
-      throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
-      );
-    }
-
-    this.gun = gun;
-    console.log("[DB] Gun instance validated");
+    this.transport = transport;
+    console.log("[DB] Transport layer validated");
 
     // Initialize storage manager
     this.storageManager = new MultiStorageManager();
-    
+
     // Add default providers
     this.storageManager.addProvider(new LocalStorageProvider());
 
     // Add custom providers if provided
     if (storageConfig?.providers) {
-      storageConfig.providers.forEach(provider => {
+      storageConfig.providers.forEach((provider) => {
         this.storageManager.addProvider(provider);
       });
     }
@@ -361,8 +381,8 @@ class DataBase {
     // Set custom pair generator
     this.customPairGenerator = storageConfig?.customPairGenerator;
 
-    // Recall only if NOT disabled and there's a "pair" in sessionStorage
-    this.user = this.gun.user().recall({ sessionStorage: true });
+    // Recall user session if transport supports it
+    this.user = this.transport.user().recall({ sessionStorage: true });
     console.log("[DB] User recall completed");
 
     this.subscribeToAuthEvents();
@@ -370,14 +390,14 @@ class DataBase {
 
     this.crypto = crypto;
     this.sea = SEA;
-    this._rxjs = new RxJS(this.gun);
-    this.node = null as unknown as IGunChain<any, any, any, any>;
+    this._rxjs = new RxJS(this.transport as any); // Cast for backward compatibility
+    this.node = null as unknown as IChain;
 
     console.log("[DB] DataBase initialization completed");
   }
 
   /**
-   * Initialize the GunInstance asynchronously
+   * Initialize the Transport Layer asynchronously
    * This method should be called after construction to perform async operations
    */
   initialize(appScope: string = "shogun"): void {
@@ -388,11 +408,16 @@ class DataBase {
         `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`,
       );
 
-      this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
+      this.node = this.transport.get(appScope);
       console.log("[DB] App scope node initialized");
 
-      // Add GunDB storage provider now that we have the node
-      this.storageManager.addProvider(new GunDBStorage(this.gun, this.node));
+      // Add GunDB storage provider if using Gun transport
+      if (this.transport.name === "gundb") {
+        const gunTransport = this.transport as any;
+        this.storageManager.addProvider(
+          new GunDBStorage(gunTransport.getGunInstance(), this.node as any),
+        );
+      }
 
       if (sessionResult.success) {
         console.log("[DB] Session automatically restored");
@@ -405,186 +430,130 @@ class DataBase {
   }
 
   private subscribeToAuthEvents() {
-    this.gun.on("auth", (ack: any) => {
-      // Auth event received
-
-      if (ack.err) {
-        ErrorHandler.handle(
-          ErrorType.GUN,
-          "AUTH_EVENT_ERROR",
-          ack.err,
-          new Error(ack.err),
-        );
-      } else {
-        this.notifyAuthListeners(ack.sea?.pub || "");
-      }
-    });
+    // Only subscribe to auth events if transport supports events
+    if (this.transport.on) {
+      this.transport.on("auth", (ack: any) => {
+        // Auth event received
+        if (ack.err) {
+          ErrorHandler.handle(
+            ErrorType.GUN,
+            "AUTH_EVENT_ERROR",
+            ack.err,
+            new Error(ack.err),
+          );
+        } else {
+          this.notifyAuthListeners(ack.sea?.pub || "");
+        }
+      });
+    }
   }
 
   private notifyAuthListeners(pub: string): void {
-    const user = this.gun.user();
-    this.onAuthCallbacks.forEach((cb) => cb(user));
+    const user = this.transport.user();
+    this.onAuthCallbacks.forEach((cb) => cb(user as any)); // Cast for backward compatibility
   }
 
   /**
-   * Adds a new peer to the network
+   * Adds a new peer to the network (Gun-specific)
    * @param peer URL of the peer to add
    */
   addPeer(peer: string): void {
     console.log(`[PEER] Adding peer: ${peer}`);
-    this.gun.opt({ peers: [peer] });
-    console.log(`[PEER] Peer added successfully`);
+
+    // Only add peers if using Gun transport
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      gunTransport.addPeer(peer);
+      console.log(`[PEER] Peer added successfully`);
+    } else {
+      console.log(
+        `[PEER] Peer management not supported by ${this.transport.name} transport`,
+      );
+    }
   }
 
   /**
-   * Removes a peer from the network
+   * Removes a peer from the network (Gun-specific)
    * @param peer URL of the peer to remove
    */
   removePeer(peer: string): void {
     console.log(`[PEER] Removing peer: ${peer}`);
-    try {
-      // Get current peers from Gun instance
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        // Remove the peer from the peers object
-        delete gunOpts.peers[peer];
 
-        // Also try to close the connection if it exists
-        const peerConnection = gunOpts.peers[peer];
-        if (peerConnection && typeof peerConnection.close === "function") {
-          peerConnection.close();
-        }
-        console.log(`[PEER] Peer removed successfully`);
-      } else {
-        console.error(`[PEER] Peer not found in current connections: ${peer}`);
-      }
-    } catch (error) {
-      console.error(`[PEER] Error removing peer ${peer}:`, error);
+    // Only remove peers if using Gun transport
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      gunTransport.removePeer(peer);
+      console.log(`[PEER] Peer removed successfully`);
+    } else {
+      console.log(
+        `[PEER] Peer management not supported by ${this.transport.name} transport`,
+      );
     }
   }
 
   /**
-   * Gets the list of currently connected peers
+   * Gets the list of currently connected peers (Gun-specific)
    * @returns Array of peer URLs
    */
   getCurrentPeers(): string[] {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        return Object.keys(gunOpts.peers).filter((peer) => {
-          const peerObj = gunOpts.peers[peer];
-          // Check if peer is actually connected (not just configured)
-          return peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
-        });
-      }
-      return [];
-    } catch (error) {
-      console.error("Error getting current peers:", error);
-      return [];
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      return gunTransport.getCurrentPeers();
     }
+    return [];
   }
 
   /**
-   * Gets the list of all configured peers (connected and disconnected)
+   * Gets the list of all configured peers (Gun-specific)
    * @returns Array of peer URLs
    */
   getAllConfiguredPeers(): string[] {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        return Object.keys(gunOpts.peers);
-      }
-      return [];
-    } catch (error) {
-      console.error("Error getting configured peers:", error);
-      return [];
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      return gunTransport.getAllConfiguredPeers();
     }
+    return [];
   }
 
   /**
-   * Gets detailed information about all peers
+   * Gets detailed information about all peers (Gun-specific)
    * @returns Object with peer information
    */
   getPeerInfo(): { [peer: string]: { connected: boolean; status: string } } {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      const peerInfo: {
-        [peer: string]: { connected: boolean; status: string };
-      } = {};
-
-      if (gunOpts && gunOpts.peers) {
-        Object.keys(gunOpts.peers).forEach((peer) => {
-          const peerObj = gunOpts.peers[peer];
-          const isConnected =
-            peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
-          const status = isConnected
-            ? "connected"
-            : peerObj && peerObj.wire
-              ? "disconnected"
-              : "not_initialized";
-
-          peerInfo[peer] = {
-            connected: isConnected,
-            status: status,
-          };
-        });
-      }
-
-      return peerInfo;
-    } catch (error) {
-      console.error("Error getting peer info:", error);
-      return {};
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      return gunTransport.getPeerInfo();
     }
+    return {};
   }
 
   /**
-   * Reconnects to a specific peer
+   * Reconnects to a specific peer (Gun-specific)
    * @param peer URL of the peer to reconnect
    */
   reconnectToPeer(peer: string): void {
-    try {
-      // First remove the peer
-      this.removePeer(peer);
-
-      // Add it back immediately instead of with timeout
-      this.addPeer(peer);
-    } catch (error) {
-      console.error(`Error reconnecting to peer ${peer}:`, error);
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      gunTransport.reconnectToPeer(peer);
+    } else {
+      console.log(
+        `[PEER] Peer reconnection not supported by ${this.transport.name} transport`,
+      );
     }
   }
 
   /**
-   * Clears all peers and optionally adds new ones
+   * Clears all peers and optionally adds new ones (Gun-specific)
    * @param newPeers Optional array of new peers to add
    */
   resetPeers(newPeers?: string[]): void {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        // Clear all existing peers
-        Object.keys(gunOpts.peers).forEach((peer) => {
-          this.removePeer(peer);
-        });
-
-        // Add new peers if provided
-        if (newPeers && newPeers.length > 0) {
-          newPeers.forEach((peer) => {
-            this.addPeer(peer);
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error resetting peers:", error);
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      gunTransport.resetPeers(newPeers);
+    } else {
+      console.log(
+        `[PEER] Peer reset not supported by ${this.transport.name} transport`,
+      );
     }
   }
 
@@ -595,8 +564,8 @@ class DataBase {
    */
   onAuth(callback: AuthCallback): () => void {
     this.onAuthCallbacks.push(callback);
-    const user = this.gun.user();
-    if (user && user.is) callback(user);
+    const user = this.transport.user();
+    if (user && user.is) callback(user as any); // Cast for backward compatibility
     return () => {
       const i = this.onAuthCallbacks.indexOf(callback);
       if (i !== -1) this.onAuthCallbacks.splice(i, 1);
@@ -605,12 +574,12 @@ class DataBase {
 
   /**
    * Helper method to navigate to a nested path by splitting and chaining .get() calls
-   * @param node Starting Gun node
+   * @param node Starting chain node
    * @param path Path string (e.g., "test/data/marco")
-   * @returns Gun node at the specified path
+   * @returns Chain node at the specified path
    */
-  private navigateToPath(node: IGunChain<any>, path: string): IGunChain<any> {
-    if (!path || typeof path !== "string") return node as IGunChain<any>;
+  private navigateToPath(node: IChain, path: string): IChain {
+    if (!path || typeof path !== "string") return node as IChain;
 
     // Split path by '/' and filter out empty segments
     const pathSegments = path
@@ -619,7 +588,7 @@ class DataBase {
       .filter((segment) => segment.length > 0);
 
     // Chain .get() calls for each path segment
-    let currentNode: IGunChain<any> = node as IGunChain<any>;
+    let currentNode: IChain = node as IChain;
     for (const segment of pathSegments) {
       currentNode = currentNode.get(segment);
     }
@@ -627,11 +596,23 @@ class DataBase {
   }
 
   /**
-   * Gets the Gun instance
-   * @returns Gun instance
+   * Gets the transport layer instance
+   * @returns Transport layer instance
    */
-  getGun(): IGunInstance {
-    return this.gun;
+  getTransport(): TransportLayer {
+    return this.transport;
+  }
+
+  /**
+   * Gets the Gun instance (for backward compatibility)
+   * @returns Gun instance if using Gun transport, null otherwise
+   */
+  getGun(): IGunInstance | null {
+    if (this.transport.name === "gundb") {
+      const gunTransport = this.transport as any;
+      return gunTransport.getGunInstance();
+    }
+    return null;
   }
 
   /**
@@ -640,13 +621,13 @@ class DataBase {
    */
   getCurrentUser(): UserInfo | null {
     try {
-      const _user = this.gun.user();
+      const _user = this.transport.user();
       return _user?.is?.pub
         ? {
             pub: _user?.is?.pub!,
             epub: _user?.is?.epub,
             alias: _user?.is?.alias as string | undefined,
-            user: _user,
+            user: _user as any, // Cast for backward compatibility
           }
         : null;
     } catch (error) {
@@ -659,17 +640,17 @@ class DataBase {
    * Gets the current user instance
    * @returns User instance
    */
-  getUser(): IGunUserInstance {
-    return this.gun.user();
+  getUser(): IUserInstance {
+    return this.transport.user();
   }
 
   /**
    * Gets a node at the specified path
    * @param path Path to the node
-   * @returns Gun node
+   * @returns Chain node
    */
-  get(path: string): IGunChain<any, any> {
-    return this.navigateToPath(this.node, path) as IGunChain<any, any>;
+  get(path: string): IChain {
+    return this.navigateToPath(this.node, path);
   }
 
   /**
@@ -692,9 +673,9 @@ class DataBase {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async put(path: string, data: any): Promise<GunMessagePut> {
+  async put(path: string, data: any): Promise<any> {
     const node = this.navigateToPath(this.node, path);
-    return await node.put(data).then();
+    return await node.put(data);
   }
 
   /**
@@ -703,9 +684,9 @@ class DataBase {
    * @param data Data to store
    * @returns Promise resolving to operation result
    */
-  async set(path: string, data: any): Promise<GunMessagePut> {
+  async set(path: string, data: any): Promise<any> {
     const node = this.navigateToPath(this.node, path);
-    return await node.set(data).then();
+    return await node.set(data);
   }
 
   /**
@@ -713,9 +694,9 @@ class DataBase {
    * @param path Path to remove
    * @returns Promise resolving to operation result
    */
-  async remove(path: string): Promise<GunMessagePut> {
+  async remove(path: string): Promise<any> {
     const node = this.navigateToPath(this.node, path);
-    return await node.put(null).then();
+    return await node.put(null);
   }
 
   /**
@@ -724,7 +705,7 @@ class DataBase {
    */
   isLoggedIn(): boolean {
     try {
-      const user = this.gun.user();
+      const user = this.transport.user();
       return !!(user && user.is && user.is.pub);
     } catch (error) {
       console.error("Error checking login status:", error);
@@ -811,13 +792,16 @@ class DataBase {
 
       // Attempt to restore user session
       try {
-        const userInstance = this.gun.user();
+        const userInstance = this.transport.user();
         if (!userInstance) {
-          console.error("Gun user instance not available");
+          console.error("Transport user instance not available");
           sessionStorage.removeItem("gunSessionData");
           localStorage.removeItem("gun/session");
           localStorage.removeItem("gun/pair");
-          return { success: false, error: "Gun user instance not available" };
+          return {
+            success: false,
+            error: "Transport user instance not available",
+          };
         }
 
         // Set the user pair if available
@@ -894,33 +878,43 @@ class DataBase {
    * Ottiene la lista dei provider di storage disponibili
    */
   getStorageProviders(): string[] {
-    return Array.from(this.storageManager['providers'].keys());
+    return Array.from(this.storageManager["providers"].keys());
   }
 
   /**
    * Salva un pair in storage specifici
    */
-  async savePairToStorage(userPub: string, pair: ISEAPair, providers?: string[]): Promise<boolean> {
+  async savePairToStorage(
+    userPub: string,
+    pair: ISEAPair,
+    providers?: string[],
+  ): Promise<boolean> {
     return await this.saveUserPair(userPub, pair, providers);
   }
 
   /**
    * Carica un pair da storage specifici
    */
-  async loadPairFromStorage(userPub: string, providers?: string[]): Promise<ISEAPair | null> {
+  async loadPairFromStorage(
+    userPub: string,
+    providers?: string[],
+  ): Promise<ISEAPair | null> {
     return await this.loadUserPair(userPub, providers);
   }
 
   /**
    * Rimuove un pair da storage specifici
    */
-  async removePairFromStorage(userPub: string, providers?: string[]): Promise<boolean> {
+  async removePairFromStorage(
+    userPub: string,
+    providers?: string[],
+  ): Promise<boolean> {
     return await this.storageManager.removePair(userPub, providers);
   }
 
   logout(): void {
     try {
-      const currentUser = this.gun.user();
+      const currentUser = this.transport.user();
       if (!currentUser || !currentUser.is) {
         return;
       }
@@ -928,8 +922,8 @@ class DataBase {
       // Log out user
       try {
         currentUser.leave();
-      } catch (gunError) {
-        console.error("Error during Gun logout:", gunError);
+      } catch (logoutError) {
+        console.error("Error during logout:", logoutError);
       }
 
       // Clear user reference
@@ -1071,7 +1065,7 @@ class DataBase {
     if (this.customPairGenerator) {
       return await this.customPairGenerator(username);
     }
-    
+
     // Fallback to standard SEA pair generation
     return await SEA.pair();
   }
@@ -1079,14 +1073,21 @@ class DataBase {
   /**
    * Salva il pair in tutti gli storage configurati
    */
-  private async saveUserPair(userPub: string, pair: ISEAPair, storageProviders?: string[]): Promise<boolean> {
+  private async saveUserPair(
+    userPub: string,
+    pair: ISEAPair,
+    storageProviders?: string[],
+  ): Promise<boolean> {
     return await this.storageManager.savePair(userPub, pair, storageProviders);
   }
 
   /**
    * Carica il pair da qualsiasi storage disponibile
    */
-  private async loadUserPair(userPub: string, storageProviders?: string[]): Promise<ISEAPair | null> {
+  private async loadUserPair(
+    userPub: string,
+    storageProviders?: string[],
+  ): Promise<ISEAPair | null> {
     return await this.storageManager.loadPair(userPub, storageProviders);
   }
 
@@ -1128,31 +1129,33 @@ class DataBase {
           return;
         }
 
-        this.gun.user().create(normalizedUsername, password, (ack: any) => {
-          if (ack.err) {
-            console.error(`User creation error: ${ack.err}`);
-            resolve({ success: false, error: ack.err });
-          } else {
-            // Validate that we got a userPub from creation
-            const userPub = ack.pub;
-            if (
-              !userPub ||
-              typeof userPub !== "string" ||
-              userPub.trim().length === 0
-            ) {
-              console.error(
-                "User creation successful but no userPub returned:",
-                ack,
-              );
-              resolve({
-                success: false,
-                error: "User creation successful but no userPub returned",
-              });
+        this.transport
+          .user()
+          .create(normalizedUsername, password, (ack: any) => {
+            if (ack.err) {
+              console.error(`User creation error: ${ack.err}`);
+              resolve({ success: false, error: ack.err });
             } else {
-              resolve({ success: true, userPub: userPub });
+              // Validate that we got a userPub from creation
+              const userPub = ack.pub;
+              if (
+                !userPub ||
+                typeof userPub !== "string" ||
+                userPub.trim().length === 0
+              ) {
+                console.error(
+                  "User creation successful but no userPub returned:",
+                  ack,
+                );
+                resolve({
+                  success: false,
+                  error: "User creation successful but no userPub returned",
+                });
+              } else {
+                resolve({ success: true, userPub: userPub });
+              }
             }
-          }
-        });
+          });
       },
     );
   }
@@ -1197,7 +1200,7 @@ class DataBase {
         }
 
         if (pair) {
-          this.gun.user().auth(pair, (ack: any) => {
+          this.transport.user().auth(pair, (ack: any) => {
             if (ack.err) {
               console.error(`Authentication after creation failed: ${ack.err}`);
               resolve({ success: false, error: ack.err });
@@ -1206,7 +1209,7 @@ class DataBase {
               setTimeout(() => {
                 // Extract userPub from multiple possible sources
                 const userPub =
-                  ack.pub || this.gun.user().is?.pub || ack.user?.pub;
+                  ack.pub || this.transport.user().is?.pub || ack.user?.pub;
 
                 if (!userPub) {
                   console.error(
@@ -1223,31 +1226,35 @@ class DataBase {
             }
           });
         } else {
-          this.gun.user().auth(normalizedUsername, password, (ack: any) => {
-            if (ack.err) {
-              console.error(`Authentication after creation failed: ${ack.err}`);
-              resolve({ success: false, error: ack.err });
-            } else {
-              // Add a small delay to ensure user state is properly set
-              setTimeout(() => {
-                // Extract userPub from multiple possible sources
-                const userPub =
-                  ack.pub || this.gun.user().is?.pub || ack.user?.pub;
+          this.transport
+            .user()
+            .auth(normalizedUsername, password, (ack: any) => {
+              if (ack.err) {
+                console.error(
+                  `Authentication after creation failed: ${ack.err}`,
+                );
+                resolve({ success: false, error: ack.err });
+              } else {
+                // Add a small delay to ensure user state is properly set
+                setTimeout(() => {
+                  // Extract userPub from multiple possible sources
+                  const userPub =
+                    ack.pub || this.transport.user().is?.pub || ack.user?.pub;
 
-                if (!userPub) {
-                  console.error(
-                    "Authentication successful but no userPub found",
-                  );
-                  resolve({
-                    success: false,
-                    error: "No userPub returned from authentication",
-                  });
-                } else {
-                  resolve({ success: true, userPub: userPub });
-                }
-              }, 100);
-            }
-          });
+                  if (!userPub) {
+                    console.error(
+                      "Authentication successful but no userPub found",
+                    );
+                    resolve({
+                      success: false,
+                      error: "No userPub returned from authentication",
+                    });
+                  } else {
+                    resolve({ success: true, userPub: userPub });
+                  }
+                }, 100);
+              }
+            });
         }
       },
     );
@@ -1324,7 +1331,7 @@ class DataBase {
       }
 
       // Set the user instance
-      this.user = this.gun.user();
+      this.user = this.transport.user();
 
       console.log(
         `[SIGNUP] Signup completed successfully for user: ${username}`,
@@ -1336,12 +1343,12 @@ class DataBase {
         userPub: authResult.userPub,
         username: username,
         isNewUser: true,
-        sea: (this.gun.user() as any)?._?.sea
+        sea: (this.transport.user() as any)?._?.sea
           ? {
-              pub: (this.gun.user() as any)._?.sea.pub,
-              priv: (this.gun.user() as any)._?.sea.priv,
-              epub: (this.gun.user() as any)._?.sea.epub,
-              epriv: (this.gun.user() as any)._?.sea.epriv,
+              pub: (this.transport.user() as any)._?.sea.pub,
+              priv: (this.transport.user() as any)._?.sea.priv,
+              epub: (this.transport.user() as any)._?.sea.epub,
+              epriv: (this.transport.user() as any)._?.sea.epriv,
             }
           : undefined,
       };
@@ -1420,7 +1427,7 @@ class DataBase {
 
       // Update in user's own node
       try {
-        await this.gun.get(userPub).get("lastSeen").put(timestamp).then();
+        await this.transport.get(userPub).get("lastSeen").put(timestamp);
       } catch (error) {
         console.error(`Failed to update lastSeen in user node:`, error);
       }
@@ -1445,7 +1452,7 @@ class DataBase {
       (resolve) => {
         if (pair) {
           console.log(`[DEBUG] Authenticating with pair for user: ${username}`);
-          this.gun.user().auth(pair, (ack: any) => {
+          this.transport.user().auth(pair, (ack: any) => {
             console.log(`[DEBUG] Pair auth callback received:`, ack);
             if (ack.err) {
               console.error(`Login error for ${username}: ${ack.err}`);
@@ -1458,7 +1465,7 @@ class DataBase {
           console.log(
             `[DEBUG] Authenticating with username/password for user: ${username}`,
           );
-          this.gun.user().auth(username, password, (ack: any) => {
+          this.transport.user().auth(username, password, (ack: any) => {
             console.log(
               `[DEBUG] Username/password auth callback received:`,
               ack,
@@ -1480,7 +1487,7 @@ class DataBase {
    */
   private buildLoginResult(username: string, userPub: string): AuthResult {
     // Get the SEA pair from the user object
-    const seaPair = (this.gun.user() as any)?._?.sea;
+    const seaPair = (this.transport.user() as any)?._?.sea;
 
     return {
       success: true,
@@ -1530,10 +1537,10 @@ class DataBase {
       // Add a small delay to ensure user state is properly set
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const userPub = this.gun.user().is?.pub;
+      const userPub = this.transport.user().is?.pub;
 
-      let alias = this.gun.user().is?.alias as string;
-      let userPair = (this.gun.user() as any)?._?.sea as ISEAPair;
+      let alias = this.transport.user().is?.alias as string;
+      let userPair = (this.transport.user() as any)?._?.sea as ISEAPair;
 
       if (!alias) {
         alias = username;
@@ -1601,7 +1608,10 @@ class DataBase {
         // Continue with login even if last seen update fails
       }
 
-      return this.buildLoginResult(username, this.gun.user().is?.pub || "");
+      return this.buildLoginResult(
+        username,
+        this.transport.user().is?.pub || "",
+      );
     } catch (error) {
       console.error(`Exception during login with pair: ${error}`);
       return { success: false, error: String(error) };
@@ -1614,38 +1624,48 @@ class DataBase {
   private async createNewUserWithCustomStorage(
     username: string,
     password: string,
-    storageProviders?: string[]
-  ): Promise<{ success: boolean; error?: string; userPub?: string; pair?: ISEAPair }> {
+    storageProviders?: string[],
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    userPub?: string;
+    pair?: ISEAPair;
+  }> {
     return new Promise(async (resolve) => {
       try {
         // Genera pair personalizzato
         const pair = await this.generateCustomPair(username);
-        
+
         // Crea utente senza chiamare gun.user().create() automaticamente
         // Invece, gestisci manualmente la creazione
         const normalizedUsername = username.trim().toLowerCase();
-        
+
         // Salva il pair negli storage specificati
-        const saveResult = await this.saveUserPair(pair.pub, pair, storageProviders);
-        
+        const saveResult = await this.saveUserPair(
+          pair.pub,
+          pair,
+          storageProviders,
+        );
+
         if (!saveResult) {
           resolve({ success: false, error: "Failed to save user pair" });
           return;
         }
 
         // Ora crea l'utente in GunDB con il pair personalizzato
-        this.gun.user().create(normalizedUsername, password, (ack: any) => {
-          if (ack.err) {
-            resolve({ success: false, error: ack.err });
-          } else {
-            resolve({ 
-              success: true, 
-              userPub: ack.pub || pair.pub,
-              pair: pair
-            });
-          }
-        });
-        
+        this.transport
+          .user()
+          .create(normalizedUsername, password, (ack: any) => {
+            if (ack.err) {
+              resolve({ success: false, error: ack.err });
+            } else {
+              resolve({
+                success: true,
+                userPub: ack.pub || pair.pub,
+                pair: pair,
+              });
+            }
+          });
       } catch (error) {
         resolve({ success: false, error: String(error) });
       }
@@ -1661,10 +1681,12 @@ class DataBase {
     options?: {
       storageProviders?: string[];
       skipGunDBCreation?: boolean;
-    }
+    },
   ): Promise<SignUpResult> {
-    console.log(`[DEBUG] signUpWithCustomStorage called for username: ${username}`);
-    
+    console.log(
+      `[DEBUG] signUpWithCustomStorage called for username: ${username}`,
+    );
+
     try {
       const validation = this.validateSignupCredentials(username, password);
       if (!validation.valid) {
@@ -1673,25 +1695,29 @@ class DataBase {
 
       // Genera pair personalizzato
       const pair = await this.generateCustomPair(username);
-      
+
       // Salva pair negli storage specificati
-      const saveResult = await this.saveUserPair(pair.pub, pair, options?.storageProviders);
-      
+      const saveResult = await this.saveUserPair(
+        pair.pub,
+        pair,
+        options?.storageProviders,
+      );
+
       if (!saveResult) {
         return { success: false, error: "Failed to save user credentials" };
       }
 
       let createResult;
-      
+
       if (options?.skipGunDBCreation) {
         // Solo salva il pair, non crea utente in GunDB
         createResult = { success: true, userPub: pair.pub, pair: pair };
       } else {
         // Crea utente anche in GunDB
         createResult = await this.createNewUserWithCustomStorage(
-          username, 
-          password, 
-          options?.storageProviders
+          username,
+          password,
+          options?.storageProviders,
         );
       }
 
@@ -1700,22 +1726,25 @@ class DataBase {
       }
 
       // Autentica l'utente
-      const authResult = await this.authenticateNewUser(username, password, pair);
-      
+      const authResult = await this.authenticateNewUser(
+        username,
+        password,
+        pair,
+      );
+
       if (!authResult.success) {
         return { success: false, error: authResult.error };
       }
 
-      this.user = this.gun.user();
+      this.user = this.transport.user();
 
       return {
         success: true,
         userPub: authResult.userPub || pair.pub,
         username: username,
         isNewUser: true,
-        sea: pair
+        sea: pair,
       };
-      
     } catch (error) {
       console.error(`Exception during custom signup for ${username}: ${error}`);
       return { success: false, error: `Signup failed: ${error}` };
@@ -1731,27 +1760,36 @@ class DataBase {
     options?: {
       storageProviders?: string[];
       loadPairFromStorage?: boolean;
-    }
+    },
   ): Promise<AuthResult> {
-    console.log(`[DEBUG] loginWithCustomStorage called for username: ${username}`);
-    
+    console.log(
+      `[DEBUG] loginWithCustomStorage called for username: ${username}`,
+    );
+
     try {
       let pair: ISEAPair | null = null;
-      
+
       // Se richiesto, carica pair da storage personalizzato
       if (options?.loadPairFromStorage) {
         // Prima trova il userPub dell'utente
         const normalizedUsername = username.trim().toLowerCase();
-        const userPub = await this.node.get("usernames").get(normalizedUsername).then();
-        
+        const userPub = await this.node
+          .get("usernames")
+          .get(normalizedUsername)
+          .then();
+
         if (userPub) {
           pair = await this.loadUserPair(userPub, options?.storageProviders);
         }
       }
 
       // Esegui autenticazione
-      const loginResult = await this.performAuthentication(username, password, pair);
-      
+      const loginResult = await this.performAuthentication(
+        username,
+        password,
+        pair,
+      );
+
       if (!loginResult.success) {
         return {
           success: false,
@@ -1761,8 +1799,8 @@ class DataBase {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const userPub = this.gun.user().is?.pub;
-      const alias = this.gun.user().is?.alias as string || username;
+      const userPub = this.transport.user().is?.pub;
+      const alias = (this.transport.user().is?.alias as string) || username;
 
       if (!userPub) {
         return {
@@ -1793,7 +1831,6 @@ class DataBase {
       }
 
       return this.buildLoginResult(username, userPub);
-      
     } catch (error) {
       console.error(`Exception during custom login for ${username}: ${error}`);
       return { success: false, error: String(error) };
@@ -1906,8 +1943,7 @@ class DataBase {
 
       const ack = await (this.node.get(userPub) as any)
         .get("security")
-        .put(securityPayload)
-        .then();
+        .put(securityPayload);
 
       if (ack.err) {
         console.error("Error saving security data to public graph:", ack.err);
@@ -1945,9 +1981,9 @@ class DataBase {
       }
 
       // Access the user's security data directly from their public key node
-      const securityData = await (this.node.get(userPub) as any)
-        .get("security")
-        .then();
+      const securityData = await (this.node.get(userPub) as any).get(
+        "security",
+      );
 
       if (!securityData || !securityData.hint) {
         return {
@@ -2181,19 +2217,33 @@ const createGun = (config: any) => {
   return gunInstance;
 };
 
-export { 
-  Gun, 
-  DataBase, 
-  SEA, 
-  RxJS, 
-  crypto, 
-  GunErrors, 
-  derive, 
+export {
+  Gun,
+  DataBase,
+  SEA,
+  RxJS,
+  crypto,
+  GunErrors,
+  derive,
   createGun,
   GunDBStorage,
   LocalStorageProvider,
-  MultiStorageManager
+  MultiStorageManager,
 };
+
+// Export transport layer components
+export type {
+  TransportLayer,
+  IUserInstance,
+  IChain,
+  TransportConfig,
+} from "./transport/TransportLayer";
+export { TransportFactory } from "./transport/TransportLayer";
+
+export { GunTransport } from "./transport/GunTransport";
+export { SqliteTransport } from "./transport/SqliteTransport";
+export { PostgresqlTransport } from "./transport/PostgresqlTransport";
+export { MongodbTransport } from "./transport/MongodbTransport";
 
 export default Gun;
 

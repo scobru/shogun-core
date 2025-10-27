@@ -2,7 +2,12 @@
  * Tests for Multi-Storage functionality
  */
 
-import { DataBase, GunDBStorage, LocalStorageProvider, MultiStorageManager } from "../../gundb/db";
+import {
+  DataBase,
+  GunDBStorage,
+  LocalStorageProvider,
+  MultiStorageManager,
+} from "../../gundb/db";
 import Gun from "gun/gun";
 import SEA from "gun/sea";
 
@@ -28,9 +33,9 @@ const createMockGun = () => ({
   off: jest.fn(),
   _: {
     opt: {
-      peers: {}
-    }
-  }
+      peers: {},
+    },
+  },
 });
 
 // Mock GunDB node
@@ -63,7 +68,7 @@ describe("Multi-Storage System", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockGun = createMockGun();
     mockNode = createMockNode();
 
@@ -99,7 +104,12 @@ describe("Multi-Storage System", () => {
 
     it("should save pair to GunDB", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
       const result = await gunDBStorage.savePair(userPub, pair);
 
@@ -110,8 +120,13 @@ describe("Multi-Storage System", () => {
 
     it("should load pair from GunDB", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockNode.then.mockResolvedValue(pair);
 
       const result = await gunDBStorage.loadPair(userPub);
@@ -132,8 +147,13 @@ describe("Multi-Storage System", () => {
 
     it("should handle errors gracefully", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockNode.put.mockRejectedValue(new Error("GunDB error"));
 
       const result = await gunDBStorage.savePair(userPub, pair);
@@ -151,27 +171,39 @@ describe("Multi-Storage System", () => {
 
     it("should save pair to localStorage", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
       const result = await localStorageProvider.savePair(userPub, pair);
 
       expect(result).toBe(true);
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         "shogun_pair_test-user-pub",
-        JSON.stringify(pair)
+        JSON.stringify(pair),
       );
     });
 
     it("should load pair from localStorage", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(pair));
 
       const result = await localStorageProvider.loadPair(userPub);
 
       expect(result).toEqual(pair);
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith("shogun_pair_test-user-pub");
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith(
+        "shogun_pair_test-user-pub",
+      );
     });
 
     it("should remove pair from localStorage", async () => {
@@ -180,13 +212,20 @@ describe("Multi-Storage System", () => {
       const result = await localStorageProvider.removePair(userPub);
 
       expect(result).toBe(true);
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("shogun_pair_test-user-pub");
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(
+        "shogun_pair_test-user-pub",
+      );
     });
 
     it("should handle localStorage errors gracefully", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockLocalStorage.setItem.mockImplementation(() => {
         throw new Error("localStorage error");
       });
@@ -204,16 +243,16 @@ describe("Multi-Storage System", () => {
 
     beforeEach(() => {
       storageManager = new MultiStorageManager();
-      
+
       mockGunDBStorage = {
-        name: 'gundb',
+        name: "gundb",
         savePair: jest.fn(),
         loadPair: jest.fn(),
         removePair: jest.fn(),
       };
-      
+
       mockLocalStorage = {
-        name: 'localStorage',
+        name: "localStorage",
         savePair: jest.fn(),
         loadPair: jest.fn(),
         removePair: jest.fn(),
@@ -224,24 +263,32 @@ describe("Multi-Storage System", () => {
     });
 
     it("should add providers correctly", () => {
-      const providers = storageManager['providers'];
-      expect(providers.has('gundb')).toBe(true);
-      expect(providers.has('localStorage')).toBe(true);
+      const providers = storageManager["providers"];
+      expect(providers.has("gundb")).toBe(true);
+      expect(providers.has("localStorage")).toBe(true);
     });
 
     it("should set primary provider", () => {
-      storageManager.setPrimaryProvider('localStorage');
-      expect(storageManager['primaryProvider']).toBe('localStorage');
+      storageManager.setPrimaryProvider("localStorage");
+      expect(storageManager["primaryProvider"]).toBe("localStorage");
     });
 
     it("should save pair to multiple providers", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockGunDBStorage.savePair.mockResolvedValue(true);
       mockLocalStorage.savePair.mockResolvedValue(true);
 
-      const result = await storageManager.savePair(userPub, pair, ['gundb', 'localStorage']);
+      const result = await storageManager.savePair(userPub, pair, [
+        "gundb",
+        "localStorage",
+      ]);
 
       expect(result).toBe(true);
       expect(mockGunDBStorage.savePair).toHaveBeenCalledWith(userPub, pair);
@@ -250,12 +297,20 @@ describe("Multi-Storage System", () => {
 
     it("should load pair from first available provider", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       mockGunDBStorage.loadPair.mockResolvedValue(null);
       mockLocalStorage.loadPair.mockResolvedValue(pair);
 
-      const result = await storageManager.loadPair(userPub, ['gundb', 'localStorage']);
+      const result = await storageManager.loadPair(userPub, [
+        "gundb",
+        "localStorage",
+      ]);
 
       expect(result).toEqual(pair);
       expect(mockGunDBStorage.loadPair).toHaveBeenCalledWith(userPub);
@@ -264,11 +319,14 @@ describe("Multi-Storage System", () => {
 
     it("should remove pair from multiple providers", async () => {
       const userPub = "test-user-pub";
-      
+
       mockGunDBStorage.removePair.mockResolvedValue(true);
       mockLocalStorage.removePair.mockResolvedValue(false);
 
-      const result = await storageManager.removePair(userPub, ['gundb', 'localStorage']);
+      const result = await storageManager.removePair(userPub, [
+        "gundb",
+        "localStorage",
+      ]);
 
       expect(result).toBe(true);
       expect(mockGunDBStorage.removePair).toHaveBeenCalledWith(userPub);
@@ -277,13 +335,23 @@ describe("Multi-Storage System", () => {
 
     it("should handle provider errors gracefully", async () => {
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
-      
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
+
       // Mock one provider to fail and one to succeed
-      mockGunDBStorage.savePair.mockImplementation(() => Promise.reject(new Error("GunDB error")));
+      mockGunDBStorage.savePair.mockImplementation(() => {
+        throw new Error("GunDB error");
+      });
       mockLocalStorage.savePair.mockResolvedValue(true);
 
-      const result = await storageManager.savePair(userPub, pair, ['gundb', 'localStorage']);
+      const result = await storageManager.savePair(userPub, pair, [
+        "gundb",
+        "localStorage",
+      ]);
 
       expect(result).toBe(true); // Should succeed if at least one provider succeeds
     });
@@ -299,7 +367,7 @@ describe("Multi-Storage System", () => {
 
     it("should initialize with custom storage configuration", () => {
       const customProvider = {
-        name: 'custom',
+        name: "custom",
         savePair: jest.fn(),
         loadPair: jest.fn(),
         removePair: jest.fn(),
@@ -309,22 +377,27 @@ describe("Multi-Storage System", () => {
         exists: jest.fn(),
       };
 
-      db = new DataBase(mockGun, 'test-scope', {
+      db = new DataBase(mockGun, "test-scope", {
         providers: [customProvider],
-        primaryProvider: 'custom',
+        primaryProvider: "custom",
         customPairGenerator: async (username: string) => {
-          return { pub: `custom-${username}`, priv: 'custom-priv', epub: 'custom-epub', epriv: 'custom-epriv' };
-        }
+          return {
+            pub: `custom-${username}`,
+            priv: "custom-priv",
+            epub: "custom-epub",
+            epriv: "custom-epriv",
+          };
+        },
       });
 
       expect(db).toBeDefined();
     });
 
     it("should add storage providers dynamically", () => {
-      db = new DataBase(mockGun, 'test-scope');
-      
+      db = new DataBase(mockGun, "test-scope");
+
       const customProvider = {
-        name: 'custom',
+        name: "custom",
         savePair: jest.fn(),
         loadPair: jest.fn(),
         removePair: jest.fn(),
@@ -335,28 +408,37 @@ describe("Multi-Storage System", () => {
       };
 
       db.addStorageProvider(customProvider);
-      db.setPrimaryStorageProvider('custom');
+      db.setPrimaryStorageProvider("custom");
 
       const providers = db.getStorageProviders();
-      expect(providers).toContain('custom');
+      expect(providers).toContain("custom");
     });
 
     it("should save and load pairs from storage", async () => {
-      db = new DataBase(mockGun, 'test-scope');
-      db.initialize('test-scope');
+      db = new DataBase(mockGun, "test-scope");
+      db.initialize("test-scope");
 
       const userPub = "test-user-pub";
-      const pair = { pub: "test-pub", priv: "test-priv", epub: "test-epub", epriv: "test-epriv" };
+      const pair = {
+        pub: "test-pub",
+        priv: "test-priv",
+        epub: "test-epub",
+        epriv: "test-epriv",
+      };
 
       // Mock the storage manager methods
       const mockSavePair = jest.fn().mockResolvedValue(true);
       const mockLoadPair = jest.fn().mockResolvedValue(pair);
-      
-      db['saveUserPair'] = mockSavePair;
-      db['loadUserPair'] = mockLoadPair;
 
-      const saveResult = await db.savePairToStorage(userPub, pair, ['localStorage']);
-      const loadResult = await db.loadPairFromStorage(userPub, ['localStorage']);
+      db["saveUserPair"] = mockSavePair;
+      db["loadUserPair"] = mockLoadPair;
+
+      const saveResult = await db.savePairToStorage(userPub, pair, [
+        "localStorage",
+      ]);
+      const loadResult = await db.loadPairFromStorage(userPub, [
+        "localStorage",
+      ]);
 
       expect(saveResult).toBe(true);
       expect(loadResult).toEqual(pair);
@@ -373,35 +455,40 @@ describe("Multi-Storage System", () => {
 
     it("should use custom pair generator when provided", async () => {
       const customPairGenerator = jest.fn().mockResolvedValue({
-        pub: 'custom-pub',
-        priv: 'custom-priv',
-        epub: 'custom-epub',
-        epriv: 'custom-epriv'
+        pub: "custom-pub",
+        priv: "custom-priv",
+        epub: "custom-epub",
+        epriv: "custom-epriv",
       });
 
-      db = new DataBase(mockGun, 'test-scope', {
-        customPairGenerator
+      db = new DataBase(mockGun, "test-scope", {
+        customPairGenerator,
       });
 
-      const pair = await db['generateCustomPair']('testuser');
+      const pair = await db["generateCustomPair"]("testuser");
 
-      expect(customPairGenerator).toHaveBeenCalledWith('testuser');
+      expect(customPairGenerator).toHaveBeenCalledWith("testuser");
       expect(pair).toEqual({
-        pub: 'custom-pub',
-        priv: 'custom-priv',
-        epub: 'custom-epub',
-        epriv: 'custom-epriv'
+        pub: "custom-pub",
+        priv: "custom-priv",
+        epub: "custom-epub",
+        epriv: "custom-epriv",
       });
     });
 
     it("should fallback to SEA.pair when no custom generator", async () => {
       // Mock SEA.pair
-      const mockSEAPair = { pub: 'sea-pub', priv: 'sea-priv', epub: 'sea-epub', epriv: 'sea-epriv' };
-      jest.spyOn(SEA, 'pair').mockResolvedValue(mockSEAPair);
+      const mockSEAPair = {
+        pub: "sea-pub",
+        priv: "sea-priv",
+        epub: "sea-epub",
+        epriv: "sea-epriv",
+      };
+      jest.spyOn(SEA, "pair").mockResolvedValue(mockSEAPair);
 
-      db = new DataBase(mockGun, 'test-scope');
+      db = new DataBase(mockGun, "test-scope");
 
-      const pair = await db['generateCustomPair']('testuser');
+      const pair = await db["generateCustomPair"]("testuser");
 
       expect(SEA.pair).toHaveBeenCalled();
       expect(pair).toEqual(mockSEAPair);
@@ -416,14 +503,18 @@ describe("Multi-Storage System", () => {
     });
 
     it("should handle non-existent providers gracefully", async () => {
-      const result = await storageManager.savePair('test-pub', {} as any, ['non-existent']);
+      const result = await storageManager.savePair("test-pub", {} as any, [
+        "non-existent",
+      ]);
       expect(result).toBe(false);
     });
 
     it("should handle provider errors in loadPair", async () => {
       const mockProvider = {
-        name: 'error-provider',
-        loadPair: jest.fn().mockImplementation(() => Promise.reject(new Error("Provider error"))),
+        name: "error-provider",
+        loadPair: jest.fn().mockImplementation(() => {
+          throw new Error("Provider error");
+        }),
         savePair: jest.fn(),
         removePair: jest.fn(),
         save: jest.fn(),
@@ -434,14 +525,18 @@ describe("Multi-Storage System", () => {
 
       storageManager.addProvider(mockProvider);
 
-      const result = await storageManager.loadPair('test-pub', ['error-provider']);
+      const result = await storageManager.loadPair("test-pub", [
+        "error-provider",
+      ]);
       expect(result).toBeNull();
     });
 
     it("should handle provider errors in removePair", async () => {
       const mockProvider = {
-        name: 'error-provider',
-        removePair: jest.fn().mockImplementation(() => Promise.reject(new Error("Provider error"))),
+        name: "error-provider",
+        removePair: jest.fn().mockImplementation(() => {
+          throw new Error("Provider error");
+        }),
         savePair: jest.fn(),
         loadPair: jest.fn(),
         save: jest.fn(),
@@ -452,7 +547,9 @@ describe("Multi-Storage System", () => {
 
       storageManager.addProvider(mockProvider);
 
-      const result = await storageManager.removePair('test-pub', ['error-provider']);
+      const result = await storageManager.removePair("test-pub", [
+        "error-provider",
+      ]);
       expect(result).toBe(false);
     });
   });
