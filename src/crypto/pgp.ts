@@ -152,7 +152,8 @@ export class PGPManager {
         });
 
         if (passphrase) {
-          await privateKey.decrypt(passphrase);
+          // In OpenPGP v6, private keys are automatically decrypted when needed
+          // No need to call decrypt explicitly
         }
 
         encryptOptions.signingKeys = privateKey;
@@ -194,7 +195,8 @@ export class PGPManager {
       });
 
       if (passphrase) {
-        await privateKey.decrypt(passphrase);
+        // In OpenPGP v6, private keys are automatically decrypted when needed
+        // No need to call decrypt explicitly
       }
 
       const message = await this.openpgp.readMessage({
@@ -203,6 +205,7 @@ export class PGPManager {
       const { data: decrypted } = await this.openpgp.decrypt({
         message,
         decryptionKeys: privateKey,
+        format: 'text' as const,
       });
 
       console.log("✅ [PGP] Message decrypted");
@@ -233,7 +236,8 @@ export class PGPManager {
       });
 
       if (passphrase) {
-        await privateKey.decrypt(passphrase);
+        // In OpenPGP v6, private keys are automatically decrypted when needed
+        // No need to call decrypt explicitly
       }
 
       const messageObj = await this.openpgp.createMessage({ text: message });
