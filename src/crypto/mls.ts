@@ -1,494 +1,741 @@
-// MLS (Message Layer Security) Implementation for shogun-core
-// RFC 9420 end-to-end encrypted group messaging
-// Simplified implementation without external dependencies
+/**
+ * MLS (Message Layer Security) Manager
+ * RFC 9420 implementation using ts-mls library
+ * Provides end-to-end encrypted group messaging with forward secrecy
+ */
+
+import {
+  createApplicationMessage,
+  createCommit,
+  createGroup,
+  joinGroup,
+  processPrivateMessage,
+  processPublicMessage,
+  getCiphersuiteFromName,
+  generateKeyPackage,
+  encodeMlsMessage,
+  decodeMlsMessage,
+  defaultCapabilities,
+  defaultLifetime,
+  emptyPskIndex,
+  nobleCryptoProvider,
+  type ClientState,
+  type Credential,
+  type Proposal,
+  type PrivateKeyPackage,
+  type KeyPackage,
+  type Welcome,
+  type PrivateMessage,
+  type CiphersuiteImpl,
+} from 'ts-mls';
+
+// Helper to strip trailing null nodes per RFC 9420
+function stripTrailingNulls(tree: any[]): any[] {
+  let lastNonNull = tree.length - 1;
+  while (lastNonNull >= 0 && tree[lastNonNull] === null) {
+    lastNonNull--;
+  }
+  return tree.slice(0, lastNonNull + 1);
+}
 
 export interface MLSGroupInfo {
   groupId: Uint8Array;
   members: string[];
   epoch: bigint;
-  tree: MLSNode[];
-}
-
-export interface MLSNode {
-  nodeId: number;
-  publicKey: CryptoKey;
-  credential: string;
-  isLeaf: boolean;
 }
 
 export interface MLSMessageEnvelope {
   groupId: Uint8Array;
   ciphertext: Uint8Array;
-  epoch: bigint;
-  senderIndex: number;
   timestamp: number;
 }
 
-export interface MLSKeyPackage {
-  keyId: number;
-  publicKey: CryptoKey;
-  credential: string;
-  capabilities: string[];
-  lifetime: number;
+export interface MLSKeyPackageBundle {
+  publicPackage: KeyPackage;
+  privatePackage: PrivateKeyPackage;
+  userId: string;
 }
 
-export interface MLSCommit {
-  proposals: MLSProposal[];
-  path: MLSUpdatePath;
-}
-
-export interface MLSProposal {
-  type: "add" | "remove" | "update";
-  keyPackage?: MLSKeyPackage;
-  removedIndex?: number;
-}
-
-export interface MLSUpdatePath {
-  leafNode: MLSNode;
-  nodes: MLSNode[];
-}
-
+/**
+ * MLSManager wraps the ts-mls functional API with a class-based interface
+ * for easier state management in applications
+ */
 export class MLSManager {
-  private groupId: Uint8Array;
-  private members: Map<string, MLSKeyPackage> = new Map();
-  private epoch: bigint = BigInt(0);
-  private tree: MLSNode[] = [];
-  private privateKey: CryptoKey | null = null;
+  private userId: string;
+  private cipherSuite: CiphersuiteImpl | null = null;
   private initialized: boolean = false;
+  private groups: Map<string, ClientState> = new Map();
+  private keyPackage: MLSKeyPackageBundle | null = null;
+  private credential: Credential;
 
-  constructor(groupId?: Uint8Array) {
-    this.groupId = groupId || crypto.getRandomValues(new Uint8Array(16));
-    console.log("🔐 [MLS] Manager created for group:", this.groupId);
+  constructor(userId: string) {
+    this.userId = userId;
+    this.credential = {
+      credentialType: 'basic',
+      identity: new TextEncoder().encode(userId),
+    };
   }
 
   /**
-   * Initialize MLS manager
+   * Initialize the MLS client with a ciphersuite
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      console.warn("[MLS] Already initialized");
+      console.warn('MLS Manager already initialized');
       return;
     }
 
     try {
-      console.log("🔐 [MLS] Initializing...");
+      console.log(`🔐 [MLS] Initializing for user: ${this.userId}`);
 
-      // Generate our own key package
-      const keyPackage = await this.generateKeyPackage();
+      // Use MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519 (ID: 1)
+      // Using nobleCryptoProvider for compatibility (pure JS implementation)
+      const cipherSuiteName = 'MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519';
+      const cs = getCiphersuiteFromName(cipherSuiteName);
+      this.cipherSuite = await nobleCryptoProvider.getCiphersuiteImpl(cs);
 
-      // Add ourselves as the first member
-      this.members.set("self", keyPackage);
-      this.tree.push({
-        nodeId: 0,
-        publicKey: keyPackage.publicKey,
-        credential: keyPackage.credential,
-        isLeaf: true,
+      console.log(`✅ [MLS] Using ciphersuite: ${cipherSuiteName}`);
+
+      // Mark as initialized before generating key package
+      this.initialized = true;
+
+      // Generate initial key package for this user
+      await this.generateKeyPackage();
+
+      console.log('✅ [MLS] Initialized successfully');
+    } catch (error) {
+      console.error('❌ [MLS] Failed to initialize:', error);
+      throw new Error(`MLS initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Generate a new key package for joining groups
+   */
+  async generateKeyPackage(): Promise<MLSKeyPackageBundle> {
+    this.ensureInitialized();
+
+    try {
+      console.log('🔑 [MLS] Generating key package');
+
+      const keyPackageResult = await generateKeyPackage(
+        this.credential,
+        defaultCapabilities(),
+        defaultLifetime,
+        [],
+        this.cipherSuite!
+      );
+
+      this.keyPackage = {
+        ...keyPackageResult,
+        userId: this.userId,
+      };
+
+      console.log('✅ [MLS] Key package generated');
+      return this.keyPackage;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to generate key package:', error);
+      throw new Error(`Key package generation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get the current key package
+   */
+  getKeyPackage(): MLSKeyPackageBundle | null {
+    return this.keyPackage;
+  }
+
+  /**
+   * Create a new MLS group
+   */
+  async createGroup(groupId: string): Promise<MLSGroupInfo> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`📝 [MLS] Creating group: ${groupId}`);
+
+      if (!this.keyPackage) {
+        throw new Error('No key package available. Call generateKeyPackage() first.');
+      }
+
+      const groupIdBytes = new TextEncoder().encode(groupId);
+
+      // Create group using ts-mls
+      const groupState = await createGroup(
+        groupIdBytes,
+        this.keyPackage.publicPackage,
+        this.keyPackage.privatePackage,
+        [],
+        this.cipherSuite!
+      );
+
+      this.groups.set(groupId, groupState);
+
+      const groupInfo: MLSGroupInfo = {
+        groupId: groupIdBytes,
+        members: [this.userId],
+        epoch: groupState.groupContext.epoch,
+      };
+
+      console.log(`✅ [MLS] Group created: ${groupId}, epoch: ${groupState.groupContext.epoch}`);
+      return groupInfo;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to create group:', error);
+      throw new Error(`Group creation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Add members to an existing group
+   */
+  async addMembers(
+    groupId: string,
+    keyPackages: MLSKeyPackageBundle[]
+  ): Promise<{ welcome: Welcome; ratchetTree: any; commit: any }> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`➕ [MLS] Adding ${keyPackages.length} member(s) to group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      // Create add proposals for each key package
+      const addProposals: Proposal[] = keyPackages.map((kp) => ({
+        proposalType: 'add',
+        add: {
+          keyPackage: kp.publicPackage,
+        },
+      }));
+
+      // Create commit with add proposals
+      const commitResult = await createCommit(
+        { state: groupState, cipherSuite: this.cipherSuite! },
+        { extraProposals: addProposals }
+      );
+
+      // Update group state
+      this.groups.set(groupId, commitResult.newState);
+
+      if (!commitResult.welcome) {
+        throw new Error('No welcome message generated');
+      }
+
+      console.log(
+        `✅ [MLS] Members added, new epoch: ${commitResult.newState.groupContext.epoch}`
+      );
+
+      // Debug: Log the commit structure
+      console.group('🔍 [MLS Debug] Commit Structure');
+      console.log('commitResult keys:', Object.keys(commitResult));
+      console.log('commit:', commitResult.commit);
+      console.log('commit.privateMessage:', (commitResult.commit as any)?.privateMessage);
+      console.groupEnd();
+
+      // RFC 9420 Section 11.2: Commit Distribution
+      // ⚠️ IMPORTANT: The returned commit MUST be sent to all existing group members
+      // so they can process it with processCommit() to stay synchronized.
+      //
+      // Distribution flow:
+      // 1. Alice adds Bob: addMembers() returns { welcome, commit }
+      // 2. Alice sends welcome to Bob (new member)
+      // 3. Alice sends commit to existing members (Charlie, David, etc.)
+      // 4. All existing members call processCommit(commit) to update their state
+      //
+      // Without distributing the commit, existing members will remain at old epoch
+      // and won't be able to decrypt messages from the updated group.
+
+      // Convert ratchetTree to a real array (it's Uint8Array-like with numeric indices)
+      const ratchetTreeArray = Array.from(commitResult.newState.ratchetTree);
+      // RFC 9420: Strip trailing null nodes before transmission
+      const strippedTree = stripTrailingNulls(ratchetTreeArray);
+
+      console.log(`🔍 [MLS] Ratchet tree stripped: ${ratchetTreeArray.length} -> ${strippedTree.length} nodes`);
+
+      return {
+        welcome: commitResult.welcome,
+        ratchetTree: strippedTree,
+        commit: commitResult.commit,
+      };
+    } catch (error) {
+      console.error('❌ [MLS] Failed to add members:', error);
+      throw new Error(`Adding members failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Process a Welcome message to join an MLS group
+   *
+   * RFC 9420 Compliance:
+   * - Interior null nodes represent blank parent nodes (unmerged positions)
+   * - These nulls are REQUIRED for proper binary tree structure
+   * - Trailing nulls are stripped by sender (per RFC 9420 requirement)
+   * - ratchetTree parameter is optional; ts-mls can extract from Welcome extension
+   *
+   * @param welcome - The Welcome message from group creator
+   * @param ratchetTree - Optional ratchet tree (normally provided out-of-band)
+   */
+  async processWelcome(
+    welcome: Welcome,
+    ratchetTree?: Uint8Array[]
+  ): Promise<MLSGroupInfo> {
+    this.ensureInitialized();
+
+    try {
+      console.log('📩 [MLS] Processing welcome message');
+
+      if (!this.keyPackage) {
+        throw new Error('No key package available');
+      }
+
+      // RFC 9420: Interior null nodes are valid (represent blank parent nodes)
+      // Trailing nulls are stripped by sender per RFC requirement
+      // Simply pass the tree as-is to ts-mls joinGroup()
+
+      if (ratchetTree && Array.isArray(ratchetTree)) {
+        const nullCount = ratchetTree.filter(n => n === null).length;
+        console.log(`🔍 [MLS] Ratchet tree received: ${ratchetTree.length} nodes (${nullCount} interior nulls)`);
+
+        // DEBUG: Log structure of each node
+        console.group('🔍 [MLS Debug] Ratchet Tree Structure');
+        ratchetTree.forEach((node, i) => {
+          if (node === null) {
+            console.log(`  Node ${i}: NULL`);
+          } else {
+            console.log(`  Node ${i}:`, {
+              type: typeof node,
+              isObject: typeof node === 'object',
+              hasNodeType: node && typeof node === 'object' && 'nodeType' in node,
+              nodeType: (node as any)?.nodeType,
+              keys: node && typeof node === 'object' ? Object.keys(node).slice(0, 5) : 'n/a'
+            });
+          }
+        });
+        console.groupEnd();
+      }
+
+      const groupState = await joinGroup(
+        welcome,
+        this.keyPackage.publicPackage,
+        this.keyPackage.privatePackage,
+        emptyPskIndex,
+        this.cipherSuite!,
+        ratchetTree as any  // Pass as-is - nulls are valid
+      );
+
+      const groupId = new TextDecoder().decode(groupState.groupContext.groupId);
+      this.groups.set(groupId, groupState);
+
+      // Extract member identities from ratchet tree
+      const members = this.extractMembersFromState(groupState);
+
+      const groupInfo: MLSGroupInfo = {
+        groupId: groupState.groupContext.groupId,
+        members,
+        epoch: groupState.groupContext.epoch,
+      };
+
+      console.log(`✅ [MLS] Welcome processed, joined group: ${groupId}`);
+      return groupInfo;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to process welcome:', error);
+      throw new Error(`Welcome processing failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Encrypt a message for a group
+   */
+  async encryptMessage(groupId: string, plaintext: string): Promise<MLSMessageEnvelope> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`🔒 [MLS] Encrypting message for group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      const plaintextBytes = new TextEncoder().encode(plaintext);
+
+      // Create application message
+      const result = await createApplicationMessage(
+        groupState,
+        plaintextBytes,
+        this.cipherSuite!
+      );
+
+      // Update group state (for key ratcheting)
+      this.groups.set(groupId, result.newState);
+
+      // Encode the private message
+      const encoded = encodeMlsMessage({
+        privateMessage: result.privateMessage,
+        wireformat: 'mls_private_message',
+        version: 'mls10',
       });
 
-      this.initialized = true;
-      console.log("✅ [MLS] Initialized successfully");
-    } catch (error) {
-      console.error("❌ [MLS] Initialization failed:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate a new key package
-   */
-  private async generateKeyPackage(): Promise<MLSKeyPackage> {
-    console.log("🔑 [MLS] Generating key package...");
-
-    // Generate ECDH key pair for MLS
-    const keyPair = await crypto.subtle.generateKey(
-      {
-        name: "ECDH",
-        namedCurve: "P-256",
-      },
-      true,
-      ["deriveKey"],
-    );
-
-    this.privateKey = keyPair.privateKey;
-
-    const keyPackage: MLSKeyPackage = {
-      keyId: Date.now(),
-      publicKey: keyPair.publicKey,
-      credential: "self-credential",
-      capabilities: ["encrypt", "decrypt"],
-      lifetime: 86400000, // 24 hours
-    };
-
-    console.log("✅ [MLS] Key package generated");
-    return keyPackage;
-  }
-
-  /**
-   * Add a member to the group
-   */
-  async addMember(memberId: string, keyPackage: MLSKeyPackage): Promise<void> {
-    console.log(`👥 [MLS] Adding member: ${memberId}`);
-
-    if (this.members.has(memberId)) {
-      throw new Error(`Member ${memberId} already exists`);
-    }
-
-    // Add to members map
-    this.members.set(memberId, keyPackage);
-
-    // Add to tree
-    const newNode: MLSNode = {
-      nodeId: this.tree.length,
-      publicKey: keyPackage.publicKey,
-      credential: keyPackage.credential,
-      isLeaf: true,
-    };
-
-    this.tree.push(newNode);
-
-    // Increment epoch
-    this.epoch++;
-
-    console.log(`✅ [MLS] Member ${memberId} added successfully`);
-  }
-
-  /**
-   * Remove a member from the group
-   */
-  async removeMember(memberId: string): Promise<void> {
-    console.log(`👥 [MLS] Removing member: ${memberId}`);
-
-    if (!this.members.has(memberId)) {
-      throw new Error(`Member ${memberId} not found`);
-    }
-
-    // Remove from members map
-    this.members.delete(memberId);
-
-    // Remove from tree (simplified - in real MLS this is more complex)
-    const memberIndex = Array.from(this.members.keys()).indexOf(memberId);
-    if (memberIndex >= 0 && memberIndex < this.tree.length) {
-      this.tree.splice(memberIndex, 1);
-    }
-
-    // Increment epoch
-    this.epoch++;
-
-    console.log(`✅ [MLS] Member ${memberId} removed successfully`);
-  }
-
-  /**
-   * Encrypt a message for the group
-   */
-  async encryptMessage(
-    message: string,
-    senderId: string = "self",
-  ): Promise<MLSMessageEnvelope> {
-    console.log(`🔒 [MLS] Encrypting message from ${senderId}`);
-
-    if (!this.initialized) {
-      throw new Error("MLS manager not initialized");
-    }
-
-    if (!this.members.has(senderId)) {
-      throw new Error(`Sender ${senderId} not in group`);
-    }
-
-    // Generate a random key for this message
-    const messageKey = await crypto.subtle.generateKey(
-      {
-        name: "AES-GCM",
-        length: 256,
-      },
-      true,
-      ["encrypt", "decrypt"],
-    );
-
-    // Encrypt the message
-    const plaintext = new TextEncoder().encode(message);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-
-    const ciphertext = await crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv: iv,
-      },
-      messageKey,
-      plaintext,
-    );
-
-    // Create envelope
     const envelope: MLSMessageEnvelope = {
-      groupId: this.groupId,
-      ciphertext: new Uint8Array(ciphertext),
-      epoch: this.epoch,
-      senderIndex: Array.from(this.members.keys()).indexOf(senderId),
+        groupId: new TextEncoder().encode(groupId),
+        ciphertext: encoded,
       timestamp: Date.now(),
     };
 
-    console.log(`✅ [MLS] Message encrypted successfully`);
+      console.log('✅ [MLS] Message encrypted');
     return envelope;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to encrypt message:', error);
+      throw new Error(`Message encryption failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
-   * Decrypt a message from the group
+   * Decrypt a message from a group
    */
   async decryptMessage(envelope: MLSMessageEnvelope): Promise<string> {
-    console.log(`🔓 [MLS] Decrypting message`);
+    this.ensureInitialized();
 
-    if (!this.initialized) {
-      throw new Error("MLS manager not initialized");
-    }
-
-    // Verify group ID
-    if (!this.arraysEqual(envelope.groupId, this.groupId)) {
-      throw new Error("Invalid group ID");
-    }
-
-    // Verify epoch
-    if (envelope.epoch !== this.epoch) {
-      console.warn(
-        `[MLS] Epoch mismatch: expected ${this.epoch}, got ${envelope.epoch}`,
-      );
-    }
-
-    // For this simplified implementation, we'll use a placeholder decryption
-    // In real MLS, we would derive the message key from the group state
     try {
-      // Create a dummy key for decryption (this is a simplified implementation)
-      const messageKey = await crypto.subtle.generateKey(
-        {
-          name: "AES-GCM",
-          length: 256,
-        },
-        true,
-        ["encrypt", "decrypt"],
+      const groupId = new TextDecoder().decode(envelope.groupId);
+      console.log(`🔓 [MLS] Decrypting message for group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      // Decode the message
+      const decoded = decodeMlsMessage(envelope.ciphertext, 0);
+      if (!decoded) {
+        throw new Error('Failed to decode message');
+      }
+
+      const [decodedMessage] = decoded;
+      if (decodedMessage.wireformat !== 'mls_private_message') {
+        throw new Error('Expected private message');
+      }
+
+      // Process the private message
+      const result = await processPrivateMessage(
+        groupState,
+        decodedMessage.privateMessage,
+        emptyPskIndex,
+        this.cipherSuite!
       );
 
-      // For this demo, we'll return a placeholder message
-      // In a real implementation, we would properly decrypt using the group state
-      const message = `Decrypted message from sender ${envelope.senderIndex}`;
-      console.log(`✅ [MLS] Message decrypted successfully`);
-      return message;
+      // Update group state
+      this.groups.set(groupId, result.newState);
+
+      if (result.kind !== 'applicationMessage') {
+        throw new Error('Expected application message');
+      }
+
+      const plaintext = new TextDecoder().decode(result.message);
+
+      console.log('✅ [MLS] Message decrypted');
+      return plaintext;
     } catch (error) {
-      console.error("❌ [MLS] Decryption failed:", error);
-      throw new Error("Message decryption failed");
+      console.error('❌ [MLS] Failed to decrypt message:', error);
+      throw new Error(`Decryption failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Update the group keys (key rotation)
+   */
+  async updateKey(groupId: string): Promise<any> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`🔄 [MLS] Performing key rotation for group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      // Create update commit (forces path update)
+      const commitResult = await createCommit(
+        { state: groupState, cipherSuite: this.cipherSuite! },
+        {} // Empty options - ts-mls will handle path update automatically
+      );
+
+      // Update group state
+      this.groups.set(groupId, commitResult.newState);
+
+      console.log(
+        `✅ [MLS] Key rotation successful, new epoch: ${commitResult.newState.groupContext.epoch}`
+      );
+
+      // Return the raw commit object for other members to process
+      return commitResult.commit;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to update key:', error);
+      throw new Error(`Key update failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Process a commit message (key rotation, member changes)
+   *
+   * RFC 9420 Section 12.1.8:
+   * - Update commits (key rotation) → PrivateMessage
+   * - Add/Remove commits → PublicMessage (for existing group members)
+   *
+   * This implementation handles both types based on wireformat.
+   */
+  async processCommit(groupId: string, commit: any): Promise<void> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`⚙️ [MLS] Processing commit for group: ${groupId}`);
+      console.log(`🔍 [MLS Debug] Commit wireformat: ${commit.wireformat}`);
+
+      // DETAILED DEBUG LOGGING
+      console.group('🔍 [MLS Debug] Full Commit Structure');
+      console.log('commit keys:', Object.keys(commit));
+      console.log('commit.wireformat:', commit.wireformat);
+      console.log('commit.publicMessage:', commit.publicMessage);
+      console.log('commit.privateMessage:', commit.privateMessage);
+
+      // Log proposals if present
+      if (commit.publicMessage?.content) {
+        console.log('publicMessage.content:', commit.publicMessage.content);
+        console.log('publicMessage.content.proposals:', commit.publicMessage.content.proposals);
+        if (commit.publicMessage.content.proposals) {
+          commit.publicMessage.content.proposals.forEach((prop: any, i: number) => {
+            console.log(`  Proposal ${i}:`, {
+              proposalType: prop.proposalType,
+              keys: Object.keys(prop),
+              full: prop
+            });
+          });
+        }
+      }
+      console.groupEnd();
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      let result;
+
+      // RFC 9420: Route based on message type
+      if (commit.wireformat === 'mls_public_message') {
+        // Public messages (add/remove member commits)
+        console.log('🔍 [MLS Debug] Processing as PUBLIC message (add/remove)...');
+        const publicMessage = commit.publicMessage || commit;
+
+        result = await processPublicMessage(
+          groupState,
+          publicMessage,
+          emptyPskIndex,
+          this.cipherSuite!
+        );
+      } else if (commit.wireformat === 'mls_private_message') {
+        // Private messages (update/key rotation commits)
+        console.log('🔍 [MLS Debug] Processing as PRIVATE message (update)...');
+        const privateMessage = commit.privateMessage || commit;
+
+        result = await processPrivateMessage(
+          groupState,
+          privateMessage,
+          emptyPskIndex,
+          this.cipherSuite!
+        );
+      } else {
+        throw new Error(`Unknown commit wireformat: ${commit.wireformat}`);
+      }
+
+      // Update group state
+      this.groups.set(groupId, result.newState);
+
+      console.log(`✅ [MLS] Commit processed, epoch: ${result.newState.groupContext.epoch}`);
+    } catch (error) {
+      console.error('❌ [MLS] Failed to process commit:', error);
+      console.error('❌ [MLS Debug] Error details:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('❌ [MLS Debug] Error message:', error instanceof Error ? error.message : String(error));
+      throw new Error(`Commit processing failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Remove members from a group
+   */
+  async removeMembers(groupId: string, memberIndices: number[]): Promise<Uint8Array> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`➖ [MLS] Removing ${memberIndices.length} member(s) from group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      // Create remove proposals
+      const removeProposals: Proposal[] = memberIndices.map((index) => ({
+        proposalType: 'remove',
+        remove: {
+          removed: index, // ts-mls expects number, not BigInt
+        },
+      }));
+
+      // Create commit with remove proposals
+      const commitResult = await createCommit(
+        { state: groupState, cipherSuite: this.cipherSuite! },
+        { extraProposals: removeProposals }
+      );
+
+      // Update group state
+      this.groups.set(groupId, commitResult.newState);
+
+      // Encode the commit
+      const encodedCommit = encodeMlsMessage({
+        publicMessage: (commitResult as any).publicMessage!,
+        wireformat: 'mls_public_message',
+        version: 'mls10',
+      });
+
+      console.log('✅ [MLS] Members removed');
+      return encodedCommit;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to remove members:', error);
+      throw new Error(`Member removal failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get list of groups
+   */
+  async getGroups(): Promise<Uint8Array[]> {
+    this.ensureInitialized();
+
+    try {
+      const groupIds = Array.from(this.groups.keys()).map((id) =>
+        new TextEncoder().encode(id)
+      );
+      return groupIds;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to get groups:', error);
+      throw new Error(`Getting groups failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Export group state for persistence
+   */
+  async exportGroupState(groupId: string): Promise<any> {
+    this.ensureInitialized();
+
+    try {
+      console.log(`💾 [MLS] Exporting state for group: ${groupId}`);
+
+      const groupState = this.groups.get(groupId);
+      if (!groupState) {
+        throw new Error(`Group ${groupId} not found`);
+      }
+
+      // Note: ts-mls ClientState contains non-serializable crypto keys
+      // This is a simplified export - in production you'd need proper serialization
+      const exportData = {
+        groupId,
+        epoch: groupState.groupContext.epoch.toString(),
+        exported: Date.now(),
+        // Add other serializable fields as needed
+      };
+
+      console.log('✅ [MLS] Group state exported');
+      return exportData;
+    } catch (error) {
+      console.error('❌ [MLS] Failed to export group state:', error);
+      throw new Error(`Group state export failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get user ID
+   */
+  getUserId(): string {
+    return this.userId;
   }
 
   /**
    * Get group information
    */
-  getGroupInfo(): MLSGroupInfo {
+  async getGroupKeyInfo(groupId: string): Promise<any> {
+    const groupState = this.groups.get(groupId);
+
+    if (!groupState) {
+      return null;
+    }
+
+    const members = this.extractMembersFromState(groupState);
+
     return {
-      groupId: this.groupId,
-      members: Array.from(this.members.keys()),
-      epoch: this.epoch,
-      tree: this.tree,
+      groupId,
+      epoch: groupState.groupContext.epoch.toString(),
+      members,
+      cipherSuite: 'MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519',
+      treeHash: this.bytesToHex(groupState.groupContext.treeHash).substring(0, 16),
     };
   }
 
   /**
-   * Get member count
+   * Clean up resources
    */
-  getMemberCount(): number {
-    return this.members.size;
-  }
-
-  /**
-   * Get current epoch
-   */
-  getCurrentEpoch(): bigint {
-    return this.epoch;
-  }
-
-  /**
-   * Export key package for sharing
-   */
-  async exportKeyPackage(): Promise<MLSKeyPackage> {
-    if (!this.initialized) {
-      throw new Error("MLS manager not initialized");
-    }
-
-    const selfKeyPackage = this.members.get("self");
-    if (!selfKeyPackage) {
-      throw new Error("No key package found");
-    }
-
-    return selfKeyPackage;
-  }
-
-  /**
-   * Import key package from another member
-   */
-  async importKeyPackage(keyPackage: MLSKeyPackage): Promise<void> {
-    console.log("📥 [MLS] Importing key package...");
-
-    // Validate key package
-    if (!keyPackage.publicKey || !keyPackage.credential) {
-      throw new Error("Invalid key package");
-    }
-
-    console.log("✅ [MLS] Key package imported successfully");
-  }
-
-  /**
-   * Create a commit for group updates
-   */
-  async createCommit(proposals: MLSProposal[]): Promise<MLSCommit> {
-    console.log("📝 [MLS] Creating commit...");
-
-    const commit: MLSCommit = {
-      proposals,
-      path: {
-        leafNode: this.tree[0], // Simplified
-        nodes: this.tree.slice(1),
-      },
-    };
-
-    console.log("✅ [MLS] Commit created successfully");
-    return commit;
-  }
-
-  /**
-   * Process a commit
-   */
-  async processCommit(commit: MLSCommit): Promise<void> {
-    console.log("🔄 [MLS] Processing commit...");
-
-    for (const proposal of commit.proposals) {
-      switch (proposal.type) {
-        case "add":
-          if (proposal.keyPackage) {
-            await this.addMember(`member-${Date.now()}`, proposal.keyPackage);
-          }
-          break;
-        case "remove":
-          if (proposal.removedIndex !== undefined) {
-            const memberId = Array.from(this.members.keys())[
-              proposal.removedIndex
-            ];
-            if (memberId) {
-              await this.removeMember(memberId);
-            }
-          }
-          break;
-        case "update":
-          // Handle update proposal
-          break;
-      }
-    }
-
-    console.log("✅ [MLS] Commit processed successfully");
-  }
-
-  /**
-   * Utility function to compare Uint8Arrays
-   */
-  private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Cleanup resources
-   */
-  async cleanup(): Promise<void> {
-    console.log("🧹 [MLS] Cleaning up...");
-
-    this.members.clear();
-    this.tree = [];
-    this.privateKey = null;
+  async destroy(): Promise<void> {
+    this.groups.clear();
+    this.keyPackage = null;
     this.initialized = false;
+    console.log('✅ [MLS] Manager destroyed');
+  }
 
-    console.log("✅ [MLS] Cleanup completed");
+  /**
+   * Extract member identities from group state
+   */
+  private extractMembersFromState(state: ClientState): string[] {
+    const members: string[] = [];
+
+    try {
+      // Iterate through ratchet tree to find leaf nodes
+      for (let i = 0; i < state.ratchetTree.length; i++) {
+        const node = state.ratchetTree[i];
+        if (node && (node as any).nodeType === 'leaf' && (node as any).leaf?.credential) {
+          const identity = new TextDecoder().decode((node as any).leaf.credential.identity);
+          members.push(identity);
+        }
+      }
+    } catch (error) {
+      console.warn('Could not extract members:', error);
+      members.push(this.userId); // At least include self
+    }
+
+    return members;
+  }
+
+  /**
+   * Convert bytes to hex string
+   */
+  private bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  /**
+   * Ensure the manager is initialized
+   */
+  private ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new Error('MLS Manager not initialized. Call initialize() first.');
+    }
   }
 }
 
-// Factory function for creating MLS managers
-export const createMLSManager = async (
-  groupId?: Uint8Array,
-): Promise<MLSManager> => {
-  const manager = new MLSManager(groupId);
-  await manager.initialize();
-  return manager;
-};
-
-// Utility functions for MLS
-export const generateMLSGroupId = (): Uint8Array => {
-  return crypto.getRandomValues(new Uint8Array(16));
-};
-
-export const createMLSProposal = (
-  type: "add" | "remove" | "update",
-  keyPackage?: MLSKeyPackage,
-  removedIndex?: number,
-): MLSProposal => {
-  return {
-    type,
-    keyPackage,
-    removedIndex,
-  };
-};
-
-// Demonstrate MLS group messaging
-export const demonstrateMLS = async () => {
-  try {
-    console.log("🚀 Starting MLS demonstration...");
-
-    // Create MLS managers for Alice, Bob, and Charlie
-    const aliceManager = await createMLSManager();
-    const bobManager = await createMLSManager();
-    const charlieManager = await createMLSManager();
-
-    console.log("✅ MLS managers created");
-
-    // Export key packages
-    const aliceKeyPackage = await aliceManager.exportKeyPackage();
-    const bobKeyPackage = await bobManager.exportKeyPackage();
-    const charlieKeyPackage = await charlieManager.exportKeyPackage();
-
-    console.log("✅ Key packages exported");
-
-    // Add members to Alice's group
-    await aliceManager.addMember("bob", bobKeyPackage);
-    await aliceManager.addMember("charlie", charlieKeyPackage);
-
-    console.log("✅ Members added to group");
-
-    // Send messages
-    const message1 = await aliceManager.encryptMessage("Hello group!", "self");
-    const message2 = await aliceManager.encryptMessage("This is MLS!", "self");
-
-    console.log("✅ Messages encrypted");
-
-    // Decrypt messages (simplified - in real MLS this would be more complex)
-    const decrypted1 = await aliceManager.decryptMessage(message1);
-    const decrypted2 = await aliceManager.decryptMessage(message2);
-
-    console.log("✅ Messages decrypted");
-
-    const result = {
-      success: true,
-      groupInfo: aliceManager.getGroupInfo(),
-      messagesExchanged: 2,
-      memberCount: aliceManager.getMemberCount(),
-      currentEpoch: aliceManager.getCurrentEpoch(),
-      demonstration: {
-        groupMessaging: true,
-        forwardSecrecy: true,
-        memberManagement: true,
-        epochUpdates: true,
-      },
-    };
-
-    console.log("✅ MLS demonstration completed successfully");
-    return result;
-  } catch (error) {
-    console.error("❌ MLS demonstration failed:", error);
-    throw error;
-  }
-};
+export default MLSManager;

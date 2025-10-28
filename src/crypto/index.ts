@@ -6,8 +6,12 @@ export * from "./file-encryption";
 export * from "./signal-protocol";
 export * from "./double-ratchet";
 export * from "./random-generation";
+
+// RFC-compliant MLS and SFrame implementations
 export * from "./mls";
+export * from "./mls-codec";
 export * from "./sframe";
+
 export * from "./types";
 export * from "./utils";
 
