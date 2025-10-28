@@ -34,7 +34,9 @@ class MLSGroupDemo {
   constructor(groupId: string, creatorId: string) {
     this.groupId = groupId;
     this.creator = creatorId;
-    console.log(`🏗️ [MLS Demo] Created group '${groupId}' with creator '${creatorId}'`);
+    console.log(
+      `🏗️ [MLS Demo] Created group '${groupId}' with creator '${creatorId}'`,
+    );
   }
 
   /**
@@ -71,7 +73,7 @@ class MLSGroupDemo {
 
     console.log(`📝 [MLS Demo] Creating group with creator: ${this.creator}`);
     const groupInfo = await creator.manager.createGroup(this.groupId);
-    
+
     console.log(`✅ [MLS Demo] Group created:`, {
       groupId: new TextDecoder().decode(groupInfo.groupId),
       members: groupInfo.members,
@@ -88,9 +90,9 @@ class MLSGroupDemo {
       throw new Error(`Creator ${this.creator} not found`);
     }
 
-    console.log(`➕ [MLS Demo] Adding members: ${memberIds.join(', ')}`);
+    console.log(`➕ [MLS Demo] Adding members: ${memberIds.join(", ")}`);
 
-    const keyPackages = memberIds.map(id => {
+    const keyPackages = memberIds.map((id) => {
       const user = this.users.get(id);
       if (!user) {
         throw new Error(`User ${id} not found`);
@@ -98,9 +100,14 @@ class MLSGroupDemo {
       return user.keyPackage;
     });
 
-    const addResult = await creator.manager.addMembers(this.groupId, keyPackages);
-    
-    console.log(`✅ [MLS Demo] Add commit created, epoch: ${addResult.commit?.epoch || 'unknown'}`);
+    const addResult = await creator.manager.addMembers(
+      this.groupId,
+      keyPackages,
+    );
+
+    console.log(
+      `✅ [MLS Demo] Add commit created, epoch: ${addResult.commit?.epoch || "unknown"}`,
+    );
 
     // Send welcome messages to new members
     for (const memberId of memberIds) {
@@ -108,8 +115,11 @@ class MLSGroupDemo {
       if (!member) continue;
 
       console.log(`📩 [MLS Demo] Sending welcome to ${memberId}`);
-      const groupInfo = await member.manager.processWelcome(addResult.welcome, addResult.ratchetTree);
-      
+      const groupInfo = await member.manager.processWelcome(
+        addResult.welcome,
+        addResult.ratchetTree,
+      );
+
       console.log(`✅ [MLS Demo] ${memberId} joined group:`, {
         groupId: new TextDecoder().decode(groupInfo.groupId),
         members: groupInfo.members,
@@ -120,7 +130,9 @@ class MLSGroupDemo {
     // Process commit for existing members
     for (const [userId, user] of this.users) {
       if (userId !== this.creator) {
-        console.log(`⚙️ [MLS Demo] Processing commit for existing member: ${userId}`);
+        console.log(
+          `⚙️ [MLS Demo] Processing commit for existing member: ${userId}`,
+        );
         await user.manager.processCommit(this.groupId, addResult.commit);
       }
     }
@@ -140,7 +152,7 @@ class MLSGroupDemo {
     console.log(`💬 [MLS Demo] ${senderId} sending message: "${message}"`);
 
     const envelope = await sender.manager.encryptMessage(this.groupId, message);
-    
+
     console.log(`🔒 [MLS Demo] Message encrypted:`, {
       groupId: new TextDecoder().decode(envelope.groupId),
       timestamp: new Date(envelope.timestamp).toISOString(),
@@ -170,7 +182,7 @@ class MLSGroupDemo {
     console.log(`🔄 [MLS Demo] ${initiatorId} initiating key rotation`);
 
     const updateCommit = await initiator.manager.updateKey(this.groupId);
-    
+
     console.log(`✅ [MLS Demo] Key rotation commit created`);
 
     // All members process the update commit
@@ -191,10 +203,10 @@ class MLSGroupDemo {
       throw new Error(`Creator ${this.creator} not found`);
     }
 
-    console.log(`➖ [MLS Demo] Removing members: ${memberIds.join(', ')}`);
+    console.log(`➖ [MLS Demo] Removing members: ${memberIds.join(", ")}`);
 
     // Get member indices (simplified - in real implementation you'd track indices properly)
-    const memberIndices = memberIds.map(id => {
+    const memberIndices = memberIds.map((id) => {
       const user = this.users.get(id);
       if (!user) {
         throw new Error(`User ${id} not found`);
@@ -203,8 +215,11 @@ class MLSGroupDemo {
       return Array.from(this.users.keys()).indexOf(id);
     });
 
-    const removeCommit = await creator.manager.removeMembers(this.groupId, memberIndices);
-    
+    const removeCommit = await creator.manager.removeMembers(
+      this.groupId,
+      memberIndices,
+    );
+
     console.log(`✅ [MLS Demo] Remove commit created`);
 
     // Process commit for remaining members
@@ -234,7 +249,7 @@ class MLSGroupDemo {
     }
 
     const groupInfo = await creator.manager.getGroupKeyInfo(this.groupId);
-    
+
     return {
       groupId: this.groupId,
       members: Array.from(this.users.keys()),
@@ -257,7 +272,7 @@ class MLSGroupDemo {
     const keyPackage = creator.keyPackage.publicPackage;
     const encoded = encodeKeyPackage(keyPackage);
     const decoded = decodeKeyPackage(encoded);
-    
+
     console.log(`✅ [MLS Demo] Key package codec test passed`);
 
     // Test welcome message encoding/decoding
@@ -294,7 +309,7 @@ class MLSGroupDemo {
 // Main demonstration function
 async function demonstrateMLSAdvanced(): Promise<void> {
   console.log("🚀 Starting MLS Advanced Demonstration");
-  console.log("=" .repeat(50));
+  console.log("=".repeat(50));
 
   const demo = new MLSGroupDemo("advanced-group", "alice");
 
@@ -318,7 +333,10 @@ async function demonstrateMLSAdvanced(): Promise<void> {
     console.log("\n📋 Step 4: Sending messages");
     await demo.sendMessage("alice", "Welcome to our secure group! 🔒");
     await demo.sendMessage("bob", "Thanks Alice! This is amazing! 🎉");
-    await demo.sendMessage("charlie", "The encryption is working perfectly! ✨");
+    await demo.sendMessage(
+      "charlie",
+      "The encryption is working perfectly! ✨",
+    );
     await demo.sendMessage("david", "Forward secrecy is incredible! 🛡️");
 
     // Step 5: Key rotation
@@ -348,7 +366,7 @@ async function demonstrateMLSAdvanced(): Promise<void> {
     console.log("📊 Final Group State:", finalInfo);
 
     console.log("\n🎉 MLS Advanced Demonstration completed successfully!");
-    console.log("=" .repeat(50));
+    console.log("=".repeat(50));
     console.log("✅ Group creation and management");
     console.log("✅ Member addition and removal");
     console.log("✅ End-to-end encrypted messaging");
@@ -356,7 +374,6 @@ async function demonstrateMLSAdvanced(): Promise<void> {
     console.log("✅ Commit processing and synchronization");
     console.log("✅ Codec functionality");
     console.log("✅ RFC 9420 compliance");
-
   } catch (error) {
     console.error("❌ MLS Advanced Demonstration failed:", error);
   } finally {

@@ -28,7 +28,7 @@ export class SFrameManager {
   private initialized: boolean = false;
 
   constructor() {
-    console.log('🎥 [SFrame] Manager created');
+    console.log("🎥 [SFrame] Manager created");
   }
 
   /**
@@ -36,21 +36,23 @@ export class SFrameManager {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      console.warn('[SFrame] Already initialized');
+      console.warn("[SFrame] Already initialized");
       return;
     }
 
     try {
-      console.log('🔐 [SFrame] Initializing...');
+      console.log("🔐 [SFrame] Initializing...");
 
       // Generate initial key
       await this.generateKey(0);
 
       this.initialized = true;
-      console.log('✅ [SFrame] Initialized successfully');
+      console.log("✅ [SFrame] Initialized successfully");
     } catch (error) {
-      console.error('❌ [SFrame] Initialization failed:', error);
-      throw new Error(`SFrame initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("❌ [SFrame] Initialization failed:", error);
+      throw new Error(
+        `SFrame initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -64,11 +66,11 @@ export class SFrameManager {
       // Generate AES-GCM key (128-bit for low overhead)
       const key = await crypto.subtle.generateKey(
         {
-          name: 'AES-GCM',
+          name: "AES-GCM",
           length: 128, // 128-bit for performance, 256-bit for maximum security
         },
         false, // Not extractable for security
-        ['encrypt', 'decrypt']
+        ["encrypt", "decrypt"],
       );
 
       // Generate salt for key derivation
@@ -86,7 +88,9 @@ export class SFrameManager {
       return sframeKey;
     } catch (error) {
       console.error(`❌ [SFrame] Key generation failed:`, error);
-      throw new Error(`SFrame key generation failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `SFrame key generation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -98,52 +102,54 @@ export class SFrameManager {
   async deriveKeyFromMLSSecret(
     mlsSecret: ArrayBuffer,
     keyId: number,
-    context: string = 'SFrame' // Legacy parameter, ignored for RFC compliance
+    context: string = "SFrame", // Legacy parameter, ignored for RFC compliance
   ): Promise<SFrameKey> {
     try {
-      console.log(`🔗 [SFrame] Deriving key ${keyId} from MLS secret (RFC 9605 Section 5.2)...`);
+      console.log(
+        `🔗 [SFrame] Deriving key ${keyId} from MLS secret (RFC 9605 Section 5.2)...`,
+      );
 
       // RFC 9605 Section 5.2: Use specific labels for MLS-based derivation
-      const secretLabel = new TextEncoder().encode('SFrame 1.0 Secret');
-      const saltLabel = new TextEncoder().encode('SFrame 1.0 Salt');
+      const secretLabel = new TextEncoder().encode("SFrame 1.0 Secret");
+      const saltLabel = new TextEncoder().encode("SFrame 1.0 Salt");
 
       // Import MLS secret as key material
       const baseKey = await crypto.subtle.importKey(
-        'raw',
+        "raw",
         mlsSecret,
-        'HKDF',
+        "HKDF",
         false,
-        ['deriveKey', 'deriveBits']
+        ["deriveKey", "deriveBits"],
       );
 
       // Derive salt using HKDF (RFC 9605)
       const derivedSaltBits = await crypto.subtle.deriveBits(
         {
-          name: 'HKDF',
-          hash: 'SHA-256',
+          name: "HKDF",
+          hash: "SHA-256",
           salt: new Uint8Array(0), // Empty salt for salt derivation
           info: saltLabel,
         },
         baseKey,
-        128 // 128 bits = 16 bytes
+        128, // 128 bits = 16 bytes
       );
       const salt = new Uint8Array(derivedSaltBits);
 
       // Derive AES-GCM key using HKDF with RFC 9605 label
       const key = await crypto.subtle.deriveKey(
         {
-          name: 'HKDF',
-          hash: 'SHA-256',
+          name: "HKDF",
+          hash: "SHA-256",
           salt: new Uint8Array(0), // Empty salt for key derivation
           info: secretLabel,
         },
         baseKey,
         {
-          name: 'AES-GCM',
+          name: "AES-GCM",
           length: 128,
         },
         false,
-        ['encrypt', 'decrypt']
+        ["encrypt", "decrypt"],
       );
 
       const sframeKey: SFrameKey = {
@@ -153,12 +159,16 @@ export class SFrameManager {
       };
 
       this.keys.set(keyId, sframeKey);
-      console.log(`✅ [SFrame] Key ${keyId} derived from MLS (RFC 9605 compliant)`);
+      console.log(
+        `✅ [SFrame] Key ${keyId} derived from MLS (RFC 9605 compliant)`,
+      );
 
       return sframeKey;
     } catch (error) {
       console.error(`❌ [SFrame] Key derivation failed:`, error);
-      throw new Error(`SFrame key derivation failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `SFrame key derivation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -190,7 +200,11 @@ export class SFrameManager {
       const counterBytes = new Uint8Array(12);
       const counterView = new DataView(counterBytes.buffer);
       // Store frame counter in last 8 bytes (big-endian uint64-like)
-      counterView.setUint32(4, Math.floor(this.frameCounter / 0x100000000), false);
+      counterView.setUint32(
+        4,
+        Math.floor(this.frameCounter / 0x100000000),
+        false,
+      );
       counterView.setUint32(8, this.frameCounter & 0xffffffff, false);
 
       // SFrame header: 1 byte for key ID + frame counter encoding
@@ -208,18 +222,20 @@ export class SFrameManager {
       // Encrypt the frame with header authentication (RFC 9605 Section 4.3)
       const ciphertext = await crypto.subtle.encrypt(
         {
-          name: 'AES-GCM',
+          name: "AES-GCM",
           iv,
           additionalData: header, // RFC 9605: Header included in AAD
           tagLength: 128, // 128-bit authentication tag
         },
         sframeKey.key,
-        frameData
+        frameData,
       );
 
       // RFC 9605: SFrame format = header + ciphertext (IV is derived, not transmitted)
       // Note: We include IV for now for simplicity, but RFC specifies deriving it from counter
-      const encrypted = new Uint8Array(header.length + iv.length + ciphertext.byteLength);
+      const encrypted = new Uint8Array(
+        header.length + iv.length + ciphertext.byteLength,
+      );
       encrypted.set(header, 0);
       encrypted.set(iv, header.length);
       encrypted.set(new Uint8Array(ciphertext), header.length + iv.length);
@@ -229,8 +245,10 @@ export class SFrameManager {
 
       return encrypted;
     } catch (error) {
-      console.error('❌ [SFrame] Frame encryption failed:', error);
-      throw new Error(`SFrame encryption failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("❌ [SFrame] Frame encryption failed:", error);
+      throw new Error(
+        `SFrame encryption failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -244,7 +262,10 @@ export class SFrameManager {
       // Parse SFrame header (5 bytes: 1 byte key ID + 4 bytes frame counter)
       const header = encryptedFrame.slice(0, 5);
       const keyId = header[0];
-      const frameCount = new DataView(header.buffer, header.byteOffset).getUint32(1, false);
+      const frameCount = new DataView(
+        header.buffer,
+        header.byteOffset,
+      ).getUint32(1, false);
 
       // Get the key
       const sframeKey = this.keys.get(keyId);
@@ -272,19 +293,21 @@ export class SFrameManager {
       // Decrypt the frame with header authentication (RFC 9605 Section 4.3)
       const plaintext = await crypto.subtle.decrypt(
         {
-          name: 'AES-GCM',
+          name: "AES-GCM",
           iv,
           additionalData: header, // RFC 9605: Header included in AAD
           tagLength: 128,
         },
         sframeKey.key,
-        ciphertext
+        ciphertext,
       );
 
       return plaintext;
     } catch (error) {
-      console.error('❌ [SFrame] Frame decryption failed:', error);
-      throw new Error(`SFrame decryption failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("❌ [SFrame] Frame decryption failed:", error);
+      throw new Error(
+        `SFrame decryption failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -310,7 +333,7 @@ export class SFrameManager {
           // Forward the encrypted frame
           controller.enqueue(encodedFrame);
         } catch (error) {
-          console.error('[SFrame] Encrypt transform error:', error);
+          console.error("[SFrame] Encrypt transform error:", error);
           // Forward unencrypted frame on error (fallback)
           controller.enqueue(encodedFrame);
         }
@@ -340,7 +363,7 @@ export class SFrameManager {
           // Forward the decrypted frame
           controller.enqueue(encodedFrame);
         } catch (error) {
-          console.error('[SFrame] Decrypt transform error:', error);
+          console.error("[SFrame] Decrypt transform error:", error);
           // Skip frame on decryption error
           // (better to drop frame than show corrupted video)
         }
@@ -367,8 +390,10 @@ export class SFrameManager {
       console.log(`✅ [SFrame] Key rotated to ${newKeyId}`);
       return newKeyId;
     } catch (error) {
-      console.error('❌ [SFrame] Key rotation failed:', error);
-      throw new Error(`SFrame key rotation failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("❌ [SFrame] Key rotation failed:", error);
+      throw new Error(
+        `SFrame key rotation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -391,7 +416,7 @@ export class SFrameManager {
    */
   resetFrameCounter(): void {
     this.frameCounter = 0;
-    console.log('🔄 [SFrame] Frame counter reset');
+    console.log("🔄 [SFrame] Frame counter reset");
   }
 
   /**
@@ -433,7 +458,7 @@ export class SFrameManager {
     this.keys.clear();
     this.initialized = false;
     this.frameCounter = 0;
-    console.log('✅ [SFrame] Manager destroyed');
+    console.log("✅ [SFrame] Manager destroyed");
   }
 
   /**
@@ -441,7 +466,9 @@ export class SFrameManager {
    */
   private ensureInitialized(): void {
     if (!this.initialized) {
-      throw new Error('SFrame Manager not initialized. Call initialize() first.');
+      throw new Error(
+        "SFrame Manager not initialized. Call initialize() first.",
+      );
     }
   }
 }

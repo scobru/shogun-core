@@ -12,6 +12,9 @@ export * from "./mls";
 export * from "./mls-codec";
 export * from "./sframe";
 
+// PGP/OpenPGP implementation
+export * from "./pgp";
+
 export * from "./types";
 export * from "./utils";
 

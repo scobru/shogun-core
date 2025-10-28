@@ -37,6 +37,14 @@ Il modulo crypto di Shogun Core fornisce funzionalità crittografiche avanzate p
 - Gestione messaggi saltati
 - Serializzazione stato per persistenza
 
+### PGP/OpenPGP (RFC 4880)
+- Generazione coppie di chiavi RSA-4096
+- Crittografia/decrittografia asimmetrica
+- Firma digitale e verifica
+- Gestione chiavi e fingerprint
+- Export/import in formato armored e binary
+- Compatibilità standard OpenPGP
+
 ## 📦 Installazione
 
 ```bash

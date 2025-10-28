@@ -45,15 +45,24 @@ async function testMLS() {
     console.log("✅ Key packages exported");
 
     // Alice adds Bob and Charlie to the group
-    const addResult = await aliceManager.addMembers("test-group", [bobKeyPackage, charlieKeyPackage]);
+    const addResult = await aliceManager.addMembers("test-group", [
+      bobKeyPackage,
+      charlieKeyPackage,
+    ]);
     console.log("✅ Members added to group");
 
     // Send welcome to Bob
-    const bobWelcome = await bobManager.processWelcome(addResult.welcome, addResult.ratchetTree);
+    const bobWelcome = await bobManager.processWelcome(
+      addResult.welcome,
+      addResult.ratchetTree,
+    );
     console.log("✅ Bob joined group:", bobWelcome);
 
     // Send welcome to Charlie
-    const charlieWelcome = await charlieManager.processWelcome(addResult.welcome, addResult.ratchetTree);
+    const charlieWelcome = await charlieManager.processWelcome(
+      addResult.welcome,
+      addResult.ratchetTree,
+    );
     console.log("✅ Charlie joined group:", charlieWelcome);
 
     // Alice processes the commit to update her state
@@ -61,7 +70,10 @@ async function testMLS() {
     console.log("✅ Alice processed commit");
 
     // Test messaging
-    const message1 = await aliceManager.encryptMessage("test-group", "Hello MLS group!");
+    const message1 = await aliceManager.encryptMessage(
+      "test-group",
+      "Hello MLS group!",
+    );
     console.log("✅ Message encrypted");
 
     const decrypted1 = await aliceManager.decryptMessage(message1);
@@ -120,7 +132,7 @@ async function testSFrame() {
     // Export Alice's key for Bob
     const aliceKey = await aliceManager.generateKey(0);
     await bobManager.generateKey(0);
-    
+
     // Set Bob to use Alice's key for decryption
     bobManager.setActiveKey(0);
     console.log("✅ Key shared between Alice and Bob");
@@ -205,13 +217,13 @@ async function testMLSSFrameIntegration() {
     // Create MLS group
     const aliceMLS = new MLSManager("alice");
     const bobMLS = new MLSManager("bob");
-    
+
     await aliceMLS.initialize();
     await bobMLS.initialize();
 
     const groupInfo = await aliceMLS.createGroup("media-group");
     const bobKeyPackage = bobMLS.getKeyPackage();
-    
+
     if (!bobKeyPackage) {
       throw new Error("Failed to get Bob's key package");
     }
@@ -225,25 +237,29 @@ async function testMLSSFrameIntegration() {
     // Create SFrame managers
     const aliceSFrame = new SFrameManager();
     const bobSFrame = new SFrameManager();
-    
+
     await aliceSFrame.initialize();
     await bobSFrame.initialize();
 
     // Derive SFrame keys from MLS group secret
     // Note: In real implementation, you'd get the actual MLS group secret
-    const mockMLSSecret = new TextEncoder().encode("mls-group-secret");
-    
+    const mockMLSSecret = new TextEncoder().encode("mls-group-secret").buffer;
+
     await aliceSFrame.deriveKeyFromMLSSecret(mockMLSSecret, 0);
     await bobSFrame.deriveKeyFromMLSSecret(mockMLSSecret, 0);
 
     console.log("✅ SFrame keys derived from MLS");
 
     // Test media encryption with MLS-derived keys
-    const mediaFrame = new TextEncoder().encode("Secure media frame from MLS group");
+    const mediaFrame = new TextEncoder().encode(
+      "Secure media frame from MLS group",
+    );
     const encryptedFrame = await aliceSFrame.encryptFrame(mediaFrame.buffer);
     const decryptedFrame = await bobSFrame.decryptFrame(encryptedFrame);
 
-    const dataMatches = new TextDecoder().decode(mediaFrame) === new TextDecoder().decode(decryptedFrame);
+    const dataMatches =
+      new TextDecoder().decode(mediaFrame) ===
+      new TextDecoder().decode(decryptedFrame);
 
     const result = {
       success: true,
@@ -277,7 +293,7 @@ async function testCodec() {
     // Create a manager and get key package
     const manager = new MLSManager("test-user");
     await manager.initialize();
-    
+
     const keyPackage = manager.getKeyPackage();
     if (!keyPackage) {
       throw new Error("Failed to get key package");
@@ -286,14 +302,14 @@ async function testCodec() {
     // Test encoding/decoding
     const encoded = encodeKeyPackage(keyPackage.publicPackage);
     const decoded = decodeKeyPackage(encoded);
-    
+
     console.log("✅ Key package encoding/decoding successful");
 
     // Test group creation and encoding
     const groupInfo = await manager.createGroup("codec-test");
     const encodedGroup = encodeRatchetTree([]);
     const decodedGroup = decodeRatchetTree(encodedGroup);
-    
+
     console.log("✅ Ratchet tree encoding/decoding successful");
 
     const result = {
@@ -332,10 +348,7 @@ async function runAllTests() {
   const codecResult = await testCodec();
 
   console.log("\n📊 Final Results:");
-  console.log(
-    "MLS RFC 9420:",
-    mlsResult.success ? "✅ PASSED" : "❌ FAILED",
-  );
+  console.log("MLS RFC 9420:", mlsResult.success ? "✅ PASSED" : "❌ FAILED");
   console.log(
     "SFrame RFC 9605:",
     sframeResult.success ? "✅ PASSED" : "❌ FAILED",
@@ -344,10 +357,7 @@ async function runAllTests() {
     "MLS-SFrame Integration:",
     integrationResult.success ? "✅ PASSED" : "❌ FAILED",
   );
-  console.log(
-    "MLS Codec:",
-    codecResult.success ? "✅ PASSED" : "❌ FAILED",
-  );
+  console.log("MLS Codec:", codecResult.success ? "✅ PASSED" : "❌ FAILED");
 
   const allPassed =
     mlsResult.success &&
@@ -356,9 +366,15 @@ async function runAllTests() {
     codecResult.success;
 
   if (allPassed) {
-    console.log("\n🎉 All MLS and SFrame RFC-compliant tests completed successfully!");
-    console.log("🔒 RFC 9420 MLS: End-to-end encrypted group messaging with forward secrecy");
-    console.log("🎥 RFC 9605 SFrame: Real-time media encryption with low overhead");
+    console.log(
+      "\n🎉 All MLS and SFrame RFC-compliant tests completed successfully!",
+    );
+    console.log(
+      "🔒 RFC 9420 MLS: End-to-end encrypted group messaging with forward secrecy",
+    );
+    console.log(
+      "🎥 RFC 9605 SFrame: Real-time media encryption with low overhead",
+    );
     console.log("🔗 Integration: MLS-derived keys for SFrame media encryption");
     console.log("📦 Codec: Serialization support for MLS messages");
   } else {
