@@ -73,12 +73,14 @@ export interface IdentityRetrievalResult {
  */
 export class CryptoIdentityManager {
   private core: IShogunCore;
+  private db: any; // Database instance
   private pgpManager: PGPManager;
   private mlsManager: MLSManager;
   private sframeManager: SFrameManager;
 
-  constructor(core: IShogunCore) {
+  constructor(core: IShogunCore, db?: any) {
     this.core = core;
+    this.db = db;
     this.pgpManager = new PGPManager();
     this.mlsManager = new MLSManager("default-user");
     this.sframeManager = new SFrameManager();
@@ -244,7 +246,7 @@ export class CryptoIdentityManager {
 
       // Salva su GunDB nel percorso privato dell'utente
       const saveResult = await new Promise<boolean>((resolve, reject) => {
-        this.core.gun
+        this.db.gun
           .user()
           .get("crypto-identities")
           .put(encryptedIdentities, (ack: any) => {
@@ -270,7 +272,7 @@ export class CryptoIdentityManager {
       });
 
       await new Promise<boolean>((resolve, reject) => {
-        this.core.gun
+        this.db.gun
           .user()
           .get("crypto-identities-hash")
           .put(identitiesHash, (ack: any) => {
@@ -331,7 +333,7 @@ export class CryptoIdentityManager {
       // Recupera le identità criptate da GunDB
       const encryptedIdentities = await new Promise<string>(
         (resolve, reject) => {
-          this.core.gun
+          this.db.gun
             .user()
             .get("crypto-identities")
             .once((data: any) => {
@@ -406,7 +408,7 @@ export class CryptoIdentityManager {
   async hasStoredIdentities(username: string): Promise<boolean> {
     try {
       const hasIdentities = await new Promise<boolean>((resolve) => {
-        this.core.gun
+        this.db.gun
           .user()
           .get("crypto-identities")
           .once((data: any) => {
@@ -536,7 +538,7 @@ export class CryptoIdentityManager {
       }
 
       // Ottieni il SEA pair dell'utente corrente
-      const userInstance = this.core.gun.user();
+      const userInstance = this.db.gun.user();
       const seaPair = (userInstance as any)?._?.sea as ISEAPair;
 
       if (!seaPair) {

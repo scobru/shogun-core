@@ -139,7 +139,7 @@ class DataBase {
       console.log("[DB] App scope node initialized");
 
       // Initialize CryptoIdentityManager
-      this._cryptoIdentityManager = new CryptoIdentityManager(this.core);
+      this._cryptoIdentityManager = new CryptoIdentityManager(this.core, this);
       console.log("[DB] CryptoIdentityManager initialized");
 
       if (sessionResult.success) {
@@ -634,6 +634,10 @@ class DataBase {
       // Log out user
       try {
         currentUser.leave();
+        // Force clear any pending authentication
+        if (currentUser._ && currentUser._.sea) {
+          currentUser._.sea = null;
+        }
       } catch (gunError) {
         console.error("Error during Gun logout:", gunError);
       }

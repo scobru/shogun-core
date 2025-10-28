@@ -12,8 +12,8 @@ async function cryptoIdentityExample() {
   // 1. Inizializza ShogunCore
   const core = new ShogunCore({
     gunOptions: {
-      peers: ["https://peer.wallie.io/gun"],
-      radisk: true,
+      peers: ["https://peer.wallie.io/gun","https://shogunnode.scobrudot.dev/gun","https://shogunnode2.scobrudot.dev/gun","https://lindanode.scobrudot.dev/gun"],
+      radisk: false,
       localStorage: false,
     },
   });
@@ -21,8 +21,8 @@ async function cryptoIdentityExample() {
   console.log("✅ ShogunCore inizializzato");
 
   // 2. Registra un nuovo utente (genera automaticamente SEA pair)
-  const username = `mario_rossi_${Date.now()}`;
-  const signupResult = await core.signUp(username, "password123");
+  const username = `scobru`;
+  const signupResult = await core.signUp(username, "francos88");
 
   if (!signupResult.success) {
     console.error("❌ Registrazione fallita:", signupResult.error);
@@ -64,7 +64,7 @@ async function cryptoIdentityExample() {
   // 5. Esempio di login con utente esistente
   console.log("\n🔄 Test login con utente esistente...");
 
-  const loginResult = await core.login(username, "password123");
+  const loginResult = await core.login(username, "francos88");
 
   if (loginResult.success) {
     console.log("✅ Login riuscito");
@@ -105,8 +105,8 @@ async function multiAuthExample() {
 
   const core = new ShogunCore({
     gunOptions: {
-      peers: ["https://peer.wallie.io/gun"],
-      radisk: true,
+      peers: ["https://peer.wallie.io/gun","https://shogunnode.scobrudot.dev/gun","https://shogunnode2.scobrudot.dev/gun","https://lindanode.scobrudot.dev/gun"],
+      radisk: false,
       localStorage: false,
     },
   });

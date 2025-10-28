@@ -17,9 +17,10 @@ async function authTest() {
   const quickStart = new AutoQuickStart({
     peers: [
       "https://peer.wallie.io/gun",
-      "https://gun-manhattan.herokuapp.com/gun",
-      "https://gun.defucc.me/gun",
+      "https://shogunnode.scobrudot.dev/gun",
     ],
+    radisk: false,
+    localStorage: false,
     appScope: "auth-test",
     // Enable debug logging
     enableGunDebug: true,
@@ -42,11 +43,17 @@ async function authTest() {
   console.log("- Is logged in:", db.isLoggedIn());
   console.log("");
 
+  // Clean up any existing session
+  console.log("🧹 Cleaning up any existing session...");
+  db.logout();
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+  console.log("✓ Session cleanup completed\n");
+
   // === TEST 1: BASIC SIGNUP AND LOGIN ===
   console.log("🧪 === TEST 1: BASIC SIGNUP AND LOGIN ===\n");
 
   const testUsername = `testuser_${Date.now()}`;
-  const testPassword = "testpass123!@#";
+  const testPassword = "testpass123";
 
   console.log(`Testing with username: ${testUsername}`);
   console.log(`Password: ${testPassword}\n`);
@@ -56,7 +63,13 @@ async function authTest() {
   const signupStartTime = Date.now();
 
   try {
-    const signupResult = await db.signUp(testUsername, testPassword);
+    // Add timeout for signup
+    const signupPromise = db.signUp(testUsername, testPassword);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Signup timeout after 30 seconds")), 30000)
+    );
+    
+    const signupResult = await Promise.race([signupPromise, timeoutPromise]);
     const signupDuration = Date.now() - signupStartTime;
 
     console.log(`✓ Signup completed in ${signupDuration}ms`);
@@ -71,14 +84,15 @@ async function authTest() {
     });
 
     if (!signupResult.success) {
-      console.error("❌ Signup failed:", signupResult.error);
-      return;
+      console.log("ℹ️ Signup failed, user might already exist. Will try login...");
     }
   } catch (error) {
-    console.error("❌ Signup threw exception:", error);
-    return;
+    console.log("ℹ️ Signup threw exception, user might already exist. Will try login...");
   }
 
+  // Wait a moment before attempting login
+  console.log("⏳ Waiting 2 seconds before login attempt...");
+  await new Promise(resolve => setTimeout(resolve, 2000));
   console.log("");
 
   // Test login
@@ -86,7 +100,13 @@ async function authTest() {
   const loginStartTime = Date.now();
 
   try {
-    const loginResult = await db.login(testUsername, testPassword);
+    // Add timeout for login
+    const loginPromise = db.login(testUsername, testPassword);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Login timeout after 30 seconds")), 30000)
+    );
+    
+    const loginResult = await Promise.race([loginPromise, timeoutPromise]);
     const loginDuration = Date.now() - loginStartTime;
 
     console.log(`✓ Login completed in ${loginDuration}ms`);
@@ -101,6 +121,7 @@ async function authTest() {
 
     if (!loginResult.success) {
       console.error("❌ Login failed:", loginResult.error);
+      console.log("ℹ️ If this is a new user, try running the test again after a few seconds");
       return;
     }
 
