@@ -205,7 +205,7 @@ export class PGPManager {
       const { data: decrypted } = await this.openpgp.decrypt({
         message,
         decryptionKeys: privateKey,
-        format: 'text' as const,
+        format: "text" as const,
       });
 
       console.log("✅ [PGP] Message decrypted");

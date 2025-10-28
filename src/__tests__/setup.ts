@@ -260,6 +260,47 @@ jest.doMock("gun/lib/rindexed.js", () => ({}));
 jest.doMock("gun/lib/webrtc.js", () => ({}));
 jest.doMock("gun/lib/yson.js", () => ({}));
 
+// Mock CryptoIdentityManager to avoid MLS issues
+jest.doMock("../managers/CryptoIdentityManager", () => ({
+  CryptoIdentityManager: require("./__mocks__/CryptoIdentityManager").CryptoIdentityManager
+}));
+
+// Mock MLS module to avoid ts-mls ES module issues
+jest.doMock("../crypto/mls", () => ({
+  MLSManager: jest.fn().mockImplementation(() => ({
+    initialize: jest.fn().mockResolvedValue(true),
+    createGroup: jest.fn().mockResolvedValue({ groupId: 'mock_group_id', epoch: 0 }),
+    addMembers: jest.fn().mockResolvedValue(true),
+    removeMembers: jest.fn().mockResolvedValue(true),
+    sendMessage: jest.fn().mockResolvedValue(true),
+    receiveMessage: jest.fn().mockResolvedValue(true)
+  }))
+}));
+
+// Mock PGP module
+jest.doMock("../crypto/pgp", () => ({
+  PGPManager: jest.fn().mockImplementation(() => ({
+    initialize: jest.fn().mockResolvedValue(true),
+    generateKeyPair: jest.fn().mockResolvedValue({
+      publicKey: 'mock_pgp_pub',
+      privateKey: 'mock_pgp_priv',
+      keyId: 'mock_key_id'
+    }),
+    encrypt: jest.fn().mockResolvedValue('encrypted_pgp_data'),
+    decrypt: jest.fn().mockResolvedValue('decrypted_pgp_data')
+  }))
+}));
+
+// Mock SFrame module
+jest.doMock("../crypto/sframe", () => ({
+  SFrameManager: jest.fn().mockImplementation(() => ({
+    initialize: jest.fn().mockResolvedValue(true),
+    generateKey: jest.fn().mockResolvedValue({ keyId: 1 }),
+    encrypt: jest.fn().mockResolvedValue('encrypted_sframe_data'),
+    decrypt: jest.fn().mockResolvedValue('decrypted_sframe_data')
+  }))
+}));
+
 // Cleanup after each test
 afterEach(() => {
   jest.clearAllMocks();

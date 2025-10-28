@@ -76,3 +76,6 @@ export {
 
 // Export crypto module
 export * from "./crypto";
+
+// Export managers
+export { CryptoIdentityManager } from "./managers/CryptoIdentityManager";

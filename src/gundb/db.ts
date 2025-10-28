@@ -34,6 +34,7 @@ import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
+import { CryptoIdentityManager } from "../managers/CryptoIdentityManager";
 
 /**
  * Configuration constants for timeouts and security
@@ -57,15 +58,20 @@ class DataBase {
   public crypto: typeof crypto;
   public sea: typeof SEA;
   public node: IGunChain<any, any, any, any>;
+  public core: any; // Reference to ShogunCore instance
 
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
   private readonly eventEmitter: EventEmitter;
 
   // Integrated modules
   private _rxjs?: RxJS;
+  private _cryptoIdentityManager?: CryptoIdentityManager;
 
-  constructor(gun: IGunInstance, appScope: string = "shogun") {
+  constructor(gun: IGunInstance, appScope: string = "shogun", core?: any) {
     console.log("[DB] Initializing DataBase");
+
+    // Store core reference
+    this.core = core;
 
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
@@ -131,6 +137,10 @@ class DataBase {
 
       this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
       console.log("[DB] App scope node initialized");
+
+      // Initialize CryptoIdentityManager
+      this._cryptoIdentityManager = new CryptoIdentityManager(this.core);
+      console.log("[DB] CryptoIdentityManager initialized");
 
       if (sessionResult.success) {
         console.log("[DB] Session automatically restored");
@@ -1162,6 +1172,43 @@ class DataBase {
       console.log(
         `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
       );
+
+      // Setup crypto identities for the user
+      if (this._cryptoIdentityManager && userSea) {
+        console.log(
+          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`,
+        );
+        try {
+          const cryptoSetupResult =
+            await this._cryptoIdentityManager.setupCryptoIdentities(
+              normalizedUsername,
+              userSea,
+              false, // Don't force regenerate if they already exist
+            );
+
+          if (cryptoSetupResult.success) {
+            console.log(
+              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`,
+            );
+          } else {
+            console.error(
+              `❌ [POSTAUTH] Crypto identities setup failed for: ${normalizedUsername}`,
+              cryptoSetupResult.error,
+            );
+            // Don't fail the entire auth process if crypto setup fails
+          }
+        } catch (cryptoError) {
+          console.error(
+            `❌ [POSTAUTH] Crypto identities setup error for: ${normalizedUsername}`,
+            cryptoError,
+          );
+          // Don't fail the entire auth process if crypto setup fails
+        }
+      } else {
+        console.log(
+          `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`,
+        );
+      }
 
       const result = {
         success: true,

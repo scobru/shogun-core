@@ -99,6 +99,7 @@ export class CoreInitializer {
       this.core.db = new DataBase(
         this.core._gun,
         config.gunOptions?.scope || "",
+        this.core,
       );
       return true;
     } catch (error) {
