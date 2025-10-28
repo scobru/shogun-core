@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -47,6 +47,8 @@
     "test:ci": "jest --ci --coverage --watchAll=false",
     "test:integration": "jest --config src/__tests__/integration/jest.integration.config.js",
     "test:integration:watch": "jest --config src/__tests__/integration/jest.integration.config.js --watch",
+    "crypto-identities:example": "yarn tsx src/examples/crypto-identity-example.ts",
+    "crypto-identities:simple": "yarn tsx src/examples/simple-crypto-identity-example.ts",
     "coverage": "jest --coverage"
   },
   "keywords": [
