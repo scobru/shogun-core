@@ -1,17 +1,54 @@
 import { ShogunCore, ShogunSDKConfig } from "../../index";
 
+// Mock Gun instance for integration tests
+const createMockGun = () => ({
+  user: jest.fn(() => ({
+    create: jest.fn(),
+    auth: jest.fn(),
+    leave: jest.fn(),
+    recall: jest.fn(),
+    get: jest.fn(),
+    put: jest.fn(),
+    on: jest.fn(),
+    once: jest.fn(),
+    off: jest.fn(),
+    is: jest.fn(),
+  })),
+  get: jest.fn(() => ({
+    map: jest.fn(),
+    once: jest.fn(),
+    put: jest.fn(),
+    on: jest.fn(),
+    off: jest.fn(),
+    then: jest.fn(), // Add thenable for promises
+  })),
+  put: jest.fn(),
+  set: jest.fn(),
+  on: jest.fn(),
+  once: jest.fn(),
+  off: jest.fn(),
+});
+
 describe("Success Test - User Manager Integration", () => {
   let shogunCore: ShogunCore;
+  let mockGun: any;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    mockGun = createMockGun();
     const config: ShogunSDKConfig = {
       appToken: "test-token",
       oauth: { enabled: false },
       peers: [],
       gunOptions: { peers: [] },
+      gunInstance: mockGun, // Provide a mocked Gun instance
     };
 
     shogunCore = new ShogunCore(config);
+    await shogunCore.db.initialize(); // Wait for async initialization
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("Core Functionality Tests", () => {
@@ -31,6 +68,7 @@ describe("Success Test - User Manager Integration", () => {
         oauth: { enabled: false },
         peers: [],
         gunOptions: { peers: [] },
+        gunInstance: mockGun, // Provide a mocked Gun instance
       };
 
       // Should not throw error with invalid config

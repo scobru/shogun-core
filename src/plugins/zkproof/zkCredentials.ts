@@ -159,6 +159,10 @@ export class ZkCredentials {
         group,
         signalBigInt,
         externalNullifier,
+        {
+          wasmFilePath: "./circuits/semaphore/20/semaphore.wasm",
+          zkeyFilePath: "./circuits/semaphore/20/semaphore.zkey",
+        },
       );
 
       return {

@@ -57,6 +57,11 @@ class DataBase {
   private _rxjs?: RxJS;
   private _cryptoIdentityManager?: CryptoIdentityManager;
 
+  // Memory leak prevention
+  private _activeTimeouts: Set<NodeJS.Timeout> = new Set();
+  private _activeIntervals: Set<NodeJS.Timeout> = new Set();
+  private _isDestroyed: boolean = false;
+
   constructor(gun: IGunInstance, appScope: string = "shogun", core?: any) {
     console.log("[DB] Initializing DataBase");
 
@@ -66,6 +71,9 @@ class DataBase {
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
+    // Setup cleanup handlers
+    this.setupCleanupHandlers();
+
     // Validate Gun instance
     if (!gun) {
       throw new Error("Gun instance is required but was not provided");
@@ -73,25 +81,25 @@ class DataBase {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`
+        `Gun instance must be an object, received: ${typeof gun}`,
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
       );
     }
 
@@ -122,7 +130,7 @@ class DataBase {
     try {
       const sessionResult = this.restoreSession();
       console.log(
-        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`
+        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`,
       );
 
       this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
@@ -151,7 +159,7 @@ class DataBase {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err)
+          new Error(ack.err),
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -696,7 +704,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
     // Validate username
     if (!username || username.length < 1) {
@@ -744,175 +752,6 @@ class DataBase {
   }
 
   /**
-   * Creates a new user in Gun
-   */
-  private async createNewUser(
-    username: string,
-    password: string
-  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
-    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
-      (resolve) => {
-        // Validate inputs before creating user
-        if (
-          !username ||
-          typeof username !== "string" ||
-          username.trim().length === 0
-        ) {
-          resolve({ success: false, error: "Invalid username provided" });
-          return;
-        }
-
-        if (
-          !password ||
-          typeof password !== "string" ||
-          password.length === 0
-        ) {
-          resolve({ success: false, error: "Invalid password provided" });
-          return;
-        }
-
-        // Normalize username
-        const normalizedUsername = username.trim().toLowerCase();
-        if (normalizedUsername.length === 0) {
-          resolve({
-            success: false,
-            error: "Username cannot be empty",
-          });
-          return;
-        }
-
-        this.gun.user().create(normalizedUsername, password, (ack: any) => {
-          if (ack.err) {
-            console.error(`User creation error: ${ack.err}`);
-            // Reset auth state after failed creation to prevent blocking future operations
-            this.resetAuthState();
-            resolve({ success: false, error: ack.err });
-          } else {
-            // Validate that we got a userPub from creation
-            const userPub = ack.pub;
-            if (
-              !userPub ||
-              typeof userPub !== "string" ||
-              userPub.trim().length === 0
-            ) {
-              console.error(
-                "User creation successful but no userPub returned:",
-                ack
-              );
-              resolve({
-                success: false,
-                error: "User creation successful but no userPub returned",
-              });
-            } else {
-              resolve({ success: true, userPub: userPub });
-            }
-          }
-        });
-      }
-    );
-  }
-
-  /**
-   * Authenticates user after creation
-   */
-  private async authenticateNewUser(
-    username: string,
-    password: string,
-    pair?: ISEAPair | null
-  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
-    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
-      (resolve) => {
-        // Validate inputs before authentication
-        if (
-          !username ||
-          typeof username !== "string" ||
-          username.trim().length === 0
-        ) {
-          resolve({ success: false, error: "Invalid username provided" });
-          return;
-        }
-
-        // Skip password validation when using pair authentication
-        if (
-          !pair &&
-          (!password || typeof password !== "string" || password.length === 0)
-        ) {
-          resolve({ success: false, error: "Invalid password provided" });
-          return;
-        }
-
-        // Normalize username to match what was used in creation
-        const normalizedUsername = username.trim().toLowerCase();
-        if (normalizedUsername.length === 0) {
-          resolve({
-            success: false,
-            error: "Username cannot be empty",
-          });
-          return;
-        }
-
-        if (pair) {
-          this.gun.user().auth(pair, (ack: any) => {
-            if (ack.err) {
-              console.error(`Authentication after creation failed: ${ack.err}`);
-              // Reset auth state on error to prevent blocking future operations
-              this.resetAuthState();
-              resolve({ success: false, error: ack.err });
-            } else {
-              // Add a small delay to ensure user state is properly set
-              setTimeout(() => {
-                // Extract userPub from multiple possible sources
-                const userPub =
-                  ack.pub || this.gun.user().is?.pub || ack.user?.pub;
-
-                if (!userPub) {
-                  console.error(
-                    "Authentication successful but no userPub found"
-                  );
-                  resolve({
-                    success: false,
-                    error: "No userPub returned from authentication",
-                  });
-                } else {
-                  resolve({ success: true, userPub: userPub });
-                }
-              }, 100);
-            }
-          });
-        } else {
-          this.gun.user().auth(normalizedUsername, password, (ack: any) => {
-            if (ack.err) {
-              console.error(`Authentication after creation failed: ${ack.err}`);
-              // Reset auth state on error to prevent blocking future operations
-              this.resetAuthState();
-              resolve({ success: false, error: ack.err });
-            } else {
-              // Add a small delay to ensure user state is properly set
-              setTimeout(() => {
-                // Extract userPub from multiple possible sources
-                const userPub =
-                  ack.pub || this.gun.user().is?.pub || ack.user?.pub;
-
-                if (!userPub) {
-                  console.error(
-                    "Authentication successful but no userPub found"
-                  );
-                  resolve({
-                    success: false,
-                    error: "No userPub returned from authentication",
-                  });
-                } else {
-                  resolve({ success: true, userPub: userPub });
-                }
-              }, 100);
-            }
-          });
-        }
-      }
-    );
-  }
-
-  /**
    * Signs up a new user using direct Gun authentication
    * @param username Username
    * @param password Password
@@ -924,7 +763,7 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
     retryCount: number = 0,
-    maxRetries: number = 3
+    maxRetries: number = 3,
   ): Promise<SignUpResult> {
     try {
       console.log(`🔄 [SIGNUP] Attempting signup for: ${username}`);
@@ -933,7 +772,7 @@ class DataBase {
       const validation = this.validateSignupCredentials(
         username,
         password,
-        pair
+        pair,
       );
       if (!validation.valid) {
         return { success: false, error: validation.error };
@@ -943,7 +782,7 @@ class DataBase {
       if (this.isAuthInProgress()) {
         if (retryCount < maxRetries) {
           console.warn(
-            `Authentication in progress during signup, retrying... (${retryCount + 1}/${maxRetries})`
+            `Authentication in progress during signup, retrying... (${retryCount + 1}/${maxRetries})`,
           );
           this.resetAuthState();
           const baseDelay = 100 * Math.pow(2, retryCount);
@@ -955,11 +794,11 @@ class DataBase {
             password,
             pair,
             retryCount + 1,
-            maxRetries
+            maxRetries,
           );
         } else {
           console.error(
-            "Max retries exceeded for signup due to concurrent operations"
+            "Max retries exceeded for signup due to concurrent operations",
           );
           this.resetAuthState();
           return {
@@ -993,7 +832,7 @@ class DataBase {
       const authResult = await this.authenticateNewUserFixed(
         username,
         password,
-        pair
+        pair,
       );
 
       if (!authResult.success) {
@@ -1008,7 +847,7 @@ class DataBase {
       ) {
         console.error(
           "Authentication successful but no valid userPub returned:",
-          authResult
+          authResult,
         );
         return {
           success: false,
@@ -1024,7 +863,7 @@ class DataBase {
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
-          authResult
+          authResult,
         );
 
         // Return the post-auth result which includes the complete user data
@@ -1058,7 +897,7 @@ class DataBase {
    */
   private async createNewUserWithPair(
     username: string,
-    pair: ISEAPair
+    pair: ISEAPair,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1092,7 +931,7 @@ class DataBase {
         // We just need to validate that the pair is valid and return success
 
         resolve({ success: true, userPub: pair.pub });
-      }
+      },
     );
   }
 
@@ -1101,7 +940,7 @@ class DataBase {
    */
   private async createNewUserFixed(
     username: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1135,7 +974,7 @@ class DataBase {
         }
 
         console.log(`🔄 [CREATE] Creating user: ${normalizedUsername}`);
-        
+
         // Crea utente senza aspettare acknowledgment
         this.gun.user().create(normalizedUsername, password, () => {});
 
@@ -1151,7 +990,7 @@ class DataBase {
             resolve({ success: false, error: "User creation failed" });
           }
         }, 2000); // Aspetta 2 secondi
-      }
+      },
     );
   }
 
@@ -1161,7 +1000,7 @@ class DataBase {
   private async authenticateNewUserFixed(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1214,17 +1053,17 @@ class DataBase {
             resolve({ success: false, error: "Authentication failed" });
           }
         }, 2000); // Aspetta 2 secondi
-      }
+      },
     );
   }
 
   private async runPostAuthOnAuthResult(
     username: string,
     userPub: string,
-    authResult: any
+    authResult: any,
   ): Promise<SignUpResult> {
     console.log(
-      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`
+      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`,
     );
 
     try {
@@ -1265,7 +1104,7 @@ class DataBase {
       const normalizedUsername = username.trim().toLowerCase();
       if (normalizedUsername.length === 0) {
         console.error(
-          `[POSTAUTH] Normalized username is empty for user: ${username}`
+          `[POSTAUTH] Normalized username is empty for user: ${username}`,
         );
         throw new Error("Username cannot be empty");
       }
@@ -1277,7 +1116,7 @@ class DataBase {
 
       const isNewUser = !existingUser || !(existingUser as any).alias;
       console.log(
-        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`
+        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`,
       );
 
       // Get user's encryption public key (epub) for comprehensive tracking
@@ -1289,17 +1128,17 @@ class DataBase {
 
       // Enhanced user tracking system
       console.log(
-        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`
+        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`,
       );
       const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
-        epub
+        epub,
       );
 
       if (!trackingResult) {
         console.error(
-          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`
+          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`,
         );
         return {
           success: false,
@@ -1308,44 +1147,54 @@ class DataBase {
       }
 
       console.log(
-        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`
+        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
       );
 
-      // Setup crypto identities for the user
-      if (this._cryptoIdentityManager && userSea) {
+      // Setup crypto identities for the user (skip if SKIP_CRYPTO_GENERATION is set)
+      if (
+        this._cryptoIdentityManager &&
+        userSea &&
+        !process.env.SKIP_CRYPTO_GENERATION
+      ) {
         console.log(
-          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`
+          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`,
         );
         try {
           const cryptoSetupResult =
             await this._cryptoIdentityManager.setupCryptoIdentities(
               normalizedUsername,
               userSea,
-              false // Don't force regenerate if they already exist
+              false, // Don't force regenerate if they already exist
             );
 
           if (cryptoSetupResult.success) {
             console.log(
-              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`
+              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`,
             );
           } else {
             console.error(
               `❌ [POSTAUTH] Crypto identities setup failed for: ${normalizedUsername}`,
-              cryptoSetupResult.error
+              cryptoSetupResult.error,
             );
             // Don't fail the entire auth process if crypto setup fails
           }
         } catch (cryptoError) {
           console.error(
             `❌ [POSTAUTH] Crypto identities setup error for: ${normalizedUsername}`,
-            cryptoError
+            cryptoError,
           );
           // Don't fail the entire auth process if crypto setup fails
         }
       } else {
-        console.log(
-          `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`
-        );
+        if (process.env.SKIP_CRYPTO_GENERATION) {
+          console.log(
+            `ℹ️ [POSTAUTH] Skipping crypto identities setup - SKIP_CRYPTO_GENERATION is set`,
+          );
+        } else {
+          console.log(
+            `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`,
+          );
+        }
       }
 
       const result = {
@@ -1365,13 +1214,13 @@ class DataBase {
       };
 
       console.log(
-        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`
+        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`,
       );
       return result;
     } catch (error) {
       console.error(
         `[POSTAUTH] Error in post-authentication setup for ${username}:`,
-        error
+        error,
       );
       return {
         success: false,
@@ -1387,10 +1236,10 @@ class DataBase {
   private async setupComprehensiveUserTracking(
     username: string,
     userPub: string,
-    epub: string
+    epub: string,
   ): Promise<boolean> {
     console.log(
-      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`
+      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`,
     );
 
     try {
@@ -1400,31 +1249,31 @@ class DataBase {
 
       if (!aliasIndexResult) {
         console.error(
-          `[TRACKING] Failed to create alias index for ${username}`
+          `[TRACKING] Failed to create alias index for ${username}`,
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 1 completed: Alias index created for ${username}`
+        `[TRACKING] Step 1 completed: Alias index created for ${username}`,
       );
 
       // 2. Create username mapping: usernames/alias -> userPub
       console.log(
-        `[TRACKING] Step 2: Creating username mapping for ${username}`
+        `[TRACKING] Step 2: Creating username mapping for ${username}`,
       );
       const usernameMappingResult = await this.createUsernameMapping(
         username,
-        userPub
+        userPub,
       );
 
       if (!usernameMappingResult) {
         console.error(
-          `[TRACKING] Failed to create username mapping for ${username}`
+          `[TRACKING] Failed to create username mapping for ${username}`,
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 2 completed: Username mapping created for ${username}`
+        `[TRACKING] Step 2 completed: Username mapping created for ${username}`,
       );
 
       // 3. Create user registry: users/userPub -> user data
@@ -1432,34 +1281,34 @@ class DataBase {
       const userRegistryResult = await this.createUserRegistry(
         username,
         userPub,
-        epub
+        epub,
       );
 
       if (!userRegistryResult) {
         console.error(
-          `[TRACKING] Failed to create user registry for ${username}`
+          `[TRACKING] Failed to create user registry for ${username}`,
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 3 completed: User registry created for ${username}`
+        `[TRACKING] Step 3 completed: User registry created for ${username}`,
       );
 
       // 4. Create reverse lookup: userPub -> alias
       console.log(`[TRACKING] Step 4: Creating reverse lookup for ${username}`);
       const reverseLookupResult = await this.createReverseLookup(
         username,
-        userPub
+        userPub,
       );
 
       if (!reverseLookupResult) {
         console.error(
-          `[TRACKING] Failed to create reverse lookup for ${username}`
+          `[TRACKING] Failed to create reverse lookup for ${username}`,
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`
+        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`,
       );
 
       // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
@@ -1469,16 +1318,16 @@ class DataBase {
 
         if (!epubIndexResult) {
           console.error(
-            `[TRACKING] Failed to create epub index for ${username}`
+            `[TRACKING] Failed to create epub index for ${username}`,
           );
           return false;
         }
         console.log(
-          `[TRACKING] Step 5 completed: Epub index created for ${username}`
+          `[TRACKING] Step 5 completed: Epub index created for ${username}`,
         );
       } else {
         console.log(
-          `[TRACKING] Step 5 skipped: No epub available for ${username}`
+          `[TRACKING] Step 5 skipped: No epub available for ${username}`,
         );
       }
 
@@ -1487,27 +1336,27 @@ class DataBase {
       const userMetadataResult = await this.createUserMetadata(
         username,
         userPub,
-        epub
+        epub,
       );
 
       if (!userMetadataResult) {
         console.error(
-          `[TRACKING] Failed to create user metadata for ${username}`
+          `[TRACKING] Failed to create user metadata for ${username}`,
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 6 completed: User metadata created for ${username}`
+        `[TRACKING] Step 6 completed: User metadata created for ${username}`,
       );
 
       console.log(
-        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`
+        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`,
       );
       return true;
     } catch (error) {
       console.error(
         `[TRACKING] Error in comprehensive user tracking setup for ${username}:`,
-        error
+        error,
       );
       // Don't throw - continue with other operations
       return false;
@@ -1519,7 +1368,7 @@ class DataBase {
    */
   private async createAliasIndex(
     username: string,
-    userPub: string
+    userPub: string,
   ): Promise<boolean> {
     try {
       // Create a simple alias mapping without using GunDB's complex alias system
@@ -1551,7 +1400,7 @@ class DataBase {
    */
   private async createUsernameMapping(
     username: string,
-    userPub: string
+    userPub: string,
   ): Promise<boolean> {
     try {
       console.log(`🔄 [USERNAME] Creating username mapping for ${username}`);
@@ -1576,7 +1425,7 @@ class DataBase {
   private async createUserRegistry(
     username: string,
     userPub: string,
-    epub: string | null
+    epub: string | null,
   ): Promise<boolean> {
     try {
       const userData = {
@@ -1608,7 +1457,7 @@ class DataBase {
    */
   private async createReverseLookup(
     username: string,
-    userPub: string
+    userPub: string,
   ): Promise<boolean> {
     try {
       console.log(`🔄 [REVERSE] Creating reverse lookup for ${username}`);
@@ -1632,7 +1481,7 @@ class DataBase {
    */
   private async createEpubIndex(
     epub: string,
-    userPub: string
+    userPub: string,
   ): Promise<boolean> {
     try {
       console.log(`🔄 [EPUB] Creating epub index for ${userPub}`);
@@ -1657,7 +1506,7 @@ class DataBase {
   private async createUserMetadata(
     username: string,
     userPub: string,
-    epub: string | null
+    epub: string | null,
   ): Promise<boolean> {
     try {
       const userMetadata = {
@@ -1717,15 +1566,13 @@ class DataBase {
       } catch (error) {
         console.error(
           `GunDB alias lookup failed for ${normalizedAlias}:`,
-          error
+          error,
         );
       }
 
       // Method 2: Try username mapping (usernames/alias -> userPub)
       try {
-        const userPubNode = this.node
-          .get("usernames")
-          .get(normalizedAlias);
+        const userPubNode = this.node.get("usernames").get(normalizedAlias);
 
         // Use once to get the actual value
         const userPub = await new Promise((resolve) => {
@@ -1745,7 +1592,7 @@ class DataBase {
       } catch (error) {
         console.error(
           `Username mapping lookup failed for ${normalizedAlias}:`,
-          error
+          error,
         );
       }
 
@@ -1775,7 +1622,7 @@ class DataBase {
 
       // Method 1: Try user registry (users/userPub -> user data)
       try {
-        const userData =  this.node.get("users").get(userPub) as any;
+        const userData = this.node.get("users").get(userPub) as any;
 
         if (userData && userData.username) {
           return {
@@ -1825,7 +1672,7 @@ class DataBase {
       }
 
       const userPubNode = this.node.get("epubKeys").get(epub);
-      
+
       // Use once to get the actual value
       const userPub = await new Promise((resolve) => {
         const timeout = setTimeout(() => resolve(null), 2000);
@@ -1835,7 +1682,7 @@ class DataBase {
         });
       });
 
-      return userPub as string || null;
+      return (userPub as string) || null;
     } catch (error) {
       console.error(`Error looking up user pub by epub ${epub}:`, error);
       return null;
@@ -1854,7 +1701,7 @@ class DataBase {
       }
 
       const aliasNode = this.node.get("userAliases").get(userPub);
-      
+
       // Use once to get the actual value
       const alias = await new Promise((resolve) => {
         const timeout = setTimeout(() => resolve(null), 2000);
@@ -1864,7 +1711,7 @@ class DataBase {
         });
       });
 
-      return alias as string || null;
+      return (alias as string) || null;
     } catch (error) {
       console.error(`Error looking up user alias by pub ${userPub}:`, error);
       return null;
@@ -1998,7 +1845,7 @@ class DataBase {
     password: string,
     pair?: ISEAPair | null,
     retryCount: number = 0,
-    maxRetries: number = 3
+    maxRetries: number = 3,
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
@@ -2007,7 +1854,7 @@ class DataBase {
         if (currentUser && currentUser._ && (currentUser._ as any).ing) {
           if (retryCount < maxRetries) {
             console.warn(
-              `Authentication already in progress, retrying... (${retryCount + 1}/${maxRetries})`
+              `Authentication already in progress, retrying... (${retryCount + 1}/${maxRetries})`,
             );
             this.resetAuthState();
 
@@ -2027,11 +1874,11 @@ class DataBase {
                 password,
                 pair,
                 retryCount + 1,
-                maxRetries
+                maxRetries,
               )
                 .then(resolve)
                 .catch((error) =>
-                  resolve({ success: false, error: String(error) })
+                  resolve({ success: false, error: String(error) }),
                 );
             }, delay);
             return;
@@ -2047,7 +1894,7 @@ class DataBase {
         }
 
         this.performAuthenticationInternal(username, password, pair, resolve);
-      }
+      },
     );
   }
 
@@ -2058,7 +1905,7 @@ class DataBase {
     username: string,
     password: string,
     pair: ISEAPair | null | undefined,
-    resolve: (value: { success: boolean; error?: string; ack?: any }) => void
+    resolve: (value: { success: boolean; error?: string; ack?: any }) => void,
   ): void {
     let resolved = false;
     const timeout = 30000; // 15 second timeout for individual auth attempts
@@ -2067,7 +1914,7 @@ class DataBase {
       if (!resolved) {
         resolved = true;
         console.error(
-          `Authentication timeout for ${username} after ${timeout}ms`
+          `Authentication timeout for ${username} after ${timeout}ms`,
         );
         this.resetAuthState();
         resolve({
@@ -2132,7 +1979,7 @@ class DataBase {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     try {
       console.log(`🔑 [LOGIN] Attempting login for: ${username}`);
@@ -2292,7 +2139,7 @@ class DataBase {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; error?: string }> {
     // Setting password hint for
 
@@ -2359,14 +2206,25 @@ class DataBase {
         hint: encryptedHint,
       };
 
-      const ack =  (this.node.get(userPub) as any)
-        .get("security")
-        .put(securityPayload)
+      console.log(
+        `💾 [HINT] Saving security data for user: ${username}, pub: ${userPub}`,
+      );
+      console.log(`💾 [HINT] Security payload:`, {
+        questions: securityPayload.questions,
+        hintLength: securityPayload.hint?.length || 0,
+      });
 
-      if (ack.err) {
+      // Save in PUBLIC space, not user space - accessible without login
+      const ack = (this.gun.get("security") as any)
+        .get(userPub)
+        .put(securityPayload);
+
+      if (ack && ack.err) {
         console.error("Error saving security data to public graph:", ack.err);
         throw new Error(ack.err);
       }
+
+      console.log(`✅ [HINT] Security data saved successfully for ${username}`);
 
       return { success: true };
     } catch (error) {
@@ -2383,35 +2241,118 @@ class DataBase {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[]
+    securityAnswers: string[],
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     // Attempting password recovery for
 
+    // Add global timeout for the entire operation
+    return Promise.race([
+      this._forgotPasswordInternal(username, securityAnswers),
+      new Promise<{ success: boolean; hint?: string; error?: string }>(
+        (resolve) => {
+          setTimeout(() => {
+            console.log(
+              `⏰ [FORGOT] Global timeout for password recovery: ${username}`,
+            );
+            resolve({ success: false, error: "Password recovery timeout" });
+          }, 10000); // 10 second global timeout
+        },
+      ),
+    ]);
+  }
+
+  private async _forgotPasswordInternal(
+    username: string,
+    securityAnswers: string[],
+  ): Promise<{ success: boolean; hint?: string; error?: string }> {
     try {
       // Find the user's data using direct lookup
       const normalizedUsername = username.trim().toLowerCase();
-      const userPub =
-        ( this.node.get("usernames").get(normalizedUsername)) ||
-        null;
+
+      // Try multiple lookup methods with fallback
+      let userPub = null;
+
+      // Method 1: Try username mapping in app scope
+      try {
+        userPub = await new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            console.log(
+              `⏰ [FORGOT] Timeout looking up user in usernames: ${username}`,
+            );
+            resolve(null);
+          }, 2000);
+
+          this.node
+            .get("usernames")
+            .get(normalizedUsername)
+            .once((data: any) => {
+              clearTimeout(timeout);
+              console.log(
+                `🔍 [FORGOT] Username lookup result for ${username}:`,
+                data,
+              );
+              resolve(data);
+            });
+        });
+      } catch (error) {
+        console.log(`❌ [FORGOT] Username lookup failed: ${error}`);
+      }
+
+      // Method 2: Try direct user lookup if username mapping fails
+      if (!userPub) {
+        console.log(`🔄 [FORGOT] Trying direct user lookup for: ${username}`);
+        try {
+          // Try to find user by searching in the users registry
+          const usersNode = this.node.get("users");
+          // This is a simplified approach - in a real implementation you'd need to iterate
+          // For now, we'll try to get the userPub from the current user if available
+          const currentUser = this.getCurrentUser();
+          if (currentUser && currentUser.pub) {
+            console.log(
+              `🔍 [FORGOT] Using current user pub as fallback: ${currentUser.pub}`,
+            );
+            userPub = currentUser.pub;
+          }
+        } catch (error) {
+          console.log(`❌ [FORGOT] Direct user lookup failed: ${error}`);
+        }
+      }
 
       if (!userPub) {
+        console.log(`❌ [FORGOT] User not found: ${username}`);
         return { success: false, error: "User not found" };
       }
 
-      // Access the user's security data directly from their public key node
-      const securityDataNode = this.node.get(userPub as string).get("security");
-      
+      // Access the user's security data from PUBLIC space (not user space)
+      const securityDataNode = (this.gun as any).get("security").get(userPub);
+
+      console.log(
+        `🔍 [FORGOT] Looking for security data for user: ${username}, pub: ${userPub}`,
+      );
+
       // Use once to get the actual value
       const securityData = await new Promise((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 2000);
+        const timeout = setTimeout(() => {
+          console.log(
+            `⏰ [FORGOT] Timeout waiting for security data for ${username} (3s)`,
+          );
+          resolve(null);
+        }, 3000); // Reduced timeout to 3 seconds
+
         securityDataNode.once((data: any) => {
           clearTimeout(timeout);
+          console.log(
+            `📊 [FORGOT] Security data received for ${username}:`,
+            data,
+          );
           resolve(data);
         });
       });
-        
 
       if (!securityData || !(securityData as any).hint) {
+        console.log(
+          `❌ [FORGOT] No security data or hint found for ${username}`,
+        );
         return {
           success: false,
           error: "No password hint found",
@@ -2448,7 +2389,10 @@ class DataBase {
         if (SEA && SEA.decrypt) {
           hint = await SEA.decrypt((securityData as any).hint, proofOfWork);
         } else if (this.crypto && this.crypto.decrypt) {
-          hint = await this.crypto.decrypt((securityData as any).hint, proofOfWork);
+          hint = await this.crypto.decrypt(
+            (securityData as any).hint,
+            proofOfWork,
+          );
         } else {
           throw new Error("Decryption functions not available");
         }
@@ -2469,6 +2413,135 @@ class DataBase {
       return { success: true, hint: hint as string };
     } catch (error) {
       console.error("Error recovering password hint:", error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Recovers password hint using security question answers and userPub directly
+   * @param userPub User's public key
+   * @param securityAnswers Array of answers to security questions
+   * @returns Promise resolving with the password hint
+   */
+  async forgotPasswordByPub(
+    userPub: string,
+    securityAnswers: string[],
+  ): Promise<{ success: boolean; hint?: string; error?: string }> {
+    // Add global timeout for the entire operation
+    return Promise.race([
+      this._forgotPasswordByPubInternal(userPub, securityAnswers),
+      new Promise<{ success: boolean; hint?: string; error?: string }>(
+        (resolve) => {
+          setTimeout(() => {
+            console.log(
+              `⏰ [FORGOT] Global timeout for password recovery by pub: ${userPub}`,
+            );
+            resolve({ success: false, error: "Password recovery timeout" });
+          }, 10000); // 10 second global timeout
+        },
+      ),
+    ]);
+  }
+
+  private async _forgotPasswordByPubInternal(
+    userPub: string,
+    securityAnswers: string[],
+  ): Promise<{ success: boolean; hint?: string; error?: string }> {
+    try {
+      if (!userPub || typeof userPub !== "string") {
+        return { success: false, error: "Invalid userPub provided" };
+      }
+
+      // Access the user's security data from PUBLIC space (not user space)
+      const securityDataNode = (this.gun as any).get("security").get(userPub);
+
+      console.log(
+        `🔍 [FORGOT] Looking for security data for userPub: ${userPub}`,
+      );
+
+      // Use once to get the actual value
+      const securityData = await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log(
+            `⏰ [FORGOT] Timeout waiting for security data for userPub: ${userPub} (3s)`,
+          );
+          resolve(null);
+        }, 3000);
+
+        securityDataNode.once((data: any) => {
+          clearTimeout(timeout);
+          console.log(
+            `📊 [FORGOT] Security data received for userPub: ${userPub}:`,
+            data,
+          );
+          resolve(data);
+        });
+      });
+
+      if (!securityData || !(securityData as any).hint) {
+        console.log(
+          `❌ [FORGOT] No security data or hint found for userPub: ${userPub}`,
+        );
+        return {
+          success: false,
+          error: "No password hint found",
+        };
+      }
+
+      // Generate hash from security answers
+      const answersText = securityAnswers.join("|");
+      let proofOfWork;
+
+      try {
+        // Use SEA directly if available
+        if (SEA && SEA.work) {
+          proofOfWork = await SEA.work(answersText, null, null, {
+            name: "SHA-256",
+          });
+        } else if (this.crypto && this.crypto.hashText) {
+          proofOfWork = await this.crypto.hashText(answersText);
+        } else {
+          throw new Error("Cryptographic functions not available");
+        }
+
+        if (!proofOfWork) {
+          throw new Error("Failed to generate hash");
+        }
+      } catch (hashError) {
+        console.error("Error generating hash:", hashError);
+        return { success: false, error: "Failed to generate security hash" };
+      }
+
+      // Decrypt the password hint with the proof of work
+      let hint;
+      try {
+        if (SEA && SEA.decrypt) {
+          hint = await SEA.decrypt((securityData as any).hint, proofOfWork);
+        } else if (this.crypto && this.crypto.decrypt) {
+          hint = await this.crypto.decrypt(
+            (securityData as any).hint,
+            proofOfWork,
+          );
+        } else {
+          throw new Error("Decryption functions not available");
+        }
+      } catch (decryptError) {
+        return {
+          success: false,
+          error: "Incorrect answers to security questions",
+        };
+      }
+
+      if (hint === undefined) {
+        return {
+          success: false,
+          error: "Incorrect answers to security questions",
+        };
+      }
+
+      return { success: true, hint: hint as string };
+    } catch (error) {
+      console.error("Error recovering password hint by pub:", error);
       return { success: false, error: String(error) };
     }
   }
@@ -2771,6 +2844,112 @@ class DataBase {
     } catch (error) {
       console.error("Error creating fresh auth context:", error);
     }
+  }
+
+  /**
+   * Setup cleanup handlers for memory leak prevention
+   */
+  private setupCleanupHandlers(): void {
+    // Handle process cleanup
+    if (typeof process !== "undefined") {
+      process.on("SIGINT", () => this.destroy());
+      process.on("SIGTERM", () => this.destroy());
+      process.on("exit", () => this.destroy());
+    }
+  }
+
+  /**
+   * Safe interval wrapper that tracks intervals for cleanup
+   */
+  private safeInterval(callback: () => void, delay: number): NodeJS.Timeout {
+    if (this._isDestroyed) {
+      return setInterval(() => {}, 0);
+    }
+
+    const interval = setInterval(() => {
+      if (!this._isDestroyed) {
+        callback();
+      }
+    }, delay);
+
+    this._activeIntervals.add(interval);
+    return interval;
+  }
+
+  /**
+   * Clear a specific timeout
+   */
+  private clearSafeTimeout(timeout: NodeJS.Timeout): void {
+    clearTimeout(timeout);
+    this._activeTimeouts.delete(timeout);
+  }
+
+  /**
+   * Clear a specific interval
+   */
+  private clearSafeInterval(interval: NodeJS.Timeout): void {
+    clearInterval(interval);
+    this._activeIntervals.delete(interval);
+  }
+
+  /**
+   * Destroy the database instance and clean up all resources
+   */
+  public destroy(): void {
+    if (this._isDestroyed) {
+      return;
+    }
+
+    console.log("[DB] Destroying DataBase instance...");
+
+    this._isDestroyed = true;
+
+    // Clear all timeouts
+    this._activeTimeouts.forEach((timeout) => {
+      clearTimeout(timeout);
+    });
+    this._activeTimeouts.clear();
+
+    // Clear all intervals
+    this._activeIntervals.forEach((interval) => {
+      clearInterval(interval);
+    });
+    this._activeIntervals.clear();
+
+    // Clear event listeners
+    this.eventEmitter.removeAllListeners();
+
+    // Clear auth callbacks
+    this.onAuthCallbacks.length = 0;
+
+    // Clear Gun user
+    if (this.user) {
+      try {
+        this.user.leave();
+      } catch (error) {
+        console.warn("Error during user leave:", error);
+      }
+      this.user = null;
+    }
+
+    // Clear Gun instance references
+    if (this.gun) {
+      try {
+        // Clear any Gun event listeners if available
+        if (typeof (this.gun as any).off === "function") {
+          (this.gun as any).off();
+        }
+      } catch (error) {
+        console.warn("Error clearing Gun listeners:", error);
+      }
+    }
+
+    // Clear other references
+    this._rxjs = undefined;
+    this._cryptoIdentityManager = undefined;
+    this.core = undefined;
+
+    console.log("[DB] DataBase instance destroyed");
   }
 }
 

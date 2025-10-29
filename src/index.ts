@@ -22,7 +22,6 @@ import {
   autoQuickStart,
 } from "./gundb";
 
-
 import Gun from "gun";
 import SEA from "gun/sea";
 

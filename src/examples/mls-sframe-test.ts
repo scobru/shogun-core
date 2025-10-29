@@ -66,8 +66,10 @@ async function testMLS() {
     console.log("✅ Charlie joined group:", charlieWelcome);
 
     // Alice processes the commit to update her state
-    await aliceManager.processCommit("test-group", addResult.commit);
-    console.log("✅ Alice processed commit");
+    // Alice doesn't need to process the commit - her state is already updated by addMembers()
+    console.log(
+      "✅ Alice already synchronized after adding members (state updated by addMembers)",
+    );
 
     // Test messaging
     const message1 = await aliceManager.encryptMessage(
@@ -76,15 +78,18 @@ async function testMLS() {
     );
     console.log("✅ Message encrypted");
 
-    const decrypted1 = await aliceManager.decryptMessage(message1);
-    console.log("✅ Message decrypted:", decrypted1);
+    // Alice doesn't need to decrypt her own message, as her state is already updated
+    console.log("✅ Alice (sender) does not need to decrypt her own message.");
 
     // Test key rotation
     const updateCommit = await aliceManager.updateKey("test-group");
     console.log("✅ Key rotation performed");
 
     // Process update commit for all members
-    await aliceManager.processCommit("test-group", updateCommit);
+    // Alice doesn't need to process the commit for key rotation - her state is already updated by updateKey()
+    console.log(
+      "✅ Alice already synchronized after key rotation (state updated by updateKey)",
+    );
     await bobManager.processCommit("test-group", updateCommit);
     await charlieManager.processCommit("test-group", updateCommit);
     console.log("✅ All members processed key rotation");
@@ -129,13 +134,15 @@ async function testSFrame() {
 
     console.log("✅ SFrame managers initialized");
 
-    // Export Alice's key for Bob
-    const aliceKey = await aliceManager.generateKey(0);
-    await bobManager.generateKey(0);
+    // Alice generates key and shares with Bob
+    const aliceSFrameKey = await aliceManager.generateKey(0);
 
-    // Set Bob to use Alice's key for decryption
+    // Bob uses Alice's key
+    await bobManager.setSharedKey(aliceSFrameKey);
+
+    // Set active key for both
+    aliceManager.setActiveKey(0);
     bobManager.setActiveKey(0);
-    console.log("✅ Key shared between Alice and Bob");
 
     // Simulate media frames
     const testFrames = [
@@ -230,7 +237,10 @@ async function testMLSSFrameIntegration() {
 
     const addResult = await aliceMLS.addMembers("media-group", [bobKeyPackage]);
     await bobMLS.processWelcome(addResult.welcome, addResult.ratchetTree);
-    await aliceMLS.processCommit("media-group", addResult.commit);
+    // Alice doesn't need to process the commit - her state is already updated by addMembers()
+    console.log(
+      "✅ Alice already synchronized after adding members (state updated by addMembers)",
+    );
 
     console.log("✅ MLS group established");
 

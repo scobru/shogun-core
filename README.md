@@ -290,9 +290,13 @@ if (result.success) {
 }
 ```
 
-## Automatic Crypto Identity Management
+## Crypto Identity Management
 
-Shogun Core automatically generates comprehensive crypto identities for every authenticated user:
+Shogun Core provides automatic crypto identity generation for every authenticated user. All crypto identities are created automatically during the signup process and stored securely in the decentralized database.
+
+### Automatic Identity Generation
+
+When a user signs up, Shogun Core automatically generates comprehensive crypto identities:
 
 - **RSA-4096 Key Pairs**: For asymmetric encryption and digital signatures
 - **AES-256 Symmetric Keys**: For fast symmetric encryption operations  
@@ -301,21 +305,130 @@ Shogun Core automatically generates comprehensive crypto identities for every au
 - **MLS Groups**: For group messaging and collaboration
 - **SFrame Keys**: For media encryption and streaming
 
+### Accessing Crypto Identities
+
 ```typescript
-// Register user - crypto identities generated automatically
+import { CryptoIdentityManager } from "shogun-core";
+
+// Create CryptoIdentityManager instance
+const cryptoManager = new CryptoIdentityManager(shogun);
+
+// Get current user's crypto identities
+const identities = await cryptoManager.getCurrentUserIdentities();
+
+if (identities.success && identities.identities) {
+  console.log("RSA Key Pair:", !!identities.identities.rsa);
+  console.log("AES Key:", !!identities.identities.aes);
+  console.log("Signal Identity:", !!identities.identities.signal);
+  console.log("PGP Keys:", !!identities.identities.pgp);
+  console.log("MLS Group:", !!identities.identities.mls);
+  console.log("SFrame Key:", !!identities.identities.sframe);
+  
+  // Access specific identity data
+  if (identities.identities.rsa) {
+    console.log("RSA Public Key:", identities.identities.rsa.publicKey);
+    console.log("RSA Private Key:", identities.identities.rsa.privateKey);
+  }
+  
+  if (identities.identities.aes) {
+    console.log("AES Key:", identities.identities.aes);
+  }
+  
+  if (identities.identities.signal) {
+    console.log("Signal Identity:", identities.identities.signal);
+  }
+  
+  if (identities.identities.pgp) {
+    console.log("PGP Public Key:", identities.identities.pgp.publicKey);
+    console.log("PGP Private Key:", identities.identities.pgp.privateKey);
+  }
+  
+  if (identities.identities.mls) {
+    console.log("MLS Group ID:", identities.identities.mls.groupId);
+    console.log("MLS Member ID:", identities.identities.mls.memberId);
+  }
+  
+  if (identities.identities.sframe) {
+    console.log("SFrame Key ID:", identities.identities.sframe.keyId);
+  }
+} else {
+  console.error("Failed to retrieve identities:", identities.error);
+}
+```
+
+### Complete Example
+
+```typescript
+import { ShogunCore, CryptoIdentityManager } from "shogun-core";
+import Gun from "gun";
+
+// Initialize Shogun Core
+const gun = Gun({ 
+  peers: ['https://gun-manhattan.herokuapp.com/gun'] 
+});
+
+const shogun = new ShogunCore({
+  gunInstance: gun,
+  scope: "my-app"
+});
+
+// Register user (crypto identities generated automatically)
 const signupResult = await shogun.signUp("alice", "password123");
 
 if (signupResult.success) {
-  const cryptoManager = shogun.getCryptoIdentityManager();
+  console.log("User registered:", signupResult.username);
+  
+  // Access crypto identities
+  const cryptoManager = new CryptoIdentityManager(shogun);
   const identities = await cryptoManager.getCurrentUserIdentities();
   
   if (identities.success) {
-    console.log("RSA Key Pair:", !!identities.identities?.rsa);
-    console.log("AES Key:", !!identities.identities?.aes);
-    console.log("Signal Identity:", !!identities.identities?.signal);
-    console.log("PGP Keys:", !!identities.identities?.pgp);
-    console.log("MLS Group:", !!identities.identities?.mls);
-    console.log("SFrame Key:", !!identities.identities?.sframe);
+    console.log("✅ All crypto identities generated successfully");
+    console.log("Identities available:", Object.keys(identities.identities || {}));
+  }
+}
+```
+
+### Identity Structure
+
+The `CryptoIdentities` interface contains:
+
+```typescript
+interface CryptoIdentities {
+  rsa?: JWKKeyPair;           // RSA-4096 key pair
+  aes?: JsonWebKey;           // AES-256 symmetric key
+  signal?: SignalUser;        // Signal Protocol identity
+  pgp?: PGPKeyPair;          // PGP key pair
+  mls?: {                    // MLS group membership
+    groupId: string;
+    memberId: string;
+  };
+  sframe?: {                 // SFrame media key
+    keyId: number;
+  };
+  createdAt: number;         // Creation timestamp
+  version: string;           // Identity version
+}
+```
+
+### Error Handling
+
+```typescript
+const identities = await cryptoManager.getCurrentUserIdentities();
+
+if (!identities.success) {
+  switch (identities.error) {
+    case "No authenticated user found":
+      console.log("Please log in first");
+      break;
+    case "Database not available":
+      console.log("Database connection issue");
+      break;
+    case "No SEA pair found for current user":
+      console.log("User authentication issue");
+      break;
+    default:
+      console.error("Unknown error:", identities.error);
   }
 }
 ```
@@ -466,16 +579,6 @@ yarn coverage
 # Plugin tests only
 yarn test src/__tests__/plugins
 ```
-
-## SHIP Standards
-
-Shogun Core implements **SHIP standards** - modular, composable protocols for decentralized applications:
-
-- **[SHIP-00](./ship/SHIP_00.md)**: Identity & Authentication Foundation
-- **[SHIP-01](./ship/SHIP_01.md)**: Decentralized Encrypted Messaging
-- **[SHIP-02](./ship/SHIP_02.md)**: Ethereum HD Wallet & Transaction Sending
-- **[SHIP-03](./ship/SHIP_03.md)**: Dual-Key Stealth Addresses (ERC-5564)
-- **[SHIP-04](./ship/SHIP_04.md)**: Multi-Modal Authentication
 
 ## Support
 

@@ -27,6 +27,7 @@ import {
   type Welcome,
   type PrivateMessage,
   type CiphersuiteImpl,
+  type MlsPublicMessage,
 } from "ts-mls";
 
 // Helper to strip trailing null nodes per RFC 9420
@@ -103,7 +104,7 @@ export class MLSManager {
       await this.generateKeyPackage();
 
       console.log("✅ [MLS] Initialized successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to initialize:", error);
       throw new Error(
         `MLS initialization failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -135,7 +136,7 @@ export class MLSManager {
 
       console.log("✅ [MLS] Key package generated");
       return this.keyPackage;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to generate key package:", error);
       throw new Error(
         `Key package generation failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -188,7 +189,7 @@ export class MLSManager {
         `✅ [MLS] Group created: ${groupId}, epoch: ${groupState.groupContext.epoch}`,
       );
       return groupInfo;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to create group:", error);
       throw new Error(
         `Group creation failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -244,10 +245,12 @@ export class MLSManager {
       console.group("🔍 [MLS Debug] Commit Structure");
       console.log("commitResult keys:", Object.keys(commitResult));
       console.log("commit:", commitResult.commit);
-      console.log(
-        "commit.privateMessage:",
-        (commitResult.commit as any)?.privateMessage,
-      );
+      if (commitResult.commit?.wireformat === "mls_private_message") {
+        console.log(
+          "commit.privateMessage:",
+          commitResult.commit.privateMessage,
+        );
+      }
       console.groupEnd();
 
       // RFC 9420 Section 11.2: Commit Distribution
@@ -277,7 +280,7 @@ export class MLSManager {
         ratchetTree: strippedTree,
         commit: commitResult.commit,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to add members:", error);
       throw new Error(
         `Adding members failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -328,9 +331,9 @@ export class MLSManager {
           } else {
             console.log(`  Node ${i}:`, {
               type: typeof node,
-              isObject: typeof node === "object",
+              isObject: typeof node === "object" && node !== null,
               hasNodeType:
-                node && typeof node === "object" && "nodeType" in node,
+                typeof node === "object" && node !== null && "nodeType" in node,
               nodeType: (node as any)?.nodeType,
               keys:
                 node && typeof node === "object"
@@ -365,7 +368,7 @@ export class MLSManager {
 
       console.log(`✅ [MLS] Welcome processed, joined group: ${groupId}`);
       return groupInfo;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to process welcome:", error);
       throw new Error(
         `Welcome processing failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -417,7 +420,7 @@ export class MLSManager {
 
       console.log("✅ [MLS] Message encrypted");
       return envelope;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to encrypt message:", error);
       throw new Error(
         `Message encryption failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -442,11 +445,12 @@ export class MLSManager {
 
       // Decode the message
       const decoded = decodeMlsMessage(envelope.ciphertext, 0);
-      if (!decoded) {
+      if (!decoded || (decoded.length as number) === 0) {
+        // Changed from 0n to 0 to fix type error
         throw new Error("Failed to decode message");
       }
 
-      const [decodedMessage] = decoded;
+      const decodedMessage = decoded[0];
       if (decodedMessage.wireformat !== "mls_private_message") {
         throw new Error("Expected private message");
       }
@@ -470,7 +474,7 @@ export class MLSManager {
 
       console.log("✅ [MLS] Message decrypted");
       return plaintext;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to decrypt message:", error);
       throw new Error(
         `Decryption failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -495,7 +499,7 @@ export class MLSManager {
       // Create update commit (forces path update)
       const commitResult = await createCommit(
         { state: groupState, cipherSuite: this.cipherSuite! },
-        {}, // Empty options - ts-mls will handle path update automatically
+        {},
       );
 
       // Update group state
@@ -507,7 +511,7 @@ export class MLSManager {
 
       // Return the raw commit object for other members to process
       return commitResult.commit;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to update key:", error);
       throw new Error(
         `Key update failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -601,11 +605,11 @@ export class MLSManager {
       console.log(
         `✅ [MLS] Commit processed, epoch: ${result.newState.groupContext.epoch}`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to process commit:", error);
       console.error(
         "❌ [MLS Debug] Error details:",
-        error instanceof Error ? error.stack : "No stack trace",
+        error instanceof Error ? error.stack : String(error),
       );
       console.error(
         "❌ [MLS Debug] Error message:",
@@ -640,7 +644,7 @@ export class MLSManager {
       const removeProposals: Proposal[] = memberIndices.map((index) => ({
         proposalType: "remove",
         remove: {
-          removed: index, // ts-mls expects number, not BigInt
+          removed: index, // Changed from BigInt(index) to number
         },
       }));
 
@@ -654,15 +658,28 @@ export class MLSManager {
       this.groups.set(groupId, commitResult.newState);
 
       // Encode the commit
-      const encodedCommit = encodeMlsMessage({
-        publicMessage: (commitResult as any).publicMessage!,
-        wireformat: "mls_public_message",
-        version: "mls10",
-      });
+      let encodedCommit: Uint8Array;
+      if (
+        commitResult.commit &&
+        commitResult.commit.wireformat === "mls_public_message"
+      ) {
+        encodedCommit = encodeMlsMessage({
+          publicMessage: (commitResult.commit as MlsPublicMessage)
+            .publicMessage!,
+          wireformat: "mls_public_message",
+          version: "mls10",
+        });
+      } else {
+        // Fallback or error handling if not a public message
+        // For now, we'll assume it should be public for remove operation.
+        throw new Error(
+          "Commit result does not contain a public message for encoding.",
+        );
+      }
 
       console.log("✅ [MLS] Members removed");
       return encodedCommit;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to remove members:", error);
       throw new Error(
         `Member removal failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -681,7 +698,7 @@ export class MLSManager {
         new TextEncoder().encode(id),
       );
       return groupIds;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to get groups:", error);
       throw new Error(
         `Getting groups failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -714,7 +731,7 @@ export class MLSManager {
 
       console.log("✅ [MLS] Group state exported");
       return exportData;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ [MLS] Failed to export group state:", error);
       throw new Error(
         `Group state export failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -776,15 +793,21 @@ export class MLSManager {
         if (
           node &&
           (node as any).nodeType === "leaf" &&
-          (node as any).leaf?.credential
+          (node as any).leaf.credential
         ) {
-          const identity = new TextDecoder().decode(
-            (node as any).leaf.credential.identity,
-          );
-          members.push(identity);
+          const credential = (node as any).leaf.credential;
+          if (credential.credentialType === "basic" && credential.identity) {
+            const identity = new TextDecoder().decode(credential.identity);
+            members.push(identity);
+          } else {
+            console.warn(
+              "Skipping credential without basic identity:",
+              credential,
+            );
+          }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn("Could not extract members:", error);
       members.push(this.userId); // At least include self
     }

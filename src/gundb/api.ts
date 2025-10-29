@@ -135,7 +135,9 @@ export class SimpleGunAPI {
           resolve(data);
         });
       });
-      return this.indexedObjectToArray<T>(indexedObj as Record<string, T> | null);
+      return this.indexedObjectToArray<T>(
+        indexedObj as Record<string, T> | null,
+      );
     } catch (error) {
       console.warn("Failed to get array:", error);
       return [];

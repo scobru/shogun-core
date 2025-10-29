@@ -11,13 +11,40 @@ import { AutoQuickStart } from "../gundb/api";
 
 async function authTest() {
   console.log("🔐 ShogunCore Authentication Test\n");
-  
+
   // Set a global timeout to prevent hanging
   const globalTimeout = setTimeout(() => {
     console.log("⏰ Global timeout reached - test taking too long");
     console.log("✅ Test completed (with timeout)");
     process.exit(0);
   }, 60000); // 60 seconds timeout
+
+  // Memory monitoring
+  const logMemoryUsage = (label: string) => {
+    if (typeof process !== "undefined" && process.memoryUsage) {
+      const usage = process.memoryUsage();
+      console.log(`📊 [${label}] Memory Usage:`, {
+        rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
+        heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
+        external: `${Math.round(usage.external / 1024 / 1024)}MB`,
+      });
+    }
+  };
+
+  // Cleanup function to clear timeouts and listeners
+  const cleanup = () => {
+    if (globalTimeout) {
+      clearTimeout(globalTimeout);
+    }
+    // Clear any other timeouts that might be running
+    // Note: process.emit('cleanup') is not a standard Node.js event
+  };
+
+  // Handle process cleanup
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
+  process.on("exit", cleanup);
 
   // === INITIALIZATION ===
   console.log("📦 === INITIALIZATION ===\n");
@@ -34,6 +61,7 @@ async function authTest() {
   try {
     await quickStart.init();
     console.log("✓ ShogunCore initialized successfully");
+    logMemoryUsage("After Init");
   } catch (error) {
     console.error("❌ Failed to initialize ShogunCore:", error);
     return;
@@ -48,6 +76,8 @@ async function authTest() {
   console.log("- Current user:", db.getCurrentUser()?.alias || "None");
   console.log("- Is logged in:", db.isLoggedIn());
   console.log("");
+
+  logMemoryUsage("Before Tests");
 
   // === TEST 1: BASIC SIGNUP AND LOGIN ===
   console.log("🧪 === TEST 1: BASIC SIGNUP AND LOGIN ===\n");
@@ -89,12 +119,12 @@ async function authTest() {
       clearTimeout(timeout);
       console.log(
         "📊 Pre-signup data:",
-        data ? "User exists" : "User not found"
+        data ? "User exists" : "User not found",
       );
       if (data) {
         console.log(
           "🔑 User pub:",
-          data.pub ? `${data.pub.substring(0, 20)}...` : "None"
+          data.pub ? `${data.pub.substring(0, 20)}...` : "None",
         );
         console.log("📝 User keys:", Object.keys(data));
       }
@@ -104,7 +134,7 @@ async function authTest() {
 
   if (preSignupCheck) {
     console.log(
-      "⚠️ User already exists, skipping signup and going directly to login"
+      "⚠️ User already exists, skipping signup and going directly to login",
     );
   } else {
     try {
@@ -125,12 +155,12 @@ async function authTest() {
 
       if (!signupResult.success) {
         console.log(
-          "ℹ️ Signup failed, user might already exist. Will try login..."
+          "ℹ️ Signup failed, user might already exist. Will try login...",
         );
       }
     } catch (error) {
       console.log(
-        "ℹ️ Signup threw exception, user might already exist. Will try login..."
+        "ℹ️ Signup threw exception, user might already exist. Will try login...",
       );
       console.log("Exception details:", error);
     }
@@ -148,7 +178,7 @@ async function authTest() {
   try {
     // Skip user existence check and try direct login
     console.log(
-      "🔄 Attempting direct login (bypassing user existence check)..."
+      "🔄 Attempting direct login (bypassing user existence check)...",
     );
 
     // Login without timeout (the database now handles this properly)
@@ -168,7 +198,7 @@ async function authTest() {
     if (!loginResult.success) {
       console.error("❌ Login failed:", loginResult.error);
       console.log(
-        "ℹ️ If this is a new user, try running the test again after a few seconds"
+        "ℹ️ If this is a new user, try running the test again after a few seconds",
       );
       return;
     }
@@ -191,7 +221,7 @@ async function authTest() {
       console.error("❌ User state verification failed");
       return;
     }
-    
+
     console.log("✅ Login verification completed successfully!");
   } catch (error) {
     console.error("❌ Login threw exception:", error);
@@ -208,7 +238,7 @@ async function authTest() {
     // Get GUN instance directly from database
     const gunInstance = db.getGunInstance();
     const appNode = db.getAppNode();
-    
+
     // Test data storage using GUN directly
     const testData = {
       message: "Hello from auth test!",
@@ -217,29 +247,29 @@ async function authTest() {
     };
 
     console.log("🔄 Storing data using GUN directly...");
-    
+
     // Store data using GUN directly without waiting for acknowledgment
     appNode.get("test/encrypted-data").put(testData);
     console.log("✓ Data stored successfully (no ack wait)");
 
     // Wait a moment for data to be stored
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     console.log("🔄 Retrieving data using GUN directly...");
-    
+
     // Retrieve data using GUN directly
     const retrievedData = await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         console.log("⏰ Data retrieval timeout");
         resolve(null);
       }, 3000);
-      
+
       appNode.get("test/encrypted-data").once((data: any) => {
         clearTimeout(timeout);
         resolve(data);
       });
     });
-    
+
     if (retrievedData) {
       console.log("✓ Data retrieved:", retrievedData);
     } else {
@@ -248,36 +278,40 @@ async function authTest() {
 
     // Test simple GUN operations
     console.log("\n🔄 Testing simple GUN operations...");
-    
+
     // Store user profile data
     const profileData = {
       name: "Auth Test User",
       email: "authtest@example.com",
       bio: "Testing authentication flow",
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     };
-    
+
     const currentUser = db.getCurrentUser();
     if (currentUser?.pub) {
       appNode.get("users").get(currentUser.pub).get("profile").put(profileData);
       console.log("✓ Profile data stored");
-      
+
       // Wait a moment
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Try to retrieve profile
       const profile = await new Promise((resolve) => {
         const timeout = setTimeout(() => {
           console.log("⏰ Profile retrieval timeout");
           resolve(null);
         }, 3000);
-        
-        appNode.get("users").get(currentUser.pub).get("profile").once((data: any) => {
-          clearTimeout(timeout);
-          resolve(data);
-        });
+
+        appNode
+          .get("users")
+          .get(currentUser.pub)
+          .get("profile")
+          .once((data: any) => {
+            clearTimeout(timeout);
+            resolve(data);
+          });
       });
-      
+
       if (profile) {
         console.log("✓ Profile retrieved:", profile);
       } else {
@@ -286,7 +320,6 @@ async function authTest() {
     } else {
       console.log("⚠️ No current user pub available for profile test");
     }
-    
   } catch (error) {
     console.error("❌ Data operations failed:", error);
   }
@@ -298,7 +331,7 @@ async function authTest() {
 
   try {
     console.log("🔄 Attempting logout...");
-    
+
     // Use GUN logout directly from database instance
     const gunInstance = db.getGunInstance();
     gunInstance.user().leave();
@@ -314,7 +347,7 @@ async function authTest() {
     console.log("Is logged in after logout:", isStillLoggedIn);
     console.log(
       "Current user after logout:",
-      currentUserAfterLogout?.alias || "None"
+      currentUserAfterLogout?.alias || "None",
     );
 
     if (isStillLoggedIn) {
@@ -333,18 +366,18 @@ async function authTest() {
 
   try {
     console.log("🔄 Attempting re-login with same credentials...");
-    
+
     // Use GUN login directly from database instance
     const gunInstance = db.getGunInstance();
     gunInstance.user().auth(testUsername, testPassword);
-    
+
     // Wait for authentication to complete
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     // Check if authentication was successful
     const user = gunInstance.user();
     const isAuthenticated = !!user.is;
-    
+
     if (isAuthenticated && user.is) {
       console.log("✓ Re-login successful");
       console.log("User pub:", user.is.pub?.substring(0, 20) + "...");
@@ -379,7 +412,7 @@ async function authTest() {
   } catch (error) {
     console.log(
       "✓ Invalid password threw exception (expected):",
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
     );
   }
 
@@ -388,7 +421,7 @@ async function authTest() {
   try {
     const nonexistentLoginResult = await db.login(
       "nonexistentuser123",
-      "password"
+      "password",
     );
     console.log("Non-existent user login result:", {
       success: nonexistentLoginResult.success,
@@ -403,7 +436,7 @@ async function authTest() {
   } catch (error) {
     console.log(
       "✓ Non-existent user threw exception (expected):",
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
     );
   }
 
@@ -414,42 +447,42 @@ async function authTest() {
 
   try {
     console.log("🔄 Testing password hint setup...");
-    
+
     // Setup password hint with security questions
     const passwordHint = "My favorite color is blue and I was born in 1990";
     const securityQuestions = [
       "What is your favorite color?",
       "What year were you born?",
-      "What is your mother's maiden name?"
+      "What is your mother's maiden name?",
     ];
     const securityAnswers = ["blue", "1990", "Smith"];
-    
+
     const hintSetupResult = await db.setPasswordHintWithSecurity(
       testUsername,
       testPassword,
       passwordHint,
       securityQuestions,
-      securityAnswers
+      securityAnswers,
     );
-    
+
     if (hintSetupResult.success) {
       console.log("✓ Password hint setup successful");
     } else {
       console.log("⚠️ Password hint setup failed:", hintSetupResult.error);
     }
-    
+
     console.log("\n🔄 Testing password recovery...");
-    
+
     // Test password recovery
     const recoveryResult = await db.forgotPassword(
       testUsername,
-      securityAnswers
+      securityAnswers,
     );
-    
+
     if (recoveryResult.success) {
       console.log("✓ Password recovery successful");
       console.log("Recovered hint:", recoveryResult.hint);
-      
+
       if (recoveryResult.hint === passwordHint) {
         console.log("✓ Recovered hint matches original");
       } else {
@@ -458,21 +491,20 @@ async function authTest() {
     } else {
       console.log("❌ Password recovery failed:", recoveryResult.error);
     }
-    
+
     // Test with wrong answers
     console.log("\n🔄 Testing password recovery with wrong answers...");
     const wrongAnswers = ["red", "1985", "Johnson"];
     const wrongRecoveryResult = await db.forgotPassword(
       testUsername,
-      wrongAnswers
+      wrongAnswers,
     );
-    
+
     if (!wrongRecoveryResult.success) {
       console.log("✓ Wrong answers correctly rejected");
     } else {
       console.log("⚠️ Wrong answers were accepted (unexpected)");
     }
-    
   } catch (error) {
     console.error("❌ Password recovery test failed:", error);
   }
@@ -491,7 +523,30 @@ async function authTest() {
 
   // Clear global timeout
   clearTimeout(globalTimeout);
-  
+
+  // Log memory usage before cleanup
+  logMemoryUsage("Before Cleanup");
+
+  // Destroy database instance to prevent memory leaks
+  try {
+    db.destroy();
+    console.log("✓ Database instance destroyed");
+  } catch (error) {
+    console.error("❌ Database destruction failed:", error);
+  }
+
+  // Force garbage collection if available
+  if (typeof global !== "undefined" && global.gc) {
+    global.gc();
+    logMemoryUsage("After GC");
+  }
+
+  // Additional cleanup
+  cleanup();
+
+  // Final memory check
+  logMemoryUsage("Final");
+
   console.log("\n✅ Authentication test completed!");
   console.log("\n📊 Test Summary:");
   console.log("- ✓ Signup with username/password");

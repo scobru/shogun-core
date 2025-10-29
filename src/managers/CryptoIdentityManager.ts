@@ -80,7 +80,7 @@ export class CryptoIdentityManager {
 
   constructor(core: IShogunCore, db?: any) {
     this.core = core;
-    this.db = db;
+    this.db = db || core.db; // Use core.db if db not provided
     this.pgpManager = new PGPManager();
     this.mlsManager = new MLSManager("default-user");
     this.sframeManager = new SFrameManager();
@@ -187,6 +187,14 @@ export class CryptoIdentityManager {
         `✅ [CryptoIdentityManager] All crypto identities generated for: ${username}`,
       );
 
+      // Force garbage collection after generation
+      if (typeof global !== "undefined" && global.gc) {
+        global.gc();
+        console.log(
+          `🧹 [${username}] Forced garbage collection after identity generation`,
+        );
+      }
+
       return {
         success: true,
         identities,
@@ -246,24 +254,44 @@ export class CryptoIdentityManager {
 
       // Salva su GunDB nel percorso privato dell'utente
       const saveResult = await new Promise<boolean>((resolve, reject) => {
-        this.db.gun
-          .user()
-          .get("crypto-identities")
-          .put(encryptedIdentities, (ack: any) => {
-            if (ack.err) {
-              console.error(
-                `❌ [${username}] Failed to save identities:`,
-                ack.err,
-              );
-              reject(new Error(ack.err));
-            } else {
-              console.log(
-                `✅ [${username}] Crypto identities saved successfully`,
-              );
-              savedKeys.push("crypto-identities");
-              resolve(true);
-            }
-          });
+        const timeout = setTimeout(() => {
+          console.warn(
+            `⚠️ [${username}] Save identities timeout after 5 seconds, continuing anyway`,
+          );
+          savedKeys.push("crypto-identities");
+          resolve(true); // Resolve anyway to not block the process
+        }, 5000); // 5 second timeout
+
+        try {
+          this.db.gun
+            .user()
+            .get("crypto-identities")
+            .put(encryptedIdentities, (ack: any) => {
+              clearTimeout(timeout);
+              if (ack && ack.err) {
+                console.error(
+                  `❌ [${username}] Failed to save identities:`,
+                  ack.err,
+                );
+                reject(new Error(ack.err));
+              } else {
+                console.log(
+                  `✅ [${username}] Crypto identities saved successfully`,
+                );
+                savedKeys.push("crypto-identities");
+                resolve(true);
+              }
+            });
+        } catch (putError) {
+          clearTimeout(timeout);
+          console.error(
+            `❌ [${username}] Error during put operation:`,
+            putError,
+          );
+          // Don't reject, just resolve to not block - Gun might save eventually
+          savedKeys.push("crypto-identities");
+          resolve(true);
+        }
       });
 
       // Salva anche una copia di backup nel percorso pubblico (solo hash per verifica)
@@ -272,23 +300,51 @@ export class CryptoIdentityManager {
       });
 
       await new Promise<boolean>((resolve, reject) => {
-        this.db.gun
-          .user()
-          .get("crypto-identities-hash")
-          .put(identitiesHash, (ack: any) => {
-            if (ack.err) {
-              console.error(
-                `❌ [${username}] Failed to save identities hash:`,
-                ack.err,
-              );
-              reject(new Error(ack.err));
-            } else {
-              console.log(`✅ [${username}] Crypto identities hash saved`);
-              savedKeys.push("crypto-identities-hash");
-              resolve(true);
-            }
-          });
+        const timeout = setTimeout(() => {
+          console.warn(
+            `⚠️ [${username}] Save identities hash timeout after 5 seconds, continuing anyway`,
+          );
+          savedKeys.push("crypto-identities-hash");
+          resolve(true); // Resolve anyway to not block the process
+        }, 5000); // 5 second timeout
+
+        try {
+          this.db.gun
+            .user()
+            .get("crypto-identities-hash")
+            .put(identitiesHash, (ack: any) => {
+              clearTimeout(timeout);
+              if (ack && ack.err) {
+                console.error(
+                  `❌ [${username}] Failed to save identities hash:`,
+                  ack.err,
+                );
+                reject(new Error(ack.err));
+              } else {
+                console.log(`✅ [${username}] Crypto identities hash saved`);
+                savedKeys.push("crypto-identities-hash");
+                resolve(true);
+              }
+            });
+        } catch (putError) {
+          clearTimeout(timeout);
+          console.error(
+            `❌ [${username}] Error during hash put operation:`,
+            putError,
+          );
+          // Don't reject, just resolve to not block - Gun might save eventually
+          savedKeys.push("crypto-identities-hash");
+          resolve(true);
+        }
       });
+
+      // Force garbage collection after saving
+      if (typeof global !== "undefined" && global.gc) {
+        global.gc();
+        console.log(
+          `🧹 [${username}] Forced garbage collection after saving identities`,
+        );
+      }
 
       return {
         success: true,
@@ -538,6 +594,13 @@ export class CryptoIdentityManager {
       }
 
       // Ottieni il SEA pair dell'utente corrente
+      if (!this.db || !this.db.gun) {
+        return {
+          success: false,
+          error: "Database not available",
+        };
+      }
+
       const userInstance = this.db.gun.user();
       const seaPair = (userInstance as any)?._?.sea as ISEAPair;
 

@@ -31,7 +31,8 @@
     <h1>ShogunCore Vanilla Test</h1>
     <pre id="output">Loading...</pre>
     <!-- Load Gun.js first -->
-
+    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.1237/dist/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.1237/dist/sea.js"></script>
     <script src="../dist/browser/shogun-core.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/shogun-relays@1.0.3/browser.js"></script>
     <script type="module">
@@ -46,13 +47,11 @@
       log("✓ <b>ShogunRelays</b> loaded successfully", "ok");
 
       log("✓ <b>ShogunCore</b> found on window", "ok");
+
+      const gun = Gun({ localStorage: true, peers: await window.ShogunRelays.getRelays() });
       
       const config = {
-        gunOptions: {
-          radisk: false,
-          localStorage: true,
-          peers: await window.ShogunRelays.getRelays(),
-        },
+        gunInstance: gun,
       };
 
       const shogun = window.Shogun(config);

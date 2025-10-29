@@ -30,19 +30,38 @@ async function cryptoIdentityExample() {
   console.log("✅ ShogunCore inizializzato");
 
   // 2. Registra un nuovo utente (genera automaticamente SEA pair)
-  const username = `scobru`;
+  const username = `scobru_${Date.now()}`;
   const signupResult = await core.signUp(username, "francos88");
 
   if (!signupResult.success) {
     console.error("❌ Registrazione fallita:", signupResult.error);
-    return;
-  }
 
-  console.log("✅ Utente registrato:", {
-    username: signupResult.username,
-    userPub: signupResult.userPub,
-    hasSEAPair: !!signupResult.sea,
-  });
+    // Prova con un username diverso
+    const altUsername = `scobru_alt_${Date.now()}`;
+    console.log(`🔄 Tentativo con username alternativo: ${altUsername}`);
+
+    const altSignupResult = await core.signUp(altUsername, "francos88");
+
+    if (!altSignupResult.success) {
+      console.error(
+        "❌ Registrazione fallita anche con username alternativo:",
+        altSignupResult.error,
+      );
+      return;
+    }
+
+    console.log("✅ Utente registrato con username alternativo:", {
+      username: altSignupResult.username,
+      userPub: altSignupResult.userPub,
+      hasSEAPair: !!altSignupResult.sea,
+    });
+  } else {
+    console.log("✅ Utente registrato:", {
+      username: signupResult.username,
+      userPub: signupResult.userPub,
+      hasSEAPair: !!signupResult.sea,
+    });
+  }
 
   // 3. Le identità crypto sono state generate automaticamente durante la registrazione
   // Possiamo accedervi tramite il CryptoIdentityManager
@@ -73,7 +92,10 @@ async function cryptoIdentityExample() {
   // 5. Esempio di login con utente esistente
   console.log("\n🔄 Test login con utente esistente...");
 
-  const loginResult = await core.login(username, "francos88");
+  const finalUsername = signupResult.success
+    ? username
+    : `scobru_alt_${Date.now()}`;
+  const loginResult = await core.login(finalUsername, "francos88");
 
   if (loginResult.success) {
     console.log("✅ Login riuscito");
@@ -160,7 +182,10 @@ async function multiAuthExample() {
       console.log("🔐 Test ZK-Proof signup...");
 
       // ZK-Proof non richiede password, usa il metodo corretto
-      const zkResult = await (zkPlugin as any).signUp();
+      const zkResult = await (zkPlugin as any).signUp(
+        "zkuser",
+        "dummy_password",
+      );
 
       if (zkResult.success) {
         console.log("✅ ZK-Proof signup riuscito");

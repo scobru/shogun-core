@@ -45,6 +45,8 @@ module.exports = {
       assert: require.resolve("assert/"),
       constants: require.resolve("constants-browserify"),
       gun: path.resolve(__dirname, "node_modules/gun/gun.js"),
+      "gun/gun": path.resolve(__dirname, "node_modules/gun/gun.js"),
+      "gun/sea": path.resolve(__dirname, "node_modules/gun/sea.js"),
       zlib: false, // winston/file.js - not needed in browser
       // Add Node.js core modules that should be ignored in browser builds
       http: false,

@@ -63,6 +63,20 @@ describe("SimpleGunAPI", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Create mock node for GunDB operations
+    const mockNode = {
+      put: jest.fn(),
+      once: jest.fn((callback) => {
+        // Simulate async data retrieval
+        setTimeout(() => {
+          callback({
+            "1": { id: "1", name: "Item 1" },
+            "2": { id: "2", name: "Item 2" },
+          });
+        }, 10);
+      }),
+    };
+
     // Create mock database
     mockDb = {
       get: jest.fn(),
@@ -71,6 +85,7 @@ describe("SimpleGunAPI", () => {
       isLoggedIn: jest.fn(),
       getUser: jest.fn(),
       initialize: jest.fn(),
+      getNode: jest.fn(() => mockNode),
     };
 
     api = new SimpleGunAPI(mockDb);
@@ -126,17 +141,12 @@ describe("SimpleGunAPI", () => {
         { id: "1", name: "Item 1" },
         { id: "2", name: "Item 2" },
       ];
-      mockDb.put.mockResolvedValue({ success: true });
 
       const result = await api.putArray("global/items", arr);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "DEPRECATED: putArray() is unreliable with GunDB. Use direct GunDB operations instead.",
       );
-      expect(mockDb.put).toHaveBeenCalledWith("global/items", {
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      });
       expect(result).toBe(true);
 
       consoleSpy.mockRestore();
@@ -144,18 +154,12 @@ describe("SimpleGunAPI", () => {
 
     it("should show deprecation warning for getArray", async () => {
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-      const indexedObj = {
-        "1": { id: "1", name: "Item 1" },
-        "2": { id: "2", name: "Item 2" },
-      };
-      mockDb.getData.mockResolvedValue(indexedObj);
 
       const result = await api.getArray("global/items");
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "DEPRECATED: getArray() is unreliable with GunDB. Use direct GunDB operations instead.",
       );
-      expect(mockDb.getData).toHaveBeenCalledWith("global/items");
       expect(result).toEqual([
         { id: "1", name: "Item 1" },
         { id: "2", name: "Item 2" },

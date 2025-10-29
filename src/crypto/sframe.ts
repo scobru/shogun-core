@@ -173,6 +173,14 @@ export class SFrameManager {
   }
 
   /**
+   * Set a shared SFrame key (e.g., from another member)
+   */
+  async setSharedKey(sframeKey: SFrameKey): Promise<void> {
+    this.keys.set(sframeKey.keyId, sframeKey);
+    console.log(`✅ [SFrame] Shared key ${sframeKey.keyId} set.`);
+  }
+
+  /**
    * Set the active encryption key
    */
   setActiveKey(keyId: number): void {
@@ -232,13 +240,9 @@ export class SFrameManager {
       );
 
       // RFC 9605: SFrame format = header + ciphertext (IV is derived, not transmitted)
-      // Note: We include IV for now for simplicity, but RFC specifies deriving it from counter
-      const encrypted = new Uint8Array(
-        header.length + iv.length + ciphertext.byteLength,
-      );
+      const encrypted = new Uint8Array(header.length + ciphertext.byteLength);
       encrypted.set(header, 0);
-      encrypted.set(iv, header.length);
-      encrypted.set(new Uint8Array(ciphertext), header.length + iv.length);
+      encrypted.set(new Uint8Array(ciphertext), header.length);
 
       // Increment frame counter
       this.frameCounter++;
@@ -273,22 +277,18 @@ export class SFrameManager {
         throw new Error(`SFrame key ${keyId} not found`);
       }
 
-      // Extract IV (12 bytes after header)
-      const iv = encryptedFrame.slice(5, 17);
-
-      // RFC 9605: Verify IV derivation (optional check for debugging)
-      // Reconstruct expected IV from frame count and salt
+      // RFC 9605: IV is derived from frame count and salt (not transmitted)
       const counterBytes = new Uint8Array(12);
       const counterView = new DataView(counterBytes.buffer);
       counterView.setUint32(4, Math.floor(frameCount / 0x100000000), false);
       counterView.setUint32(8, frameCount & 0xffffffff, false);
-      const expectedIV = new Uint8Array(12);
+      const iv = new Uint8Array(12);
       for (let i = 0; i < 12; i++) {
-        expectedIV[i] = sframeKey.salt[i] ^ counterBytes[i];
+        iv[i] = sframeKey.salt[i] ^ counterBytes[i];
       }
 
       // Extract ciphertext (rest of the data)
-      const ciphertext = encryptedFrame.slice(17);
+      const ciphertext = encryptedFrame.slice(header.length);
 
       // Decrypt the frame with header authentication (RFC 9605 Section 4.3)
       const plaintext = await crypto.subtle.decrypt(
