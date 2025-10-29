@@ -22,9 +22,9 @@ import {
   autoQuickStart,
 } from "./gundb";
 
-import { SEA } from "./gundb/db";
 
-import Gun from "./gundb/db";
+import Gun from "gun";
+import SEA from "gun/sea";
 
 export * from "./utils/errorHandler";
 

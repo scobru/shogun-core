@@ -107,7 +107,8 @@ export class SimpleGunAPI {
     );
     try {
       const indexed = this.arrayToIndexedObject(arr);
-      await this.db.put(path, indexed);
+      const node = this.db.getNode(path);
+      node.put(indexed);
       return true;
     } catch (error) {
       console.warn("Failed to put array:", error);
@@ -126,8 +127,15 @@ export class SimpleGunAPI {
       "DEPRECATED: getArray() is unreliable with GunDB. Use direct GunDB operations instead.",
     );
     try {
-      const indexedObj = await this.db.getData(path);
-      return this.indexedObjectToArray<T>(indexedObj);
+      const node = this.db.getNode(path);
+      const indexedObj = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000);
+        node.once((data: any) => {
+          clearTimeout(timeout);
+          resolve(data);
+        });
+      });
+      return this.indexedObjectToArray<T>(indexedObj as Record<string, T> | null);
     } catch (error) {
       console.warn("Failed to get array:", error);
       return [];

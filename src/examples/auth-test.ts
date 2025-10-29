@@ -61,7 +61,7 @@ async function authTest() {
   await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
 
   // Force reset auth state for problematic users
-  if (testUsername === "scobru") {
+  if (testUsername === "dev") {
     console.log("🔧 Performing aggressive cleanup for problematic user...");
     db.aggressiveAuthCleanup();
     await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3 seconds
@@ -345,7 +345,7 @@ async function authTest() {
     const user = gunInstance.user();
     const isAuthenticated = !!user.is;
     
-    if (isAuthenticated) {
+    if (isAuthenticated && user.is) {
       console.log("✓ Re-login successful");
       console.log("User pub:", user.is.pub?.substring(0, 20) + "...");
       console.log("User alias:", user.is.alias || testUsername);
@@ -409,6 +409,76 @@ async function authTest() {
 
   console.log("");
 
+  // === TEST 6: PASSWORD RECOVERY ===
+  console.log("🔐 === TEST 6: PASSWORD RECOVERY ===\n");
+
+  try {
+    console.log("🔄 Testing password hint setup...");
+    
+    // Setup password hint with security questions
+    const passwordHint = "My favorite color is blue and I was born in 1990";
+    const securityQuestions = [
+      "What is your favorite color?",
+      "What year were you born?",
+      "What is your mother's maiden name?"
+    ];
+    const securityAnswers = ["blue", "1990", "Smith"];
+    
+    const hintSetupResult = await db.setPasswordHintWithSecurity(
+      testUsername,
+      testPassword,
+      passwordHint,
+      securityQuestions,
+      securityAnswers
+    );
+    
+    if (hintSetupResult.success) {
+      console.log("✓ Password hint setup successful");
+    } else {
+      console.log("⚠️ Password hint setup failed:", hintSetupResult.error);
+    }
+    
+    console.log("\n🔄 Testing password recovery...");
+    
+    // Test password recovery
+    const recoveryResult = await db.forgotPassword(
+      testUsername,
+      securityAnswers
+    );
+    
+    if (recoveryResult.success) {
+      console.log("✓ Password recovery successful");
+      console.log("Recovered hint:", recoveryResult.hint);
+      
+      if (recoveryResult.hint === passwordHint) {
+        console.log("✓ Recovered hint matches original");
+      } else {
+        console.log("⚠️ Recovered hint doesn't match original");
+      }
+    } else {
+      console.log("❌ Password recovery failed:", recoveryResult.error);
+    }
+    
+    // Test with wrong answers
+    console.log("\n🔄 Testing password recovery with wrong answers...");
+    const wrongAnswers = ["red", "1985", "Johnson"];
+    const wrongRecoveryResult = await db.forgotPassword(
+      testUsername,
+      wrongAnswers
+    );
+    
+    if (!wrongRecoveryResult.success) {
+      console.log("✓ Wrong answers correctly rejected");
+    } else {
+      console.log("⚠️ Wrong answers were accepted (unexpected)");
+    }
+    
+  } catch (error) {
+    console.error("❌ Password recovery test failed:", error);
+  }
+
+  console.log("");
+
   // === FINAL LOGOUT ===
   console.log("🚪 === FINAL CLEANUP ===\n");
 
@@ -431,6 +501,9 @@ async function authTest() {
   console.log("- ✓ Re-login capability");
   console.log("- ✓ Error handling for invalid credentials");
   console.log("- ✓ Error handling for non-existent users");
+  console.log("- ✓ Password hint setup with security questions");
+  console.log("- ✓ Password recovery with correct answers");
+  console.log("- ✓ Password recovery rejection with wrong answers");
 }
 
 // Esegui il test

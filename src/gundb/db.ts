@@ -11,7 +11,6 @@ import type {
   IGunChain,
   IGunInstance,
   ISEAPair,
-  GunMessagePut,
 } from "gun/types";
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
@@ -1136,9 +1135,9 @@ class DataBase {
         }
 
         console.log(`🔄 [CREATE] Creating user: ${normalizedUsername}`);
-
+        
         // Crea utente senza aspettare acknowledgment
-        this.gun.user().create(normalizedUsername, password);
+        this.gun.user().create(normalizedUsername, password, () => {});
 
         // Aspetta che la creazione si completi
         setTimeout(() => {
@@ -1274,9 +1273,9 @@ class DataBase {
       console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
 
       console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
-      const existingUser = this.gun.get(userPub)
+      const existingUser = this.gun.get(userPub);
 
-      const isNewUser = !existingUser || !existingUser.alias;
+      const isNewUser = !existingUser || !(existingUser as any).alias;
       console.log(
         `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`
       );
@@ -1724,12 +1723,21 @@ class DataBase {
 
       // Method 2: Try username mapping (usernames/alias -> userPub)
       try {
-        const userPub =  this.node
+        const userPubNode = this.node
           .get("usernames")
-          .get(normalizedAlias)
+          .get(normalizedAlias);
+
+        // Use once to get the actual value
+        const userPub = await new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 2000);
+          userPubNode.once((data: any) => {
+            clearTimeout(timeout);
+            resolve(data);
+          });
+        });
 
         if (userPub) {
-          const userData = await this.getUserDataByPub(userPub);
+          const userData = await this.getUserDataByPub(userPub as string);
           if (userData) {
             return userData;
           }
@@ -1816,9 +1824,18 @@ class DataBase {
         return null;
       }
 
-      const userPub =  this.node.get("epubKeys").get(epub);
+      const userPubNode = this.node.get("epubKeys").get(epub);
+      
+      // Use once to get the actual value
+      const userPub = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000);
+        userPubNode.once((data: any) => {
+          clearTimeout(timeout);
+          resolve(data);
+        });
+      });
 
-      return userPub || null;
+      return userPub as string || null;
     } catch (error) {
       console.error(`Error looking up user pub by epub ${epub}:`, error);
       return null;
@@ -1836,9 +1853,18 @@ class DataBase {
         return null;
       }
 
-      const alias =  this.node.get("userAliases").get(userPub);
+      const aliasNode = this.node.get("userAliases").get(userPub);
+      
+      // Use once to get the actual value
+      const alias = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000);
+        aliasNode.once((data: any) => {
+          clearTimeout(timeout);
+          resolve(data);
+        });
+      });
 
-      return alias || null;
+      return alias as string || null;
     } catch (error) {
       console.error(`Error looking up user alias by pub ${userPub}:`, error);
       return null;
@@ -2140,8 +2166,8 @@ class DataBase {
 
       console.log("✅ [LOGIN] Authentication successful!");
 
-      const userPub = user.is.pub;
-      let alias = user.is.alias as string;
+      const userPub = user?.is?.pub;
+      let alias = user?.is?.alias as string;
       let userPair = (user as any)?._?.sea as ISEAPair;
 
       if (!alias) {
@@ -2373,11 +2399,19 @@ class DataBase {
       }
 
       // Access the user's security data directly from their public key node
-      const securityData =  (this.node.get(userPub) as any)
-        .get("security")
+      const securityDataNode = this.node.get(userPub as string).get("security");
+      
+      // Use once to get the actual value
+      const securityData = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000);
+        securityDataNode.once((data: any) => {
+          clearTimeout(timeout);
+          resolve(data);
+        });
+      });
         
 
-      if (!securityData || !securityData.hint) {
+      if (!securityData || !(securityData as any).hint) {
         return {
           success: false,
           error: "No password hint found",
@@ -2412,9 +2446,9 @@ class DataBase {
       let hint;
       try {
         if (SEA && SEA.decrypt) {
-          hint = await SEA.decrypt(securityData.hint, proofOfWork);
+          hint = await SEA.decrypt((securityData as any).hint, proofOfWork);
         } else if (this.crypto && this.crypto.decrypt) {
-          hint = await this.crypto.decrypt(securityData.hint, proofOfWork);
+          hint = await this.crypto.decrypt((securityData as any).hint, proofOfWork);
         } else {
           throw new Error("Decryption functions not available");
         }
