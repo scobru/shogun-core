@@ -3,19 +3,28 @@
  * Mostra come le identità crypto vengono generate automaticamente dopo l'autenticazione SEA
  */
 
+import Gun from "gun";
 import { ShogunCore, CryptoIdentityManager } from "../index";
 
 // Esempio di utilizzo
 async function cryptoIdentityExample() {
   console.log("🚀 Avvio esempio CryptoIdentityManager");
 
-  // 1. Inizializza ShogunCore
+  // 1. Crea Gun instance
+  const gunInstance = Gun({
+    peers: [
+      "https://peer.wallie.io/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+      "https://shogunnode2.scobrudot.dev/gun",
+      "https://lindanode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false,
+  });
+
+  // 2. Inizializza ShogunCore con Gun instance
   const core = new ShogunCore({
-    gunOptions: {
-      peers: ["https://peer.wallie.io/gun","https://shogunnode.scobrudot.dev/gun","https://shogunnode2.scobrudot.dev/gun","https://lindanode.scobrudot.dev/gun"],
-      radisk: false,
-      localStorage: false,
-    },
+    gunInstance: gunInstance,
   });
 
   console.log("✅ ShogunCore inizializzato");
@@ -103,12 +112,19 @@ async function cryptoIdentityExample() {
 async function multiAuthExample() {
   console.log("\n🔐 Esempio con diversi metodi di autenticazione");
 
+  const gunInstance = Gun({
+    peers: [
+      "https://peer.wallie.io/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+      "https://shogunnode2.scobrudot.dev/gun",
+      "https://lindanode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false,
+  });
+
   const core = new ShogunCore({
-    gunOptions: {
-      peers: ["https://peer.wallie.io/gun","https://shogunnode.scobrudot.dev/gun","https://shogunnode2.scobrudot.dev/gun","https://lindanode.scobrudot.dev/gun"],
-      radisk: false,
-      localStorage: false,
-    },
+    gunInstance: gunInstance,
   });
 
   // Esempio con WebAuthn (se disponibile)

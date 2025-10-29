@@ -211,8 +211,7 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
-  gunInstance?: IGunInstance<any>;
-  gunOptions?: any;
+  gunInstance: IGunInstance<any>; // Required: existing Gun instance
   webauthn?: WebauthnConfig;
   web3?: {
     enabled?: boolean;

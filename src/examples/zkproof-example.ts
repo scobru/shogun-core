@@ -5,6 +5,7 @@
  * for privacy-preserving authentication using Semaphore protocol.
  */
 
+import Gun from "gun";
 import { ShogunCore } from "../core";
 import { ZkProofPlugin } from "../plugins/zkproof";
 
@@ -14,9 +15,9 @@ async function basicExample() {
 
   // Initialize Shogun with ZK-Proof plugin
   const shogun = new ShogunCore({
-    gunOptions: {
+    gunInstance: Gun({
       peers: ["https://peer.wallie.io/gun"],
-    },
+    }),
     zkproof: {
       enabled: true,
       defaultGroupId: "my-app-users",
@@ -76,9 +77,9 @@ async function deterministicExample() {
   console.log("\n=== Deterministic ZK Identity Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: {
+    gunInstance: Gun({
       peers: ["https://peer.wallie.io/gun"],
-    },
+    }),
     zkproof: {
       enabled: true,
       deterministic: true,
@@ -119,9 +120,9 @@ async function proofExample() {
   console.log("\n=== ZK Proof Generation & Verification Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: {
+    gunInstance: Gun({
       peers: ["https://peer.wallie.io/gun"],
-    },
+    }),
     zkproof: {
       enabled: true,
       defaultGroupId: "proof-demo-group",
@@ -178,9 +179,9 @@ async function multiDeviceExample() {
   // Device 1: Create account
   console.log("📱 DEVICE 1: Creating account...");
   const shogun1 = new ShogunCore({
-    gunOptions: {
+    gunInstance: Gun({
       peers: ["https://peer.wallie.io/gun"],
-    },
+    }),
     zkproof: { enabled: true },
   });
 
@@ -201,9 +202,9 @@ async function multiDeviceExample() {
   console.log("\n💻 DEVICE 2: Importing account with trapdoor...");
 
   const shogun2 = new ShogunCore({
-    gunOptions: {
+    gunInstance: Gun({
       peers: ["https://peer.wallie.io/gun"],
-    },
+    }),
     zkproof: { enabled: true },
   });
 

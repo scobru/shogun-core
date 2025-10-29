@@ -5,7 +5,7 @@ import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
-import { DataBase, RxJS, createGun, derive } from "../gundb";
+import { DataBase, RxJS, derive } from "../gundb";
 
 /**
  * Handles initialization of ShogunCore components
@@ -73,40 +73,58 @@ export class CoreInitializer {
   /**
    * Initialize Gun instance
    */
-  // Sì, è corretto.
   private initializeGun(config: ShogunCoreConfig): boolean {
     try {
-      if (config.gunInstance) {
-        console.log("Using existing Gun instance:", config.gunInstance);
-        this.core._gun = config.gunInstance;
-      } else if (config.gunOptions && config.gunInstance === undefined) {
-        console.log("Creating Gun instance with config:", config.gunOptions);
-        this.core._gun = createGun(config.gunOptions);
-      } else if (config.gunInstance && config.gunOptions) {
-        throw new Error(
-          "Gun instance and gun options cannot be provided together",
-        );
-        return false;
+      if (!config.gunInstance) {
+        throw new Error("Gun instance is required but was not provided");
       }
+
+      // Validate Gun instance
+      if (typeof config.gunInstance !== "object") {
+        throw new Error(
+          `Gun instance must be an object, received: ${typeof config.gunInstance}`,
+        );
+      }
+
+      if (typeof config.gunInstance.user !== "function") {
+        throw new Error(
+          `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof config.gunInstance.user}`,
+        );
+      }
+
+      if (typeof config.gunInstance.get !== "function") {
+        throw new Error(
+          `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof config.gunInstance.get}`,
+        );
+      }
+
+      if (typeof config.gunInstance.on !== "function") {
+        throw new Error(
+          `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof config.gunInstance.on}`,
+        );
+      }
+
+      console.log("Using provided Gun instance:", config.gunInstance);
+      this.core._gun = config.gunInstance;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
-        console.error("Error creating Gun instance:", error);
+        console.error("Error validating Gun instance:", error);
       }
-      return false;
+      throw new Error(`Failed to validate Gun instance: ${error}`);
     }
 
     try {
       this.core.db = new DataBase(
         this.core._gun,
-        config.gunOptions?.scope || "",
+        "shogun", // Default app scope
         this.core,
       );
       return true;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {
-        console.error("Error initializing GunInstance:", error);
+        console.error("Error initializing DataBase:", error);
       }
-      throw new Error(`Failed to initialize GunInstance: ${error}`);
+      throw new Error(`Failed to initialize DataBase: ${error}`);
     }
   }
 

@@ -2,11 +2,12 @@
  * Example showing how to use the simplified ShogunCore API
  *
  * The API has been streamlined:
- * - AutoQuickStart: Quick initialization helper
+ * - AutoQuickStart: Quick initialization helper (requires existing Gun instance)
  * - api.database: Direct access to DataBase for basic operations (get, put, set, remove, auth)
  * - api helper methods: High-level helpers for profile, settings, collections, and array utilities
  */
 
+import Gun from "gun";
 import { AutoQuickStart } from "../gundb/api";
 
 async function simpleAPITest() {
@@ -15,11 +16,13 @@ async function simpleAPITest() {
   // === QUICK START ===
   console.log("📦 === INITIALIZATION ===\n");
 
-  // Use AutoQuickStart for easy setup
-  const quickStart = new AutoQuickStart({
+  // Create Gun instance first
+  const gunInstance = Gun({
     peers: ["https://peer.wallie.io/gun"],
-    appScope: "simple-test",
   });
+
+  // Use AutoQuickStart with existing Gun instance
+  const quickStart = new AutoQuickStart(gunInstance, "simple-test");
 
   await quickStart.init();
 

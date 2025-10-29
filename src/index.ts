@@ -34,6 +34,10 @@ export * from "./interfaces/shogun";
 
 export * from "./config/simplified-config";
 
+// Type alias for backward compatibility
+import type { ShogunCoreConfig } from "./interfaces/shogun";
+export type ShogunSDKConfig = ShogunCoreConfig;
+
 export type * from "./interfaces/plugin";
 
 export type {

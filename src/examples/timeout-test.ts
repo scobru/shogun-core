@@ -5,6 +5,7 @@
  * This script specifically tests the fixes we implemented to prevent hanging
  */
 
+import Gun from "gun";
 import { AutoQuickStart } from "../gundb/api";
 
 async function timeoutTest() {
@@ -16,15 +17,18 @@ async function timeoutTest() {
   // === INITIALIZATION ===
   console.log("📦 === INITIALIZATION ===\n");
 
-  const quickStart = new AutoQuickStart({
+  // Create Gun instance first
+  const gunInstance = Gun({
     peers: [
+      "http://localhost:8765/gun",
       "https://peer.wallie.io/gun",
       "https://gun-manhattan.herokuapp.com/gun",
       "https://gun.defucc.me/gun",
     ],
-    appScope: "timeout-test",
-    enableGunDebug: true,
   });
+
+  // Use AutoQuickStart with existing Gun instance
+  const quickStart = new AutoQuickStart(gunInstance, "timeout-test");
 
   try {
     await quickStart.init();

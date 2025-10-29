@@ -16,16 +16,7 @@ import type {
 
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 
-import Gun from "gun/gun";
 import SEA from "gun/sea";
-
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
-
 import derive, { DeriveOptions } from "./derive";
 
 import { ErrorHandler, ErrorType } from "../utils/errorHandler";
@@ -83,25 +74,25 @@ class DataBase {
 
     if (typeof gun !== "object") {
       throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`,
+        `Gun instance must be an object, received: ${typeof gun}`
       );
     }
 
     if (typeof gun.user !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
+        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`
       );
     }
 
     if (typeof gun.get !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
+        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`
       );
     }
 
     if (typeof gun.on !== "function") {
       throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
+        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`
       );
     }
 
@@ -132,7 +123,7 @@ class DataBase {
     try {
       const sessionResult = this.restoreSession();
       console.log(
-        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`,
+        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`
       );
 
       this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
@@ -161,7 +152,7 @@ class DataBase {
           ErrorType.GUN,
           "AUTH_EVENT_ERROR",
           ack.err,
-          new Error(ack.err),
+          new Error(ack.err)
         );
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
@@ -421,49 +412,28 @@ class DataBase {
   }
 
   /**
-   * Gets data at the specified path (one-time read)
-   * @param path Path to get the data from
-   * @returns Promise resolving to the data
+   * Gets the Gun instance for direct operations
+   * @returns Gun instance
    */
-  async getData(path: string): Promise<any> {
-    const node = this.navigateToPath(this.node, path);
-    return new Promise<any>((resolve, reject) => {
-      node.once((data: any) => {
-        resolve(data);
-      });
-    });
+  getGunInstance(): IGunInstance {
+    return this.gun;
   }
 
   /**
-   * Puts data at the specified path
-   * @param path Path to store data
-   * @param data Data to store
-   * @returns Promise resolving to operation result
+   * Gets the app scope node for direct operations
+   * @returns Gun node
    */
-  async put(path: string, data: any): Promise<GunMessagePut> {
-    const node = this.navigateToPath(this.node, path);
-    return await node.put(data).then();
+  getAppNode(): IGunChain<any, any> {
+    return this.node;
   }
 
   /**
-   * Sets data at the specified path
-   * @param path Path to store data
-   * @param data Data to store
-   * @returns Promise resolving to operation result
+   * Helper method to get a node at a specific path for direct GUN operations
+   * @param path Path to the node
+   * @returns Gun node at the specified path
    */
-  async set(path: string, data: any): Promise<GunMessagePut> {
-    const node = this.navigateToPath(this.node, path);
-    return await node.set(data).then();
-  }
-
-  /**
-   * Removes data at the specified path
-   * @param path Path to remove
-   * @returns Promise resolving to operation result
-   */
-  async remove(path: string): Promise<GunMessagePut> {
-    const node = this.navigateToPath(this.node, path);
-    return await node.put(null).then();
+  getNode(path: string): IGunChain<any, any> {
+    return this.navigateToPath(this.node, path) as IGunChain<any, any>;
   }
 
   /**
@@ -635,8 +605,8 @@ class DataBase {
       try {
         currentUser.leave();
         // Force clear any pending authentication
-        if (currentUser._ && currentUser._.sea) {
-          currentUser._.sea = null;
+        if (currentUser._ && (currentUser._ as any).sea) {
+          (currentUser._ as any).sea = null;
         }
       } catch (gunError) {
         console.error("Error during Gun logout:", gunError);
@@ -727,7 +697,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): { valid: boolean; error?: string } {
     // Validate username
     if (!username || username.length < 1) {
@@ -779,7 +749,7 @@ class DataBase {
    */
   private async createNewUser(
     username: string,
-    password: string,
+    password: string
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -815,6 +785,8 @@ class DataBase {
         this.gun.user().create(normalizedUsername, password, (ack: any) => {
           if (ack.err) {
             console.error(`User creation error: ${ack.err}`);
+            // Reset auth state after failed creation to prevent blocking future operations
+            this.resetAuthState();
             resolve({ success: false, error: ack.err });
           } else {
             // Validate that we got a userPub from creation
@@ -826,7 +798,7 @@ class DataBase {
             ) {
               console.error(
                 "User creation successful but no userPub returned:",
-                ack,
+                ack
               );
               resolve({
                 success: false,
@@ -837,7 +809,7 @@ class DataBase {
             }
           }
         });
-      },
+      }
     );
   }
 
@@ -847,7 +819,7 @@ class DataBase {
   private async authenticateNewUser(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -884,6 +856,8 @@ class DataBase {
           this.gun.user().auth(pair, (ack: any) => {
             if (ack.err) {
               console.error(`Authentication after creation failed: ${ack.err}`);
+              // Reset auth state on error to prevent blocking future operations
+              this.resetAuthState();
               resolve({ success: false, error: ack.err });
             } else {
               // Add a small delay to ensure user state is properly set
@@ -894,7 +868,7 @@ class DataBase {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found",
+                    "Authentication successful but no userPub found"
                   );
                   resolve({
                     success: false,
@@ -910,6 +884,8 @@ class DataBase {
           this.gun.user().auth(normalizedUsername, password, (ack: any) => {
             if (ack.err) {
               console.error(`Authentication after creation failed: ${ack.err}`);
+              // Reset auth state on error to prevent blocking future operations
+              this.resetAuthState();
               resolve({ success: false, error: ack.err });
             } else {
               // Add a small delay to ensure user state is properly set
@@ -920,7 +896,7 @@ class DataBase {
 
                 if (!userPub) {
                   console.error(
-                    "Authentication successful but no userPub found",
+                    "Authentication successful but no userPub found"
                   );
                   resolve({
                     success: false,
@@ -933,7 +909,7 @@ class DataBase {
             }
           });
         }
-      },
+      }
     );
   }
 
@@ -948,16 +924,51 @@ class DataBase {
     username: string,
     password: string,
     pair?: ISEAPair | null,
+    retryCount: number = 0,
+    maxRetries: number = 3
   ): Promise<SignUpResult> {
     try {
+      console.log(`🔄 [SIGNUP] Attempting signup for: ${username}`);
+
       // Validate credentials with enhanced security
       const validation = this.validateSignupCredentials(
         username,
         password,
-        pair,
+        pair
       );
       if (!validation.valid) {
         return { success: false, error: validation.error };
+      }
+
+      // Check if authentication is in progress and retry if needed
+      if (this.isAuthInProgress()) {
+        if (retryCount < maxRetries) {
+          console.warn(
+            `Authentication in progress during signup, retrying... (${retryCount + 1}/${maxRetries})`
+          );
+          this.resetAuthState();
+          const baseDelay = 100 * Math.pow(2, retryCount);
+          const jitter = Math.random() * 100;
+          const delay = Math.min(baseDelay + jitter, 2000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          return this.signUp(
+            username,
+            password,
+            pair,
+            retryCount + 1,
+            maxRetries
+          );
+        } else {
+          console.error(
+            "Max retries exceeded for signup due to concurrent operations"
+          );
+          this.resetAuthState();
+          return {
+            success: false,
+            error:
+              "Signup failed after multiple retries due to concurrent operations",
+          };
+        }
       }
 
       let createResult;
@@ -967,10 +978,12 @@ class DataBase {
         createResult = await this.createNewUserWithPair(username, pair);
       } else {
         // For password authentication, use standard creation
-        createResult = await this.createNewUser(username, password);
+        createResult = await this.createNewUserFixed(username, password);
       }
 
       if (!createResult.success) {
+        // Reset auth state after failed creation to prevent blocking future operations
+        this.resetAuthState();
         return { success: false, error: createResult.error };
       }
 
@@ -978,10 +991,10 @@ class DataBase {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Authenticate the newly created user
-      const authResult = await this.authenticateNewUser(
+      const authResult = await this.authenticateNewUserFixed(
         username,
         password,
-        pair,
+        pair
       );
 
       if (!authResult.success) {
@@ -996,7 +1009,7 @@ class DataBase {
       ) {
         console.error(
           "Authentication successful but no valid userPub returned:",
-          authResult,
+          authResult
         );
         return {
           success: false,
@@ -1012,7 +1025,7 @@ class DataBase {
         const postAuthResult = await this.runPostAuthOnAuthResult(
           username,
           authResult.userPub,
-          authResult,
+          authResult
         );
 
         // Return the post-auth result which includes the complete user data
@@ -1046,7 +1059,7 @@ class DataBase {
    */
   private async createNewUserWithPair(
     username: string,
-    pair: ISEAPair,
+    pair: ISEAPair
   ): Promise<{ success: boolean; error?: string; userPub?: string }> {
     return new Promise<{ success: boolean; error?: string; userPub?: string }>(
       (resolve) => {
@@ -1080,17 +1093,139 @@ class DataBase {
         // We just need to validate that the pair is valid and return success
 
         resolve({ success: true, userPub: pair.pub });
-      },
+      }
+    );
+  }
+
+  /**
+   * Creates a new user in Gun without waiting for acknowledgment
+   */
+  private async createNewUserFixed(
+    username: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
+    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
+      (resolve) => {
+        // Validate inputs before creating user
+        if (
+          !username ||
+          typeof username !== "string" ||
+          username.trim().length === 0
+        ) {
+          resolve({ success: false, error: "Invalid username provided" });
+          return;
+        }
+
+        if (
+          !password ||
+          typeof password !== "string" ||
+          password.length === 0
+        ) {
+          resolve({ success: false, error: "Invalid password provided" });
+          return;
+        }
+
+        // Normalize username
+        const normalizedUsername = username.trim().toLowerCase();
+        if (normalizedUsername.length === 0) {
+          resolve({
+            success: false,
+            error: "Username cannot be empty",
+          });
+          return;
+        }
+
+        console.log(`🔄 [CREATE] Creating user: ${normalizedUsername}`);
+
+        // Crea utente senza aspettare acknowledgment
+        this.gun.user().create(normalizedUsername, password);
+
+        // Aspetta che la creazione si completi
+        setTimeout(() => {
+          // Controlla se l'utente è stato creato
+          const user = this.gun.user();
+          if (user && user.is && user.is.pub) {
+            console.log("✅ [CREATE] User created successfully");
+            resolve({ success: true, userPub: user.is.pub });
+          } else {
+            console.log("❌ [CREATE] User creation failed");
+            resolve({ success: false, error: "User creation failed" });
+          }
+        }, 2000); // Aspetta 2 secondi
+      }
+    );
+  }
+
+  /**
+   * Authenticates user after creation without waiting for acknowledgment
+   */
+  private async authenticateNewUserFixed(
+    username: string,
+    password: string,
+    pair?: ISEAPair | null
+  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
+    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
+      (resolve) => {
+        // Validate inputs before authentication
+        if (
+          !username ||
+          typeof username !== "string" ||
+          username.trim().length === 0
+        ) {
+          resolve({ success: false, error: "Invalid username provided" });
+          return;
+        }
+
+        // Skip password validation when using pair authentication
+        if (
+          !pair &&
+          (!password || typeof password !== "string" || password.length === 0)
+        ) {
+          resolve({ success: false, error: "Invalid password provided" });
+          return;
+        }
+
+        // Normalize username to match what was used in creation
+        const normalizedUsername = username.trim().toLowerCase();
+        if (normalizedUsername.length === 0) {
+          resolve({
+            success: false,
+            error: "Username cannot be empty",
+          });
+          return;
+        }
+
+        console.log(`🔑 [AUTH] Authenticating user: ${normalizedUsername}`);
+
+        // Autentica senza aspettare acknowledgment
+        if (pair) {
+          this.gun.user().auth(pair);
+        } else {
+          this.gun.user().auth(normalizedUsername, password);
+        }
+
+        // Aspetta che l'autenticazione si completi
+        setTimeout(() => {
+          const user = this.gun.user();
+          if (user && user.is && user.is.pub) {
+            console.log("✅ [AUTH] Authentication successful");
+            resolve({ success: true, userPub: user.is.pub });
+          } else {
+            console.log("❌ [AUTH] Authentication failed");
+            resolve({ success: false, error: "Authentication failed" });
+          }
+        }, 2000); // Aspetta 2 secondi
+      }
     );
   }
 
   private async runPostAuthOnAuthResult(
     username: string,
     userPub: string,
-    authResult: any,
+    authResult: any
   ): Promise<SignUpResult> {
     console.log(
-      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`,
+      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`
     );
 
     try {
@@ -1131,7 +1266,7 @@ class DataBase {
       const normalizedUsername = username.trim().toLowerCase();
       if (normalizedUsername.length === 0) {
         console.error(
-          `[POSTAUTH] Normalized username is empty for user: ${username}`,
+          `[POSTAUTH] Normalized username is empty for user: ${username}`
         );
         throw new Error("Username cannot be empty");
       }
@@ -1139,11 +1274,11 @@ class DataBase {
       console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
 
       console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
-      const existingUser = await this.gun.get(userPub).then();
+      const existingUser = this.gun.get(userPub)
 
       const isNewUser = !existingUser || !existingUser.alias;
       console.log(
-        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`,
+        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`
       );
 
       // Get user's encryption public key (epub) for comprehensive tracking
@@ -1155,17 +1290,17 @@ class DataBase {
 
       // Enhanced user tracking system
       console.log(
-        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`,
+        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`
       );
       const trackingResult = await this.setupComprehensiveUserTracking(
         normalizedUsername,
         userPub,
-        epub,
+        epub
       );
 
       if (!trackingResult) {
         console.error(
-          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`,
+          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`
         );
         return {
           success: false,
@@ -1174,43 +1309,43 @@ class DataBase {
       }
 
       console.log(
-        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
+        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`
       );
 
       // Setup crypto identities for the user
       if (this._cryptoIdentityManager && userSea) {
         console.log(
-          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`,
+          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`
         );
         try {
           const cryptoSetupResult =
             await this._cryptoIdentityManager.setupCryptoIdentities(
               normalizedUsername,
               userSea,
-              false, // Don't force regenerate if they already exist
+              false // Don't force regenerate if they already exist
             );
 
           if (cryptoSetupResult.success) {
             console.log(
-              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`,
+              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`
             );
           } else {
             console.error(
               `❌ [POSTAUTH] Crypto identities setup failed for: ${normalizedUsername}`,
-              cryptoSetupResult.error,
+              cryptoSetupResult.error
             );
             // Don't fail the entire auth process if crypto setup fails
           }
         } catch (cryptoError) {
           console.error(
             `❌ [POSTAUTH] Crypto identities setup error for: ${normalizedUsername}`,
-            cryptoError,
+            cryptoError
           );
           // Don't fail the entire auth process if crypto setup fails
         }
       } else {
         console.log(
-          `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`,
+          `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`
         );
       }
 
@@ -1231,13 +1366,13 @@ class DataBase {
       };
 
       console.log(
-        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`,
+        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`
       );
       return result;
     } catch (error) {
       console.error(
         `[POSTAUTH] Error in post-authentication setup for ${username}:`,
-        error,
+        error
       );
       return {
         success: false,
@@ -1253,10 +1388,10 @@ class DataBase {
   private async setupComprehensiveUserTracking(
     username: string,
     userPub: string,
-    epub: string,
+    epub: string
   ): Promise<boolean> {
     console.log(
-      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`,
+      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`
     );
 
     try {
@@ -1266,31 +1401,31 @@ class DataBase {
 
       if (!aliasIndexResult) {
         console.error(
-          `[TRACKING] Failed to create alias index for ${username}`,
+          `[TRACKING] Failed to create alias index for ${username}`
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 1 completed: Alias index created for ${username}`,
+        `[TRACKING] Step 1 completed: Alias index created for ${username}`
       );
 
       // 2. Create username mapping: usernames/alias -> userPub
       console.log(
-        `[TRACKING] Step 2: Creating username mapping for ${username}`,
+        `[TRACKING] Step 2: Creating username mapping for ${username}`
       );
       const usernameMappingResult = await this.createUsernameMapping(
         username,
-        userPub,
+        userPub
       );
 
       if (!usernameMappingResult) {
         console.error(
-          `[TRACKING] Failed to create username mapping for ${username}`,
+          `[TRACKING] Failed to create username mapping for ${username}`
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 2 completed: Username mapping created for ${username}`,
+        `[TRACKING] Step 2 completed: Username mapping created for ${username}`
       );
 
       // 3. Create user registry: users/userPub -> user data
@@ -1298,34 +1433,34 @@ class DataBase {
       const userRegistryResult = await this.createUserRegistry(
         username,
         userPub,
-        epub,
+        epub
       );
 
       if (!userRegistryResult) {
         console.error(
-          `[TRACKING] Failed to create user registry for ${username}`,
+          `[TRACKING] Failed to create user registry for ${username}`
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 3 completed: User registry created for ${username}`,
+        `[TRACKING] Step 3 completed: User registry created for ${username}`
       );
 
       // 4. Create reverse lookup: userPub -> alias
       console.log(`[TRACKING] Step 4: Creating reverse lookup for ${username}`);
       const reverseLookupResult = await this.createReverseLookup(
         username,
-        userPub,
+        userPub
       );
 
       if (!reverseLookupResult) {
         console.error(
-          `[TRACKING] Failed to create reverse lookup for ${username}`,
+          `[TRACKING] Failed to create reverse lookup for ${username}`
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`,
+        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`
       );
 
       // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
@@ -1335,16 +1470,16 @@ class DataBase {
 
         if (!epubIndexResult) {
           console.error(
-            `[TRACKING] Failed to create epub index for ${username}`,
+            `[TRACKING] Failed to create epub index for ${username}`
           );
           return false;
         }
         console.log(
-          `[TRACKING] Step 5 completed: Epub index created for ${username}`,
+          `[TRACKING] Step 5 completed: Epub index created for ${username}`
         );
       } else {
         console.log(
-          `[TRACKING] Step 5 skipped: No epub available for ${username}`,
+          `[TRACKING] Step 5 skipped: No epub available for ${username}`
         );
       }
 
@@ -1353,27 +1488,27 @@ class DataBase {
       const userMetadataResult = await this.createUserMetadata(
         username,
         userPub,
-        epub,
+        epub
       );
 
       if (!userMetadataResult) {
         console.error(
-          `[TRACKING] Failed to create user metadata for ${username}`,
+          `[TRACKING] Failed to create user metadata for ${username}`
         );
         return false;
       }
       console.log(
-        `[TRACKING] Step 6 completed: User metadata created for ${username}`,
+        `[TRACKING] Step 6 completed: User metadata created for ${username}`
       );
 
       console.log(
-        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`,
+        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`
       );
       return true;
     } catch (error) {
       console.error(
         `[TRACKING] Error in comprehensive user tracking setup for ${username}:`,
-        error,
+        error
       );
       // Don't throw - continue with other operations
       return false;
@@ -1385,7 +1520,7 @@ class DataBase {
    */
   private async createAliasIndex(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
       // Create a simple alias mapping without using GunDB's complex alias system
@@ -1396,28 +1531,16 @@ class DataBase {
         createdAt: Date.now(),
       };
 
-      return new Promise<boolean>((resolve) => {
-        // Add timeout to prevent hanging
-        const timeout = setTimeout(() => {
-          console.error(`Alias index creation timeout for ${username}`);
-          resolve(false);
-        }, 5000); // 5 second timeout
+      console.log(`🔄 [ALIAS] Creating alias index for ${username}`);
 
-        // Store alias mapping in a simple way
-        this.node
-          .get("aliases")
-          .get(username)
-          .put(aliasData, (ack: any) => {
-            clearTimeout(timeout); // Clear timeout since callback fired
-            if (ack && ack.err) {
-              console.error(`Error creating alias index: ${ack.err}`);
-              resolve(false);
-            } else {
-              console.log(`✓ Alias index created for ${username}`);
-              resolve(true);
-            }
-          });
-      });
+      // Store alias mapping without waiting for acknowledgment
+      this.node.get("aliases").get(username).put(aliasData);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      console.log(`✅ [ALIAS] Alias index created for ${username}`);
+      return true;
     } catch (error) {
       console.error(`Error creating alias index: ${error}`);
       return false;
@@ -1429,22 +1552,19 @@ class DataBase {
    */
   private async createUsernameMapping(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("usernames")
-          .get(username)
-          .put(userPub, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating username mapping: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
+      console.log(`🔄 [USERNAME] Creating username mapping for ${username}`);
+
+      // Store username mapping without waiting for acknowledgment
+      this.node.get("usernames").get(username).put(userPub);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log(`✅ [USERNAME] Username mapping created for ${username}`);
+      return true;
     } catch (error) {
       console.error(`Error creating username mapping: ${error}`);
       return false;
@@ -1457,7 +1577,7 @@ class DataBase {
   private async createUserRegistry(
     username: string,
     userPub: string,
-    epub: string | null,
+    epub: string | null
   ): Promise<boolean> {
     try {
       const userData = {
@@ -1468,19 +1588,16 @@ class DataBase {
         lastSeen: Date.now().toString(),
       };
 
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("users")
-          .get(userPub)
-          .put(userData, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating user registry: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
+      console.log(`🔄 [REGISTRY] Creating user registry for ${username}`);
+
+      // Store user registry without waiting for acknowledgment
+      this.node.get("users").get(userPub).put(userData);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log(`✅ [REGISTRY] User registry created for ${username}`);
+      return true;
     } catch (error) {
       console.error(`Error creating user registry: ${error}`);
       return false;
@@ -1492,21 +1609,19 @@ class DataBase {
    */
   private async createReverseLookup(
     username: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
-      const ack = await this.node
-        .get("userAliases")
-        .get(userPub)
-        .put(username)
-        .then();
+      console.log(`🔄 [REVERSE] Creating reverse lookup for ${username}`);
 
-      if (ack.err) {
-        console.error(`Error creating reverse lookup: ${ack.err}`);
-        return false;
-      } else {
-        return true;
-      }
+      // Store reverse lookup without waiting for acknowledgment
+      this.node.get("userAliases").get(userPub).put(username);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log(`✅ [REVERSE] Reverse lookup created for ${username}`);
+      return true;
     } catch (error) {
       console.error(`Error creating reverse lookup: ${error}`);
       return false;
@@ -1518,22 +1633,19 @@ class DataBase {
    */
   private async createEpubIndex(
     epub: string,
-    userPub: string,
+    userPub: string
   ): Promise<boolean> {
     try {
-      return new Promise<boolean>((resolve) => {
-        this.node
-          .get("epubKeys")
-          .get(epub)
-          .put(userPub, (ack: any) => {
-            if (ack && ack.err) {
-              console.error(`Error creating epub index: ${ack.err}`);
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          });
-      });
+      console.log(`🔄 [EPUB] Creating epub index for ${userPub}`);
+
+      // Store epub index without waiting for acknowledgment
+      this.node.get("epubKeys").get(epub).put(userPub);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log(`✅ [EPUB] Epub index created for ${userPub}`);
+      return true;
     } catch (error) {
       console.error(`Error creating epub index: ${error}`);
       return false;
@@ -1546,7 +1658,7 @@ class DataBase {
   private async createUserMetadata(
     username: string,
     userPub: string,
-    epub: string | null,
+    epub: string | null
   ): Promise<boolean> {
     try {
       const userMetadata = {
@@ -1556,16 +1668,16 @@ class DataBase {
         lastSeen: Date.now(),
       };
 
-      return new Promise<boolean>((resolve) => {
-        this.gun.get(userPub).put(userMetadata, (ack: any) => {
-          if (ack && ack.err) {
-            console.error(`Error creating user metadata: ${ack.err}`);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
-      });
+      console.log(`🔄 [METADATA] Creating user metadata for ${username}`);
+
+      // Store user metadata without waiting for acknowledgment
+      this.gun.get(userPub).put(userMetadata);
+
+      // Aspetta un momento per la scrittura
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log(`✅ [METADATA] User metadata created for ${username}`);
+      return true;
     } catch (error) {
       console.error(`Error creating user metadata: ${error}`);
       return false;
@@ -1592,7 +1704,7 @@ class DataBase {
 
       // Method 1: Try GunDB standard alias lookup (~@alias)
       try {
-        const aliasData = await this.gun.get(`~@${normalizedAlias}`).then();
+        const aliasData = this.gun.get(`~@${normalizedAlias}`) as any;
         if (aliasData && aliasData["~pubKeyOfUser"]) {
           const userPub =
             aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
@@ -1606,16 +1718,15 @@ class DataBase {
       } catch (error) {
         console.error(
           `GunDB alias lookup failed for ${normalizedAlias}:`,
-          error,
+          error
         );
       }
 
       // Method 2: Try username mapping (usernames/alias -> userPub)
       try {
-        const userPub = await this.node
+        const userPub =  this.node
           .get("usernames")
           .get(normalizedAlias)
-          .then();
 
         if (userPub) {
           const userData = await this.getUserDataByPub(userPub);
@@ -1626,7 +1737,7 @@ class DataBase {
       } catch (error) {
         console.error(
           `Username mapping lookup failed for ${normalizedAlias}:`,
-          error,
+          error
         );
       }
 
@@ -1656,7 +1767,7 @@ class DataBase {
 
       // Method 1: Try user registry (users/userPub -> user data)
       try {
-        const userData = await this.node.get("users").get(userPub).then();
+        const userData =  this.node.get("users").get(userPub) as any;
 
         if (userData && userData.username) {
           return {
@@ -1673,14 +1784,14 @@ class DataBase {
 
       // Method 2: Try user's own node
       try {
-        const userNodeData = await this.gun.get(userPub).then();
-        if (userNodeData && userNodeData.username) {
+        const userNodeData = this.gun.get(userPub);
+        if (userNodeData && (userNodeData as any).username) {
           return {
             userPub: userPub,
-            epub: userNodeData.epub || null,
-            username: userNodeData.username,
-            registeredAt: userNodeData.registeredAt || 0,
-            lastSeen: userNodeData.lastSeen || 0,
+            epub: (userNodeData as any).epub || null,
+            username: (userNodeData as any).username,
+            registeredAt: (userNodeData as any).registeredAt || 0,
+            lastSeen: (userNodeData as any).lastSeen || 0,
           };
         }
       } catch (error) {
@@ -1705,7 +1816,7 @@ class DataBase {
         return null;
       }
 
-      const userPub = await this.node.get("epubKeys").get(epub).then();
+      const userPub =  this.node.get("epubKeys").get(epub);
 
       return userPub || null;
     } catch (error) {
@@ -1725,7 +1836,7 @@ class DataBase {
         return null;
       }
 
-      const alias = await this.node.get("userAliases").get(userPub).then();
+      const alias =  this.node.get("userAliases").get(userPub);
 
       return alias || null;
     } catch (error) {
@@ -1783,19 +1894,14 @@ class DataBase {
 
       // Update in user registry
       try {
-        await this.node
-          .get("users")
-          .get(userPub)
-          .get("lastSeen")
-          .put(timestamp)
-          .then();
+        this.node.get("users").get(userPub).get("lastSeen").put(timestamp);
       } catch (error) {
         console.error(`Failed to update lastSeen in user registry:`, error);
       }
 
       // Update in user's own node
       try {
-        await this.gun.get(userPub).get("lastSeen").put(timestamp).then();
+        this.gun.get(userPub).get("lastSeen").put(timestamp);
       } catch (error) {
         console.error(`Failed to update lastSeen in user node:`, error);
       }
@@ -1805,36 +1911,166 @@ class DataBase {
   }
 
   /**
-   * Performs authentication with Gun
+   * Resets Gun.js authentication state to allow new auth operations
+   */
+  private resetAuthState(): void {
+    try {
+      const currentUser = this.gun.user();
+      if (currentUser && currentUser._) {
+        // Reset the authentication flag
+        if ((currentUser._ as any).sea) {
+          (currentUser._ as any).sea = null;
+        }
+        // Reset the ing flag that prevents concurrent operations
+        if ((currentUser._ as any).ing) {
+          (currentUser._ as any).ing = false;
+        }
+        // Force clear any pending authentication callbacks
+        if ((currentUser._ as any).auth) {
+          (currentUser._ as any).auth = null;
+        }
+        // Clear any pending operations
+        if ((currentUser._ as any).act) {
+          (currentUser._ as any).act = null;
+        }
+        // Clear any pending callbacks
+        if ((currentUser._ as any).cb) {
+          (currentUser._ as any).cb = null;
+        }
+        // Clear any pending retries
+        if ((currentUser._ as any).retries) {
+          (currentUser._ as any).retries = 0;
+        }
+        // Clear any pending timeouts
+        if ((currentUser._ as any).timeout) {
+          clearTimeout((currentUser._ as any).timeout);
+          (currentUser._ as any).timeout = null;
+        }
+      }
+
+      // Also try to call leave() to ensure clean state
+      try {
+        currentUser.leave();
+      } catch (leaveError) {
+        // Ignore leave errors, just trying to clean up
+      }
+
+      // Force clear the user reference to ensure clean state
+      this.user = null;
+
+      console.log("Auth state reset completed");
+    } catch (error) {
+      console.warn("Error resetting auth state:", error);
+    }
+  }
+
+  /**
+   * Performs authentication with Gun with retry mechanism
    */
   private async performAuthentication(
     username: string,
     password: string,
     pair?: ISEAPair | null,
+    retryCount: number = 0,
+    maxRetries: number = 3
   ): Promise<{ success: boolean; error?: string; ack?: any }> {
     return new Promise<{ success: boolean; error?: string; ack?: any }>(
       (resolve) => {
-        if (pair) {
-          this.gun.user().auth(pair, (ack: any) => {
-            if (ack.err) {
-              console.error(`Login error for ${username}: ${ack.err}`);
-              resolve({ success: false, error: ack.err });
-            } else {
-              resolve({ success: true, ack });
+        // Check if there's already an authentication operation in progress
+        const currentUser = this.gun.user();
+        if (currentUser && currentUser._ && (currentUser._ as any).ing) {
+          if (retryCount < maxRetries) {
+            console.warn(
+              `Authentication already in progress, retrying... (${retryCount + 1}/${maxRetries})`
+            );
+            this.resetAuthState();
+
+            // For the first retry, try to create a fresh authentication context
+            if (retryCount === 0) {
+              this.createFreshAuthContext();
             }
-          });
-        } else {
-          this.gun.user().auth(username, password, (ack: any) => {
-            if (ack.err) {
-              console.error(`Login error for ${username}: ${ack.err}`);
-              resolve({ success: false, error: ack.err });
-            } else {
-              resolve({ success: true, ack });
-            }
-          });
+
+            // Add exponential backoff delay with jitter
+            const baseDelay = 200 * Math.pow(2, retryCount);
+            const jitter = Math.random() * 200;
+            const delay = Math.min(baseDelay + jitter, 3000);
+
+            setTimeout(() => {
+              this.performAuthentication(
+                username,
+                password,
+                pair,
+                retryCount + 1,
+                maxRetries
+              )
+                .then(resolve)
+                .catch((error) =>
+                  resolve({ success: false, error: String(error) })
+                );
+            }, delay);
+            return;
+          } else {
+            console.error("Max retries exceeded for authentication");
+            this.resetAuthState();
+            resolve({
+              success: false,
+              error: "Authentication failed after multiple retries",
+            });
+            return;
+          }
         }
-      },
+
+        this.performAuthenticationInternal(username, password, pair, resolve);
+      }
     );
+  }
+
+  /**
+   * Internal authentication method with timeout
+   */
+  private performAuthenticationInternal(
+    username: string,
+    password: string,
+    pair: ISEAPair | null | undefined,
+    resolve: (value: { success: boolean; error?: string; ack?: any }) => void
+  ): void {
+    let resolved = false;
+    const timeout = 30000; // 15 second timeout for individual auth attempts
+
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error(
+          `Authentication timeout for ${username} after ${timeout}ms`
+        );
+        this.resetAuthState();
+        resolve({
+          success: false,
+          error: `Authentication timeout after ${timeout}ms`,
+        });
+      }
+    }, timeout);
+
+    const authCallback = (ack: any) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+
+      if (ack.err) {
+        console.error(`Login error for ${username}: ${ack.err}`);
+        // Reset auth state on error to prevent blocking future attempts
+        this.resetAuthState();
+        resolve({ success: false, error: ack.err });
+      } else {
+        resolve({ success: true, ack });
+      }
+    };
+
+    if (pair) {
+      this.gun.user().auth(pair, authCallback);
+    } else {
+      this.gun.user().auth(username, password, authCallback);
+    }
   }
 
   /**
@@ -1870,29 +2106,43 @@ class DataBase {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<AuthResult> {
     try {
-      const loginResult = await this.performAuthentication(
-        username,
-        password,
-        pair,
-      );
+      console.log(`🔑 [LOGIN] Attempting login for: ${username}`);
 
-      if (!loginResult.success) {
+      // Pulisci lo stato utente esistente
+      this.gun.user().leave();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Autentica senza aspettare acknowledgment
+      if (pair) {
+        this.gun.user().auth(pair);
+      } else {
+        this.gun.user().auth(username, password);
+      }
+
+      // Aspetta che l'autenticazione si completi
+      console.log("⏳ [LOGIN] Waiting for authentication to complete...");
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Controlla se l'autenticazione è riuscita
+      const user = this.gun.user();
+      const isAuthenticated = !!user.is;
+
+      if (!isAuthenticated) {
+        console.log("❌ [LOGIN] Authentication failed");
         return {
           success: false,
           error: `User '${username}' not found. Please check your username or register first.`,
         };
       }
 
-      // Add a small delay to ensure user state is properly set
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      console.log("✅ [LOGIN] Authentication successful!");
 
-      const userPub = this.gun.user().is?.pub;
-
-      let alias = this.gun.user().is?.alias as string;
-      let userPair = (this.gun.user() as any)?._?.sea as ISEAPair;
+      const userPub = user.is.pub;
+      let alias = user.is.alias as string;
+      let userPair = (user as any)?._?.sea as ISEAPair;
 
       if (!alias) {
         alias = username;
@@ -1905,7 +2155,7 @@ class DataBase {
         };
       }
 
-      // Pass the userPub to runPostAuthOnAuthResult
+      // Esegui post-authentication tasks
       try {
         await this.runPostAuthOnAuthResult(alias, userPub, {
           success: true,
@@ -2016,7 +2266,7 @@ class DataBase {
     password: string,
     hint: string,
     securityQuestions: string[],
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; error?: string }> {
     // Setting password hint for
 
@@ -2083,10 +2333,9 @@ class DataBase {
         hint: encryptedHint,
       };
 
-      const ack = await (this.node.get(userPub) as any)
+      const ack =  (this.node.get(userPub) as any)
         .get("security")
         .put(securityPayload)
-        .then();
 
       if (ack.err) {
         console.error("Error saving security data to public graph:", ack.err);
@@ -2108,7 +2357,7 @@ class DataBase {
    */
   async forgotPassword(
     username: string,
-    securityAnswers: string[],
+    securityAnswers: string[]
   ): Promise<{ success: boolean; hint?: string; error?: string }> {
     // Attempting password recovery for
 
@@ -2116,7 +2365,7 @@ class DataBase {
       // Find the user's data using direct lookup
       const normalizedUsername = username.trim().toLowerCase();
       const userPub =
-        (await this.node.get("usernames").get(normalizedUsername).then()) ||
+        ( this.node.get("usernames").get(normalizedUsername)) ||
         null;
 
       if (!userPub) {
@@ -2124,9 +2373,9 @@ class DataBase {
       }
 
       // Access the user's security data directly from their public key node
-      const securityData = await (this.node.get(userPub) as any)
+      const securityData =  (this.node.get(userPub) as any)
         .get("security")
-        .then();
+        
 
       if (!securityData || !securityData.hint) {
         return {
@@ -2353,16 +2602,145 @@ class DataBase {
   public isAuthenticated(): boolean {
     return this.user?.is?.pub ? true : false;
   }
+
+  /**
+   * Check if an authentication operation is currently in progress
+   */
+  public isAuthInProgress(): boolean {
+    try {
+      const currentUser = this.gun.user();
+      return !!(currentUser && currentUser._ && (currentUser._ as any).ing);
+    } catch (error) {
+      console.warn("Error checking auth progress:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Force reset authentication state (useful for debugging or recovery)
+   */
+  public forceResetAuthState(): void {
+    this.resetAuthState();
+  }
+
+  /**
+   * Aggressive cleanup for problematic users
+   * This method performs a complete reset of all authentication state
+   */
+  public aggressiveAuthCleanup(): void {
+    try {
+      console.log("🧹 Performing aggressive auth cleanup...");
+
+      // Reset all auth state
+      this.resetAuthState();
+
+      // Clear all Gun.js internal state
+      const currentUser = this.gun.user();
+      if (currentUser && currentUser._) {
+        // Clear all possible internal flags
+        const internalState = currentUser._ as any;
+        Object.keys(internalState).forEach((key) => {
+          if (typeof internalState[key] === "boolean") {
+            internalState[key] = false;
+          } else if (
+            typeof internalState[key] === "object" &&
+            internalState[key] !== null
+          ) {
+            if (
+              key === "sea" ||
+              key === "auth" ||
+              key === "act" ||
+              key === "cb"
+            ) {
+              internalState[key] = null;
+            }
+          }
+        });
+      }
+
+      // Force logout
+      try {
+        currentUser.leave();
+      } catch (error) {
+        // Ignore errors
+      }
+
+      // Clear user reference
+      this.user = null;
+
+      // Clear all session storage
+      if (typeof sessionStorage !== "undefined") {
+        try {
+          const keys = Object.keys(sessionStorage);
+          keys.forEach((key) => {
+            if (
+              key.includes("gun") ||
+              key.includes("user") ||
+              key.includes("auth")
+            ) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+
+      // Clear all local storage
+      if (typeof localStorage !== "undefined") {
+        try {
+          const keys = Object.keys(localStorage);
+          keys.forEach((key) => {
+            if (
+              key.includes("gun") ||
+              key.includes("user") ||
+              key.includes("auth")
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+
+      console.log("✓ Aggressive auth cleanup completed");
+    } catch (error) {
+      console.error("Error during aggressive cleanup:", error);
+    }
+  }
+
+  /**
+   * Creates a completely fresh authentication context
+   * This is a more aggressive approach when normal reset doesn't work
+   */
+  private createFreshAuthContext(): void {
+    try {
+      // Reset all auth state
+      this.resetAuthState();
+
+      // Create a completely new user instance
+      const freshUser = this.gun.user();
+      this.user = freshUser;
+
+      // Clear any cached authentication data
+      if (typeof sessionStorage !== "undefined") {
+        try {
+          sessionStorage.removeItem("gunSessionData");
+          sessionStorage.removeItem("gunUserData");
+        } catch (error) {
+          console.warn("Error clearing session storage:", error);
+        }
+      }
+
+      console.log("Fresh authentication context created");
+    } catch (error) {
+      console.error("Error creating fresh auth context:", error);
+    }
+  }
 }
 
-const createGun = (config: any) => {
-  const gunInstance = Gun(config);
-  return gunInstance;
-};
-
-export { Gun, DataBase, SEA, RxJS, crypto, GunErrors, derive, createGun };
-
-export default Gun;
+export { DataBase, SEA, RxJS, crypto, GunErrors, derive };
 
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
 export type { GunDataEventData, GunPeerEventData };

@@ -5,16 +5,19 @@
  * Run this to verify that the authentication system is working
  */
 
+import Gun from "gun";
 import { AutoQuickStart } from "../gundb/api";
 
 async function quickAuthTest() {
   console.log("🚀 Quick Authentication Test\n");
 
-  // Initialize ShogunCore
-  const quickStart = new AutoQuickStart({
+  // Create Gun instance first
+  const gunInstance = Gun({
     peers: ["https://peer.wallie.io/gun"],
-    appScope: "quick-test",
   });
+
+  // Initialize ShogunCore with existing Gun instance
+  const quickStart = new AutoQuickStart(gunInstance, "quick-test");
 
   try {
     await quickStart.init();

@@ -5,6 +5,7 @@
  * about documents and identity without revealing sensitive data
  */
 
+import Gun from "gun";
 import { ShogunCore } from "../core";
 import { ZkProofPlugin } from "../plugins/zkproof";
 import {
@@ -18,7 +19,7 @@ async function ageVerificationExample() {
   console.log("=== Age Verification Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: { peers: ["https://peer.wallie.io/gun"] },
+    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
     zkproof: { enabled: true },
   });
 
@@ -74,7 +75,7 @@ async function citizenshipExample() {
   console.log("\n=== Citizenship Verification Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: { peers: ["https://peer.wallie.io/gun"] },
+    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
     zkproof: { enabled: true },
   });
 
@@ -114,7 +115,7 @@ async function educationExample() {
   console.log("\n=== Education Credential Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: { peers: ["https://peer.wallie.io/gun"] },
+    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
     zkproof: { enabled: true },
   });
 
@@ -158,7 +159,7 @@ async function incomeExample() {
   console.log("\n=== Income Verification Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: { peers: ["https://peer.wallie.io/gun"] },
+    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
     zkproof: { enabled: true },
   });
 
@@ -203,7 +204,7 @@ async function customCredentialExample() {
   console.log("\n=== Custom Credential Example ===\n");
 
   const shogun = new ShogunCore({
-    gunOptions: { peers: ["https://peer.wallie.io/gun"] },
+    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
     zkproof: { enabled: true },
   });
 

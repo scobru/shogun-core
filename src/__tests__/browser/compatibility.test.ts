@@ -11,11 +11,26 @@ jest.mock("@semaphore-protocol/proof", () => ({
 }));
 
 import { ShogunCore, ShogunSDKConfig } from "../../index";
+import Gun from "gun/gun";
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
 
 describe("Browser Compatibility Tests", () => {
   let originalLocalStorage: Storage | undefined;
   let originalCrypto: Crypto | undefined;
   let originalWindow: Window | undefined;
+
+  // Helper function to create a Gun instance for tests
+  const createTestGunInstance = () =>
+    Gun({
+      peers: [],
+      localStorage: false,
+      radisk: false,
+    });
 
   beforeEach(() => {
     // Backup delle API originali
@@ -58,10 +73,7 @@ describe("Browser Compatibility Tests", () => {
       global.window = { localStorage: mockLocalStorage } as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -74,10 +86,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).window;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -99,10 +108,7 @@ describe("Browser Compatibility Tests", () => {
       global.window = { localStorage: mockLocalStorage } as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -125,10 +131,7 @@ describe("Browser Compatibility Tests", () => {
       global.crypto = mockCrypto as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -140,10 +143,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).crypto;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -164,9 +164,8 @@ describe("Browser Compatibility Tests", () => {
       global.navigator = mockNavigator as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        gunInstance: createTestGunInstance(),
         webauthn: { enabled: true },
-        peers: [],
       };
 
       expect(() => {
@@ -178,9 +177,8 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).navigator;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        gunInstance: createTestGunInstance(),
         webauthn: { enabled: true },
-        peers: [],
       };
 
       expect(() => {
@@ -203,9 +201,8 @@ describe("Browser Compatibility Tests", () => {
       } as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        gunInstance: createTestGunInstance(),
         web3: { enabled: true },
-        peers: [],
       };
 
       expect(() => {
@@ -217,9 +214,8 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).window;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        gunInstance: createTestGunInstance(),
         web3: { enabled: true },
-        peers: [],
       };
 
       expect(() => {
@@ -241,10 +237,7 @@ describe("Browser Compatibility Tests", () => {
         .mockImplementation(() => mockEventTarget) as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -256,10 +249,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).EventTarget;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -280,8 +270,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
-        gunOptions: { peers: [] },
-        gunOptions: { peers: [] }, // Provide gunOptions to avoid default creation
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -297,8 +286,7 @@ describe("Browser Compatibility Tests", () => {
         appToken: "test-token",
         oauth: { enabled: false },
         peers: [],
-        gunOptions: { peers: [] },
-        gunOptions: { peers: [] }, // Provide gunOptions to avoid default creation
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -313,10 +301,7 @@ describe("Browser Compatibility Tests", () => {
       global.fetch = mockFetch as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: true },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -328,10 +313,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).fetch;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: true },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -346,10 +328,7 @@ describe("Browser Compatibility Tests", () => {
       global.URL = mockURL as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: true },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -361,10 +340,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).URL;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: true },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -384,10 +360,7 @@ describe("Browser Compatibility Tests", () => {
       global.performance = mockPerformance as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -399,10 +372,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).performance;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -424,10 +394,7 @@ describe("Browser Compatibility Tests", () => {
       global.console = mockConsole as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {
@@ -439,10 +406,7 @@ describe("Browser Compatibility Tests", () => {
       delete (global as any).console;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
-        oauth: { enabled: false },
-        peers: [],
-        gunOptions: { peers: [] },
+        gunInstance: createTestGunInstance(),
       };
 
       expect(() => {

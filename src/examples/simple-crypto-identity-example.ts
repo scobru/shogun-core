@@ -3,6 +3,7 @@
  * Focus sulla funzionalità principale senza plugin opzionali
  */
 
+import Gun from "gun";
 import { ShogunCore, CryptoIdentityManager } from "../index";
 
 // Esempio principale
@@ -10,13 +11,16 @@ async function simpleCryptoIdentityExample() {
   console.log("🚀 Esempio Semplificato CryptoIdentityManager");
   console.log("============================================\n");
 
-  // 1. Inizializza ShogunCore
+  // 1. Crea Gun instance
+  const gunInstance = Gun({
+    peers: ["https://peer.wallie.io/gun"],
+    radisk: true,
+    localStorage: false,
+  });
+
+  // 2. Inizializza ShogunCore con Gun instance
   const core = new ShogunCore({
-    gunOptions: {
-      peers: ["https://peer.wallie.io/gun"],
-      radisk: true,
-      localStorage: false,
-    },
+    gunInstance: gunInstance,
   });
 
   console.log("✅ ShogunCore inizializzato");

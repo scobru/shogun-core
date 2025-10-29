@@ -9,7 +9,8 @@
  * - High-level user data helpers (profile, settings, collections)
  */
 
-import { DataBase, createGun } from "./db";
+import { DataBase } from "./db";
+import { IGunInstance } from "gun/types";
 
 /**
  * Simple API wrapper that provides high-level helper methods.
@@ -455,30 +456,16 @@ export class QuickStart {
 }
 
 /**
- * Auto Quick Start helper - creates a simple API with automatic Gun instance creation
- * No need to pass a Gun instance, it creates one automatically
+ * Auto Quick Start helper - creates a simple API with an existing Gun instance
+ * Requires a Gun instance to be passed in
  */
 export class AutoQuickStart {
   private db: DataBase;
   private simpleAPI: SimpleGunAPI;
-  private gunInstance: any;
+  private gunInstance: IGunInstance;
 
-  constructor(config?: {
-    peers?: string[];
-    appScope?: string;
-    [key: string]: any;
-  }) {
-    const gunConfig = {
-      peers: config?.peers || [],
-      ...config,
-    };
-
-    // Remove appScope from gunConfig as it's not a Gun configuration option
-    delete gunConfig.appScope;
-
-    this.gunInstance = createGun(gunConfig);
-    const appScope = config?.appScope || "shogun";
-
+  constructor(gunInstance: IGunInstance, appScope: string = "shogun") {
+    this.gunInstance = gunInstance;
     this.db = new DataBase(this.gunInstance, appScope);
     this.simpleAPI = new SimpleGunAPI(this.db);
   }
@@ -512,12 +499,11 @@ export function quickStart(gunInstance: any, appScope?: string): QuickStart {
 }
 
 /**
- * Global helper for auto quick setup - creates Gun instance automatically
+ * Global helper for auto quick setup - requires existing Gun instance
  */
-export function autoQuickStart(config?: {
-  peers?: string[];
-  appScope?: string;
-  [key: string]: any;
-}): AutoQuickStart {
-  return new AutoQuickStart(config);
+export function autoQuickStart(
+  gunInstance: IGunInstance,
+  appScope: string = "shogun",
+): AutoQuickStart {
+  return new AutoQuickStart(gunInstance, appScope);
 }

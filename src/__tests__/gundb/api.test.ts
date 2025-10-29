@@ -9,7 +9,7 @@ import {
   quickStart,
   autoQuickStart,
 } from "../../gundb/api";
-import { DataBase, createGun } from "../../gundb/db";
+import { DataBase } from "../../gundb/db";
 
 // Mock Gun instance
 const createMockGun = () => ({
@@ -53,7 +53,7 @@ jest.mock("../../gundb/db", () => ({
     getUserByAlias: jest.fn(),
     initialize: jest.fn(),
   })),
-  createGun: jest.fn(() => createMockGun()),
+  // createGun removed - Gun instances must be created externally
 }));
 
 describe("SimpleGunAPI", () => {
@@ -351,18 +351,17 @@ describe("QuickStart", () => {
 
 describe("AutoQuickStart", () => {
   let autoQuickStart: AutoQuickStart;
+  let mockGun: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGun = createMockGun();
 
-    autoQuickStart = new AutoQuickStart({
-      peers: ["http://localhost:8765/gun"],
-      appScope: "test-scope",
-    });
+    autoQuickStart = new AutoQuickStart(mockGun, "test-scope");
   });
 
-  it("should create with default config", () => {
-    const auto = new AutoQuickStart();
+  it("should create with Gun instance", () => {
+    const auto = new AutoQuickStart(mockGun);
 
     expect(auto).toBeDefined();
   });
@@ -380,9 +379,9 @@ describe("AutoQuickStart", () => {
   });
 
   it("should provide gun instance access", () => {
-    const gun = autoQuickStart.gun;
-
-    expect(gun).toBeDefined();
+    // AutoQuickStart no longer exposes gun instance directly
+    // The gun instance is used internally by the database
+    expect(autoQuickStart).toBeDefined();
   });
 });
 
@@ -395,10 +394,8 @@ describe("Helper Functions", () => {
   });
 
   it("should create AutoQuickStart instance", () => {
-    const auto = autoQuickStart({
-      peers: ["http://localhost:8765/gun"],
-      appScope: "test-scope",
-    });
+    const gun = createMockGun();
+    const auto = autoQuickStart(gun, "test-scope");
 
     expect(auto).toBeInstanceOf(AutoQuickStart);
   });

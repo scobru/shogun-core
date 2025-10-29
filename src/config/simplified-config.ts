@@ -1,33 +1,105 @@
 /**
  * Simplified configuration options to reduce complexity
  * Provides sensible defaults and easy-to-use presets
+ *
+ * NOTE: This file is deprecated. ShogunCore now requires an existing Gun instance.
+ * Use the examples in the examples/ directory for proper usage.
  */
 
 import { ShogunCoreConfig } from "../interfaces/shogun";
+import Gun from "gun/gun";
+import "gun/lib/then";
+import "gun/lib/radix";
+import "gun/lib/radisk";
+import "gun/lib/store";
+import "gun/lib/rindexed";
+import "gun/lib/webrtc";
+
+/**
+ * Helper functions to create Gun instances with common configurations
+ * These functions create Gun instances that can be passed to ShogunCore
+ */
+export const GunInstanceHelpers = {
+  /**
+   * Create a minimal Gun instance for simple apps
+   */
+  minimal: () =>
+    Gun({
+      peers: ["https://shogunnode.scobrudot.dev/gun"],
+      localStorage: true,
+    }),
+
+  /**
+   * Create a development Gun instance with local storage
+   */
+  development: () =>
+    Gun({
+      peers: ["https://shogunnode.scobrudot.dev/gun"],
+      localStorage: true,
+      radisk: false,
+    }),
+
+  /**
+   * Create a production Gun instance with multiple peers
+   */
+  production: (customPeers?: string[]) =>
+    Gun({
+      peers: customPeers || [
+        "https://shogunnode.scobrudot.dev/gun",
+        "https://peer.wallie.io/gun",
+      ],
+      localStorage: true,
+      radisk: true,
+    }),
+
+  /**
+   * Create an offline-first Gun instance
+   */
+  offline: () =>
+    Gun({
+      peers: [],
+      localStorage: true,
+      radisk: true,
+    }),
+
+  /**
+   * Create a Gun instance for Web3-enabled apps
+   */
+  web3: () =>
+    Gun({
+      peers: ["https://shogunnode.scobrudot.dev/gun"],
+      localStorage: true,
+    }),
+
+  /**
+   * Create a Gun instance for WebAuthn-enabled apps
+   */
+  webauthn: () =>
+    Gun({
+      peers: ["https://shogunnode.scobrudot.dev/gun"],
+      localStorage: true,
+    }),
+};
 
 /**
  * Preset configurations for common use cases
+ * @deprecated Use GunInstanceHelpers to create Gun instances and pass them to ShogunCore
  */
 export const ShogunPresets = {
   /**
    * Minimal configuration for simple apps
+   * @deprecated Use GunInstanceHelpers.minimal() instead
    */
   minimal: (): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: ["https://relay.shogun-eco.xyz/gun"],
-      localStorage: true,
-    },
+    gunInstance: GunInstanceHelpers.minimal(),
   }),
 
   /**
    * Development configuration with local storage
+   * @deprecated Use GunInstanceHelpers.development() instead
    */
   development: (): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: ["https://relay.shogun-eco.xyz/gun"],
-      localStorage: true,
-      radisk: false,
-    },
+    gunInstance: GunInstanceHelpers.development(),
     timeouts: {
       login: 5000,
       signup: 5000,
@@ -37,16 +109,10 @@ export const ShogunPresets = {
 
   /**
    * Production configuration with multiple peers
+   * @deprecated Use GunInstanceHelpers.production() instead
    */
   production: (customPeers?: string[]): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: customPeers || [
-        "https://relay.shogun-eco.xyz/gun",
-        "https://peer.wallie.io/gun",
-      ],
-      localStorage: true,
-      radisk: true,
-    },
+    gunInstance: GunInstanceHelpers.production(customPeers),
     timeouts: {
       login: 10000,
       signup: 10000,
@@ -56,23 +122,18 @@ export const ShogunPresets = {
 
   /**
    * Offline-first configuration
+   * @deprecated Use GunInstanceHelpers.offline() instead
    */
   offline: (): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: [],
-      localStorage: true,
-      radisk: true,
-    },
+    gunInstance: GunInstanceHelpers.offline(),
   }),
 
   /**
    * Web3-enabled configuration
+   * @deprecated Use GunInstanceHelpers.web3() instead
    */
   web3: (): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: ["https://relay.shogun-eco.xyz/gun"],
-      localStorage: true,
-    },
+    gunInstance: GunInstanceHelpers.web3(),
     web3: {
       enabled: true,
     },
@@ -80,41 +141,44 @@ export const ShogunPresets = {
 
   /**
    * WebAuthn-enabled configuration
+   * @deprecated Use GunInstanceHelpers.webauthn() instead
    */
   webauthn: (): ShogunCoreConfig => ({
-    gunOptions: {
-      peers: ["https://relay.shogun-eco.xyz/gun"],
-      localStorage: true,
-    },
+    gunInstance: GunInstanceHelpers.webauthn(),
     webauthn: {
       enabled: true,
       rpName: "My Shogun App",
-      rpId: window.location.hostname,
+      rpId:
+        typeof window !== "undefined" ? window.location.hostname : "localhost",
     },
   }),
 };
 
 /**
  * Configuration builder for custom setups
+ * @deprecated Use GunInstanceHelpers to create Gun instances and pass them to ShogunCore
  */
 export class ShogunConfigBuilder {
   private config: Partial<ShogunCoreConfig> = {};
+  private gunOptions: any = {};
 
   /**
-   * Set Gun options
+   * Set Gun options (deprecated - use GunInstanceHelpers instead)
+   * @deprecated Use GunInstanceHelpers to create Gun instances
    */
-  gunOptions(options: any): this {
-    this.config.gunOptions = { ...this.config.gunOptions, ...options };
+  setGunOptions(options: any): this {
+    this.gunOptions = { ...this.gunOptions, ...options };
     return this;
   }
 
   /**
-   * Add peers
+   * Add peers (deprecated - use GunInstanceHelpers instead)
+   * @deprecated Use GunInstanceHelpers to create Gun instances
    */
   peers(peerList: string[]): this {
-    this.config.gunOptions = {
-      ...this.config.gunOptions,
-      peers: [...(this.config.gunOptions?.peers || []), ...peerList],
+    this.gunOptions = {
+      ...this.gunOptions,
+      peers: [...(this.gunOptions?.peers || []), ...peerList],
     };
     return this;
   }
@@ -161,18 +225,24 @@ export class ShogunConfigBuilder {
 
   /**
    * Build the final configuration
+   * @deprecated Use GunInstanceHelpers to create Gun instances and pass them to ShogunCore
    */
   build(): ShogunCoreConfig {
-    return this.config as ShogunCoreConfig;
+    return {
+      ...this.config,
+      gunInstance: Gun(this.gunOptions),
+    } as ShogunCoreConfig;
   }
 }
 
 /**
  * Helper functions for common configuration patterns
+ * @deprecated Use GunInstanceHelpers to create Gun instances and pass them to ShogunCore
  */
 export const ConfigHelpers = {
   /**
    * Create a configuration for a specific environment
+   * @deprecated Use GunInstanceHelpers instead
    */
   forEnvironment(env: "development" | "production" | "test"): ShogunCoreConfig {
     switch (env) {
@@ -189,6 +259,7 @@ export const ConfigHelpers = {
 
   /**
    * Create a configuration with custom peers
+   * @deprecated Use GunInstanceHelpers.production(peers) instead
    */
   withPeers(peers: string[]): ShogunCoreConfig {
     return ShogunPresets.production(peers);
@@ -196,6 +267,7 @@ export const ConfigHelpers = {
 
   /**
    * Create a configuration for a specific use case
+   * @deprecated Use GunInstanceHelpers instead
    */
   forUseCase(
     useCase: "chat" | "social" | "gaming" | "finance",
@@ -232,30 +304,36 @@ export const ConfigHelpers = {
 
 /**
  * Quick configuration functions
+ * @deprecated Use GunInstanceHelpers to create Gun instances and pass them to ShogunCore
  */
 export const QuickConfig = {
   /**
    * Minimal setup for quick testing
+   * @deprecated Use GunInstanceHelpers.minimal() instead
    */
   test: () => ShogunPresets.minimal(),
 
   /**
    * Standard setup for most apps
+   * @deprecated Use GunInstanceHelpers.production() instead
    */
   standard: () => ShogunPresets.production(),
 
   /**
    * Setup with WebAuthn for secure apps
+   * @deprecated Use GunInstanceHelpers.webauthn() instead
    */
   secure: () => ShogunPresets.webauthn(),
 
   /**
    * Setup with Web3 for crypto apps
+   * @deprecated Use GunInstanceHelpers.web3() instead
    */
   crypto: () => ShogunPresets.web3(),
 
   /**
    * Offline setup for local development
+   * @deprecated Use GunInstanceHelpers.offline() instead
    */
   local: () => ShogunPresets.offline(),
 };
