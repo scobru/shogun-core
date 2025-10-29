@@ -31,7 +31,7 @@ export * from "./plugins";
 
 export * from "./interfaces/shogun";
 
-export * from "./config/simplified-config";
+// export * from "./config/simplified-config"; // Deprecated - removed to avoid Gun.js import issues
 
 // Type alias for backward compatibility
 import type { ShogunCoreConfig } from "./interfaces/shogun";

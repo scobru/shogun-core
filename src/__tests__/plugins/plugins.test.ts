@@ -312,9 +312,9 @@ describe("Plugin system and plugin functionality", () => {
 
     // Check if the plugin has a destroy method
     expect(typeof web3!.destroy).toBe("function");
-    
+
     // Ensure the plugin is properly initialized
-    if (web3 && typeof web3.initialize === 'function') {
+    if (web3 && typeof web3.initialize === "function") {
       web3.initialize(core as any);
     }
 

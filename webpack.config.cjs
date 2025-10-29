@@ -16,11 +16,17 @@ module.exports = {
     // Add clean webpack plugin configuration
     clean: true,
   },
-  // Remove Gun from externals to bundle it internally
+  // Make Gun external to avoid bundling issues
   externals: {
-    // gun: "Gun", // Commented out to bundle Gun internally
-    // "gun/gun": "Gun", // Commented out to bundle Gun internally
-    // "gun/sea": "Gun.SEA", // Commented out to bundle Gun internally
+    gun: "Gun",
+    "gun/gun": "Gun",
+    "gun/sea": "Gun.SEA",
+    "gun/lib/then": "Gun",
+    "gun/lib/radix": "Gun",
+    "gun/lib/radisk": "Gun",
+    "gun/lib/store": "Gun",
+    "gun/lib/rindexed": "Gun",
+    "gun/lib/webrtc": "Gun",
   },
 
   resolve: {
@@ -95,6 +101,26 @@ module.exports = {
           },
         ],
       },
+      // Handle Gun.js dynamic imports
+      {
+        test: /node_modules\/gun\/.*\.js$/,
+        use: [
+          {
+            loader: "babel-loader",
+            options: {
+              presets: ["@babel/preset-env"],
+              plugins: [
+                "@babel/plugin-transform-modules-commonjs",
+                "@babel/plugin-proposal-optional-chaining",
+                ["@babel/plugin-transform-runtime", {
+                  "helpers": false,
+                  "regenerator": true
+                }]
+              ],
+            },
+          },
+        ],
+      },
     ],
   },
   plugins: [
@@ -123,7 +149,7 @@ module.exports = {
     new webpack.DefinePlugin({
       "typeof window": '"object"',
     }),
-    // Remove the ProvidePlugin for Gun since we're bundling it
+    // Provide Gun as a global variable (not needed since Gun is external)
     // new webpack.ProvidePlugin({
     //   Gun: "gun",
     // }),

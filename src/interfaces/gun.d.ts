@@ -33,3 +33,10 @@ declare module "gun/sea" {
 }
 
 declare module "gun/axe" {}
+
+// Extend Gun chain interface to include .then() method
+declare global {
+  interface IGunChain<T, TKey, TValue, TContext> {
+    then(callback: (data: TValue) => void): IGunChain<T, TKey, TValue, TContext>;
+  }
+}

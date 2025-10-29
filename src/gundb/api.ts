@@ -199,7 +199,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user.get("profile").put(profileData).then();
+      await user.get("profile").put(profileData);
       return true;
     } catch (error) {
       console.warn("Failed to update profile:", error);
@@ -219,8 +219,8 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const profileData = await user.get("profile").once().then();
-      return profileData;
+      const profileData = await user.get("profile").once();
+      return profileData as unknown as Record<string, unknown>;
     } catch (error) {
       console.warn("Failed to get profile:", error);
       return null;
@@ -241,7 +241,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user.get("settings").put(settings).then();
+      await user.get("settings").put(settings);
       return true;
     } catch (error) {
       console.warn("Failed to save settings:", error);
@@ -261,8 +261,8 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const settingsData = await user.get("settings").once().then();
-      return settingsData;
+      const settingsData = await user.get("settings").once();
+      return settingsData as unknown as Record<string, unknown>;
     } catch (error) {
       console.warn("Failed to get settings:", error);
       return null;
@@ -285,7 +285,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user.get("preferences").put(preferences).then();
+      await user.get("preferences").put(preferences);
       return true;
     } catch (error) {
       console.warn("Failed to save preferences:", error);
@@ -305,8 +305,8 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      const preferencesData = await user.get("preferences").once().then();
-      return preferencesData;
+      const preferencesData = await user.get("preferences").once();
+      return preferencesData as unknown as Record<string, unknown>;
     } catch (error) {
       console.warn("Failed to get preferences:", error);
       return null;
@@ -331,7 +331,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user.get(`collections/${collectionName}`).put(items).then();
+      await user.get(`collections/${collectionName}`).put(items);
       return true;
     } catch (error) {
       console.warn(`Failed to create collection ${collectionName}:`, error);
@@ -360,8 +360,7 @@ export class SimpleGunAPI {
       const user = this.db.getUser();
       await user
         .get(`collections/${collectionName}/${itemId}`)
-        .put(item)
-        .then();
+        .put(item);
       return true;
     } catch (error) {
       console.warn(
@@ -389,9 +388,8 @@ export class SimpleGunAPI {
       const user = this.db.getUser();
       const collectionData = await user
         .get(`collections/${collectionName}`)
-        .once()
-        .then();
-      return collectionData;
+        .once();
+      return collectionData as unknown as Record<string, unknown>;
     } catch (error) {
       console.warn(`Failed to get collection ${collectionName}:`, error);
       return null;
@@ -417,8 +415,7 @@ export class SimpleGunAPI {
       const user = this.db.getUser();
       await user
         .get(`collections/${collectionName}/${itemId}`)
-        .put(null)
-        .then();
+        .put(null);
       return true;
     } catch (error) {
       console.warn(
