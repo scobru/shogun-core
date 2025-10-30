@@ -358,9 +358,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user
-        .get(`collections/${collectionName}/${itemId}`)
-        .put(item);
+      await user.get(`collections/${collectionName}/${itemId}`).put(item);
       return true;
     } catch (error) {
       console.warn(
@@ -413,9 +411,7 @@ export class SimpleGunAPI {
       }
 
       const user = this.db.getUser();
-      await user
-        .get(`collections/${collectionName}/${itemId}`)
-        .put(null);
+      await user.get(`collections/${collectionName}/${itemId}`).put(null);
       return true;
     } catch (error) {
       console.warn(
