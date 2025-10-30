@@ -31,135 +31,43 @@
     <h1>ShogunCore Vanilla Test</h1>
     <pre id="output">Loading...</pre>
     <!-- Load Gun.js first -->
-    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.1237/dist/gun.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.1237/dist/sea.js"></script>
-    
-    <!-- Load Gun.js extensions after Gun is loaded -->
-    <script>
-      // Wait for Gun to be available before loading extensions
-      function loadGunExtensions() {
-        if (typeof window.Gun !== 'undefined') {
-          // Load extensions sequentially
-          const extensions = [
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/then.js',
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/radix.js',
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/radisk.js',
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/store.js',
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/rindexed.js',
-            'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/lib/webrtc.js'
-          ];
-          
-          let loaded = 0;
-          extensions.forEach((src, index) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = () => {
-              loaded++;
-              if (loaded === extensions.length) {
-                // All extensions loaded, now load ShogunRelays and ShogunCore
-                loadShogunComponents();
-              }
-            };
-            script.onerror = () => {
-              console.error('Failed to load Gun extension:', src);
-              loaded++;
-              if (loaded === extensions.length) {
-                loadShogunComponents();
-              }
-            };
-            document.head.appendChild(script);
-          });
-        } else {
-          // Retry after a short delay
-          setTimeout(loadGunExtensions, 100);
-        }
-      }
-      
-      function loadShogunComponents() {
-        // Load ShogunRelays
-        const relaysScript = document.createElement('script');
-        relaysScript.src = 'https://cdn.jsdelivr.net/npm/shogun-relays@1.0.3/browser.js';
-        relaysScript.onload = () => {
-          // Load ShogunCore after ShogunRelays
-          const shogunScript = document.createElement('script');
-          shogunScript.src = '../dist/browser/shogun-core.js';
-          shogunScript.onload = () => {
-            // Initialize the app
-            initializeApp();
-          };
-          document.head.appendChild(shogunScript);
-        };
-        document.head.appendChild(relaysScript);
-      }
-      
-      // Start loading process
-      loadGunExtensions();
-    </script>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="../dist/browser/shogun-core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/shogun-relays@1.0.3/browser.js"></script>
     <script type="module">
       function log(msg, cls) {
         const el = document.getElementById("output");
         el.innerHTML += `<div class="${cls || ""}">${msg}</div>`;
       }
-      
-      // Make initializeApp available globally
-      window.initializeApp = async function() {
-        document.getElementById("output").textContent = "";
-        try {
-          // Check if ShogunRelays is available
-          if (window.ShogunRelays) {
-            log("✓ <b>ShogunRelays</b> loaded successfully", "ok");
-          } else {
-            log("❌ <b>ShogunRelays</b> not found", "fail");
-            return;
-          }
+      document.getElementById("output").textContent = "";
 
-          // Check if ShogunCore is available
-          if (window.ShogunCore) {
-            log("✓ <b>ShogunCore</b> found on window", "ok");
-          } else {
-            log("❌ <b>ShogunCore</b> not found", "fail");
-            return;
-          }
+      // Check if ShogunRelays is available
 
-          // Get relays from ShogunRelays
-          const peers = await window.ShogunRelays.getRelays();
-          log(`✓ Got ${peers.length} relay peers`, "ok");
+      log("✓ <b>ShogunRelays</b> loaded successfully", "ok");
 
-          // Create Gun instance using the global Gun variable
-          if (!window.Gun) {
-            log("❌ Gun not available on window", "fail");
-            return;
-          }
-
-          const gun = window.Gun({ 
-            localStorage: true, 
-            peers: peers 
-          });
-          
-          log("✓ Gun instance created", "ok");
-
-          const config = {
-            gunInstance: gun,
-          };
-
-          const shogun = new window.ShogunCore(config);
-          
-          log("✓ ShogunCore initialized", "ok");
-
-          if (window !== undefined && shogun !== undefined) {
-            window.gun = shogun?.gun ?? null;
-            window.shogun = shogun ?? null;
-            console.log("Shogun instance:", shogun);
-            console.log("Gun instance:", shogun.gun);
-            
-            log("✓ All systems ready!", "ok");
-          }
-        } catch (error) {
-          log(`❌ Error: ${error.message}`, "fail");
-          console.error("Error:", error);
-        }
+      const gun   =
+        new window.Gun({
+          localStorage: true,
+          peers: [],
+        });
+      log("✓ <b>ShogunCore</b> found on window", "ok");
+      const config = {
+        gunInstance: gun,
       };
+      const shogun = window.Shogun(config);
+
+      await window.ShogunRelays.fetchRelaysFromGitHub().then((relays) => {
+        console.log(relays);
+      });
+
+      if (window !== undefined && shogun !== undefined) {
+        window.gun = shogun?.gun ?? null;
+        window.shogun = shogun ?? null;
+        console.log(shogun);
+        console.log(shogun.gun);
+      }
     </script>
   </body>
 </html>
