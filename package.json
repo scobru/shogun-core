@@ -1,14 +1,14 @@
 {
   "name": "shogun-core",
-  "version": "6.0.4",
+  "version": "6.1.0",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "module": "./dist/index.esm.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/index.esm.js",
       "require": "./dist/index.js",
       "browser": "./dist/browser/shogun-core.js",
       "default": "./dist/index.js",
@@ -19,7 +19,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "yarn docs && yarn format && yarn run build:cjs && yarn run build:browser",
+    "build": "yarn docs && yarn format && yarn run build:cjs && yarn run build:browser && node scripts/make-esm.mjs",
     "build:cjs": "tsc",
     "build:browser": "webpack --config webpack.config.cjs",
     "dev": "tsc --watch",
