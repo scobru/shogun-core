@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "6.1.0",
+  "version": "6.1.1",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.esm.js",
@@ -13,6 +13,13 @@
       "browser": "./dist/browser/shogun-core.js",
       "default": "./dist/index.js",
       "node": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/browser/shogun-core.js",
+      "require": "./dist/browser/shogun-core.js",
+      "browser": "./dist/browser/shogun-core.js",
+      "default": "./dist/browser/shogun-core.js"
     }
   },
   "files": [
