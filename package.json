@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "6.1.1",
+  "version": "6.2.0",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
   "module": "./dist/index.esm.js",
@@ -8,18 +8,11 @@
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.esm.js",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "browser": "./dist/browser/shogun-core.js",
       "default": "./dist/index.js",
       "node": "./dist/index.js"
-    },
-    "./browser": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/browser/shogun-core.js",
-      "require": "./dist/browser/shogun-core.js",
-      "browser": "./dist/browser/shogun-core.js",
-      "default": "./dist/browser/shogun-core.js"
     }
   },
   "files": [
@@ -87,8 +80,9 @@
     "buffer": "^6.0.3",
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
+    "elliptic": "^6.6.1",
     "ethers": "^6.13.5",
-    "gun": "git+https://github.com/amark/gun.git",
+    "gun": "^0.2020.1241",
     "nostr-tools": "^2.15.0",
     "openpgp": "^6.2.2",
     "rxjs": "^7.8.2",
