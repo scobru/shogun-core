@@ -198,7 +198,7 @@ export const importSignalSigningPublicKey = async (
     {
       name: "Ed25519",
     },
-    false,
+    true, // Make public keys extractable for re-export in bundles
     ["verify"],
   );
 };
