@@ -90,17 +90,91 @@ export const generateSignalSigningKeyPair =
 export const exportSignalPublicKey = async (
   publicKey: CryptoKey,
 ): Promise<ArrayBuffer> => {
-  // Handle fallback keys for testing
-  if (
-    publicKey &&
-    typeof publicKey === "object" &&
-    publicKey.algorithm &&
-    !publicKey.extractable
-  ) {
-    // This is a fallback key object, return a mock ArrayBuffer
-    return new ArrayBuffer(32);
+  try {
+    // Check key properties
+    const algorithmName = publicKey?.algorithm?.name;
+    const isExtractable = publicKey?.extractable;
+
+    if (!isExtractable) {
+      throw new Error(
+        `Cannot export non-extractable key. Algorithm: ${algorithmName}, Type: ${publicKey?.type}`,
+      );
+    }
+
+    // For Ed25519 keys, try raw format first, fallback to spki if needed
+    let exported: ArrayBuffer;
+    if (algorithmName === "Ed25519") {
+      try {
+        exported = await crypto.subtle.exportKey("raw", publicKey);
+        // Validate that we got actual data (not all zeros)
+        const bytes = new Uint8Array(exported);
+        const isAllZeros = bytes.every((byte) => byte === 0);
+        if (isAllZeros) {
+          throw new Error("Export returned all zeros");
+        }
+      } catch (rawError) {
+        // Try SPKI format as fallback for Ed25519
+        try {
+          const spki = await crypto.subtle.exportKey("spki", publicKey);
+          // Extract the raw 32-byte key from SPKI format (Ed25519 public key is last 32 bytes)
+          // SPKI structure: [header bytes...][32-byte public key]
+          const spkiBytes = new Uint8Array(spki);
+          if (spkiBytes.length < 32) {
+            throw new Error(`SPKI format too short: ${spkiBytes.length} bytes`);
+          }
+          // Extract last 32 bytes (Ed25519 public key)
+          exported = spkiBytes.slice(-32).buffer;
+        } catch (spkiError) {
+          throw new Error(
+            `Failed to export Ed25519 key in both raw and spki formats. Raw error: ${rawError instanceof Error ? rawError.message : rawError}, SPKI error: ${spkiError instanceof Error ? spkiError.message : spkiError}`,
+          );
+        }
+      }
+    } else {
+      // For X25519 and other keys, use raw format
+      exported = await crypto.subtle.exportKey("raw", publicKey);
+    }
+
+    // Final validation
+    const finalBytes = new Uint8Array(exported);
+    const isAllZeros = finalBytes.every((byte) => byte === 0);
+    if (isAllZeros) {
+      throw new Error(
+        `Exported key is all zeros. Algorithm: ${algorithmName}, Size: ${exported.byteLength} bytes`,
+      );
+    }
+
+    return exported;
+  } catch (error) {
+    // If export fails, it might be a fallback/mock key
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const algorithmName = publicKey?.algorithm?.name;
+
+    console.error("exportSignalPublicKey failed:", errorMessage, {
+      algorithm: algorithmName,
+      type: publicKey?.type,
+      extractable: publicKey?.extractable,
+    });
+
+    // Check if this is a fallback key object (doesn't have standard CryptoKey properties)
+    // Fallback keys are just plain objects, not real CryptoKey instances
+    if (
+      publicKey &&
+      typeof publicKey === "object" &&
+      publicKey.algorithm &&
+      (!publicKey.extractable || !(publicKey instanceof CryptoKey))
+    ) {
+      // This is a fallback key object - we can't export it, so we need to generate a proper key
+      // This should not happen in production - it means Ed25519 is not supported
+      throw new Error(
+        `Cannot export fallback ${algorithmName} key. ${algorithmName} is not supported in this environment. Error: ${errorMessage}`,
+      );
+    }
+
+    // Re-throw if it's not a fallback key issue
+    throw error;
   }
-  return await crypto.subtle.exportKey("raw", publicKey);
 };
 
 export const importSignalPublicKey = async (
@@ -300,21 +374,49 @@ export const getSignalPublicKeyBundle = async (
     const identityKey = await exportSignalPublicKey(
       user.identityKeyPair.publicKey,
     );
+    console.log(
+      `✓ Identity X25519 key exported: ${identityKey.byteLength} bytes`,
+    );
 
     console.log("Exporting identity signing key...");
+    const identitySigningKeyBefore = user.identitySigningKeyPair.publicKey;
+    console.log("Identity signing key properties:", {
+      algorithm: identitySigningKeyBefore?.algorithm?.name,
+      type: identitySigningKeyBefore?.type,
+      extractable: identitySigningKeyBefore?.extractable,
+    });
+
     const identitySigningKey = await exportSignalPublicKey(
       user.identitySigningKeyPair.publicKey,
     );
+    const signingKeyBytes = new Uint8Array(identitySigningKey);
+    console.log(
+      `✓ Identity signing key exported: ${identitySigningKey.byteLength} bytes, first 8 bytes:`,
+      Array.from(signingKeyBytes.slice(0, 8)),
+    );
+
+    const isAllZeros = signingKeyBytes.every((byte) => byte === 0);
+    if (isAllZeros) {
+      throw new Error(
+        "Identity signing key export returned all zeros - this should have been caught by exportSignalPublicKey",
+      );
+    }
 
     console.log("Exporting signed prekey...");
     const signedPrekey = await exportSignalPublicKey(
       user.signedPrekeyPair.publicKey,
     );
+    console.log(`✓ Signed prekey exported: ${signedPrekey.byteLength} bytes`);
 
     const oneTimePrekey =
       user.oneTimePrekeyPairs.length > 0
         ? await exportSignalPublicKey(user.oneTimePrekeyPairs[0].publicKey)
         : null;
+    if (oneTimePrekey) {
+      console.log(
+        `✓ One-time prekey exported: ${oneTimePrekey.byteLength} bytes`,
+      );
+    }
 
     const bundle = {
       identityKey, // X25519 key
