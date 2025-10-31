@@ -5,7 +5,7 @@
  * for privacy-preserving authentication using Semaphore protocol.
  */
 
-import Gun from "gun";
+import { Gun, SEA } from "../index";
 import { ShogunCore } from "../core";
 import { ZkProofPlugin } from "../plugins/zkproof";
 
@@ -13,11 +13,20 @@ import { ZkProofPlugin } from "../plugins/zkproof";
 async function basicExample() {
   console.log("=== Basic ZK-Proof Authentication Example ===\n");
 
+  const gunInstance = Gun({
+    peers: [
+      "https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun",
+      "https://5eh4twk2f62autunsje4panime.srv.us/gun",
+    ],
+    radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
+  });
+
   // Initialize Shogun with ZK-Proof plugin
   const shogun = new ShogunCore({
-    gunInstance: Gun({
-      peers: ["https://peer.wallie.io/gun"],
-    }),
+    gunInstance: gunInstance,
     zkproof: {
       enabled: true,
       defaultGroupId: "my-app-users",
@@ -76,10 +85,19 @@ async function basicExample() {
 async function deterministicExample() {
   console.log("\n=== Deterministic ZK Identity Example ===\n");
 
+  const gunInstance = Gun({
+    peers: [
+      "https://lindanode.scobrudot.dev/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
+  });
+
   const shogun = new ShogunCore({
-    gunInstance: Gun({
-      peers: ["https://peer.wallie.io/gun"],
-    }),
+    gunInstance: gunInstance,
     zkproof: {
       enabled: true,
       deterministic: true,
@@ -119,10 +137,19 @@ async function deterministicExample() {
 async function proofExample() {
   console.log("\n=== ZK Proof Generation & Verification Example ===\n");
 
+  const gunInstance = Gun({
+    peers: [
+      "https://lindanode.scobrudot.dev/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
+  });
+
   const shogun = new ShogunCore({
-    gunInstance: Gun({
-      peers: ["https://peer.wallie.io/gun"],
-    }),
+    gunInstance: gunInstance,
     zkproof: {
       enabled: true,
       defaultGroupId: "proof-demo-group",
@@ -178,10 +205,18 @@ async function multiDeviceExample() {
 
   // Device 1: Create account
   console.log("📱 DEVICE 1: Creating account...");
+  const gunInstance1 = Gun({
+    peers: [
+      "https://lindanode.scobrudot.dev/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
+  });
   const shogun1 = new ShogunCore({
-    gunInstance: Gun({
-      peers: ["https://peer.wallie.io/gun"],
-    }),
+    gunInstance: gunInstance1,
     zkproof: { enabled: true },
   });
 
@@ -201,10 +236,18 @@ async function multiDeviceExample() {
   // Device 2: Import account
   console.log("\n💻 DEVICE 2: Importing account with trapdoor...");
 
+  const gunInstance2 = Gun({
+    peers: [
+      "https://lindanode.scobrudot.dev/gun",
+      "https://shogunnode.scobrudot.dev/gun",
+    ],
+    radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
+  });
   const shogun2 = new ShogunCore({
-    gunInstance: Gun({
-      peers: ["https://peer.wallie.io/gun"],
-    }),
+    gunInstance: gunInstance2,
     zkproof: { enabled: true },
   });
 

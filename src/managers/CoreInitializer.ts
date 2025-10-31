@@ -5,7 +5,7 @@ import { WebauthnPlugin } from "../plugins/webauthn/webauthnPlugin";
 import { Web3ConnectorPlugin } from "../plugins/web3/web3ConnectorPlugin";
 import { NostrConnectorPlugin } from "../plugins/nostr/nostrConnectorPlugin";
 import { ZkProofPlugin } from "../plugins/zkproof/zkProofPlugin";
-import { DataBase, RxJS, derive } from "../gundb";
+import { DataBase, RxJS, derive } from "../gundb/db";
 
 /**
  * Handles initialization of ShogunCore components
@@ -114,10 +114,28 @@ export class CoreInitializer {
     }
 
     try {
+      // Get SEA from Gun instance or global
+      let sea = (this.core._gun as any).SEA || null;
+      if (!sea) {
+        // Try to find SEA in various global locations
+        if (
+          typeof window !== "undefined" &&
+          (window as any).Gun &&
+          (window as any).Gun.SEA
+        ) {
+          sea = (window as any).Gun.SEA;
+        } else if ((globalThis as any).Gun && (globalThis as any).Gun.SEA) {
+          sea = (globalThis as any).Gun.SEA;
+        } else if ((global as any).Gun && (global as any).Gun.SEA) {
+          sea = (global as any).Gun.SEA;
+        }
+      }
+
       this.core.db = new DataBase(
         this.core._gun,
         "shogun", // Default app scope
         this.core,
+        sea,
       );
       return true;
     } catch (error) {

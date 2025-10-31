@@ -5,12 +5,37 @@
  */
 
 import { ISEAPair } from "gun";
-import { SEA } from "gun";
 import { v4 as uuidv4 } from "uuid";
 
-// Helper function to get SEA safely
+// Helper function to get SEA safely from various sources
 function getSEA() {
-  return (global as any).SEA || SEA;
+  // Try globalThis first (works in both browser and Node)
+  if ((globalThis as any).Gun && (globalThis as any).Gun.SEA) {
+    return (globalThis as any).Gun.SEA;
+  }
+  // Try window (browser)
+  if (
+    typeof window !== "undefined" &&
+    (window as any).Gun &&
+    (window as any).Gun.SEA
+  ) {
+    return (window as any).Gun.SEA;
+  }
+  // Try global (Node.js)
+  if ((global as any).Gun && (global as any).Gun.SEA) {
+    return (global as any).Gun.SEA;
+  }
+  // Try direct SEA global
+  if ((globalThis as any).SEA) {
+    return (globalThis as any).SEA;
+  }
+  if (typeof window !== "undefined" && (window as any).SEA) {
+    return (window as any).SEA;
+  }
+  if ((global as any).SEA) {
+    return (global as any).SEA;
+  }
+  return null;
 }
 
 /**

@@ -18,7 +18,6 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
-- ⭐ **Simple API**: Easy-to-use wrapper for common operations
 
 ## Installation
 
@@ -30,52 +29,18 @@ yarn add shogun-core
 
 ## Quick Start
 
-### Simple API Setup (Recommended)
-
 ```typescript
-import { quickStart, Gun } from "shogun-core";
+import { ShogunCore } from "shogun-core";
+import Gun from "gun";
 
-// Create Gun instance
+// Create Gun instance first
 const gun = Gun({ 
   peers: ['https://gun-manhattan.herokuapp.com/gun'] 
 });
 
-// Quick start with simple API
-const shogun = quickStart(gun, 'my-app');
-await shogun.init();
-
-// Use simplified API
-const user = await shogun.api.signup('alice', 'password123');
-if (user) {
-  console.log('User created:', user.username);
-  
-  // User space operations
-  await shogun.api.updateProfile({ 
-    name: 'Alice', 
-    email: 'alice@example.com' 
-  });
-  
-  await shogun.api.saveSettings({ 
-    theme: 'dark', 
-    language: 'en' 
-  });
-  
-  // Create collections
-  await shogun.api.createCollection('todos', {
-    '1': { text: 'Learn Shogun Core', done: false },
-    '2': { text: 'Build dApp', done: false }
-  });
-}
-```
-
-### Advanced Setup (Full Features)
-
-```typescript
-import { ShogunCore } from "shogun-core";
-
+// Initialize Shogun Core with the Gun instance
 const shogun = new ShogunCore({
-  peers: ["https://gun-manhattan.herokuapp.com/gun"],
-  scope: "my-awesome-app",
+  gunInstance: gun,
   
   // Enable authentication plugins
   web3: { enabled: true },
@@ -89,58 +54,47 @@ const shogun = new ShogunCore({
     enabled: true,
     defaultGroupId: "my-app-users",
   },
-  smartwallet: {
-    enabled: true,
-    factoryAddress: "0x...",
-    defaultRequiredSignatures: 1,
-    defaultRequiredGuardians: 2,
+  
+  // Optional: Configure crypto identity auto-generation
+  crypto: {
+    autoGenerateOnAuth: true, // Generate crypto identities automatically after auth
   },
 });
+
+// Register Smart Wallet plugin separately if needed
+import { SmartWalletPlugin } from "shogun-core";
+
+const smartWalletPlugin = new SmartWalletPlugin({
+  enabled: true,
+  factoryAddress: "0x...",
+  defaultRequiredSignatures: 1,
+  defaultRequiredGuardians: 2,
+});
+
+shogun.register(smartWalletPlugin);
 ```
 
-## Simple API Methods
+## Basic Database Operations
 
 ```typescript
-const api = shogun.api;
-const db = api.database; // Access database directly
+const db = shogun.db;
 
-// Authentication
-const user = await db.signUp('username', 'password');
-const loginResult = await db.login('username', 'password');
-db.logout();
-const isLoggedIn = db.isLoggedIn();
-
-// Basic data operations
-await db.put('path/to/data', { value: 'hello' });
-const data = await db.getData('path/to/data');
-await db.set('path/to/data', { value: 'updated' });
-await db.remove('path/to/data');
-
-// Profile management
-await api.updateProfile({ 
-  name: 'John Doe', 
-  email: 'john@example.com',
-  bio: 'Developer' 
-});
-const profile = await api.getProfile();
-
-// Settings and preferences
-await api.saveSettings({ language: 'en', notifications: true });
-const settings = await api.getSettings();
-
-// Collections
-await api.createCollection('todos', {
-  '1': { text: 'Learn Shogun Core', done: false },
-  '2': { text: 'Build dApp', done: false }
+// Store data using Gun chaining
+await db.get('users').get('alice').get('profile').put({
+  name: 'Alice Smith',
+  email: 'alice@example.com'
 });
 
-await api.addToCollection('todos', '3', { 
-  text: 'Deploy to production', 
-  done: false 
-});
+// Read data
+const profile = await db.get('users').get('alice').get('profile').once().then();
 
-const todos = await api.getCollection('todos');
-await api.removeFromCollection('todos', '2');
+// Update specific fields
+await db.get('users').get('alice').get('profile').get('name').put('Alice Johnson');
+
+// Iterate over collections with .map()
+db.get('users').map((user, userId) => {
+  console.log(`User ${userId}:`, user);
+});
 ```
 
 ## Authentication Methods
@@ -264,12 +218,25 @@ if (zkPlugin && zkPlugin.isAvailable()) {
 ### 6. Smart Wallet Plugin API
 
 ```typescript
-const smartWalletPlugin = shogun.getPlugin("smartwallet");
+import { SmartWalletPlugin } from "shogun-core";
+
+// Register Smart Wallet plugin
+const smartWalletPlugin = new SmartWalletPlugin({
+  enabled: true,
+  factoryAddress: "0x...", // Smart Wallet Factory contract address
+  defaultRequiredSignatures: 1,
+  defaultRequiredGuardians: 2,
+});
+
+shogun.register(smartWalletPlugin);
 
 // Configure signer (derive EOA from WebAuthn seed phrase)
+const webauthnPlugin = shogun.getPlugin("webauthn");
 const signUpResult = await webauthnPlugin.signUp("alice", {
   generateSeedPhrase: true
 });
+
+import { derive } from "shogun-core";
 
 const wallet = await derive(signUpResult.seedPhrase!, "alice", {
   includeSecp256k1Ethereum: true
@@ -305,54 +272,58 @@ When a user signs up, Shogun Core automatically generates comprehensive crypto i
 - **MLS Groups**: For group messaging and collaboration
 - **SFrame Keys**: For media encryption and streaming
 
-### Accessing Crypto Identities
+### Generating Crypto Identities
 
 ```typescript
 import { CryptoIdentityManager } from "shogun-core";
+import type { ISEAPair } from "gun/types";
 
 // Create CryptoIdentityManager instance
-const cryptoManager = new CryptoIdentityManager(shogun);
+const cryptoManager = new CryptoIdentityManager();
 
-// Get current user's crypto identities
-const identities = await cryptoManager.getCurrentUserIdentities();
+// Generate crypto identities for a user
+const seaPair: ISEAPair = /* your SEA pair */;
+const result = await cryptoManager.generateAllIdentities("username", seaPair);
 
-if (identities.success && identities.identities) {
-  console.log("RSA Key Pair:", !!identities.identities.rsa);
-  console.log("AES Key:", !!identities.identities.aes);
-  console.log("Signal Identity:", !!identities.identities.signal);
-  console.log("PGP Keys:", !!identities.identities.pgp);
-  console.log("MLS Group:", !!identities.identities.mls);
-  console.log("SFrame Key:", !!identities.identities.sframe);
+if (result.success && result.identities) {
+  console.log("RSA Key Pair:", !!result.identities.rsa);
+  console.log("AES Key:", !!result.identities.aes);
+  console.log("Signal Identity:", !!result.identities.signal);
+  console.log("PGP Keys:", !!result.identities.pgp);
+  console.log("MLS Group:", !!result.identities.mls);
+  console.log("SFrame Key:", !!result.identities.sframe);
   
   // Access specific identity data
-  if (identities.identities.rsa) {
-    console.log("RSA Public Key:", identities.identities.rsa.publicKey);
-    console.log("RSA Private Key:", identities.identities.rsa.privateKey);
+  if (result.identities.rsa) {
+    console.log("RSA Public Key:", result.identities.rsa.publicKey);
+    console.log("RSA Private Key:", result.identities.rsa.privateKey);
   }
   
-  if (identities.identities.aes) {
-    console.log("AES Key:", identities.identities.aes);
+  if (result.identities.aes) {
+    console.log("AES Key:", result.identities.aes);
   }
   
-  if (identities.identities.signal) {
-    console.log("Signal Identity:", identities.identities.signal);
+  if (result.identities.signal) {
+    console.log("Signal Identity:", result.identities.signal);
   }
   
-  if (identities.identities.pgp) {
-    console.log("PGP Public Key:", identities.identities.pgp.publicKey);
-    console.log("PGP Private Key:", identities.identities.pgp.privateKey);
+  if (result.identities.pgp) {
+    console.log("PGP Public Key:", result.identities.pgp.publicKey);
+    console.log("PGP Private Key:", result.identities.pgp.privateKey);
   }
   
-  if (identities.identities.mls) {
-    console.log("MLS Group ID:", identities.identities.mls.groupId);
-    console.log("MLS Member ID:", identities.identities.mls.memberId);
+  if (result.identities.mls) {
+    console.log("MLS Group ID:", result.identities.mls.groupId);
+    console.log("MLS Member ID:", result.identities.mls.memberId);
   }
   
-  if (identities.identities.sframe) {
-    console.log("SFrame Key ID:", identities.identities.sframe.keyId);
+  if (result.identities.sframe) {
+    console.log("SFrame Key ID:", result.identities.sframe.keyId);
   }
+  
+  // Note: Save identities to GunDB from the frontend if needed
 } else {
-  console.error("Failed to retrieve identities:", identities.error);
+  console.error("Failed to generate identities:", result.error);
 }
 ```
 
@@ -368,23 +339,28 @@ const gun = Gun({
 });
 
 const shogun = new ShogunCore({
-  gunInstance: gun,
-  scope: "my-app"
+  gunInstance: gun
 });
 
-// Register user (crypto identities generated automatically)
+// Register user
 const signupResult = await shogun.signUp("alice", "password123");
 
-if (signupResult.success) {
+if (signupResult.success && signupResult.sea) {
   console.log("User registered:", signupResult.username);
   
-  // Access crypto identities
-  const cryptoManager = new CryptoIdentityManager(shogun);
-  const identities = await cryptoManager.getCurrentUserIdentities();
+  // Generate crypto identities
+  const cryptoManager = new CryptoIdentityManager();
+  const result = await cryptoManager.generateAllIdentities(
+    signupResult.username,
+    signupResult.sea
+  );
   
-  if (identities.success) {
+  if (result.success && result.identities) {
     console.log("✅ All crypto identities generated successfully");
-    console.log("Identities available:", Object.keys(identities.identities || {}));
+    console.log("Identities available:", Object.keys(result.identities));
+    
+    // Save identities to GunDB from the frontend if needed
+    // The manager only generates identities, saving is handled by the frontend
   }
 }
 ```
@@ -414,51 +390,19 @@ interface CryptoIdentities {
 ### Error Handling
 
 ```typescript
-const identities = await cryptoManager.getCurrentUserIdentities();
+const result = await cryptoManager.generateAllIdentities("username", seaPair);
 
-if (!identities.success) {
-  switch (identities.error) {
-    case "No authenticated user found":
-      console.log("Please log in first");
-      break;
-    case "Database not available":
-      console.log("Database connection issue");
-      break;
-    case "No SEA pair found for current user":
-      console.log("User authentication issue");
+if (!result.success) {
+  switch (result.error) {
+    case "Failed to generate crypto identities":
+      console.log("Identity generation failed");
       break;
     default:
-      console.error("Unknown error:", identities.error);
+      console.error("Unknown error:", result.error);
   }
 }
 ```
 
-## Advanced Gun Operations
-
-```typescript
-const db = api.database;
-
-// Store nested data with Gun chaining
-await db.get('users').get('alice').get('profile').put({
-  name: 'Alice Smith',
-  email: 'alice@example.com',
-  preferences: {
-    theme: 'dark',
-    language: 'en'
-  }
-});
-
-// Read nested data
-const profile = await db.get('users').get('alice').get('profile').once().then();
-
-// Update specific fields
-await db.get('users').get('alice').get('profile').get('preferences').get('theme').put('light');
-
-// Iterate over collections with .map()
-db.get('users').map((user, userId) => {
-  console.log(`User ${userId}:`, user);
-});
-```
 
 ## Browser Usage (CDN)
 
@@ -475,9 +419,14 @@ db.get('users').map((user, userId) => {
     <script src="https://cdn.jsdelivr.net/npm/shogun-core/dist/browser/shogun-core.js"></script>
 
     <script>
-      const shogunCore = window.SHOGUN_CORE({
-        peers: ["https://gun-manhattan.herokuapp.com/gun"],
-        scope: "my-browser-app",
+      // Create Gun instance first
+      const gun = Gun({ 
+        peers: ["https://gun-manhattan.herokuapp.com/gun"] 
+      });
+
+      // Initialize Shogun Core
+      const shogunCore = new window.SHOGUN_CORE({
+        gunInstance: gun,
         web3: { enabled: true },
         webauthn: {
           enabled: true,
@@ -519,11 +468,8 @@ shogun.on("error", (error) => {
 
 ```typescript
 interface ShogunCoreConfig {
-  peers?: string[]; // GunDB peer URLs
-  scope?: string; // Application scope
-  authToken?: string; // GunDB super peer secret
-  appToken?: string; // Application token
-
+  gunInstance: IGunInstance<any>; // Required: existing Gun instance
+  
   // Plugin configurations
   webauthn?: {
     enabled?: boolean;
@@ -543,13 +489,20 @@ interface ShogunCoreConfig {
     enabled?: boolean;
     defaultGroupId?: string;
     deterministic?: boolean;
+    minEntropy?: number;
   };
 
-  smartwallet?: {
+  // Crypto identity configuration
+  crypto?: {
+    /**
+     * When true (default), generate and save crypto identities automatically after auth.
+     * Set to false to skip automatic crypto identity generation.
+     */
+    autoGenerateOnAuth?: boolean;
+  };
+
+  postAuth?: {
     enabled?: boolean;
-    factoryAddress?: string;
-    defaultRequiredSignatures?: number;
-    defaultRequiredGuardians?: number;
   };
 
   // Timeouts
@@ -558,8 +511,17 @@ interface ShogunCoreConfig {
     signup?: number;
     operation?: number;
   };
+
+  plugins?: {
+    autoRegister?: ShogunPlugin[];
+  };
+
+  disableAutoRecall?: boolean; // Disable automatic session recall on init
+  silent?: boolean; // Disable console logs
 }
 ```
+
+**Note**: `SmartWalletPlugin` must be registered separately using `shogun.register()` as it's not included in the main configuration.
 
 ## Testing
 

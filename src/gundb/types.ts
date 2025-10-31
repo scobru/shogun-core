@@ -18,18 +18,7 @@ export type UserInfo = {
 
 // Auth callback types
 export type AuthCallback = (user: GunUser) => void;
-export type AuthResult = {
-  success: boolean;
-  userPub?: string;
-  error?: string;
-  ack?: any; // Use any for Gun.js compatibility
-  sea?: {
-    pub: string;
-    priv: string;
-    epub: string;
-    epriv: string;
-  };
-};
+// AuthResult is exported from interfaces/shogun.ts to avoid duplication
 
 // Data operation types - using any for Gun.js compatibility
 export type GunData = any;
@@ -230,20 +219,6 @@ export interface TypedGunOperationResult<T = unknown> {
   };
 }
 
-// // User data with proper typing
-// export interface TypedUserInfo {
-//   pub: string;
-//   alias?: string;
-//   timestamp?: number;
-//   user?: GunUserInstance;
-//   metadata?: Record<string, unknown>;
-// }
-
-// Authentication with better typing
-export interface TypedAuthCallback {
-  (user: IGunUserInstance<any>): void;
-}
-
 export interface TypedAuthResult {
   success: boolean;
   userPub?: string;
@@ -258,98 +233,15 @@ export interface TypedAuthResult {
   sea?: ISEAPair;
 }
 
-// Configuration with proper typing
-export interface TypedGunConfig {
-  peers?: string[];
-  localStorage?: boolean;
-  radisk?: boolean;
-  file?: string;
-  uuid?: () => string;
-  [key: string]: unknown;
-}
-
-// Event data with proper typing
-export interface TypedEventData {
-  type: string;
-  data: unknown;
-  timestamp: number;
-  source?: string;
-}
-
-// Path operations with better typing
-export type GunPath = string | string[];
-
-export interface PathOperation<T = unknown> {
-  path: GunPath;
-  data?: T;
-  callback?: GunAckCallback;
-}
-
-// RxJS integration with proper typing
-export interface TypedRxJSObservable<T = unknown> {
-  subscribe: (observer: {
-    next: (value: T) => void;
-    error?: (error: Error) => void;
-    complete?: () => void;
-  }) => { unsubscribe: () => void };
-}
-
-// Plugin system with better typing
-export interface TypedPluginConfig {
-  name: string;
-  version: string;
-  enabled: boolean;
-  config?: Record<string, unknown>;
-}
-
-// Storage with proper typing
-export interface TypedStorageData {
-  key: string;
-  value: unknown;
-  timestamp: number;
-  ttl?: number;
-}
-
-// Error handling with better typing
-export interface TypedGunError extends Error {
-  code?: string;
-  type: "GUN_ERROR" | "AUTH_ERROR" | "NETWORK_ERROR" | "VALIDATION_ERROR";
-  context?: Record<string, unknown>;
-}
-
-// Utility types for common operations
-export type GunOperation =
-  | "get"
-  | "put"
-  | "set"
-  | "remove"
-  | "once"
-  | "on"
-  | "off";
-export type GunAuthMethod =
-  | "password"
-  | "pair"
-  | "webauthn"
-  | "web3"
-  | "nostr"
-  | "zkproof";
-
-// Generic wrapper for Gun operations
-export interface TypedGunWrapper<T = Record<string, unknown>> {
-  gun: IGunInstance<any>;
-  user: IGunUserInstance | null;
-
-  // Typed operations
-  get(path: GunPath): Promise<T>;
-  put(path: GunPath, data: T): Promise<TypedGunOperationResult<T>>;
-  set(path: GunPath, data: T): Promise<TypedGunOperationResult<T>>;
-  remove(path: GunPath): Promise<TypedGunOperationResult>;
-
-  // Typed user operations
-  getUserData(path: string): Promise<T>;
-  putUserData(path: string, data: T): Promise<void>;
-
-  // Typed authentication
-  login(username: string, password: string): Promise<TypedAuthResult>;
-  signUp(username: string, password: string): Promise<TypedAuthResult>;
-}
+// Removed unused types:
+// - TypedAuthCallback (never imported/used)
+// - TypedGunConfig (never imported/used)
+// - TypedEventData (never imported/used)
+// - PathOperation (never imported/used)
+// - TypedRxJSObservable (never imported/used)
+// - TypedPluginConfig (never imported/used)
+// - TypedStorageData (never imported/used)
+// - TypedGunError (never imported/used)
+// - GunOperation (never imported/used)
+// - GunAuthMethod (never imported/used)
+// - TypedGunWrapper (never imported/used)

@@ -50,12 +50,7 @@ export type AuthMethod =
   | "zkproof"
   | "pair";
 
-export interface AuthEventData {
-  userPub?: string;
-  username?: string;
-  method: "password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair";
-  provider?: string;
-}
+// AuthEventData is exported from interfaces/events.ts to avoid duplication
 
 // Authentication result interfaces
 export interface AuthResult {
@@ -225,6 +220,9 @@ export interface ShogunCoreConfig {
     deterministic?: boolean;
     minEntropy?: number;
   };
+  /**
+   * Crypto-related configuration
+   */
   timeouts?: {
     login?: number;
     signup?: number;
@@ -237,6 +235,9 @@ export interface ShogunCoreConfig {
   silent?: boolean; // 🔧 Disable console logs
 }
 
+// Deprecated: Use ShogunEventMap from interfaces/events.ts instead
+// ShogunEvents is kept only for backward compatibility in tests
+// TODO: Remove after updating tests to use ShogunEventMap
 export interface ShogunEvents {
   error: (data: { action: string; message: string }) => void;
   "auth:signup": (data: { username: string; userPub: string }) => void;

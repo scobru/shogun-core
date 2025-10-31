@@ -590,14 +590,14 @@ export class WebauthnPlugin
           );
         }
 
-        const generatedPair =
-          await this.generatePairFromCredentials(credentials);
-        if (!generatedPair) {
+        // Use the key directly from credentials instead of calling generatePairFromCredentials
+        // since generateCredentials already returns the derived key pair
+        if (!credentials.key) {
           throw new Error(
             "Failed to generate SEA pair from WebAuthn credentials",
           );
         }
-        pair = generatedPair;
+        pair = credentials.key;
       }
 
       core.setAuthMethod("webauthn");

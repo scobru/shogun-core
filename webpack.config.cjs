@@ -74,53 +74,6 @@ module.exports = {
         use: "ts-loader",
         exclude: /node_modules/,
       },
-      {
-        test: /node_modules\/(gun|gun-browser)\/((?!build).)*\.js$/,
-        parser: {
-          amd: false,
-          commonjs: false,
-          system: false,
-          exprContext: false,
-          wrappedContext: false,
-          requireJs: false,
-        },
-      },
-      // Add explicit loader for Gun.js modules
-      {
-        test: /node_modules\/gun\/(gun\.js|sea\.js)$/,
-        use: [
-          {
-            loader: "babel-loader",
-            options: {
-              presets: ["@babel/preset-env"],
-              plugins: [
-                "@babel/plugin-transform-modules-commonjs",
-                "@babel/plugin-proposal-optional-chaining",
-              ],
-            },
-          },
-        ],
-      },
-      // Handle Gun.js dynamic imports
-      {
-        test: /node_modules\/gun\/.*\.js$/,
-        use: [
-          {
-            loader: "babel-loader",
-            options: {
-              presets: ["@babel/preset-env"],
-              plugins: [
-                "@babel/plugin-transform-modules-commonjs",
-                "@babel/plugin-proposal-optional-chaining",
-                ["@babel/plugin-transform-runtime", {
-                  "helpers": false,
-                  "regenerator": true
-                }]
-              ],
-            },
-          },
-        ],
-      },
     ],
   },
   plugins: [

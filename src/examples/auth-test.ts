@@ -5,9 +5,8 @@
  * Includes timeout handling and error recovery testing
  */
 
-import Gun from "gun";
-
-import { AutoQuickStart } from "../gundb/api";
+import { Gun, SEA } from "../index";
+import { ShogunCore } from "../core";
 
 async function authTest() {
   console.log("🔐 ShogunCore Authentication Test\n");
@@ -17,7 +16,7 @@ async function authTest() {
     console.log("⏰ Global timeout reached - test taking too long");
     console.log("✅ Test completed (with timeout)");
     process.exit(0);
-  }, 60000); // 60 seconds timeout
+  }, 120000); // 120 seconds timeout (increased for login/signup operations)
 
   // Memory monitoring
   const logMemoryUsage = (label: string) => {
@@ -49,17 +48,51 @@ async function authTest() {
   // === INITIALIZATION ===
   console.log("📦 === INITIALIZATION ===\n");
 
+  // Set SEA on Gun globally BEFORE creating instance
+  (Gun as any).SEA = SEA;
+
+  // Debug: Check if SEA is available
+  console.log("[DEBUG] SEA available:", !!SEA);
+  console.log("[DEBUG] Gun.SEA available:", !!(Gun as any).SEA);
+
   // Create Gun instance first
+  // Note: Enabling localStorage allows operations to work offline/without peer acknowledgment
+  // In Node.js, Gun will use an in-memory store if localStorage isn't available
   const gunInstance = Gun({
-    peers: ["https://shogunnode.scobrudot.dev/gun"],
+    peers: [
+      "https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun",
+      "https://5eh4twk2f62autunsje4panime.srv.us/gun",
+    ],
     radisk: false,
+    localStorage: false, // Enable for testing - allows offline operations
+    // Reduce log noise from SEA verification errors (these are expected when checking invalid credentials)
+    log: () => {}, // Disable Gun.js console logging to reduce noise
   });
 
-  // Use AutoQuickStart with existing Gun instance
-  const quickStart = new AutoQuickStart(gunInstance, "shogun");
+  // Attach SEA to Gun instance for Node.js environment
+  (gunInstance as any).SEA = SEA;
+
+  // Also set SEA on global Gun for CryptoIdentityManager fallback
+  if ((Gun as any) && !(Gun as any).SEA) {
+    (Gun as any).SEA = SEA;
+  }
+
+  // Set on globalThis as well
+  if ((globalThis as any).Gun) {
+    (globalThis as any).Gun.SEA = SEA;
+  }
+  (globalThis as any).SEA = SEA;
+
+  console.log("[DEBUG] gunInstance.SEA available:", !!(gunInstance as any).SEA);
+  console.log("[DEBUG] Gun.SEA available:", !!(Gun as any).SEA);
+  console.log("[DEBUG] globalThis.SEA available:", !!(globalThis as any).SEA);
+
+  // Use ShogunCore with existing Gun instance
+  const shogunCore = new ShogunCore({
+    gunInstance: gunInstance,
+  });
 
   try {
-    await quickStart.init();
     console.log("✓ ShogunCore initialized successfully");
     logMemoryUsage("After Init");
   } catch (error) {
@@ -67,13 +100,16 @@ async function authTest() {
     return;
   }
 
-  const api = quickStart.api;
-  const db = api.database;
+  const db = shogunCore.db;
 
   console.log("peers:", (db.gun._.opt as any).peers);
 
   console.log("- Database instance:", db ? "Available" : "Not available");
-  console.log("- Current user:", db.getCurrentUser()?.alias || "None");
+  const user = db.gun.user();
+  const currentUserInfo = user?.is
+    ? { alias: user.is.alias, pub: user.is.pub }
+    : null;
+  console.log("- Current user:", currentUserInfo?.alias || "None");
   console.log("- Is logged in:", db.isLoggedIn());
   console.log("");
 
@@ -82,7 +118,7 @@ async function authTest() {
   // === TEST 1: BASIC SIGNUP AND LOGIN ===
   console.log("🧪 === TEST 1: BASIC SIGNUP AND LOGIN ===\n");
 
-  const testUsername = "dev";
+  const testUsername = "scobru";
   const testPassword = "francos88";
 
   // Clean up any existing session
@@ -91,7 +127,7 @@ async function authTest() {
   await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
 
   // Force reset auth state for problematic users
-  if (testUsername === "dev") {
+  if (testUsername === "scobru") {
     console.log("🔧 Performing aggressive cleanup for problematic user...");
     db.aggressiveAuthCleanup();
     await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3 seconds
@@ -205,7 +241,14 @@ async function authTest() {
 
     // Verify user state
     console.log("\n🔍 Verifying user state...");
-    const currentUser = db.getCurrentUser();
+    const userInstance = db.gun.user();
+    const currentUser = userInstance?.is
+      ? {
+          alias: userInstance.is.alias,
+          pub: userInstance.is.pub,
+          epub: (userInstance as any)?._?.sea?.epub,
+        }
+      : null;
     const isLoggedIn = db.isLoggedIn();
 
     console.log("Current user:", {
@@ -236,8 +279,8 @@ async function authTest() {
 
   try {
     // Get GUN instance directly from database
-    const gunInstance = db.getGunInstance();
-    const appNode = db.getAppNode();
+    const gunInstance = db.gun;
+    const appNode = db.node;
 
     // Test data storage using GUN directly
     const testData = {
@@ -287,7 +330,8 @@ async function authTest() {
       lastUpdated: Date.now(),
     };
 
-    const currentUser = db.getCurrentUser();
+    const userInstance = db.gun.user();
+    const currentUser = userInstance?.is ? { pub: userInstance.is.pub } : null;
     if (currentUser?.pub) {
       appNode.get("users").get(currentUser.pub).get("profile").put(profileData);
       console.log("✓ Profile data stored");
@@ -333,7 +377,7 @@ async function authTest() {
     console.log("🔄 Attempting logout...");
 
     // Use GUN logout directly from database instance
-    const gunInstance = db.getGunInstance();
+    const gunInstance = db.gun;
     gunInstance.user().leave();
     console.log("✓ GUN logout completed");
 
@@ -341,7 +385,10 @@ async function authTest() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const isStillLoggedIn = db.isLoggedIn();
-    const currentUserAfterLogout = db.getCurrentUser();
+    const userAfterLogout = db.gun.user();
+    const currentUserAfterLogout = userAfterLogout?.is
+      ? { alias: userAfterLogout.is.alias }
+      : null;
 
     console.log("✓ Logout completed");
     console.log("Is logged in after logout:", isStillLoggedIn);
@@ -368,7 +415,7 @@ async function authTest() {
     console.log("🔄 Attempting re-login with same credentials...");
 
     // Use GUN login directly from database instance
-    const gunInstance = db.getGunInstance();
+    const gunInstance = db.gun;
     gunInstance.user().auth(testUsername, testPassword);
 
     // Wait for authentication to complete
@@ -382,7 +429,11 @@ async function authTest() {
       console.log("✓ Re-login successful");
       console.log("User pub:", user.is.pub?.substring(0, 20) + "...");
       console.log("User alias:", user.is.alias || testUsername);
-      console.log("Current user:", db.getCurrentUser()?.alias || "None");
+      const currentUserInstance = db.gun.user();
+      const currentUserInfo = currentUserInstance?.is
+        ? { alias: currentUserInstance.is.alias }
+        : null;
+      console.log("Current user:", currentUserInfo?.alias || "None");
     } else {
       console.error("❌ Re-login failed - authentication not successful");
     }
@@ -443,73 +494,12 @@ async function authTest() {
   console.log("");
 
   // === TEST 6: PASSWORD RECOVERY ===
+  // NOTE: Password recovery functions removed in simplified database
+  // Skipping password recovery test
   console.log("🔐 === TEST 6: PASSWORD RECOVERY ===\n");
-
-  try {
-    console.log("🔄 Testing password hint setup...");
-
-    // Setup password hint with security questions
-    const passwordHint = "My favorite color is blue and I was born in 1990";
-    const securityQuestions = [
-      "What is your favorite color?",
-      "What year were you born?",
-      "What is your mother's maiden name?",
-    ];
-    const securityAnswers = ["blue", "1990", "Smith"];
-
-    const hintSetupResult = await db.setPasswordHintWithSecurity(
-      testUsername,
-      testPassword,
-      passwordHint,
-      securityQuestions,
-      securityAnswers,
-    );
-
-    if (hintSetupResult.success) {
-      console.log("✓ Password hint setup successful");
-    } else {
-      console.log("⚠️ Password hint setup failed:", hintSetupResult.error);
-    }
-
-    console.log("\n🔄 Testing password recovery...");
-
-    // Test password recovery
-    const recoveryResult = await db.forgotPassword(
-      testUsername,
-      securityAnswers,
-    );
-
-    if (recoveryResult.success) {
-      console.log("✓ Password recovery successful");
-      console.log("Recovered hint:", recoveryResult.hint);
-
-      if (recoveryResult.hint === passwordHint) {
-        console.log("✓ Recovered hint matches original");
-      } else {
-        console.log("⚠️ Recovered hint doesn't match original");
-      }
-    } else {
-      console.log("❌ Password recovery failed:", recoveryResult.error);
-    }
-
-    // Test with wrong answers
-    console.log("\n🔄 Testing password recovery with wrong answers...");
-    const wrongAnswers = ["red", "1985", "Johnson"];
-    const wrongRecoveryResult = await db.forgotPassword(
-      testUsername,
-      wrongAnswers,
-    );
-
-    if (!wrongRecoveryResult.success) {
-      console.log("✓ Wrong answers correctly rejected");
-    } else {
-      console.log("⚠️ Wrong answers were accepted (unexpected)");
-    }
-  } catch (error) {
-    console.error("❌ Password recovery test failed:", error);
-  }
-
-  console.log("");
+  console.log(
+    "ℹ️ Password recovery test skipped (functions removed in simplified database)\n",
+  );
 
   // === FINAL LOGOUT ===
   console.log("🚪 === FINAL CLEANUP ===\n");
@@ -556,9 +546,7 @@ async function authTest() {
   console.log("- ✓ Re-login capability");
   console.log("- ✓ Error handling for invalid credentials");
   console.log("- ✓ Error handling for non-existent users");
-  console.log("- ✓ Password hint setup with security questions");
-  console.log("- ✓ Password recovery with correct answers");
-  console.log("- ✓ Password recovery rejection with wrong answers");
+  // Password recovery tests removed (functions removed in simplified database)
 }
 
 // Esegui il test

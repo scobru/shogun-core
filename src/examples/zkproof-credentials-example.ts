@@ -5,7 +5,7 @@
  * about documents and identity without revealing sensitive data
  */
 
-import Gun from "gun";
+import { Gun, SEA } from "../index";
 import { ShogunCore } from "../core";
 import { ZkProofPlugin } from "../plugins/zkproof";
 import {
@@ -17,9 +17,13 @@ import { Identity } from "@semaphore-protocol/identity";
 // Example 1: Age Verification
 async function ageVerificationExample() {
   console.log("=== Age Verification Example ===\n");
+  const peers = [
+    "https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun",
+    "https://5eh4twk2f62autunsje4panime.srv.us/gun",
+  ];
 
   const shogun = new ShogunCore({
-    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
+    gunInstance: Gun({ peers: peers }),
     zkproof: { enabled: true },
   });
 

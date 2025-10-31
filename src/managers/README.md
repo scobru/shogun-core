@@ -1,13 +1,11 @@
 # CryptoIdentityManager
 
-Il `CryptoIdentityManager` è una classe che gestisce automaticamente la generazione e il salvataggio delle identità crypto dopo l'autenticazione SEA dell'utente in ShogunCore.
+Il `CryptoIdentityManager` è un wrapper che gestisce la generazione delle identità crypto. Il salvataggio su GunDB è gestito lato frontend.
 
 ## 🚀 Caratteristiche
 
-- **Generazione automatica**: Le identità crypto vengono generate automaticamente dopo login/signup
-- **Crittografia SEA**: Tutte le identità vengono criptate usando il SEA pair dell'utente
-- **Salvataggio su GunDB**: Le identità criptate vengono salvate nel database decentralizzato
-- **Recupero sicuro**: Possibilità di recuperare e decriptare le identità salvate
+- **Generazione identità**: Genera tutte le identità crypto disponibili (RSA, AES, Signal, PGP, MLS, SFrame)
+- **Wrapper semplice**: Interfaccia semplice per generare identità senza salvataggio automatico
 - **Supporto multi-metodo**: Funziona con tutti i metodi di autenticazione (password, WebAuthn, ZK-Proof, etc.)
 
 ## 🔐 Identità Crypto Generate
@@ -31,12 +29,13 @@ npm install shogun-core
 
 ## 🔧 Utilizzo
 
-### Utilizzo Automatico
+### Utilizzo Base
 
-Le identità crypto vengono generate automaticamente durante il processo di autenticazione:
+Genera le identità crypto dopo l'autenticazione:
 
 ```typescript
-import { ShogunCore } from 'shogun-core';
+import { ShogunCore, CryptoIdentityManager } from 'shogun-core';
+import type { ISEAPair } from 'gun/types';
 
 const core = new ShogunCore();
 await core.initialize({
@@ -45,63 +44,52 @@ await core.initialize({
   }
 });
 
-// Registra un nuovo utente - le identità crypto vengono generate automaticamente
+// Registra un nuovo utente
 const signupResult = await core.signUp("mario_rossi", "password123");
 
-if (signupResult.success) {
-  console.log("✅ Utente registrato con identità crypto generate automaticamente");
+if (signupResult.success && signupResult.sea) {
+  // Crea un'istanza del manager
+  const cryptoManager = new CryptoIdentityManager();
+
+  // Genera identità per l'utente
+  const result = await cryptoManager.generateAllIdentities(
+    signupResult.username,
+    signupResult.sea
+  );
+
+  if (result.success && result.identities) {
+    console.log("✅ Identità crypto generate");
+    console.log("- RSA:", !!result.identities.rsa);
+    console.log("- AES:", !!result.identities.aes);
+    console.log("- Signal:", !!result.identities.signal);
+    console.log("- PGP:", !!result.identities.pgp);
+    console.log("- MLS:", !!result.identities.mls);
+    console.log("- SFrame:", !!result.identities.sframe);
+    
+    // Salva le identità su GunDB lato frontend se necessario
+    // Esempio:
+    // const encrypted = await SEA.encrypt(JSON.stringify(result.identities), seaPair.priv);
+    // core.db.gun.user().get("crypto-identities").put(encrypted);
+  }
 }
 ```
 
-### Utilizzo Manuale
+### Utilizzo con setupCryptoIdentities
 
-Puoi anche gestire manualmente le identità crypto:
-
-```typescript
-import { ShogunCore, CryptoIdentityManager } from 'shogun-core';
-
-const core = new ShogunCore();
-await core.initialize();
-
-// Crea un'istanza del manager
-const cryptoManager = new CryptoIdentityManager(core);
-
-// Genera identità per un utente specifico
-const identities = await cryptoManager.generateAllIdentities(
-  "mario_rossi", 
-  seaPair
-);
-
-// Salva le identità su GunDB
-const saveResult = await cryptoManager.saveIdentitiesToGun(
-  "mario_rossi",
-  identities.identities!,
-  seaPair
-);
-
-// Recupera le identità salvate
-const retrieveResult = await cryptoManager.retrieveIdentitiesFromGun(
-  "mario_rossi",
-  seaPair
-);
-```
-
-### Recupero delle Identità Correnti
+Il metodo `setupCryptoIdentities` è un wrapper che chiama `generateAllIdentities`:
 
 ```typescript
-// Ottieni le identità dell'utente attualmente autenticato
-const currentIdentities = await cryptoManager.getCurrentUserIdentities();
+const cryptoManager = new CryptoIdentityManager();
 
-if (currentIdentities.success) {
-  const identities = currentIdentities.identities!;
-  
-  console.log("Identità disponibili:");
-  console.log("- RSA:", !!identities.rsa);
-  console.log("- AES:", !!identities.aes);
-  console.log("- Signal:", !!identities.signal);
-  console.log("- PGP:", !!identities.pgp);
-  console.log("- MLS:", !!identities.mls);
-  console.log("- SFrame:", !!identities.sframe);
+const result = await cryptoManager.setupCryptoIdentities(
+  "username",
+  seaPair,
+  false // forceRegenerate - ignorato, sempre genera nuove identità
+);
+
+if (result.success && result.identities) {
+  // Usa le identità generate
+  // Salvataggio gestito lato frontend
 }
 ```
 
@@ -110,60 +98,65 @@ if (currentIdentities.success) {
 ```mermaid
 graph TD
     A[Utente fa Login/Signup] --> B[ShogunCore genera SEA Pair]
-    B --> C[runPostAuthOnAuthResult]
-    C --> D[CryptoIdentityManager.setupCryptoIdentities]
+    B --> C[Frontend chiama CryptoIdentityManager]
+    C --> D[generateAllIdentities]
     D --> E[Genera RSA-4096 Key Pair]
     D --> F[Genera AES-256 Symmetric Key]
     D --> G[Genera Signal Protocol Identity]
     D --> H[Genera PGP Key Pair]
     D --> I[Inizializza MLS Group]
     D --> J[Genera SFrame Key]
-    E --> K[Serializza tutte le identità]
+    E --> K[Restituisce tutte le identità]
     F --> K
     G --> K
     H --> K
     I --> K
     J --> K
-    K --> L[Cripta con SEA.encrypt usando SEA Pair]
-    L --> M[Salva su GunDB nel percorso privato utente]
-    M --> N[Salva hash per verifica integrità]
+    K --> L[Frontend gestisce il salvataggio]
+    L --> M[Cripta con SEA se necessario]
+    M --> N[Salva su GunDB dal frontend]
     N --> O[Identità crypto pronte per l'uso]
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style O fill:#e8f5e8
     style L fill:#fff3e0
-    style M fill:#fce4ec
+    style N fill:#fce4ec
 ```
 
 ## 🛡️ Sicurezza
 
-- **Crittografia End-to-End**: Tutte le identità sono criptate con il SEA pair dell'utente
-- **Accesso Privato**: Solo l'utente proprietario può decriptare le proprie identità
-- **Salvataggio Sicuro**: Le identità sono salvate nel percorso privato dell'utente su GunDB
-- **Verifica Integrità**: Viene salvato un hash per verificare l'integrità dei dati
+- **Generazione sicura**: Le identità vengono generate usando algoritmi crittografici standard
+- **Gestione lato frontend**: Il salvataggio e la crittografia sono gestiti dal frontend
+- **Controllo completo**: Il frontend ha controllo completo sul processo di salvataggio
 
 ## 🔧 API Reference
 
 ### CryptoIdentityManager
 
+#### Costruttore
+```typescript
+constructor()
+```
+Crea una nuova istanza di CryptoIdentityManager. Non richiede parametri.
+
 #### `generateAllIdentities(username: string, seaPair: ISEAPair): Promise<IdentityGenerationResult>`
 Genera tutte le identità crypto disponibili per un utente.
 
-#### `saveIdentitiesToGun(username: string, identities: CryptoIdentities, seaPair: ISEAPair): Promise<IdentitySaveResult>`
-Cripta e salva le identità crypto su GunDB.
+**Parametri:**
+- `username`: Nome utente
+- `seaPair`: Coppia di chiavi SEA dell'utente (opzionale, non più utilizzato ma mantenuto per compatibilità)
 
-#### `retrieveIdentitiesFromGun(username: string, seaPair: ISEAPair): Promise<IdentityRetrievalResult>`
-Recupera e decripta le identità crypto da GunDB.
+**Restituisce:**
+- `IdentityGenerationResult` con le identità generate
 
-#### `setupCryptoIdentities(username: string, seaPair: ISEAPair, forceRegenerate?: boolean): Promise<IdentityGenerationResult & IdentitySaveResult>`
-Processo completo: genera, salva e gestisce le identità crypto.
+#### `setupCryptoIdentities(username: string, seaPair: ISEAPair, forceRegenerate?: boolean): Promise<IdentityGenerationResult>`
+Wrapper che chiama `generateAllIdentities`. Mantenuto per compatibilità.
 
-#### `getCurrentUserIdentities(): Promise<IdentityRetrievalResult>`
-Ottiene le identità crypto dell'utente corrente.
-
-#### `hasStoredIdentities(username: string): Promise<boolean>`
-Verifica se l'utente ha già delle identità crypto salvate.
+**Parametri:**
+- `username`: Nome utente
+- `seaPair`: Coppia di chiavi SEA dell'utente (opzionale)
+- `forceRegenerate`: Ignorato, genera sempre nuove identità
 
 ## 📝 Esempi
 
@@ -179,17 +172,12 @@ Il `CryptoIdentityManager` si integra automaticamente con:
 
 ## 🐛 Troubleshooting
 
-### Le identità non vengono generate automaticamente
-- Verifica che l'utente sia autenticato correttamente
-- Controlla che il SEA pair sia disponibile
-- Verifica i log per errori durante la generazione
+### Le identità non vengono generate
+- Verifica che tutti i parametri siano corretti
+- Controlla i log per errori durante la generazione
+- Assicurati che i moduli crypto (PGP, MLS, SFrame) siano inizializzati correttamente
 
-### Errore durante il salvataggio
-- Verifica la connessione a GunDB
-- Controlla che l'utente abbia i permessi di scrittura
-- Verifica che il SEA pair sia valido
-
-### Errore durante il recupero
-- Verifica che le identità siano state salvate correttamente
-- Controlla che il SEA pair sia lo stesso usato per il salvataggio
-- Verifica che l'utente sia autenticato
+### Errore durante la generazione di una specifica identità
+- Alcune identità potrebbero fallire (MLS, PGP) - questo è normale
+- Le identità generate con successo saranno comunque restituite
+- Verifica i log per dettagli su quali identità sono fallite

@@ -1,112 +1,68 @@
 /**
- * GunDB class with enhanced features:
- * - Dynamic peer linking
- * - Support for remove/unset operations
- * - Direct authentication through Gun.user()
+ * GunDB - Simplified database wrapper for Gun.js
+ * Provides only essential signup and login functionality
+ * Based on Gun.js User Authentication: https://deepwiki.com/amark/gun/6.1-user-authentication
  */
 
-import type { UserInfo, AuthCallback, EventData, EventListener } from "./types";
+import type { AuthCallback, EventData, EventListener } from "./types";
 import type {
   IGunUserInstance,
   IGunChain,
   IGunInstance,
   ISEAPair,
 } from "gun/types";
-
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
-
-import SEA from "gun/sea";
-import derive, { DeriveOptions } from "./derive";
-
-import { ErrorHandler, ErrorType } from "../utils/errorHandler";
-import { EventEmitter } from "../utils/eventEmitter";
-import { GunDataEventData, GunPeerEventData } from "../interfaces/events";
 import { RxJS } from "./rxjs";
+import { EventEmitter } from "../utils/eventEmitter";
 import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
-import { CryptoIdentityManager } from "../managers/CryptoIdentityManager";
 
 /**
- * Configuration constants for timeouts and security
+ * Configuration constants
  */
 const CONFIG = {
-  TIMEOUTS: {
-    USER_DATA_OPERATION: 5000,
-  },
   PASSWORD: {
     MIN_LENGTH: 8,
-    REQUIRE_UPPERCASE: false,
-    REQUIRE_LOWERCASE: false,
-    REQUIRE_NUMBERS: false,
-    REQUIRE_SPECIAL_CHARS: false,
   },
+  TIMEOUT: 30000, // 30 seconds
 } as const;
 
 class DataBase {
   public gun: IGunInstance;
   public user: IGunUserInstance | null = null;
   public crypto: typeof crypto;
-  public sea: typeof SEA;
+  public sea: any;
   public node: IGunChain<any, any, any, any>;
-  public core: any; // Reference to ShogunCore instance
 
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
   private readonly eventEmitter: EventEmitter;
-
-  // Integrated modules
   private _rxjs?: RxJS;
-  private _cryptoIdentityManager?: CryptoIdentityManager;
-
-  // Memory leak prevention
-  private _activeTimeouts: Set<NodeJS.Timeout> = new Set();
-  private _activeIntervals: Set<NodeJS.Timeout> = new Set();
   private _isDestroyed: boolean = false;
 
-  constructor(gun: IGunInstance, appScope: string = "shogun", core?: any) {
+  constructor(
+    gun: IGunInstance,
+    appScope: string = "shogun",
+    core?: any,
+    sea?: any,
+  ) {
     console.log("[DB] Initializing DataBase");
-
-    // Store core reference
-    this.core = core;
 
     // Initialize event emitter
     this.eventEmitter = new EventEmitter();
-
-    // Setup cleanup handlers
-    this.setupCleanupHandlers();
 
     // Validate Gun instance
     if (!gun) {
       throw new Error("Gun instance is required but was not provided");
     }
 
-    if (typeof gun !== "object") {
-      throw new Error(
-        `Gun instance must be an object, received: ${typeof gun}`,
-      );
-    }
-
     if (typeof gun.user !== "function") {
-      throw new Error(
-        `Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof gun.user}`,
-      );
-    }
-
-    if (typeof gun.get !== "function") {
-      throw new Error(
-        `Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof gun.get}`,
-      );
-    }
-
-    if (typeof gun.on !== "function") {
-      throw new Error(
-        `Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof gun.on}`,
-      );
+      throw new Error("Gun instance is invalid: gun.user is not a function");
     }
 
     this.gun = gun;
     console.log("[DB] Gun instance validated");
 
-    // Recall only if NOT disabled and there's a "pair" in sessionStorage
+    // Recall user session if available
     this.user = this.gun.user().recall({ sessionStorage: true });
     console.log("[DB] User recall completed");
 
@@ -114,230 +70,57 @@ class DataBase {
     console.log("[DB] Auth events subscribed");
 
     this.crypto = crypto;
-    this.sea = SEA;
+
+    // Get SEA from gun instance or global
+    this.sea = sea || null;
+    if (!this.sea) {
+      if ((this.gun as any).SEA) {
+        this.sea = (this.gun as any).SEA;
+      } else if ((globalThis as any).Gun?.SEA) {
+        this.sea = (globalThis as any).Gun.SEA;
+      } else if ((globalThis as any).SEA) {
+        this.sea = (globalThis as any).SEA;
+      }
+    }
+
     this._rxjs = new RxJS(this.gun);
-    this.node = null as unknown as IGunChain<any, any, any, any>;
+    this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
 
     console.log("[DB] DataBase initialization completed");
   }
 
   /**
-   * Initialize the GunInstance asynchronously
-   * This method should be called after construction to perform async operations
+   * Initialize with app scope
    */
   initialize(appScope: string = "shogun"): void {
     console.log(`[DB] Initializing with appScope: ${appScope}`);
-    try {
-      const sessionResult = this.restoreSession();
-      console.log(
-        `[DB] Session restore result: ${sessionResult.success ? "success" : "failed"}`,
-      );
-
-      this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
-      console.log("[DB] App scope node initialized");
-
-      // Initialize CryptoIdentityManager
-      this._cryptoIdentityManager = new CryptoIdentityManager(this.core, this);
-      console.log("[DB] CryptoIdentityManager initialized");
-
-      if (sessionResult.success) {
-        console.log("[DB] Session automatically restored");
-      } else {
-        console.log("[DB] No previous session to restore");
-      }
-    } catch (error) {
-      console.error("[DB] Error during automatic session restoration:", error);
-    }
+    this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
+    console.log("[DB] App scope node initialized");
   }
 
-  private subscribeToAuthEvents() {
+  /**
+   * Subscribe to Gun auth events
+   */
+  private subscribeToAuthEvents(): void {
     this.gun.on("auth", (ack: any) => {
-      // Auth event received
-
       if (ack.err) {
-        ErrorHandler.handle(
-          ErrorType.GUN,
-          "AUTH_EVENT_ERROR",
-          ack.err,
-          new Error(ack.err),
-        );
+        console.error("[DB] Auth event error:", ack.err);
       } else {
         this.notifyAuthListeners(ack.sea?.pub || "");
       }
     });
   }
 
+  /**
+   * Notify all auth callbacks
+   */
   private notifyAuthListeners(pub: string): void {
     const user = this.gun.user();
     this.onAuthCallbacks.forEach((cb) => cb(user));
   }
 
   /**
-   * Adds a new peer to the network
-   * @param peer URL of the peer to add
-   */
-  addPeer(peer: string): void {
-    console.log(`[PEER] Adding peer: ${peer}`);
-    this.gun.opt({ peers: [peer] });
-    console.log(`[PEER] Peer added successfully`);
-  }
-
-  /**
-   * Removes a peer from the network
-   * @param peer URL of the peer to remove
-   */
-  removePeer(peer: string): void {
-    console.log(`[PEER] Removing peer: ${peer}`);
-    try {
-      // Get current peers from Gun instance
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        // Remove the peer from the peers object
-        delete gunOpts.peers[peer];
-
-        // Also try to close the connection if it exists
-        const peerConnection = gunOpts.peers[peer];
-        if (peerConnection && typeof peerConnection.close === "function") {
-          peerConnection.close();
-        }
-        console.log(`[PEER] Peer removed successfully`);
-      } else {
-        console.error(`[PEER] Peer not found in current connections: ${peer}`);
-      }
-    } catch (error) {
-      console.error(`[PEER] Error removing peer ${peer}:`, error);
-    }
-  }
-
-  /**
-   * Gets the list of currently connected peers
-   * @returns Array of peer URLs
-   */
-  getCurrentPeers(): string[] {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        return Object.keys(gunOpts.peers).filter((peer) => {
-          const peerObj = gunOpts.peers[peer];
-          // Check if peer is actually connected (not just configured)
-          return peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
-        });
-      }
-      return [];
-    } catch (error) {
-      console.error("Error getting current peers:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Gets the list of all configured peers (connected and disconnected)
-   * @returns Array of peer URLs
-   */
-  getAllConfiguredPeers(): string[] {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        return Object.keys(gunOpts.peers);
-      }
-      return [];
-    } catch (error) {
-      console.error("Error getting configured peers:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Gets detailed information about all peers
-   * @returns Object with peer information
-   */
-  getPeerInfo(): { [peer: string]: { connected: boolean; status: string } } {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      const peerInfo: {
-        [peer: string]: { connected: boolean; status: string };
-      } = {};
-
-      if (gunOpts && gunOpts.peers) {
-        Object.keys(gunOpts.peers).forEach((peer) => {
-          const peerObj = gunOpts.peers[peer];
-          const isConnected =
-            peerObj && peerObj.wire && peerObj.wire.hied !== "bye";
-          const status = isConnected
-            ? "connected"
-            : peerObj && peerObj.wire
-              ? "disconnected"
-              : "not_initialized";
-
-          peerInfo[peer] = {
-            connected: isConnected,
-            status: status,
-          };
-        });
-      }
-
-      return peerInfo;
-    } catch (error) {
-      console.error("Error getting peer info:", error);
-      return {};
-    }
-  }
-
-  /**
-   * Reconnects to a specific peer
-   * @param peer URL of the peer to reconnect
-   */
-  reconnectToPeer(peer: string): void {
-    try {
-      // First remove the peer
-      this.removePeer(peer);
-
-      // Add it back immediately instead of with timeout
-      this.addPeer(peer);
-    } catch (error) {
-      console.error(`Error reconnecting to peer ${peer}:`, error);
-    }
-  }
-
-  /**
-   * Clears all peers and optionally adds new ones
-   * @param newPeers Optional array of new peers to add
-   */
-  resetPeers(newPeers?: string[]): void {
-    try {
-      const gunOpts = this.gun._.opt as unknown as {
-        peers: { [peer: string]: any };
-      };
-      if (gunOpts && gunOpts.peers) {
-        // Clear all existing peers
-        Object.keys(gunOpts.peers).forEach((peer) => {
-          this.removePeer(peer);
-        });
-
-        // Add new peers if provided
-        if (newPeers && newPeers.length > 0) {
-          newPeers.forEach((peer) => {
-            this.addPeer(peer);
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error resetting peers:", error);
-    }
-  }
-
-  /**
-   * Registers an authentication callback
-   * @param callback Function to call on auth events
-   * @returns Function to unsubscribe the callback
+   * Register authentication callback
    */
   onAuth(callback: AuthCallback): () => void {
     this.onAuthCallbacks.push(callback);
@@ -350,116 +133,19 @@ class DataBase {
   }
 
   /**
-   * Helper method to navigate to a nested path by splitting and chaining .get() calls
-   * @param node Starting Gun node
-   * @param path Path string (e.g., "test/data/marco")
-   * @returns Gun node at the specified path
-   */
-  private navigateToPath(node: IGunChain<any>, path: string): IGunChain<any> {
-    if (!path || typeof path !== "string") return node as IGunChain<any>;
-
-    // Split path by '/' and filter out empty segments
-    const pathSegments = path
-      .split("/")
-      .map((segment) => segment.trim())
-      .filter((segment) => segment.length > 0);
-
-    // Chain .get() calls for each path segment
-    let currentNode: IGunChain<any> = node as IGunChain<any>;
-    for (const segment of pathSegments) {
-      currentNode = currentNode.get(segment);
-    }
-    return currentNode;
-  }
-
-  /**
-   * Gets the Gun instance
-   * @returns Gun instance
-   */
-  getGun(): IGunInstance {
-    return this.gun;
-  }
-
-  /**
-   * Gets the current user
-   * @returns Current user object or null
-   */
-  getCurrentUser(): UserInfo | null {
-    try {
-      const _user = this.gun.user();
-      return _user?.is?.pub
-        ? {
-            pub: _user?.is?.pub!,
-            epub: _user?.is?.epub,
-            alias: _user?.is?.alias as string | undefined,
-            user: _user,
-          }
-        : null;
-    } catch (error) {
-      console.error("Error getting current user:", error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets the current user instance
-   * @returns User instance
-   */
-  getUser(): IGunUserInstance {
-    return this.gun.user();
-  }
-
-  /**
-   * Gets a node at the specified path
-   * @param path Path to the node
-   * @returns Gun node
-   */
-  get(path: string): IGunChain<any, any> {
-    return this.navigateToPath(this.node, path) as IGunChain<any, any>;
-  }
-
-  /**
-   * Gets the Gun instance for direct operations
-   * @returns Gun instance
-   */
-  getGunInstance(): IGunInstance {
-    return this.gun;
-  }
-
-  /**
-   * Gets the app scope node for direct operations
-   * @returns Gun node
-   */
-  getAppNode(): IGunChain<any, any> {
-    return this.node;
-  }
-
-  /**
-   * Helper method to get a node at a specific path for direct GUN operations
-   * @param path Path to the node
-   * @returns Gun node at the specified path
-   */
-  getNode(path: string): IGunChain<any, any> {
-    return this.navigateToPath(this.node, path) as IGunChain<any, any>;
-  }
-
-  /**
-   * Checks if a user is currently logged in
-   * @returns True if logged in
+   * Check if user is logged in
    */
   isLoggedIn(): boolean {
     try {
       const user = this.gun.user();
       return !!(user && user.is && user.is.pub);
     } catch (error) {
-      console.error("Error checking login status:", error);
       return false;
     }
   }
 
   /**
-   * Attempts to restore user session from local storage
-   * @returns Promise resolving to session restoration result
+   * Restore session from storage
    */
   restoreSession(): {
     success: boolean;
@@ -467,194 +153,60 @@ class DataBase {
     error?: string;
   } {
     try {
-      if (typeof localStorage === "undefined") {
-        return { success: false, error: "localStorage not available" };
+      if (typeof sessionStorage === "undefined") {
+        return { success: false, error: "sessionStorage not available" };
       }
 
-      // Check for session data in sessionStorage first (new format)
-      let sessionData = sessionStorage.getItem("gunSessionData");
-
+      const sessionData = sessionStorage.getItem("gunSessionData");
       if (!sessionData) {
-        // Fallback to old localStorage format
-        const sessionInfo = localStorage.getItem("gun/session");
-        const pairInfo = localStorage.getItem("gun/pair");
-
-        if (!sessionInfo || !pairInfo) {
-          // No saved session found
-          return { success: false, error: "No saved session" };
-        }
-
-        let session, pair;
-        try {
-          session = JSON.parse(sessionInfo);
-          pair = JSON.parse(pairInfo);
-        } catch (parseError) {
-          console.error("Error parsing session data:", parseError);
-          // Clear corrupted data
-          localStorage.removeItem("gun/session");
-          localStorage.removeItem("gun/pair");
-          return { success: false, error: "Corrupted session data" };
-        }
-
-        // Convert old format to new format
-        sessionData = JSON.stringify({
-          username: session.username,
-          pair: pair,
-          userPub: session.userPub,
-          timestamp: Date.now(),
-          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
+        return { success: false, error: "No saved session" };
       }
 
-      let session;
-      try {
-        session = JSON.parse(sessionData);
-      } catch (parseError) {
-        console.error("Error parsing session data:", parseError);
-        // Clear corrupted data
-        sessionStorage.removeItem("gunSessionData");
-        return { success: false, error: "Corrupted session data" };
-      }
-
-      // Validate session data structure
-      if (!session.username || !session.userPub) {
-        // Invalid session data, clearing storage
-        sessionStorage.removeItem("gunSessionData");
-        localStorage.removeItem("gun/session");
-        localStorage.removeItem("gun/pair");
-        return { success: false, error: "Incomplete session data" };
+      const session = JSON.parse(sessionData);
+      if (!session.userPub) {
+        return { success: false, error: "Invalid session data" };
       }
 
       // Check if session is expired
       if (session.expiresAt && Date.now() > session.expiresAt) {
-        // Session expired, clearing storage
         sessionStorage.removeItem("gunSessionData");
-        localStorage.removeItem("gun/session");
-        localStorage.removeItem("gun/pair");
         return { success: false, error: "Session expired" };
       }
 
-      // Attempt to restore user session
-      try {
-        const userInstance = this.gun.user();
-        if (!userInstance) {
-          console.error("Gun user instance not available");
-          sessionStorage.removeItem("gunSessionData");
-          localStorage.removeItem("gun/session");
-          localStorage.removeItem("gun/pair");
-          return { success: false, error: "Gun user instance not available" };
-        }
-
-        // Set the user pair if available
-        if (session.pair) {
-          try {
-            (userInstance as any)._ = { ...userInstance._, sea: session.pair };
-          } catch (pairError) {
-            console.error("Error setting user pair:", pairError);
-          }
-        }
-
-        // Attempt to recall user session
-        try {
-          if (
-            typeof sessionStorage !== "undefined" &&
-            sessionStorage.getItem("pair")
-          ) {
-            const recallResult = userInstance.recall({ sessionStorage: true });
-          } else {
-            const recallResult = userInstance;
-          }
-        } catch (recallError) {
-          console.error("Error during recall:", recallError);
-        }
-
-        // Verify session restoration success
-        if (userInstance.is && userInstance.is.pub === session.userPub) {
-          this.user = userInstance;
-          // Session restored successfully for user
-          return {
-            success: true,
-            userPub: session.userPub,
-          };
-        } else {
-          // Session restoration verification failed
-          sessionStorage.removeItem("gunSessionData");
-          localStorage.removeItem("gun/session");
-          localStorage.removeItem("gun/pair");
-          return { success: false, error: "Session verification failed" };
-        }
-      } catch (error) {
-        console.error(`Error restoring session: ${error}`);
-        return {
-          success: false,
-          error: `Session restoration failed: ${error}`,
-        };
+      // Verify session restoration
+      const user = this.gun.user();
+      if (user.is && user.is.pub === session.userPub) {
+        this.user = user;
+        return { success: true, userPub: session.userPub };
       }
-    } catch (mainError) {
-      console.error(`Error in restoreSession: ${mainError}`);
-      return {
-        success: false,
-        error: `Session restoration failed: ${mainError}`,
-      };
-    }
 
-    return { success: false, error: "No session data available" };
+      return { success: false, error: "Session verification failed" };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
   }
 
+  /**
+   * Logout user
+   */
   logout(): void {
     try {
       const currentUser = this.gun.user();
-      if (!currentUser || !currentUser.is) {
-        return;
-      }
-
-      // Log out user
-      try {
+      if (currentUser && currentUser.is) {
         currentUser.leave();
-        // Force clear any pending authentication
-        if (currentUser._ && (currentUser._ as any).sea) {
-          (currentUser._ as any).sea = null;
-        }
-      } catch (gunError) {
-        console.error("Error during Gun logout:", gunError);
       }
-
-      // Clear user reference
       this.user = null;
 
-      // Clear local session data
-      try {
-        // Clear session data if needed
-      } catch (error) {
-        console.error("Error clearing local session data:", error);
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("gunSessionData");
       }
-
-      // Clear session storage
-      try {
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.removeItem("gunSessionData");
-          // Session storage cleared
-        }
-      } catch (error) {
-        console.error("Error clearing session storage:", error);
-      }
-
-      // Logout completed successfully
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("[DB] Error during logout:", error);
     }
   }
 
   /**
-   * Accesses the RxJS module for reactive programming
-   * @returns GunRxJS instance
-   */
-  rx(): RxJS {
-    return this._rxjs as RxJS;
-  }
-
-  /**
-   * Validates password strength according to security requirements
+   * Validate password strength
    */
   private validatePasswordStrength(password: string): {
     valid: boolean;
@@ -666,55 +218,24 @@ class DataBase {
         error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
       };
     }
-
-    const validations = [];
-
-    if (CONFIG.PASSWORD.REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) {
-      validations.push("uppercase letter");
-    }
-
-    if (CONFIG.PASSWORD.REQUIRE_LOWERCASE && !/[a-z]/.test(password)) {
-      validations.push("lowercase letter");
-    }
-
-    if (CONFIG.PASSWORD.REQUIRE_NUMBERS && !/\d/.test(password)) {
-      validations.push("number");
-    }
-
-    if (
-      CONFIG.PASSWORD.REQUIRE_SPECIAL_CHARS &&
-      !/[!@#$%^&*(),.?":{}|<>]/.test(password)
-    ) {
-      validations.push("special character");
-    }
-
-    if (validations.length > 0) {
-      return {
-        valid: false,
-        error: `Password must contain at least one: ${validations.join(", ")}`,
-      };
-    }
-
     return { valid: true };
   }
 
   /**
-   * Validates signup credentials with enhanced security
+   * Validate signup credentials
    */
   private validateSignupCredentials(
     username: string,
     password: string,
     pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
-    // Validate username
     if (!username || username.length < 1) {
       return {
         valid: false,
-        error: "Username must be more than 0 characters long!",
+        error: "Username must be more than 0 characters long",
       };
     }
 
-    // Validate username format (alphanumeric and some special chars only)
     if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
       return {
         valid: false,
@@ -723,1241 +244,45 @@ class DataBase {
       };
     }
 
-    // If using pair authentication, skip password validation
     if (pair) {
-      if (
-        !(pair as ISEAPair).pub ||
-        !(pair as ISEAPair).priv ||
-        !(pair as ISEAPair).epub ||
-        !(pair as ISEAPair).epriv
-      ) {
-        return {
-          valid: false,
-          error: "Invalid pair provided",
-        };
-      }
-
       if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
-        return {
-          valid: false,
-          error: "Invalid pair provided",
-        };
+        return { valid: false, error: "Invalid pair provided" };
       }
-
       return { valid: true };
     }
 
-    // Validate password strength
     return this.validatePasswordStrength(password);
   }
 
   /**
-   * Signs up a new user using direct Gun authentication
-   * @param username Username
-   * @param password Password
-   * @param pair Optional SEA pair for Web3 login
-   * @returns Promise resolving to signup result
-   */
-  async signUp(
-    username: string,
-    password: string,
-    pair?: ISEAPair | null,
-    retryCount: number = 0,
-    maxRetries: number = 3,
-  ): Promise<SignUpResult> {
-    try {
-      console.log(`🔄 [SIGNUP] Attempting signup for: ${username}`);
-
-      // Validate credentials with enhanced security
-      const validation = this.validateSignupCredentials(
-        username,
-        password,
-        pair,
-      );
-      if (!validation.valid) {
-        return { success: false, error: validation.error };
-      }
-
-      // Check if authentication is in progress and retry if needed
-      if (this.isAuthInProgress()) {
-        if (retryCount < maxRetries) {
-          console.warn(
-            `Authentication in progress during signup, retrying... (${retryCount + 1}/${maxRetries})`,
-          );
-          this.resetAuthState();
-          const baseDelay = 100 * Math.pow(2, retryCount);
-          const jitter = Math.random() * 100;
-          const delay = Math.min(baseDelay + jitter, 2000);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          return this.signUp(
-            username,
-            password,
-            pair,
-            retryCount + 1,
-            maxRetries,
-          );
-        } else {
-          console.error(
-            "Max retries exceeded for signup due to concurrent operations",
-          );
-          this.resetAuthState();
-          return {
-            success: false,
-            error:
-              "Signup failed after multiple retries due to concurrent operations",
-          };
-        }
-      }
-
-      let createResult;
-
-      if (pair) {
-        // For Web3/plugin authentication, use pair-based creation
-        createResult = await this.createNewUserWithPair(username, pair);
-      } else {
-        // For password authentication, use standard creation
-        createResult = await this.createNewUserFixed(username, password);
-      }
-
-      if (!createResult.success) {
-        // Reset auth state after failed creation to prevent blocking future operations
-        this.resetAuthState();
-        return { success: false, error: createResult.error };
-      }
-
-      // Add a small delay to ensure user is properly registered
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Authenticate the newly created user
-      const authResult = await this.authenticateNewUserFixed(
-        username,
-        password,
-        pair,
-      );
-
-      if (!authResult.success) {
-        return { success: false, error: authResult.error };
-      }
-
-      // Validate that we have a userPub
-      if (
-        !authResult.userPub ||
-        typeof authResult.userPub !== "string" ||
-        authResult.userPub.trim().length === 0
-      ) {
-        console.error(
-          "Authentication successful but no valid userPub returned:",
-          authResult,
-        );
-        return {
-          success: false,
-          error: "Authentication successful but no valid userPub returned",
-        };
-      }
-
-      // Set the user instance
-      this.user = this.gun.user();
-
-      // Run post-authentication tasks
-      try {
-        const postAuthResult = await this.runPostAuthOnAuthResult(
-          username,
-          authResult.userPub,
-          authResult,
-        );
-
-        // Return the post-auth result which includes the complete user data
-        return postAuthResult;
-      } catch (postAuthError) {
-        console.error(`Post-auth error: ${postAuthError}`);
-        // Even if post-auth fails, the user was created and authenticated successfully
-        return {
-          success: true,
-          userPub: authResult.userPub,
-          username: username,
-          isNewUser: true,
-          sea: (this.gun.user() as any)?._?.sea
-            ? {
-                pub: (this.gun.user() as any)._?.sea.pub,
-                priv: (this.gun.user() as any)._?.sea.priv,
-                epub: (this.gun.user() as any)._?.sea.epub,
-                epriv: (this.gun.user() as any)._?.sea.epriv,
-              }
-            : undefined,
-        };
-      }
-    } catch (error) {
-      console.error(`Exception during signup for ${username}: ${error}`);
-      return { success: false, error: `Signup failed: ${error}` };
-    }
-  }
-
-  /**
-   * Creates a new user in Gun with pair-based authentication (for Web3/plugins)
-   */
-  private async createNewUserWithPair(
-    username: string,
-    pair: ISEAPair,
-  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
-    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
-      (resolve) => {
-        // Validate inputs before creating user
-        if (
-          !username ||
-          typeof username !== "string" ||
-          username.trim().length === 0
-        ) {
-          resolve({ success: false, error: "Invalid username provided" });
-          return;
-        }
-
-        if (!pair || !pair.pub || !pair.priv) {
-          resolve({ success: false, error: "Invalid pair provided" });
-          return;
-        }
-
-        // Normalize username
-        const normalizedUsername = username.trim().toLowerCase();
-        if (normalizedUsername.length === 0) {
-          resolve({
-            success: false,
-            error: "Username cannot be empty",
-          });
-          return;
-        }
-
-        // For pair-based authentication, we don't need to call gun.user().create()
-        // because the pair already contains the cryptographic credentials
-        // We just need to validate that the pair is valid and return success
-
-        resolve({ success: true, userPub: pair.pub });
-      },
-    );
-  }
-
-  /**
-   * Creates a new user in Gun without waiting for acknowledgment
-   */
-  private async createNewUserFixed(
-    username: string,
-    password: string,
-  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
-    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
-      (resolve) => {
-        // Validate inputs before creating user
-        if (
-          !username ||
-          typeof username !== "string" ||
-          username.trim().length === 0
-        ) {
-          resolve({ success: false, error: "Invalid username provided" });
-          return;
-        }
-
-        if (
-          !password ||
-          typeof password !== "string" ||
-          password.length === 0
-        ) {
-          resolve({ success: false, error: "Invalid password provided" });
-          return;
-        }
-
-        // Normalize username
-        const normalizedUsername = username.trim().toLowerCase();
-        if (normalizedUsername.length === 0) {
-          resolve({
-            success: false,
-            error: "Username cannot be empty",
-          });
-          return;
-        }
-
-        console.log(`🔄 [CREATE] Creating user: ${normalizedUsername}`);
-
-        // Crea utente senza aspettare acknowledgment
-        this.gun.user().create(normalizedUsername, password, () => {});
-
-        // Aspetta che la creazione si completi
-        setTimeout(() => {
-          // Controlla se l'utente è stato creato
-          const user = this.gun.user();
-          if (user && user.is && user.is.pub) {
-            console.log("✅ [CREATE] User created successfully");
-            resolve({ success: true, userPub: user.is.pub });
-          } else {
-            console.log("❌ [CREATE] User creation failed");
-            resolve({ success: false, error: "User creation failed" });
-          }
-        }, 2000); // Aspetta 2 secondi
-      },
-    );
-  }
-
-  /**
-   * Authenticates user after creation without waiting for acknowledgment
-   */
-  private async authenticateNewUserFixed(
-    username: string,
-    password: string,
-    pair?: ISEAPair | null,
-  ): Promise<{ success: boolean; error?: string; userPub?: string }> {
-    return new Promise<{ success: boolean; error?: string; userPub?: string }>(
-      (resolve) => {
-        // Validate inputs before authentication
-        if (
-          !username ||
-          typeof username !== "string" ||
-          username.trim().length === 0
-        ) {
-          resolve({ success: false, error: "Invalid username provided" });
-          return;
-        }
-
-        // Skip password validation when using pair authentication
-        if (
-          !pair &&
-          (!password || typeof password !== "string" || password.length === 0)
-        ) {
-          resolve({ success: false, error: "Invalid password provided" });
-          return;
-        }
-
-        // Normalize username to match what was used in creation
-        const normalizedUsername = username.trim().toLowerCase();
-        if (normalizedUsername.length === 0) {
-          resolve({
-            success: false,
-            error: "Username cannot be empty",
-          });
-          return;
-        }
-
-        console.log(`🔑 [AUTH] Authenticating user: ${normalizedUsername}`);
-
-        // Autentica senza aspettare acknowledgment
-        if (pair) {
-          this.gun.user().auth(pair);
-        } else {
-          this.gun.user().auth(normalizedUsername, password);
-        }
-
-        // Aspetta che l'autenticazione si completi
-        setTimeout(() => {
-          const user = this.gun.user();
-          if (user && user.is && user.is.pub) {
-            console.log("✅ [AUTH] Authentication successful");
-            resolve({ success: true, userPub: user.is.pub });
-          } else {
-            console.log("❌ [AUTH] Authentication failed");
-            resolve({ success: false, error: "Authentication failed" });
-          }
-        }, 2000); // Aspetta 2 secondi
-      },
-    );
-  }
-
-  private async runPostAuthOnAuthResult(
-    username: string,
-    userPub: string,
-    authResult: any,
-  ): Promise<SignUpResult> {
-    console.log(
-      `[POSTAUTH] Starting post-auth setup for user: ${username}, userPub: ${userPub}`,
-    );
-
-    try {
-      console.log(`[POSTAUTH] Validating parameters for user: ${username}`);
-
-      // Validate required parameters
-      if (
-        !username ||
-        typeof username !== "string" ||
-        username.trim().length === 0
-      ) {
-        console.error(`[POSTAUTH] Invalid username provided: ${username}`);
-        throw new Error("Invalid username provided");
-      }
-
-      if (
-        !userPub ||
-        typeof userPub !== "string" ||
-        userPub.trim().length === 0
-      ) {
-        console.error("[POSTAUTH] Invalid userPub provided:", {
-          userPub,
-          type: typeof userPub,
-          authResult,
-        });
-        throw new Error("Invalid userPub provided");
-      }
-
-      // Additional validation for userPub format
-      if (!userPub.includes(".") || userPub.length < 10) {
-        console.error(`[POSTAUTH] Invalid userPub format: ${userPub}`);
-        throw new Error("Invalid userPub format");
-      }
-
-      console.log(`[POSTAUTH] Parameters validated for user: ${username}`);
-
-      // Normalize username to prevent path issues
-      const normalizedUsername = username.trim().toLowerCase();
-      if (normalizedUsername.length === 0) {
-        console.error(
-          `[POSTAUTH] Normalized username is empty for user: ${username}`,
-        );
-        throw new Error("Username cannot be empty");
-      }
-
-      console.log(`[POSTAUTH] Normalized username: ${normalizedUsername}`);
-
-      console.log(`[POSTAUTH] Checking if user exists: ${userPub}`);
-      const existingUser = this.gun.get(userPub);
-
-      const isNewUser = !existingUser || !(existingUser as any).alias;
-      console.log(
-        `[POSTAUTH] User is ${isNewUser ? "NEW" : "EXISTING"}: ${userPub}`,
-      );
-
-      // Get user's encryption public key (epub) for comprehensive tracking
-      const userInstance = this.gun.user();
-      const userSea = (userInstance as any)?._?.sea;
-      const epub = userSea?.epub;
-
-      console.log(`[POSTAUTH] User epub retrieved: ${epub ? "yes" : "no"}`);
-
-      // Enhanced user tracking system
-      console.log(
-        `[POSTAUTH] Setting up comprehensive user tracking for: ${normalizedUsername}`,
-      );
-      const trackingResult = await this.setupComprehensiveUserTracking(
-        normalizedUsername,
-        userPub,
-        epub,
-      );
-
-      if (!trackingResult) {
-        console.error(
-          `[POSTAUTH] Comprehensive user tracking setup failed for: ${normalizedUsername}`,
-        );
-        return {
-          success: false,
-          error: "Comprehensive user tracking setup failed",
-        };
-      }
-
-      console.log(
-        `[POSTAUTH] User tracking setup completed successfully for: ${normalizedUsername}`,
-      );
-
-      // Setup crypto identities for the user (skip if SKIP_CRYPTO_GENERATION is set)
-      if (
-        this._cryptoIdentityManager &&
-        userSea &&
-        !process.env.SKIP_CRYPTO_GENERATION
-      ) {
-        console.log(
-          `[POSTAUTH] Setting up crypto identities for: ${normalizedUsername}`,
-        );
-        try {
-          const cryptoSetupResult =
-            await this._cryptoIdentityManager.setupCryptoIdentities(
-              normalizedUsername,
-              userSea,
-              false, // Don't force regenerate if they already exist
-            );
-
-          if (cryptoSetupResult.success) {
-            console.log(
-              `✅ [POSTAUTH] Crypto identities setup completed for: ${normalizedUsername}`,
-            );
-          } else {
-            console.error(
-              `❌ [POSTAUTH] Crypto identities setup failed for: ${normalizedUsername}`,
-              cryptoSetupResult.error,
-            );
-            // Don't fail the entire auth process if crypto setup fails
-          }
-        } catch (cryptoError) {
-          console.error(
-            `❌ [POSTAUTH] Crypto identities setup error for: ${normalizedUsername}`,
-            cryptoError,
-          );
-          // Don't fail the entire auth process if crypto setup fails
-        }
-      } else {
-        if (process.env.SKIP_CRYPTO_GENERATION) {
-          console.log(
-            `ℹ️ [POSTAUTH] Skipping crypto identities setup - SKIP_CRYPTO_GENERATION is set`,
-          );
-        } else {
-          console.log(
-            `ℹ️ [POSTAUTH] Skipping crypto identities setup - manager not available or no SEA pair`,
-          );
-        }
-      }
-
-      const result = {
-        success: true,
-        userPub: userPub,
-        username: normalizedUsername,
-        isNewUser: isNewUser,
-        // Get the SEA pair from the user object
-        sea: userSea
-          ? {
-              pub: userSea.pub,
-              priv: userSea.priv,
-              epub: userSea.epub,
-              epriv: userSea.epriv,
-            }
-          : undefined,
-      };
-
-      console.log(
-        `[POSTAUTH] Post-auth setup completed successfully for user: ${username}`,
-      );
-      return result;
-    } catch (error) {
-      console.error(
-        `[POSTAUTH] Error in post-authentication setup for ${username}:`,
-        error,
-      );
-      return {
-        success: false,
-        error: `Post-authentication setup failed: ${error}`,
-      };
-    }
-  }
-
-  /**
-   * Sets up comprehensive user tracking system for agile user lookup
-   * Creates multiple indexes for efficient user discovery
-   */
-  private async setupComprehensiveUserTracking(
-    username: string,
-    userPub: string,
-    epub: string,
-  ): Promise<boolean> {
-    console.log(
-      `[TRACKING] Starting comprehensive user tracking setup for: ${username}, userPub: ${userPub}`,
-    );
-
-    try {
-      // 1. Create alias index: ~@alias -> userPub (for GunDB compatibility)
-      console.log(`[TRACKING] Step 1: Creating alias index for ${username}`);
-      const aliasIndexResult = await this.createAliasIndex(username, userPub);
-
-      if (!aliasIndexResult) {
-        console.error(
-          `[TRACKING] Failed to create alias index for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 1 completed: Alias index created for ${username}`,
-      );
-
-      // 2. Create username mapping: usernames/alias -> userPub
-      console.log(
-        `[TRACKING] Step 2: Creating username mapping for ${username}`,
-      );
-      const usernameMappingResult = await this.createUsernameMapping(
-        username,
-        userPub,
-      );
-
-      if (!usernameMappingResult) {
-        console.error(
-          `[TRACKING] Failed to create username mapping for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 2 completed: Username mapping created for ${username}`,
-      );
-
-      // 3. Create user registry: users/userPub -> user data
-      console.log(`[TRACKING] Step 3: Creating user registry for ${username}`);
-      const userRegistryResult = await this.createUserRegistry(
-        username,
-        userPub,
-        epub,
-      );
-
-      if (!userRegistryResult) {
-        console.error(
-          `[TRACKING] Failed to create user registry for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 3 completed: User registry created for ${username}`,
-      );
-
-      // 4. Create reverse lookup: userPub -> alias
-      console.log(`[TRACKING] Step 4: Creating reverse lookup for ${username}`);
-      const reverseLookupResult = await this.createReverseLookup(
-        username,
-        userPub,
-      );
-
-      if (!reverseLookupResult) {
-        console.error(
-          `[TRACKING] Failed to create reverse lookup for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 4 completed: Reverse lookup created for ${username}`,
-      );
-
-      // 5. Create epub index: epubKeys/epub -> userPub (for encryption lookups)
-      if (epub) {
-        console.log(`[TRACKING] Step 5: Creating epub index for ${username}`);
-        const epubIndexResult = await this.createEpubIndex(epub, userPub);
-
-        if (!epubIndexResult) {
-          console.error(
-            `[TRACKING] Failed to create epub index for ${username}`,
-          );
-          return false;
-        }
-        console.log(
-          `[TRACKING] Step 5 completed: Epub index created for ${username}`,
-        );
-      } else {
-        console.log(
-          `[TRACKING] Step 5 skipped: No epub available for ${username}`,
-        );
-      }
-
-      // 6. Create user metadata in user's own node
-      console.log(`[TRACKING] Step 6: Creating user metadata for ${username}`);
-      const userMetadataResult = await this.createUserMetadata(
-        username,
-        userPub,
-        epub,
-      );
-
-      if (!userMetadataResult) {
-        console.error(
-          `[TRACKING] Failed to create user metadata for ${username}`,
-        );
-        return false;
-      }
-      console.log(
-        `[TRACKING] Step 6 completed: User metadata created for ${username}`,
-      );
-
-      console.log(
-        `[TRACKING] Comprehensive user tracking setup completed successfully for: ${username}`,
-      );
-      return true;
-    } catch (error) {
-      console.error(
-        `[TRACKING] Error in comprehensive user tracking setup for ${username}:`,
-        error,
-      );
-      // Don't throw - continue with other operations
-      return false;
-    }
-  }
-
-  /**
-   * Creates alias index following GunDB pattern: ~@alias -> userPub
-   */
-  private async createAliasIndex(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      // Create a simple alias mapping without using GunDB's complex alias system
-      // Store username -> userPub mapping in a simple way
-      const aliasData = {
-        username: username,
-        userPub: userPub,
-        createdAt: Date.now(),
-      };
-
-      console.log(`🔄 [ALIAS] Creating alias index for ${username}`);
-
-      // Store alias mapping without waiting for acknowledgment
-      this.node.get("aliases").get(username).put(aliasData);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log(`✅ [ALIAS] Alias index created for ${username}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating alias index: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates username mapping: usernames/alias -> userPub
-   */
-  private async createUsernameMapping(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      console.log(`🔄 [USERNAME] Creating username mapping for ${username}`);
-
-      // Store username mapping without waiting for acknowledgment
-      this.node.get("usernames").get(username).put(userPub);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`✅ [USERNAME] Username mapping created for ${username}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating username mapping: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates user registry: users/userPub -> user data
-   */
-  private async createUserRegistry(
-    username: string,
-    userPub: string,
-    epub: string | null,
-  ): Promise<boolean> {
-    try {
-      const userData = {
-        username: username,
-        userPub: userPub,
-        epub: epub,
-        registeredAt: Date.now().toString(),
-        lastSeen: Date.now().toString(),
-      };
-
-      console.log(`🔄 [REGISTRY] Creating user registry for ${username}`);
-
-      // Store user registry without waiting for acknowledgment
-      this.node.get("users").get(userPub).put(userData);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`✅ [REGISTRY] User registry created for ${username}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating user registry: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates reverse lookup: userPub -> alias
-   */
-  private async createReverseLookup(
-    username: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      console.log(`🔄 [REVERSE] Creating reverse lookup for ${username}`);
-
-      // Store reverse lookup without waiting for acknowledgment
-      this.node.get("userAliases").get(userPub).put(username);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`✅ [REVERSE] Reverse lookup created for ${username}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating reverse lookup: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates epub index: epubKeys/epub -> userPub
-   */
-  private async createEpubIndex(
-    epub: string,
-    userPub: string,
-  ): Promise<boolean> {
-    try {
-      console.log(`🔄 [EPUB] Creating epub index for ${userPub}`);
-
-      // Store epub index without waiting for acknowledgment
-      this.node.get("epubKeys").get(epub).put(userPub);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`✅ [EPUB] Epub index created for ${userPub}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating epub index: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Creates user metadata in user's own node
-   */
-  private async createUserMetadata(
-    username: string,
-    userPub: string,
-    epub: string | null,
-  ): Promise<boolean> {
-    try {
-      const userMetadata = {
-        username: username,
-        epub: epub,
-        registeredAt: Date.now(),
-        lastSeen: Date.now(),
-      };
-
-      console.log(`🔄 [METADATA] Creating user metadata for ${username}`);
-
-      // Store user metadata without waiting for acknowledgment
-      this.gun.get(userPub).put(userMetadata);
-
-      // Aspetta un momento per la scrittura
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`✅ [METADATA] User metadata created for ${username}`);
-      return true;
-    } catch (error) {
-      console.error(`Error creating user metadata: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Gets user information by alias using the comprehensive tracking system
-   * @param alias Username/alias to lookup
-   * @returns Promise resolving to user information or null if not found
-   */
-  async getUserByAlias(alias: string): Promise<{
-    userPub: string;
-    epub: string | null;
-    username: string;
-    registeredAt: number;
-    lastSeen: number;
-  } | null> {
-    try {
-      const normalizedAlias = alias.trim().toLowerCase();
-      if (!normalizedAlias) {
-        return null;
-      }
-
-      // Method 1: Try GunDB standard alias lookup (~@alias)
-      try {
-        const aliasData = this.gun.get(`~@${normalizedAlias}`) as any;
-        if (aliasData && aliasData["~pubKeyOfUser"]) {
-          const userPub =
-            aliasData["~pubKeyOfUser"]["#"] || aliasData["~pubKeyOfUser"];
-          if (userPub) {
-            const userData = await this.getUserDataByPub(userPub);
-            if (userData) {
-              return userData;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(
-          `GunDB alias lookup failed for ${normalizedAlias}:`,
-          error,
-        );
-      }
-
-      // Method 2: Try username mapping (usernames/alias -> userPub)
-      try {
-        const userPubNode = this.node.get("usernames").get(normalizedAlias);
-
-        // Use once to get the actual value
-        const userPub = await new Promise((resolve) => {
-          const timeout = setTimeout(() => resolve(null), 2000);
-          userPubNode.once((data: any) => {
-            clearTimeout(timeout);
-            resolve(data);
-          });
-        });
-
-        if (userPub) {
-          const userData = await this.getUserDataByPub(userPub as string);
-          if (userData) {
-            return userData;
-          }
-        }
-      } catch (error) {
-        console.error(
-          `Username mapping lookup failed for ${normalizedAlias}:`,
-          error,
-        );
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error looking up user by alias ${alias}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user information by public key
-   * @param userPub User's public key
-   * @returns Promise resolving to user information or null if not found
-   */
-  async getUserDataByPub(userPub: string): Promise<{
-    userPub: string;
-    epub: string | null;
-    username: string;
-    registeredAt: number;
-    lastSeen: number;
-  } | null> {
-    try {
-      if (!userPub || typeof userPub !== "string") {
-        return null;
-      }
-
-      // Method 1: Try user registry (users/userPub -> user data)
-      try {
-        const userData = this.node.get("users").get(userPub) as any;
-
-        if (userData && userData.username) {
-          return {
-            userPub: userData.userPub || userPub,
-            epub: userData.epub || null,
-            username: userData.username,
-            registeredAt: userData.registeredAt || 0,
-            lastSeen: userData.lastSeen || 0,
-          };
-        }
-      } catch (error) {
-        console.error(`User registry lookup failed for ${userPub}:`, error);
-      }
-
-      // Method 2: Try user's own node
-      try {
-        const userNodeData = this.gun.get(userPub);
-        if (userNodeData && (userNodeData as any).username) {
-          return {
-            userPub: userPub,
-            epub: (userNodeData as any).epub || null,
-            username: (userNodeData as any).username,
-            registeredAt: (userNodeData as any).registeredAt || 0,
-            lastSeen: (userNodeData as any).lastSeen || 0,
-          };
-        }
-      } catch (error) {
-        console.error(`User node lookup failed for ${userPub}:`, error);
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error looking up user data by pub ${userPub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user public key by encryption public key (epub)
-   * @param epub User's encryption public key
-   * @returns Promise resolving to user public key or null if not found
-   */
-  async getUserPubByEpub(epub: string): Promise<string | null> {
-    try {
-      if (!epub || typeof epub !== "string") {
-        return null;
-      }
-
-      const userPubNode = this.node.get("epubKeys").get(epub);
-
-      // Use once to get the actual value
-      const userPub = await new Promise((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 2000);
-        userPubNode.once((data: any) => {
-          clearTimeout(timeout);
-          resolve(data);
-        });
-      });
-
-      return (userPub as string) || null;
-    } catch (error) {
-      console.error(`Error looking up user pub by epub ${epub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets user alias by public key
-   * @param userPub User's public key
-   * @returns Promise resolving to user alias or null if not found
-   */
-  async getUserAliasByPub(userPub: string): Promise<string | null> {
-    try {
-      if (!userPub || typeof userPub !== "string") {
-        return null;
-      }
-
-      const aliasNode = this.node.get("userAliases").get(userPub);
-
-      // Use once to get the actual value
-      const alias = await new Promise((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 2000);
-        aliasNode.once((data: any) => {
-          clearTimeout(timeout);
-          resolve(data);
-        });
-      });
-
-      return (alias as string) || null;
-    } catch (error) {
-      console.error(`Error looking up user alias by pub ${userPub}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Gets all registered users (for admin purposes)
-   * @returns Promise resolving to array of user information
-   */
-  async getAllRegisteredUsers(): Promise<
-    Array<{
-      userPub: string;
-      epub: string | null;
-      username: string;
-      registeredAt: number;
-      lastSeen: number;
-    }>
-  > {
-    try {
-      const users: Array<{
-        userPub: string;
-        epub: string | null;
-        username: string;
-        registeredAt: number;
-        lastSeen: number;
-      }> = [];
-
-      // Get all users from the users registry
-      const usersNode = this.node.get("users");
-
-      // Note: This is a simplified approach. In a real implementation,
-      // you might want to use Gun's map functionality or iterate through
-      // known user public keys
-      return users;
-    } catch (error) {
-      console.error(`Error getting all registered users:`, error);
-      return [];
-    }
-  }
-
-  /**
-   * Updates user's last seen timestamp
-   * @param userPub User's public key
-   */
-  async updateUserLastSeen(userPub: string): Promise<void> {
-    try {
-      if (!userPub || typeof userPub !== "string") {
-        return;
-      }
-
-      const timestamp = Date.now();
-
-      // Update in user registry
-      try {
-        this.node.get("users").get(userPub).get("lastSeen").put(timestamp);
-      } catch (error) {
-        console.error(`Failed to update lastSeen in user registry:`, error);
-      }
-
-      // Update in user's own node
-      try {
-        this.gun.get(userPub).get("lastSeen").put(timestamp);
-      } catch (error) {
-        console.error(`Failed to update lastSeen in user node:`, error);
-      }
-    } catch (error) {
-      console.error(`Error updating user last seen for ${userPub}:`, error);
-    }
-  }
-
-  /**
-   * Resets Gun.js authentication state to allow new auth operations
+   * Reset authentication state
    */
   private resetAuthState(): void {
     try {
-      const currentUser = this.gun.user();
-      if (currentUser && currentUser._) {
-        // Reset the authentication flag
-        if ((currentUser._ as any).sea) {
-          (currentUser._ as any).sea = null;
-        }
-        // Reset the ing flag that prevents concurrent operations
-        if ((currentUser._ as any).ing) {
-          (currentUser._ as any).ing = false;
-        }
-        // Force clear any pending authentication callbacks
-        if ((currentUser._ as any).auth) {
-          (currentUser._ as any).auth = null;
-        }
-        // Clear any pending operations
-        if ((currentUser._ as any).act) {
-          (currentUser._ as any).act = null;
-        }
-        // Clear any pending callbacks
-        if ((currentUser._ as any).cb) {
-          (currentUser._ as any).cb = null;
-        }
-        // Clear any pending retries
-        if ((currentUser._ as any).retries) {
-          (currentUser._ as any).retries = 0;
-        }
-        // Clear any pending timeouts
-        if ((currentUser._ as any).timeout) {
-          clearTimeout((currentUser._ as any).timeout);
-          (currentUser._ as any).timeout = null;
-        }
+      const user = this.gun.user();
+      if (user && (user as any)._) {
+        const cat = (user as any)._;
+        // Reset Gun's internal auth state
+        cat.ing = false;
+        cat.auth = null;
+        cat.act = null;
       }
-
-      // Also try to call leave() to ensure clean state
-      try {
-        currentUser.leave();
-      } catch (leaveError) {
-        // Ignore leave errors, just trying to clean up
-      }
-
-      // Force clear the user reference to ensure clean state
+      user.leave();
       this.user = null;
-
-      console.log("Auth state reset completed");
-    } catch (error) {
-      console.warn("Error resetting auth state:", error);
+    } catch (e) {
+      // Ignore
     }
   }
 
   /**
-   * Performs authentication with Gun with retry mechanism
-   */
-  private async performAuthentication(
-    username: string,
-    password: string,
-    pair?: ISEAPair | null,
-    retryCount: number = 0,
-    maxRetries: number = 3,
-  ): Promise<{ success: boolean; error?: string; ack?: any }> {
-    return new Promise<{ success: boolean; error?: string; ack?: any }>(
-      (resolve) => {
-        // Check if there's already an authentication operation in progress
-        const currentUser = this.gun.user();
-        if (currentUser && currentUser._ && (currentUser._ as any).ing) {
-          if (retryCount < maxRetries) {
-            console.warn(
-              `Authentication already in progress, retrying... (${retryCount + 1}/${maxRetries})`,
-            );
-            this.resetAuthState();
-
-            // For the first retry, try to create a fresh authentication context
-            if (retryCount === 0) {
-              this.createFreshAuthContext();
-            }
-
-            // Add exponential backoff delay with jitter
-            const baseDelay = 200 * Math.pow(2, retryCount);
-            const jitter = Math.random() * 200;
-            const delay = Math.min(baseDelay + jitter, 3000);
-
-            setTimeout(() => {
-              this.performAuthentication(
-                username,
-                password,
-                pair,
-                retryCount + 1,
-                maxRetries,
-              )
-                .then(resolve)
-                .catch((error) =>
-                  resolve({ success: false, error: String(error) }),
-                );
-            }, delay);
-            return;
-          } else {
-            console.error("Max retries exceeded for authentication");
-            this.resetAuthState();
-            resolve({
-              success: false,
-              error: "Authentication failed after multiple retries",
-            });
-            return;
-          }
-        }
-
-        this.performAuthenticationInternal(username, password, pair, resolve);
-      },
-    );
-  }
-
-  /**
-   * Internal authentication method with timeout
-   */
-  private performAuthenticationInternal(
-    username: string,
-    password: string,
-    pair: ISEAPair | null | undefined,
-    resolve: (value: { success: boolean; error?: string; ack?: any }) => void,
-  ): void {
-    let resolved = false;
-    const timeout = 30000; // 15 second timeout for individual auth attempts
-
-    const timeoutId = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        console.error(
-          `Authentication timeout for ${username} after ${timeout}ms`,
-        );
-        this.resetAuthState();
-        resolve({
-          success: false,
-          error: `Authentication timeout after ${timeout}ms`,
-        });
-      }
-    }, timeout);
-
-    const authCallback = (ack: any) => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timeoutId);
-
-      if (ack.err) {
-        console.error(`Login error for ${username}: ${ack.err}`);
-        // Reset auth state on error to prevent blocking future attempts
-        this.resetAuthState();
-        resolve({ success: false, error: ack.err });
-      } else {
-        resolve({ success: true, ack });
-      }
-    };
-
-    if (pair) {
-      this.gun.user().auth(pair, authCallback);
-    } else {
-      this.gun.user().auth(username, password, authCallback);
-    }
-  }
-
-  /**
-   * Builds login result object
+   * Build login result
    */
   private buildLoginResult(username: string, userPub: string): AuthResult {
-    // Get the SEA pair from the user object
     const seaPair = (this.gun.user() as any)?._?.sea;
-
     return {
       success: true,
       userPub,
       username,
-      // Include SEA pair for consistency with AuthResult interface
       sea: seaPair
         ? {
             pub: seaPair.pub,
@@ -1970,991 +295,243 @@ class DataBase {
   }
 
   /**
-   * Performs login with username and password
-   * @param username Username
-   * @param password Password
-   * @param pair SEA pair (optional)
-   * @returns Promise resolving to AuthResult object
+   * Save credentials to session storage
    */
-  async login(
-    username: string,
-    password: string,
-    pair?: ISEAPair | null,
-  ): Promise<AuthResult> {
-    try {
-      console.log(`🔑 [LOGIN] Attempting login for: ${username}`);
-
-      // Pulisci lo stato utente esistente
-      this.gun.user().leave();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Autentica senza aspettare acknowledgment
-      if (pair) {
-        this.gun.user().auth(pair);
-      } else {
-        this.gun.user().auth(username, password);
-      }
-
-      // Aspetta che l'autenticazione si completi
-      console.log("⏳ [LOGIN] Waiting for authentication to complete...");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Controlla se l'autenticazione è riuscita
-      const user = this.gun.user();
-      const isAuthenticated = !!user.is;
-
-      if (!isAuthenticated) {
-        console.log("❌ [LOGIN] Authentication failed");
-        return {
-          success: false,
-          error: `User '${username}' not found. Please check your username or register first.`,
-        };
-      }
-
-      console.log("✅ [LOGIN] Authentication successful!");
-
-      const userPub = user?.is?.pub;
-      let alias = user?.is?.alias as string;
-      let userPair = (user as any)?._?.sea as ISEAPair;
-
-      if (!alias) {
-        alias = username;
-      }
-
-      if (!userPub) {
-        return {
-          success: false,
-          error: "Authentication failed: No user pub returned.",
-        };
-      }
-
-      // Esegui post-authentication tasks
-      try {
-        await this.runPostAuthOnAuthResult(alias, userPub, {
-          success: true,
-          userPub: userPub,
-        });
-      } catch (postAuthError) {
-        console.error(`Post-auth error during login: ${postAuthError}`);
-        // Continue with login even if post-auth fails
-      }
-
-      // Update user's last seen timestamp
-      try {
-        await this.updateUserLastSeen(userPub);
-      } catch (lastSeenError) {
-        console.error(`Error updating last seen: ${lastSeenError}`);
-        // Continue with login even if last seen update fails
-      }
-
-      // Save credentials for future sessions
-      try {
-        const userInfo = {
-          alias: username,
-          pair: pair ?? userPair,
-          userPub: userPub,
-        };
-
-        this.saveCredentials(userInfo);
-      } catch (saveError) {
-        console.error(`Error saving credentials:`, saveError);
-      }
-
-      return this.buildLoginResult(username, userPub);
-    } catch (error) {
-      console.error(`Exception during login for ${username}: ${error}`);
-      return { success: false, error: String(error) };
-    }
-  }
-
-  /**
-   * Performs login with GunDB pair directly
-   * @param username Username
-   * @param pair SEA pair
-   * @returns Promise resolving to AuthResult object
-   */
-  async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
-    try {
-      const loginResult = await this.performAuthentication(username, "", pair);
-      if (!loginResult.success) {
-        return {
-          success: false,
-          error: `User '${username}' not found. Please check your username or register first.`,
-        };
-      }
-
-      await this.runPostAuthOnAuthResult(username, pair.pub || "", {
-        success: true,
-        userPub: pair.pub,
-      });
-
-      try {
-        await this.updateUserLastSeen(pair.pub);
-      } catch (lastSeenError) {
-        console.error(`Error updating last seen: ${lastSeenError}`);
-        // Continue with login even if last seen update fails
-      }
-
-      return this.buildLoginResult(username, this.gun.user().is?.pub || "");
-    } catch (error) {
-      console.error(`Exception during login with pair: ${error}`);
-      return { success: false, error: String(error) };
-    }
-  }
-
   private saveCredentials(userInfo: {
     alias: string;
     pair: ISEAPair;
     userPub: string;
   }): void {
     try {
-      const sessionInfo = {
-        username: userInfo.alias,
-        pair: userInfo.pair,
-        userPub: userInfo.userPub,
-        timestamp: Date.now(),
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-      };
-
       if (typeof sessionStorage !== "undefined") {
-        // Save session data directly (unencrypted)
+        const sessionInfo = {
+          username: userInfo.alias,
+          pair: userInfo.pair,
+          userPub: userInfo.userPub,
+          timestamp: Date.now(),
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        };
         sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
       }
     } catch (error) {
-      console.error(`Error saving credentials: ${error}`);
+      console.error("[DB] Error saving credentials:", error);
     }
   }
 
   /**
-   * Sets up security questions and password hint
-   * @param username Username
-   * @param password Current password
-   * @param hint Password hint
-   * @param securityQuestions Array of security questions
-   * @param securityAnswers Array of answers to security questions
-   * @returns Promise resolving with the operation result
+   * Sign up a new user
+   * Based on Gun.js user().create() - https://deepwiki.com/amark/gun/6.1-user-authentication
    */
-  async setPasswordHintWithSecurity(
+  async signUp(
     username: string,
     password: string,
-    hint: string,
-    securityQuestions: string[],
-    securityAnswers: string[],
-  ): Promise<{ success: boolean; error?: string }> {
-    // Setting password hint for
-
-    // Verify that the user is authenticated with password
-    const loginResult = await this.login(username, password);
-    if (!loginResult.success) {
-      return { success: false, error: "Authentication failed" };
+    pair?: ISEAPair | null,
+  ): Promise<SignUpResult> {
+    const validation = this.validateSignupCredentials(username, password, pair);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
     }
 
-    // Check if user was authenticated with password (not with other methods)
-    const currentUser = this.getCurrentUser();
-    if (!currentUser || !currentUser.pub) {
-      return { success: false, error: "User not authenticated" };
-    }
+    this.resetAuthState();
+    const normalizedUsername = username.trim().toLowerCase();
 
-    try {
-      // Generate a proof of work from security question answers
-      const answersText = securityAnswers.join("|");
-      let proofOfWork;
+    return new Promise<SignUpResult>((resolve) => {
+      const timeoutId = setTimeout(() => {
+        this.resetAuthState();
+        resolve({ success: false, error: "Signup timeout" });
+      }, CONFIG.TIMEOUT);
 
-      try {
-        // Use SEA directly if available
-        if (SEA && SEA.work) {
-          proofOfWork = await SEA.work(answersText, null, null, {
-            name: "SHA-256",
-          });
-        } else if (this.crypto && this.crypto.hashText) {
-          proofOfWork = await this.crypto.hashText(answersText);
-        } else {
-          throw new Error("Cryptographic functions not available");
+      const callback = (ack: any) => {
+        clearTimeout(timeoutId);
+        if (ack.err) {
+          this.resetAuthState();
+          resolve({ success: false, error: ack.err });
+          return;
         }
 
-        if (!proofOfWork) {
-          throw new Error("Failed to generate hash");
-        }
-      } catch (hashError) {
-        console.error("Error generating hash:", hashError);
-        return { success: false, error: "Failed to generate security hash" };
-      }
-
-      // Encrypt the password hint with the proof of work
-      let encryptedHint;
-      try {
-        if (SEA && SEA.encrypt) {
-          encryptedHint = await SEA.encrypt(hint, proofOfWork);
-        } else if (this.crypto && this.crypto.encrypt) {
-          encryptedHint = await this.crypto.encrypt(hint, proofOfWork);
-        } else {
-          throw new Error("Encryption functions not available");
+        const user = this.gun.user();
+        const userPub = user?.is?.pub;
+        if (!userPub) {
+          this.resetAuthState();
+          resolve({ success: false, error: "No userPub available" });
+          return;
         }
 
-        if (!encryptedHint) {
-          throw new Error("Failed to encrypt hint");
-        }
-      } catch (encryptError) {
-        console.error("Error encrypting hint:", encryptError);
-        return { success: false, error: "Failed to encrypt password hint" };
-      }
-
-      // Save to the public graph, readable by anyone but only decryptable with the right answers.
-      const userPub = currentUser.pub;
-      const securityPayload = {
-        questions: JSON.stringify(securityQuestions),
-        hint: encryptedHint,
+        this.user = user;
+        const sea = (user as any)?._?.sea;
+        resolve({
+          success: true,
+          userPub,
+          username: normalizedUsername,
+          isNewUser: true,
+          sea: sea
+            ? {
+                pub: sea.pub,
+                priv: sea.priv,
+                epub: sea.epub,
+                epriv: sea.epriv,
+              }
+            : undefined,
+        });
       };
 
-      console.log(
-        `💾 [HINT] Saving security data for user: ${username}, pub: ${userPub}`,
-      );
-      console.log(`💾 [HINT] Security payload:`, {
-        questions: securityPayload.questions,
-        hintLength: securityPayload.hint?.length || 0,
-      });
-
-      // Save in PUBLIC space, not user space - accessible without login
-      const ack = (this.gun.get("security") as any)
-        .get(userPub)
-        .put(securityPayload);
-
-      if (ack && ack.err) {
-        console.error("Error saving security data to public graph:", ack.err);
-        throw new Error(ack.err);
+      if (pair) {
+        this.gun.user().auth(pair, callback);
+      } else {
+        this.gun.user().create(normalizedUsername, password, callback);
       }
-
-      console.log(`✅ [HINT] Security data saved successfully for ${username}`);
-
-      return { success: true };
-    } catch (error) {
-      console.error("Error setting password hint:", error);
-      return { success: false, error: String(error) };
-    }
+    });
   }
 
   /**
-   * Recovers password hint using security question answers
-   * @param username Username
-   * @param securityAnswers Array of answers to security questions
-   * @returns Promise resolving with the password hint
+   * Login with username and password
+   * Based on Gun.js user().auth() - https://deepwiki.com/amark/gun/6.1-user-authentication
    */
-  async forgotPassword(
+  async login(
     username: string,
-    securityAnswers: string[],
-  ): Promise<{ success: boolean; hint?: string; error?: string }> {
-    // Attempting password recovery for
+    password: string,
+    pair?: ISEAPair | null,
+  ): Promise<AuthResult> {
+    this.resetAuthState();
+    const normalizedUsername = username.trim().toLowerCase();
 
-    // Add global timeout for the entire operation
-    return Promise.race([
-      this._forgotPasswordInternal(username, securityAnswers),
-      new Promise<{ success: boolean; hint?: string; error?: string }>(
-        (resolve) => {
-          setTimeout(() => {
-            console.log(
-              `⏰ [FORGOT] Global timeout for password recovery: ${username}`,
-            );
-            resolve({ success: false, error: "Password recovery timeout" });
-          }, 10000); // 10 second global timeout
-        },
-      ),
-    ]);
-  }
+    return new Promise<AuthResult>((resolve) => {
+      const timeoutId = setTimeout(() => {
+        this.resetAuthState();
+        resolve({ success: false, error: "Login timeout" });
+      }, CONFIG.TIMEOUT);
 
-  private async _forgotPasswordInternal(
-    username: string,
-    securityAnswers: string[],
-  ): Promise<{ success: boolean; hint?: string; error?: string }> {
-    try {
-      // Find the user's data using direct lookup
-      const normalizedUsername = username.trim().toLowerCase();
+      const callback = (ack: any) => {
+        clearTimeout(timeoutId);
+        if (ack.err) {
+          this.resetAuthState();
+          resolve({ success: false, error: ack.err });
+          return;
+        }
 
-      // Try multiple lookup methods with fallback
-      let userPub = null;
+        const user = this.gun.user();
+        const userPub = user?.is?.pub;
+        if (!userPub) {
+          this.resetAuthState();
+          resolve({ success: false, error: "No userPub available" });
+          return;
+        }
 
-      // Method 1: Try username mapping in app scope
-      try {
-        userPub = await new Promise((resolve) => {
-          const timeout = setTimeout(() => {
-            console.log(
-              `⏰ [FORGOT] Timeout looking up user in usernames: ${username}`,
-            );
-            resolve(null);
-          }, 2000);
+        this.user = user;
+        const alias = user?.is?.alias as string;
+        const userPair = (user as any)?._?.sea as ISEAPair;
 
-          this.node
-            .get("usernames")
-            .get(normalizedUsername)
-            .once((data: any) => {
-              clearTimeout(timeout);
-              console.log(
-                `🔍 [FORGOT] Username lookup result for ${username}:`,
-                data,
-              );
-              resolve(data);
-            });
-        });
-      } catch (error) {
-        console.log(`❌ [FORGOT] Username lookup failed: ${error}`);
-      }
-
-      // Method 2: Try direct user lookup if username mapping fails
-      if (!userPub) {
-        console.log(`🔄 [FORGOT] Trying direct user lookup for: ${username}`);
         try {
-          // Try to find user by searching in the users registry
-          const usersNode = this.node.get("users");
-          // This is a simplified approach - in a real implementation you'd need to iterate
-          // For now, we'll try to get the userPub from the current user if available
-          const currentUser = this.getCurrentUser();
-          if (currentUser && currentUser.pub) {
-            console.log(
-              `🔍 [FORGOT] Using current user pub as fallback: ${currentUser.pub}`,
-            );
-            userPub = currentUser.pub;
-          }
-        } catch (error) {
-          console.log(`❌ [FORGOT] Direct user lookup failed: ${error}`);
-        }
-      }
-
-      if (!userPub) {
-        console.log(`❌ [FORGOT] User not found: ${username}`);
-        return { success: false, error: "User not found" };
-      }
-
-      // Access the user's security data from PUBLIC space (not user space)
-      const securityDataNode = (this.gun as any).get("security").get(userPub);
-
-      console.log(
-        `🔍 [FORGOT] Looking for security data for user: ${username}, pub: ${userPub}`,
-      );
-
-      // Use once to get the actual value
-      const securityData = await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          console.log(
-            `⏰ [FORGOT] Timeout waiting for security data for ${username} (3s)`,
-          );
-          resolve(null);
-        }, 3000); // Reduced timeout to 3 seconds
-
-        securityDataNode.once((data: any) => {
-          clearTimeout(timeout);
-          console.log(
-            `📊 [FORGOT] Security data received for ${username}:`,
-            data,
-          );
-          resolve(data);
-        });
-      });
-
-      if (!securityData || !(securityData as any).hint) {
-        console.log(
-          `❌ [FORGOT] No security data or hint found for ${username}`,
-        );
-        return {
-          success: false,
-          error: "No password hint found",
-        };
-      }
-
-      // Generate hash from security answers
-      const answersText = securityAnswers.join("|");
-      let proofOfWork;
-
-      try {
-        // Use SEA directly if available
-        if (SEA && SEA.work) {
-          proofOfWork = await SEA.work(answersText, null, null, {
-            name: "SHA-256",
+          this.saveCredentials({
+            alias: alias || normalizedUsername,
+            pair: pair ?? userPair,
+            userPub: userPub,
           });
-        } else if (this.crypto && this.crypto.hashText) {
-          proofOfWork = await this.crypto.hashText(answersText);
-        } else {
-          throw new Error("Cryptographic functions not available");
+        } catch (saveError) {
+          // Ignore save errors
         }
 
-        if (!proofOfWork) {
-          throw new Error("Failed to generate hash");
-        }
-      } catch (hashError) {
-        console.error("Error generating hash:", hashError);
-        return { success: false, error: "Failed to generate security hash" };
-      }
+        resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
+      };
 
-      // Decrypt the password hint with the proof of work
-      let hint;
-      try {
-        if (SEA && SEA.decrypt) {
-          hint = await SEA.decrypt((securityData as any).hint, proofOfWork);
-        } else if (this.crypto && this.crypto.decrypt) {
-          hint = await this.crypto.decrypt(
-            (securityData as any).hint,
-            proofOfWork,
-          );
-        } else {
-          throw new Error("Decryption functions not available");
-        }
-      } catch (decryptError) {
-        return {
-          success: false,
-          error: "Incorrect answers to security questions",
-        };
+      if (pair) {
+        this.gun.user().auth(pair, callback);
+      } else {
+        this.gun.user().auth(normalizedUsername, password, callback);
       }
-
-      if (hint === undefined) {
-        return {
-          success: false,
-          error: "Incorrect answers to security questions",
-        };
-      }
-
-      return { success: true, hint: hint as string };
-    } catch (error) {
-      console.error("Error recovering password hint:", error);
-      return { success: false, error: String(error) };
-    }
+    });
   }
 
   /**
-   * Recovers password hint using security question answers and userPub directly
-   * @param userPub User's public key
-   * @param securityAnswers Array of answers to security questions
-   * @returns Promise resolving with the password hint
+   * Get current user
    */
-  async forgotPasswordByPub(
-    userPub: string,
-    securityAnswers: string[],
-  ): Promise<{ success: boolean; hint?: string; error?: string }> {
-    // Add global timeout for the entire operation
-    return Promise.race([
-      this._forgotPasswordByPubInternal(userPub, securityAnswers),
-      new Promise<{ success: boolean; hint?: string; error?: string }>(
-        (resolve) => {
-          setTimeout(() => {
-            console.log(
-              `⏰ [FORGOT] Global timeout for password recovery by pub: ${userPub}`,
-            );
-            resolve({ success: false, error: "Password recovery timeout" });
-          }, 10000); // 10 second global timeout
-        },
-      ),
-    ]);
-  }
-
-  private async _forgotPasswordByPubInternal(
-    userPub: string,
-    securityAnswers: string[],
-  ): Promise<{ success: boolean; hint?: string; error?: string }> {
+  getCurrentUser(): { pub: string; user?: any } | null {
     try {
-      if (!userPub || typeof userPub !== "string") {
-        return { success: false, error: "Invalid userPub provided" };
-      }
-
-      // Access the user's security data from PUBLIC space (not user space)
-      const securityDataNode = (this.gun as any).get("security").get(userPub);
-
-      console.log(
-        `🔍 [FORGOT] Looking for security data for userPub: ${userPub}`,
-      );
-
-      // Use once to get the actual value
-      const securityData = await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          console.log(
-            `⏰ [FORGOT] Timeout waiting for security data for userPub: ${userPub} (3s)`,
-          );
-          resolve(null);
-        }, 3000);
-
-        securityDataNode.once((data: any) => {
-          clearTimeout(timeout);
-          console.log(
-            `📊 [FORGOT] Security data received for userPub: ${userPub}:`,
-            data,
-          );
-          resolve(data);
-        });
-      });
-
-      if (!securityData || !(securityData as any).hint) {
-        console.log(
-          `❌ [FORGOT] No security data or hint found for userPub: ${userPub}`,
-        );
+      const user = this.gun.user();
+      if (user && user.is && user.is.pub) {
         return {
-          success: false,
-          error: "No password hint found",
+          pub: user.is.pub,
+          user: user,
         };
       }
-
-      // Generate hash from security answers
-      const answersText = securityAnswers.join("|");
-      let proofOfWork;
-
-      try {
-        // Use SEA directly if available
-        if (SEA && SEA.work) {
-          proofOfWork = await SEA.work(answersText, null, null, {
-            name: "SHA-256",
-          });
-        } else if (this.crypto && this.crypto.hashText) {
-          proofOfWork = await this.crypto.hashText(answersText);
-        } else {
-          throw new Error("Cryptographic functions not available");
-        }
-
-        if (!proofOfWork) {
-          throw new Error("Failed to generate hash");
-        }
-      } catch (hashError) {
-        console.error("Error generating hash:", hashError);
-        return { success: false, error: "Failed to generate security hash" };
-      }
-
-      // Decrypt the password hint with the proof of work
-      let hint;
-      try {
-        if (SEA && SEA.decrypt) {
-          hint = await SEA.decrypt((securityData as any).hint, proofOfWork);
-        } else if (this.crypto && this.crypto.decrypt) {
-          hint = await this.crypto.decrypt(
-            (securityData as any).hint,
-            proofOfWork,
-          );
-        } else {
-          throw new Error("Decryption functions not available");
-        }
-      } catch (decryptError) {
-        return {
-          success: false,
-          error: "Incorrect answers to security questions",
-        };
-      }
-
-      if (hint === undefined) {
-        return {
-          success: false,
-          error: "Incorrect answers to security questions",
-        };
-      }
-
-      return { success: true, hint: hint as string };
+      return null;
     } catch (error) {
-      console.error("Error recovering password hint by pub:", error);
-      return { success: false, error: String(error) };
+      return null;
     }
   }
 
-  // Errors
-  static Errors = GunErrors;
+  /**
+   * Login with SEA pair
+   */
+  async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
+    return this.login(username, "", pair);
+  }
 
   /**
-   * Adds an event listener
-   * @param event Event name
-   * @param listener Event listener function
+   * Get RxJS module
+   */
+  rx(): RxJS {
+    return this._rxjs as RxJS;
+  }
+
+  /**
+   * Destroy database instance
+   */
+  public destroy(): void {
+    if (this._isDestroyed) return;
+
+    console.log("[DB] Destroying DataBase instance...");
+    this._isDestroyed = true;
+
+    this.onAuthCallbacks.length = 0;
+
+    // Clear event listeners
+    this.eventEmitter.removeAllListeners();
+
+    if (this.user) {
+      try {
+        this.user.leave();
+      } catch (error) {
+        // Ignore
+      }
+      this.user = null;
+    }
+
+    this._rxjs = undefined;
+    console.log("[DB] DataBase instance destroyed");
+  }
+
+  /**
+   * Aggressive auth cleanup (kept for compatibility with tests)
+   */
+  public aggressiveAuthCleanup(): void {
+    console.log("🧹 Performing aggressive auth cleanup...");
+    this.resetAuthState();
+    this.logout();
+    console.log("✓ Aggressive auth cleanup completed");
+  }
+
+  /**
+   * Event emitter methods for CoreInitializer compatibility
    */
   on(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.on(event, listener);
   }
 
-  /**
-   * Removes an event listener
-   * @param event Event name
-   * @param listener Event listener function
-   */
   off(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.off(event, listener);
   }
 
-  /**
-   * Adds a one-time event listener
-   * @param event Event name
-   * @param listener Event listener function
-   */
   once(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.once(event, listener);
   }
 
-  /**
-   * Emits an event
-   * @param event Event name
-   * @param data Event data
-   */
   emit(event: string | symbol, data?: EventData): boolean {
     return this.eventEmitter.emit(event, data);
   }
-
-  /**
-   * Recall user session
-   */
-  public recall(options?: { sessionStorage?: boolean }): void {
-    if (this.user) {
-      if (
-        typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem("pair")
-      ) {
-        this.user.recall({ sessionStorage: true });
-      } else {
-        this.user;
-      }
-    }
-  }
-
-  /**
-   * Leave user session
-   */
-  public leave(): void {
-    if (this.user) {
-      this.user.leave();
-    }
-  }
-
-  /**
-   * Set user data
-   */
-  public setUserData(data: any): void {
-    if (this.user) {
-      this.user.put(data);
-    }
-  }
-
-  /**
-   * Set password hint
-   */
-  public setPasswordHint(hint: string): void {
-    if (this.user) {
-      try {
-        this.user.get("passwordHint").put(hint);
-      } catch (error) {
-        // Handle case where user.get returns undefined
-        console.warn("Could not set password hint:", error);
-      }
-    }
-  }
-
-  /**
-   * Get password hint
-   */
-  public getPasswordHint(): string | null {
-    if (this.user) {
-      // Access passwordHint from user data, not from is object
-      return (this.user as any).passwordHint || null;
-    }
-    return null;
-  }
-
-  /**
-   * Save session to storage
-   */
-  public saveSession(session: any): void {
-    if (this.user) {
-      if (
-        typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem("pair")
-      ) {
-        this.user.recall({ sessionStorage: true });
-      } else {
-        this.user;
-      }
-    }
-  }
-
-  /**
-   * Load session from storage
-   */
-  public loadSession(): any {
-    if (this.user) {
-      if (
-        typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem("pair")
-      ) {
-        return this.user.recall({ sessionStorage: true });
-      } else {
-        return this.user;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Clear session
-   */
-  public clearSession(): void {
-    if (this.user) {
-      this.user.leave();
-    }
-  }
-
-  /**
-   * Get app scope
-   */
-  public getAppScope(): string {
-    return (this.node as any)?._?.soul || "shogun";
-  }
-
-  /**
-   * Get user public key
-   */
-  public getUserPub(): string | null {
-    if (this.user) {
-      return this.user.is?.pub || null;
-    }
-    return null;
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  public isAuthenticated(): boolean {
-    return this.user?.is?.pub ? true : false;
-  }
-
-  /**
-   * Check if an authentication operation is currently in progress
-   */
-  public isAuthInProgress(): boolean {
-    try {
-      const currentUser = this.gun.user();
-      return !!(currentUser && currentUser._ && (currentUser._ as any).ing);
-    } catch (error) {
-      console.warn("Error checking auth progress:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Force reset authentication state (useful for debugging or recovery)
-   */
-  public forceResetAuthState(): void {
-    this.resetAuthState();
-  }
-
-  /**
-   * Aggressive cleanup for problematic users
-   * This method performs a complete reset of all authentication state
-   */
-  public aggressiveAuthCleanup(): void {
-    try {
-      console.log("🧹 Performing aggressive auth cleanup...");
-
-      // Reset all auth state
-      this.resetAuthState();
-
-      // Clear all Gun.js internal state
-      const currentUser = this.gun.user();
-      if (currentUser && currentUser._) {
-        // Clear all possible internal flags
-        const internalState = currentUser._ as any;
-        Object.keys(internalState).forEach((key) => {
-          if (typeof internalState[key] === "boolean") {
-            internalState[key] = false;
-          } else if (
-            typeof internalState[key] === "object" &&
-            internalState[key] !== null
-          ) {
-            if (
-              key === "sea" ||
-              key === "auth" ||
-              key === "act" ||
-              key === "cb"
-            ) {
-              internalState[key] = null;
-            }
-          }
-        });
-      }
-
-      // Force logout
-      try {
-        currentUser.leave();
-      } catch (error) {
-        // Ignore errors
-      }
-
-      // Clear user reference
-      this.user = null;
-
-      // Clear all session storage
-      if (typeof sessionStorage !== "undefined") {
-        try {
-          const keys = Object.keys(sessionStorage);
-          keys.forEach((key) => {
-            if (
-              key.includes("gun") ||
-              key.includes("user") ||
-              key.includes("auth")
-            ) {
-              sessionStorage.removeItem(key);
-            }
-          });
-        } catch (error) {
-          // Ignore errors
-        }
-      }
-
-      // Clear all local storage
-      if (typeof localStorage !== "undefined") {
-        try {
-          const keys = Object.keys(localStorage);
-          keys.forEach((key) => {
-            if (
-              key.includes("gun") ||
-              key.includes("user") ||
-              key.includes("auth")
-            ) {
-              localStorage.removeItem(key);
-            }
-          });
-        } catch (error) {
-          // Ignore errors
-        }
-      }
-
-      console.log("✓ Aggressive auth cleanup completed");
-    } catch (error) {
-      console.error("Error during aggressive cleanup:", error);
-    }
-  }
-
-  /**
-   * Creates a completely fresh authentication context
-   * This is a more aggressive approach when normal reset doesn't work
-   */
-  private createFreshAuthContext(): void {
-    try {
-      // Reset all auth state
-      this.resetAuthState();
-
-      // Create a completely new user instance
-      const freshUser = this.gun.user();
-      this.user = freshUser;
-
-      // Clear any cached authentication data
-      if (typeof sessionStorage !== "undefined") {
-        try {
-          sessionStorage.removeItem("gunSessionData");
-          sessionStorage.removeItem("gunUserData");
-        } catch (error) {
-          console.warn("Error clearing session storage:", error);
-        }
-      }
-
-      console.log("Fresh authentication context created");
-    } catch (error) {
-      console.error("Error creating fresh auth context:", error);
-    }
-  }
-
-  /**
-   * Setup cleanup handlers for memory leak prevention
-   */
-  private setupCleanupHandlers(): void {
-    // Handle process cleanup
-    if (typeof process !== "undefined") {
-      process.on("SIGINT", () => this.destroy());
-      process.on("SIGTERM", () => this.destroy());
-      process.on("exit", () => this.destroy());
-    }
-  }
-
-  /**
-   * Safe interval wrapper that tracks intervals for cleanup
-   */
-  private safeInterval(callback: () => void, delay: number): NodeJS.Timeout {
-    if (this._isDestroyed) {
-      return setInterval(() => {}, 0);
-    }
-
-    const interval = setInterval(() => {
-      if (!this._isDestroyed) {
-        callback();
-      }
-    }, delay);
-
-    this._activeIntervals.add(interval);
-    return interval;
-  }
-
-  /**
-   * Clear a specific timeout
-   */
-  private clearSafeTimeout(timeout: NodeJS.Timeout): void {
-    clearTimeout(timeout);
-    this._activeTimeouts.delete(timeout);
-  }
-
-  /**
-   * Clear a specific interval
-   */
-  private clearSafeInterval(interval: NodeJS.Timeout): void {
-    clearInterval(interval);
-    this._activeIntervals.delete(interval);
-  }
-
-  /**
-   * Destroy the database instance and clean up all resources
-   */
-  public destroy(): void {
-    if (this._isDestroyed) {
-      return;
-    }
-
-    console.log("[DB] Destroying DataBase instance...");
-
-    this._isDestroyed = true;
-
-    // Clear all timeouts
-    this._activeTimeouts.forEach((timeout) => {
-      clearTimeout(timeout);
-    });
-    this._activeTimeouts.clear();
-
-    // Clear all intervals
-    this._activeIntervals.forEach((interval) => {
-      clearInterval(interval);
-    });
-    this._activeIntervals.clear();
-
-    // Clear event listeners
-    this.eventEmitter.removeAllListeners();
-
-    // Clear auth callbacks
-    this.onAuthCallbacks.length = 0;
-
-    // Clear Gun user
-    if (this.user) {
-      try {
-        this.user.leave();
-      } catch (error) {
-        console.warn("Error during user leave:", error);
-      }
-      this.user = null;
-    }
-
-    // Clear Gun instance references
-    if (this.gun) {
-      try {
-        // Clear any Gun event listeners if available
-        if (typeof (this.gun as any).off === "function") {
-          (this.gun as any).off();
-        }
-      } catch (error) {
-        console.warn("Error clearing Gun listeners:", error);
-      }
-    }
-
-    // Clear other references
-    this._rxjs = undefined;
-    this._cryptoIdentityManager = undefined;
-    this.core = undefined;
-
-    console.log("[DB] DataBase instance destroyed");
-  }
 }
 
-export { DataBase, SEA, RxJS, crypto, GunErrors, derive };
-
+export { DataBase, RxJS, crypto, GunErrors };
+export { default as derive, type DeriveOptions } from "./derive";
 export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
-export type { GunDataEventData, GunPeerEventData };
-export type { DeriveOptions };
+export type { GunDataEventData, GunPeerEventData } from "../interfaces/events";

@@ -1,79 +1,128 @@
 /**
  * Esempio di utilizzo del CryptoIdentityManager
- * Mostra come le identità crypto vengono generate automaticamente dopo l'autenticazione SEA
+ * Mostra come generare le identità crypto
  */
 
 import Gun from "gun";
-import { ShogunCore, CryptoIdentityManager } from "../index";
+// Import SEA as side-effect to load it globally
+import "gun/sea";
+// Also try to import it directly to ensure it's available
+import SEA from "gun/sea";
 
-// Esempio di utilizzo
-async function cryptoIdentityExample() {
+import "gun/lib/then";
+import "gun/axe";
+
+// Ensure Gun.SEA is available globally
+// In Node.js, SEA should attach to Gun.SEA or globalThis.SEA
+if (typeof window === "undefined") {
+  // Node.js environment
+  const GunModule = require("gun");
+  if (GunModule && GunModule.SEA) {
+    (globalThis as any).Gun = GunModule;
+    (globalThis as any).SEA = GunModule.SEA;
+  }
+}
+
+// Suppress expected Gun.js SEA verification errors globally
+// These errors are normal when verifying non-existent or corrupted data
+const originalLog = console.log;
+const originalError = console.error;
+let errorSuppressionActive = false;
+
+const suppressedLog = (...args: any[]) => {
+  if (!errorSuppressionActive) {
+    originalLog.apply(console, args);
+    return;
+  }
+  const message = args.join(" ");
+  // Suppress expected SEA verification errors
+  if (
+    message.includes("Signature did not match") ||
+    message.includes("base64Text") ||
+    message.includes("Could not decrypt") ||
+    message.includes("Argument 'base64Text' is not Base64 encoded")
+  ) {
+    return; // Suppress these expected errors
+  }
+  originalLog.apply(console, args);
+};
+
+const suppressedError = (...args: any[]) => {
+  if (!errorSuppressionActive) {
+    originalError.apply(console, args);
+    return;
+  }
+  const message = args.join(" ");
+  if (
+    message.includes("Signature did not match") ||
+    message.includes("base64Text") ||
+    message.includes("Could not decrypt") ||
+    message.includes("Argument 'base64Text' is not Base64 encoded")
+  ) {
+    return;
+  }
+  originalError.apply(console, args);
+};
+
+// Enable error suppression
+errorSuppressionActive = true;
+console.log = suppressedLog as any;
+console.error = suppressedError as any;
+
+import { CryptoIdentityManager } from "../index";
+import type { ISEAPair } from "gun/types";
+
+// Esempio base di generazione identità
+async function basicIdentityExample() {
   console.log("🚀 Avvio esempio CryptoIdentityManager");
 
-  // 1. Crea Gun instance
-  const gunInstance = Gun({
-    peers: [
-      "https://peer.wallie.io/gun",
-      "https://shogunnode.scobrudot.dev/gun",
-      "https://shogunnode2.scobrudot.dev/gun",
-      "https://lindanode.scobrudot.dev/gun",
-    ],
-    radisk: false,
-    localStorage: false,
-  });
-
-  // 2. Inizializza ShogunCore con Gun instance
-  const core = new ShogunCore({
-    gunInstance: gunInstance,
-  });
-
-  console.log("✅ ShogunCore inizializzato");
-
-  // 2. Registra un nuovo utente (genera automaticamente SEA pair)
-  const username = `scobru_${Date.now()}`;
-  const signupResult = await core.signUp(username, "francos88");
-
-  if (!signupResult.success) {
-    console.error("❌ Registrazione fallita:", signupResult.error);
-
-    // Prova con un username diverso
-    const altUsername = `scobru_alt_${Date.now()}`;
-    console.log(`🔄 Tentativo con username alternativo: ${altUsername}`);
-
-    const altSignupResult = await core.signUp(altUsername, "francos88");
-
-    if (!altSignupResult.success) {
-      console.error(
-        "❌ Registrazione fallita anche con username alternativo:",
-        altSignupResult.error,
-      );
-      return;
-    }
-
-    console.log("✅ Utente registrato con username alternativo:", {
-      username: altSignupResult.username,
-      userPub: altSignupResult.userPub,
-      hasSEAPair: !!altSignupResult.sea,
-    });
-  } else {
-    console.log("✅ Utente registrato:", {
-      username: signupResult.username,
-      userPub: signupResult.userPub,
-      hasSEAPair: !!signupResult.sea,
-    });
+  // Assicurati che SEA sia disponibile
+  if (!(globalThis as any).SEA && !(globalThis as any).Gun?.SEA) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  // 3. Le identità crypto sono state generate automaticamente durante la registrazione
-  // Possiamo accedervi tramite il CryptoIdentityManager
-  const cryptoManager = new CryptoIdentityManager(core);
+  // Genera un SEA pair di esempio per il test
+  // In un'app reale, questo verrebbe dall'autenticazione
+  const SEA = (globalThis as any).SEA || (globalThis as any).Gun?.SEA;
+  if (!SEA) {
+    console.error(
+      "❌ SEA non disponibile. Assicurati che gun/sea sia importato.",
+    );
+    return;
+  }
 
-  // 4. Recupera le identità crypto dell'utente corrente
-  const identitiesResult = await cryptoManager.getCurrentUserIdentities();
+  console.log("✅ SEA disponibile");
 
-  if (identitiesResult.success && identitiesResult.identities) {
-    const identities = identitiesResult.identities;
+  // Genera un SEA pair di esempio
+  const exampleUser = "example_user_" + Date.now();
+  const examplePassword = "example_password";
 
-    console.log("🔐 Identità crypto generate automaticamente:");
+  console.log(`🔐 Generazione SEA pair di esempio per: ${exampleUser}`);
+  const seaPair = await SEA.pair();
+
+  if (!seaPair) {
+    console.error("❌ Impossibile generare SEA pair di esempio");
+    return;
+  }
+
+  console.log("✅ SEA pair generato");
+
+  // Inizializza CryptoIdentityManager
+  const cryptoManager = new CryptoIdentityManager();
+
+  // Genera le identità crypto
+  console.log("🔐 Generazione delle identità crypto...");
+
+  const generateResult = await cryptoManager.generateAllIdentities(
+    exampleUser,
+    seaPair,
+  );
+
+  if (generateResult.success && generateResult.identities) {
+    const identities = generateResult.identities;
+
+    console.log("✅ Identità crypto generate con successo!");
+    console.log("🔐 Identità crypto generate:");
     console.log("- RSA Key Pair:", !!identities.rsa);
     console.log("- AES Symmetric Key:", !!identities.aes);
     console.log("- Signal Protocol Identity:", !!identities.signal);
@@ -82,142 +131,130 @@ async function cryptoIdentityExample() {
     console.log("- SFrame Key:", !!identities.sframe);
     console.log("- Created At:", new Date(identities.createdAt).toISOString());
     console.log("- Version:", identities.version);
-  } else {
-    console.error(
-      "❌ Errore nel recupero delle identità:",
-      identitiesResult.error,
-    );
-  }
-
-  // 5. Esempio di login con utente esistente
-  console.log("\n🔄 Test login con utente esistente...");
-
-  const finalUsername = signupResult.success
-    ? username
-    : `scobru_alt_${Date.now()}`;
-  const loginResult = await core.login(finalUsername, "francos88");
-
-  if (loginResult.success) {
-    console.log("✅ Login riuscito");
-
-    // Le identità crypto esistenti vengono recuperate automaticamente
-    const existingIdentities = await cryptoManager.getCurrentUserIdentities();
-
-    if (existingIdentities.success) {
-      console.log("✅ Identità crypto esistenti recuperate");
-    }
-  } else {
-    console.error("❌ Login fallito:", loginResult.error);
-  }
-
-  // 6. Esempio di rigenerazione forzata delle identità
-  console.log("\n🔄 Test rigenerazione identità...");
-
-  if (signupResult.sea) {
-    const regenerateResult = await cryptoManager.setupCryptoIdentities(
-      username,
-      signupResult.sea,
-      true, // forceRegenerate = true
+    console.log(
+      "\nℹ️ Nota: Le identità generate dovranno essere salvate lato frontend se necessario.",
     );
 
-    if (regenerateResult.success) {
-      console.log("✅ Identità crypto rigenerate:", regenerateResult.savedKeys);
-    } else {
-      console.error("❌ Rigenerazione fallita:", regenerateResult.error);
-    }
+    // Esempio di come serializzare le identità per il salvataggio
+    const identitiesJson = JSON.stringify(identities);
+    console.log(
+      `\n📦 Identità serializzate (${identitiesJson.length} caratteri)`,
+    );
+    console.log(
+      "💡 Puoi criptare e salvare questa stringa usando SEA.encrypt() lato frontend",
+    );
+  } else {
+    console.warn(
+      "⚠️ Impossibile generare le identità crypto:",
+      generateResult.error,
+    );
   }
 
   console.log("\n🎉 Esempio completato!");
+
+  // Restore original console methods at the end
+  errorSuppressionActive = false;
+  console.log = originalLog;
+  console.error = originalError;
 }
 
-// Esempio di utilizzo con diversi metodi di autenticazione
-async function multiAuthExample() {
-  console.log("\n🔐 Esempio con diversi metodi di autenticazione");
+// Esempio di rigenerazione delle identità
+async function regenerateIdentityExample() {
+  console.log("\n🔄 Esempio di rigenerazione identità");
 
-  const gunInstance = Gun({
-    peers: [
-      "https://peer.wallie.io/gun",
-      "https://shogunnode.scobrudot.dev/gun",
-      "https://shogunnode2.scobrudot.dev/gun",
-      "https://lindanode.scobrudot.dev/gun",
-    ],
-    radisk: false,
-    localStorage: false,
-  });
-
-  const core = new ShogunCore({
-    gunInstance: gunInstance,
-  });
-
-  // Esempio con WebAuthn (se disponibile)
-  try {
-    const webauthnPlugin = core.getAuthenticationMethod("webauthn");
-    if (webauthnPlugin) {
-      console.log("🔐 Test WebAuthn signup...");
-
-      const webauthnResult = await (webauthnPlugin as any).signUp(
-        "alice_webauthn",
-      );
-
-      if (webauthnResult.success) {
-        console.log("✅ WebAuthn signup riuscito");
-
-        // Le identità crypto vengono generate automaticamente anche con WebAuthn
-        const cryptoManager = new CryptoIdentityManager(core);
-        const identities = await cryptoManager.getCurrentUserIdentities();
-
-        if (identities.success) {
-          console.log("✅ Identità crypto generate con WebAuthn");
-        }
-      }
-    }
-  } catch (error) {
-    console.log("ℹ️ WebAuthn non disponibile:", error);
+  const SEA = (globalThis as any).SEA || (globalThis as any).Gun?.SEA;
+  if (!SEA) {
+    console.error("❌ SEA non disponibile");
+    return;
   }
 
-  // Esempio con ZK-Proof (se disponibile)
-  try {
-    const zkPlugin = core.getAuthenticationMethod("zkproof");
-    if (zkPlugin) {
-      console.log("🔐 Test ZK-Proof signup...");
+  const exampleUser = "example_user_regenerate";
+  const seaPair = await SEA.pair();
 
-      // ZK-Proof non richiede password, usa il metodo corretto
-      const zkResult = await (zkPlugin as any).signUp(
-        "zkuser",
-        "dummy_password",
-      );
+  const cryptoManager = new CryptoIdentityManager();
 
-      if (zkResult.success) {
-        console.log("✅ ZK-Proof signup riuscito");
+  console.log("🔐 Prima generazione...");
+  const firstResult = await cryptoManager.generateAllIdentities(
+    exampleUser,
+    seaPair,
+  );
 
-        // Le identità crypto vengono generate automaticamente anche con ZK-Proof
-        const cryptoManager = new CryptoIdentityManager(core);
-        const identities = await cryptoManager.getCurrentUserIdentities();
-
-        if (identities.success) {
-          console.log("✅ Identità crypto generate con ZK-Proof");
-        }
-      } else {
-        console.log("ℹ️ ZK-Proof signup non riuscito:", zkResult.error);
-      }
-    } else {
-      console.log("ℹ️ ZK-Proof plugin non disponibile");
-    }
-  } catch (error) {
-    console.log(
-      "ℹ️ ZK-Proof test saltato:",
-      error instanceof Error ? error.message : String(error),
-    );
+  if (firstResult.success && firstResult.identities) {
+    console.log("✅ Prima generazione completata");
+    console.log("- RSA:", !!firstResult.identities.rsa);
+    console.log("- AES:", !!firstResult.identities.aes);
   }
+
+  console.log("\n🔐 Seconda generazione (nuove identità)...");
+  const secondResult = await cryptoManager.generateAllIdentities(
+    exampleUser,
+    seaPair,
+  );
+
+  if (secondResult.success && secondResult.identities) {
+    console.log("✅ Seconda generazione completata");
+    console.log("- RSA:", !!secondResult.identities.rsa);
+    console.log("- AES:", !!secondResult.identities.aes);
+    console.log("ℹ️ Nota: Ogni generazione crea nuove identità uniche");
+  }
+
+  // Restore original console methods at the end
+  errorSuppressionActive = false;
+  console.log = originalLog;
+  console.error = originalError;
+}
+
+// Esempio usando setupCryptoIdentities (wrapper)
+async function setupIdentityExample() {
+  console.log("\n🔧 Esempio usando setupCryptoIdentities");
+
+  const SEA = (globalThis as any).SEA || (globalThis as any).Gun?.SEA;
+  if (!SEA) {
+    console.error("❌ SEA non disponibile");
+    return;
+  }
+
+  const exampleUser = "example_user_setup";
+  const seaPair = await SEA.pair();
+
+  const cryptoManager = new CryptoIdentityManager();
+
+  console.log("🔐 Usando setupCryptoIdentities (wrapper)...");
+  const result = await cryptoManager.setupCryptoIdentities(
+    exampleUser,
+    seaPair,
+    false, // forceRegenerate - ignorato, sempre genera nuove identità
+  );
+
+  if (result.success && result.identities) {
+    console.log("✅ Identità generate usando setupCryptoIdentities");
+    console.log("- RSA:", !!result.identities.rsa);
+    console.log("- AES:", !!result.identities.aes);
+    console.log("- Signal:", !!result.identities.signal);
+    console.log("- PGP:", !!result.identities.pgp);
+    console.log("- MLS:", !!result.identities.mls);
+    console.log("- SFrame:", !!result.identities.sframe);
+  }
+
+  // Restore original console methods at the end
+  errorSuppressionActive = false;
+  console.log = originalLog;
+  console.error = originalError;
 }
 
 // Funzione principale per eseguire gli esempi
 export async function runCryptoIdentityExamples() {
   try {
-    await cryptoIdentityExample();
-    await multiAuthExample();
+    await basicIdentityExample();
+    await regenerateIdentityExample();
+    await setupIdentityExample();
   } catch (error) {
     console.error("❌ Errore durante l'esecuzione degli esempi:", error);
+  } finally {
+    // Always restore console methods
+    errorSuppressionActive = false;
+    console.log = originalLog;
+    console.error = originalError;
   }
 }
 
