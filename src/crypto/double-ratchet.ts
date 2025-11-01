@@ -225,6 +225,12 @@ const performDHRatchetStep = async (
     // Generate our sending key pair for future messages
     console.log("🔑 Generating DH key pair for responder's future sending");
     state.sendingDHKeyPair = await generateSignalKeyPair();
+
+    // For responder's first receive, we don't derive a sending chain yet
+    // because we haven't sent anything. The sending chain will be derived
+    // when we send our first message.
+    console.log("✓ DH ratchet step completed (responder first receive)");
+    return;
   } else if (state.sendingDHKeyPair) {
     console.log(
       "🔄 Deriving receiving chain from: DH(our_current_private, their_public)",
@@ -248,6 +254,7 @@ const performDHRatchetStep = async (
   }
 
   // Step 2: Generate NEW DH key pair and derive sending chain
+  // This only executes for subsequent ratchet steps (not responder's first receive)
   console.log("🔑 Generating NEW DH key pair for ratchet step");
   state.sendingDHKeyPair = await generateSignalKeyPair();
   state.sendingMessageNumber = 0;
@@ -320,8 +327,37 @@ export const doubleRatchetEncrypt = async (
     `🔒 Encrypting message #${state.sendingMessageNumber} with Double Ratchet`,
   );
 
+  // If responder is sending first message, derive sending chain
   if (!state.sendingChainKey) {
-    throw new Error("No sending chain key available - cannot encrypt");
+    if (
+      !state.isInitiator &&
+      state.receivingDHPublicKey &&
+      state.sendingDHKeyPair
+    ) {
+      console.log("🔄 Responder's first send: Deriving sending chain");
+
+      // Derive sending chain from our sending DH key pair and their receiving DH public key
+      const sendingDHOutput = await performSignalDH(
+        state.sendingDHKeyPair.privateKey,
+        state.receivingDHPublicKey,
+      );
+
+      const hkdfSending = await doubleRatchetHKDF(
+        new Uint8Array(state.rootKey),
+        sendingDHOutput,
+        DOUBLE_RATCHET_INFO_CHAIN_KEY,
+        64,
+      );
+
+      state.rootKey = hkdfSending.slice(0, 32);
+      state.sendingChainKey = hkdfSending.slice(32, 64);
+      state.sendingMessageNumber = 0;
+      state.previousChainLength = state.receivingMessageNumber;
+
+      console.log("✅ Sending chain derived for responder's first message");
+    } else {
+      throw new Error("No sending chain key available - cannot encrypt");
+    }
   }
 
   // Derive message key
