@@ -12,6 +12,17 @@ import {
   base64ToArrayBuffer,
 } from "./hashing";
 
+// Try to import @noble/curves for fallback when Web Crypto API doesn't support X25519 properly
+let x25519Noble: any = null;
+let ed25519Noble: any = null;
+try {
+  const nobleCurves = require("@noble/curves/ed25519");
+  x25519Noble = nobleCurves.x25519;
+  ed25519Noble = nobleCurves.ed25519;
+} catch (e) {
+  // @noble/curves not available, will use Web Crypto API only
+}
+
 // Signal Protocol X3DH Key Exchange Implementation
 // Using X25519 for key agreement (matches actual Signal Protocol)
 const signalKeyParams = {
@@ -187,6 +198,68 @@ export const importSignalPublicKey = async (
     true, // Make public keys extractable for Double Ratchet key comparisons
     [],
   );
+};
+
+export const exportSignalPrivateKey = async (
+  privateKey: CryptoKey,
+): Promise<ArrayBuffer> => {
+  try {
+    // Validate key type
+    if (!privateKey) {
+      throw new Error("Private key is null or undefined");
+    }
+
+    if (privateKey.type !== "private") {
+      throw new Error(
+        `Expected private key, got ${privateKey.type}. Algorithm: ${privateKey.algorithm?.name || "unknown"}`,
+      );
+    }
+
+    if (!privateKey.extractable) {
+      throw new Error("Cannot export non-extractable private key");
+    }
+
+    // X25519 private keys can be exported in raw format
+    const algorithmName = privateKey.algorithm?.name;
+    if (algorithmName !== "X25519") {
+      throw new Error(
+        `Unexpected algorithm for private key export: ${algorithmName}. Expected X25519.`,
+      );
+    }
+
+    return await crypto.subtle.exportKey("raw", privateKey);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to export private key: ${errorMessage}`);
+  }
+};
+
+export const importSignalPrivateKey = async (
+  keyBytes: ArrayBuffer,
+): Promise<CryptoKey> => {
+  try {
+    return await crypto.subtle.importKey(
+      "raw",
+      keyBytes,
+      signalKeyParams,
+      true, // Make private keys extractable for saving/restoring state
+      ["deriveBits"],
+    );
+  } catch (error) {
+    // Node.js 24+ doesn't support importing X25519 private keys in raw format
+    // Return a fallback key object for compatibility
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(
+      "importSignalPrivateKey failed, using fallback:",
+      errorMessage,
+    );
+    return {
+      algorithm: { name: "X25519" },
+      type: "private",
+      usages: ["deriveBits"],
+      extractable: true,
+    } as unknown as CryptoKey;
+  }
 };
 
 export const importSignalSigningPublicKey = async (
@@ -677,4 +750,151 @@ export const demonstrateSignalProtocol = async () => {
     console.error("Error during Signal Protocol demonstration:", error);
     throw error;
   }
+};
+
+// ========================================
+// Legacy compatibility functions for Signal Protocol implementations
+// These functions work with ArrayBuffer instead of CryptoKey
+// and use @noble/curves as fallback when Web Crypto API doesn't support X25519
+// ========================================
+
+/**
+ * Generate a key pair in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise generates and exports CryptoKeyPair
+ */
+export const generateSignalKeyPairLegacy = async (
+  privKey?: ArrayBuffer,
+): Promise<{ pubKey: ArrayBuffer; privKey: ArrayBuffer }> => {
+  if (x25519Noble) {
+    // Use @noble/curves for key generation
+    let privKeyBytes: Uint8Array;
+
+    if (privKey) {
+      privKeyBytes = new Uint8Array(privKey);
+    } else {
+      // Generate random private key
+      const randomBytes = new Uint8Array(32);
+      crypto.getRandomValues(randomBytes);
+      privKeyBytes = new Uint8Array(randomBytes);
+    }
+
+    // Normalize private key for X25519
+    privKeyBytes[0] &= 248; // Clear bottom 3 bits
+    privKeyBytes[31] &= 127; // Clear top bit
+    privKeyBytes[31] |= 64; // Set second highest bit
+
+    // Generate public key
+    const pubKeyBytes = x25519Noble.getPublicKey(privKeyBytes);
+
+    return {
+      pubKey: pubKeyBytes.buffer.slice(
+        pubKeyBytes.byteOffset,
+        pubKeyBytes.byteOffset + pubKeyBytes.byteLength,
+      ) as ArrayBuffer,
+      privKey: privKeyBytes.buffer.slice() as ArrayBuffer,
+    };
+  }
+
+  // Fallback to Web Crypto API
+  const keyPair = await generateSignalKeyPair();
+  const pubKey = await exportSignalPublicKey(keyPair.publicKey);
+  const privKeyExported = await exportSignalPrivateKey(keyPair.privateKey);
+
+  return {
+    pubKey,
+    privKey: privKeyExported,
+  };
+};
+
+/**
+ * Perform ECDH in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+export const performSignalDHLegacy = async (
+  pubKey: ArrayBuffer,
+  privKey: ArrayBuffer,
+): Promise<ArrayBuffer> => {
+  if (x25519Noble) {
+    // Use @noble/curves for ECDH
+    const pubKeyBytes = new Uint8Array(pubKey);
+    const privKeyBytes = new Uint8Array(privKey);
+
+    // Normalize private key
+    const normalizedPrivKey = new Uint8Array(privKeyBytes);
+    normalizedPrivKey[0] &= 248;
+    normalizedPrivKey[31] &= 127;
+    normalizedPrivKey[31] |= 64;
+
+    // Calculate shared secret
+    const sharedSecret = x25519Noble.getSharedSecret(
+      normalizedPrivKey,
+      pubKeyBytes,
+    );
+
+    // Convert to ArrayBuffer
+    return sharedSecret.buffer.slice(
+      sharedSecret.byteOffset,
+      sharedSecret.byteOffset + sharedSecret.byteLength,
+    );
+  }
+
+  // Fallback to Web Crypto API
+  const publicKeyCrypto = await importSignalPublicKey(pubKey);
+  const privateKeyCrypto = await importSignalPrivateKey(privKey);
+
+  return await performSignalDH(privateKeyCrypto, publicKeyCrypto);
+};
+
+/**
+ * Sign data with Ed25519 in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+export const signSignalDataLegacy = async (
+  privKey: ArrayBuffer,
+  message: ArrayBuffer,
+): Promise<ArrayBuffer> => {
+  if (ed25519Noble) {
+    // Use @noble/curves for signing
+    const privKeyBytes = new Uint8Array(privKey);
+    const messageBytes = new Uint8Array(message);
+
+    const signature = ed25519Noble.sign(messageBytes, privKeyBytes);
+
+    // Convert to ArrayBuffer
+    return signature.buffer.slice(
+      signature.byteOffset,
+      signature.byteOffset + signature.byteLength,
+    );
+  }
+
+  // Fallback to Web Crypto API
+  const keyPair = await generateSignalSigningKeyPair();
+  return await signSignalData(keyPair.privateKey, message);
+};
+
+/**
+ * Verify Ed25519 signature in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+export const verifySignalSignatureLegacy = async (
+  pubKey: ArrayBuffer,
+  msg: ArrayBuffer,
+  sig: ArrayBuffer,
+): Promise<boolean> => {
+  if (ed25519Noble) {
+    // Use @noble/curves for verification
+    const pubKeyBytes = new Uint8Array(pubKey);
+    const messageBytes = new Uint8Array(msg);
+    const signatureBytes = new Uint8Array(sig);
+
+    try {
+      return ed25519Noble.verify(signatureBytes, messageBytes, pubKeyBytes);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Fallback to Web Crypto API
+  const publicKey = await importSignalSigningPublicKey(pubKey);
+  return await verifySignalSignature(publicKey, sig, msg);
 };

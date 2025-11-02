@@ -77,6 +77,8 @@ export interface DoubleRatchetState {
   skippedMessageKeys: Map<string, Uint8Array>;
   isInitiator: boolean;
   initialized: number;
+  // X3DH ephemeral public key (stored by initiator, used only once in first message)
+  x3dhEphemeralPublic?: ArrayBuffer;
 }
 
 export interface MessageEnvelope {
@@ -86,6 +88,8 @@ export interface MessageEnvelope {
   ciphertext: Uint8Array;
   iv: Uint8Array;
   timestamp: number;
+  // X3DH ephemeral public key (only present in first message from initiator)
+  x3dhEphemeralPublic?: Uint8Array;
 }
 
 export interface CryptoConfig {
@@ -220,6 +224,7 @@ export interface CryptoMethods {
     sharedSecret: ArrayBuffer,
     isInitiator: boolean,
     remotePublicKey?: CryptoKey | null,
+    x3dhEphemeralPublic?: ArrayBuffer,
   ) => Promise<DoubleRatchetState>;
   doubleRatchetEncrypt: (
     state: DoubleRatchetState,

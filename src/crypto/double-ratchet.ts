@@ -95,6 +95,7 @@ export const initializeDoubleRatchet = async (
   sharedSecret: ArrayBuffer,
   isInitiator: boolean,
   remotePublicKey: CryptoKey | null = null,
+  x3dhEphemeralPublic?: ArrayBuffer,
 ): Promise<DoubleRatchetState> => {
   console.log(
     `🔄 Initializing Double Ratchet (${isInitiator ? "Initiator" : "Responder"})`,
@@ -108,7 +109,12 @@ export const initializeDoubleRatchet = async (
     32,
   );
 
-  console.log("✓ Initial root key derived from X3DH secret");
+  const rootKeyHex = bufferToSignalHex(initialRootKey);
+  console.log("✓ Initial root key derived from X3DH secret", {
+    role: isInitiator ? "Initiator" : "Responder",
+    rootKeyHex: rootKeyHex.substring(0, 16) + "...",
+    rootKeyLength: initialRootKey.byteLength,
+  });
 
   const state: DoubleRatchetState = {
     // Core ratchet state
@@ -131,12 +137,21 @@ export const initializeDoubleRatchet = async (
     // State flags
     isInitiator,
     initialized: Date.now(),
+
+    // X3DH ephemeral (only for initiator)
+    x3dhEphemeralPublic,
   };
 
   if (isInitiator) {
     // Initiator: Generate initial DH key pair and derive sending chain directly from root key
     console.log("🔑 Generating initial DH key pair for initiator");
     state.sendingDHKeyPair = await generateSignalKeyPair();
+
+    const initialRootKeyHexBeforeDerivation = bufferToSignalHex(initialRootKey);
+    console.log("🔍 Initiator - root key before sending chain derivation:", {
+      rootKeyHex: initialRootKeyHexBeforeDerivation.substring(0, 16) + "...",
+      rootKeyLength: initialRootKey.byteLength,
+    });
 
     // Derive initial sending chain directly from root key for first message
     const hkdfOutput = await doubleRatchetHKDF(
@@ -146,9 +161,20 @@ export const initializeDoubleRatchet = async (
       64, // 32 bytes root key + 32 bytes chain key
     );
 
-    state.rootKey = hkdfOutput.slice(0, 32);
-    state.sendingChainKey = hkdfOutput.slice(32, 64);
-    console.log("✓ Initial sending chain derived directly from root key");
+    const newRootKey = hkdfOutput.slice(0, 32);
+    const sendingChainKey = hkdfOutput.slice(32, 64);
+    const newRootKeyHex = bufferToSignalHex(newRootKey);
+    const sendingChainKeyHex = bufferToSignalHex(sendingChainKey);
+
+    state.rootKey = newRootKey;
+    state.sendingChainKey = sendingChainKey;
+
+    console.log("✓ Initial sending chain derived directly from root key", {
+      oldRootKeyHex: initialRootKeyHexBeforeDerivation.substring(0, 16) + "...",
+      newRootKeyHex: newRootKeyHex.substring(0, 16) + "...",
+      sendingChainKeyHex: sendingChainKeyHex.substring(0, 16) + "...",
+      sendingChainKeyLength: sendingChainKey.byteLength,
+    });
   } else {
     // Responder: Start with receiving mode, will derive receiving chain from root key on first message
     console.log("📥 Responder initialized, waiting for first message");
@@ -185,26 +211,57 @@ const performDHRatchetStep = async (
 ): Promise<void> => {
   console.log("🔄 Performing DH ratchet step");
 
-  // Save current receiving chain info for skipped messages
-  state.previousChainLength = state.receivingMessageNumber;
-  state.receivingMessageNumber = 0;
-  state.receivingDHPublicKey = newRemotePublicKey;
-
-  // Generate a receiving DH key pair if we don't have one
-  if (!state.sendingDHKeyPair) {
-    state.sendingDHKeyPair = await generateSignalKeyPair();
-  }
+  // Save current receiving chain info for skipped messages BEFORE checking first receive
+  // IMPORTANT: Save the OLD values before modifying them for the check
+  const wasReceivingMessageNumber = state.receivingMessageNumber;
+  const wasPreviousChainLength = state.previousChainLength;
 
   // Check if this is the responder's first message from the initiator
+  // This MUST be checked BEFORE modifying state or generating sendingDHKeyPair
+  // otherwise the condition will never be true for the first message
   const isResponderFirstReceive =
     !state.isInitiator &&
     !state.receivingChainKey &&
-    state.receivingMessageNumber === 0;
+    wasReceivingMessageNumber === 0 &&
+    wasPreviousChainLength === 0; // previousChainLength should be 0 for first message
+
+  // Update state for ratchet step (after check)
+  state.previousChainLength = state.receivingMessageNumber;
+  state.receivingDHPublicKey = newRemotePublicKey;
+
+  // Note: receivingMessageNumber is reset to 0 AFTER the isResponderFirstReceive check
+  // because we need to check wasReceivingMessageNumber === 0
+
+  console.log("🔍 Checking isResponderFirstReceive:", {
+    isResponder: !state.isInitiator,
+    hasReceivingChainKey: !!state.receivingChainKey,
+    wasReceivingMessageNumber,
+    wasPreviousChainLength,
+    isResponderFirstReceive,
+    hasSendingDHKeyPair: !!state.sendingDHKeyPair,
+    conditionBreakdown: {
+      notInitiator: !state.isInitiator,
+      noReceivingChainKey: !state.receivingChainKey,
+      receivingMessageNumberIsZero: wasReceivingMessageNumber === 0,
+      previousChainLengthIsZero: wasPreviousChainLength === 0,
+      allConditionsMet:
+        !state.isInitiator &&
+        !state.receivingChainKey &&
+        wasReceivingMessageNumber === 0 &&
+        wasPreviousChainLength === 0,
+    },
+  });
 
   if (isResponderFirstReceive) {
     console.log(
       "🔄 First receive: matching initiator's direct root key derivation (responder only)",
     );
+
+    const initialRootKeyHex = bufferToSignalHex(state.rootKey);
+    console.log("🔍 Responder first receive - root key before derivation:", {
+      rootKeyHex: initialRootKeyHex.substring(0, 16) + "...",
+      rootKeyLength: state.rootKey.byteLength,
+    });
 
     // Alice derived: HKDF(empty_salt, rootKey, CHAIN_KEY_INFO) -> [newRootKey, sendingChain]
     // Bob must derive the exact same way to get the matching receiving chain
@@ -216,11 +273,23 @@ const performDHRatchetStep = async (
     );
 
     // Update our root key to match initiator's updated root key
-    state.rootKey = hkdfResult.slice(0, 32);
-    // Set receiving chain to match initiator's sending chain
-    state.receivingChainKey = hkdfResult.slice(32, 64);
+    const newRootKey = hkdfResult.slice(0, 32);
+    const receivingChainKey = hkdfResult.slice(32, 64);
+    const newRootKeyHex = bufferToSignalHex(newRootKey);
+    const receivingChainKeyHex = bufferToSignalHex(receivingChainKey);
 
-    console.log("🔄 Receiving chain set to match initiator's sending chain");
+    state.rootKey = newRootKey;
+    // Set receiving chain to match initiator's sending chain
+    state.receivingChainKey = receivingChainKey;
+    // Reset receiving message number for the new chain
+    state.receivingMessageNumber = 0;
+
+    console.log("🔄 Receiving chain set to match initiator's sending chain", {
+      oldRootKeyHex: initialRootKeyHex.substring(0, 16) + "...",
+      newRootKeyHex: newRootKeyHex.substring(0, 16) + "...",
+      receivingChainKeyHex: receivingChainKeyHex.substring(0, 16) + "...",
+      receivingChainKeyLength: receivingChainKey.byteLength,
+    });
 
     // Generate our sending key pair for future messages
     console.log("🔑 Generating DH key pair for responder's future sending");
@@ -231,42 +300,113 @@ const performDHRatchetStep = async (
     // when we send our first message.
     console.log("✓ DH ratchet step completed (responder first receive)");
     return;
-  } else if (state.sendingDHKeyPair) {
+  }
+
+  // Reset receiving message number for new chain (for non-first receive cases)
+  state.receivingMessageNumber = 0;
+
+  // Generate a receiving DH key pair if we don't have one
+  // NOTE: If state was restored, sendingDHKeyPair should now be properly restored
+  // with both public and private keys. If it's still null, we need to generate one,
+  // but this might cause chain derivation issues if we're in the middle of a conversation.
+  if (!state.sendingDHKeyPair) {
+    console.log(
+      "⚠️ Warning: No sendingDHKeyPair found, generating new one. This might cause chain derivation issues if state was restored.",
+    );
+    state.sendingDHKeyPair = await generateSignalKeyPair();
+  }
+
+  // Derive receiving chain from existing sendingDHKeyPair
+  if (state.sendingDHKeyPair) {
     console.log(
       "🔄 Deriving receiving chain from: DH(our_current_private, their_public)",
     );
+
+    // Log the DH keys being used for debugging
+    const ourPublicKeyHex = bufferToSignalHex(
+      await exportSignalPublicKey(state.sendingDHKeyPair.publicKey),
+    );
+    const theirPublicKeyHex = bufferToSignalHex(
+      await exportSignalPublicKey(newRemotePublicKey),
+    );
+    // Also check what receivingDHPublicKey we currently have (this should match ourPublicKeyHex if we're synchronized)
+    const currentReceivingDHPublicKeyHex = state.receivingDHPublicKey
+      ? bufferToSignalHex(
+          await exportSignalPublicKey(state.receivingDHPublicKey),
+        )
+      : "null";
+    console.log("🔍 DH key derivation details:", {
+      ourPublicKeyHex: ourPublicKeyHex.substring(0, 16) + "...",
+      theirPublicKeyHex: theirPublicKeyHex.substring(0, 16) + "...",
+      currentReceivingDHPublicKeyHex:
+        currentReceivingDHPublicKeyHex !== "null"
+          ? currentReceivingDHPublicKeyHex.substring(0, 16) + "..."
+          : "null",
+      rootKeyLength: state.rootKey.byteLength,
+      rootKeyHex: bufferToSignalHex(state.rootKey).substring(0, 16) + "...",
+      previousChainLength: state.previousChainLength,
+      receivingMessageNumber: state.receivingMessageNumber,
+    });
+
     const receivingDHOutput = await performSignalDH(
       state.sendingDHKeyPair.privateKey,
       newRemotePublicKey,
     );
 
     // Derive receiving chain key from the DH output
+    // IMPORTANT: Use the CURRENT root key (before updating) for HKDF
+    const rootKeyBeforeReceivingDerivation = state.rootKey;
+    const rootKeyBeforeReceivingHex = bufferToSignalHex(
+      rootKeyBeforeReceivingDerivation,
+    );
+
     const hkdfReceiving = await doubleRatchetHKDF(
-      new Uint8Array(state.rootKey),
+      new Uint8Array(rootKeyBeforeReceivingDerivation),
       receivingDHOutput,
       DOUBLE_RATCHET_INFO_CHAIN_KEY,
       64,
     );
+    const oldRootKeyHex = rootKeyBeforeReceivingHex.substring(0, 16) + "...";
     state.rootKey = hkdfReceiving.slice(0, 32);
     state.receivingChainKey = hkdfReceiving.slice(32, 64);
+    const newRootKeyHex =
+      bufferToSignalHex(state.rootKey).substring(0, 16) + "...";
+    const receivingChainKeyHex =
+      bufferToSignalHex(state.receivingChainKey).substring(0, 16) + "...";
 
-    console.log("🔄 DH ratchet step - receiving chain established");
+    console.log("🔄 DH ratchet step - receiving chain established", {
+      oldRootKeyHex,
+      newRootKeyHex,
+      receivingChainKeyHex,
+      receivingChainKeyLength: state.receivingChainKey.byteLength,
+      previousChainLength: state.previousChainLength,
+    });
   }
 
   // Step 2: Generate NEW DH key pair and derive sending chain
   // This only executes for subsequent ratchet steps (not responder's first receive)
-  console.log("🔑 Generating NEW DH key pair for ratchet step");
+  console.log("🔑 Generating NEW DH key pair for ratchet step", {
+    rootKeyBeforeSendingDerivation:
+      bufferToSignalHex(state.rootKey).substring(0, 16) + "...",
+    previousChainLength: state.previousChainLength,
+  });
   state.sendingDHKeyPair = await generateSignalKeyPair();
   state.sendingMessageNumber = 0;
 
   // Derive sending chain from our NEW DH key pair
+  // IMPORTANT: Use the CURRENT root key (after receiving chain derivation if applicable) for HKDF
+  const rootKeyBeforeSendingDerivation = state.rootKey;
+  const rootKeyBeforeSendingHex = bufferToSignalHex(
+    rootKeyBeforeSendingDerivation,
+  );
+
   const sendingDHOutput = await performSignalDH(
     state.sendingDHKeyPair.privateKey,
     newRemotePublicKey,
   );
 
   const hkdfSending = await doubleRatchetHKDF(
-    new Uint8Array(state.rootKey),
+    new Uint8Array(rootKeyBeforeSendingDerivation),
     sendingDHOutput,
     DOUBLE_RATCHET_INFO_CHAIN_KEY,
     64,
@@ -275,7 +415,15 @@ const performDHRatchetStep = async (
   state.rootKey = hkdfSending.slice(0, 32);
   state.sendingChainKey = hkdfSending.slice(32, 64);
 
-  console.log("🔄 DH ratchet step - sending chain established");
+  const rootKeyAfterHex = bufferToSignalHex(state.rootKey);
+  const sendingChainKeyHex = bufferToSignalHex(state.sendingChainKey);
+
+  console.log("🔄 DH ratchet step - sending chain established", {
+    rootKeyBeforeHex: rootKeyBeforeSendingHex.substring(0, 16) + "...",
+    rootKeyAfterHex: rootKeyAfterHex.substring(0, 16) + "...",
+    sendingChainKeyHex: sendingChainKeyHex.substring(0, 16) + "...",
+    previousChainLength: state.previousChainLength,
+  });
   console.log("✓ DH ratchet step completed");
 };
 
@@ -368,7 +516,24 @@ export const doubleRatchetEncrypt = async (
   );
   const dhPublicKeyBytes = new Uint8Array(dhPublicKeyBuffer);
 
-  console.log("🔑 Alice encryption - Chain and message keys");
+  // Log encryption state for debugging
+  const sendingDHPublicKeyHex = bufferToSignalHex(dhPublicKeyBuffer);
+  const rootKeyHex = bufferToSignalHex(state.rootKey);
+  const sendingChainKeyHex = bufferToSignalHex(state.sendingChainKey);
+  const receivingDHPublicKeyHex = state.receivingDHPublicKey
+    ? bufferToSignalHex(await exportSignalPublicKey(state.receivingDHPublicKey))
+    : "null";
+  console.log("🔑 Alice encryption - Chain and message keys", {
+    sendingDHPublicKeyHex: sendingDHPublicKeyHex.substring(0, 16) + "...",
+    receivingDHPublicKeyHex:
+      receivingDHPublicKeyHex !== "null"
+        ? receivingDHPublicKeyHex.substring(0, 16) + "..."
+        : "null",
+    rootKeyHex: rootKeyHex.substring(0, 16) + "...",
+    sendingChainKeyHex: sendingChainKeyHex.substring(0, 16) + "...",
+    sendingMessageNumber: state.sendingMessageNumber,
+    previousChainLength: state.previousChainLength,
+  });
 
   // Prepare additional authenticated data (AAD)
   const aad = new Uint8Array(dhPublicKeyBytes.length + 8); // DH key + 2 uint32s
@@ -397,6 +562,17 @@ export const doubleRatchetEncrypt = async (
     plaintextBytes,
   );
 
+  console.log("🔍 Encryption details:", {
+    messageNumber: state.sendingMessageNumber,
+    previousChainLength: state.previousChainLength,
+    dhPublicKeyLength: dhPublicKeyBytes.length,
+    plaintextLength: plaintextBytes.length,
+    ciphertextLength: ciphertext.byteLength,
+    ivLength: iv.length,
+    aadLength: aad.length,
+    messageKeyLength: messageKey.length,
+  });
+
   // Update sending chain key
   state.sendingChainKey = await deriveNextChainKey(state.sendingChainKey);
 
@@ -408,6 +584,18 @@ export const doubleRatchetEncrypt = async (
     iv: iv,
     timestamp: Date.now(),
   };
+
+  // Include X3DH ephemeral public key in the first message from initiator
+  if (
+    state.isInitiator &&
+    state.sendingMessageNumber === 0 &&
+    state.x3dhEphemeralPublic
+  ) {
+    console.log("📤 Including X3DH ephemeral public key in first message");
+    messageEnvelope.x3dhEphemeralPublic = new Uint8Array(
+      state.x3dhEphemeralPublic,
+    );
+  }
 
   state.sendingMessageNumber++;
 
@@ -430,6 +618,17 @@ export const doubleRatchetDecrypt = async (
     `🔓 Decrypting message #${messageEnvelope.messageNumber} with Double Ratchet`,
   );
 
+  // Log initial state for debugging
+  console.log("🔍 Initial decrypt state:", {
+    receivingMessageNumber: state.receivingMessageNumber,
+    sendingMessageNumber: state.sendingMessageNumber,
+    previousChainLength: state.previousChainLength,
+    hasReceivingChainKey: !!state.receivingChainKey,
+    hasReceivingDHPublicKey: !!state.receivingDHPublicKey,
+    hasSendingDHKeyPair: !!state.sendingDHKeyPair,
+    isInitiator: state.isInitiator,
+  });
+
   const { dhPublicKey, messageNumber, previousChainLength, ciphertext, iv } =
     messageEnvelope;
   const dhPublicKeyHex = bufferToSignalHex(dhPublicKey.buffer as ArrayBuffer);
@@ -449,6 +648,15 @@ export const doubleRatchetDecrypt = async (
         )
       : null;
 
+    console.log("🔍 DH key comparison:", {
+      messageDhKeyHex: dhPublicKeyHex.substring(0, 16) + "...",
+      currentDhKeyHex: currentDhKeyHex
+        ? currentDhKeyHex.substring(0, 16) + "..."
+        : "null",
+      match: dhPublicKeyHex === currentDhKeyHex,
+      receivingMessageNumber: state.receivingMessageNumber,
+    });
+
     if (dhPublicKeyHex !== currentDhKeyHex) {
       console.log("🔄 New DH public key detected, performing ratchet step");
 
@@ -462,31 +670,81 @@ export const doubleRatchetDecrypt = async (
       await performDHRatchetStep(state, remotePublicKey);
     }
 
-    // Skip message keys if needed
-    await skipMessageKeys(state, messageNumber);
-
-    // Derive message key
-    if (!state.receivingChainKey) {
-      throw new Error("No receiving chain key available - cannot decrypt");
+    // Skip message keys if needed (for out-of-order messages)
+    if (messageNumber > state.receivingMessageNumber) {
+      await skipMessageKeys(state, messageNumber);
     }
 
-    // Store original chain key for logging
-    const originalChainKey = state.receivingChainKey;
+    // Validate message number matches after skipping
+    if (messageNumber !== state.receivingMessageNumber) {
+      // Check if we have this message in skipped keys
+      const skippedKeyCheck = state.skippedMessageKeys.get(skippedKeyId);
+      if (!skippedKeyCheck) {
+        throw new Error(
+          `Message number mismatch: expected ${state.receivingMessageNumber}, got ${messageNumber}. This may indicate a missing message or synchronization issue.`,
+        );
+      }
+      // If we found it in skipped keys, we should have handled it earlier
+      // This shouldn't happen, but if it does, use the skipped key
+      messageKey = skippedKeyCheck;
+      state.skippedMessageKeys.delete(skippedKeyId);
+      console.log(
+        `📋 Using skipped message key for message ${messageNumber} (late catch)`,
+      );
+    } else {
+      // Derive message key
+      if (!state.receivingChainKey) {
+        throw new Error("No receiving chain key available - cannot decrypt");
+      }
 
-    messageKey = await deriveMessageKey(originalChainKey);
-    state.receivingChainKey = await deriveNextChainKey(originalChainKey);
-    const currentMessageNumber = state.receivingMessageNumber;
-    state.receivingMessageNumber++;
+      // Store original chain key for logging
+      const originalChainKey = state.receivingChainKey;
+      const receivingChainKeyHex = bufferToSignalHex(originalChainKey);
+      const rootKeyHex = bufferToSignalHex(state.rootKey);
+      const receivingDHPublicKeyHex = state.receivingDHPublicKey
+        ? bufferToSignalHex(
+            await exportSignalPublicKey(state.receivingDHPublicKey),
+          )
+        : "null";
 
-    console.log("🔑 Bob decryption - Chain and message keys");
+      messageKey = await deriveMessageKey(originalChainKey);
+      state.receivingChainKey = await deriveNextChainKey(originalChainKey);
+      const currentMessageNumber = state.receivingMessageNumber;
+      state.receivingMessageNumber++;
+
+      console.log("🔑 Bob decryption - Chain and message keys", {
+        messageNumber: currentMessageNumber,
+        chainKeyLength: originalChainKey.byteLength,
+        messageKeyLength: messageKey.length,
+        nextReceivingMessageNumber: state.receivingMessageNumber,
+        receivingDHPublicKeyHex:
+          receivingDHPublicKeyHex.substring(0, 16) + "...",
+        rootKeyHex: rootKeyHex.substring(0, 16) + "...",
+        receivingChainKeyHex: receivingChainKeyHex.substring(0, 16) + "...",
+        previousChainLength: state.previousChainLength,
+      });
+    }
   }
 
   // Prepare AAD for verification
+  // IMPORTANT: The AAD must match EXACTLY what was used during encryption
+  // This includes: dhPublicKey, messageNumber, and previousChainLength
   const aad = new Uint8Array(dhPublicKey.length + 8);
   aad.set(dhPublicKey);
   const view = new DataView(aad.buffer, dhPublicKey.length);
   view.setUint32(0, messageNumber, true);
   view.setUint32(4, previousChainLength, true);
+
+  // Log AAD details for debugging (before decryption attempt)
+  console.log("🔍 AAD details for decryption:", {
+    dhPublicKeyHex: dhPublicKeyHex.substring(0, 16) + "...",
+    messageNumber,
+    previousChainLength,
+    statePreviousChainLength: state.previousChainLength,
+    receivingMessageNumber: state.receivingMessageNumber,
+    aadLength: aad.length,
+    messageKeyLength: messageKey.length,
+  });
 
   // Decrypt with AES-GCM
   const cryptoKey = await crypto.subtle.importKey(
@@ -498,6 +756,49 @@ export const doubleRatchetDecrypt = async (
   );
 
   try {
+    // Log AAD details for debugging
+    const aadDetails = {
+      dhPublicKeyPrefix: Array.from(dhPublicKey.slice(0, 8))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(""),
+      messageNumberBytes: Array.from(
+        new Uint8Array(aad.slice(dhPublicKey.length, dhPublicKey.length + 4)),
+      )
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(""),
+      previousChainLengthBytes: Array.from(
+        new Uint8Array(aad.slice(dhPublicKey.length + 4)),
+      )
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(""),
+    };
+
+    // Log root key and chain key for comparison with encryption
+    const rootKeyHex = bufferToSignalHex(state.rootKey);
+    const messageKeyHex = bufferToSignalHex(messageKey.buffer as ArrayBuffer);
+    const receivingChainKeyHex = state.receivingChainKey
+      ? bufferToSignalHex(state.receivingChainKey)
+      : "null";
+
+    console.log("🔍 Decryption attempt details:", {
+      messageNumber,
+      previousChainLength,
+      statePreviousChainLength: state.previousChainLength,
+      dhPublicKeyLength: dhPublicKey.length,
+      ciphertextLength: ciphertext.length,
+      ivLength: iv.length,
+      aadLength: aad.length,
+      messageKeyLength: messageKey.length,
+      rootKeyHex: rootKeyHex.substring(0, 32) + "...", // Show more for comparison
+      receivingChainKeyHex:
+        receivingChainKeyHex !== "null"
+          ? receivingChainKeyHex.substring(0, 32) + "..."
+          : "null",
+      messageKeyHex: messageKeyHex.substring(0, 32) + "...",
+      receivingMessageNumber: state.receivingMessageNumber,
+      aadDetails,
+    });
+
     const plaintext = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: new Uint8Array(iv), additionalData: aad },
       cryptoKey,
@@ -513,8 +814,22 @@ export const doubleRatchetDecrypt = async (
 
     return plaintextString;
   } catch (error) {
-    console.error("❌ Message decryption failed:", error);
-    throw new Error("Message decryption failed - authentication failed");
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    console.error("❌ Message decryption failed:", errorObj);
+    console.error("❌ Decryption error details:", {
+      errorName: errorObj.name,
+      errorMessage: errorObj.message,
+      messageNumber,
+      previousChainLength,
+      dhPublicKeyLength: dhPublicKey.length,
+      ciphertextLength: ciphertext.length,
+      ivLength: iv.length,
+      aadLength: aad.length,
+      messageKeyLength: messageKey.length,
+    });
+    throw new Error(
+      `Message decryption failed - authentication failed: ${errorObj.message}`,
+    );
   }
 };
 

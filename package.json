@@ -1,15 +1,16 @@
 {
   "name": "shogun-core",
   "version": "6.2.4",
+  "type": "module",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/index.js",
-  "module": "./dist/index.esm.js",
+  "module": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "require": "./dist-cjs/index.js",
       "browser": "./dist/browser/shogun-core.js",
       "default": "./dist/index.js",
       "node": "./dist/index.js"
@@ -19,8 +20,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "yarn docs && yarn format && yarn run build:cjs && yarn run build:browser && node scripts/make-esm.mjs",
-    "build:cjs": "tsc",
+    "build": "yarn docs && yarn format && yarn run build:esm && yarn run build:cjs && yarn run build:browser",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir ./dist-cjs && node scripts/make-cjs.mjs",
     "build:browser": "webpack --config webpack.config.cjs",
     "dev": "tsc --watch",
     "identity": "tsx ../shogun-SHIP/src/examples/identity-cli.ts",

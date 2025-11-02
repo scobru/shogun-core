@@ -5,9 +5,9 @@
     "outDir": "./dist",
     "isolatedModules": true,
     "target": "ES2020", // Target modern JavaScript
-    "module": "NodeNext",
+    "module": "ES2020",
     "lib": ["ES2020", "dom"], // Include modern JavaScript and DOM libraries
-    "moduleResolution": "NodeNext", // Use Node.js module resolution
+    "moduleResolution": "bundler", // Use bundler resolution for better ESM support
     "typeRoots": ["./node_modules/@types"], // Specify type definition directories
     "allowJs": true, // Allow JavaScript files to be included in the project
     "skipLibCheck": true, // Skip type checking of declaration files
