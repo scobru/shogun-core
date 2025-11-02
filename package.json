@@ -22,7 +22,7 @@
   "scripts": {
     "build": "yarn docs && yarn format && yarn run build:esm && yarn run build:cjs && yarn run build:browser",
     "build:esm": "tsc",
-    "build:cjs": "tsc --module commonjs --outDir ./dist-cjs && node scripts/make-cjs.mjs",
+    "build:cjs": "tsc --project tsconfig.cjs.json && node scripts/make-cjs.mjs",
     "build:browser": "webpack --config webpack.config.cjs",
     "dev": "tsc --watch",
     "identity": "tsx ../shogun-SHIP/src/examples/identity-cli.ts",

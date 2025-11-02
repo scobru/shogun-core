@@ -15,13 +15,17 @@ import {
 // Try to import @noble/curves for fallback when Web Crypto API doesn't support X25519 properly
 let x25519Noble: any = null;
 let ed25519Noble: any = null;
-try {
-  const nobleCurves = require("@noble/curves/ed25519");
-  x25519Noble = nobleCurves.x25519;
-  ed25519Noble = nobleCurves.ed25519;
-} catch (e) {
-  // @noble/curves not available, will use Web Crypto API only
-}
+
+// Load @noble/curves dynamically (may not be available in all environments)
+(async () => {
+  try {
+    const nobleCurves = await import("@noble/curves/ed25519");
+    x25519Noble = nobleCurves.x25519;
+    ed25519Noble = nobleCurves.ed25519;
+  } catch (e) {
+    // @noble/curves not available, will use Web Crypto API only
+  }
+})();
 
 // Signal Protocol X3DH Key Exchange Implementation
 // Using X25519 for key agreement (matches actual Signal Protocol)
