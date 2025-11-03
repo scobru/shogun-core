@@ -907,7 +907,7 @@ export const demonstrateDoubleRatchet = async () => {
       initializeSignalUser,
       getSignalPublicKeyBundle,
       performSignalX3DHKeyExchange,
-    } = await import("./signal-protocol.js");
+    } = await import("./signal-protocol");
 
     const alice = await initializeSignalUser("Alice");
     const bob = await initializeSignalUser("Bob");

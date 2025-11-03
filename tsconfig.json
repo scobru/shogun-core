@@ -4,15 +4,17 @@
     "declarationDir": "./dist/types",
     "outDir": "./dist",
     "isolatedModules": true,
-    "target": "ES2020", // Target modern JavaScript
-    "module": "ES2020",
-    "lib": ["ES2020", "dom"], // Include modern JavaScript and DOM libraries
-    "moduleResolution": "bundler", // Use bundler resolution for better ESM support
+    "module": "ESNext", // ESNext for modern module support
+    "lib": ["ES2018", "ES2019", "ES2020","ES2022", "DOM", "DOM.Iterable"], // Include multiple ES versions and DOM libraries for broader compatibility
+    "moduleResolution": "bundler", // Bundler resolution allows imports without extensions (works with webpack)
     "typeRoots": ["./node_modules/@types"], // Specify type definition directories
     "allowJs": true, // Allow JavaScript files to be included in the project
     "skipLibCheck": true, // Skip type checking of declaration files
     "esModuleInterop": true, // Enable interoperability between CommonJS and ES modules
+    "allowSyntheticDefaultImports": true, // Allow default imports from modules with no default export
     "forceConsistentCasingInFileNames": true, // Ensure consistent casing in import paths
+    "resolveJsonModule": true, // Allow importing JSON modules
+    "downlevelIteration": true, // Emit more compatible iteration helpers for better compatibility
     "strict": true, // Enable all strict type-checking options
     "noImplicitAny": true, // Raise error on expressions and declarations with an implied 'any' type
     "strictNullChecks": true, // Enable strict null checks
@@ -23,7 +25,8 @@
     "noUnusedLocals": false, // Report errors on unused locals
     "noUnusedParameters": false, // Report errors on unused parameters
     "noImplicitReturns": true, // Report error when not all code paths in function return a value
-    "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statements
+    "noFallthroughCasesInSwitch": true, // Report errors for fallthrough cases in switch statements
+    "composite": true, // Enable composite project support
   },
   "include": ["src/**/*"],
   "exclude": [

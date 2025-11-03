@@ -1,0 +1,17 @@
+import { ShogunCore } from "./core";
+import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/db";
+import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import { TypedGunOperationResult, TypedAuthResult } from "./gundb";
+export * from "./utils/errorHandler";
+export * from "./plugins";
+export * from "./interfaces/shogun";
+export * from "./gundb/gun-es";
+import type { ShogunCoreConfig } from "./interfaces/shogun";
+export type ShogunSDKConfig = ShogunCoreConfig;
+export type * from "./interfaces/plugin";
+export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, TypedGunOperationResult, TypedAuthResult, };
+export { ShogunCore, RxJS, crypto, derive, GunErrors, DataBase };
+export { generateSeedPhrase, validateSeedPhrase, mnemonicToSeed, seedToPassword, deriveCredentialsFromMnemonic, formatSeedPhrase, normalizeSeedPhrase, } from "./utils/seedPhrase";
+export * from "./crypto";
+export { CryptoIdentityManager } from "./managers/CryptoIdentityManager";
+export type { CryptoIdentities, IdentityGenerationResult, } from "./managers/CryptoIdentityManager";
