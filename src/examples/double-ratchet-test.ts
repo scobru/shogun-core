@@ -66,7 +66,7 @@ async function testInteractiveDoubleRatchet() {
       initializeSignalUser,
       getSignalPublicKeyBundle,
       performSignalX3DHKeyExchange,
-    } = await import("../crypto/signal-protocol.js");
+    } = await import("../crypto/signal-protocol");
 
     const alice = await initializeSignalUser("Alice");
     const bob = await initializeSignalUser("Bob");

@@ -3,17 +3,17 @@
   "version": "6.2.4",
   "type": "module",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/types/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js",
+      "types": "./dist/types/src/index.d.ts",
+      "import": "./dist/src/index.js",
       "require": "./dist-cjs/index.js",
       "browser": "./dist/browser/shogun-core.js",
-      "default": "./dist/index.js",
-      "node": "./dist/index.js"
+      "default": "./dist/src/index.js",
+      "node": "./dist/src/index.js"
     }
   },
   "files": [
@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "yarn docs && yarn format && yarn run build:esm && yarn run build:cjs && yarn run build:browser",
-    "build:esm": "tsc",
+    "build:esm": "tsc && node scripts/add-js-extensions.mjs",
     "build:cjs": "tsc --project tsconfig.cjs.json && node scripts/make-cjs.mjs",
     "build:browser": "webpack --config webpack.config.cjs",
     "dev": "tsc --watch",

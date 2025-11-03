@@ -76,7 +76,7 @@ async function testInteractiveDoubleRatchet() {
     try {
         console.log("🔄 Starting Interactive Double Ratchet test...");
         // Initialize X3DH for shared secret
-        const { initializeSignalUser, getSignalPublicKeyBundle, performSignalX3DHKeyExchange, } = await Promise.resolve().then(() => __importStar(require("../crypto/signal-protocol.js")));
+        const { initializeSignalUser, getSignalPublicKeyBundle, performSignalX3DHKeyExchange, } = await Promise.resolve().then(() => __importStar(require("../crypto/signal-protocol")));
         const alice = await initializeSignalUser("Alice");
         const bob = await initializeSignalUser("Bob");
         const bobBundle = await getSignalPublicKeyBundle(bob);

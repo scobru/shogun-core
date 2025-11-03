@@ -4,8 +4,8 @@
     "declarationDir": "./dist/types",
     "outDir": "./dist",
     "isolatedModules": true,
-    "module": "ESNext", // ESNext for modern module support
-    "lib": ["ES2018", "ES2019", "ES2020","ES2022", "DOM", "DOM.Iterable"], // Include multiple ES versions and DOM libraries for broader compatibility
+    "module": "esnext", // esnext supports dynamic imports (lowercase for TypeScript compatibility)
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], // Include multiple ES versions and DOM libraries for broader compatibility
     "moduleResolution": "bundler", // Bundler resolution allows imports without extensions (works with webpack)
     "typeRoots": ["./node_modules/@types"], // Specify type definition directories
     "allowJs": true, // Allow JavaScript files to be included in the project
