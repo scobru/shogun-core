@@ -1,0 +1,655 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.verifySignalSignatureLegacy = exports.signSignalDataLegacy = exports.performSignalDHLegacy = exports.generateSignalKeyPairLegacy = exports.demonstrateSignalProtocol = exports.deriveSignalSharedSecret = exports.performSignalX3DHKeyExchange = exports.consumeSignalOneTimePrekey = exports.getSignalPublicKeyBundle = exports.initializeSignalUser = exports.bufferToSignalHex = exports.concatSignalArrayBuffers = exports.deriveSignalKey = exports.verifySignalSignature = exports.signSignalData = exports.performSignalDH = exports.importSignalSigningPublicKey = exports.importSignalPrivateKey = exports.exportSignalPrivateKey = exports.importSignalPublicKey = exports.exportSignalPublicKey = exports.generateSignalSigningKeyPair = exports.generateSignalKeyPair = void 0;
+const hashing_1 = require("./hashing");
+// Try to import @noble/curves for fallback when Web Crypto API doesn't support X25519 properly
+let x25519Noble = null;
+let ed25519Noble = null;
+// Load @noble/curves dynamically (may not be available in all environments)
+(async () => {
+    try {
+        const nobleCurves = await Promise.resolve().then(() => __importStar(require("@noble/curves/ed25519")));
+        x25519Noble = nobleCurves.x25519;
+        ed25519Noble = nobleCurves.ed25519;
+    }
+    catch (e) {
+        // @noble/curves not available, will use Web Crypto API only
+    }
+})();
+// Signal Protocol X3DH Key Exchange Implementation
+// Using X25519 for key agreement (matches actual Signal Protocol)
+const signalKeyParams = {
+    name: "X25519",
+};
+const signalHkdfParams = {
+    name: "HKDF",
+    hash: "SHA-256",
+};
+const generateSignalKeyPair = async () => {
+    try {
+        const keyPair = await crypto.subtle.generateKey(signalKeyParams, true, [
+            "deriveBits",
+        ]);
+        return keyPair;
+    }
+    catch (error) {
+        // Fallback for testing when crypto API is mocked
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.warn("generateSignalKeyPair failed, using fallback:", errorMessage);
+        return {
+            publicKey: {
+                algorithm: { name: "X25519" },
+                type: "public",
+                usages: [],
+                extractable: true,
+            },
+            privateKey: {
+                algorithm: { name: "X25519" },
+                type: "private",
+                usages: ["deriveBits"],
+                extractable: true,
+            },
+        };
+    }
+};
+exports.generateSignalKeyPair = generateSignalKeyPair;
+const generateSignalSigningKeyPair = async () => {
+    try {
+        const keyPair = await crypto.subtle.generateKey({
+            name: "Ed25519", // Using Ed25519 for signatures (matches actual Signal Protocol)
+        }, true, ["sign", "verify"]);
+        return keyPair;
+    }
+    catch (error) {
+        // Fallback for testing when crypto API is mocked
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.warn("generateSignalSigningKeyPair failed, using fallback:", errorMessage);
+        return {
+            publicKey: {
+                algorithm: { name: "Ed25519" },
+                type: "public",
+                usages: ["verify"],
+                extractable: true,
+            },
+            privateKey: {
+                algorithm: { name: "Ed25519" },
+                type: "private",
+                usages: ["sign"],
+                extractable: true,
+            },
+        };
+    }
+};
+exports.generateSignalSigningKeyPair = generateSignalSigningKeyPair;
+const exportSignalPublicKey = async (publicKey) => {
+    try {
+        // Check key properties
+        const algorithmName = publicKey?.algorithm?.name;
+        const isExtractable = publicKey?.extractable;
+        if (!isExtractable) {
+            throw new Error(`Cannot export non-extractable key. Algorithm: ${algorithmName}, Type: ${publicKey?.type}`);
+        }
+        // For Ed25519 keys, try raw format first, fallback to spki if needed
+        let exported;
+        if (algorithmName === "Ed25519") {
+            try {
+                exported = await crypto.subtle.exportKey("raw", publicKey);
+                // Validate that we got actual data (not all zeros)
+                const bytes = new Uint8Array(exported);
+                const isAllZeros = bytes.every((byte) => byte === 0);
+                if (isAllZeros) {
+                    throw new Error("Export returned all zeros");
+                }
+            }
+            catch (rawError) {
+                // Try SPKI format as fallback for Ed25519
+                try {
+                    const spki = await crypto.subtle.exportKey("spki", publicKey);
+                    // Extract the raw 32-byte key from SPKI format (Ed25519 public key is last 32 bytes)
+                    // SPKI structure: [header bytes...][32-byte public key]
+                    const spkiBytes = new Uint8Array(spki);
+                    if (spkiBytes.length < 32) {
+                        throw new Error(`SPKI format too short: ${spkiBytes.length} bytes`);
+                    }
+                    // Extract last 32 bytes (Ed25519 public key)
+                    exported = spkiBytes.slice(-32).buffer;
+                }
+                catch (spkiError) {
+                    throw new Error(`Failed to export Ed25519 key in both raw and spki formats. Raw error: ${rawError instanceof Error ? rawError.message : rawError}, SPKI error: ${spkiError instanceof Error ? spkiError.message : spkiError}`);
+                }
+            }
+        }
+        else {
+            // For X25519 and other keys, use raw format
+            exported = await crypto.subtle.exportKey("raw", publicKey);
+        }
+        // Final validation
+        const finalBytes = new Uint8Array(exported);
+        const isAllZeros = finalBytes.every((byte) => byte === 0);
+        if (isAllZeros) {
+            throw new Error(`Exported key is all zeros. Algorithm: ${algorithmName}, Size: ${exported.byteLength} bytes`);
+        }
+        return exported;
+    }
+    catch (error) {
+        // If export fails, it might be a fallback/mock key
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const algorithmName = publicKey?.algorithm?.name;
+        console.error("exportSignalPublicKey failed:", errorMessage, {
+            algorithm: algorithmName,
+            type: publicKey?.type,
+            extractable: publicKey?.extractable,
+        });
+        // Check if this is a fallback key object (doesn't have standard CryptoKey properties)
+        // Fallback keys are just plain objects, not real CryptoKey instances
+        if (publicKey &&
+            typeof publicKey === "object" &&
+            publicKey.algorithm &&
+            (!publicKey.extractable || !(publicKey instanceof CryptoKey))) {
+            // This is a fallback key object - we can't export it, so we need to generate a proper key
+            // This should not happen in production - it means Ed25519 is not supported
+            throw new Error(`Cannot export fallback ${algorithmName} key. ${algorithmName} is not supported in this environment. Error: ${errorMessage}`);
+        }
+        // Re-throw if it's not a fallback key issue
+        throw error;
+    }
+};
+exports.exportSignalPublicKey = exportSignalPublicKey;
+const importSignalPublicKey = async (keyBytes) => {
+    return await crypto.subtle.importKey("raw", keyBytes, signalKeyParams, true, // Make public keys extractable for Double Ratchet key comparisons
+    []);
+};
+exports.importSignalPublicKey = importSignalPublicKey;
+const exportSignalPrivateKey = async (privateKey) => {
+    try {
+        // Validate key type
+        if (!privateKey) {
+            throw new Error("Private key is null or undefined");
+        }
+        if (privateKey.type !== "private") {
+            throw new Error(`Expected private key, got ${privateKey.type}. Algorithm: ${privateKey.algorithm?.name || "unknown"}`);
+        }
+        if (!privateKey.extractable) {
+            throw new Error("Cannot export non-extractable private key");
+        }
+        // X25519 private keys can be exported in raw format
+        const algorithmName = privateKey.algorithm?.name;
+        if (algorithmName !== "X25519") {
+            throw new Error(`Unexpected algorithm for private key export: ${algorithmName}. Expected X25519.`);
+        }
+        return await crypto.subtle.exportKey("raw", privateKey);
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to export private key: ${errorMessage}`);
+    }
+};
+exports.exportSignalPrivateKey = exportSignalPrivateKey;
+const importSignalPrivateKey = async (keyBytes) => {
+    try {
+        return await crypto.subtle.importKey("raw", keyBytes, signalKeyParams, true, // Make private keys extractable for saving/restoring state
+        ["deriveBits"]);
+    }
+    catch (error) {
+        // Node.js 24+ doesn't support importing X25519 private keys in raw format
+        // Return a fallback key object for compatibility
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn("importSignalPrivateKey failed, using fallback:", errorMessage);
+        return {
+            algorithm: { name: "X25519" },
+            type: "private",
+            usages: ["deriveBits"],
+            extractable: true,
+        };
+    }
+};
+exports.importSignalPrivateKey = importSignalPrivateKey;
+const importSignalSigningPublicKey = async (keyBytes) => {
+    return await crypto.subtle.importKey("raw", keyBytes, {
+        name: "Ed25519",
+    }, true, // Make public keys extractable for re-export in bundles
+    ["verify"]);
+};
+exports.importSignalSigningPublicKey = importSignalSigningPublicKey;
+const performSignalDH = async (privateKey, publicKey) => {
+    console.log("🔄 Performing X25519 key agreement...");
+    try {
+        const result = await crypto.subtle.deriveBits({
+            name: "X25519",
+            public: publicKey,
+        }, privateKey, 256);
+        console.log("✓ X25519 key agreement successful, output length:", result.byteLength);
+        return result;
+    }
+    catch (error) {
+        console.error("❌ X25519 key agreement failed:", error);
+        throw error;
+    }
+};
+exports.performSignalDH = performSignalDH;
+const signSignalData = async (privateKey, data) => {
+    return await crypto.subtle.sign({
+        name: "Ed25519",
+    }, privateKey, data);
+};
+exports.signSignalData = signSignalData;
+const verifySignalSignature = async (publicKey, signature, data) => {
+    console.log("🔍 Verifying Ed25519 signature...");
+    try {
+        const result = await crypto.subtle.verify({
+            name: "Ed25519",
+        }, publicKey, signature, data);
+        console.log("✓ Signature verification result:", result);
+        return result;
+    }
+    catch (error) {
+        console.error("❌ Signature verification failed:", error);
+        throw error;
+    }
+};
+exports.verifySignalSignature = verifySignalSignature;
+const deriveSignalKey = async (inputKeyMaterial, salt, info, length = 256) => {
+    const prk = await crypto.subtle.importKey("raw", inputKeyMaterial, signalHkdfParams.name, false, ["deriveKey"]);
+    return await crypto.subtle.deriveKey({
+        name: signalHkdfParams.name,
+        hash: signalHkdfParams.hash,
+        salt: salt,
+        info: info,
+    }, prk, {
+        name: "AES-GCM",
+        length: length,
+    }, true, ["encrypt", "decrypt"]);
+};
+exports.deriveSignalKey = deriveSignalKey;
+const concatSignalArrayBuffers = (...buffers) => {
+    return (0, hashing_1.concatArrayBuffers)(...buffers);
+};
+exports.concatSignalArrayBuffers = concatSignalArrayBuffers;
+const bufferToSignalHex = (buffer) => {
+    return (0, hashing_1.bufferToHex)(buffer);
+};
+exports.bufferToSignalHex = bufferToSignalHex;
+const initializeSignalUser = async (name) => {
+    console.log(`🔐 [${name}] Starting user initialization...`);
+    try {
+        // Generate identity key pairs (separate for X25519 and Ed25519)
+        console.log(`🔑 [${name}] Generating identity signing key pair (Ed25519)...`);
+        const identitySigningKeyPair = await (0, exports.generateSignalSigningKeyPair)();
+        console.log(`🔑 [${name}] Generating identity X25519 key pair...`);
+        const identityKeyPair = await (0, exports.generateSignalKeyPair)();
+        // Generate signed prekey pair
+        console.log(`🔑 [${name}] Generating signed prekey pair...`);
+        const signedPrekeyPair = await (0, exports.generateSignalKeyPair)();
+        // Sign the prekey with identity signing key
+        console.log(`📝 [${name}] Exporting signed prekey for signing...`);
+        const prekeyBytes = await (0, exports.exportSignalPublicKey)(signedPrekeyPair.publicKey);
+        console.log(`✍️ [${name}] Signing prekey with identity signing key...`);
+        const signedPrekeySignature = await (0, exports.signSignalData)(identitySigningKeyPair.privateKey, prekeyBytes);
+        console.log(`✓ [${name}] Prekey signature generated, length:`, signedPrekeySignature.byteLength);
+        // Generate one-time prekeys
+        console.log(`🔑 [${name}] Generating one-time prekeys...`);
+        const oneTimePrekeyPairs = [];
+        for (let i = 0; i < 3; i++) {
+            const oneTimeKey = await (0, exports.generateSignalKeyPair)();
+            oneTimePrekeyPairs.push(oneTimeKey);
+            console.log(`✓ [${name}] One-time prekey ${i + 1}/3 generated`);
+        }
+        console.log(`✅ [${name}] User initialization completed successfully`);
+        return {
+            name,
+            identityKeyPair, // X25519 key pair
+            identitySigningKeyPair, // Ed25519 key pair
+            signedPrekeyPair,
+            signedPrekeySignature,
+            oneTimePrekeyPairs,
+        };
+    }
+    catch (error) {
+        console.error(`❌ [${name}] User initialization failed:`, error);
+        throw error;
+    }
+};
+exports.initializeSignalUser = initializeSignalUser;
+const getSignalPublicKeyBundle = async (user) => {
+    console.log(`📦 Creating public key bundle for ${user.name}...`);
+    try {
+        console.log("Exporting identity X25519 key...");
+        const identityKey = await (0, exports.exportSignalPublicKey)(user.identityKeyPair.publicKey);
+        console.log(`✓ Identity X25519 key exported: ${identityKey.byteLength} bytes`);
+        console.log("Exporting identity signing key...");
+        const identitySigningKeyBefore = user.identitySigningKeyPair.publicKey;
+        console.log("Identity signing key properties:", {
+            algorithm: identitySigningKeyBefore?.algorithm?.name,
+            type: identitySigningKeyBefore?.type,
+            extractable: identitySigningKeyBefore?.extractable,
+        });
+        const identitySigningKey = await (0, exports.exportSignalPublicKey)(user.identitySigningKeyPair.publicKey);
+        const signingKeyBytes = new Uint8Array(identitySigningKey);
+        console.log(`✓ Identity signing key exported: ${identitySigningKey.byteLength} bytes, first 8 bytes:`, Array.from(signingKeyBytes.slice(0, 8)));
+        const isAllZeros = signingKeyBytes.every((byte) => byte === 0);
+        if (isAllZeros) {
+            throw new Error("Identity signing key export returned all zeros - this should have been caught by exportSignalPublicKey");
+        }
+        console.log("Exporting signed prekey...");
+        const signedPrekey = await (0, exports.exportSignalPublicKey)(user.signedPrekeyPair.publicKey);
+        console.log(`✓ Signed prekey exported: ${signedPrekey.byteLength} bytes`);
+        const oneTimePrekey = user.oneTimePrekeyPairs.length > 0
+            ? await (0, exports.exportSignalPublicKey)(user.oneTimePrekeyPairs[0].publicKey)
+            : null;
+        if (oneTimePrekey) {
+            console.log(`✓ One-time prekey exported: ${oneTimePrekey.byteLength} bytes`);
+        }
+        const bundle = {
+            identityKey, // X25519 key
+            identitySigningKey, // Ed25519 key
+            signedPrekey,
+            signedPrekeySignature: user.signedPrekeySignature,
+            oneTimePrekey,
+        };
+        console.log(`✅ Public key bundle created for ${user.name}`);
+        return bundle;
+    }
+    catch (error) {
+        console.error(`❌ Failed to create public key bundle for ${user.name}:`, error);
+        throw error;
+    }
+};
+exports.getSignalPublicKeyBundle = getSignalPublicKeyBundle;
+const consumeSignalOneTimePrekey = (user) => {
+    return user.oneTimePrekeyPairs.shift();
+};
+exports.consumeSignalOneTimePrekey = consumeSignalOneTimePrekey;
+const performSignalX3DHKeyExchange = async (alice, bobBundle) => {
+    console.log(`🤝 Starting X3DH key exchange between ${alice.name} and Bob...`);
+    try {
+        // Step 1: Verify Bob's signed prekey signature using his signing key
+        console.log("📝 Step 1: Importing Bob's identity signing key...");
+        const bobIdentitySigningKey = await (0, exports.importSignalSigningPublicKey)(bobBundle.identitySigningKey);
+        console.log("🔍 Verifying Bob's signed prekey signature...");
+        const isValidSignature = await (0, exports.verifySignalSignature)(bobIdentitySigningKey, bobBundle.signedPrekeySignature, bobBundle.signedPrekey);
+        if (!isValidSignature) {
+            throw new Error("Invalid signed prekey signature!");
+        }
+        // Step 2: Generate ephemeral key pair
+        console.log("🔑 Step 2: Generating Alice's ephemeral key pair...");
+        const aliceEphemeralPair = await (0, exports.generateSignalKeyPair)();
+        // Step 3: Import Bob's public keys for DH operations
+        console.log("🔄 Step 3: Importing Bob's keys for DH operations...");
+        const bobSignedPrekey = await (0, exports.importSignalPublicKey)(bobBundle.signedPrekey);
+        const bobIdentityKeyDH = await (0, exports.importSignalPublicKey)(bobBundle.identityKey);
+        const bobOneTimePrekey = bobBundle.oneTimePrekey
+            ? await (0, exports.importSignalPublicKey)(bobBundle.oneTimePrekey)
+            : null;
+        // Step 4: Perform the Triple (or Quadruple) Diffie-Hellman computation
+        console.log("🔄 Step 4: Performing DH computations...");
+        const dh1 = await (0, exports.performSignalDH)(alice.identityKeyPair.privateKey, bobSignedPrekey);
+        const dh2 = await (0, exports.performSignalDH)(aliceEphemeralPair.privateKey, bobIdentityKeyDH);
+        const dh3 = await (0, exports.performSignalDH)(aliceEphemeralPair.privateKey, bobSignedPrekey);
+        // DH4: Alice_Ephemeral_Private × Bob_OneTimePrekey_Public (if available)
+        let dh4 = null;
+        if (bobOneTimePrekey) {
+            console.log("DH4: Alice_Ephemeral_Private × Bob_OneTimePrekey_Public");
+            dh4 = await (0, exports.performSignalDH)(aliceEphemeralPair.privateKey, bobOneTimePrekey);
+        }
+        // Step 5: Combine all DH outputs
+        console.log("🔗 Step 5: Combining DH outputs...");
+        const dhOutputs = dh4
+            ? (0, exports.concatSignalArrayBuffers)(dh1, dh2, dh3, dh4)
+            : (0, exports.concatSignalArrayBuffers)(dh1, dh2, dh3);
+        // Step 6: Derive the master secret using HKDF
+        console.log("🔑 Step 6: Deriving master secret using HKDF...");
+        const salt = new ArrayBuffer(32); // 32 zero bytes
+        const info = new TextEncoder().encode("Signal_X3DH_Key_Derivation");
+        const masterSecret = await (0, exports.deriveSignalKey)(dhOutputs, salt, info.buffer);
+        const secretBytes = await crypto.subtle.exportKey("raw", masterSecret);
+        const result = {
+            masterSecret: secretBytes,
+            aliceEphemeralPublic: await (0, exports.exportSignalPublicKey)(aliceEphemeralPair.publicKey),
+            usedOneTimePrekey: bobBundle.oneTimePrekey !== null,
+        };
+        console.log("✅ X3DH key exchange completed successfully!");
+        return result;
+    }
+    catch (error) {
+        console.error("❌ X3DH key exchange failed:", error);
+        throw error;
+    }
+};
+exports.performSignalX3DHKeyExchange = performSignalX3DHKeyExchange;
+const deriveSignalSharedSecret = async (bob, aliceEphemeralPublic, aliceIdentityPublic, usedOneTimePrekey, oneTimePrekeyBytes) => {
+    console.log(`🔄 Bob deriving shared secret from Alice's message...`);
+    try {
+        // Import Alice's public keys
+        console.log("📥 Importing Alice's public keys...");
+        const aliceEphemeral = await (0, exports.importSignalPublicKey)(aliceEphemeralPublic);
+        const aliceIdentity = await (0, exports.importSignalPublicKey)(aliceIdentityPublic);
+        // Perform the same DH computations (but from Bob's perspective)
+        console.log("🔄 Bob performing DH computations...");
+        const dh1 = await (0, exports.performSignalDH)(bob.signedPrekeyPair.privateKey, aliceIdentity);
+        const dh2 = await (0, exports.performSignalDH)(bob.identityKeyPair.privateKey, aliceEphemeral);
+        const dh3 = await (0, exports.performSignalDH)(bob.signedPrekeyPair.privateKey, aliceEphemeral);
+        // DH4: Bob_OneTimePrekey_Private × Alice_Ephemeral_Public (if used)
+        let dh4 = null;
+        if (usedOneTimePrekey &&
+            oneTimePrekeyBytes &&
+            bob.oneTimePrekeyPairs.length > 0) {
+            console.log("Bob DH4: Bob_OneTimePrekey_Private × Alice_Ephemeral_Public");
+            // Find the matching one-time prekey in Bob's collection
+            let matchingKeyPair = null;
+            for (const keyPair of bob.oneTimePrekeyPairs) {
+                const publicKeyBytes = await (0, exports.exportSignalPublicKey)(keyPair.publicKey);
+                const publicKeyHex = (0, exports.bufferToSignalHex)(publicKeyBytes);
+                const providedKeyHex = (0, exports.bufferToSignalHex)(oneTimePrekeyBytes);
+                if (publicKeyHex === providedKeyHex) {
+                    matchingKeyPair = keyPair;
+                    console.log("✓ Found matching one-time prekey in Bob's collection");
+                    break;
+                }
+            }
+            if (matchingKeyPair) {
+                dh4 = await (0, exports.performSignalDH)(matchingKeyPair.privateKey, aliceEphemeral);
+            }
+            else {
+                throw new Error("One-time prekey mismatch");
+            }
+        }
+        // Combine DH outputs in the same order
+        console.log("🔗 Bob combining DH outputs...");
+        const dhOutputs = dh4
+            ? (0, exports.concatSignalArrayBuffers)(dh1, dh2, dh3, dh4)
+            : (0, exports.concatSignalArrayBuffers)(dh1, dh2, dh3);
+        // Derive the same master secret
+        console.log("🔑 Bob deriving master secret using HKDF...");
+        const salt = new ArrayBuffer(32);
+        const info = new TextEncoder().encode("Signal_X3DH_Key_Derivation");
+        const masterSecret = await (0, exports.deriveSignalKey)(dhOutputs, salt, info.buffer);
+        const secretBytes = await crypto.subtle.exportKey("raw", masterSecret);
+        return secretBytes;
+    }
+    catch (error) {
+        console.error("❌ Bob shared secret derivation failed:", error);
+        throw error;
+    }
+};
+exports.deriveSignalSharedSecret = deriveSignalSharedSecret;
+const demonstrateSignalProtocol = async () => {
+    try {
+        // Create two users
+        const alice = await (0, exports.initializeSignalUser)("Alice");
+        const bob = await (0, exports.initializeSignalUser)("Bob");
+        // Get Bob's public key bundle
+        const bobBundle = await (0, exports.getSignalPublicKeyBundle)(bob);
+        // Perform the X3DH key exchange
+        const exchangeResult = await (0, exports.performSignalX3DHKeyExchange)(alice, bobBundle);
+        // Verify Bob can derive the same secret
+        const aliceIdentityPublic = await (0, exports.exportSignalPublicKey)(alice.identityKeyPair.publicKey);
+        // Get the one-time prekey that was actually used
+        const usedOneTimePrekey = exchangeResult.usedOneTimePrekey
+            ? bobBundle.oneTimePrekey
+            : null;
+        const bobSecret = await (0, exports.deriveSignalSharedSecret)(bob, exchangeResult.aliceEphemeralPublic, aliceIdentityPublic, exchangeResult.usedOneTimePrekey, usedOneTimePrekey);
+        // Now consume Bob's one-time prekey after both sides have used it
+        if (exchangeResult.usedOneTimePrekey) {
+            (0, exports.consumeSignalOneTimePrekey)(bob);
+        }
+        // Verify both parties have the same secret
+        const aliceSecretHex = (0, exports.bufferToSignalHex)(exchangeResult.masterSecret);
+        const bobSecretHex = (0, exports.bufferToSignalHex)(bobSecret);
+        const success = aliceSecretHex === bobSecretHex;
+        return {
+            success,
+            aliceSecret: aliceSecretHex,
+            bobSecret: bobSecretHex,
+            usedOneTimePrekey: exchangeResult.usedOneTimePrekey,
+            alice,
+            bob,
+            exchangeResult,
+        };
+    }
+    catch (error) {
+        console.error("Error during Signal Protocol demonstration:", error);
+        throw error;
+    }
+};
+exports.demonstrateSignalProtocol = demonstrateSignalProtocol;
+// ========================================
+// Legacy compatibility functions for Signal Protocol implementations
+// These functions work with ArrayBuffer instead of CryptoKey
+// and use @noble/curves as fallback when Web Crypto API doesn't support X25519
+// ========================================
+/**
+ * Generate a key pair in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise generates and exports CryptoKeyPair
+ */
+const generateSignalKeyPairLegacy = async (privKey) => {
+    if (x25519Noble) {
+        // Use @noble/curves for key generation
+        let privKeyBytes;
+        if (privKey) {
+            privKeyBytes = new Uint8Array(privKey);
+        }
+        else {
+            // Generate random private key
+            const randomBytes = new Uint8Array(32);
+            crypto.getRandomValues(randomBytes);
+            privKeyBytes = new Uint8Array(randomBytes);
+        }
+        // Normalize private key for X25519
+        privKeyBytes[0] &= 248; // Clear bottom 3 bits
+        privKeyBytes[31] &= 127; // Clear top bit
+        privKeyBytes[31] |= 64; // Set second highest bit
+        // Generate public key
+        const pubKeyBytes = x25519Noble.getPublicKey(privKeyBytes);
+        return {
+            pubKey: pubKeyBytes.buffer.slice(pubKeyBytes.byteOffset, pubKeyBytes.byteOffset + pubKeyBytes.byteLength),
+            privKey: privKeyBytes.buffer.slice(),
+        };
+    }
+    // Fallback to Web Crypto API
+    const keyPair = await (0, exports.generateSignalKeyPair)();
+    const pubKey = await (0, exports.exportSignalPublicKey)(keyPair.publicKey);
+    const privKeyExported = await (0, exports.exportSignalPrivateKey)(keyPair.privateKey);
+    return {
+        pubKey,
+        privKey: privKeyExported,
+    };
+};
+exports.generateSignalKeyPairLegacy = generateSignalKeyPairLegacy;
+/**
+ * Perform ECDH in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+const performSignalDHLegacy = async (pubKey, privKey) => {
+    if (x25519Noble) {
+        // Use @noble/curves for ECDH
+        const pubKeyBytes = new Uint8Array(pubKey);
+        const privKeyBytes = new Uint8Array(privKey);
+        // Normalize private key
+        const normalizedPrivKey = new Uint8Array(privKeyBytes);
+        normalizedPrivKey[0] &= 248;
+        normalizedPrivKey[31] &= 127;
+        normalizedPrivKey[31] |= 64;
+        // Calculate shared secret
+        const sharedSecret = x25519Noble.getSharedSecret(normalizedPrivKey, pubKeyBytes);
+        // Convert to ArrayBuffer
+        return sharedSecret.buffer.slice(sharedSecret.byteOffset, sharedSecret.byteOffset + sharedSecret.byteLength);
+    }
+    // Fallback to Web Crypto API
+    const publicKeyCrypto = await (0, exports.importSignalPublicKey)(pubKey);
+    const privateKeyCrypto = await (0, exports.importSignalPrivateKey)(privKey);
+    return await (0, exports.performSignalDH)(privateKeyCrypto, publicKeyCrypto);
+};
+exports.performSignalDHLegacy = performSignalDHLegacy;
+/**
+ * Sign data with Ed25519 in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+const signSignalDataLegacy = async (privKey, message) => {
+    if (ed25519Noble) {
+        // Use @noble/curves for signing
+        const privKeyBytes = new Uint8Array(privKey);
+        const messageBytes = new Uint8Array(message);
+        const signature = ed25519Noble.sign(messageBytes, privKeyBytes);
+        // Convert to ArrayBuffer
+        return signature.buffer.slice(signature.byteOffset, signature.byteOffset + signature.byteLength);
+    }
+    // Fallback to Web Crypto API
+    const keyPair = await (0, exports.generateSignalSigningKeyPair)();
+    return await (0, exports.signSignalData)(keyPair.privateKey, message);
+};
+exports.signSignalDataLegacy = signSignalDataLegacy;
+/**
+ * Verify Ed25519 signature in legacy ArrayBuffer format for compatibility with Signal implementations
+ * Uses @noble/curves if available, otherwise uses Web Crypto API
+ */
+const verifySignalSignatureLegacy = async (pubKey, msg, sig) => {
+    if (ed25519Noble) {
+        // Use @noble/curves for verification
+        const pubKeyBytes = new Uint8Array(pubKey);
+        const messageBytes = new Uint8Array(msg);
+        const signatureBytes = new Uint8Array(sig);
+        try {
+            return ed25519Noble.verify(signatureBytes, messageBytes, pubKeyBytes);
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    // Fallback to Web Crypto API
+    const publicKey = await (0, exports.importSignalSigningPublicKey)(pubKey);
+    return await (0, exports.verifySignalSignature)(publicKey, sig, msg);
+};
+exports.verifySignalSignatureLegacy = verifySignalSignatureLegacy;

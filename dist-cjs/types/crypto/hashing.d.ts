@@ -1,0 +1,9 @@
+export declare const randomString: (additionalSalt?: string) => string;
+export declare const sha256Hash: (input: any) => Promise<string>;
+export declare const sha512Hash: (input: any) => Promise<string>;
+export declare const sha3_512Hash: (input: any) => Promise<string>;
+export declare const bufferToHex: (buffer: ArrayBuffer) => string;
+export declare const hexToBuffer: (hex: string) => ArrayBuffer;
+export declare const concatArrayBuffers: (...buffers: ArrayBuffer[]) => ArrayBuffer;
+export declare const base64ToArrayBuffer: (base64: string) => ArrayBuffer;
+export declare const arrayBufferToBase64: (buffer: ArrayBuffer) => string;
