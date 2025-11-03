@@ -67,3 +67,6 @@ export type {
   CryptoIdentities,
   IdentityGenerationResult,
 } from "./managers/CryptoIdentityManager";
+
+// Export storage
+export { ShogunStorage } from "./storage/storage";
