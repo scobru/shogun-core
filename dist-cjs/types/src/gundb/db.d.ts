@@ -90,9 +90,22 @@ declare class DataBase {
         user?: any;
     } | null;
     /**
-     * Login with SEA pair
+     * Get current user's public key
+     * @returns {string | null} User's public key or null if not logged in
+     */
+    getUserPub(): string | null;
+    /**
+     * Login with SEA pair directly
+     * @param username - Username for identification
+     * @param pair - GunDB SEA pair for authentication
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Authenticates user using a GunDB pair directly without password
      */
     loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult>;
+    /**
+     * Login with SEA pair
+     */
+    loginWithPairLegacy(username: string, pair: ISEAPair): Promise<AuthResult>;
     /**
      * Get RxJS module
      */

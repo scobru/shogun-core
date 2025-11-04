@@ -56,7 +56,7 @@ const CONFIG = {
     PASSWORD: {
         MIN_LENGTH: 8,
     },
-    TIMEOUT: 30000, // 30 seconds
+    TIMEOUT: 11000, // 30 seconds
 };
 class DataBase {
     constructor(gun, appScope = "shogun", core, sea) {
@@ -251,8 +251,17 @@ class DataBase {
                 cat.ing = false;
                 cat.auth = null;
                 cat.act = null;
+                // Clear any pending auth operations
+                if (cat.auth) {
+                    cat.auth = null;
+                }
             }
-            user.leave();
+            try {
+                user.leave();
+            }
+            catch (leaveError) {
+                // Ignore leave errors
+            }
             this.user = null;
         }
         catch (e) {
@@ -307,51 +316,161 @@ class DataBase {
         if (!validation.valid) {
             return { success: false, error: validation.error };
         }
+        console.log("[DB] Signup validation:", validation);
         this.resetAuthState();
         const normalizedUsername = username.trim().toLowerCase();
-        return new Promise((resolve) => {
-            const timeoutId = setTimeout(() => {
-                this.resetAuthState();
-                resolve({ success: false, error: "Signup timeout" });
-            }, CONFIG.TIMEOUT);
-            const callback = (ack) => {
-                clearTimeout(timeoutId);
-                if (ack.err) {
-                    this.resetAuthState();
-                    resolve({ success: false, error: ack.err });
-                    return;
-                }
-                const user = this.gun.user();
-                const userPub = user?.is?.pub;
-                if (!userPub) {
-                    this.resetAuthState();
-                    resolve({ success: false, error: "No userPub available" });
-                    return;
-                }
-                this.user = user;
-                const sea = user?._?.sea;
-                resolve({
-                    success: true,
-                    userPub,
-                    username: normalizedUsername,
-                    isNewUser: true,
-                    sea: sea
-                        ? {
-                            pub: sea.pub,
-                            priv: sea.priv,
-                            epub: sea.epub,
-                            epriv: sea.epriv,
+        const user = this.gun.user();
+        // If the caller provides a key pair, try direct auth first (pair-based signup)
+        // Gun's API doesn't natively allow us to register with a pair directly,
+        // but we can try creating and then authenticating immediately with the pair,
+        // to allow for direct access for known keys.
+        if (pair) {
+            // Try to directly authenticate with the pair FIRST
+            // If this user already exists and the pair is valid, just log in
+            try {
+                const loginResult = await new Promise((resolve) => {
+                    let callbackInvoked = false;
+                    const timeoutId = setTimeout(() => {
+                        if (!callbackInvoked) {
+                            callbackInvoked = true;
+                            resolve({ success: false, error: "Pair auth timeout" });
                         }
-                        : undefined,
+                    }, CONFIG.TIMEOUT);
+                    user.auth(pair, (ack) => {
+                        if (callbackInvoked) {
+                            return;
+                        }
+                        callbackInvoked = true;
+                        clearTimeout(timeoutId);
+                        if (ack.err) {
+                            // Could not login with pair, try to create user with username/password
+                            resolve({ success: false, error: ack.err });
+                            return;
+                        }
+                        const userPub = user?.is?.pub;
+                        if (!userPub) {
+                            this.resetAuthState();
+                            resolve({ success: false, error: "No userPub available" });
+                            return;
+                        }
+                        this.user = user;
+                        const alias = user?.is?.alias;
+                        const userPair = user?._?.sea;
+                        this.saveCredentials({
+                            alias: alias || normalizedUsername,
+                            pair: pair ?? userPair,
+                            userPub: userPub,
+                        });
+                        resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
+                    });
                 });
-            };
-            if (pair) {
-                this.gun.user().auth(pair, callback);
+                // If we got a successful result, return it
+                if (loginResult && loginResult.success) {
+                    return loginResult;
+                }
+                // If pair auth failed, continue to create user with username/password
             }
-            else {
-                this.gun.user().create(normalizedUsername, password, callback);
+            catch (e) {
+                // fallback to create user
+                // (continue below)
             }
+        }
+        console.log("[DB] Falling back to classic username/password account creation");
+        // Fallback to classic username/password account creation
+        const result = await new Promise((resolve) => {
+            let callbackInvoked = false;
+            const timeoutId = setTimeout(() => {
+                if (!callbackInvoked) {
+                    callbackInvoked = true;
+                    console.log("[DB] Signup timeout");
+                    this.resetAuthState();
+                    resolve({ success: false, error: "Signup timeout" });
+                }
+            }, CONFIG.TIMEOUT);
+            user.create(normalizedUsername, password, (createAck) => {
+                if (callbackInvoked) {
+                    return;
+                }
+                console.log("[DB] Signup callback received:", JSON.stringify(createAck));
+                // Check for error: ack.err or ack.ok !== 0 means error
+                if (createAck.err ||
+                    (createAck.ok !== undefined && createAck.ok !== 0)) {
+                    callbackInvoked = true;
+                    clearTimeout(timeoutId);
+                    this.resetAuthState();
+                    resolve({ success: false, error: createAck.err || "Signup failed" });
+                    return;
+                }
+                // After create, we need to authenticate to get the user fully logged in
+                // Use ack.pub if available for the userPub
+                const userPub = createAck.pub;
+                if (!userPub) {
+                    callbackInvoked = true;
+                    clearTimeout(timeoutId);
+                    this.resetAuthState();
+                    resolve({
+                        success: false,
+                        error: "No userPub available from signup",
+                    });
+                    return;
+                }
+                // Now authenticate with the username/password to complete the login
+                user.auth(normalizedUsername, password, (authAck) => {
+                    if (callbackInvoked) {
+                        return;
+                    }
+                    callbackInvoked = true;
+                    clearTimeout(timeoutId);
+                    if (authAck.err) {
+                        this.resetAuthState();
+                        resolve({
+                            success: false,
+                            error: authAck.err || "Authentication after signup failed",
+                        });
+                        return;
+                    }
+                    // Verify user is authenticated
+                    const authenticatedUserPub = user?.is?.pub;
+                    if (!authenticatedUserPub) {
+                        this.resetAuthState();
+                        resolve({
+                            success: false,
+                            error: "User not authenticated after signup",
+                        });
+                        return;
+                    }
+                    this.user = user;
+                    const alias = user?.is?.alias;
+                    const userPair = user?._?.sea;
+                    try {
+                        this.saveCredentials({
+                            alias: alias || normalizedUsername,
+                            pair: pair ?? userPair,
+                            userPub: authenticatedUserPub,
+                        });
+                    }
+                    catch (saveError) {
+                        // Ignore save errors
+                    }
+                    const sea = user?._?.sea;
+                    resolve({
+                        success: true,
+                        userPub: authenticatedUserPub,
+                        username: normalizedUsername,
+                        isNewUser: true,
+                        sea: sea
+                            ? {
+                                pub: sea.pub,
+                                priv: sea.priv,
+                                epub: sea.epub,
+                                epriv: sea.epriv,
+                            }
+                            : undefined,
+                    });
+                });
+            });
         });
+        return result;
     }
     /**
      * Login with username and password
@@ -360,45 +479,72 @@ class DataBase {
     async login(username, password, pair) {
         this.resetAuthState();
         const normalizedUsername = username.trim().toLowerCase();
+        const user = this.gun.user();
+        console.log("[DB] Login with username:", normalizedUsername);
         return new Promise((resolve) => {
             const timeoutId = setTimeout(() => {
                 this.resetAuthState();
                 resolve({ success: false, error: "Login timeout" });
             }, CONFIG.TIMEOUT);
-            const callback = (ack) => {
-                clearTimeout(timeoutId);
-                if (ack.err) {
-                    this.resetAuthState();
-                    resolve({ success: false, error: ack.err });
-                    return;
-                }
-                const user = this.gun.user();
-                const userPub = user?.is?.pub;
-                if (!userPub) {
-                    this.resetAuthState();
-                    resolve({ success: false, error: "No userPub available" });
-                    return;
-                }
-                this.user = user;
-                const alias = user?.is?.alias;
-                const userPair = user?._?.sea;
-                try {
-                    this.saveCredentials({
-                        alias: alias || normalizedUsername,
-                        pair: pair ?? userPair,
-                        userPub: userPub,
-                    });
-                }
-                catch (saveError) {
-                    // Ignore save errors
-                }
-                resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
-            };
             if (pair) {
-                this.gun.user().auth(pair, callback);
+                user.auth(pair, (ack) => {
+                    clearTimeout(timeoutId);
+                    if (ack.err) {
+                        this.resetAuthState();
+                        resolve({ success: false, error: ack.err });
+                        return;
+                    }
+                    const userPub = user?.is?.pub;
+                    if (!userPub) {
+                        this.resetAuthState();
+                        resolve({ success: false, error: "No userPub available" });
+                        return;
+                    }
+                    this.user = user;
+                    const alias = user?.is?.alias;
+                    const userPair = user?._?.sea;
+                    try {
+                        this.saveCredentials({
+                            alias: alias || normalizedUsername,
+                            pair: pair ?? userPair,
+                            userPub: userPub,
+                        });
+                    }
+                    catch (saveError) {
+                        // Ignore save errors
+                    }
+                    resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
+                });
             }
             else {
-                this.gun.user().auth(normalizedUsername, password, callback);
+                user.auth(normalizedUsername, password, (ack) => {
+                    clearTimeout(timeoutId);
+                    if (ack.err) {
+                        this.resetAuthState();
+                        resolve({ success: false, error: ack.err });
+                        return;
+                    }
+                    const userPub = user?.is?.pub;
+                    if (!userPub) {
+                        this.resetAuthState();
+                        resolve({ success: false, error: "No userPub available" });
+                        return;
+                    }
+                    this.user = user;
+                    const alias = user?.is?.alias;
+                    const userPair = user?._?.sea;
+                    try {
+                        this.saveCredentials({
+                            alias: alias || normalizedUsername,
+                            pair: pair ?? userPair,
+                            userPub: userPub,
+                        });
+                    }
+                    catch (saveError) {
+                        // Ignore save errors
+                    }
+                    resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
+                });
             }
         });
     }
@@ -421,9 +567,77 @@ class DataBase {
         }
     }
     /**
-     * Login with SEA pair
+     * Get current user's public key
+     * @returns {string | null} User's public key or null if not logged in
+     */
+    getUserPub() {
+        try {
+            const user = this.gun.user();
+            return user?.is?.pub || null;
+        }
+        catch (error) {
+            return null;
+        }
+    }
+    /**
+     * Login with SEA pair directly
+     * @param username - Username for identification
+     * @param pair - GunDB SEA pair for authentication
+     * @returns {Promise<AuthResult>} Promise with authentication result
+     * @description Authenticates user using a GunDB pair directly without password
      */
     async loginWithPair(username, pair) {
+        // Validate pair structure
+        if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+            return {
+                success: false,
+                error: "Invalid pair structure - missing required keys",
+            };
+        }
+        this.resetAuthState();
+        const normalizedUsername = username.trim().toLowerCase();
+        const user = this.gun.user();
+        console.log("[DB] Login with pair for username:", normalizedUsername);
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                this.resetAuthState();
+                resolve({ success: false, error: "Login with pair timeout" });
+            }, CONFIG.TIMEOUT);
+            user.auth(pair, (ack) => {
+                clearTimeout(timeoutId);
+                if (ack.err) {
+                    this.resetAuthState();
+                    resolve({ success: false, error: ack.err });
+                    return;
+                }
+                const userPub = user?.is?.pub;
+                if (!userPub) {
+                    this.resetAuthState();
+                    resolve({ success: false, error: "No userPub available" });
+                    return;
+                }
+                this.user = user;
+                const alias = user?.is?.alias;
+                const userPair = user?._?.sea;
+                try {
+                    this.saveCredentials({
+                        alias: alias || normalizedUsername,
+                        pair: pair ?? userPair,
+                        userPub: userPub,
+                    });
+                }
+                catch (saveError) {
+                    // Ignore save errors
+                }
+                resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
+            });
+        });
+    }
+    /**
+     * Login with SEA pair
+     */
+    // Legacy method - kept for backward compatibility
+    async loginWithPairLegacy(username, pair) {
         return this.login(username, "", pair);
     }
     /**
