@@ -43,7 +43,7 @@ class DataBase {
     gun: IGunInstance,
     appScope: string = "shogun",
     core?: any,
-    sea?: any
+    sea?: any,
   ) {
     console.log("[DB] Initializing DataBase");
 
@@ -227,7 +227,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
     if (!username || username.length < 1) {
       return {
@@ -333,7 +333,7 @@ class DataBase {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     const validation = this.validateSignupCredentials(username, password, pair);
     if (!validation.valid) {
@@ -390,7 +390,7 @@ class DataBase {
               userPub: userPub,
             });
             resolve(
-              this.buildLoginResult(alias || normalizedUsername, userPub)
+              this.buildLoginResult(alias || normalizedUsername, userPub),
             );
           });
         });
@@ -407,7 +407,7 @@ class DataBase {
     }
 
     console.log(
-      "[DB] Falling back to classic username/password account creation"
+      "[DB] Falling back to classic username/password account creation",
     );
     // Fallback to classic username/password account creation
     const result: SignUpResult = await new Promise<SignUpResult>((resolve) => {
@@ -428,7 +428,7 @@ class DataBase {
 
         console.log(
           "[DB] Signup callback received:",
-          JSON.stringify(createAck)
+          JSON.stringify(createAck),
         );
 
         // Check for error: ack.err or ack.ok !== 0 means error
@@ -529,7 +529,7 @@ class DataBase {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     this.resetAuthState();
     const normalizedUsername = username.trim().toLowerCase();
@@ -713,7 +713,7 @@ class DataBase {
   // Legacy method - kept for backward compatibility
   async loginWithPairLegacy(
     username: string,
-    pair: ISEAPair
+    pair: ISEAPair,
   ): Promise<AuthResult> {
     return this.login(username, "", pair);
   }
