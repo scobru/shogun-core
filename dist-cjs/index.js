@@ -14,7 +14,10 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShogunStorage = exports.CryptoIdentityManager = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
+exports.setBufferPolyfill = exports.ShogunStorage = exports.CryptoIdentityManager = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
+// Import polyfills FIRST before any other imports
+// This ensures Buffer and other Node.js polyfills are available
+require("./polyfills");
 const core_1 = require("./core");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return core_1.ShogunCore; } });
 const db_1 = require("./gundb/db");
@@ -48,3 +51,6 @@ Object.defineProperty(exports, "CryptoIdentityManager", { enumerable: true, get:
 // Export storage
 var storage_1 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_1.ShogunStorage; } });
+// Export polyfill utilities
+var polyfills_1 = require("./polyfills");
+Object.defineProperty(exports, "setBufferPolyfill", { enumerable: true, get: function () { return polyfills_1.setBufferPolyfill; } });

@@ -1,3 +1,7 @@
+// Import polyfills FIRST before any other imports
+// This ensures Buffer and other Node.js polyfills are available
+import "./polyfills";
+
 import { ShogunCore } from "./core";
 
 import {
@@ -70,3 +74,6 @@ export type {
 
 // Export storage
 export { ShogunStorage } from "./storage/storage";
+
+// Export polyfill utilities
+export { setBufferPolyfill } from "./polyfills";

@@ -1,3 +1,4 @@
+import "./polyfills";
 import { ShogunCore } from "./core";
 import { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions } from "./gundb/db";
 import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
@@ -16,3 +17,4 @@ export * from "./crypto";
 export { CryptoIdentityManager } from "./managers/CryptoIdentityManager";
 export type { CryptoIdentities, IdentityGenerationResult, } from "./managers/CryptoIdentityManager";
 export { ShogunStorage } from "./storage/storage";
+export { setBufferPolyfill } from "./polyfills";
