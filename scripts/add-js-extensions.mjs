@@ -14,11 +14,17 @@ const __dirname = dirname(__filename);
 const distPath = resolve(__dirname, "../dist/src");
 
 // Regex to match relative imports/exports that need .js extension
-// Matches: from "./path" or from '../path' or export * from "./path" or import("./path")
+// Matches:
+// - import ... from "./path" or import ... from '../path'
+// - export * from "./path" or export { ... } from "./path"
+// - import("./path") or require("./path")
+// - import "./path" (side-effect imports)
 const importExportRegex = /(?:from|import\()\s*['"](\.\.?\/[^'"]+?)(['"])/g;
+// Also match side-effect imports: import "./path"
+const sideEffectImportRegex = /^import\s+['"](\.\.?\/[^'"]+?)(['"])/gm;
 
 function resolveImportPath(importPath, currentFileDir) {
-  // Skip if it's already has an extension
+  // Skip if it already has an extension
   if (extname(importPath)) {
     return importPath;
   }
@@ -36,6 +42,8 @@ function resolveImportPath(importPath, currentFileDir) {
     if (existsSync(join(fullPath, "index.js"))) {
       return importPath + "/index.js";
     }
+    // If directory exists but no index.js, assume it should be /index.js
+    return importPath + "/index.js";
   }
 
   // Check if it's a file with .js extension
@@ -43,7 +51,14 @@ function resolveImportPath(importPath, currentFileDir) {
     return importPath + ".js";
   }
 
-  // If neither exists, assume it should be .js (default behavior)
+  // Check if the file exists without extension (shouldn't happen in compiled JS, but just in case)
+  if (existsSync(fullPath)) {
+    // File exists without extension, assume it's .js
+    return importPath + ".js";
+  }
+
+  // If file doesn't exist, assume it should be .js (default behavior for ESM)
+  // This handles cases where the file might not be compiled yet or is in a different location
   return importPath + ".js";
 }
 
@@ -60,14 +75,14 @@ function addJsExtensions(dir, baseDir = dir) {
       let originalContent = content;
       const fileDir = dirname(fullPath);
 
-      // Fix import/export statements
+      // Fix import/export statements (from ... and import(...))
       content = content.replace(importExportRegex, (match, path, quote) => {
-        // Skip if it's already has an extension or if it's a directory import (ends with /)
+        // Skip if it's already a directory import (ends with /)
         if (path.endsWith("/")) {
           return match;
         }
         // Skip if already has a file extension
-        if (path.match(/\.(js|json|ts|tsx|mjs|cjs)$/)) {
+        if (path.match(/\.(js|json|ts|tsx|mjs|cjs|css|scss)$/)) {
           return match;
         }
         // Skip node_modules imports (absolute imports)
@@ -76,7 +91,32 @@ function addJsExtensions(dir, baseDir = dir) {
         }
 
         const resolvedPath = resolveImportPath(path, fileDir);
-        return match.replace(path + quote, resolvedPath + quote);
+        if (resolvedPath !== path) {
+          return match.replace(path + quote, resolvedPath + quote);
+        }
+        return match;
+      });
+
+      // Fix side-effect imports (import "./path")
+      content = content.replace(sideEffectImportRegex, (match, path, quote) => {
+        // Skip if it's already a directory import (ends with /)
+        if (path.endsWith("/")) {
+          return match;
+        }
+        // Skip if already has a file extension
+        if (path.match(/\.(js|json|ts|tsx|mjs|cjs|css|scss)$/)) {
+          return match;
+        }
+        // Skip node_modules imports (absolute imports)
+        if (!path.startsWith("./") && !path.startsWith("../")) {
+          return match;
+        }
+
+        const resolvedPath = resolveImportPath(path, fileDir);
+        if (resolvedPath !== path) {
+          return match.replace(path + quote, resolvedPath + quote);
+        }
+        return match;
       });
 
       if (content !== originalContent) {
@@ -87,12 +127,16 @@ function addJsExtensions(dir, baseDir = dir) {
   }
 }
 
-if (statSync(distPath).isDirectory()) {
+// Check if dist/src exists
+if (existsSync(distPath) && statSync(distPath).isDirectory()) {
   console.log(
-    "[add-js-extensions] Adding .js extensions to relative imports..."
+    "[add-js-extensions] Adding .js extensions to relative imports in dist/src..."
   );
   addJsExtensions(distPath);
   console.log("[add-js-extensions] Done!");
 } else {
-  console.warn("[add-js-extensions] dist/src directory not found, skipping...");
+  console.warn(
+    `[add-js-extensions] dist/src directory not found at ${distPath}, skipping...`
+  );
+  process.exit(0); // Exit successfully even if directory doesn't exist
 }
