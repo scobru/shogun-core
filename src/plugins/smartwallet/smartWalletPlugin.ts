@@ -10,7 +10,6 @@ import {
   RecoveryRequest,
 } from "./types";
 import { ethers } from "ethers";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
 
 // Smart Wallet ABIs
 const SMART_WALLET_FACTORY_ABI = [

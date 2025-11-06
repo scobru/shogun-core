@@ -13,8 +13,5 @@ export type * from "./interfaces/plugin";
 export type { IGunUserInstance, IGunInstance, GunDataEventData, GunPeerEventData, DeriveOptions, TypedGunOperationResult, TypedAuthResult, };
 export { ShogunCore, RxJS, crypto, derive, GunErrors, DataBase };
 export { generateSeedPhrase, validateSeedPhrase, mnemonicToSeed, seedToPassword, deriveCredentialsFromMnemonic, formatSeedPhrase, normalizeSeedPhrase, } from "./utils/seedPhrase";
-export * from "./crypto";
-export { CryptoIdentityManager } from "./managers/CryptoIdentityManager";
-export type { CryptoIdentities, IdentityGenerationResult, } from "./managers/CryptoIdentityManager";
 export { ShogunStorage } from "./storage/storage";
 export { setBufferPolyfill } from "./polyfills";

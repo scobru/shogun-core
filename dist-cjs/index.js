@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setBufferPolyfill = exports.ShogunStorage = exports.CryptoIdentityManager = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
+exports.setBufferPolyfill = exports.ShogunStorage = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
 // Import polyfills FIRST before any other imports
 // This ensures Buffer and other Node.js polyfills are available
 require("./polyfills");
@@ -43,11 +43,6 @@ Object.defineProperty(exports, "seedToPassword", { enumerable: true, get: functi
 Object.defineProperty(exports, "deriveCredentialsFromMnemonic", { enumerable: true, get: function () { return seedPhrase_1.deriveCredentialsFromMnemonic; } });
 Object.defineProperty(exports, "formatSeedPhrase", { enumerable: true, get: function () { return seedPhrase_1.formatSeedPhrase; } });
 Object.defineProperty(exports, "normalizeSeedPhrase", { enumerable: true, get: function () { return seedPhrase_1.normalizeSeedPhrase; } });
-// Export crypto module
-__exportStar(require("./crypto"), exports);
-// Export managers
-var CryptoIdentityManager_1 = require("./managers/CryptoIdentityManager");
-Object.defineProperty(exports, "CryptoIdentityManager", { enumerable: true, get: function () { return CryptoIdentityManager_1.CryptoIdentityManager; } });
 // Export storage
 var storage_1 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_1.ShogunStorage; } });

@@ -62,16 +62,6 @@ export {
   normalizeSeedPhrase,
 } from "./utils/seedPhrase";
 
-// Export crypto module
-export * from "./crypto";
-
-// Export managers
-export { CryptoIdentityManager } from "./managers/CryptoIdentityManager";
-export type {
-  CryptoIdentities,
-  IdentityGenerationResult,
-} from "./managers/CryptoIdentityManager";
-
 // Export storage
 export { ShogunStorage } from "./storage/storage";
 
