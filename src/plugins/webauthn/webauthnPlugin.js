@@ -474,7 +474,7 @@ var WebauthnPlugin = /** @class */ (function (_super) {
      */
     WebauthnPlugin.prototype.login = function (username) {
         return __awaiter(this, void 0, void 0, function () {
-            var core, _a, authenticator, pub, credentials, error_8;
+            var core, authenticator, credentials, error_8;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -486,21 +486,23 @@ var WebauthnPlugin = /** @class */ (function (_super) {
                         if (!this.isSupported()) {
                             throw new Error("WebAuthn is not supported by this browser");
                         }
-                        return [4 /*yield*/, this.setupConsistentOneshotSigning(username)];
+                        return [4 /*yield*/, this.generateCredentials(username, null, true)];
                     case 1:
-                        _a = (_b.sent()), authenticator = _a.authenticator, pub = _a.pub;
-                        if (!core.authenticate) return [3 /*break*/, 3];
-                        return [4 /*yield*/, core.authenticate(username, authenticator, pub)];
-                    case 2: return [2 /*return*/, _b.sent()];
-                    case 3: return [4 /*yield*/, this.generateCredentials(username, null, true)];
-                    case 4:
                         credentials = _b.sent();
-                        if (!(credentials === null || credentials === void 0 ? void 0 : credentials.success)) {
+                        if (!((credentials === null || credentials === void 0 ? void 0 : credentials.success) && (credentials === null || credentials === void 0 ? void 0 : credentials.key))) {
                             throw new Error((credentials === null || credentials === void 0 ? void 0 : credentials.error) || "WebAuthn verification failed");
                         }
                         core.setAuthMethod("webauthn");
-                        return [4 /*yield*/, core.login(username, "", credentials.key)];
-                    case 5: return [2 /*return*/, _b.sent()];
+                        if (!core.authenticate) return [3 /*break*/, 3];
+                        authenticator = function () { return __awaiter(void 0, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                return [2 /*return*/, credentials];
+                            });
+                        }); };
+                        return [4 /*yield*/, core.authenticate(username, authenticator, credentials.key.pub)];
+                    case 2: return [2 /*return*/, _b.sent()];
+                    case 3: return [4 /*yield*/, core.login(username, "", credentials.key)];
+                    case 4: return [2 /*return*/, _b.sent()];
                     case 6:
                         error_8 = _b.sent();
                         console.error("Error during WebAuthn login: ".concat(error_8));

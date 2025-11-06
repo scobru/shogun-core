@@ -333,18 +333,19 @@ class WebauthnPlugin extends base_1.BasePlugin {
             if (!this.isSupported()) {
                 throw new Error("WebAuthn is not supported by this browser");
             }
-            // Prefer the oneshot consistent signing flow (tests mock this)
-            const { authenticator, pub } = (await this.setupConsistentOneshotSigning(username));
-            // If core has an authenticate method (tests), use it
-            if (core.authenticate) {
-                return await core.authenticate(username, authenticator, pub);
-            }
-            // Fallback to credentials-based flow
+            // Derive the SEA pair through WebAuthn verification (requires PIN/biometric)
             const credentials = await this.generateCredentials(username, null, true);
-            if (!credentials?.success) {
+            if (!credentials?.success || !credentials.key) {
                 throw new Error(credentials?.error || "WebAuthn verification failed");
             }
+            // Ensure we mark the authentication method before attempting login
             core.setAuthMethod("webauthn");
+            // If core has a custom authenticate hook (tests), use it with the derived key pair
+            if (core.authenticate) {
+                const authenticator = async () => credentials;
+                return await core.authenticate(username, authenticator, credentials.key?.pub);
+            }
+            // Login using the derived SEA pair, consistent with the signup flow
             return await core.login(username, "", credentials.key);
         }
         catch (error) {

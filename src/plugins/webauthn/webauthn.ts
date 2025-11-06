@@ -47,7 +47,7 @@ declare global {
 const DEFAULT_CONFIG: WebAuthnConfig = {
   rpName: "Shogun Wallet",
   timeout: 60000,
-  userVerification: "preferred",
+  userVerification: "required",
   attestation: "none",
   authenticatorAttachment: "platform",
   requireResidentKey: false,
