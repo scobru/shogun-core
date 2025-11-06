@@ -411,6 +411,15 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 if (!credentials?.success) {
                     throw new Error(credentials?.error || "Unable to generate WebAuthn credentials");
                 }
+                // Force an immediate user verification so the platform authenticator
+                // always prompts for PIN/biometrics during signup, matching the login flow
+                const postRegistrationVerification = await this.assertWebauthn().authenticateUser(username, null, {
+                    userVerification: "required",
+                });
+                if (!postRegistrationVerification.success) {
+                    throw new Error(postRegistrationVerification.error ||
+                        "WebAuthn verification required to complete registration");
+                }
                 // Use the key directly from credentials instead of calling generatePairFromCredentials
                 // since generateCredentials already returns the derived key pair
                 if (!credentials.key) {
