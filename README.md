@@ -14,7 +14,6 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 - 🌐 **Decentralized Storage**: Built on GunDB for peer-to-peer data synchronization
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins
 - 💼 **Smart Wallet**: Account Abstraction with multi-sig, social recovery, and batch transactions
-- 🔑 **Automatic Crypto Identity Management**: RSA, AES, Signal Protocol, PGP, MLS, and SFrame keys
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
@@ -53,11 +52,6 @@ const shogun = new ShogunCore({
   zkproof: { 
     enabled: true,
     defaultGroupId: "my-app-users",
-  },
-  
-  // Optional: Configure crypto identity auto-generation
-  crypto: {
-    autoGenerateOnAuth: true, // Generate crypto identities automatically after auth
   },
 });
 
@@ -257,153 +251,6 @@ if (result.success) {
 }
 ```
 
-## Crypto Identity Management
-
-Shogun Core provides automatic crypto identity generation for every authenticated user. All crypto identities are created automatically during the signup process and stored securely in the decentralized database.
-
-### Automatic Identity Generation
-
-When a user signs up, Shogun Core automatically generates comprehensive crypto identities:
-
-- **RSA-4096 Key Pairs**: For asymmetric encryption and digital signatures
-- **AES-256 Symmetric Keys**: For fast symmetric encryption operations  
-- **Signal Protocol Identities**: For end-to-end encrypted messaging
-- **PGP Key Pairs**: For email encryption and digital signatures
-- **MLS Groups**: For group messaging and collaboration
-- **SFrame Keys**: For media encryption and streaming
-
-### Generating Crypto Identities
-
-```typescript
-import { CryptoIdentityManager } from "shogun-core";
-import type { ISEAPair } from "gun/types";
-
-// Create CryptoIdentityManager instance
-const cryptoManager = new CryptoIdentityManager();
-
-// Generate crypto identities for a user
-const seaPair: ISEAPair = /* your SEA pair */;
-const result = await cryptoManager.generateAllIdentities("username", seaPair);
-
-if (result.success && result.identities) {
-  console.log("RSA Key Pair:", !!result.identities.rsa);
-  console.log("AES Key:", !!result.identities.aes);
-  console.log("Signal Identity:", !!result.identities.signal);
-  console.log("PGP Keys:", !!result.identities.pgp);
-  console.log("MLS Group:", !!result.identities.mls);
-  console.log("SFrame Key:", !!result.identities.sframe);
-  
-  // Access specific identity data
-  if (result.identities.rsa) {
-    console.log("RSA Public Key:", result.identities.rsa.publicKey);
-    console.log("RSA Private Key:", result.identities.rsa.privateKey);
-  }
-  
-  if (result.identities.aes) {
-    console.log("AES Key:", result.identities.aes);
-  }
-  
-  if (result.identities.signal) {
-    console.log("Signal Identity:", result.identities.signal);
-  }
-  
-  if (result.identities.pgp) {
-    console.log("PGP Public Key:", result.identities.pgp.publicKey);
-    console.log("PGP Private Key:", result.identities.pgp.privateKey);
-  }
-  
-  if (result.identities.mls) {
-    console.log("MLS Group ID:", result.identities.mls.groupId);
-    console.log("MLS Member ID:", result.identities.mls.memberId);
-  }
-  
-  if (result.identities.sframe) {
-    console.log("SFrame Key ID:", result.identities.sframe.keyId);
-  }
-  
-  // Note: Save identities to GunDB from the frontend if needed
-} else {
-  console.error("Failed to generate identities:", result.error);
-}
-```
-
-### Complete Example
-
-```typescript
-import { ShogunCore, CryptoIdentityManager } from "shogun-core";
-import Gun from "gun";
-
-// Initialize Shogun Core
-const gun = Gun({ 
-  peers: ['https://gun-manhattan.herokuapp.com/gun'] 
-});
-
-const shogun = new ShogunCore({
-  gunInstance: gun
-});
-
-// Register user
-const signupResult = await shogun.signUp("alice", "password123");
-
-if (signupResult.success && signupResult.sea) {
-  console.log("User registered:", signupResult.username);
-  
-  // Generate crypto identities
-  const cryptoManager = new CryptoIdentityManager();
-  const result = await cryptoManager.generateAllIdentities(
-    signupResult.username,
-    signupResult.sea
-  );
-  
-  if (result.success && result.identities) {
-    console.log("✅ All crypto identities generated successfully");
-    console.log("Identities available:", Object.keys(result.identities));
-    
-    // Save identities to GunDB from the frontend if needed
-    // The manager only generates identities, saving is handled by the frontend
-  }
-}
-```
-
-### Identity Structure
-
-The `CryptoIdentities` interface contains:
-
-```typescript
-interface CryptoIdentities {
-  rsa?: JWKKeyPair;           // RSA-4096 key pair
-  aes?: JsonWebKey;           // AES-256 symmetric key
-  signal?: SignalUser;        // Signal Protocol identity
-  pgp?: PGPKeyPair;          // PGP key pair
-  mls?: {                    // MLS group membership
-    groupId: string;
-    memberId: string;
-  };
-  sframe?: {                 // SFrame media key
-    keyId: number;
-  };
-  createdAt: number;         // Creation timestamp
-  version: string;           // Identity version
-}
-```
-
-### Error Handling
-
-```typescript
-const result = await cryptoManager.generateAllIdentities("username", seaPair);
-
-if (!result.success) {
-  switch (result.error) {
-    case "Failed to generate crypto identities":
-      console.log("Identity generation failed");
-      break;
-    default:
-      console.error("Unknown error:", result.error);
-  }
-}
-```
-
-
 ## Browser Usage (CDN)
 
 ```html
@@ -490,15 +337,6 @@ interface ShogunCoreConfig {
     defaultGroupId?: string;
     deterministic?: boolean;
     minEntropy?: number;
-  };
-
-  // Crypto identity configuration
-  crypto?: {
-    /**
-     * When true (default), generate and save crypto identities automatically after auth.
-     * Set to false to skip automatic crypto identity generation.
-     */
-    autoGenerateOnAuth?: boolean;
   };
 
   postAuth?: {
