@@ -1,9 +1,3 @@
-/**
- * GunDB - Simplified database wrapper for Gun.js
- * Provides only essential signup and login functionality
- * Based on Gun.js User Authentication: https://deepwiki.com/amark/gun/6.1-user-authentication
- */
-
 import type { AuthCallback, EventData, EventListener } from "./types";
 import type {
   IGunUserInstance,
@@ -18,7 +12,8 @@ import * as GunErrors from "./errors";
 import * as crypto from "./crypto";
 
 /**
- * Configuration constants
+ * GunDB configuration constants.
+ * @internal
  */
 const CONFIG = {
   PASSWORD: {
@@ -26,52 +21,66 @@ const CONFIG = {
   },
 } as const;
 
+/**
+ * DataBase
+ *
+ * Manages GunDB user authentication and various utility helpers for
+ * session, alias/username, SEA cryptography, event handling, and reactive streams.
+ */
 class DataBase {
+  /** GunDB instance */
   public gun: IGunInstance;
+  /** Cached user instance or `null` if not logged in */
   public user: IGunUserInstance | null = null;
+  /** Crypto utilities used internally */
   public crypto: typeof crypto;
+  /** Gun SEA cryptography context (usually gun.SEA) */
   public sea: any;
+  /** App namespace root Gun node */
   public node: IGunChain<any, any, any, any>;
+  /** Gun node dedicated to mapping usernames to pubkeys */
+  private readonly usernamesNode: IGunChain<any, any, any, any>;
 
+  /** Registered callbacks for auth state changes */
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
+  /** EventEmitter for app-specific event management */
   private readonly eventEmitter: EventEmitter;
+  /** RxJS-based GunDB observable/stream helper */
   private _rxjs?: RxJS;
+  /** Whether the database instance has been destroyed */
   private _isDestroyed: boolean = false;
 
+  /**
+   * Constructs a new DataBase instance connected to a GunDB instance.
+   * @param gun The main GunDB instance.
+   * @param appScope The namespace under which data/nodes are stored. Default: "shogun"
+   * @param core Optionally, the root Gun instance (unused in this context).
+   * @param sea Optional cryptography (Gun SEA) instance; will be auto-discovered if not provided.
+   * @throws If gun or gun.user() is not provided.
+   */
   constructor(
     gun: IGunInstance,
     appScope: string = "shogun",
     core?: any,
     sea?: any,
   ) {
-    console.log("[DB] Initializing DataBase");
-
-    // Initialize event emitter
     this.eventEmitter = new EventEmitter();
 
-    // Validate Gun instance
     if (!gun) {
       throw new Error("Gun instance is required but was not provided");
     }
-
     if (typeof gun.user !== "function") {
       throw new Error("Gun instance is invalid: gun.user is not a function");
     }
 
     this.gun = gun;
-    console.log("[DB] Gun instance validated");
 
-    // Recall user session if available
     this.user = this.gun.user().recall({ sessionStorage: true });
-    console.log("[DB] User recall completed");
-
     this.subscribeToAuthEvents();
-    console.log("[DB] Auth events subscribed");
 
     this.crypto = crypto;
-
-    // Get SEA from gun instance or global
     this.sea = sea || null;
+
     if (!this.sea) {
       if ((this.gun as any).SEA) {
         this.sea = (this.gun as any).SEA;
@@ -83,22 +92,30 @@ class DataBase {
     }
 
     this._rxjs = new RxJS(this.gun);
+
     this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
+    this.usernamesNode = this.gun.get("usernames") as IGunChain<
+      any,
+      any,
+      any,
+      any
+    >;
 
     console.log("[DB] DataBase initialization completed");
   }
 
   /**
-   * Initialize with app scope
+   * Re-initialize with a different app scope/namespace.
+   * @param appScope The new namespace.
    */
   initialize(appScope: string = "shogun"): void {
-    console.log(`[DB] Initializing with appScope: ${appScope}`);
     this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
-    console.log("[DB] App scope node initialized");
   }
 
   /**
-   * Subscribe to Gun auth events
+   * Internal: subscribe to GunDB "auth" events and notify listeners.
+   * Listeners are invoked on authentication status change.
+   * @internal
    */
   private subscribeToAuthEvents(): void {
     this.gun.on("auth", (ack: any) => {
@@ -111,7 +128,9 @@ class DataBase {
   }
 
   /**
-   * Notify all auth callbacks
+   * Internal: notify all onAuth callbacks with current user.
+   * @param pub User's public key (pub).
+   * @internal
    */
   private notifyAuthListeners(pub: string): void {
     const user = this.gun.user();
@@ -119,7 +138,9 @@ class DataBase {
   }
 
   /**
-   * Register authentication callback
+   * Listen for authentication/sign-in events (login, logout, etc).
+   * @param callback Function to call with new user instance.
+   * @returns Function to remove the registered callback.
    */
   onAuth(callback: AuthCallback): () => void {
     this.onAuthCallbacks.push(callback);
@@ -132,7 +153,8 @@ class DataBase {
   }
 
   /**
-   * Check if user is logged in
+   * Check if a user is currently logged in (there is a valid session).
+   * @returns `true` if logged in; otherwise `false`.
    */
   isLoggedIn(): boolean {
     try {
@@ -144,7 +166,8 @@ class DataBase {
   }
 
   /**
-   * Restore session from storage
+   * Attempt to restore a previously saved session from sessionStorage.
+   * @returns Object indicating success, error, and userPub if restored.
    */
   restoreSession(): {
     success: boolean;
@@ -186,7 +209,7 @@ class DataBase {
   }
 
   /**
-   * Logout user
+   * Log out the current user, clear local state and remove session from storage.
    */
   logout(): void {
     try {
@@ -205,7 +228,9 @@ class DataBase {
   }
 
   /**
-   * Validate password strength
+   * Validate that a provided password meets minimum length requirements.
+   * @param password Password string to validate.
+   * @returns Object indicating validity and, if invalid, an error.
    */
   private validatePasswordStrength(password: string): {
     valid: boolean;
@@ -221,7 +246,11 @@ class DataBase {
   }
 
   /**
-   * Validate signup credentials
+   * Validate a signup request's username, password, and/or cryptographic pair.
+   * @param username Username string.
+   * @param password Password string.
+   * @param pair Optional cryptographic SEA pair.
+   * @returns Object with validation status and optional error.
    */
   private validateSignupCredentials(
     username: string,
@@ -254,18 +283,128 @@ class DataBase {
   }
 
   /**
-   * Reset authentication state
+   * Ensures that an alias/username is available in GunDB for registration.
+   * @param alias Username to check.
+   * @param timeout Timeout in milliseconds (default 5000ms).
+   * @throws If the alias is already taken.
+   */
+  private async ensureAliasAvailable(
+    alias: string,
+    timeout = 5000,
+  ): Promise<void> {
+    const available = await this.isAliasAvailable(alias, timeout);
+    if (!available) {
+      throw new Error(`Alias "${alias}" is already registered in Gun`);
+    }
+  }
+
+  /**
+   * Checks if a given alias/username is available on GunDB.
+   * @param alias Username to check for availability.
+   * @param timeout Timeout in ms (default: 5000).
+   * @returns Promise resolving to `true` if available; otherwise `false`.
+   * @throws If alias is invalid or on I/O error.
+   */
+  private async isAliasAvailable(
+    alias: string,
+    timeout = 5000,
+  ): Promise<boolean> {
+    if (typeof alias !== "string" || !alias.trim()) {
+      throw new Error("Alias must be a non-empty string");
+    }
+
+    const normalizedAlias = alias.trim().toLowerCase();
+
+    return new Promise<boolean>((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error("Timeout while checking alias availability"));
+      }, timeout);
+
+      this.usernamesNode.get(normalizedAlias).once((existingPub: any) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(!existingPub);
+      });
+    });
+  }
+
+  /**
+   * Register a new alias (username) → public key mapping on GunDB.
+   * @param alias The username/alias to register.
+   * @param userPub The user's public key.
+   * @param timeout Timeout in ms (default 5000).
+   * @throws If alias/userPub is invalid or the alias cannot be registered.
+   */
+  private async registerAlias(
+    alias: string,
+    userPub: string,
+    timeout = 5000,
+  ): Promise<void> {
+    if (!alias || !alias.trim()) {
+      throw new Error("Alias must be provided for registration");
+    }
+    if (!userPub) {
+      throw new Error("userPub must be provided for alias registration");
+    }
+
+    const normalizedAlias = alias.trim().toLowerCase();
+
+    const available = await this.isAliasAvailable(
+      normalizedAlias,
+      timeout,
+    ).catch((error) => {
+      console.error("[DB] Alias availability check failed:", error);
+      throw error;
+    });
+
+    if (!available) {
+      throw new Error(
+        `Alias "${normalizedAlias}" is no longer available for registration`,
+      );
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error("Timeout while registering alias"));
+      }, timeout);
+
+      this.usernamesNode.get(normalizedAlias).put(userPub, (ack: any) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+
+        if (ack && ack.err) {
+          reject(new Error(String(ack.err)));
+          return;
+        }
+
+        resolve();
+      });
+    }).catch((error) => {
+      console.error("[DB] Failed to register alias:", error);
+      throw error;
+    });
+  }
+
+  /**
+   * Reset gun.user() authentication state and clear cached user.
+   * @internal
    */
   private resetAuthState(): void {
     try {
       const user = this.gun.user();
       if (user && (user as any)._) {
         const cat = (user as any)._;
-        // Reset Gun's internal auth state
         cat.ing = false;
         cat.auth = null;
         cat.act = null;
-        // Clear any pending auth operations
         if (cat.auth) {
           cat.auth = null;
         }
@@ -282,7 +421,11 @@ class DataBase {
   }
 
   /**
-   * Build login result
+   * Assemble a standard AuthResult object after a successful login.
+   * @param username Resulting username.
+   * @param userPub Public key (pub) for logged-in user.
+   * @returns AuthResult.
+   * @internal
    */
   private buildLoginResult(username: string, userPub: string): AuthResult {
     const seaPair = (this.gun.user() as any)?._?.sea;
@@ -302,7 +445,8 @@ class DataBase {
   }
 
   /**
-   * Save credentials to session storage
+   * Save credentials for the current session to sessionStorage, if available.
+   * @param userInfo The credentials and user identity to store.
    */
   private saveCredentials(userInfo: {
     alias: string;
@@ -326,8 +470,11 @@ class DataBase {
   }
 
   /**
-   * Sign up a new user
-   * Based on Gun.js user().create() - https://deepwiki.com/amark/gun/6.1-user-authentication
+   * Register and authenticate a new user account.
+   * @param username The username to create/account for.
+   * @param password The user's password.
+   * @param pair Optional cryptographic pair (for `auth` instead of password).
+   * @returns SignUpResult Promise.
    */
   async signUp(
     username: string,
@@ -339,19 +486,11 @@ class DataBase {
       return { success: false, error: validation.error };
     }
 
-    console.log("[DB] Signup validation:", validation);
-
     this.resetAuthState();
     const normalizedUsername = username.trim().toLowerCase();
     const user = this.gun.user() as IGunUserInstance;
 
-    // If the caller provides a key pair, try direct auth first (pair-based signup)
-    // Gun's API doesn't natively allow us to register with a pair directly,
-    // but we can try creating and then authenticating immediately with the pair,
-    // to allow for direct access for known keys.
     if (pair) {
-      // Try to directly authenticate with the pair FIRST
-      // If this user already exists and the pair is valid, just log in
       try {
         const loginResult = await new Promise<SignUpResult>((resolve) => {
           let callbackInvoked = false;
@@ -363,7 +502,6 @@ class DataBase {
             callbackInvoked = true;
 
             if (ack.err) {
-              // Could not login with pair, try to create user with username/password
               resolve({ success: false, error: ack.err });
               return;
             }
@@ -387,21 +525,25 @@ class DataBase {
           });
         });
 
-        // If we got a successful result, return it
         if (loginResult && loginResult.success) {
           return loginResult;
         }
-        // If pair auth failed, continue to create user with username/password
       } catch (e) {
         // fallback to create user
         // (continue below)
       }
     }
 
-    console.log(
-      "[DB] Falling back to classic username/password account creation",
-    );
-    // Fallback to classic username/password account creation
+    try {
+      await this.ensureAliasAvailable(normalizedUsername);
+    } catch (aliasError) {
+      return {
+        success: false,
+        error:
+          aliasError instanceof Error ? aliasError.message : String(aliasError),
+      };
+    }
+
     const result: SignUpResult = await new Promise<SignUpResult>((resolve) => {
       let callbackInvoked = false;
 
@@ -410,12 +552,6 @@ class DataBase {
           return;
         }
 
-        console.log(
-          "[DB] Signup callback received:",
-          JSON.stringify(createAck),
-        );
-
-        // Check for error: ack.err or ack.ok !== 0 means error
         if (
           createAck.err ||
           (createAck.ok !== undefined && createAck.ok !== 0)
@@ -426,8 +562,6 @@ class DataBase {
           return;
         }
 
-        // After create, we need to authenticate to get the user fully logged in
-        // Use ack.pub if available for the userPub
         const userPub = createAck.pub;
 
         if (!userPub) {
@@ -440,8 +574,7 @@ class DataBase {
           return;
         }
 
-        // Now authenticate with the username/password to complete the login
-        user.auth(normalizedUsername, password, (authAck: any) => {
+        user.auth(normalizedUsername, password, async (authAck: any) => {
           if (callbackInvoked) {
             return;
           }
@@ -456,7 +589,6 @@ class DataBase {
             return;
           }
 
-          // Verify user is authenticated
           const authenticatedUserPub = user?.is?.pub;
           if (!authenticatedUserPub) {
             this.resetAuthState();
@@ -479,6 +611,15 @@ class DataBase {
             });
           } catch (saveError) {
             // Ignore save errors
+          }
+
+          try {
+            await this.registerAlias(
+              alias || normalizedUsername,
+              authenticatedUserPub,
+            );
+          } catch (registerError) {
+            console.error("[DB] Alias registration failed:", registerError);
           }
 
           const sea = (user as any)?._?.sea;
@@ -504,8 +645,11 @@ class DataBase {
   }
 
   /**
-   * Login with username and password
-   * Based on Gun.js user().auth() - https://deepwiki.com/amark/gun/6.1-user-authentication
+   * Sign in (authenticate) as an existing user by username/password or SEA pair.
+   * @param username Username to log in as.
+   * @param password User's password (or "" if using pair).
+   * @param pair Optional cryptographic SEA pair.
+   * @returns AuthResult Promise.
    */
   async login(
     username: string,
@@ -515,8 +659,6 @@ class DataBase {
     this.resetAuthState();
     const normalizedUsername = username.trim().toLowerCase();
     const user = this.gun.user();
-
-    console.log("[DB] Login with username:", normalizedUsername);
 
     return new Promise<AuthResult>((resolve) => {
       if (pair) {
@@ -586,7 +728,8 @@ class DataBase {
   }
 
   /**
-   * Get current user
+   * Returns the currently authenticated user's public key and Gun user instance, if logged in.
+   * @returns Object containing `pub` (public key) and optionally `user`, or `null`.
    */
   getCurrentUser(): { pub: string; user?: any } | null {
     try {
@@ -604,8 +747,8 @@ class DataBase {
   }
 
   /**
-   * Get current user's public key
-   * @returns {string | null} User's public key or null if not logged in
+   * Get current user's public key.
+   * @returns User's public key or null if not logged in.
    */
   getUserPub(): string | null {
     try {
@@ -617,11 +760,11 @@ class DataBase {
   }
 
   /**
-   * Login with SEA pair directly
-   * @param username - Username for identification
-   * @param pair - GunDB SEA pair for authentication
-   * @returns {Promise<AuthResult>} Promise with authentication result
-   * @description Authenticates user using a GunDB pair directly without password
+   * Authenticate using a SEA pair directly (no password required).
+   * @param username The user's username for identification (not cryptographically enforced).
+   * @param pair GunDB SEA pair for authentication.
+   * @returns Promise with authentication result.
+   * @description Authenticates user using a GunDB pair directly without password.
    */
   async loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult> {
     // Validate pair structure
@@ -673,9 +816,11 @@ class DataBase {
   }
 
   /**
-   * Login with SEA pair
+   * Legacy API: Sign in using a username and SEA pair (password parameter is unused).
+   * @param username Username to sign in as.
+   * @param pair SEA key pair.
+   * @returns AuthResult Promise.
    */
-  // Legacy method - kept for backward compatibility
   async loginWithPairLegacy(
     username: string,
     pair: ISEAPair,
@@ -684,14 +829,16 @@ class DataBase {
   }
 
   /**
-   * Get RxJS module
+   * Returns the bound RxJS GunDB helper (reactive streams).
+   * @returns RxJS instance.
    */
   rx(): RxJS {
     return this._rxjs as RxJS;
   }
 
   /**
-   * Destroy database instance
+   * Tears down the DataBase instance and performs cleanup of all resources/listeners.
+   * No further actions should be performed on this instance after destruction.
    */
   public destroy(): void {
     if (this._isDestroyed) return;
@@ -701,7 +848,6 @@ class DataBase {
 
     this.onAuthCallbacks.length = 0;
 
-    // Clear event listeners
     this.eventEmitter.removeAllListeners();
 
     if (this.user) {
@@ -718,7 +864,7 @@ class DataBase {
   }
 
   /**
-   * Aggressive auth cleanup (kept for compatibility with tests)
+   * Aggressively clean up authentication state and session. Typically used for error recovery.
    */
   public aggressiveAuthCleanup(): void {
     console.log("🧹 Performing aggressive auth cleanup...");
@@ -728,20 +874,38 @@ class DataBase {
   }
 
   /**
-   * Event emitter methods for CoreInitializer compatibility
+   * Register an event handler.
+   * @param event Event name.
+   * @param listener Listener function.
    */
   on(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.on(event, listener);
   }
 
+  /**
+   * Remove an event handler.
+   * @param event Event name.
+   * @param listener Listener function.
+   */
   off(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.off(event, listener);
   }
 
+  /**
+   * Register an event handler for a single event occurrence.
+   * @param event Event name.
+   * @param listener Listener function.
+   */
   once(event: string | symbol, listener: EventListener): void {
     this.eventEmitter.once(event, listener);
   }
 
+  /**
+   * Emit a custom event.
+   * @param event Event name.
+   * @param data Optional associated data.
+   * @returns `true` if listeners were notified; otherwise `false`.
+   */
   emit(event: string | symbol, data?: EventData): boolean {
     return this.eventEmitter.emit(event, data);
   }
