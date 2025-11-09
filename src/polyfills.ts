@@ -63,10 +63,7 @@ if (
   typeof Buffer === "undefined"
 ) {
   setBufferPolyfill((window as any).Buffer);
-} else if (
-  typeof globalThis !== "undefined" &&
-  typeof Buffer === "undefined"
-) {
+} else if (typeof globalThis !== "undefined" && typeof Buffer === "undefined") {
   setBufferPolyfill(BufferPolyfill);
 }
 

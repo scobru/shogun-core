@@ -30,6 +30,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setBufferPolyfill = void 0;
+const buffer_1 = require("buffer");
 // Ensure process is available for browser
 if (typeof window !== "undefined") {
     if (!window.process) {
@@ -58,4 +59,7 @@ if (typeof window !== "undefined" &&
     window.Buffer &&
     typeof Buffer === "undefined") {
     (0, exports.setBufferPolyfill)(window.Buffer);
+}
+else if (typeof globalThis !== "undefined" && typeof Buffer === "undefined") {
+    (0, exports.setBufferPolyfill)(buffer_1.Buffer);
 }
