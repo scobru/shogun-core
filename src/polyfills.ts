@@ -28,6 +28,8 @@
  * For Webpack projects, the ProvidePlugin should handle this automatically.
  */
 
+import { Buffer as BufferPolyfill } from "buffer";
+
 // Ensure process is available for browser
 if (typeof window !== "undefined") {
   if (!(window as any).process) {
@@ -61,6 +63,11 @@ if (
   typeof Buffer === "undefined"
 ) {
   setBufferPolyfill((window as any).Buffer);
+} else if (
+  typeof globalThis !== "undefined" &&
+  typeof Buffer === "undefined"
+) {
+  setBufferPolyfill(BufferPolyfill);
 }
 
 // Export empty to make this a valid module

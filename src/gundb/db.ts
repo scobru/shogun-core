@@ -24,7 +24,6 @@ const CONFIG = {
   PASSWORD: {
     MIN_LENGTH: 8,
   },
-  TIMEOUT: 11000, // 30 seconds
 } as const;
 
 class DataBase {
@@ -356,19 +355,12 @@ class DataBase {
       try {
         const loginResult = await new Promise<SignUpResult>((resolve) => {
           let callbackInvoked = false;
-          const timeoutId = setTimeout(() => {
-            if (!callbackInvoked) {
-              callbackInvoked = true;
-              resolve({ success: false, error: "Pair auth timeout" });
-            }
-          }, CONFIG.TIMEOUT);
 
           user.auth(pair, (ack: any) => {
             if (callbackInvoked) {
               return;
             }
             callbackInvoked = true;
-            clearTimeout(timeoutId);
 
             if (ack.err) {
               // Could not login with pair, try to create user with username/password
@@ -412,14 +404,6 @@ class DataBase {
     // Fallback to classic username/password account creation
     const result: SignUpResult = await new Promise<SignUpResult>((resolve) => {
       let callbackInvoked = false;
-      const timeoutId = setTimeout(() => {
-        if (!callbackInvoked) {
-          callbackInvoked = true;
-          console.log("[DB] Signup timeout");
-          this.resetAuthState();
-          resolve({ success: false, error: "Signup timeout" });
-        }
-      }, CONFIG.TIMEOUT);
 
       user.create(normalizedUsername, password, (createAck: any) => {
         if (callbackInvoked) {
@@ -437,7 +421,6 @@ class DataBase {
           (createAck.ok !== undefined && createAck.ok !== 0)
         ) {
           callbackInvoked = true;
-          clearTimeout(timeoutId);
           this.resetAuthState();
           resolve({ success: false, error: createAck.err || "Signup failed" });
           return;
@@ -449,7 +432,6 @@ class DataBase {
 
         if (!userPub) {
           callbackInvoked = true;
-          clearTimeout(timeoutId);
           this.resetAuthState();
           resolve({
             success: false,
@@ -464,7 +446,6 @@ class DataBase {
             return;
           }
           callbackInvoked = true;
-          clearTimeout(timeoutId);
 
           if (authAck.err) {
             this.resetAuthState();
@@ -538,15 +519,8 @@ class DataBase {
     console.log("[DB] Login with username:", normalizedUsername);
 
     return new Promise<AuthResult>((resolve) => {
-      const timeoutId = setTimeout(() => {
-        this.resetAuthState();
-        resolve({ success: false, error: "Login timeout" });
-      }, CONFIG.TIMEOUT);
-
       if (pair) {
         user.auth(pair, (ack: any) => {
-          clearTimeout(timeoutId);
-
           if (ack.err) {
             this.resetAuthState();
             resolve({ success: false, error: ack.err });
@@ -578,8 +552,6 @@ class DataBase {
         });
       } else {
         user.auth(normalizedUsername, password, (ack: any) => {
-          clearTimeout(timeoutId);
-
           if (ack.err) {
             this.resetAuthState();
             resolve({ success: false, error: ack.err });
@@ -667,14 +639,7 @@ class DataBase {
     console.log("[DB] Login with pair for username:", normalizedUsername);
 
     return new Promise<AuthResult>((resolve) => {
-      const timeoutId = setTimeout(() => {
-        this.resetAuthState();
-        resolve({ success: false, error: "Login with pair timeout" });
-      }, CONFIG.TIMEOUT);
-
       user.auth(pair, (ack: any) => {
-        clearTimeout(timeoutId);
-
         if (ack.err) {
           this.resetAuthState();
           resolve({ success: false, error: ack.err });
