@@ -44,15 +44,36 @@ const GunErrors = __importStar(require("./errors"));
 exports.GunErrors = GunErrors;
 const crypto = __importStar(require("./crypto"));
 exports.crypto = crypto;
+/**
+ * GunDB configuration constants.
+ * @internal
+ */
 const CONFIG = {
     PASSWORD: {
         MIN_LENGTH: 8,
     },
 };
+/**
+ * DataBase
+ *
+ * Manages GunDB user authentication and various utility helpers for
+ * session, alias/username, SEA cryptography, event handling, and reactive streams.
+ */
 class DataBase {
+    /**
+     * Constructs a new DataBase instance connected to a GunDB instance.
+     * @param gun The main GunDB instance.
+     * @param appScope The namespace under which data/nodes are stored. Default: "shogun"
+     * @param core Optionally, the root Gun instance (unused in this context).
+     * @param sea Optional cryptography (Gun SEA) instance; will be auto-discovered if not provided.
+     * @throws If gun or gun.user() is not provided.
+     */
     constructor(gun, appScope = "shogun", core, sea) {
+        /** Cached user instance or `null` if not logged in */
         this.user = null;
+        /** Registered callbacks for auth state changes */
         this.onAuthCallbacks = [];
+        /** Whether the database instance has been destroyed */
         this._isDestroyed = false;
         this.eventEmitter = new eventEmitter_1.EventEmitter();
         if (!gun) {
@@ -82,9 +103,18 @@ class DataBase {
         this.usernamesNode = this.gun.get("usernames");
         console.log("[DB] DataBase initialization completed");
     }
+    /**
+     * Re-initialize with a different app scope/namespace.
+     * @param appScope The new namespace.
+     */
     initialize(appScope = "shogun") {
         this.node = this.gun.get(appScope);
     }
+    /**
+     * Internal: subscribe to GunDB "auth" events and notify listeners.
+     * Listeners are invoked on authentication status change.
+     * @internal
+     */
     subscribeToAuthEvents() {
         this.gun.on("auth", (ack) => {
             if (ack.err) {
@@ -95,10 +125,20 @@ class DataBase {
             }
         });
     }
+    /**
+     * Internal: notify all onAuth callbacks with current user.
+     * @param pub User's public key (pub).
+     * @internal
+     */
     notifyAuthListeners(pub) {
         const user = this.gun.user();
         this.onAuthCallbacks.forEach((cb) => cb(user));
     }
+    /**
+     * Listen for authentication/sign-in events (login, logout, etc).
+     * @param callback Function to call with new user instance.
+     * @returns Function to remove the registered callback.
+     */
     onAuth(callback) {
         this.onAuthCallbacks.push(callback);
         const user = this.gun.user();
@@ -110,6 +150,10 @@ class DataBase {
                 this.onAuthCallbacks.splice(i, 1);
         };
     }
+    /**
+     * Check if a user is currently logged in (there is a valid session).
+     * @returns `true` if logged in; otherwise `false`.
+     */
     isLoggedIn() {
         try {
             const user = this.gun.user();
@@ -119,6 +163,10 @@ class DataBase {
             return false;
         }
     }
+    /**
+     * Attempt to restore a previously saved session from sessionStorage.
+     * @returns Object indicating success, error, and userPub if restored.
+     */
     restoreSession() {
         try {
             if (typeof sessionStorage === "undefined") {
@@ -149,6 +197,9 @@ class DataBase {
             return { success: false, error: String(error) };
         }
     }
+    /**
+     * Log out the current user, clear local state and remove session from storage.
+     */
     logout() {
         try {
             const currentUser = this.gun.user();
@@ -164,6 +215,11 @@ class DataBase {
             console.error("[DB] Error during logout:", error);
         }
     }
+    /**
+     * Validate that a provided password meets minimum length requirements.
+     * @param password Password string to validate.
+     * @returns Object indicating validity and, if invalid, an error.
+     */
     validatePasswordStrength(password) {
         if (password.length < CONFIG.PASSWORD.MIN_LENGTH) {
             return {
@@ -173,6 +229,13 @@ class DataBase {
         }
         return { valid: true };
     }
+    /**
+     * Validate a signup request's username, password, and/or cryptographic pair.
+     * @param username Username string.
+     * @param password Password string.
+     * @param pair Optional cryptographic SEA pair.
+     * @returns Object with validation status and optional error.
+     */
     validateSignupCredentials(username, password, pair) {
         if (!username || username.length < 1) {
             return {
@@ -194,12 +257,25 @@ class DataBase {
         }
         return this.validatePasswordStrength(password);
     }
+    /**
+     * Ensures that an alias/username is available in GunDB for registration.
+     * @param alias Username to check.
+     * @param timeout Timeout in milliseconds (default 5000ms).
+     * @throws If the alias is already taken.
+     */
     async ensureAliasAvailable(alias, timeout = 5000) {
         const available = await this.isAliasAvailable(alias, timeout);
         if (!available) {
             throw new Error(`Alias "${alias}" is already registered in Gun`);
         }
     }
+    /**
+     * Checks if a given alias/username is available on GunDB.
+     * @param alias Username to check for availability.
+     * @param timeout Timeout in ms (default: 5000).
+     * @returns Promise resolving to `true` if available; otherwise `false`.
+     * @throws If alias is invalid or on I/O error.
+     */
     async isAliasAvailable(alias, timeout = 5000) {
         if (typeof alias !== "string" || !alias.trim()) {
             throw new Error("Alias must be a non-empty string");
@@ -222,6 +298,31 @@ class DataBase {
             });
         });
     }
+    /**
+     * Checks if a given alias/username is taken on GunDB.
+     * @param alias Username to check for availability.
+     * @returns Promise resolving to `true` if taken; otherwise `false`.
+     * @throws If alias is invalid or on I/O error.
+     */
+    async isAliasTaken(alias) {
+        return new Promise((resolve, reject) => {
+            this.gun.get(`~@${alias}`).once((user) => {
+                if (user) {
+                    resolve(false);
+                }
+                else {
+                    resolve(true);
+                }
+            });
+        });
+    }
+    /**
+     * Register a new alias (username) → public key mapping on GunDB.
+     * @param alias The username/alias to register.
+     * @param userPub The user's public key.
+     * @param timeout Timeout in ms (default 5000).
+     * @throws If alias/userPub is invalid or the alias cannot be registered.
+     */
     async registerAlias(alias, userPub, timeout = 5000) {
         if (!alias || !alias.trim()) {
             throw new Error("Alias must be provided for registration");
@@ -234,6 +335,10 @@ class DataBase {
             console.error("[DB] Alias availability check failed:", error);
             throw error;
         });
+        const taken = await this.isAliasTaken(normalizedAlias);
+        if (taken) {
+            throw new Error(`Alias "${normalizedAlias}" is already taken`);
+        }
         if (!available) {
             throw new Error(`Alias "${normalizedAlias}" is no longer available for registration`);
         }
@@ -261,6 +366,10 @@ class DataBase {
             throw error;
         });
     }
+    /**
+     * Reset gun.user() authentication state and clear cached user.
+     * @internal
+     */
     resetAuthState() {
         try {
             const user = this.gun.user();
@@ -285,6 +394,13 @@ class DataBase {
             // Ignore
         }
     }
+    /**
+     * Assemble a standard AuthResult object after a successful login.
+     * @param username Resulting username.
+     * @param userPub Public key (pub) for logged-in user.
+     * @returns AuthResult.
+     * @internal
+     */
     buildLoginResult(username, userPub) {
         const seaPair = this.gun.user()?._?.sea;
         return {
@@ -301,6 +417,10 @@ class DataBase {
                 : undefined,
         };
     }
+    /**
+     * Save credentials for the current session to sessionStorage, if available.
+     * @param userInfo The credentials and user identity to store.
+     */
     saveCredentials(userInfo) {
         try {
             if (typeof sessionStorage !== "undefined") {
@@ -318,6 +438,13 @@ class DataBase {
             console.error("[DB] Error saving credentials:", error);
         }
     }
+    /**
+     * Register and authenticate a new user account.
+     * @param username The username to create/account for.
+     * @param password The user's password.
+     * @param pair Optional cryptographic pair (for `auth` instead of password).
+     * @returns SignUpResult Promise.
+     */
     async signUp(username, password, pair) {
         const validation = this.validateSignupCredentials(username, password, pair);
         if (!validation.valid) {
@@ -458,6 +585,13 @@ class DataBase {
         });
         return result;
     }
+    /**
+     * Sign in (authenticate) as an existing user by username/password or SEA pair.
+     * @param username Username to log in as.
+     * @param password User's password (or "" if using pair).
+     * @param pair Optional cryptographic SEA pair.
+     * @returns AuthResult Promise.
+     */
     async login(username, password, pair) {
         this.resetAuthState();
         const normalizedUsername = username.trim().toLowerCase();
@@ -523,6 +657,10 @@ class DataBase {
             }
         });
     }
+    /**
+     * Returns the currently authenticated user's public key and Gun user instance, if logged in.
+     * @returns Object containing `pub` (public key) and optionally `user`, or `null`.
+     */
     getCurrentUser() {
         try {
             const user = this.gun.user();
@@ -539,8 +677,8 @@ class DataBase {
         }
     }
     /**
-     * Get current user's public key
-     * @returns {string | null} User's public key or null if not logged in
+     * Get current user's public key.
+     * @returns User's public key or null if not logged in.
      */
     getUserPub() {
         try {
@@ -552,11 +690,11 @@ class DataBase {
         }
     }
     /**
-     * Login with SEA pair directly
-     * @param username - Username for identification
-     * @param pair - GunDB SEA pair for authentication
-     * @returns {Promise<AuthResult>} Promise with authentication result
-     * @description Authenticates user using a GunDB pair directly without password
+     * Authenticate using a SEA pair directly (no password required).
+     * @param username The user's username for identification (not cryptographically enforced).
+     * @param pair GunDB SEA pair for authentication.
+     * @returns Promise with authentication result.
+     * @description Authenticates user using a GunDB pair directly without password.
      */
     async loginWithPair(username, pair) {
         // Validate pair structure
@@ -600,12 +738,26 @@ class DataBase {
             });
         });
     }
+    /**
+     * Legacy API: Sign in using a username and SEA pair (password parameter is unused).
+     * @param username Username to sign in as.
+     * @param pair SEA key pair.
+     * @returns AuthResult Promise.
+     */
     async loginWithPairLegacy(username, pair) {
         return this.login(username, "", pair);
     }
+    /**
+     * Returns the bound RxJS GunDB helper (reactive streams).
+     * @returns RxJS instance.
+     */
     rx() {
         return this._rxjs;
     }
+    /**
+     * Tears down the DataBase instance and performs cleanup of all resources/listeners.
+     * No further actions should be performed on this instance after destruction.
+     */
     destroy() {
         if (this._isDestroyed)
             return;
@@ -625,21 +777,45 @@ class DataBase {
         this._rxjs = undefined;
         console.log("[DB] DataBase instance destroyed");
     }
+    /**
+     * Aggressively clean up authentication state and session. Typically used for error recovery.
+     */
     aggressiveAuthCleanup() {
         console.log("🧹 Performing aggressive auth cleanup...");
         this.resetAuthState();
         this.logout();
         console.log("✓ Aggressive auth cleanup completed");
     }
+    /**
+     * Register an event handler.
+     * @param event Event name.
+     * @param listener Listener function.
+     */
     on(event, listener) {
         this.eventEmitter.on(event, listener);
     }
+    /**
+     * Remove an event handler.
+     * @param event Event name.
+     * @param listener Listener function.
+     */
     off(event, listener) {
         this.eventEmitter.off(event, listener);
     }
+    /**
+     * Register an event handler for a single event occurrence.
+     * @param event Event name.
+     * @param listener Listener function.
+     */
     once(event, listener) {
         this.eventEmitter.once(event, listener);
     }
+    /**
+     * Emit a custom event.
+     * @param event Event name.
+     * @param data Optional associated data.
+     * @returns `true` if listeners were notified; otherwise `false`.
+     */
     emit(event, data) {
         return this.eventEmitter.emit(event, data);
     }

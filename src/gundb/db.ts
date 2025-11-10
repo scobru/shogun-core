@@ -62,7 +62,7 @@ class DataBase {
     gun: IGunInstance,
     appScope: string = "shogun",
     core?: any,
-    sea?: any
+    sea?: any,
   ) {
     this.eventEmitter = new EventEmitter();
 
@@ -255,7 +255,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): { valid: boolean; error?: string } {
     if (!username || username.length < 1) {
       return {
@@ -290,7 +290,7 @@ class DataBase {
    */
   private async ensureAliasAvailable(
     alias: string,
-    timeout = 5000
+    timeout = 5000,
   ): Promise<void> {
     const available = await this.isAliasAvailable(alias, timeout);
     if (!available) {
@@ -307,7 +307,7 @@ class DataBase {
    */
   private async isAliasAvailable(
     alias: string,
-    timeout = 5000
+    timeout = 5000,
   ): Promise<boolean> {
     if (typeof alias !== "string" || !alias.trim()) {
       throw new Error("Alias must be a non-empty string");
@@ -360,7 +360,7 @@ class DataBase {
   private async registerAlias(
     alias: string,
     userPub: string,
-    timeout = 5000
+    timeout = 5000,
   ): Promise<void> {
     if (!alias || !alias.trim()) {
       throw new Error("Alias must be provided for registration");
@@ -373,7 +373,7 @@ class DataBase {
 
     const available = await this.isAliasAvailable(
       normalizedAlias,
-      timeout
+      timeout,
     ).catch((error) => {
       console.error("[DB] Alias availability check failed:", error);
       throw error;
@@ -387,7 +387,7 @@ class DataBase {
 
     if (!available) {
       throw new Error(
-        `Alias "${normalizedAlias}" is no longer available for registration`
+        `Alias "${normalizedAlias}" is no longer available for registration`,
       );
     }
 
@@ -503,7 +503,7 @@ class DataBase {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<SignUpResult> {
     const validation = this.validateSignupCredentials(username, password, pair);
     if (!validation.valid) {
@@ -544,7 +544,7 @@ class DataBase {
               userPub: userPub,
             });
             resolve(
-              this.buildLoginResult(alias || normalizedUsername, userPub)
+              this.buildLoginResult(alias || normalizedUsername, userPub),
             );
           });
         });
@@ -640,7 +640,7 @@ class DataBase {
           try {
             await this.registerAlias(
               alias || normalizedUsername,
-              authenticatedUserPub
+              authenticatedUserPub,
             );
           } catch (registerError) {
             console.error("[DB] Alias registration failed:", registerError);
@@ -678,7 +678,7 @@ class DataBase {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null
+    pair?: ISEAPair | null,
   ): Promise<AuthResult> {
     this.resetAuthState();
     const normalizedUsername = username.trim().toLowerCase();
@@ -847,7 +847,7 @@ class DataBase {
    */
   async loginWithPairLegacy(
     username: string,
-    pair: ISEAPair
+    pair: ISEAPair,
   ): Promise<AuthResult> {
     return this.login(username, "", pair);
   }
