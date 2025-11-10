@@ -62,7 +62,7 @@ class DataBase {
     gun: IGunInstance,
     appScope: string = "shogun",
     core?: any,
-    sea?: any,
+    sea?: any
   ) {
     this.eventEmitter = new EventEmitter();
 
@@ -255,7 +255,7 @@ class DataBase {
   private validateSignupCredentials(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): { valid: boolean; error?: string } {
     if (!username || username.length < 1) {
       return {
@@ -290,7 +290,7 @@ class DataBase {
    */
   private async ensureAliasAvailable(
     alias: string,
-    timeout = 5000,
+    timeout = 5000
   ): Promise<void> {
     const available = await this.isAliasAvailable(alias, timeout);
     if (!available) {
@@ -307,7 +307,7 @@ class DataBase {
    */
   private async isAliasAvailable(
     alias: string,
-    timeout = 5000,
+    timeout = 5000
   ): Promise<boolean> {
     if (typeof alias !== "string" || !alias.trim()) {
       throw new Error("Alias must be a non-empty string");
@@ -333,6 +333,24 @@ class DataBase {
   }
 
   /**
+   * Checks if a given alias/username is taken on GunDB.
+   * @param alias Username to check for availability.
+   * @returns Promise resolving to `true` if taken; otherwise `false`.
+   * @throws If alias is invalid or on I/O error.
+   */
+  private async isAliasTaken(alias: string): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.gun.get(`~@${alias}`).once((user) => {
+        if (user) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    });
+  }
+
+  /**
    * Register a new alias (username) → public key mapping on GunDB.
    * @param alias The username/alias to register.
    * @param userPub The user's public key.
@@ -342,7 +360,7 @@ class DataBase {
   private async registerAlias(
     alias: string,
     userPub: string,
-    timeout = 5000,
+    timeout = 5000
   ): Promise<void> {
     if (!alias || !alias.trim()) {
       throw new Error("Alias must be provided for registration");
@@ -355,15 +373,21 @@ class DataBase {
 
     const available = await this.isAliasAvailable(
       normalizedAlias,
-      timeout,
+      timeout
     ).catch((error) => {
       console.error("[DB] Alias availability check failed:", error);
       throw error;
     });
 
+    const taken = await this.isAliasTaken(normalizedAlias);
+
+    if (taken) {
+      throw new Error(`Alias "${normalizedAlias}" is already taken`);
+    }
+
     if (!available) {
       throw new Error(
-        `Alias "${normalizedAlias}" is no longer available for registration`,
+        `Alias "${normalizedAlias}" is no longer available for registration`
       );
     }
 
@@ -479,7 +503,7 @@ class DataBase {
   async signUp(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<SignUpResult> {
     const validation = this.validateSignupCredentials(username, password, pair);
     if (!validation.valid) {
@@ -520,7 +544,7 @@ class DataBase {
               userPub: userPub,
             });
             resolve(
-              this.buildLoginResult(alias || normalizedUsername, userPub),
+              this.buildLoginResult(alias || normalizedUsername, userPub)
             );
           });
         });
@@ -616,7 +640,7 @@ class DataBase {
           try {
             await this.registerAlias(
               alias || normalizedUsername,
-              authenticatedUserPub,
+              authenticatedUserPub
             );
           } catch (registerError) {
             console.error("[DB] Alias registration failed:", registerError);
@@ -654,7 +678,7 @@ class DataBase {
   async login(
     username: string,
     password: string,
-    pair?: ISEAPair | null,
+    pair?: ISEAPair | null
   ): Promise<AuthResult> {
     this.resetAuthState();
     const normalizedUsername = username.trim().toLowerCase();
@@ -823,7 +847,7 @@ class DataBase {
    */
   async loginWithPairLegacy(
     username: string,
-    pair: ISEAPair,
+    pair: ISEAPair
   ): Promise<AuthResult> {
     return this.login(username, "", pair);
   }
