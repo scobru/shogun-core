@@ -131,12 +131,7 @@ export class CoreInitializer {
         }
       }
 
-      this.core.db = new DataBase(
-        this.core._gun,
-        "shogun", // Default app scope
-        this.core,
-        sea,
-      );
+      this.core.db = new DataBase(this.core._gun, this.core, sea);
       return true;
     } catch (error) {
       if (typeof console !== "undefined" && console.error) {

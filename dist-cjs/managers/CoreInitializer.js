@@ -105,8 +105,7 @@ class CoreInitializer {
                     sea = global.Gun.SEA;
                 }
             }
-            this.core.db = new db_1.DataBase(this.core._gun, "shogun", // Default app scope
-            this.core, sea);
+            this.core.db = new db_1.DataBase(this.core._gun, this.core, sea);
             return true;
         }
         catch (error) {

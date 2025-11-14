@@ -1,5 +1,5 @@
 import type { AuthCallback, EventData, EventListener } from "./types";
-import type { IGunUserInstance, IGunChain, IGunInstance, ISEAPair } from "gun/types";
+import type { IGunUserInstance, IGunInstance, ISEAPair } from "gun/types";
 import type { AuthResult, SignUpResult } from "../interfaces/shogun";
 import { RxJS } from "./rxjs";
 import * as GunErrors from "./errors";
@@ -19,8 +19,6 @@ declare class DataBase {
     crypto: typeof crypto;
     /** Gun SEA cryptography context (usually gun.SEA) */
     sea: any;
-    /** App namespace root Gun node */
-    node: IGunChain<any, any, any, any>;
     /** Gun node dedicated to mapping usernames to pubkeys */
     private readonly usernamesNode;
     /** Registered callbacks for auth state changes */
@@ -34,17 +32,15 @@ declare class DataBase {
     /**
      * Constructs a new DataBase instance connected to a GunDB instance.
      * @param gun The main GunDB instance.
-     * @param appScope The namespace under which data/nodes are stored. Default: "shogun"
      * @param core Optionally, the root Gun instance (unused in this context).
      * @param sea Optional cryptography (Gun SEA) instance; will be auto-discovered if not provided.
      * @throws If gun or gun.user() is not provided.
      */
-    constructor(gun: IGunInstance, appScope?: string, core?: any, sea?: any);
+    constructor(gun: IGunInstance, core?: any, sea?: any);
     /**
-     * Re-initialize with a different app scope/namespace.
-     * @param appScope The new namespace.
+     * Initialize the database instance.
      */
-    initialize(appScope?: string): void;
+    initialize(): void;
     /**
      * Internal: subscribe to GunDB "auth" events and notify listeners.
      * Listeners are invoked on authentication status change.

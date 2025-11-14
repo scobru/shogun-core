@@ -36,8 +36,6 @@ class DataBase {
   public crypto: typeof crypto;
   /** Gun SEA cryptography context (usually gun.SEA) */
   public sea: any;
-  /** App namespace root Gun node */
-  public node: IGunChain<any, any, any, any>;
   /** Gun node dedicated to mapping usernames to pubkeys */
   private readonly usernamesNode: IGunChain<any, any, any, any>;
 
@@ -53,17 +51,11 @@ class DataBase {
   /**
    * Constructs a new DataBase instance connected to a GunDB instance.
    * @param gun The main GunDB instance.
-   * @param appScope The namespace under which data/nodes are stored. Default: "shogun"
    * @param core Optionally, the root Gun instance (unused in this context).
    * @param sea Optional cryptography (Gun SEA) instance; will be auto-discovered if not provided.
    * @throws If gun or gun.user() is not provided.
    */
-  constructor(
-    gun: IGunInstance,
-    appScope: string = "shogun",
-    core?: any,
-    sea?: any,
-  ) {
+  constructor(gun: IGunInstance, core?: any, sea?: any) {
     this.eventEmitter = new EventEmitter();
 
     if (!gun) {
@@ -93,7 +85,6 @@ class DataBase {
 
     this._rxjs = new RxJS(this.gun);
 
-    this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
     this.usernamesNode = this.gun.get("usernames") as IGunChain<
       any,
       any,
@@ -105,11 +96,10 @@ class DataBase {
   }
 
   /**
-   * Re-initialize with a different app scope/namespace.
-   * @param appScope The new namespace.
+   * Initialize the database instance.
    */
-  initialize(appScope: string = "shogun"): void {
-    this.node = this.gun.get(appScope) as IGunChain<any, any, any, any>;
+  initialize(): void {
+    // Database is already initialized in constructor
   }
 
   /**

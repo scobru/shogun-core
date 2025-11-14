@@ -280,7 +280,6 @@ async function authTest() {
   try {
     // Get GUN instance directly from database
     const gunInstance = db.gun;
-    const appNode = db.node;
 
     // Test data storage using GUN directly
     const testData = {
@@ -292,7 +291,7 @@ async function authTest() {
     console.log("🔄 Storing data using GUN directly...");
 
     // Store data using GUN directly without waiting for acknowledgment
-    appNode.get("test/encrypted-data").put(testData);
+    gunInstance.get("test/encrypted-data").put(testData);
     console.log("✓ Data stored successfully (no ack wait)");
 
     // Wait a moment for data to be stored
@@ -307,7 +306,7 @@ async function authTest() {
         resolve(null);
       }, 3000);
 
-      appNode.get("test/encrypted-data").once((data: any) => {
+      gunInstance.get("test/encrypted-data").once((data: any) => {
         clearTimeout(timeout);
         resolve(data);
       });
@@ -333,7 +332,11 @@ async function authTest() {
     const userInstance = db.gun.user();
     const currentUser = userInstance?.is ? { pub: userInstance.is.pub } : null;
     if (currentUser?.pub) {
-      appNode.get("users").get(currentUser.pub).get("profile").put(profileData);
+      gunInstance
+        .get("users")
+        .get(currentUser.pub)
+        .get("profile")
+        .put(profileData);
       console.log("✓ Profile data stored");
 
       // Wait a moment
@@ -346,7 +349,7 @@ async function authTest() {
           resolve(null);
         }, 3000);
 
-        appNode
+        gunInstance
           .get("users")
           .get(currentUser.pub)
           .get("profile")

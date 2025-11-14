@@ -63,12 +63,11 @@ class DataBase {
     /**
      * Constructs a new DataBase instance connected to a GunDB instance.
      * @param gun The main GunDB instance.
-     * @param appScope The namespace under which data/nodes are stored. Default: "shogun"
      * @param core Optionally, the root Gun instance (unused in this context).
      * @param sea Optional cryptography (Gun SEA) instance; will be auto-discovered if not provided.
      * @throws If gun or gun.user() is not provided.
      */
-    constructor(gun, appScope = "shogun", core, sea) {
+    constructor(gun, core, sea) {
         /** Cached user instance or `null` if not logged in */
         this.user = null;
         /** Registered callbacks for auth state changes */
@@ -99,16 +98,14 @@ class DataBase {
             }
         }
         this._rxjs = new rxjs_1.RxJS(this.gun);
-        this.node = this.gun.get(appScope);
         this.usernamesNode = this.gun.get("usernames");
         console.log("[DB] DataBase initialization completed");
     }
     /**
-     * Re-initialize with a different app scope/namespace.
-     * @param appScope The new namespace.
+     * Initialize the database instance.
      */
-    initialize(appScope = "shogun") {
-        this.node = this.gun.get(appScope);
+    initialize() {
+        // Database is already initialized in constructor
     }
     /**
      * Internal: subscribe to GunDB "auth" events and notify listeners.
