@@ -22,6 +22,11 @@ export declare class CoreInitializer {
      */
     private initializeHolster;
     /**
+     * Check if we're using Holster instead of Gun
+     * Holster has a 'next' method that Gun doesn't have
+     */
+    private isHolster;
+    /**
      * Initialize Gun/Holster user
      */
     private initializeGunUser;

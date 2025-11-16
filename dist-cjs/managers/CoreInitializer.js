@@ -187,6 +187,21 @@ class CoreInitializer {
         }
     }
     /**
+     * Check if we're using Holster instead of Gun
+     * Holster has a 'next' method that Gun doesn't have
+     */
+    isHolster() {
+        // Check if gun has 'next' method (Holster-specific)
+        if (typeof this.core.gun.next === "function") {
+            return true;
+        }
+        // Check if db is DataBaseHolster instance
+        if (this.core.db && this.core.db.constructor.name === "DataBaseHolster") {
+            return true;
+        }
+        return false;
+    }
+    /**
      * Initialize Gun/Holster user
      */
     initializeGunUser() {
@@ -214,27 +229,47 @@ class CoreInitializer {
             }
             throw new Error(`Failed to initialize user: ${error}`);
         }
-        // Setup auth event listener (Gun has native events, Holster uses polling in DataBaseHolster)
-        if (typeof this.core.gun.on === "function") {
-            this.core.gun.on("auth", (user) => {
-                const userInstance = this.core.gun.user();
-                if (typeof userInstance.recall === "function") {
-                    if (userInstance.recall.length > 0) {
-                        this.core._user = userInstance.recall({ sessionStorage: true });
+        // Setup auth event listener
+        // Gun has native "auth" events, but Holster doesn't support global events
+        // Holster uses polling in DataBaseHolster.subscribeToAuthEvents() instead
+        if (this.isHolster()) {
+            // Holster doesn't support global "auth" events
+            // Auth events are handled via polling in DataBaseHolster
+            // The DataBaseHolster will emit auth events via its onAuth callbacks
+            if (typeof console !== "undefined" && console.log) {
+                console.log("[CoreInitializer] Using Holster - auth events handled via DataBaseHolster polling");
+            }
+        }
+        else if (typeof this.core.gun.on === "function") {
+            // Gun has native "auth" events
+            try {
+                this.core.gun.on("auth", (user) => {
+                    const userInstance = this.core.gun.user();
+                    if (typeof userInstance.recall === "function") {
+                        if (userInstance.recall.length > 0) {
+                            this.core._user = userInstance.recall({ sessionStorage: true });
+                        }
+                        else {
+                            userInstance.recall();
+                            this.core._user = userInstance.is ? userInstance : null;
+                        }
                     }
                     else {
-                        userInstance.recall();
-                        this.core._user = userInstance.is ? userInstance : null;
+                        this.core._user = userInstance;
                     }
-                }
-                else {
-                    this.core._user = userInstance;
-                }
-                this.core.emit("auth:login", {
-                    userPub: user.pub || user.is?.pub,
-                    method: "password",
+                    this.core.emit("auth:login", {
+                        userPub: user.pub || user.is?.pub,
+                        method: "password",
+                    });
                 });
-            });
+            }
+            catch (error) {
+                // If gun.on("auth") fails, it might be because we're using Holster
+                // but the detection didn't work. Log and continue.
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("[CoreInitializer] Failed to register auth event listener:", error);
+                }
+            }
         }
     }
     /**
@@ -263,35 +298,45 @@ class CoreInitializer {
      * Setup wallet derivation
      */
     setupWalletDerivation() {
-        // Only setup if gun.on is available (Gun has native events)
-        if (typeof this.core.gun.on === "function") {
-            this.core.gun.on("auth", async (user) => {
-                if (!user.is)
-                    return;
-                const priv = user._?.sea?.epriv || user.is?.epriv;
-                const pub = user._?.sea?.epub || user.is?.epub;
-                if (priv && pub) {
-                    this.core.wallets = await (0, db_1.derive)(priv, pub, {
-                        includeSecp256k1Bitcoin: true,
-                        includeSecp256k1Ethereum: true,
-                    });
-                }
-            });
+        if (this.isHolster()) {
+            // For Holster, wallet derivation is handled via onAuth callbacks in DataBaseHolster
+            if (this.core.db && typeof this.core.db.onAuth === "function") {
+                this.core.db.onAuth(async (user) => {
+                    if (!user.is)
+                        return;
+                    const priv = user.is?.epriv;
+                    const pub = user.is?.epub;
+                    if (priv && pub) {
+                        this.core.wallets = await (0, db_1.derive)(priv, pub, {
+                            includeSecp256k1Bitcoin: true,
+                            includeSecp256k1Ethereum: true,
+                        });
+                    }
+                });
+            }
         }
-        else {
-            // For Holster, wallet derivation will be handled via onAuth callbacks
-            this.core.db.onAuth(async (user) => {
-                if (!user.is)
-                    return;
-                const priv = user.is?.epriv;
-                const pub = user.is?.epub;
-                if (priv && pub) {
-                    this.core.wallets = await (0, db_1.derive)(priv, pub, {
-                        includeSecp256k1Bitcoin: true,
-                        includeSecp256k1Ethereum: true,
-                    });
+        else if (typeof this.core.gun.on === "function") {
+            // Gun has native "auth" events
+            try {
+                this.core.gun.on("auth", async (user) => {
+                    if (!user.is)
+                        return;
+                    const priv = user._?.sea?.epriv || user.is?.epriv;
+                    const pub = user._?.sea?.epub || user.is?.epub;
+                    if (priv && pub) {
+                        this.core.wallets = await (0, db_1.derive)(priv, pub, {
+                            includeSecp256k1Bitcoin: true,
+                            includeSecp256k1Ethereum: true,
+                        });
+                    }
+                });
+            }
+            catch (error) {
+                // If gun.on("auth") fails, log and continue
+                if (typeof console !== "undefined" && console.warn) {
+                    console.warn("[CoreInitializer] Failed to register wallet derivation listener:", error);
                 }
-            });
+            }
         }
     }
     /**

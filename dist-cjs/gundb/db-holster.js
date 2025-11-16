@@ -72,6 +72,7 @@ class DataBaseHolster {
         /** Last known user state */
         this.lastUserState = null;
         this.eventEmitter = new eventEmitter_1.EventEmitter();
+        this.core = core;
         if (!holster) {
             throw new Error("Holster instance is required but was not provided");
         }
@@ -119,13 +120,31 @@ class DataBaseHolster {
             const user = this.holster.user();
             const currentState = user.is;
             if (currentState !== this.lastUserState) {
+                const previousState = this.lastUserState;
                 this.lastUserState = currentState;
                 if (currentState) {
+                    // User logged in
                     this.notifyAuthListeners(currentState.pub || "");
+                    // Emit auth:login event if core is available and user just logged in
+                    if (this.core &&
+                        typeof this.core.emit === "function" &&
+                        !previousState) {
+                        this.core.emit("auth:login", {
+                            userPub: currentState.pub || "",
+                            username: currentState.username || "",
+                            method: "password",
+                        });
+                    }
                 }
                 else {
                     // User logged out
                     this.notifyAuthListeners("");
+                    // Emit auth:logout event if core is available and user just logged out
+                    if (this.core &&
+                        typeof this.core.emit === "function" &&
+                        previousState) {
+                        this.core.emit("auth:logout", undefined);
+                    }
                 }
             }
         }, 100);
@@ -207,6 +226,7 @@ class DataBaseHolster {
      */
     logout() {
         try {
+            const wasLoggedIn = !!this.user;
             const currentUser = this.holster.user();
             if (currentUser && currentUser.is) {
                 currentUser.leave();
@@ -214,6 +234,10 @@ class DataBaseHolster {
             this.user = null;
             if (typeof sessionStorage !== "undefined") {
                 sessionStorage.removeItem("gunSessionData");
+            }
+            // Emit auth:logout event if core is available and user was logged in
+            if (wasLoggedIn && this.core && typeof this.core.emit === "function") {
+                this.core.emit("auth:logout", undefined);
             }
         }
         catch (error) {
@@ -267,7 +291,7 @@ class DataBaseHolster {
     }
     /**
      * Checks if a given alias/username is available on Holster.
-     * Uses Holster's .get().next() API instead of chained .get()
+     * Uses the same approach as isAliasTaken but returns the inverse.
      */
     async isAliasAvailable(alias, timeout = 5000) {
         if (typeof alias !== "string" || !alias.trim()) {
@@ -280,15 +304,20 @@ class DataBaseHolster {
                 if (settled)
                     return;
                 settled = true;
-                reject(new Error("Timeout while checking alias availability"));
+                // If timeout, assume alias is available (optimistic approach)
+                // This allows signup to proceed even if the check times out
+                resolve(true);
             }, timeout);
-            // Holster: use .next() instead of chained .get()
-            this.usernamesNode.next(normalizedAlias, null, (existingPub) => {
+            // Holster: check if username exists by looking up ~@username
+            // Use the same approach as isAliasTaken for consistency
+            this.holster.get(`~@${normalizedAlias}`).next(null, null, (user) => {
                 if (settled)
                     return;
                 settled = true;
                 clearTimeout(timer);
-                resolve(!existingPub);
+                // If user exists, alias is taken (return false)
+                // If user is null/undefined, alias is available (return true)
+                resolve(!user);
             });
         });
     }
@@ -298,13 +327,11 @@ class DataBaseHolster {
     async isAliasTaken(alias) {
         return new Promise((resolve, reject) => {
             // Holster: use .get().next() for chaining
+            // Check if username exists by looking up ~@username
             this.holster.get(`~@${alias}`).next(null, null, (user) => {
-                if (user) {
-                    resolve(false);
-                }
-                else {
-                    resolve(true);
-                }
+                // If user exists, alias is taken (return true)
+                // If user is null/undefined, alias is available (return false)
+                resolve(!!user);
             });
         });
     }
@@ -499,6 +526,14 @@ class DataBaseHolster {
                     catch (registerError) {
                         console.error("[DB] Alias registration failed:", registerError);
                     }
+                    // Emit auth:signup event if core is available
+                    if (this.core && typeof this.core.emit === "function") {
+                        this.core.emit("auth:signup", {
+                            userPub: authenticatedUserPub,
+                            username: normalizedUsername,
+                            method: "password",
+                        });
+                    }
                     resolve({
                         success: true,
                         userPub: authenticatedUserPub,
@@ -562,6 +597,14 @@ class DataBaseHolster {
                 }
                 catch (saveError) {
                     // Ignore save errors
+                }
+                // Emit auth:login event if core is available
+                if (this.core && typeof this.core.emit === "function") {
+                    this.core.emit("auth:login", {
+                        userPub: userPub,
+                        username: alias || normalizedUsername,
+                        method: "password",
+                    });
                 }
                 resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
             });
@@ -685,6 +728,14 @@ class DataBaseHolster {
                         catch (saveError) {
                             // Ignore save errors
                         }
+                        // Emit auth:login event if core is available (existing user)
+                        if (this.core && typeof this.core.emit === "function") {
+                            this.core.emit("auth:login", {
+                                userPub: pair.pub,
+                                username: normalizedUsername,
+                                method: "pair",
+                            });
+                        }
                         resolve(this.buildLoginResult(normalizedUsername, pair.pub));
                     }, { wait: 5000 });
                     return;
@@ -766,6 +817,19 @@ class DataBaseHolster {
                     }
                     catch (saveError) {
                         // Ignore save errors
+                    }
+                    // Emit auth:signup event (new user created) and auth:login event if core is available
+                    if (this.core && typeof this.core.emit === "function") {
+                        this.core.emit("auth:signup", {
+                            userPub: pair.pub,
+                            username: normalizedUsername,
+                            method: "pair",
+                        });
+                        this.core.emit("auth:login", {
+                            userPub: pair.pub,
+                            username: normalizedUsername,
+                            method: "pair",
+                        });
                     }
                     resolve(this.buildLoginResult(normalizedUsername, pair.pub));
                 });
@@ -900,17 +964,28 @@ class DataBaseHolster {
                 once: (callback) => {
                     // Implement .once() using .on()
                     let called = false;
+                    let unsubscribe = null;
                     const wrappedCallback = (data) => {
                         if (!called) {
                             called = true;
                             callback(data);
+                            // Unsubscribe immediately after callback
+                            if (unsubscribe) {
+                                unsubscribe();
+                                unsubscribe = null;
+                            }
+                            else if (chain.off) {
+                                chain.off(wrappedCallback);
+                            }
                         }
                     };
-                    chain.on(wrappedCallback);
-                    // Auto-unsubscribe after first call
-                    setTimeout(() => {
-                        chain.off(wrappedCallback);
-                    }, 0);
+                    // Subscribe and store unsubscribe function
+                    if (chain.on) {
+                        const unsub = chain.on(wrappedCallback);
+                        if (typeof unsub === "function") {
+                            unsubscribe = unsub;
+                        }
+                    }
                     return createChainProxy(chain);
                 },
                 on: (callback) => {

@@ -21,6 +21,8 @@ declare class DataBase {
     sea: any;
     /** Gun node dedicated to mapping usernames to pubkeys */
     private readonly usernamesNode;
+    /** ShogunCore instance for emitting events */
+    private readonly core?;
     /** Registered callbacks for auth state changes */
     private readonly onAuthCallbacks;
     /** EventEmitter for app-specific event management */

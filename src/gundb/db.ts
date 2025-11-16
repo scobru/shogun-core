@@ -38,6 +38,8 @@ class DataBase {
   public sea: any;
   /** Gun node dedicated to mapping usernames to pubkeys */
   private readonly usernamesNode: IGunChain<any, any, any, any>;
+  /** ShogunCore instance for emitting events */
+  private readonly core?: any;
 
   /** Registered callbacks for auth state changes */
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
@@ -57,6 +59,7 @@ class DataBase {
    */
   constructor(gun: IGunInstance, core?: any, sea?: any) {
     this.eventEmitter = new EventEmitter();
+    this.core = core;
 
     if (!gun) {
       throw new Error("Gun instance is required but was not provided");
@@ -203,6 +206,7 @@ class DataBase {
    */
   logout(): void {
     try {
+      const wasLoggedIn = !!this.user;
       const currentUser = this.gun.user();
       if (currentUser && currentUser.is) {
         currentUser.leave();
@@ -211,6 +215,11 @@ class DataBase {
 
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.removeItem("gunSessionData");
+      }
+
+      // Emit auth:logout event if core is available and user was logged in
+      if (wasLoggedIn && this.core && typeof this.core.emit === "function") {
+        this.core.emit("auth:logout", undefined);
       }
     } catch (error) {
       console.error("[DB] Error during logout:", error);
@@ -330,12 +339,11 @@ class DataBase {
    */
   private async isAliasTaken(alias: string): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
+      // Check if username exists by looking up ~@username
       this.gun.get(`~@${alias}`).once((user) => {
-        if (user) {
-          resolve(false);
-        } else {
-          resolve(true);
-        }
+        // If user exists, alias is taken (return true)
+        // If user is null/undefined, alias is available (return false)
+        resolve(!!user);
       });
     });
   }
@@ -533,6 +541,16 @@ class DataBase {
               pair: pair ?? userPair,
               userPub: userPub,
             });
+
+            // Emit auth:signup event if core is available (pair-based signup)
+            if (this.core && typeof this.core.emit === "function") {
+              this.core.emit("auth:signup", {
+                userPub: userPub,
+                username: normalizedUsername,
+                method: "pair" as const,
+              });
+            }
+
             resolve(
               this.buildLoginResult(alias || normalizedUsername, userPub),
             );
@@ -636,6 +654,15 @@ class DataBase {
             console.error("[DB] Alias registration failed:", registerError);
           }
 
+          // Emit auth:signup event if core is available
+          if (this.core && typeof this.core.emit === "function") {
+            this.core.emit("auth:signup", {
+              userPub: authenticatedUserPub,
+              username: normalizedUsername,
+              method: pair ? ("pair" as const) : ("password" as const),
+            });
+          }
+
           const sea = (user as any)?._?.sea;
           resolve({
             success: true,
@@ -704,6 +731,15 @@ class DataBase {
             // Ignore save errors
           }
 
+          // Emit auth:login event if core is available (pair-based login)
+          if (this.core && typeof this.core.emit === "function") {
+            this.core.emit("auth:login", {
+              userPub: userPub,
+              username: alias || normalizedUsername,
+              method: "pair" as const,
+            });
+          }
+
           resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
         });
       } else {
@@ -733,6 +769,15 @@ class DataBase {
             });
           } catch (saveError) {
             // Ignore save errors
+          }
+
+          // Emit auth:login event if core is available (password-based login)
+          if (this.core && typeof this.core.emit === "function") {
+            this.core.emit("auth:login", {
+              userPub: userPub,
+              username: alias || normalizedUsername,
+              method: "password" as const,
+            });
           }
 
           resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
@@ -822,6 +867,15 @@ class DataBase {
           });
         } catch (saveError) {
           // Ignore save errors
+        }
+
+        // Emit auth:login event if core is available (loginWithPair)
+        if (this.core && typeof this.core.emit === "function") {
+          this.core.emit("auth:login", {
+            userPub: userPub,
+            username: alias || normalizedUsername,
+            method: "pair" as const,
+          });
         }
 
         resolve(this.buildLoginResult(alias || normalizedUsername, userPub));

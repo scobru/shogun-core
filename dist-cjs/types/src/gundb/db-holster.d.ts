@@ -21,6 +21,8 @@ declare class DataBaseHolster {
     sea: any;
     /** Holster node dedicated to mapping usernames to pubkeys */
     private readonly usernamesNode;
+    /** ShogunCore instance for emitting events */
+    private readonly core?;
     /** Registered callbacks for auth state changes */
     private readonly onAuthCallbacks;
     /** EventEmitter for app-specific event management */
@@ -94,7 +96,7 @@ declare class DataBaseHolster {
     private ensureAliasAvailable;
     /**
      * Checks if a given alias/username is available on Holster.
-     * Uses Holster's .get().next() API instead of chained .get()
+     * Uses the same approach as isAliasTaken but returns the inverse.
      */
     private isAliasAvailable;
     /**
