@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import { ShogunPlugin } from "./interfaces/plugin";
 import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
 import { DataBase, RxJS } from "./gundb";
+import { DataBaseHolster } from "./gundb/db-holster";
 import { PluginManager } from "./managers/PluginManager";
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -20,7 +21,7 @@ import { PluginManager } from "./managers/PluginManager";
  */
 export declare class ShogunCore implements IShogunCore {
     static readonly API_VERSION = "^6.2.1";
-    db: DataBase;
+    db: DataBase | DataBaseHolster;
     storage: ShogunStorage;
     provider?: ethers.Provider;
     config: ShogunCoreConfig;

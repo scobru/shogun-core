@@ -14,8 +14,13 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.RxJSHolster = exports.DataBaseHolster = void 0;
 // Export the main class
 __exportStar(require("./db"), exports);
 __exportStar(require("./gun-es"), exports);
+var db_holster_1 = require("./db-holster");
+Object.defineProperty(exports, "DataBaseHolster", { enumerable: true, get: function () { return db_holster_1.DataBaseHolster; } });
+var rxjs_holster_1 = require("./rxjs-holster");
+Object.defineProperty(exports, "RxJSHolster", { enumerable: true, get: function () { return rxjs_holster_1.RxJSHolster; } });
 // Export improved types
 __exportStar(require("./types"), exports);

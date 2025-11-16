@@ -13,6 +13,8 @@ import {
 } from "./gundb/db";
 
 import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
+import { DataBaseHolster } from "./gundb/db-holster";
+import { RxJSHolster } from "./gundb/rxjs-holster";
 
 // Import improved types
 import { TypedGunOperationResult, TypedAuthResult } from "./gundb";
@@ -46,7 +48,16 @@ export type {
   TypedAuthResult,
 };
 
-export { ShogunCore, RxJS, crypto, derive, GunErrors, DataBase };
+export {
+  ShogunCore,
+  RxJS,
+  crypto,
+  derive,
+  GunErrors,
+  DataBase,
+  DataBaseHolster,
+  RxJSHolster,
+};
 
 // Note: Gun and SEA are not exported to avoid bundling issues
 // Users should import Gun and SEA directly from the 'gun' package

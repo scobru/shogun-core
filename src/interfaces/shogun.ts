@@ -3,6 +3,7 @@ import { ISEAPair } from "gun";
 import { ethers } from "ethers";
 import { ShogunError } from "../utils/errorHandler";
 import { DataBase } from "../gundb/db";
+import { DataBaseHolster } from "../gundb/db-holster";
 import { RxJS } from "../gundb/rxjs";
 import { ShogunPlugin, PluginManager } from "./plugin";
 import { ShogunStorage } from "../storage/storage";
@@ -125,7 +126,7 @@ export interface IShogunCore extends PluginManager {
   _gun: IGunInstance<any>; // Internal gun instance
   user: IGunUserInstance | null;
   _user: IGunUserInstance | null; // Internal user instance
-  db: DataBase;
+  db: DataBase | DataBaseHolster;
   rx: RxJS; // RxJS integration
   storage: ShogunStorage;
   config: ShogunCoreConfig;
@@ -206,7 +207,8 @@ export interface WebauthnConfig {
  * Shogun SDK configuration
  */
 export interface ShogunCoreConfig {
-  gunInstance: IGunInstance<any>; // Required: existing Gun instance
+  gunInstance?: IGunInstance<any>; // Optional: existing Gun instance (required if holsterInstance not provided)
+  holsterInstance?: any; // Optional: existing Holster instance (required if gunInstance not provided)
   webauthn?: WebauthnConfig;
   web3?: {
     enabled?: boolean;

@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setBufferPolyfill = exports.ShogunStorage = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
+exports.setBufferPolyfill = exports.ShogunStorage = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.RxJSHolster = exports.DataBaseHolster = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
 // Import polyfills FIRST before any other imports
 // This ensures Buffer and other Node.js polyfills are available
 require("./polyfills");
@@ -26,6 +26,10 @@ Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { 
 Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return db_1.derive; } });
 Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return db_1.GunErrors; } });
 Object.defineProperty(exports, "DataBase", { enumerable: true, get: function () { return db_1.DataBase; } });
+const db_holster_1 = require("./gundb/db-holster");
+Object.defineProperty(exports, "DataBaseHolster", { enumerable: true, get: function () { return db_holster_1.DataBaseHolster; } });
+const rxjs_holster_1 = require("./gundb/rxjs-holster");
+Object.defineProperty(exports, "RxJSHolster", { enumerable: true, get: function () { return rxjs_holster_1.RxJSHolster; } });
 // Gun and SEA imports removed - users should import them directly from 'gun' package
 // This prevents bundling issues in build systems like Vite
 __exportStar(require("./utils/errorHandler"), exports);

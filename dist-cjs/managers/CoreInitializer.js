@@ -8,6 +8,8 @@ const web3ConnectorPlugin_1 = require("../plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("../plugins/nostr/nostrConnectorPlugin");
 const zkProofPlugin_1 = require("../plugins/zkproof/zkProofPlugin");
 const db_1 = require("../gundb/db");
+const db_holster_1 = require("../gundb/db-holster");
+const rxjs_holster_1 = require("../gundb/rxjs-holster");
 /**
  * Handles initialization of ShogunCore components
  */
@@ -51,20 +53,30 @@ class CoreInitializer {
         this.setupGunEventForwarding();
         // Setup wallet derivation
         this.setupWalletDerivation();
-        // Initialize RxJS
-        this.core.rx = new db_1.RxJS(this.core.gun);
+        // Initialize RxJS (use appropriate implementation based on instance type)
+        if (config.holsterInstance) {
+            this.core.rx = new rxjs_holster_1.RxJSHolster(this.core.gun);
+        }
+        else {
+            this.core.rx = new db_1.RxJS(this.core.gun);
+        }
         // Register built-in plugins
         this.registerBuiltinPlugins(config);
         // Initialize async components
         this.initializeDb();
     }
     /**
-     * Initialize Gun instance
+     * Initialize Gun or Holster instance
      */
     initializeGun(config) {
+        // Check if Holster instance is provided
+        if (config.holsterInstance) {
+            return this.initializeHolster(config);
+        }
+        // Otherwise, use Gun instance
         try {
             if (!config.gunInstance) {
-                throw new Error("Gun instance is required but was not provided");
+                throw new Error("Either gunInstance or holsterInstance is required but neither was provided");
             }
             // Validate Gun instance
             if (typeof config.gunInstance !== "object") {
@@ -116,25 +128,114 @@ class CoreInitializer {
         }
     }
     /**
-     * Initialize Gun user
+     * Initialize Holster instance
      */
-    initializeGunUser() {
+    initializeHolster(config) {
         try {
-            this.core._user = this.core.gun.user().recall({ sessionStorage: true });
+            if (!config.holsterInstance) {
+                throw new Error("Holster instance is required but was not provided");
+            }
+            // Validate Holster instance
+            if (typeof config.holsterInstance !== "object") {
+                throw new Error(`Holster instance must be an object, received: ${typeof config.holsterInstance}`);
+            }
+            if (typeof config.holsterInstance.user !== "function") {
+                throw new Error(`Holster instance is invalid: holster.user is not a function. Received holster.user type: ${typeof config.holsterInstance.user}`);
+            }
+            if (typeof config.holsterInstance.get !== "function") {
+                throw new Error(`Holster instance is invalid: holster.get is not a function. Received holster.get type: ${typeof config.holsterInstance.get}`);
+            }
+            console.log("Using provided Holster instance:", config.holsterInstance);
+            // Store holster instance in _gun for compatibility
+            this.core._gun = config.holsterInstance;
         }
         catch (error) {
             if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing Gun user:", error);
+                console.error("Error validating Holster instance:", error);
             }
-            throw new Error(`Failed to initialize Gun user: ${error}`);
+            throw new Error(`Failed to validate Holster instance: ${error}`);
         }
-        this.core.gun.on("auth", (user) => {
-            this.core._user = this.core.gun.user().recall({ sessionStorage: true });
-            this.core.emit("auth:login", {
-                userPub: user.pub,
-                method: "password",
+        try {
+            // Get SEA from Holster instance or global
+            let sea = this.core._gun.SEA || null;
+            if (!sea) {
+                // Try to find SEA in various global locations
+                if (typeof window !== "undefined" &&
+                    window.Holster &&
+                    window.Holster.SEA) {
+                    sea = window.Holster.SEA;
+                }
+                else if (globalThis.Holster &&
+                    globalThis.Holster.SEA) {
+                    sea = globalThis.Holster.SEA;
+                }
+                else if (global.Holster && global.Holster.SEA) {
+                    sea = global.Holster.SEA;
+                }
+                else if (globalThis.SEA) {
+                    sea = globalThis.SEA;
+                }
+            }
+            this.core.db = new db_holster_1.DataBaseHolster(this.core._gun, this.core, sea);
+            return true;
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing DataBaseHolster:", error);
+            }
+            throw new Error(`Failed to initialize DataBaseHolster: ${error}`);
+        }
+    }
+    /**
+     * Initialize Gun/Holster user
+     */
+    initializeGunUser() {
+        try {
+            const userInstance = this.core.gun.user();
+            // Holster's recall() doesn't take options, Gun's does
+            if (typeof userInstance.recall === "function") {
+                if (userInstance.recall.length > 0) {
+                    // Gun API: recall takes options
+                    this.core._user = userInstance.recall({ sessionStorage: true });
+                }
+                else {
+                    // Holster API: recall takes no arguments
+                    userInstance.recall();
+                    this.core._user = userInstance.is ? userInstance : null;
+                }
+            }
+            else {
+                this.core._user = userInstance;
+            }
+        }
+        catch (error) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error("Error initializing user:", error);
+            }
+            throw new Error(`Failed to initialize user: ${error}`);
+        }
+        // Setup auth event listener (Gun has native events, Holster uses polling in DataBaseHolster)
+        if (typeof this.core.gun.on === "function") {
+            this.core.gun.on("auth", (user) => {
+                const userInstance = this.core.gun.user();
+                if (typeof userInstance.recall === "function") {
+                    if (userInstance.recall.length > 0) {
+                        this.core._user = userInstance.recall({ sessionStorage: true });
+                    }
+                    else {
+                        userInstance.recall();
+                        this.core._user = userInstance.is ? userInstance : null;
+                    }
+                }
+                else {
+                    this.core._user = userInstance;
+                }
+                this.core.emit("auth:login", {
+                    userPub: user.pub || user.is?.pub,
+                    method: "password",
+                });
             });
-        });
+        }
     }
     /**
      * Setup Gun event forwarding
@@ -162,16 +263,36 @@ class CoreInitializer {
      * Setup wallet derivation
      */
     setupWalletDerivation() {
-        this.core.gun.on("auth", async (user) => {
-            if (!user.is)
-                return;
-            const priv = user._?.sea?.epriv;
-            const pub = user._?.sea?.epub;
-            this.core.wallets = await (0, db_1.derive)(priv, pub, {
-                includeSecp256k1Bitcoin: true,
-                includeSecp256k1Ethereum: true,
+        // Only setup if gun.on is available (Gun has native events)
+        if (typeof this.core.gun.on === "function") {
+            this.core.gun.on("auth", async (user) => {
+                if (!user.is)
+                    return;
+                const priv = user._?.sea?.epriv || user.is?.epriv;
+                const pub = user._?.sea?.epub || user.is?.epub;
+                if (priv && pub) {
+                    this.core.wallets = await (0, db_1.derive)(priv, pub, {
+                        includeSecp256k1Bitcoin: true,
+                        includeSecp256k1Ethereum: true,
+                    });
+                }
             });
-        });
+        }
+        else {
+            // For Holster, wallet derivation will be handled via onAuth callbacks
+            this.core.db.onAuth(async (user) => {
+                if (!user.is)
+                    return;
+                const priv = user.is?.epriv;
+                const pub = user.is?.epub;
+                if (priv && pub) {
+                    this.core.wallets = await (0, db_1.derive)(priv, pub, {
+                        includeSecp256k1Bitcoin: true,
+                        includeSecp256k1Ethereum: true,
+                    });
+                }
+            });
+        }
     }
     /**
      * Register built-in plugins based on configuration

@@ -14,11 +14,15 @@ export declare class CoreInitializer {
      */
     initialize(config: ShogunCoreConfig): Promise<void>;
     /**
-     * Initialize Gun instance
+     * Initialize Gun or Holster instance
      */
     private initializeGun;
     /**
-     * Initialize Gun user
+     * Initialize Holster instance
+     */
+    private initializeHolster;
+    /**
+     * Initialize Gun/Holster user
      */
     private initializeGunUser;
     /**
