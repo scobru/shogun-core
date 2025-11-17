@@ -689,14 +689,9 @@ class DataBaseHolster {
           // Ignore save errors
         }
 
-        // Emit auth:login event if core is available
-        if (this.core && typeof this.core.emit === "function") {
-          this.core.emit("auth:login", {
-            userPub: userPub,
-            username: alias || normalizedUsername,
-            method: "password" as const,
-          });
-        }
+        // Don't emit auth:login here - let subscribeToAuthEvents() handle it via polling
+        // This prevents duplicate events. The polling will detect the state change from
+        // null/undefined to user.is and emit the event once.
 
         resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
       });
@@ -842,14 +837,9 @@ class DataBaseHolster {
                 // Ignore save errors
               }
 
-              // Emit auth:login event if core is available (existing user)
-              if (this.core && typeof this.core.emit === "function") {
-                this.core.emit("auth:login", {
-                  userPub: pair.pub,
-                  username: normalizedUsername,
-                  method: "pair" as const,
-                });
-              }
+              // Don't emit auth:login here - let subscribeToAuthEvents() handle it via polling
+              // This prevents duplicate events. The polling will detect the state change from
+              // null/undefined to user.is and emit the event once.
 
               resolve(this.buildLoginResult(normalizedUsername, pair.pub));
             },
@@ -956,19 +946,19 @@ class DataBaseHolster {
             // Ignore save errors
           }
 
-          // Emit auth:signup event (new user created) and auth:login event if core is available
+          // Emit auth:signup event (new user created) if core is available
+          // The auth:login event will be emitted by subscribeToAuthEvents() when it detects the state change
           if (this.core && typeof this.core.emit === "function") {
             this.core.emit("auth:signup", {
               userPub: pair.pub,
               username: normalizedUsername,
               method: "pair" as const,
             });
-            this.core.emit("auth:login", {
-              userPub: pair.pub,
-              username: normalizedUsername,
-              method: "pair" as const,
-            });
           }
+
+          // Don't emit auth:login here - let subscribeToAuthEvents() handle it via polling
+          // This prevents duplicate events. The polling will detect the state change from
+          // null/undefined to user.is and emit the event once.
 
           resolve(this.buildLoginResult(normalizedUsername, pair.pub));
         });
