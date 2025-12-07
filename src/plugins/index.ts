@@ -43,15 +43,3 @@ export type {
   VerifiableCredentialProof,
   CredentialVerificationResult,
 } from "./zkproof/zkCredentials";
-
-// Smart Wallet plugin exports
-export { SmartWalletPlugin } from "./smartwallet/smartWalletPlugin";
-export type {
-  SmartWalletPluginInterface,
-  SmartWalletConfig,
-  WalletCreateResult,
-  WalletInfo,
-  ExecutionResult,
-  ProposalInfo,
-  RecoveryRequest,
-} from "./smartwallet/types";

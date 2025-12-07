@@ -14,5 +14,3 @@ export { ZkProofPlugin } from "./zkproof/zkProofPlugin";
 export { ZkCredentials, CredentialType } from "./zkproof/zkCredentials";
 export type { ZkProofPluginInterface, ZkIdentityData, ZkProofAuthResult, ZkProofGenerationOptions, ZkProofVerificationResult, ZkProofCredential, ZkProofConfig, SemaphoreProof, } from "./zkproof/types";
 export type { CredentialClaim, VerifiableCredentialProof, CredentialVerificationResult, } from "./zkproof/zkCredentials";
-export { SmartWalletPlugin } from "./smartwallet/smartWalletPlugin";
-export type { SmartWalletPluginInterface, SmartWalletConfig, WalletCreateResult, WalletInfo, ExecutionResult, ProposalInfo, RecoveryRequest, } from "./smartwallet/types";

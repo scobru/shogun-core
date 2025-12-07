@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SmartWalletPlugin = exports.CredentialType = exports.ZkCredentials = exports.ZkProofPlugin = exports.ZkProofConnector = exports.NostrConnectorPlugin = exports.NostrConnector = exports.Web3ConnectorPlugin = exports.Web3Connector = exports.WebauthnPlugin = exports.Webauthn = exports.BasePlugin = void 0;
+exports.CredentialType = exports.ZkCredentials = exports.ZkProofPlugin = exports.ZkProofConnector = exports.NostrConnectorPlugin = exports.NostrConnector = exports.Web3ConnectorPlugin = exports.Web3Connector = exports.WebauthnPlugin = exports.Webauthn = exports.BasePlugin = void 0;
 // Base plugin interface and types
 var base_1 = require("./base");
 Object.defineProperty(exports, "BasePlugin", { enumerable: true, get: function () { return base_1.BasePlugin; } });
@@ -27,6 +27,3 @@ Object.defineProperty(exports, "ZkProofPlugin", { enumerable: true, get: functio
 var zkCredentials_1 = require("./zkproof/zkCredentials");
 Object.defineProperty(exports, "ZkCredentials", { enumerable: true, get: function () { return zkCredentials_1.ZkCredentials; } });
 Object.defineProperty(exports, "CredentialType", { enumerable: true, get: function () { return zkCredentials_1.CredentialType; } });
-// Smart Wallet plugin exports
-var smartWalletPlugin_1 = require("./smartwallet/smartWalletPlugin");
-Object.defineProperty(exports, "SmartWalletPlugin", { enumerable: true, get: function () { return smartWalletPlugin_1.SmartWalletPlugin; } });
