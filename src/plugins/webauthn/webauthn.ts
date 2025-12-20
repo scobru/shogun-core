@@ -77,8 +77,8 @@ export class Webauthn extends EventEmitter {
       rpId:
         config?.rpId ??
         (typeof window !== "undefined" &&
-          window.location &&
-          window.location.hostname
+        window.location &&
+        window.location.hostname
           ? window.location.hostname.split(":")[0]
           : "localhost"),
     };
@@ -394,26 +394,26 @@ export class Webauthn extends EventEmitter {
       const userId = new TextEncoder().encode(username);
 
       const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
-      {
-        challenge,
-        rp: {
-          name: "Shogun Wallet",
-          ...(this.config.rpId !== "localhost" && { id: this.config.rpId }),
-        },
-        user: {
-          id: userId,
-          name: username,
-          displayName: username,
-        },
-        pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-        timeout: this.config.timeout,
-        attestation: this.config.attestation,
-        authenticatorSelection: {
-          authenticatorAttachment: this.config.authenticatorAttachment,
-          userVerification: this.config.userVerification,
-          requireResidentKey: this.config.requireResidentKey,
-        },
-      };
+        {
+          challenge,
+          rp: {
+            name: "Shogun Wallet",
+            ...(this.config.rpId !== "localhost" && { id: this.config.rpId }),
+          },
+          user: {
+            id: userId,
+            name: username,
+            displayName: username,
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          timeout: this.config.timeout,
+          attestation: this.config.attestation,
+          authenticatorSelection: {
+            authenticatorAttachment: this.config.authenticatorAttachment,
+            userVerification: this.config.userVerification,
+            requireResidentKey: this.config.requireResidentKey,
+          },
+        };
 
       const credential = await navigator.credentials.create({
         publicKey: publicKeyCredentialCreationOptions,

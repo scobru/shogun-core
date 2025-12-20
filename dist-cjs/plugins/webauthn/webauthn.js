@@ -24,7 +24,7 @@ const DEFAULT_CONFIG = {
     timeout: 60000,
     userVerification: "required",
     attestation: "none",
-    authenticatorAttachment: "platform",
+    authenticatorAttachment: undefined, // Support both platform (Face ID, Windows Hello) AND cross-platform (USB keys)
     requireResidentKey: false,
 };
 /**
