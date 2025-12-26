@@ -1,4 +1,4 @@
-import { NostrConnector } from "./nostrConnector";
+import { NostrConnector } from './nostrConnector';
 /**
  * Nostr Signing Credential for oneshot signing
  */

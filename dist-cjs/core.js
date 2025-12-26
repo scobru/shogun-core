@@ -36,8 +36,8 @@ class ShogunCore {
         this.coreInitializer = new CoreInitializer_1.CoreInitializer(this);
         // Initialize async components
         this.coreInitializer.initialize(config).catch((error) => {
-            if (typeof console !== "undefined" && console.warn) {
-                console.warn("Error during async initialization:", error);
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('Error during async initialization:', error);
             }
         });
     }
@@ -302,13 +302,13 @@ class ShogunCore {
      */
     async saveCredentials(credentials) {
         try {
-            this.storage.setItem("userCredentials", JSON.stringify(credentials));
+            this.storage.setItem('userCredentials', JSON.stringify(credentials));
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.warn) {
-                console.warn("Failed to save credentials to storage");
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('Failed to save credentials to storage');
             }
-            if (typeof console !== "undefined" && console.error) {
+            if (typeof console !== 'undefined' && console.error) {
                 console.error(`Error saving credentials:`, error);
             }
         }
@@ -318,10 +318,10 @@ class ShogunCore {
     }
 }
 exports.ShogunCore = ShogunCore;
-ShogunCore.API_VERSION = "^6.2.1";
+ShogunCore.API_VERSION = '^6.2.1';
 // Global declarations are handled in the original core.ts file
 // to avoid conflicts, we only set the window properties here
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
     window.Shogun = (config) => {
         return new ShogunCore(config);
     };

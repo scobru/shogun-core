@@ -29,10 +29,10 @@ class AuthManager {
                 return;
             }
             this.core.db.logout();
-            this.core.emit("auth:logout");
+            this.core.emit('auth:logout');
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGOUT_FAILED", error instanceof Error ? error.message : "Error during logout", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, 'LOGOUT_FAILED', error instanceof Error ? error.message : 'Error during logout', error);
         }
     }
     /**
@@ -46,7 +46,7 @@ class AuthManager {
     async login(username, password, pair) {
         try {
             if (!this.currentAuthMethod) {
-                this.currentAuthMethod = "password";
+                this.currentAuthMethod = 'password';
             }
             const result = await this.core.db.login(username, password, pair);
             if (result.success) {
@@ -55,23 +55,23 @@ class AuthManager {
                 if (seaPair) {
                     result.sea = seaPair;
                 }
-                this.core.emit("auth:login", {
-                    userPub: result.userPub ?? "",
-                    method: this.currentAuthMethod === "pair"
-                        ? "password"
-                        : this.currentAuthMethod || "password",
+                this.core.emit('auth:login', {
+                    userPub: result.userPub ?? '',
+                    method: this.currentAuthMethod === 'pair'
+                        ? 'password'
+                        : this.currentAuthMethod || 'password',
                 });
             }
             else {
-                result.error = result.error || "Wrong user or password";
+                result.error = result.error || 'Wrong user or password';
             }
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "LOGIN_FAILED", error.message ?? "Unknown error during login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, 'LOGIN_FAILED', error.message ?? 'Unknown error during login', error);
             return {
                 success: false,
-                error: error.message ?? "Unknown error during login",
+                error: error.message ?? 'Unknown error during login',
             };
         }
     }
@@ -87,7 +87,7 @@ class AuthManager {
             if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
                 return {
                     success: false,
-                    error: "Invalid pair structure - missing required keys",
+                    error: 'Invalid pair structure - missing required keys',
                 };
             }
             // Use the new loginWithPair method from GunInstance
@@ -98,24 +98,24 @@ class AuthManager {
                 if (seaPair) {
                     result.sea = seaPair;
                 }
-                this.currentAuthMethod = "pair";
-                this.core.emit("auth:login", {
-                    userPub: result.userPub ?? "",
-                    method: "pair",
+                this.currentAuthMethod = 'pair';
+                this.core.emit('auth:login', {
+                    userPub: result.userPub ?? '',
+                    method: 'pair',
                     username,
                 });
             }
             else {
                 result.error =
-                    result.error || "Authentication failed with provided pair";
+                    result.error || 'Authentication failed with provided pair';
             }
             return result;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, "PAIR_LOGIN_FAILED", error.message ?? "Unknown error during pair login", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.AUTHENTICATION, 'PAIR_LOGIN_FAILED', error.message ?? 'Unknown error during pair login', error);
             return {
                 success: false,
-                error: error.message ?? "Unknown error during pair login",
+                error: error.message ?? 'Unknown error during pair login',
             };
         }
     }
@@ -132,30 +132,30 @@ class AuthManager {
     async signUp(username, password, pair) {
         try {
             if (!this.core.db) {
-                throw new Error("Database not initialized");
+                throw new Error('Database not initialized');
             }
             // For password-based signup, ensure password is provided
-            if (!pair && (!password || password.trim() === "")) {
-                throw new Error("Password is required for password-based signup");
+            if (!pair && (!password || password.trim() === '')) {
+                throw new Error('Password is required for password-based signup');
             }
-            const result = await this.core.db.signUp(username, password || "", pair);
+            const result = await this.core.db.signUp(username, password || '', pair);
             if (result.success) {
                 // Update current authentication method
-                this.currentAuthMethod = pair ? "web3" : "password";
-                this.core.emit("auth:signup", {
+                this.currentAuthMethod = pair ? 'web3' : 'password';
+                this.core.emit('auth:signup', {
                     userPub: result.userPub,
                     username,
                     method: this.currentAuthMethod,
                 });
-                this.core.emit("debug", {
-                    action: "signup_success",
+                this.core.emit('debug', {
+                    action: 'signup_success',
                     userPub: result.userPub,
                     method: this.currentAuthMethod,
                 });
             }
             else {
-                this.core.emit("debug", {
-                    action: "signup_failed",
+                this.core.emit('debug', {
+                    action: 'signup_failed',
                     error: result.error,
                     username,
                 });
@@ -163,11 +163,11 @@ class AuthManager {
             return result;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
+            if (typeof console !== 'undefined' && console.error) {
                 console.error(`Error during registration for user ${username}:`, error);
             }
-            this.core.emit("debug", {
-                action: "signup_error",
+            this.core.emit('debug', {
+                action: 'signup_error',
                 error: error instanceof Error ? error.message : String(error),
                 username,
             });
@@ -200,13 +200,13 @@ class AuthManager {
      */
     getAuthenticationMethod(type) {
         switch (type) {
-            case "webauthn":
-                return this.core.getPlugin("webauthn");
-            case "web3":
-                return this.core.getPlugin("web3");
-            case "nostr":
-                return this.core.getPlugin("nostr");
-            case "password":
+            case 'webauthn':
+                return this.core.getPlugin('webauthn');
+            case 'web3':
+                return this.core.getPlugin('web3');
+            case 'nostr':
+                return this.core.getPlugin('nostr');
+            case 'password':
             default:
                 return {
                     login: async (username, password) => {
@@ -215,7 +215,7 @@ class AuthManager {
                     signUp: async (username, password, confirm) => {
                         // For password-based signup, validate password confirmation
                         if (confirm && password !== confirm) {
-                            throw new Error("Password and confirm password do not match");
+                            throw new Error('Password and confirm password do not match');
                         }
                         return await this.signUp(username, password);
                     },

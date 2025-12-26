@@ -1,5 +1,5 @@
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
-import { BaseEvent, BaseConfig, BaseDeviceInfo, BaseResult, BaseAuthResult } from "../../interfaces/common";
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
+import { BaseEvent, BaseConfig, BaseDeviceInfo, BaseResult, BaseAuthResult } from '../../interfaces/common';
 /**
  * WebAuthn types definitions
  */

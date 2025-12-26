@@ -16,27 +16,27 @@ import {
   NostrConnectorConfig,
   AlbyProvider,
   NostrProvider,
-} from "../../plugins/index";
+} from '../../plugins/index';
 
-describe("Plugins Index", () => {
-  describe("Base exports", () => {
-    it("should export BasePlugin class", () => {
+describe('Plugins Index', () => {
+  describe('Base exports', () => {
+    it('should export BasePlugin class', () => {
       expect(BasePlugin).toBeDefined();
-      expect(typeof BasePlugin).toBe("function");
+      expect(typeof BasePlugin).toBe('function');
     });
 
-    it("should export ShogunPlugin type", () => {
+    it('should export ShogunPlugin type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockPlugin: ShogunPlugin = {
-        name: "test-plugin",
-        version: "1.0.0",
+        name: 'test-plugin',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
       };
       expect(mockPlugin).toBeDefined();
     });
 
-    it("should export PluginManager type", () => {
+    it('should export PluginManager type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockManager: PluginManager = {
         registerPlugin: jest.fn(),
@@ -49,22 +49,22 @@ describe("Plugins Index", () => {
     });
   });
 
-  describe("WebAuthn exports", () => {
-    it("should export Webauthn class", () => {
+  describe('WebAuthn exports', () => {
+    it('should export Webauthn class', () => {
       expect(Webauthn).toBeDefined();
-      expect(typeof Webauthn).toBe("function");
+      expect(typeof Webauthn).toBe('function');
     });
 
-    it("should export WebauthnPlugin class", () => {
+    it('should export WebauthnPlugin class', () => {
       expect(WebauthnPlugin).toBeDefined();
-      expect(typeof WebauthnPlugin).toBe("function");
+      expect(typeof WebauthnPlugin).toBe('function');
     });
 
-    it("should export WebauthnPluginInterface type", () => {
+    it('should export WebauthnPluginInterface type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockInterface: WebauthnPluginInterface = {
-        name: "webauthn",
-        version: "1.0.0",
+        name: 'webauthn',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
         register: jest.fn(),
@@ -75,22 +75,22 @@ describe("Plugins Index", () => {
     });
   });
 
-  describe("Web3 exports", () => {
-    it("should export Web3Connector class", () => {
+  describe('Web3 exports', () => {
+    it('should export Web3Connector class', () => {
       expect(Web3Connector).toBeDefined();
-      expect(typeof Web3Connector).toBe("function");
+      expect(typeof Web3Connector).toBe('function');
     });
 
-    it("should export Web3ConnectorPlugin class", () => {
+    it('should export Web3ConnectorPlugin class', () => {
       expect(Web3ConnectorPlugin).toBeDefined();
-      expect(typeof Web3ConnectorPlugin).toBe("function");
+      expect(typeof Web3ConnectorPlugin).toBe('function');
     });
 
-    it("should export Web3ConnectorPluginInterface type", () => {
+    it('should export Web3ConnectorPluginInterface type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockInterface: Web3ConnectorPluginInterface = {
-        name: "web3",
-        version: "1.0.0",
+        name: 'web3',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
         connectWallet: jest.fn(),
@@ -102,22 +102,22 @@ describe("Plugins Index", () => {
     });
   });
 
-  describe("Nostr exports", () => {
-    it("should export NostrConnector class", () => {
+  describe('Nostr exports', () => {
+    it('should export NostrConnector class', () => {
       expect(NostrConnector).toBeDefined();
-      expect(typeof NostrConnector).toBe("function");
+      expect(typeof NostrConnector).toBe('function');
     });
 
-    it("should export NostrConnectorPlugin class", () => {
+    it('should export NostrConnectorPlugin class', () => {
       expect(NostrConnectorPlugin).toBeDefined();
-      expect(typeof NostrConnectorPlugin).toBe("function");
+      expect(typeof NostrConnectorPlugin).toBe('function');
     });
 
-    it("should export NostrConnectorPluginInterface type", () => {
+    it('should export NostrConnectorPluginInterface type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockInterface: NostrConnectorPluginInterface = {
-        name: "nostr",
-        version: "1.0.0",
+        name: 'nostr',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
         connect: jest.fn(),
@@ -128,38 +128,38 @@ describe("Plugins Index", () => {
       expect(mockInterface).toBeDefined();
     });
 
-    it("should export NostrConnectorCredentials type", () => {
+    it('should export NostrConnectorCredentials type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockCredentials: NostrConnectorCredentials = {
-        privateKey: "test-private-key",
-        publicKey: "test-public-key",
+        privateKey: 'test-private-key',
+        publicKey: 'test-public-key',
       };
       expect(mockCredentials).toBeDefined();
     });
 
-    it("should export NostrConnectorKeyPair type", () => {
+    it('should export NostrConnectorKeyPair type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockKeyPair: NostrConnectorKeyPair = {
-        privateKey: "test-private-key",
-        publicKey: "test-public-key",
+        privateKey: 'test-private-key',
+        publicKey: 'test-public-key',
       };
       expect(mockKeyPair).toBeDefined();
     });
 
-    it("should export NostrConnectorConfig type", () => {
+    it('should export NostrConnectorConfig type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockConfig: NostrConnectorConfig = {
-        relays: ["wss://relay.example.com"],
+        relays: ['wss://relay.example.com'],
         enabled: true,
       };
       expect(mockConfig).toBeDefined();
     });
 
-    it("should export AlbyProvider type", () => {
+    it('should export AlbyProvider type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockProvider: AlbyProvider = {
-        name: "alby",
-        version: "1.0.0",
+        name: 'alby',
+        version: '1.0.0',
         connect: jest.fn(),
         disconnect: jest.fn(),
         signEvent: jest.fn(),
@@ -168,11 +168,11 @@ describe("Plugins Index", () => {
       expect(mockProvider).toBeDefined();
     });
 
-    it("should export NostrProvider type", () => {
+    it('should export NostrProvider type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockProvider: NostrProvider = {
-        name: "nostr",
-        version: "1.0.0",
+        name: 'nostr',
+        version: '1.0.0',
         connect: jest.fn(),
         disconnect: jest.fn(),
         signEvent: jest.fn(),
@@ -184,9 +184,9 @@ describe("Plugins Index", () => {
 
   // OAuth has been removed from Shogun Core
 
-  describe("Module structure", () => {
-    it("should export all expected classes and types", () => {
-      const moduleExports = require("../../plugins/index");
+  describe('Module structure', () => {
+    it('should export all expected classes and types', () => {
+      const moduleExports = require('../../plugins/index');
 
       // Base exports
       expect(moduleExports.BasePlugin).toBeDefined();
@@ -221,19 +221,19 @@ describe("Plugins Index", () => {
     });
   });
 
-  describe("Type compatibility", () => {
-    it("should allow BasePlugin to be used as ShogunPlugin", () => {
+  describe('Type compatibility', () => {
+    it('should allow BasePlugin to be used as ShogunPlugin', () => {
       class TestPlugin extends BasePlugin {
-        name = "test-plugin";
-        version = "1.0.0";
+        name = 'test-plugin';
+        version = '1.0.0';
       }
 
       const plugin: ShogunPlugin = new TestPlugin();
-      expect(plugin.name).toBe("test-plugin");
-      expect(plugin.version).toBe("1.0.0");
+      expect(plugin.name).toBe('test-plugin');
+      expect(plugin.version).toBe('1.0.0');
     });
 
-    it("should allow plugin classes to be instantiated", () => {
+    it('should allow plugin classes to be instantiated', () => {
       // Test that we can create instances of the exported classes
       // These will fail due to missing dependencies, but we can test the exports
       expect(() => {

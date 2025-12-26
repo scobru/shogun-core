@@ -1,9 +1,9 @@
-import { Identity } from "@semaphore-protocol/identity";
-import { Group } from "@semaphore-protocol/group";
-import { generateProof, verifyProof } from "@semaphore-protocol/proof";
-import { ethers } from "ethers";
-import { ISEAPair } from "gun";
-import derive from "../../gundb/derive";
+import { Identity } from '@semaphore-protocol/identity';
+import { Group } from '@semaphore-protocol/group';
+import { generateProof, verifyProof } from '@semaphore-protocol/proof';
+import { ethers } from 'ethers';
+import { ISEAPair } from 'gun';
+import derive from '../../gundb/derive';
 import {
   ZkIdentityData,
   ZkProofAuthResult,
@@ -11,8 +11,8 @@ import {
   ZkProofVerificationResult,
   ZkProofCredential,
   SemaphoreProof,
-} from "./types";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+} from './types';
+import { ErrorHandler, ErrorType } from '../../utils/errorHandler';
 
 /**
  * Connector for ZK-Proof operations using Semaphore protocol
@@ -53,7 +53,7 @@ export class ZkProofConnector {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ZK_IDENTITY_GENERATION_FAILED",
+        'ZK_IDENTITY_GENERATION_FAILED',
         `Failed to generate ZK identity: ${error.message}`,
         error,
       );
@@ -82,7 +82,7 @@ export class ZkProofConnector {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ZK_IDENTITY_RESTORE_FAILED",
+        'ZK_IDENTITY_RESTORE_FAILED',
         `Failed to restore ZK identity: ${error.message}`,
         error,
       );
@@ -121,7 +121,7 @@ export class ZkProofConnector {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ZK_CREDENTIAL_GENERATION_FAILED",
+        'ZK_CREDENTIAL_GENERATION_FAILED',
         `Failed to generate credentials from ZK identity: ${error.message}`,
         error,
       );
@@ -132,7 +132,7 @@ export class ZkProofConnector {
   /**
    * Get or create a Semaphore group
    */
-  private getOrCreateGroup(groupId: string = "default"): Group {
+  private getOrCreateGroup(groupId: string = 'default'): Group {
     if (!this.groups.has(groupId)) {
       // Convert string groupId to BigNumber using keccak256 hash
       const groupIdHash = ethers.keccak256(ethers.toUtf8Bytes(groupId));
@@ -145,7 +145,7 @@ export class ZkProofConnector {
   /**
    * Add identity to a group
    */
-  addToGroup(commitment: string, groupId: string = "default"): void {
+  addToGroup(commitment: string, groupId: string = 'default'): void {
     const group = this.getOrCreateGroup(groupId);
     group.addMember(BigInt(commitment));
   }
@@ -158,9 +158,9 @@ export class ZkProofConnector {
     options: ZkProofGenerationOptions = {},
   ): Promise<SemaphoreProof> {
     try {
-      const groupId = options.groupId || "default";
-      const messageString = options.message || "authenticate";
-      const scopeString = options.scope || "shogun-auth";
+      const groupId = options.groupId || 'default';
+      const messageString = options.message || 'authenticate';
+      const scopeString = options.scope || 'shogun-auth';
 
       // Convert message and scope to BigNumber (Semaphore requires BigInt)
       const messageHash = ethers.keccak256(ethers.toUtf8Bytes(messageString));
@@ -177,7 +177,7 @@ export class ZkProofConnector {
       }
 
       if (!identity) {
-        throw new Error("Identity not found and cannot be reconstructed");
+        throw new Error('Identity not found and cannot be reconstructed');
       }
 
       // Get group
@@ -201,7 +201,7 @@ export class ZkProofConnector {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ZK_PROOF_GENERATION_FAILED",
+        'ZK_PROOF_GENERATION_FAILED',
         `Failed to generate ZK proof: ${error.message}`,
         error,
       );
@@ -226,7 +226,7 @@ export class ZkProofConnector {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ZK_PROOF_VERIFICATION_FAILED",
+        'ZK_PROOF_VERIFICATION_FAILED',
         `Failed to verify ZK proof: ${error.message}`,
         error,
       );

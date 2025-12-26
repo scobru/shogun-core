@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SEA = exports.Gun = void 0;
-const min_1 = require("./min");
-Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return min_1.Gun; } });
-Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return min_1.SEA; } });
 require("gun/lib/then.js");
 require("gun/lib/radix.js");
 require("gun/lib/radisk.js");
 require("gun/lib/store.js");
 require("gun/lib/rindexed.js");
 require("gun/lib/webrtc.js");
+var min_1 = require("./min");
+Object.defineProperty(exports, "Gun", { enumerable: true, get: function () { return min_1.Gun; } });
+Object.defineProperty(exports, "SEA", { enumerable: true, get: function () { return min_1.SEA; } });

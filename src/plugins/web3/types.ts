@@ -1,11 +1,11 @@
-import { ISEAPair } from "gun";
+import { ISEAPair } from 'gun';
 import {
   BaseConfig,
   BaseResult,
   BaseAuthResult,
   BaseCacheEntry,
-} from "../../interfaces/common";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
+} from '../../interfaces/common';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 
 /**
  * Result of connection attempt

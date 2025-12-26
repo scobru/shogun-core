@@ -1,4 +1,4 @@
-import { ShogunCore, ShogunSDKConfig } from "../../index";
+import { ShogunCore, ShogunSDKConfig } from '../../index';
 
 // Mock Gun instance for integration tests
 const createMockGun = () => ({
@@ -29,14 +29,14 @@ const createMockGun = () => ({
   off: jest.fn(),
 });
 
-describe("Success Test - User Manager Integration", () => {
+describe('Success Test - User Manager Integration', () => {
   let shogunCore: ShogunCore;
   let mockGun: any;
 
   beforeAll(async () => {
     mockGun = createMockGun();
     const config: ShogunSDKConfig = {
-      appToken: "test-token",
+      appToken: 'test-token',
       oauth: { enabled: false },
       peers: [],
       gunOptions: { peers: [] },
@@ -51,20 +51,20 @@ describe("Success Test - User Manager Integration", () => {
     jest.clearAllMocks();
   });
 
-  describe("Core Functionality Tests", () => {
-    it("should initialize ShogunCore correctly", () => {
+  describe('Core Functionality Tests', () => {
+    it('should initialize ShogunCore correctly', () => {
       expect(shogunCore).toBeDefined();
       // db is initialized asynchronously, so we check if it exists or will be initialized
       expect(shogunCore.db).toBeDefined();
-      expect(typeof shogunCore.signUp).toBe("function");
-      expect(typeof shogunCore.login).toBe("function");
+      expect(typeof shogunCore.signUp).toBe('function');
+      expect(typeof shogunCore.login).toBe('function');
     });
   });
 
-  describe("Error Handling Tests", () => {
-    it("should handle invalid configurations gracefully", () => {
+  describe('Error Handling Tests', () => {
+    it('should handle invalid configurations gracefully', () => {
       const invalidConfig = {
-        appToken: "",
+        appToken: '',
         oauth: { enabled: false },
         peers: [],
         gunOptions: { peers: [] },
@@ -77,21 +77,21 @@ describe("Success Test - User Manager Integration", () => {
       }).not.toThrow();
     });
 
-    it("should handle validation errors gracefully", () => {
+    it('should handle validation errors gracefully', () => {
       // Skip this test since validateSignupCredentials doesn't exist in current API
       expect(true).toBe(true);
     });
   });
 
-  describe("Integration Summary", () => {
-    it("should demonstrate successful integration testing", () => {
+  describe('Integration Summary', () => {
+    it('should demonstrate successful integration testing', () => {
       // This test summarizes our successful integration testing approach
       expect(true).toBe(true);
       console.log(
-        "🎉 Integration testing with real GunDB instance successful!",
+        '🎉 Integration testing with real GunDB instance successful!',
       );
-      console.log("✅ Core authentication functions work correctly");
-      console.log("✅ Integration tests verify real GunDB interactions");
+      console.log('✅ Core authentication functions work correctly');
+      console.log('✅ Integration tests verify real GunDB interactions');
     });
   });
 });

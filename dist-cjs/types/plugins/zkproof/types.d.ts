@@ -1,4 +1,4 @@
-import { ISEAPair } from "gun";
+import { ISEAPair } from 'gun';
 /**
  * ZK-Proof identity data
  */

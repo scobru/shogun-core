@@ -1,7 +1,7 @@
-import { ShogunCore } from "../core";
-import { ShogunPlugin } from "../interfaces/plugin";
-import { PluginCategory } from "../interfaces/shogun";
-import { EventEmitter } from "../utils/eventEmitter";
+import { ShogunCore } from '../core';
+import { ShogunPlugin } from '../interfaces/plugin';
+import { PluginCategory } from '../interfaces/shogun';
+import { EventEmitter } from '../utils/eventEmitter';
 
 /**
  * Classe base per tutti i plugin di ShogunCore
@@ -37,7 +37,7 @@ export abstract class BasePlugin extends EventEmitter implements ShogunPlugin {
   destroy(): void {
     try {
       // Emetti evento di distruzione
-      this.emit("destroyed", {
+      this.emit('destroyed', {
         name: this.name,
         version: this.version,
       });

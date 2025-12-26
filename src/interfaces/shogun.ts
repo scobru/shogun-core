@@ -1,32 +1,32 @@
-import { IGunInstance, IGunUserInstance } from "gun/types";
-import { ISEAPair } from "gun";
-import { ethers } from "ethers";
-import { ShogunError } from "../utils/errorHandler";
-import { DataBase } from "../gundb/db";
-import { DataBaseHolster } from "../gundb/db-holster";
-import { RxJS } from "../gundb/rxjs";
-import { ShogunPlugin, PluginManager } from "./plugin";
-import { ShogunStorage } from "../storage/storage";
-import { ShogunEventMap } from "./events";
+import { IGunInstance, IGunUserInstance } from 'gun/types';
+import { ISEAPair } from 'gun';
+import { ethers } from 'ethers';
+import { ShogunError } from '../utils/errorHandler';
+import { DataBase } from '../gundb/db';
+import { DataBaseHolster } from '../gundb/db-holster';
+import { RxJS } from '../gundb/rxjs';
+import { ShogunPlugin, PluginManager } from './plugin';
+import { ShogunStorage } from '../storage/storage';
+import { ShogunEventMap } from './events';
 
 /**
  * Standard plugin categories in ShogunCore
  */
 export enum PluginCategory {
   /** Authentication plugins (WebAuthn, MetaMask, Bitcoin) */
-  Authentication = "authentication",
+  Authentication = 'authentication',
   /** Wallet management plugins */
-  Wallet = "wallet",
+  Wallet = 'wallet',
   /** Privacy and anonymity plugins */
-  Privacy = "privacy",
+  Privacy = 'privacy',
   /** Decentralized identity plugins */
-  Identity = "identity",
+  Identity = 'identity',
   /** Other utility plugins */
-  Utility = "utility",
+  Utility = 'utility',
   /** Messages plugins */
-  Messages = "messages",
+  Messages = 'messages',
   /** Messaging plugins */
-  Other = "other",
+  Other = 'other',
 }
 
 /**
@@ -34,22 +34,22 @@ export enum PluginCategory {
  */
 export enum CorePlugins {
   /** WebAuthn plugin */
-  WebAuthn = "webauthn",
+  WebAuthn = 'webauthn',
   /** Ethereum plugin */
-  Web3 = "web3",
+  Web3 = 'web3',
   /** Bitcoin wallet plugin */
-  Nostr = "nostr",
+  Nostr = 'nostr',
   /** Zero-Knowledge Proof plugin */
-  ZkProof = "zkproof",
+  ZkProof = 'zkproof',
 }
 
 export type AuthMethod =
-  | "password"
-  | "webauthn"
-  | "web3"
-  | "nostr"
-  | "zkproof"
-  | "pair";
+  | 'password'
+  | 'webauthn'
+  | 'web3'
+  | 'nostr'
+  | 'zkproof'
+  | 'pair';
 
 // AuthEventData is exported from interfaces/events.ts to avoid duplication
 
@@ -242,9 +242,9 @@ export interface ShogunCoreConfig {
 // TODO: Remove after updating tests to use ShogunEventMap
 export interface ShogunEvents {
   error: (data: { action: string; message: string }) => void;
-  "auth:signup": (data: { username: string; userPub: string }) => void;
-  "auth:login": (data: { username: string; userPub: string }) => void;
-  "auth:logout": (data: Record<string, never>) => void;
+  'auth:signup': (data: { username: string; userPub: string }) => void;
+  'auth:login': (data: { username: string; userPub: string }) => void;
+  'auth:logout': (data: Record<string, never>) => void;
 }
 
 export interface Wallets {

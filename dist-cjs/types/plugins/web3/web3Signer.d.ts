@@ -1,4 +1,4 @@
-import { Web3Connector } from "./web3Connector";
+import { Web3Connector } from './web3Connector';
 /**
  * Web3 Signing Credential for oneshot signing
  */

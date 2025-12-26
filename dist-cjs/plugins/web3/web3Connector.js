@@ -17,7 +17,7 @@ const derive_1 = __importDefault(require("../../gundb/derive"));
 class Web3Connector extends eventEmitter_1.EventEmitter {
     constructor(config = {}) {
         super();
-        this.MESSAGE_TO_SIGN = "I Love Shogun!";
+        this.MESSAGE_TO_SIGN = 'I Love Shogun!';
         this.DEFAULT_CONFIG = {
             cacheDuration: 30 * 60 * 1000, // 30 minutes
             maxRetries: 3,
@@ -37,7 +37,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * to handle conflicts between multiple wallet providers
      */
     initProvider() {
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
             try {
                 // Check if ethereum is available from any provider
                 const ethereumProvider = this.getAvailableEthereumProvider();
@@ -45,67 +45,67 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     this.provider = new ethers_1.ethers.BrowserProvider(ethereumProvider);
                 }
                 else {
-                    console.warn("No compatible Ethereum provider found");
+                    console.warn('No compatible Ethereum provider found');
                 }
             }
             catch (error) {
-                console.error("Failed to initialize BrowserProvider", error);
+                console.error('Failed to initialize BrowserProvider', error);
             }
         }
         else {
-            console.warn("Window object not available (non-browser environment)");
+            console.warn('Window object not available (non-browser environment)');
         }
     }
     /**
      * Get available Ethereum provider from multiple possible sources
      */
     getAvailableEthereumProvider() {
-        if (typeof window === "undefined")
+        if (typeof window === 'undefined')
             return undefined;
         // Define provider sources with priority order
         const providerSources = [
             // Check if we have providers in the _ethereumProviders registry (from index.html)
             {
                 source: () => window._ethereumProviders && window._ethereumProviders[0],
-                name: "Registry Primary",
+                name: 'Registry Primary',
             },
-            { source: () => window.ethereum, name: "Standard ethereum" },
+            { source: () => window.ethereum, name: 'Standard ethereum' },
             {
                 source: () => window.web3?.currentProvider,
-                name: "Legacy web3",
+                name: 'Legacy web3',
             },
-            { source: () => window.metamask, name: "MetaMask specific" },
+            { source: () => window.metamask, name: 'MetaMask specific' },
             {
                 source: () => window.ethereum?.providers?.find((p) => p.isMetaMask),
-                name: "MetaMask from providers array",
+                name: 'MetaMask from providers array',
             },
             {
                 source: () => window.ethereum?.providers?.[0],
-                name: "First provider in array",
+                name: 'First provider in array',
             },
             // Try known provider names
             {
                 source: () => window.enkrypt?.providers?.ethereum,
-                name: "Enkrypt",
+                name: 'Enkrypt',
             },
             {
                 source: () => window.coinbaseWalletExtension,
-                name: "Coinbase",
+                name: 'Coinbase',
             },
-            { source: () => window.trustWallet, name: "Trust Wallet" },
+            { source: () => window.trustWallet, name: 'Trust Wallet' },
             // Use special registry if available
             {
                 source: () => Array.isArray(window._ethereumProviders)
                     ? window._ethereumProviders.find((p) => !p._isProxy)
                     : undefined,
-                name: "Registry non-proxy",
+                name: 'Registry non-proxy',
             },
         ];
         // Try each provider source
         for (const { source, name } of providerSources) {
             try {
                 const provider = source();
-                if (provider && typeof provider.request === "function") {
+                if (provider && typeof provider.request === 'function') {
                     return provider;
                 }
             }
@@ -116,7 +116,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             }
         }
         // No provider found
-        console.warn("No compatible Ethereum provider found");
+        console.warn('No compatible Ethereum provider found');
         return undefined;
     }
     /**
@@ -124,22 +124,22 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     async setupProvider() {
         try {
-            if (typeof window !== "undefined") {
+            if (typeof window !== 'undefined') {
                 // Check if ethereum is available from any provider
                 const ethereumProvider = this.getAvailableEthereumProvider();
                 if (ethereumProvider) {
                     this.provider = new ethers_1.ethers.BrowserProvider(ethereumProvider);
                 }
                 else {
-                    console.warn("No compatible Ethereum provider found");
+                    console.warn('No compatible Ethereum provider found');
                 }
             }
             else {
-                console.warn("Window object not available (non-browser environment)");
+                console.warn('Window object not available (non-browser environment)');
             }
         }
         catch (error) {
-            console.error("Failed to initialize BrowserProvider", error);
+            console.error('Failed to initialize BrowserProvider', error);
         }
     }
     /**
@@ -148,24 +148,24 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
     setupEventListeners() {
         if (this.provider) {
             // Listen for network changes through ethers provider
-            this.provider.on("network", (newNetwork, oldNetwork) => {
-                this.emit("chainChanged", newNetwork);
+            this.provider.on('network', (newNetwork, oldNetwork) => {
+                this.emit('chainChanged', newNetwork);
             });
             // Listen for account changes through the detected provider
             try {
                 const ethereumProvider = this.getAvailableEthereumProvider();
                 if (ethereumProvider?.on) {
-                    ethereumProvider.on("accountsChanged", (accounts) => {
-                        this.emit("accountsChanged", accounts);
+                    ethereumProvider.on('accountsChanged', (accounts) => {
+                        this.emit('accountsChanged', accounts);
                     });
                     // Also listen for chainChanged events directly
-                    ethereumProvider.on("chainChanged", (chainId) => {
-                        this.emit("chainChanged", { chainId });
+                    ethereumProvider.on('chainChanged', (chainId) => {
+                        this.emit('chainChanged', { chainId });
                     });
                 }
             }
             catch (error) {
-                console.warn("Failed to setup account change listeners", error);
+                console.warn('Failed to setup account change listeners', error);
             }
         }
     }
@@ -192,7 +192,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
         }
         // Check for invalid/empty signature
         if (!cached.signature ||
-            typeof cached.signature !== "string" ||
+            typeof cached.signature !== 'string' ||
             cached.signature.length < 16) {
             console.warn(`Invalid cached signature for address ${address} (length: ${cached.signature ? cached.signature.length : 0}), deleting from cache.`);
             this.signatureCache.delete(address);
@@ -215,17 +215,17 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     validateAddress(address) {
         if (!address) {
-            throw new Error("Address not provided");
+            throw new Error('Address not provided');
         }
         try {
             const normalizedAddress = String(address).trim().toLowerCase();
             if (!ethers_1.ethers.isAddress(normalizedAddress)) {
-                throw new Error("Invalid address format");
+                throw new Error('Invalid address format');
             }
             return ethers_1.ethers.getAddress(normalizedAddress);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.VALIDATION, "INVALID_ADDRESS", "Invalid Ethereum address provided", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.VALIDATION, 'INVALID_ADDRESS', 'Invalid Ethereum address provided', error);
             throw error;
         }
     }
@@ -237,13 +237,13 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             if (!this.provider) {
                 this.initProvider();
                 if (!this.provider) {
-                    throw new Error("MetaMask is not available. Please install MetaMask extension.");
+                    throw new Error('MetaMask is not available. Please install MetaMask extension.');
                 }
             }
             // First check if we can get the provider
             const ethereumProvider = this.getAvailableEthereumProvider();
             if (!ethereumProvider) {
-                throw new Error("No compatible Ethereum provider found");
+                throw new Error('No compatible Ethereum provider found');
             }
             // Richiedi esplicitamente l'accesso all'account MetaMask
             let accounts = [];
@@ -251,25 +251,25 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             try {
                 // Try the provider we found first
                 accounts = await ethereumProvider.request({
-                    method: "eth_requestAccounts",
+                    method: 'eth_requestAccounts',
                 });
             }
             catch (requestError) {
-                console.warn("First account request failed, trying window.ethereum:", requestError);
+                console.warn('First account request failed, trying window.ethereum:', requestError);
                 // Fallback to window.ethereum if available and different
                 if (window.ethereum && window.ethereum !== ethereumProvider) {
                     try {
                         accounts = await window.ethereum.request({
-                            method: "eth_requestAccounts",
+                            method: 'eth_requestAccounts',
                         });
                     }
                     catch (fallbackError) {
-                        console.error("All account request methods failed", fallbackError);
-                        throw new Error("User denied account access");
+                        console.error('All account request methods failed', fallbackError);
+                        throw new Error('User denied account access');
                     }
                 }
                 else {
-                    throw new Error("User denied account access");
+                    throw new Error('User denied account access');
                 }
             }
             if (!accounts || accounts.length === 0) {
@@ -279,10 +279,10 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     const signer = await this.provider.getSigner();
                     const address = await signer.getAddress();
                     if (!address) {
-                        console.error("No address returned from signer");
-                        throw new Error("No address returned from signer");
+                        console.error('No address returned from signer');
+                        throw new Error('No address returned from signer');
                     }
-                    this.emit("connected", { address });
+                    this.emit('connected', { address });
                     return {
                         success: true,
                         address,
@@ -297,11 +297,11 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
                 }
             }
-            throw new Error("Failed to get signer after all attempts");
+            throw new Error('Failed to get signer after all attempts');
         }
         catch (error) {
-            console.error("Failed to connect to MetaMask:", error);
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "METAMASK_CONNECTION_ERROR", error.message ?? "Unknown error while connecting to MetaMask", error);
+            console.error('Failed to connect to MetaMask:', error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, 'METAMASK_CONNECTION_ERROR', error.message ?? 'Unknown error while connecting to MetaMask', error);
             return { success: false, error: error.message };
         }
     }
@@ -331,7 +331,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             return this.generateCredentialsFromSignature(validAddress, signature);
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, "CREDENTIALS_GENERATION_ERROR", error.message ?? "Error generating MetaMask credentials", error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.WEBAUTHN, 'CREDENTIALS_GENERATION_ERROR', error.message ?? 'Error generating MetaMask credentials', error);
             throw error;
         }
     }
@@ -349,9 +349,9 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * Generates fallback credentials (for testing/development)
      */
     generateFallbackCredentials(address) {
-        console.warn("Using fallback credentials generation for address:", address);
+        console.warn('Using fallback credentials generation for address:', address);
         // Generate a deterministic but insecure fallback
-        const fallbackSignature = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(address + "fallback"));
+        const fallbackSignature = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(address + 'fallback'));
         return {
             username: address.toLowerCase(),
             password: fallbackSignature,
@@ -363,7 +363,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      * Checks if MetaMask is available
      */
     static isMetaMaskAvailable() {
-        if (typeof window === "undefined") {
+        if (typeof window === 'undefined') {
             return false;
         }
         // Check multiple possible sources
@@ -376,7 +376,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
         for (const source of sources) {
             try {
                 const provider = source();
-                if (provider && typeof provider.request === "function") {
+                if (provider && typeof provider.request === 'function') {
                     return true;
                 }
             }
@@ -392,7 +392,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
     requestSignatureWithTimeout(address, message, timeout = 30000) {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
-                reject(new Error("Signature request timed out"));
+                reject(new Error('Signature request timed out'));
             }, timeout);
             const cleanup = () => {
                 clearTimeout(timeoutId);
@@ -414,7 +414,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                     resolve(signature);
                 }
                 catch (error) {
-                    console.error("Failed to request signature:", error);
+                    console.error('Failed to request signature:', error);
                     errorHandler(error);
                 }
             };
@@ -436,7 +436,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
             this.customWallet = new ethers_1.ethers.Wallet(privateKey, this.customProvider);
         }
         catch (error) {
-            throw new Error(`Error configuring provider: ${error.message ?? "Unknown error"}`);
+            throw new Error(`Error configuring provider: ${error.message ?? 'Unknown error'}`);
         }
     }
     /**
@@ -451,12 +451,12 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
                 this.initProvider();
             }
             if (!this.provider) {
-                throw new Error("Provider not initialized");
+                throw new Error('Provider not initialized');
             }
             return await this.provider.getSigner();
         }
         catch (error) {
-            throw new Error(`Unable to get Ethereum signer: ${error.message || "Unknown error"}`);
+            throw new Error(`Unable to get Ethereum signer: ${error.message || 'Unknown error'}`);
         }
     }
     /**
@@ -479,7 +479,7 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     async generatePassword(signature) {
         if (!signature) {
-            throw new Error("Invalid signature");
+            throw new Error('Invalid signature');
         }
         const hash = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(signature));
         return hash.slice(2, 66); // Remove 0x and use first 32 bytes
@@ -493,13 +493,13 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     async verifySignature(message, signature) {
         if (!message || !signature) {
-            throw new Error("Invalid message or signature");
+            throw new Error('Invalid message or signature');
         }
         try {
             return ethers_1.ethers.verifyMessage(message, signature);
         }
         catch (error) {
-            throw new Error("Invalid message or signature");
+            throw new Error('Invalid message or signature');
         }
     }
     /**
@@ -509,25 +509,25 @@ class Web3Connector extends eventEmitter_1.EventEmitter {
      */
     async getEthereumSigner() {
         if (!Web3Connector.isMetaMaskAvailable()) {
-            throw new Error("MetaMask not found. Please install MetaMask to continue.");
+            throw new Error('MetaMask not found. Please install MetaMask to continue.');
         }
         try {
             const ethereum = window.ethereum;
             await ethereum.request({
-                method: "eth_requestAccounts",
+                method: 'eth_requestAccounts',
             });
             const provider = new ethers_1.ethers.BrowserProvider(ethereum);
             return provider.getSigner();
         }
         catch (error) {
-            throw new Error(`Error accessing MetaMask: ${error.message ?? "Unknown error"}`);
+            throw new Error(`Error accessing MetaMask: ${error.message ?? 'Unknown error'}`);
         }
     }
 }
 exports.Web3Connector = Web3Connector;
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
     window.Web3Connector = Web3Connector;
 }
-else if (typeof global !== "undefined") {
+else if (typeof global !== 'undefined') {
     global.Web3Connector = Web3Connector;
 }

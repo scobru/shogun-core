@@ -1,1 +1,1 @@
-declare module "shogun-gun-es";
+declare module 'shogun-gun-es';

@@ -5,21 +5,21 @@
  * about documents and identity without revealing sensitive data
  */
 
-import { Gun, SEA } from "../index";
-import { ShogunCore } from "../core";
-import { ZkProofPlugin } from "../plugins/zkproof";
+import { Gun, SEA } from '../index';
+import { ShogunCore } from '../core';
+import { ZkProofPlugin } from '../plugins/zkproof';
 import {
   ZkCredentials,
   CredentialType,
-} from "../plugins/zkproof/zkCredentials";
-import { Identity } from "@semaphore-protocol/identity";
+} from '../plugins/zkproof/zkCredentials';
+import { Identity } from '@semaphore-protocol/identity';
 
 // Example 1: Age Verification
 async function ageVerificationExample() {
-  console.log("=== Age Verification Example ===\n");
+  console.log('=== Age Verification Example ===\n');
   const peers = [
-    "https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun",
-    "https://5eh4twk2f62autunsje4panime.srv.us/gun",
+    'https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun',
+    'https://5eh4twk2f62autunsje4panime.srv.us/gun',
   ];
 
   const shogun = new ShogunCore({
@@ -29,7 +29,7 @@ async function ageVerificationExample() {
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+  const zkPlugin = shogun.getPlugin<ZkProofPlugin>('zkproof');
   if (!zkPlugin) return;
 
   // Create ZK identity
@@ -44,7 +44,7 @@ async function ageVerificationExample() {
   );
 
   // User's actual birthdate (PRIVATE)
-  const birthDate = new Date("1990-05-15");
+  const birthDate = new Date('1990-05-15');
   const actualAge = Math.floor(
     (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000),
   );
@@ -66,7 +66,7 @@ async function ageVerificationExample() {
     // Anyone can verify the proof
     const verification = await zkCreds.verifyCredential(ageProof);
     console.log(
-      `\nVerification result: ${verification.verified ? "✅ VALID" : "❌ INVALID"}`,
+      `\nVerification result: ${verification.verified ? '✅ VALID' : '❌ INVALID'}`,
     );
   } catch (error: any) {
     console.log(`Note: Full proof generation requires circuit files`);
@@ -76,23 +76,23 @@ async function ageVerificationExample() {
 
 // Example 2: Citizenship Verification
 async function citizenshipExample() {
-  console.log("\n=== Citizenship Verification Example ===\n");
+  console.log('\n=== Citizenship Verification Example ===\n');
 
   const shogun = new ShogunCore({
-    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
+    gunInstance: Gun({ peers: ['https://peer.wallie.io/gun'] }),
     zkproof: { enabled: true },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+  const zkPlugin = shogun.getPlugin<ZkProofPlugin>('zkproof');
   if (!zkPlugin) return;
 
   const identity = await zkPlugin.generateIdentity();
   const semaphoreIdentity = new Identity(identity.trapdoor!);
   const zkCreds = new ZkCredentials();
 
-  console.log("Scenario: Prove EU citizenship without revealing country\n");
+  console.log('Scenario: Prove EU citizenship without revealing country\n');
 
   console.log(`Private data (NOT revealed):`);
   console.log(`  Country: Italy`);
@@ -101,8 +101,8 @@ async function citizenshipExample() {
   try {
     const citizenshipProof = await zkCreds.proveCitizenship(
       semaphoreIdentity,
-      "Italy",
-      "EU",
+      'Italy',
+      'EU',
     );
 
     console.log(`Public proof:`);
@@ -116,23 +116,23 @@ async function citizenshipExample() {
 
 // Example 3: Education Credentials
 async function educationExample() {
-  console.log("\n=== Education Credential Example ===\n");
+  console.log('\n=== Education Credential Example ===\n');
 
   const shogun = new ShogunCore({
-    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
+    gunInstance: Gun({ peers: ['https://peer.wallie.io/gun'] }),
     zkproof: { enabled: true },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+  const zkPlugin = shogun.getPlugin<ZkProofPlugin>('zkproof');
   if (!zkPlugin) return;
 
   const identity = await zkPlugin.generateIdentity();
   const semaphoreIdentity = new Identity(identity.trapdoor!);
   const zkCreds = new ZkCredentials();
 
-  console.log("Scenario: Prove you have a degree without revealing details\n");
+  console.log('Scenario: Prove you have a degree without revealing details\n');
 
   console.log(`Private data (NOT revealed):`);
   console.log(`  University: MIT`);
@@ -143,8 +143,8 @@ async function educationExample() {
   try {
     const eduProof = await zkCreds.proveEducation(
       semaphoreIdentity,
-      "Bachelor of Science",
-      "MIT",
+      'Bachelor of Science',
+      'MIT',
       2020,
     );
 
@@ -160,16 +160,16 @@ async function educationExample() {
 
 // Example 4: Income Verification
 async function incomeExample() {
-  console.log("\n=== Income Verification Example ===\n");
+  console.log('\n=== Income Verification Example ===\n');
 
   const shogun = new ShogunCore({
-    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
+    gunInstance: Gun({ peers: ['https://peer.wallie.io/gun'] }),
     zkproof: { enabled: true },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+  const zkPlugin = shogun.getPlugin<ZkProofPlugin>('zkproof');
   if (!zkPlugin) return;
 
   const identity = await zkPlugin.generateIdentity();
@@ -177,7 +177,7 @@ async function incomeExample() {
   const zkCreds = new ZkCredentials();
 
   console.log(
-    "Scenario: Apply for loan proving income > 50k without revealing exact salary\n",
+    'Scenario: Apply for loan proving income > 50k without revealing exact salary\n',
   );
 
   console.log(`Private data (NOT revealed):`);
@@ -189,7 +189,7 @@ async function incomeExample() {
       semaphoreIdentity,
       75000,
       50000,
-      "EUR",
+      'EUR',
     );
 
     console.log(`Public proof sent to bank:`);
@@ -205,16 +205,16 @@ async function incomeExample() {
 
 // Example 5: Custom Credential
 async function customCredentialExample() {
-  console.log("\n=== Custom Credential Example ===\n");
+  console.log('\n=== Custom Credential Example ===\n');
 
   const shogun = new ShogunCore({
-    gunInstance: Gun({ peers: ["https://peer.wallie.io/gun"] }),
+    gunInstance: Gun({ peers: ['https://peer.wallie.io/gun'] }),
     zkproof: { enabled: true },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const zkPlugin = shogun.getPlugin<ZkProofPlugin>("zkproof");
+  const zkPlugin = shogun.getPlugin<ZkProofPlugin>('zkproof');
   if (!zkPlugin) return;
 
   const identity = await zkPlugin.generateIdentity();
@@ -234,9 +234,9 @@ async function customCredentialExample() {
   try {
     const devProof = await zkCreds.proveAttribute(semaphoreIdentity, {
       type: CredentialType.CUSTOM,
-      claim: "Verified GitHub developer with 5+ years experience",
+      claim: 'Verified GitHub developer with 5+ years experience',
       privateData: {
-        githubUsername: "johndoe",
+        githubUsername: 'johndoe',
         repositories: 150,
         stars: 5234,
         yearsActive: 8,
@@ -256,8 +256,8 @@ async function customCredentialExample() {
 
 // Run all examples
 async function main() {
-  console.log("🔐 ZK-Proof Verifiable Credentials Examples");
-  console.log("==========================================\n");
+  console.log('🔐 ZK-Proof Verifiable Credentials Examples');
+  console.log('==========================================\n');
 
   try {
     await ageVerificationExample();
@@ -266,11 +266,11 @@ async function main() {
     await incomeExample();
     await customCredentialExample();
 
-    console.log("\n✨ All credential examples completed!");
-    console.log("\nℹ️  Note: These examples show the credential structure.");
-    console.log("   For full ZK proof generation, run: yarn setup:zkproof");
+    console.log('\n✨ All credential examples completed!');
+    console.log('\nℹ️  Note: These examples show the credential structure.');
+    console.log('   For full ZK proof generation, run: yarn setup:zkproof');
   } catch (error) {
-    console.error("\n❌ Error:", error);
+    console.error('\n❌ Error:', error);
   }
 
   process.exit(0);

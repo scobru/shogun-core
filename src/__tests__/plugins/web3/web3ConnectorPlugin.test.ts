@@ -1,23 +1,23 @@
-import { Web3ConnectorPlugin } from "../../../plugins/web3/web3ConnectorPlugin";
-import { ShogunCore } from "../../../index";
-import { Web3Connector } from "../../../plugins/web3/web3Connector";
-import { Web3Signer } from "../../../plugins/web3/web3Signer";
-import { ErrorHandler, ErrorType } from "../../../utils/errorHandler";
-import { ethers } from "ethers";
-import { ISEAPair } from "gun";
+import { Web3ConnectorPlugin } from '../../../plugins/web3/web3ConnectorPlugin';
+import { ShogunCore } from '../../../index';
+import { Web3Connector } from '../../../plugins/web3/web3Connector';
+import { Web3Signer } from '../../../plugins/web3/web3Signer';
+import { ErrorHandler, ErrorType } from '../../../utils/errorHandler';
+import { ethers } from 'ethers';
+import { ISEAPair } from 'gun';
 
 // Mock dependencies
-jest.mock("../../../plugins/web3/web3Connector");
-jest.mock("../../../plugins/web3/web3Signer");
-jest.mock("../../../utils/errorHandler");
-jest.mock("ethers");
+jest.mock('../../../plugins/web3/web3Connector');
+jest.mock('../../../plugins/web3/web3Signer');
+jest.mock('../../../utils/errorHandler');
+jest.mock('ethers');
 
 const MockWeb3Connector = Web3Connector as jest.MockedClass<
   typeof Web3Connector
 >;
 const MockWeb3Signer = Web3Signer as jest.MockedClass<typeof Web3Signer>;
 
-describe("Web3ConnectorPlugin", () => {
+describe('Web3ConnectorPlugin', () => {
   let plugin: Web3ConnectorPlugin;
   let mockCore: ShogunCore;
   let mockConnector: jest.Mocked<Web3Connector>;
@@ -80,45 +80,45 @@ describe("Web3ConnectorPlugin", () => {
     plugin = new Web3ConnectorPlugin();
   });
 
-  describe("Constructor", () => {
-    it("should create Web3ConnectorPlugin with correct properties", () => {
-      expect(plugin.name).toBe("web3");
-      expect(plugin.version).toBe("1.0.0");
-      expect(plugin.description).toContain("Ethereum wallet connection");
+  describe('Constructor', () => {
+    it('should create Web3ConnectorPlugin with correct properties', () => {
+      expect(plugin.name).toBe('web3');
+      expect(plugin.version).toBe('1.0.0');
+      expect(plugin.description).toContain('Ethereum wallet connection');
     });
   });
 
-  describe("initialize", () => {
-    it("should initialize plugin with core and create connector/signer", () => {
+  describe('initialize', () => {
+    it('should initialize plugin with core and create connector/signer', () => {
       plugin.initialize(mockCore);
 
-      expect(plugin["core"]).toBe(mockCore);
+      expect(plugin['core']).toBe(mockCore);
       expect(MockWeb3Connector).toHaveBeenCalled();
       expect(MockWeb3Signer).toHaveBeenCalledWith(mockConnector);
     });
   });
 
-  describe("destroy", () => {
-    it("should cleanup resources when destroyed", () => {
+  describe('destroy', () => {
+    it('should cleanup resources when destroyed', () => {
       plugin.initialize(mockCore);
       plugin.destroy();
 
       expect(mockConnector.cleanup).toHaveBeenCalled();
-      expect(plugin["Web3"]).toBeNull();
-      expect(plugin["signer"]).toBeNull();
+      expect(plugin['Web3']).toBeNull();
+      expect(plugin['signer']).toBeNull();
     });
 
-    it("should handle destroy when not initialized", () => {
+    it('should handle destroy when not initialized', () => {
       expect(() => plugin.destroy()).not.toThrow();
     });
   });
 
-  describe("isAvailable", () => {
+  describe('isAvailable', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return availability status from connector", () => {
+    it('should return availability status from connector', () => {
       mockConnector.isAvailable.mockReturnValue(true);
 
       const result = plugin.isAvailable();
@@ -127,25 +127,25 @@ describe("Web3ConnectorPlugin", () => {
       expect(mockConnector.isAvailable).toHaveBeenCalled();
     });
 
-    it("should throw error when not initialized", () => {
+    it('should throw error when not initialized', () => {
       const uninitializedPlugin = new Web3ConnectorPlugin();
 
       expect(() => uninitializedPlugin.isAvailable()).toThrow(
-        "Plugin web3 not initialized",
+        'Plugin web3 not initialized',
       );
     });
   });
 
-  describe("connectMetaMask", () => {
+  describe('connectMetaMask', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should connect to MetaMask successfully", async () => {
+    it('should connect to MetaMask successfully', async () => {
       const mockResult = {
         success: true,
-        address: "0x1234567890123456789012345678901234567890",
-        provider: "metamask",
+        address: '0x1234567890123456789012345678901234567890',
+        provider: 'metamask',
       };
 
       mockConnector.connectMetaMask.mockResolvedValue(mockResult);
@@ -156,10 +156,10 @@ describe("Web3ConnectorPlugin", () => {
       expect(mockConnector.connectMetaMask).toHaveBeenCalled();
     });
 
-    it("should handle connection failure", async () => {
+    it('should handle connection failure', async () => {
       const mockResult = {
         success: false,
-        error: "Connection failed",
+        error: 'Connection failed',
       };
 
       mockConnector.connectMetaMask.mockResolvedValue(mockResult);
@@ -170,53 +170,53 @@ describe("Web3ConnectorPlugin", () => {
     });
   });
 
-  describe("generateCredentials", () => {
+  describe('generateCredentials', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should generate credentials successfully", async () => {
+    it('should generate credentials successfully', async () => {
       const mockCredentials: ISEAPair = {
-        pub: "pub123",
-        priv: "priv123",
-        epub: "epub123",
-        epriv: "epriv123",
+        pub: 'pub123',
+        priv: 'priv123',
+        epub: 'epub123',
+        epriv: 'epriv123',
       };
 
       mockConnector.generateCredentials.mockResolvedValue(mockCredentials);
 
       const result = await plugin.generateCredentials(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockCredentials);
       expect(mockConnector.generateCredentials).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
   });
 
-  describe("setCustomProvider", () => {
+  describe('setCustomProvider', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should set custom provider", () => {
-      plugin.setCustomProvider("https://rpc.example.com", "private_key_123");
+    it('should set custom provider', () => {
+      plugin.setCustomProvider('https://rpc.example.com', 'private_key_123');
 
       expect(mockConnector.setCustomProvider).toHaveBeenCalledWith(
-        "https://rpc.example.com",
-        "private_key_123",
+        'https://rpc.example.com',
+        'private_key_123',
       );
     });
   });
 
-  describe("getSigner", () => {
+  describe('getSigner', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return signer from connector", async () => {
+    it('should return signer from connector', async () => {
       const mockSigner = {} as ethers.Signer;
       mockConnector.getSigner.mockResolvedValue(mockSigner);
 
@@ -227,12 +227,12 @@ describe("Web3ConnectorPlugin", () => {
     });
   });
 
-  describe("getProvider", () => {
+  describe('getProvider', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return provider from connector", async () => {
+    it('should return provider from connector', async () => {
       const mockProvider = {} as ethers.JsonRpcProvider;
       mockConnector.getProvider.mockResolvedValue(mockProvider);
 
@@ -243,187 +243,187 @@ describe("Web3ConnectorPlugin", () => {
     });
   });
 
-  describe("generatePassword", () => {
+  describe('generatePassword', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should generate password from signature", async () => {
-      mockConnector.generatePassword.mockResolvedValue("generated_password");
+    it('should generate password from signature', async () => {
+      mockConnector.generatePassword.mockResolvedValue('generated_password');
 
-      const result = await plugin.generatePassword("signature123");
+      const result = await plugin.generatePassword('signature123');
 
-      expect(result).toBe("generated_password");
+      expect(result).toBe('generated_password');
       expect(mockConnector.generatePassword).toHaveBeenCalledWith(
-        "signature123",
+        'signature123',
       );
     });
   });
 
-  describe("verifySignature", () => {
+  describe('verifySignature', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should verify signature and return address", async () => {
+    it('should verify signature and return address', async () => {
       mockConnector.verifySignature.mockResolvedValue(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
-      const result = await plugin.verifySignature("message", "signature");
+      const result = await plugin.verifySignature('message', 'signature');
 
-      expect(result).toBe("0x1234567890123456789012345678901234567890");
+      expect(result).toBe('0x1234567890123456789012345678901234567890');
       expect(mockConnector.verifySignature).toHaveBeenCalledWith(
-        "message",
-        "signature",
+        'message',
+        'signature',
       );
     });
   });
 
-  describe("createSigningCredential", () => {
+  describe('createSigningCredential', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should create signing credential successfully", async () => {
+    it('should create signing credential successfully', async () => {
       const mockCredential = {
-        address: "0x1234567890123456789012345678901234567890",
-        publicKey: "pubkey123",
-        privateKey: "privkey123",
+        address: '0x1234567890123456789012345678901234567890',
+        publicKey: 'pubkey123',
+        privateKey: 'privkey123',
       };
 
       mockConnector.createSigningCredential.mockResolvedValue(mockCredential);
 
       const result = await plugin.createSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.createSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
   });
 
-  describe("createAuthenticator", () => {
+  describe('createAuthenticator', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should create authenticator function", () => {
+    it('should create authenticator function', () => {
       const mockAuthenticator = jest.fn();
       mockConnector.createAuthenticator.mockReturnValue(mockAuthenticator);
 
       const result = plugin.createAuthenticator(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBe(mockAuthenticator);
       expect(mockConnector.createAuthenticator).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
   });
 
-  describe("createDerivedKeyPair", () => {
+  describe('createDerivedKeyPair', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should create derived key pair", async () => {
+    it('should create derived key pair', async () => {
       const mockKeyPair = {
-        pub: "pub123",
-        priv: "priv123",
-        epub: "epub123",
-        epriv: "epriv123",
+        pub: 'pub123',
+        priv: 'priv123',
+        epub: 'epub123',
+        epriv: 'epriv123',
       };
 
       mockConnector.createDerivedKeyPair.mockResolvedValue(mockKeyPair);
 
       const result = await plugin.createDerivedKeyPair(
-        "0x1234567890123456789012345678901234567890",
-        ["extra1", "extra2"],
+        '0x1234567890123456789012345678901234567890',
+        ['extra1', 'extra2'],
       );
 
       expect(result).toEqual(mockKeyPair);
       expect(mockConnector.createDerivedKeyPair).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
-        ["extra1", "extra2"],
+        '0x1234567890123456789012345678901234567890',
+        ['extra1', 'extra2'],
       );
     });
   });
 
-  describe("signWithDerivedKeys", () => {
+  describe('signWithDerivedKeys', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should sign data with derived keys", async () => {
-      mockConnector.signWithDerivedKeys.mockResolvedValue("signed_data");
+    it('should sign data with derived keys', async () => {
+      mockConnector.signWithDerivedKeys.mockResolvedValue('signed_data');
 
       const result = await plugin.signWithDerivedKeys(
-        { data: "test" },
-        "0x1234567890123456789012345678901234567890",
-        ["extra"],
+        { data: 'test' },
+        '0x1234567890123456789012345678901234567890',
+        ['extra'],
       );
 
-      expect(result).toBe("signed_data");
+      expect(result).toBe('signed_data');
       expect(mockConnector.signWithDerivedKeys).toHaveBeenCalledWith(
-        { data: "test" },
-        "0x1234567890123456789012345678901234567890",
-        ["extra"],
+        { data: 'test' },
+        '0x1234567890123456789012345678901234567890',
+        ['extra'],
       );
     });
   });
 
-  describe("getSigningCredential", () => {
+  describe('getSigningCredential', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return signing credential if exists", () => {
+    it('should return signing credential if exists', () => {
       const mockCredential = {
-        address: "0x1234567890123456789012345678901234567890",
-        publicKey: "pubkey123",
+        address: '0x1234567890123456789012345678901234567890',
+        publicKey: 'pubkey123',
       };
 
       mockConnector.getSigningCredential.mockReturnValue(mockCredential);
 
       const result = plugin.getSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockCredential);
       expect(mockConnector.getSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
 
-    it("should return undefined if credential not found", () => {
+    it('should return undefined if credential not found', () => {
       mockConnector.getSigningCredential.mockReturnValue(undefined);
 
       const result = plugin.getSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBeUndefined();
     });
   });
 
-  describe("listSigningCredentials", () => {
+  describe('listSigningCredentials', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return list of signing credentials", () => {
+    it('should return list of signing credentials', () => {
       const mockCredentials = [
         {
-          address: "0x1234567890123456789012345678901234567890",
-          publicKey: "pubkey123",
+          address: '0x1234567890123456789012345678901234567890',
+          publicKey: 'pubkey123',
         },
         {
-          address: "0x0987654321098765432109876543210987654321",
-          publicKey: "pubkey456",
+          address: '0x0987654321098765432109876543210987654321',
+          publicKey: 'pubkey456',
         },
       ];
 
@@ -436,44 +436,44 @@ describe("Web3ConnectorPlugin", () => {
     });
   });
 
-  describe("removeSigningCredential", () => {
+  describe('removeSigningCredential', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should remove signing credential successfully", () => {
+    it('should remove signing credential successfully', () => {
       mockConnector.removeSigningCredential.mockReturnValue(true);
 
       const result = plugin.removeSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBe(true);
       expect(mockConnector.removeSigningCredential).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
 
-    it("should return false if credential not found", () => {
+    it('should return false if credential not found', () => {
       mockConnector.removeSigningCredential.mockReturnValue(false);
 
       const result = plugin.removeSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBe(false);
     });
   });
 
-  describe("createGunUserFromSigningCredential", () => {
+  describe('createGunUserFromSigningCredential', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should create Gun user successfully", async () => {
+    it('should create Gun user successfully', async () => {
       const mockResult = {
         success: true,
-        userPub: "gun_pub_123",
+        userPub: 'gun_pub_123',
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
@@ -481,19 +481,19 @@ describe("Web3ConnectorPlugin", () => {
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockResult);
       expect(
         mockConnector.createGunUserFromSigningCredential,
-      ).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
+      ).toHaveBeenCalledWith('0x1234567890123456789012345678901234567890');
     });
 
-    it("should handle Gun user creation failure", async () => {
+    it('should handle Gun user creation failure', async () => {
       const mockResult = {
         success: false,
-        error: "Creation failed",
+        error: 'Creation failed',
       };
 
       mockConnector.createGunUserFromSigningCredential.mockResolvedValue(
@@ -501,268 +501,268 @@ describe("Web3ConnectorPlugin", () => {
       );
 
       const result = await plugin.createGunUserFromSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockResult);
     });
   });
 
-  describe("getGunUserPubFromSigningCredential", () => {
+  describe('getGunUserPubFromSigningCredential', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return Gun user public key", async () => {
+    it('should return Gun user public key', async () => {
       mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
-        "gun_pub_123",
+        'gun_pub_123',
       );
 
       const result = await plugin.getGunUserPubFromSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
-      expect(result).toBe("gun_pub_123");
+      expect(result).toBe('gun_pub_123');
       expect(
         mockConnector.getGunUserPubFromSigningCredential,
-      ).toHaveBeenCalledWith("0x1234567890123456789012345678901234567890");
+      ).toHaveBeenCalledWith('0x1234567890123456789012345678901234567890');
     });
 
-    it("should return undefined if not found", async () => {
+    it('should return undefined if not found', async () => {
       mockConnector.getGunUserPubFromSigningCredential.mockResolvedValue(
         undefined,
       );
 
       const result = await plugin.getGunUserPubFromSigningCredential(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBeUndefined();
     });
   });
 
-  describe("getPassword", () => {
+  describe('getPassword', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should return password for address", () => {
-      mockConnector.getPassword.mockReturnValue("stored_password");
+    it('should return password for address', () => {
+      mockConnector.getPassword.mockReturnValue('stored_password');
 
       const result = plugin.getPassword(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
-      expect(result).toBe("stored_password");
+      expect(result).toBe('stored_password');
       expect(mockConnector.getPassword).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
 
-    it("should return undefined if password not found", () => {
+    it('should return undefined if password not found', () => {
       mockConnector.getPassword.mockReturnValue(undefined);
 
       const result = plugin.getPassword(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toBeUndefined();
     });
   });
 
-  describe("verifyConsistency", () => {
+  describe('verifyConsistency', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should verify consistency successfully", async () => {
+    it('should verify consistency successfully', async () => {
       const mockResult = {
         consistent: true,
-        actualUserPub: "gun_pub_123",
-        expectedUserPub: "gun_pub_123",
+        actualUserPub: 'gun_pub_123',
+        expectedUserPub: 'gun_pub_123',
       };
 
       mockConnector.verifyConsistency.mockResolvedValue(mockResult);
 
       const result = await plugin.verifyConsistency(
-        "0x1234567890123456789012345678901234567890",
-        "gun_pub_123",
+        '0x1234567890123456789012345678901234567890',
+        'gun_pub_123',
       );
 
       expect(result).toEqual(mockResult);
       expect(mockConnector.verifyConsistency).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
-        "gun_pub_123",
+        '0x1234567890123456789012345678901234567890',
+        'gun_pub_123',
       );
     });
 
-    it("should detect inconsistency", async () => {
+    it('should detect inconsistency', async () => {
       const mockResult = {
         consistent: false,
-        actualUserPub: "gun_pub_123",
-        expectedUserPub: "gun_pub_456",
+        actualUserPub: 'gun_pub_123',
+        expectedUserPub: 'gun_pub_456',
       };
 
       mockConnector.verifyConsistency.mockResolvedValue(mockResult);
 
       const result = await plugin.verifyConsistency(
-        "0x1234567890123456789012345678901234567890",
-        "gun_pub_456",
+        '0x1234567890123456789012345678901234567890',
+        'gun_pub_456',
       );
 
       expect(result.consistent).toBe(false);
     });
   });
 
-  describe("setupConsistentOneshotSigning", () => {
+  describe('setupConsistentOneshotSigning', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should setup consistent oneshot signing", async () => {
+    it('should setup consistent oneshot signing', async () => {
       const mockResult = {
         credential: {
-          address: "0x1234567890123456789012345678901234567890",
-          publicKey: "pubkey123",
+          address: '0x1234567890123456789012345678901234567890',
+          publicKey: 'pubkey123',
         },
         authenticator: jest.fn(),
-        gunUser: { success: true, userPub: "gun_pub_123" },
-        username: "0x1234567890123456789012345678901234567890",
-        password: "generated_password",
+        gunUser: { success: true, userPub: 'gun_pub_123' },
+        username: '0x1234567890123456789012345678901234567890',
+        password: 'generated_password',
       };
 
       mockConnector.setupConsistentOneshotSigning.mockResolvedValue(mockResult);
 
       const result = await plugin.setupConsistentOneshotSigning(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockResult);
       expect(mockConnector.setupConsistentOneshotSigning).toHaveBeenCalledWith(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
     });
   });
 
-  describe("login", () => {
+  describe('login', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should perform login successfully", async () => {
+    it('should perform login successfully', async () => {
       const mockAuthResult = {
         success: true,
         user: {
-          userPub: "gun_pub_123",
-          username: "0x1234567890123456789012345678901234567890",
+          userPub: 'gun_pub_123',
+          username: '0x1234567890123456789012345678901234567890',
         },
-        userPub: "gun_pub_123",
+        userPub: 'gun_pub_123',
       };
 
       // Mock the setupConsistentOneshotSigning method directly
-      jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
+      jest.spyOn(plugin, 'setupConsistentOneshotSigning').mockResolvedValue({
         credential: {
-          address: "0x1234567890123456789012345678901234567890",
-          publicKey: "pubkey123",
+          address: '0x1234567890123456789012345678901234567890',
+          publicKey: 'pubkey123',
         },
         authenticator: jest.fn(),
-        gunUser: { success: true, userPub: "gun_pub_123" },
-        username: "0x1234567890123456789012345678901234567890",
-        password: "generated_password",
+        gunUser: { success: true, userPub: 'gun_pub_123' },
+        username: '0x1234567890123456789012345678901234567890',
+        password: 'generated_password',
       });
 
       // Mock isAvailable to return true
-      jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
+      jest.spyOn(plugin, 'isAvailable').mockReturnValue(true);
 
       const result = await plugin.login(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockAuthResult);
     });
 
-    it("should handle login failure", async () => {
+    it('should handle login failure', async () => {
       const mockAuthResult = {
         success: false,
-        error: "Authentication failed",
+        error: 'Authentication failed',
       };
 
-      jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
+      jest.spyOn(plugin, 'setupConsistentOneshotSigning').mockResolvedValue({
         credential: {
-          address: "0x1234567890123456789012345678901234567890",
-          publicKey: "pubkey123",
+          address: '0x1234567890123456789012345678901234567890',
+          publicKey: 'pubkey123',
         },
         authenticator: jest.fn(),
-        gunUser: { success: false, error: "Gun user creation failed" },
-        username: "0x1234567890123456789012345678901234567890",
-        password: "generated_password",
+        gunUser: { success: false, error: 'Gun user creation failed' },
+        username: '0x1234567890123456789012345678901234567890',
+        password: 'generated_password',
       });
 
       const result = await plugin.login(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result.success).toBe(false);
     });
   });
 
-  describe("signUp", () => {
+  describe('signUp', () => {
     beforeEach(() => {
       plugin.initialize(mockCore);
     });
 
-    it("should perform signup successfully", async () => {
+    it('should perform signup successfully', async () => {
       const mockSignUpResult = {
         success: true,
         user: {
-          userPub: "gun_pub_123",
-          username: "0x1234567890123456789012345678901234567890",
+          userPub: 'gun_pub_123',
+          username: '0x1234567890123456789012345678901234567890',
         },
-        userPub: "gun_pub_123",
+        userPub: 'gun_pub_123',
       };
 
       // Mock the setupConsistentOneshotSigning method directly
-      jest.spyOn(plugin, "setupConsistentOneshotSigning").mockResolvedValue({
+      jest.spyOn(plugin, 'setupConsistentOneshotSigning').mockResolvedValue({
         credential: {
-          address: "0x1234567890123456789012345678901234567890",
-          publicKey: "pubkey123",
+          address: '0x1234567890123456789012345678901234567890',
+          publicKey: 'pubkey123',
         },
         authenticator: jest.fn(),
-        gunUser: { success: true, userPub: "gun_pub_123" },
-        username: "0x1234567890123456789012345678901234567890",
-        password: "generated_password",
+        gunUser: { success: true, userPub: 'gun_pub_123' },
+        username: '0x1234567890123456789012345678901234567890',
+        password: 'generated_password',
       });
 
       // Mock isAvailable to return true
-      jest.spyOn(plugin, "isAvailable").mockReturnValue(true);
+      jest.spyOn(plugin, 'isAvailable').mockReturnValue(true);
 
       const result = await plugin.signUp(
-        "0x1234567890123456789012345678901234567890",
+        '0x1234567890123456789012345678901234567890',
       );
 
       expect(result).toEqual(mockSignUpResult);
     });
   });
 
-  describe("Error handling", () => {
-    it("should handle connector initialization errors", () => {
+  describe('Error handling', () => {
+    it('should handle connector initialization errors', () => {
       MockWeb3Connector.mockImplementation(() => {
-        throw new Error("Connector initialization failed");
+        throw new Error('Connector initialization failed');
       });
 
       expect(() => {
         plugin.initialize(mockCore);
-      }).toThrow("Connector initialization failed");
+      }).toThrow('Connector initialization failed');
     });
 
-    it("should handle signer initialization errors", () => {
+    it('should handle signer initialization errors', () => {
       MockWeb3Signer.mockImplementation(() => {
-        throw new Error("Signer initialization failed");
+        throw new Error('Signer initialization failed');
       });
 
       expect(() => {
         plugin.initialize(mockCore);
-      }).toThrow("Signer initialization failed");
+      }).toThrow('Signer initialization failed');
     });
   });
 });

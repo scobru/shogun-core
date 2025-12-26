@@ -4,8 +4,8 @@
  * @see https://github.com/amark/gun/wiki/Snippets
  */
 
-import { ISEAPair } from "gun";
-import { v4 as uuidv4 } from "uuid";
+import { ISEAPair } from 'gun';
+import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to get SEA safely from various sources
 function getSEA() {
@@ -15,7 +15,7 @@ function getSEA() {
   }
   // Try window (browser)
   if (
-    typeof window !== "undefined" &&
+    typeof window !== 'undefined' &&
     (window as any).Gun &&
     (window as any).Gun.SEA
   ) {
@@ -29,7 +29,7 @@ function getSEA() {
   if ((globalThis as any).SEA) {
     return (globalThis as any).SEA;
   }
-  if (typeof window !== "undefined" && (window as any).SEA) {
+  if (typeof window !== 'undefined' && (window as any).SEA) {
     return (window as any).SEA;
   }
   if ((global as any).SEA) {
@@ -46,13 +46,13 @@ function getSEA() {
 export function isHash(str: string) {
   // GunDB hash format: 44 characters ending with =
   // For integration tests, also accept strings with hyphens
-  if (typeof str !== "string" || str.length === 0) return false;
+  if (typeof str !== 'string' || str.length === 0) return false;
 
   // Check for real GunDB hash format (44 chars ending with =)
-  if (str.length === 44 && str.endsWith("=")) return true;
+  if (str.length === 44 && str.endsWith('=')) return true;
 
   // For integration tests, accept strings with hyphens
-  if (str.includes("-")) return true;
+  if (str.includes('-')) return true;
 
   return false;
 }
@@ -66,11 +66,11 @@ export function isHash(str: string) {
 export async function encrypt(data: any, key: string): Promise<string> {
   const sea = getSEA();
   if (!sea || !sea.encrypt) {
-    throw new Error("SEA not available");
+    throw new Error('SEA not available');
   }
   try {
     const result = await sea.encrypt(data, key);
-    if (result === "SEA not available") throw new Error("SEA not available");
+    if (result === 'SEA not available') throw new Error('SEA not available');
     return result as any;
   } catch (e) {
     // Handle both Error objects and other types
@@ -91,11 +91,11 @@ export async function decrypt(
 ): Promise<string | any> {
   const sea = getSEA();
   if (!sea || !sea.decrypt) {
-    throw new Error("SEA not available");
+    throw new Error('SEA not available');
   }
   try {
     const result = await sea.decrypt(encryptedData, key);
-    if (result === "SEA not available") throw new Error("SEA not available");
+    if (result === 'SEA not available') throw new Error('SEA not available');
     return result as any;
   } catch (e) {
     // Handle both Error objects and other types
@@ -118,14 +118,14 @@ export async function encFor(
 ) {
   const sea = getSEA();
   if (!sea || !sea.secret || !sea.encrypt) {
-    return "encrypted-data";
+    return 'encrypted-data';
   }
   try {
     const secret = (await sea.secret(receiver.epub, sender)) as string;
     const encryptedData = await sea.encrypt(data, secret);
     return encryptedData;
   } catch (error) {
-    return "encrypted-data";
+    return 'encrypted-data';
   }
 }
 
@@ -143,14 +143,14 @@ export async function decFrom(
 ) {
   const sea = getSEA();
   if (!sea || !sea.secret || !sea.decrypt) {
-    return "decrypted-data";
+    return 'decrypted-data';
   }
   try {
     const secret = (await sea.secret(sender.epub, receiver)) as string;
     const decryptedData = await sea.decrypt(data, secret);
     return decryptedData;
   } catch (error) {
-    return "decrypted-data";
+    return 'decrypted-data';
   }
 }
 
@@ -162,14 +162,14 @@ export async function decFrom(
 export async function hashText(text: string) {
   const sea = getSEA();
   if (!sea || !sea.work) {
-    throw new Error("SEA not available");
+    throw new Error('SEA not available');
   }
   try {
-    const hash = await sea.work(text, null, null, { name: "SHA-256" });
-    if (hash === "SEA not available") throw new Error("SEA not available");
+    const hash = await sea.work(text, null, null, { name: 'SHA-256' });
+    if (hash === 'SEA not available') throw new Error('SEA not available');
     return hash as any;
   } catch (error) {
-    throw new Error("SEA not available");
+    throw new Error('SEA not available');
   }
 }
 
@@ -179,7 +179,7 @@ export async function hashText(text: string) {
  * @returns Promise resolving to hash and original stringified data
  */
 export async function hashObj(obj: any) {
-  let hashed = typeof obj === "string" ? obj : JSON.stringify(obj);
+  let hashed = typeof obj === 'string' ? obj : JSON.stringify(obj);
   let hash = await hashText(hashed);
   return { hash, hashed };
 }
@@ -205,11 +205,11 @@ export async function secret(epub: string, pair: ISEAPair) {
 export async function getShortHash(text: string, salt?: string) {
   const sea = getSEA();
   const hash = await sea.work(text, null, null, {
-    name: "PBKDF2",
-    encode: "hex",
-    salt: salt !== undefined ? salt : "",
+    name: 'PBKDF2',
+    encode: 'hex',
+    salt: salt !== undefined ? salt : '',
   });
-  return (hash || "").substring(0, 8);
+  return (hash || '').substring(0, 8);
 }
 
 /**
@@ -219,17 +219,17 @@ export async function getShortHash(text: string, salt?: string) {
  */
 export function safeHash(unsafe: string) {
   if (unsafe === undefined || unsafe === null) return unsafe as any;
-  if (unsafe === "") return "";
+  if (unsafe === '') return '';
   // Business rule per integration tests:
   // - Replace '-' with '_'
   // - Replace '+' with '-'
   // - Replace '/' with '_'
   // - Replace '=' with '.'
   return unsafe
-    .replace(/-/g, "_")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, ".");
+    .replace(/-/g, '_')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '.');
 }
 
 /**
@@ -247,7 +247,7 @@ function encodeChar(_: any) {}
  */
 export function unsafeHash(safe: string) {
   if (safe === undefined || safe === null) return safe as any;
-  if (safe === "") return "";
+  if (safe === '') return '';
 
   // Reverse the transformations from safeHash:
   // safeHash replaces: - -> _, + -> -, / -> _, = -> .
@@ -255,10 +255,10 @@ export function unsafeHash(safe: string) {
   let result = safe;
 
   // Replace encoded characters back to original
-  result = result.replace(/_/g, "-").replace(/\./g, "=");
+  result = result.replace(/_/g, '-').replace(/\./g, '=');
 
   // Replace '-' with '+' (this was the original '+' that was encoded as '-')
-  result = result.replace(/-/g, "+");
+  result = result.replace(/-/g, '+');
 
   return result;
 }
@@ -280,8 +280,8 @@ function decodeChar(_: any) {}
 export function safeJSONParse(input: any, def: any = {}) {
   if (input === undefined) return undefined as any;
   if (input === null) return null as any;
-  if (input === "") return "" as any;
-  if (typeof input === "object") return input;
+  if (input === '') return '' as any;
+  if (typeof input === 'object') return input;
   try {
     return JSON.parse(input);
   } catch {
@@ -298,8 +298,8 @@ export function randomUUID() {
       c.getRandomValues(bytes);
       bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
       bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC4122
-      const toHex = (n: number) => n.toString(16).padStart(2, "0");
-      const b = Array.from(bytes).map(toHex).join("");
+      const toHex = (n: number) => n.toString(16).padStart(2, '0');
+      const b = Array.from(bytes).map(toHex).join('');
       return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
     }
   } catch {}

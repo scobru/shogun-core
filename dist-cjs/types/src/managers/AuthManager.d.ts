@@ -1,5 +1,5 @@
-import { IShogunCore, AuthResult, SignUpResult, AuthMethod } from "../interfaces/shogun";
-import { ISEAPair } from "gun";
+import { IShogunCore, AuthResult, SignUpResult, AuthMethod } from '../interfaces/shogun';
+import { ISEAPair } from 'gun';
 /**
  * Manages authentication operations for ShogunCore
  */

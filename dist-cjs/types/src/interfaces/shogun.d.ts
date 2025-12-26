@@ -1,13 +1,13 @@
-import { IGunInstance, IGunUserInstance } from "gun/types";
-import { ISEAPair } from "gun";
-import { ethers } from "ethers";
-import { ShogunError } from "../utils/errorHandler";
-import { DataBase } from "../gundb/db";
-import { DataBaseHolster } from "../gundb/db-holster";
-import { RxJS } from "../gundb/rxjs";
-import { ShogunPlugin, PluginManager } from "./plugin";
-import { ShogunStorage } from "../storage/storage";
-import { ShogunEventMap } from "./events";
+import { IGunInstance, IGunUserInstance } from 'gun/types';
+import { ISEAPair } from 'gun';
+import { ethers } from 'ethers';
+import { ShogunError } from '../utils/errorHandler';
+import { DataBase } from '../gundb/db';
+import { DataBaseHolster } from '../gundb/db-holster';
+import { RxJS } from '../gundb/rxjs';
+import { ShogunPlugin, PluginManager } from './plugin';
+import { ShogunStorage } from '../storage/storage';
+import { ShogunEventMap } from './events';
 /**
  * Standard plugin categories in ShogunCore
  */
@@ -40,7 +40,7 @@ export declare enum CorePlugins {
     /** Zero-Knowledge Proof plugin */
     ZkProof = "zkproof"
 }
-export type AuthMethod = "password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair";
+export type AuthMethod = 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair';
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -182,15 +182,15 @@ export interface ShogunEvents {
         action: string;
         message: string;
     }) => void;
-    "auth:signup": (data: {
+    'auth:signup': (data: {
         username: string;
         userPub: string;
     }) => void;
-    "auth:login": (data: {
+    'auth:login': (data: {
         username: string;
         userPub: string;
     }) => void;
-    "auth:logout": (data: Record<string, never>) => void;
+    'auth:logout': (data: Record<string, never>) => void;
 }
 export interface Wallets {
     secp256k1Bitcoin: {

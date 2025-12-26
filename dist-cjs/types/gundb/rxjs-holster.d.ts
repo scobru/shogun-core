@@ -1,4 +1,4 @@
-import { Observable } from "rxjs";
+import { Observable } from 'rxjs';
 /**
  * RxJS Integration for Holster
  * Provides reactive programming capabilities for Holster data

@@ -2,27 +2,27 @@ import {
   WebauthnPlugin,
   Webauthn,
   WebauthnPluginInterface,
-} from "../../../plugins/webauthn/index";
+} from '../../../plugins/webauthn/index';
 
-describe("WebAuthn Plugin Index", () => {
-  describe("Class exports", () => {
-    it("should export WebauthnPlugin class", () => {
+describe('WebAuthn Plugin Index', () => {
+  describe('Class exports', () => {
+    it('should export WebauthnPlugin class', () => {
       expect(WebauthnPlugin).toBeDefined();
-      expect(typeof WebauthnPlugin).toBe("function");
+      expect(typeof WebauthnPlugin).toBe('function');
     });
 
-    it("should export Webauthn class", () => {
+    it('should export Webauthn class', () => {
       expect(Webauthn).toBeDefined();
-      expect(typeof Webauthn).toBe("function");
+      expect(typeof Webauthn).toBe('function');
     });
   });
 
-  describe("Type exports", () => {
-    it("should export WebauthnPluginInterface type", () => {
+  describe('Type exports', () => {
+    it('should export WebauthnPluginInterface type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockInterface: WebauthnPluginInterface = {
-        name: "webauthn",
-        version: "1.0.0",
+        name: 'webauthn',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
         register: jest.fn(),
@@ -33,9 +33,9 @@ describe("WebAuthn Plugin Index", () => {
     });
   });
 
-  describe("Module structure", () => {
-    it("should export all expected classes and types", () => {
-      const moduleExports = require("../../../plugins/webauthn/index");
+  describe('Module structure', () => {
+    it('should export all expected classes and types', () => {
+      const moduleExports = require('../../../plugins/webauthn/index');
 
       // Class exports
       expect(moduleExports.WebauthnPlugin).toBeDefined();
@@ -46,8 +46,8 @@ describe("WebAuthn Plugin Index", () => {
     });
   });
 
-  describe("Type compatibility", () => {
-    it("should allow plugin classes to be instantiated", () => {
+  describe('Type compatibility', () => {
+    it('should allow plugin classes to be instantiated', () => {
       // Test that we can create instances of the exported classes
       // These will fail due to missing dependencies, but we can test the exports
       // WebauthnPlugin should not throw when instantiated without dependencies

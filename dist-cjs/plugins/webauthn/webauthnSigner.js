@@ -16,16 +16,16 @@ const base64url = {
     encode: function (buffer) {
         const bytes = new Uint8Array(buffer);
         return btoa(String.fromCharCode(...bytes))
-            .replace(/\+/g, "-")
-            .replace(/\//g, "_")
-            .replace(/=/g, "");
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
     },
     decode: function (str) {
-        str = str.replace(/-/g, "+").replace(/_/g, "/");
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
         while (str.length % 4)
-            str += "=";
+            str += '=';
         const binary = atob(str);
-        return new Uint8Array(binary.split("").map((c) => c.charCodeAt(0)));
+        return new Uint8Array(binary.split('').map((c) => c.charCodeAt(0)));
     },
 };
 /**
@@ -48,10 +48,10 @@ class WebAuthnSigner {
                 publicKey: {
                     challenge: crypto.getRandomValues(new Uint8Array(32)),
                     rp: {
-                        id: window.location.hostname === "localhost"
-                            ? "localhost"
+                        id: window.location.hostname === 'localhost'
+                            ? 'localhost'
                             : window.location.hostname,
-                        name: "Shogun Wallet",
+                        name: 'Shogun Wallet',
                     },
                     user: {
                         id: new TextEncoder().encode(username),
@@ -60,25 +60,25 @@ class WebAuthnSigner {
                     },
                     // Use the same algorithms as webauthn.js for SEA compatibility
                     pubKeyCredParams: [
-                        { type: "public-key", alg: -7 }, // ECDSA, P-256 curve, for signing
-                        { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets
-                        { type: "public-key", alg: -257 },
+                        { type: 'public-key', alg: -7 }, // ECDSA, P-256 curve, for signing
+                        { type: 'public-key', alg: -25 }, // ECDH, P-256 curve, for creating shared secrets
+                        { type: 'public-key', alg: -257 },
                     ],
                     authenticatorSelection: {
-                        userVerification: "preferred",
+                        userVerification: 'preferred',
                     },
                     timeout: 60000,
-                    attestation: "none",
+                    attestation: 'none',
                 },
             }));
             if (!credential) {
-                throw new Error("Failed to create WebAuthn credential");
+                throw new Error('Failed to create WebAuthn credential');
             }
             // Extract public key in the same way as webauthn.js
             const response = credential.response;
             const publicKey = response.getPublicKey();
             if (!publicKey) {
-                throw new Error("Failed to get public key from credential");
+                throw new Error('Failed to get public key from credential');
             }
             const rawKey = new Uint8Array(publicKey);
             // Extract coordinates like webauthn.js (slice positions may need adjustment)
@@ -101,7 +101,7 @@ class WebAuthnSigner {
             return signingCredential;
         }
         catch (error) {
-            console.error("Error creating signing credential:", error);
+            console.error('Error creating signing credential:', error);
             throw new Error(`Failed to create signing credential: ${error.message}`);
         }
     }
@@ -119,13 +119,13 @@ class WebAuthnSigner {
                 const challenge = new TextEncoder().encode(JSON.stringify(data));
                 const options = {
                     challenge,
-                    rpId: window.location.hostname === "localhost"
-                        ? "localhost"
+                    rpId: window.location.hostname === 'localhost'
+                        ? 'localhost'
                         : window.location.hostname,
-                    userVerification: "preferred",
+                    userVerification: 'preferred',
                     allowCredentials: [
                         {
-                            type: "public-key",
+                            type: 'public-key',
                             id: credential.rawId,
                         },
                     ],
@@ -135,12 +135,12 @@ class WebAuthnSigner {
                     publicKey: options,
                 }));
                 if (!assertion) {
-                    throw new Error("WebAuthn assertion failed");
+                    throw new Error('WebAuthn assertion failed');
                 }
                 return assertion.response;
             }
             catch (error) {
-                console.error("WebAuthn assertion error:", error);
+                console.error('WebAuthn assertion error:', error);
                 throw error;
             }
         };
@@ -167,7 +167,7 @@ class WebAuthnSigner {
             };
         }
         catch (error) {
-            console.error("Error deriving keys from WebAuthn credential:", error);
+            console.error('Error deriving keys from WebAuthn credential:', error);
             throw error;
         }
     }
@@ -221,7 +221,7 @@ class WebAuthnSigner {
             });
         }
         catch (error) {
-            console.error("Error creating Gun user:", error);
+            console.error('Error creating Gun user:', error);
             return { success: false, error: error.message };
         }
     }
@@ -249,10 +249,10 @@ class WebAuthnSigner {
                 m: message,
                 s: base64url.encode(signature.toCompactRawBytes()),
             };
-            return "SEA" + JSON.stringify(seaSignature);
+            return 'SEA' + JSON.stringify(seaSignature);
         }
         catch (error) {
-            console.error("Error signing with derived keys:", error);
+            console.error('Error signing with derived keys:', error);
             throw error;
         }
     }

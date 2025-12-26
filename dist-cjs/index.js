@@ -18,24 +18,24 @@ exports.setBufferPolyfill = exports.ShogunStorage = exports.normalizeSeedPhrase 
 // Import polyfills FIRST before any other imports
 // This ensures Buffer and other Node.js polyfills are available
 require("./polyfills");
-const core_1 = require("./core");
-Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return core_1.ShogunCore; } });
-const db_1 = require("./gundb/db");
-Object.defineProperty(exports, "RxJS", { enumerable: true, get: function () { return db_1.RxJS; } });
-Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { return db_1.crypto; } });
-Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return db_1.derive; } });
-Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return db_1.GunErrors; } });
-Object.defineProperty(exports, "DataBase", { enumerable: true, get: function () { return db_1.DataBase; } });
-const db_holster_1 = require("./gundb/db-holster");
-Object.defineProperty(exports, "DataBaseHolster", { enumerable: true, get: function () { return db_holster_1.DataBaseHolster; } });
-const rxjs_holster_1 = require("./gundb/rxjs-holster");
-Object.defineProperty(exports, "RxJSHolster", { enumerable: true, get: function () { return rxjs_holster_1.RxJSHolster; } });
 // Gun and SEA imports removed - users should import them directly from 'gun' package
 // This prevents bundling issues in build systems like Vite
 __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./plugins"), exports);
 __exportStar(require("./interfaces/shogun"), exports);
 __exportStar(require("./gundb/gun-es"), exports);
+var core_1 = require("./core");
+Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return core_1.ShogunCore; } });
+var db_1 = require("./gundb/db");
+Object.defineProperty(exports, "RxJS", { enumerable: true, get: function () { return db_1.RxJS; } });
+Object.defineProperty(exports, "crypto", { enumerable: true, get: function () { return db_1.crypto; } });
+Object.defineProperty(exports, "derive", { enumerable: true, get: function () { return db_1.derive; } });
+Object.defineProperty(exports, "GunErrors", { enumerable: true, get: function () { return db_1.GunErrors; } });
+Object.defineProperty(exports, "DataBase", { enumerable: true, get: function () { return db_1.DataBase; } });
+var db_holster_1 = require("./gundb/db-holster");
+Object.defineProperty(exports, "DataBaseHolster", { enumerable: true, get: function () { return db_holster_1.DataBaseHolster; } });
+var rxjs_holster_1 = require("./gundb/rxjs-holster");
+Object.defineProperty(exports, "RxJSHolster", { enumerable: true, get: function () { return rxjs_holster_1.RxJSHolster; } });
 // Note: Gun and SEA are not exported to avoid bundling issues
 // Users should import Gun and SEA directly from the 'gun' package
 // Export seed phrase utilities for WebAuthn multi-device support

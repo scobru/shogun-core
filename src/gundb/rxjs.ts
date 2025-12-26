@@ -1,6 +1,6 @@
-import { Observable } from "rxjs";
-import { distinctUntilChanged } from "rxjs/operators";
-import { IGunInstance, IGunUserInstance } from "gun";
+import { Observable } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs/operators';
+import { IGunInstance, IGunUserInstance } from 'gun';
 
 /**
  * RxJS Integration for GunDB
@@ -49,7 +49,7 @@ export class RxJS {
         for (let i = 1; i < path.length; i++) {
           node = node.get(path[i]);
         }
-      } else if (typeof path === "string") {
+      } else if (typeof path === 'string') {
         node = this.gun.get(path);
       } else {
         node = path;
@@ -63,7 +63,7 @@ export class RxJS {
         }
 
         // Remove Gun metadata before emitting
-        if (typeof data === "object" && data !== null) {
+        if (typeof data === 'object' && data !== null) {
           const cleanData = this.removeGunMeta(data);
           subscriber.next(cleanData as T);
         } else {
@@ -73,7 +73,7 @@ export class RxJS {
 
       // Return teardown logic
       return () => {
-        if (unsub && typeof unsub === "function") {
+        if (unsub && typeof unsub === 'function') {
           unsub();
         }
         node.off();
@@ -102,12 +102,12 @@ export class RxJS {
         return;
       }
 
-      const node = typeof path === "string" ? this.gun.get(path) : path;
+      const node = typeof path === 'string' ? this.gun.get(path) : path;
       const results: Record<string, T> = {};
 
       const unsub = node.map().on((data: T, key: string) => {
         // Skip soul key which is Gun's internal reference
-        if (key === "_" || !data) return;
+        if (key === '_' || !data) return;
 
         if (matchFn && !matchFn(data)) {
           // If matchFn is provided and returns false, remove item
@@ -119,14 +119,14 @@ export class RxJS {
         }
 
         const cleanData =
-          typeof data === "object" ? this.removeGunMeta(data) : data;
+          typeof data === 'object' ? this.removeGunMeta(data) : data;
         results[key] = cleanData as T;
         subscriber.next(Object.values(results));
       });
 
       // Return teardown logic
       return () => {
-        if (unsub && typeof unsub === "function") {
+        if (unsub && typeof unsub === 'function') {
           unsub();
         }
         node.off();
@@ -153,7 +153,7 @@ export class RxJS {
         });
       };
 
-      if (typeof path === "string" || Array.isArray(path)) {
+      if (typeof path === 'string' || Array.isArray(path)) {
         // Path-based put
         let node: any;
         if (Array.isArray(path)) {
@@ -209,7 +209,7 @@ export class RxJS {
         });
       };
 
-      if (typeof path === "string" || Array.isArray(path)) {
+      if (typeof path === 'string' || Array.isArray(path)) {
         let node: any;
         if (Array.isArray(path)) {
           node = this.gun.get(path[0]);
@@ -245,7 +245,7 @@ export class RxJS {
    */
   once<T>(path?: string | any): Observable<T> {
     let node: any;
-    if (typeof path === "string") {
+    if (typeof path === 'string') {
       node = this.gun.get(path);
     } else if (path) {
       node = path;
@@ -262,7 +262,7 @@ export class RxJS {
         }
 
         const cleanData =
-          typeof data === "object" ? this.removeGunMeta(data) : data;
+          typeof data === 'object' ? this.removeGunMeta(data) : data;
         subscriber.next(cleanData as T);
         subscriber.complete();
       });
@@ -281,7 +281,7 @@ export class RxJS {
   ): Observable<R> {
     // Convert all sources to observables
     const observables = sources.map((source) => {
-      if (typeof source === "string") {
+      if (typeof source === 'string') {
         return this.observe<T>(source);
       }
       return source as Observable<T>;
@@ -337,7 +337,7 @@ export class RxJS {
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
       const user = this.gun.user();
-      if (typeof dataOrPath === "string") {
+      if (typeof dataOrPath === 'string') {
         user.get(dataOrPath).put(maybeData as T, (ack: any) => {
           if (callback) callback(ack);
           if (ack.err) {
@@ -375,7 +375,7 @@ export class RxJS {
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
       const user = this.gun.user();
-      if (typeof dataOrPath === "string") {
+      if (typeof dataOrPath === 'string') {
         (user.get(dataOrPath) as any).set(maybeData as T, (ack: any) => {
           if (callback) callback(ack);
           if (ack.err) {
@@ -440,7 +440,7 @@ export class RxJS {
     if (path) {
       return this.observe<T>(this.gun.user().get(path));
     }
-    return this.observe<T>(this.gun.user().get("~"));
+    return this.observe<T>(this.gun.user().get('~'));
   }
 
   /**
@@ -449,7 +449,7 @@ export class RxJS {
    * @returns Cleaned object without Gun metadata
    */
   private removeGunMeta<T>(obj: T): T {
-    if (!obj || typeof obj !== "object") return obj;
+    if (!obj || typeof obj !== 'object') return obj;
 
     // Create a clean copy
     const cleanObj: any = Array.isArray(obj) ? [] : {};
@@ -457,10 +457,10 @@ export class RxJS {
     // Copy properties, skipping Gun metadata
     Object.keys(obj).forEach((key) => {
       // Skip Gun metadata
-      if (key === "_" || key === "#") return;
+      if (key === '_' || key === '#') return;
 
       const val = (obj as any)[key];
-      if (val && typeof val === "object") {
+      if (val && typeof val === 'object') {
         cleanObj[key] = this.removeGunMeta(val);
       } else {
         cleanObj[key] = val;

@@ -1,7 +1,7 @@
-import { ShogunCore } from "../core";
-import { ShogunPlugin } from "../interfaces/plugin";
-import { PluginCategory } from "../interfaces/shogun";
-import { EventEmitter } from "../utils/eventEmitter";
+import { ShogunCore } from '../core';
+import { ShogunPlugin } from '../interfaces/plugin';
+import { PluginCategory } from '../interfaces/shogun';
+import { EventEmitter } from '../utils/eventEmitter';
 /**
  * Classe base per tutti i plugin di ShogunCore
  * Fornisce funzionalità comuni e implementazione base dell'interfaccia ShogunPlugin

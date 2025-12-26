@@ -11,7 +11,7 @@ exports.generateDeterministicPassword = generateDeterministicPassword;
  * Valida uno username secondo le regole comuni
  */
 function validateUsername(username) {
-    if (!username || typeof username !== "string")
+    if (!username || typeof username !== 'string')
         return false;
     if (username.length < 3 || username.length > 64)
         return false;
@@ -23,7 +23,7 @@ function validateUsername(username) {
  * Valida una email
  */
 function validateEmail(email) {
-    if (!email || typeof email !== "string")
+    if (!email || typeof email !== 'string')
         return false;
     // Regex semplice per email
     return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
@@ -33,7 +33,7 @@ function validateEmail(email) {
  * @deprecated OAuth has been removed from Shogun Core
  */
 function validateProvider(provider) {
-    console.warn("[validation] OAuth has been removed from Shogun Core");
+    console.warn('[validation] OAuth has been removed from Shogun Core');
     return false;
 }
 // --- GENERAZIONE USERNAME ---
@@ -42,20 +42,20 @@ function validateProvider(provider) {
  * Esempio: google_utente, github_12345, nostr_pubkey, web3_0xabc...
  */
 function generateUsernameFromIdentity(provider, userInfo) {
-    if (provider === "web3" && userInfo.id) {
+    if (provider === 'web3' && userInfo.id) {
         return `web3_${userInfo.id.toLowerCase()}`;
     }
-    if (provider === "nostr" && userInfo.id) {
+    if (provider === 'nostr' && userInfo.id) {
         return `nostr_${userInfo.id}`;
     }
-    if (provider === "webauthn" && userInfo.id) {
+    if (provider === 'webauthn' && userInfo.id) {
         return `webauthn_${userInfo.id}`;
     }
     if (userInfo.email && validateEmail(userInfo.email)) {
-        return `${provider}_${userInfo.email.split("@")[0]}`;
+        return `${provider}_${userInfo.email.split('@')[0]}`;
     }
     if (userInfo.name) {
-        return `${provider}_${userInfo.name.replace(/\s+/g, "_")}`;
+        return `${provider}_${userInfo.name.replace(/\s+/g, '_')}`;
     }
     if (userInfo.id) {
         return `${provider}_${userInfo.id}`;
@@ -75,7 +75,7 @@ function generateDeterministicPassword(salt) {
     }
     catch (error) {
         // Fallback in case ethers is not available
-        console.warn("ethers not available, using fallback password generation");
-        return Buffer.from(salt).toString("hex").slice(0, 32);
+        console.warn('ethers not available, using fallback password generation');
+        return Buffer.from(salt).toString('hex').slice(0, 32);
     }
 }

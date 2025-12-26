@@ -1,4 +1,4 @@
-import { TextEncoder, TextDecoder } from "util";
+import { TextEncoder, TextDecoder } from 'util';
 
 // Add jest types
 declare const jest: any;
@@ -7,33 +7,33 @@ declare const test: any;
 declare const expect: any;
 
 // Polyfill TextEncoder and TextDecoder for Node.js environment
-if (typeof global.TextEncoder === "undefined") {
+if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder as any;
 }
 
-if (typeof global.TextDecoder === "undefined") {
+if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder as any;
 }
 
 // Polyfill crypto for Node.js environment
-if (typeof global.crypto === "undefined") {
-  const crypto = require("crypto");
+if (typeof global.crypto === 'undefined') {
+  const crypto = require('crypto');
   global.crypto = {
     getRandomValues: (arr: any) => crypto.randomFillSync(arr),
     subtle: {
       generateKey: async () =>
         ({
-          type: "secret",
+          type: 'secret',
           extractable: true,
-          algorithm: { name: "AES-GCM" },
-          usages: ["encrypt", "decrypt"],
+          algorithm: { name: 'AES-GCM' },
+          usages: ['encrypt', 'decrypt'],
         }) as any,
       importKey: async () =>
         ({
-          type: "secret",
+          type: 'secret',
           extractable: true,
-          algorithm: { name: "AES-GCM" },
-          usages: ["encrypt", "decrypt"],
+          algorithm: { name: 'AES-GCM' },
+          usages: ['encrypt', 'decrypt'],
         }) as any,
       deriveBits: jest.fn().mockImplementation((params, key, bits) => {
         // Generate a valid private key for testing
@@ -103,12 +103,12 @@ if (typeof global.crypto === "undefined") {
 }
 
 // Polyfill window object for browser-like environment
-if (typeof global.window === "undefined") {
+if (typeof global.window === 'undefined') {
   global.window = {
-    location: { href: "http://localhost:3000" },
+    location: { href: 'http://localhost:3000' },
     navigator: {
-      userAgent: "Jest Test Environment",
-      platform: "Win32",
+      userAgent: 'Jest Test Environment',
+      platform: 'Win32',
     },
     document: {
       createElement: () => ({}),
@@ -147,17 +147,17 @@ if (typeof global.window === "undefined") {
 }
 
 // Polyfill fetch for Node.js environment
-if (typeof global.fetch === "undefined") {
+if (typeof global.fetch === 'undefined') {
   global.fetch = async () =>
     ({
       ok: true,
       json: async () => ({}),
-      text: async () => "",
+      text: async () => '',
     }) as any;
 }
 
 // Check if we're in integration test mode
-const isIntegrationTest = process.env.JEST_INTEGRATION === "true";
+const isIntegrationTest = process.env.JEST_INTEGRATION === 'true';
 
 // Global Gun mock (only for unit tests)
 if (!isIntegrationTest) {
@@ -201,78 +201,78 @@ if (!isIntegrationTest) {
 // Set global SEA mock
 (global as any).SEA = {
   pair: jest.fn().mockResolvedValue({
-    pub: "test-pub-key",
-    priv: "test-priv-key",
-    epub: "test-epub-key",
-    epriv: "test-epriv-key",
+    pub: 'test-pub-key',
+    priv: 'test-priv-key',
+    epub: 'test-epub-key',
+    epriv: 'test-epriv-key',
   }),
-  sign: jest.fn().mockResolvedValue("signed-data"),
+  sign: jest.fn().mockResolvedValue('signed-data'),
   verify: jest.fn().mockResolvedValue(true),
-  encrypt: jest.fn().mockResolvedValue("encrypted-data"),
-  decrypt: jest.fn().mockResolvedValue("decrypted-data"),
-  secret: jest.fn().mockResolvedValue("secret"),
-  work: jest.fn().mockResolvedValue("proof"),
+  encrypt: jest.fn().mockResolvedValue('encrypted-data'),
+  decrypt: jest.fn().mockResolvedValue('decrypted-data'),
+  secret: jest.fn().mockResolvedValue('secret'),
+  work: jest.fn().mockResolvedValue('proof'),
 };
 
 // Mock Gun modules (only for unit tests)
 if (!isIntegrationTest) {
-  jest.doMock("gun", () => ({
+  jest.doMock('gun', () => ({
     default: (global as any).Gun,
     SEA: {
       pair: jest.fn().mockResolvedValue({
-        pub: "test-pub-key",
-        priv: "test-priv-key",
-        epub: "test-epub-key",
-        epriv: "test-epriv-key",
+        pub: 'test-pub-key',
+        priv: 'test-priv-key',
+        epub: 'test-epub-key',
+        epriv: 'test-epriv-key',
       }),
-      sign: jest.fn().mockResolvedValue("signed-data"),
+      sign: jest.fn().mockResolvedValue('signed-data'),
       verify: jest.fn().mockResolvedValue(true),
-      encrypt: jest.fn().mockResolvedValue("encrypted-data"),
-      decrypt: jest.fn().mockResolvedValue("decrypted-data"),
-      secret: jest.fn().mockResolvedValue("shared-secret"),
-      work: jest.fn().mockResolvedValue("hashed-data"),
+      encrypt: jest.fn().mockResolvedValue('encrypted-data'),
+      decrypt: jest.fn().mockResolvedValue('decrypted-data'),
+      secret: jest.fn().mockResolvedValue('shared-secret'),
+      work: jest.fn().mockResolvedValue('hashed-data'),
     },
   }));
 
-  jest.doMock("gun/gun", () => (global as any).Gun);
+  jest.doMock('gun/gun', () => (global as any).Gun);
 }
 
-jest.doMock("gun/sea", () => ({
+jest.doMock('gun/sea', () => ({
   pair: jest.fn().mockResolvedValue({
-    pub: "test-pub-key",
-    priv: "test-priv-key",
-    epub: "test-epub-key",
-    epriv: "test-epriv-key",
+    pub: 'test-pub-key',
+    priv: 'test-priv-key',
+    epub: 'test-epub-key',
+    epriv: 'test-epriv-key',
   }),
-  sign: jest.fn().mockResolvedValue("signed-data"),
+  sign: jest.fn().mockResolvedValue('signed-data'),
   verify: jest.fn().mockResolvedValue(true),
-  encrypt: jest.fn().mockResolvedValue("encrypted-data"),
-  decrypt: jest.fn().mockResolvedValue("decrypted-data"),
-  secret: jest.fn().mockResolvedValue("shared-secret"),
-  work: jest.fn().mockResolvedValue("hashed-data"),
+  encrypt: jest.fn().mockResolvedValue('encrypted-data'),
+  decrypt: jest.fn().mockResolvedValue('decrypted-data'),
+  secret: jest.fn().mockResolvedValue('shared-secret'),
+  work: jest.fn().mockResolvedValue('hashed-data'),
 }));
 
 // Mock other Gun imports
-jest.doMock("gun/lib/then.js", () => ({}));
-jest.doMock("gun/lib/radisk.js", () => ({}));
-jest.doMock("gun/lib/store.js", () => ({}));
-jest.doMock("gun/lib/rindexed.js", () => ({}));
-jest.doMock("gun/lib/webrtc.js", () => ({}));
-jest.doMock("gun/lib/yson.js", () => ({}));
+jest.doMock('gun/lib/then.js', () => ({}));
+jest.doMock('gun/lib/radisk.js', () => ({}));
+jest.doMock('gun/lib/store.js', () => ({}));
+jest.doMock('gun/lib/rindexed.js', () => ({}));
+jest.doMock('gun/lib/webrtc.js', () => ({}));
+jest.doMock('gun/lib/yson.js', () => ({}));
 
 // Mock CryptoIdentityManager to avoid MLS issues
-jest.doMock("../managers/CryptoIdentityManager", () => ({
-  CryptoIdentityManager: require("./__mocks__/CryptoIdentityManager")
+jest.doMock('../managers/CryptoIdentityManager', () => ({
+  CryptoIdentityManager: require('./__mocks__/CryptoIdentityManager')
     .CryptoIdentityManager,
 }));
 
 // Mock MLS module to avoid ts-mls ES module issues
-jest.doMock("../crypto/mls", () => ({
+jest.doMock('../crypto/mls', () => ({
   MLSManager: jest.fn().mockImplementation(() => ({
     initialize: jest.fn().mockResolvedValue(true),
     createGroup: jest
       .fn()
-      .mockResolvedValue({ groupId: "mock_group_id", epoch: 0 }),
+      .mockResolvedValue({ groupId: 'mock_group_id', epoch: 0 }),
     addMembers: jest.fn().mockResolvedValue(true),
     removeMembers: jest.fn().mockResolvedValue(true),
     sendMessage: jest.fn().mockResolvedValue(true),
@@ -281,26 +281,26 @@ jest.doMock("../crypto/mls", () => ({
 }));
 
 // Mock PGP module
-jest.doMock("../crypto/pgp", () => ({
+jest.doMock('../crypto/pgp', () => ({
   PGPManager: jest.fn().mockImplementation(() => ({
     initialize: jest.fn().mockResolvedValue(true),
     generateKeyPair: jest.fn().mockResolvedValue({
-      publicKey: "mock_pgp_pub",
-      privateKey: "mock_pgp_priv",
-      keyId: "mock_key_id",
+      publicKey: 'mock_pgp_pub',
+      privateKey: 'mock_pgp_priv',
+      keyId: 'mock_key_id',
     }),
-    encrypt: jest.fn().mockResolvedValue("encrypted_pgp_data"),
-    decrypt: jest.fn().mockResolvedValue("decrypted_pgp_data"),
+    encrypt: jest.fn().mockResolvedValue('encrypted_pgp_data'),
+    decrypt: jest.fn().mockResolvedValue('decrypted_pgp_data'),
   })),
 }));
 
 // Mock SFrame module
-jest.doMock("../crypto/sframe", () => ({
+jest.doMock('../crypto/sframe', () => ({
   SFrameManager: jest.fn().mockImplementation(() => ({
     initialize: jest.fn().mockResolvedValue(true),
     generateKey: jest.fn().mockResolvedValue({ keyId: 1 }),
-    encrypt: jest.fn().mockResolvedValue("encrypted_sframe_data"),
-    decrypt: jest.fn().mockResolvedValue("decrypted_sframe_data"),
+    encrypt: jest.fn().mockResolvedValue('encrypted_sframe_data'),
+    decrypt: jest.fn().mockResolvedValue('decrypted_sframe_data'),
   })),
 }));
 
@@ -310,6 +310,6 @@ afterEach(() => {
 });
 
 // Dummy test to make this a valid test suite
-test("dummy test", () => {
+test('dummy test', () => {
   expect(true).toBe(true);
 });

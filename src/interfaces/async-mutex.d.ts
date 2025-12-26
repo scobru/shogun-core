@@ -1,4 +1,4 @@
-declare module "async-mutex" {
+declare module 'async-mutex' {
   export class Mutex {
     constructor();
     acquire(): Promise<() => void>;

@@ -8,32 +8,32 @@ import {
   NostrConnectorConfig,
   AlbyProvider,
   NostrProvider,
-} from "../../../plugins/nostr/index";
+} from '../../../plugins/nostr/index';
 
-describe("Nostr Plugin Index", () => {
-  describe("Class exports", () => {
-    it("should export NostrConnectorPlugin class", () => {
+describe('Nostr Plugin Index', () => {
+  describe('Class exports', () => {
+    it('should export NostrConnectorPlugin class', () => {
       expect(NostrConnectorPlugin).toBeDefined();
-      expect(typeof NostrConnectorPlugin).toBe("function");
+      expect(typeof NostrConnectorPlugin).toBe('function');
     });
 
-    it("should export NostrConnector class", () => {
+    it('should export NostrConnector class', () => {
       expect(NostrConnector).toBeDefined();
-      expect(typeof NostrConnector).toBe("function");
+      expect(typeof NostrConnector).toBe('function');
     });
 
-    it("should export NostrSigner class", () => {
+    it('should export NostrSigner class', () => {
       expect(NostrSigner).toBeDefined();
-      expect(typeof NostrSigner).toBe("function");
+      expect(typeof NostrSigner).toBe('function');
     });
   });
 
-  describe("Type exports", () => {
-    it("should export NostrConnectorPluginInterface type", () => {
+  describe('Type exports', () => {
+    it('should export NostrConnectorPluginInterface type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockInterface: NostrConnectorPluginInterface = {
-        name: "nostr",
-        version: "1.0.0",
+        name: 'nostr',
+        version: '1.0.0',
         initialize: jest.fn(),
         destroy: jest.fn(),
         connect: jest.fn(),
@@ -44,38 +44,38 @@ describe("Nostr Plugin Index", () => {
       expect(mockInterface).toBeDefined();
     });
 
-    it("should export NostrConnectorCredentials type", () => {
+    it('should export NostrConnectorCredentials type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockCredentials: NostrConnectorCredentials = {
-        privateKey: "test-private-key",
-        publicKey: "test-public-key",
+        privateKey: 'test-private-key',
+        publicKey: 'test-public-key',
       };
       expect(mockCredentials).toBeDefined();
     });
 
-    it("should export NostrConnectorKeyPair type", () => {
+    it('should export NostrConnectorKeyPair type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockKeyPair: NostrConnectorKeyPair = {
-        privateKey: "test-private-key",
-        publicKey: "test-public-key",
+        privateKey: 'test-private-key',
+        publicKey: 'test-public-key',
       };
       expect(mockKeyPair).toBeDefined();
     });
 
-    it("should export NostrConnectorConfig type", () => {
+    it('should export NostrConnectorConfig type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockConfig: NostrConnectorConfig = {
-        relays: ["wss://relay.example.com"],
+        relays: ['wss://relay.example.com'],
         enabled: true,
       };
       expect(mockConfig).toBeDefined();
     });
 
-    it("should export AlbyProvider type", () => {
+    it('should export AlbyProvider type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockProvider: AlbyProvider = {
-        name: "alby",
-        version: "1.0.0",
+        name: 'alby',
+        version: '1.0.0',
         connect: jest.fn(),
         disconnect: jest.fn(),
         signEvent: jest.fn(),
@@ -84,11 +84,11 @@ describe("Nostr Plugin Index", () => {
       expect(mockProvider).toBeDefined();
     });
 
-    it("should export NostrProvider type", () => {
+    it('should export NostrProvider type', () => {
       // This is a type test - we're just ensuring the type is exported
       const mockProvider: NostrProvider = {
-        name: "nostr",
-        version: "1.0.0",
+        name: 'nostr',
+        version: '1.0.0',
         connect: jest.fn(),
         disconnect: jest.fn(),
         signEvent: jest.fn(),
@@ -98,9 +98,9 @@ describe("Nostr Plugin Index", () => {
     });
   });
 
-  describe("Module structure", () => {
-    it("should export all expected classes and types", () => {
-      const moduleExports = require("../../../plugins/nostr/index");
+  describe('Module structure', () => {
+    it('should export all expected classes and types', () => {
+      const moduleExports = require('../../../plugins/nostr/index');
 
       // Class exports
       expect(moduleExports.NostrConnectorPlugin).toBeDefined();
@@ -112,8 +112,8 @@ describe("Nostr Plugin Index", () => {
     });
   });
 
-  describe("Type compatibility", () => {
-    it("should allow plugin classes to be instantiated", () => {
+  describe('Type compatibility', () => {
+    it('should allow plugin classes to be instantiated', () => {
       // Test that we can create instances of the exported classes
       // These might fail due to missing dependencies, but we can test the exports
       expect(() => {

@@ -1,18 +1,18 @@
-import { BasePlugin } from "../base";
-import { ShogunCore } from "../../core";
+import { BasePlugin } from '../base';
+import { ShogunCore } from '../../core';
 import {
   NostrConnector,
   MESSAGE_TO_SIGN,
   deriveNostrKeys,
-} from "./nostrConnector";
-import { NostrSigner, NostrSigningCredential } from "./nostrSigner";
+} from './nostrConnector';
+import { NostrSigner, NostrSigningCredential } from './nostrSigner';
 import {
   NostrConnectorCredentials,
   ConnectionResult,
   NostrConnectorPluginInterface,
-} from "./types";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
-import { ErrorHandler, ErrorType, createError } from "../../utils/errorHandler";
+} from './types';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
+import { ErrorHandler, ErrorType, createError } from '../../utils/errorHandler';
 
 /**
  * Plugin for managing Bitcoin wallet functionality in ShogunCore
@@ -22,10 +22,10 @@ export class NostrConnectorPlugin
   extends BasePlugin
   implements NostrConnectorPluginInterface
 {
-  name = "nostr";
-  version = "1.0.0";
+  name = 'nostr';
+  version = '1.0.0';
   description =
-    "Provides Bitcoin wallet connection and authentication for ShogunCore";
+    'Provides Bitcoin wallet connection and authentication for ShogunCore';
 
   private bitcoinConnector: NostrConnector | null = null;
   private signer: NostrSigner | null = null;
@@ -60,7 +60,7 @@ export class NostrConnectorPlugin
   private assertBitcoinConnector(): NostrConnector {
     this.assertInitialized();
     if (!this.bitcoinConnector) {
-      throw new Error("Bitcoin wallet module not initialized");
+      throw new Error('Bitcoin wallet module not initialized');
     }
     return this.bitcoinConnector;
   }
@@ -72,7 +72,7 @@ export class NostrConnectorPlugin
   private assertSigner(): NostrSigner {
     this.assertInitialized();
     if (!this.signer) {
-      throw new Error("Nostr signer not initialized");
+      throw new Error('Nostr signer not initialized');
     }
     return this.signer;
   }
@@ -101,11 +101,11 @@ export class NostrConnectorPlugin
         return {
           success: false,
           error:
-            "Nostr extension not available. Please install a Nostr extension like nos2x, Alby, or Coracle.",
+            'Nostr extension not available. Please install a Nostr extension like nos2x, Alby, or Coracle.',
         };
       }
 
-      const result = await this.connectBitcoinWallet("nostr");
+      const result = await this.connectBitcoinWallet('nostr');
 
       if (result.success) {
       }
@@ -113,12 +113,12 @@ export class NostrConnectorPlugin
       return result;
     } catch (error: any) {
       console.error(
-        "[nostrConnectorPlugin] Error connecting to Nostr wallet:",
+        '[nostrConnectorPlugin] Error connecting to Nostr wallet:',
         error,
       );
       return {
         success: false,
-        error: error.message || "Unknown error connecting to Nostr wallet",
+        error: error.message || 'Unknown error connecting to Nostr wallet',
       };
     }
   }
@@ -127,12 +127,12 @@ export class NostrConnectorPlugin
    * @inheritdoc
    */
   async connectBitcoinWallet(
-    type: "alby" | "nostr" | "manual" = "nostr",
+    type: 'alby' | 'nostr' | 'manual' = 'nostr',
   ): Promise<ConnectionResult> {
     // Prioritize nostr over alby (since they are functionally identical)
     // If type is alby, try to use nostr instead
-    if (type === "alby") {
-      type = "nostr";
+    if (type === 'alby') {
+      type = 'nostr';
     }
     return this.assertBitcoinConnector().connectWallet(type);
   }
@@ -192,7 +192,7 @@ export class NostrConnectorPlugin
   ): Promise<NostrSigningCredential> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.createSigningCredential === "function") {
+      if (typeof conn.createSigningCredential === 'function') {
         return await conn.createSigningCredential(address);
       }
       return await this.assertSigner().createSigningCredential(address);
@@ -210,7 +210,7 @@ export class NostrConnectorPlugin
   createAuthenticator(address: string): (data: any) => Promise<string> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.createAuthenticator === "function") {
+      if (typeof conn.createAuthenticator === 'function') {
         return conn.createAuthenticator(address);
       }
       return this.assertSigner().createAuthenticator(address);
@@ -229,7 +229,7 @@ export class NostrConnectorPlugin
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.createDerivedKeyPair === "function") {
+      if (typeof conn.createDerivedKeyPair === 'function') {
         return await conn.createDerivedKeyPair(address, extra);
       }
       return await this.assertSigner().createDerivedKeyPair(address, extra);
@@ -249,7 +249,7 @@ export class NostrConnectorPlugin
   ): Promise<string> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.signWithDerivedKeys === "function") {
+      if (typeof conn.signWithDerivedKeys === 'function') {
         return await conn.signWithDerivedKeys(data, address, extra);
       }
       return await this.assertSigner().signWithDerivedKeys(
@@ -268,7 +268,7 @@ export class NostrConnectorPlugin
    */
   getSigningCredential(address: string): NostrSigningCredential | undefined {
     const conn = this.assertBitcoinConnector() as any;
-    if (typeof conn.getSigningCredential === "function") {
+    if (typeof conn.getSigningCredential === 'function') {
       return conn.getSigningCredential(address);
     }
     return this.assertSigner().getCredential(address);
@@ -279,7 +279,7 @@ export class NostrConnectorPlugin
    */
   listSigningCredentials(): NostrSigningCredential[] {
     const conn = this.assertBitcoinConnector() as any;
-    if (typeof conn.listSigningCredentials === "function") {
+    if (typeof conn.listSigningCredentials === 'function') {
       return conn.listSigningCredentials();
     }
     return this.assertSigner().listCredentials();
@@ -290,7 +290,7 @@ export class NostrConnectorPlugin
    */
   removeSigningCredential(address: string): boolean {
     const conn = this.assertBitcoinConnector() as any;
-    if (typeof conn.removeSigningCredential === "function") {
+    if (typeof conn.removeSigningCredential === 'function') {
       return conn.removeSigningCredential(address);
     }
     return this.assertSigner().removeCredential(address);
@@ -307,7 +307,7 @@ export class NostrConnectorPlugin
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.createGunUserFromSigningCredential === "function") {
+      if (typeof conn.createGunUserFromSigningCredential === 'function') {
         return await conn.createGunUserFromSigningCredential(address);
       }
       const core = this.assertInitialized();
@@ -325,7 +325,7 @@ export class NostrConnectorPlugin
    */
   getGunUserPubFromSigningCredential(address: string): string | undefined {
     const conn = this.assertBitcoinConnector() as any;
-    if (typeof conn.getGunUserPubFromSigningCredential === "function") {
+    if (typeof conn.getGunUserPubFromSigningCredential === 'function') {
       return conn.getGunUserPubFromSigningCredential(address);
     }
     return this.assertSigner().getGunUserPub(address);
@@ -336,7 +336,7 @@ export class NostrConnectorPlugin
    */
   getPassword(address: string): string | undefined {
     const conn = this.assertBitcoinConnector() as any;
-    if (typeof conn.getPassword === "function") {
+    if (typeof conn.getPassword === 'function') {
       return conn.getPassword(address);
     }
     return this.assertSigner().getPassword(address);
@@ -356,7 +356,7 @@ export class NostrConnectorPlugin
   }> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.verifyConsistency === "function") {
+      if (typeof conn.verifyConsistency === 'function') {
         return await conn.verifyConsistency(address, expectedUserPub);
       }
       return await this.assertSigner().verifyConsistency(
@@ -382,7 +382,7 @@ export class NostrConnectorPlugin
   }> {
     try {
       const conn = this.assertBitcoinConnector() as any;
-      if (typeof conn.setupConsistentOneshotSigning === "function") {
+      if (typeof conn.setupConsistentOneshotSigning === 'function') {
         return await conn.setupConsistentOneshotSigning(address);
       }
       const credential = await this.createSigningCredential(address);
@@ -418,16 +418,16 @@ export class NostrConnectorPlugin
       if (!address) {
         throw createError(
           ErrorType.VALIDATION,
-          "ADDRESS_REQUIRED",
-          "Bitcoin address required for login",
+          'ADDRESS_REQUIRED',
+          'Bitcoin address required for login',
         );
       }
 
       if (!this.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
-          "BITCOIN_WALLET_UNAVAILABLE",
-          "No Bitcoin wallet available in the browser",
+          'BITCOIN_WALLET_UNAVAILABLE',
+          'No Bitcoin wallet available in the browser',
         );
       }
 
@@ -450,8 +450,8 @@ export class NostrConnectorPlugin
       ) {
         throw createError(
           ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Bitcoin wallet credentials not generated correctly or signature missing",
+          'CREDENTIAL_GENERATION_FAILED',
+          'Bitcoin wallet credentials not generated correctly or signature missing',
         );
       }
 
@@ -465,8 +465,8 @@ export class NostrConnectorPlugin
         console.error(`Signature verification failed for address: ${address}`);
         throw createError(
           ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "Bitcoin wallet signature verification failed",
+          'SIGNATURE_VERIFICATION_FAILED',
+          'Bitcoin wallet signature verification failed',
         );
       }
 
@@ -474,33 +474,33 @@ export class NostrConnectorPlugin
       const k = await deriveNostrKeys(address, signature, message);
 
       // Set authentication method to nostr before login
-      core.setAuthMethod("nostr");
+      core.setAuthMethod('nostr');
 
       // Usa le chiavi derivate per login
-      const loginResult = await core.login(credentials.username, "", k);
+      const loginResult = await core.login(credentials.username, '', k);
 
       if (!loginResult.success) {
         throw createError(
           ErrorType.AUTHENTICATION,
-          "BITCOIN_LOGIN_FAILED",
-          loginResult.error || "Failed to log in with Bitcoin credentials",
+          'BITCOIN_LOGIN_FAILED',
+          loginResult.error || 'Failed to log in with Bitcoin credentials',
         );
       }
 
       // Emit login event
-      core.emit("auth:login", {
-        userPub: loginResult.userPub || "",
+      core.emit('auth:login', {
+        userPub: loginResult.userPub || '',
         username: credentials.username,
-        method: "nostr",
+        method: 'nostr',
       });
 
       return loginResult;
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "BITCOIN_LOGIN_ERROR";
+      const errorCode = error?.code || 'BITCOIN_LOGIN_ERROR';
       const errorMessage =
-        error?.message || "Unknown error during Bitcoin wallet login";
+        error?.message || 'Unknown error during Bitcoin wallet login';
 
       ErrorHandler.handle(errorType, errorCode, errorMessage, error);
       return { success: false, error: errorMessage };
@@ -519,16 +519,16 @@ export class NostrConnectorPlugin
       if (!address) {
         throw createError(
           ErrorType.VALIDATION,
-          "ADDRESS_REQUIRED",
-          "Bitcoin address required for signup",
+          'ADDRESS_REQUIRED',
+          'Bitcoin address required for signup',
         );
       }
 
       if (!this.isAvailable()) {
         throw createError(
           ErrorType.ENVIRONMENT,
-          "BITCOIN_WALLET_UNAVAILABLE",
-          "No Bitcoin wallet available in the browser",
+          'BITCOIN_WALLET_UNAVAILABLE',
+          'No Bitcoin wallet available in the browser',
         );
       }
 
@@ -551,8 +551,8 @@ export class NostrConnectorPlugin
       ) {
         throw createError(
           ErrorType.AUTHENTICATION,
-          "CREDENTIAL_GENERATION_FAILED",
-          "Bitcoin wallet credentials not generated correctly or signature missing",
+          'CREDENTIAL_GENERATION_FAILED',
+          'Bitcoin wallet credentials not generated correctly or signature missing',
         );
       }
 
@@ -567,8 +567,8 @@ export class NostrConnectorPlugin
         console.error(`Signature verification failed for address: ${address}`);
         throw createError(
           ErrorType.SECURITY,
-          "SIGNATURE_VERIFICATION_FAILED",
-          "Bitcoin wallet signature verification failed",
+          'SIGNATURE_VERIFICATION_FAILED',
+          'Bitcoin wallet signature verification failed',
         );
       }
 
@@ -576,7 +576,7 @@ export class NostrConnectorPlugin
       const k = await deriveNostrKeys(address, signature, message);
 
       // Set authentication method to nostr before signup
-      core.setAuthMethod("nostr");
+      core.setAuthMethod('nostr');
 
       // Usa le chiavi derivate per signup
       const signupResult = await core.signUp(
@@ -587,28 +587,28 @@ export class NostrConnectorPlugin
 
       if (signupResult.success) {
         // Dopo la creazione, autentica subito
-        const authResult = await core.login(credentials.username, "", k);
+        const authResult = await core.login(credentials.username, '', k);
         if (authResult.success) {
           console.log(
             `Bitcoin wallet registration and login completed for user: ${credentials.username}`,
           );
           // Emetti eventi
-          core.emit("auth:signup", {
-            userPub: authResult.userPub || "",
+          core.emit('auth:signup', {
+            userPub: authResult.userPub || '',
             username: credentials.username,
-            method: "nostr",
+            method: 'nostr',
           });
           return { ...authResult };
         } else {
-          return { ...signupResult, error: "User created but login failed" };
+          return { ...signupResult, error: 'User created but login failed' };
         }
       } else {
         // Se l'errore è che l'utente esiste già, prova direttamente l'auth
         if (
           signupResult.error &&
-          signupResult.error.toLowerCase().includes("exist")
+          signupResult.error.toLowerCase().includes('exist')
         ) {
-          const authResult = await core.login(credentials.username, "", k);
+          const authResult = await core.login(credentials.username, '', k);
           return { ...authResult };
         }
         return signupResult;
@@ -616,9 +616,9 @@ export class NostrConnectorPlugin
     } catch (error: any) {
       // Handle both ShogunError and generic errors
       const errorType = error?.type || ErrorType.AUTHENTICATION;
-      const errorCode = error?.code || "BITCOIN_SIGNUP_ERROR";
+      const errorCode = error?.code || 'BITCOIN_SIGNUP_ERROR';
       const errorMessage =
-        error?.message || "Unknown error during Bitcoin wallet signup";
+        error?.message || 'Unknown error during Bitcoin wallet signup';
 
       ErrorHandler.handle(errorType, errorCode, errorMessage, error);
       return { success: false, error: errorMessage };

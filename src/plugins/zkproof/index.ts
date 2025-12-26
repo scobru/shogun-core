@@ -42,9 +42,9 @@
  * @module zkproof
  */
 
-export { ZkProofPlugin } from "./zkProofPlugin";
-export { ZkProofConnector } from "./zkProofConnector";
-export { ZkCredentials, CredentialType } from "./zkCredentials";
+export { ZkProofPlugin } from './zkProofPlugin';
+export { ZkProofConnector } from './zkProofConnector';
+export { ZkCredentials, CredentialType } from './zkCredentials';
 export type {
   ZkIdentityData,
   ZkProofAuthResult,
@@ -54,9 +54,9 @@ export type {
   ZkProofConfig,
   ZkProofPluginInterface,
   SemaphoreProof,
-} from "./types";
+} from './types';
 export type {
   CredentialClaim,
   VerifiableCredentialProof,
   CredentialVerificationResult,
-} from "./zkCredentials";
+} from './zkCredentials';

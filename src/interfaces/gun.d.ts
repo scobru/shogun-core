@@ -1,13 +1,13 @@
-declare module "gun/lib/yson" {}
-declare module "gun/lib/serve" {}
-declare module "gun/lib/store" {}
-declare module "gun/lib/rfs" {}
-declare module "gun/lib/rs3" {}
-declare module "gun/lib/wire" {}
-declare module "gun/lib/multicast" {}
-declare module "gun/lib/stats" {}
+declare module 'gun/lib/yson' {}
+declare module 'gun/lib/serve' {}
+declare module 'gun/lib/store' {}
+declare module 'gun/lib/rfs' {}
+declare module 'gun/lib/rs3' {}
+declare module 'gun/lib/wire' {}
+declare module 'gun/lib/multicast' {}
+declare module 'gun/lib/stats' {}
 
-declare module "gun/sea" {
+declare module 'gun/sea' {
   interface WorkOptions {
     name?: string;
     [key: string]: any;
@@ -32,7 +32,7 @@ declare module "gun/sea" {
   export default SEA;
 }
 
-declare module "gun/axe" {}
+declare module 'gun/axe' {}
 
 // Extend Gun chain interface to include .then() method
 declare global {

@@ -1,12 +1,12 @@
-import { ShogunCore } from "../../index";
-import { CorePlugins, ShogunSDKConfig } from "../../interfaces/shogun";
-import { Web3ConnectorPlugin } from "../../plugins/web3/web3ConnectorPlugin";
-import { NostrConnectorPlugin } from "../../plugins/nostr/nostrConnectorPlugin";
-import { WebauthnPlugin } from "../../plugins/webauthn/webauthnPlugin"; // Import WebauthnPlugin
+import { ShogunCore } from '../../index';
+import { CorePlugins, ShogunSDKConfig } from '../../interfaces/shogun';
+import { Web3ConnectorPlugin } from '../../plugins/web3/web3ConnectorPlugin';
+import { NostrConnectorPlugin } from '../../plugins/nostr/nostrConnectorPlugin';
+import { WebauthnPlugin } from '../../plugins/webauthn/webauthnPlugin'; // Import WebauthnPlugin
 
 // Mock delle dipendenze di GunDB per evitare side-effects e ambiente browser
-jest.mock("../../gundb", () => {
-  const originalGundb = jest.requireActual("../../gundb");
+jest.mock('../../gundb', () => {
+  const originalGundb = jest.requireActual('../../gundb');
   return {
     ...originalGundb,
     Gun: jest.fn(() => ({
@@ -38,12 +38,12 @@ jest.mock("../../gundb", () => {
       // Aggiungi altri metodi mockati se necessario
       isLoggedIn: jest.fn().mockReturnValue(false),
       logout: jest.fn(),
-      login: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      login: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       loginWithPair: jest.fn(),
-      signUp: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      signUp: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       updateUserAlias: jest.fn(),
       clearGunStorage: jest.fn(),
-      getCurrentUser: jest.fn().mockReturnValue({ pub: "pub" }),
+      getCurrentUser: jest.fn().mockReturnValue({ pub: 'pub' }),
       getUser: jest.fn(() => ({
         get: jest.fn().mockReturnThis(),
         put: jest.fn().mockReturnThis(),
@@ -70,7 +70,7 @@ jest.mock("../../gundb", () => {
 });
 
 // Mock ShogunStorage
-jest.mock("../../storage/storage", () => ({
+jest.mock('../../storage/storage', () => ({
   ShogunStorage: jest.fn().mockImplementation(() => ({
     setItem: jest.fn(),
     getItem: jest.fn(),
@@ -80,11 +80,11 @@ jest.mock("../../storage/storage", () => ({
 }));
 
 // Mock dei connector dei plugin per evitare dipendenze reali (Web3/Nostr)
-jest.mock("../../plugins/web3/web3ConnectorPlugin", () => {
+jest.mock('../../plugins/web3/web3ConnectorPlugin', () => {
   return {
     Web3ConnectorPlugin: class MockWeb3ConnectorPlugin {
-      name = "web3";
-      version = "1.0.0";
+      name = 'web3';
+      version = '1.0.0';
       core: any;
       events: any = new Map();
 
@@ -95,7 +95,7 @@ jest.mock("../../plugins/web3/web3ConnectorPlugin", () => {
         return true;
       }
       async connectMetaMask() {
-        return { success: true, address: "0xabc" };
+        return { success: true, address: '0xabc' };
       }
       on(eventName: string, listener: () => void) {
         if (!this.events.has(eventName)) {
@@ -111,11 +111,11 @@ jest.mock("../../plugins/web3/web3ConnectorPlugin", () => {
   };
 });
 
-jest.mock("../../plugins/nostr/nostrConnectorPlugin", () => {
+jest.mock('../../plugins/nostr/nostrConnectorPlugin', () => {
   return {
     NostrConnectorPlugin: class MockNostrConnectorPlugin {
-      name = "nostr";
-      version = "1.0.0";
+      name = 'nostr';
+      version = '1.0.0';
       core: any;
       events: any = new Map();
 
@@ -129,7 +129,7 @@ jest.mock("../../plugins/nostr/nostrConnectorPlugin", () => {
         return true;
       }
       async connectNostrWallet() {
-        return { success: true, address: "npub123" };
+        return { success: true, address: 'npub123' };
       }
       on(eventName: string, listener: () => void) {
         if (!this.events.has(eventName)) {
@@ -145,11 +145,11 @@ jest.mock("../../plugins/nostr/nostrConnectorPlugin", () => {
   };
 });
 
-jest.mock("../../plugins/webauthn/webauthnPlugin", () => {
+jest.mock('../../plugins/webauthn/webauthnPlugin', () => {
   return {
     WebauthnPlugin: class MockWebauthnPlugin {
-      name = "webauthn";
-      version = "1.0.0";
+      name = 'webauthn';
+      version = '1.0.0';
       core: any;
       events: any = new Map();
 
@@ -158,8 +158,8 @@ jest.mock("../../plugins/webauthn/webauthnPlugin", () => {
       }
       isSupported() {
         return (
-          typeof window !== "undefined" &&
-          typeof window.PublicKeyCredential !== "undefined"
+          typeof window !== 'undefined' &&
+          typeof window.PublicKeyCredential !== 'undefined'
         );
       }
       on(eventName: string, listener: () => void) {
@@ -176,11 +176,11 @@ jest.mock("../../plugins/webauthn/webauthnPlugin", () => {
   };
 });
 
-jest.mock("../../plugins/zkproof/zkProofPlugin", () => {
+jest.mock('../../plugins/zkproof/zkProofPlugin', () => {
   return {
     ZkProofPlugin: class MockZkProofPlugin {
-      name = "zkproof";
-      version = "1.0.0";
+      name = 'zkproof';
+      version = '1.0.0';
       core: any;
       events: any = new Map();
 
@@ -200,7 +200,7 @@ jest.mock("../../plugins/zkproof/zkProofPlugin", () => {
   };
 });
 
-describe("Plugin system and plugin functionality", () => {
+describe('Plugin system and plugin functionality', () => {
   let config: ShogunSDKConfig;
   let core: ShogunCore;
   let mockGunInstance: any;
@@ -229,8 +229,8 @@ describe("Plugin system and plugin functionality", () => {
       web3: { enabled: true },
       nostr: { enabled: true },
       zkproof: { enabled: true }, // Add ZK-Proof plugin config
-      peers: ["http://localhost:8765/gun"],
-      gunOptions: { peers: ["http://localhost:8765/gun"] },
+      peers: ['http://localhost:8765/gun'],
+      gunOptions: { peers: ['http://localhost:8765/gun'] },
     };
     core = new ShogunCore(config);
     await core.db.initialize(); // Wait for async initialization
@@ -246,26 +246,26 @@ describe("Plugin system and plugin functionality", () => {
     // Don't unregister plugins between tests to avoid interference
   });
 
-  it("registers built-in plugins when config provided", () => {
+  it('registers built-in plugins when config provided', () => {
     expect(core.hasPlugin(CorePlugins.WebAuthn)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Nostr)).toBe(true);
     expect(core.hasPlugin(CorePlugins.ZkProof)).toBe(true); // Check ZK-Proof plugin
   });
 
-  it("getPlugin returns correct instances", () => {
+  it('getPlugin returns correct instances', () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3);
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr);
     const webauthn = core.getPlugin<WebauthnPlugin>(CorePlugins.WebAuthn); // Get Webauthn plugin
     const zkproof = core.getPlugin<any>(CorePlugins.ZkProof); // Get ZK-Proof plugin
 
-    expect(web3?.name).toBe("web3");
-    expect(nostr?.name).toBe("nostr");
-    expect(webauthn?.name).toBe("webauthn"); // Check Webauthn plugin name
-    expect(zkproof?.name).toBe("zkproof"); // Check ZK-Proof plugin name
+    expect(web3?.name).toBe('web3');
+    expect(nostr?.name).toBe('nostr');
+    expect(webauthn?.name).toBe('webauthn'); // Check Webauthn plugin name
+    expect(zkproof?.name).toBe('zkproof'); // Check ZK-Proof plugin name
   });
 
-  it("Web3 plugin exposes availability and connection", async () => {
+  it('Web3 plugin exposes availability and connection', async () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
     expect(web3.isAvailable()).toBe(true);
     // Mock connectMetaMask if it interacts with a real browser environment
@@ -274,7 +274,7 @@ describe("Plugin system and plugin functionality", () => {
     expect(conn.success).toBe(true);
   });
 
-  it("Nostr plugin can connect via extension", async () => {
+  it('Nostr plugin can connect via extension', async () => {
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr)!;
     expect(nostr.isNostrExtensionAvailable()).toBe(true);
     // Mock connectNostrWallet if it interacts with a real browser environment
@@ -283,7 +283,7 @@ describe("Plugin system and plugin functionality", () => {
     expect(res.success).toBe(true);
   });
 
-  it("WebAuthn plugin reports unsupported in Node env", () => {
+  it('WebAuthn plugin reports unsupported in Node env', () => {
     // Ensure WebAuthn plugin is retrieved correctly
     const webauthn = core.getPlugin<WebauthnPlugin>(CorePlugins.WebAuthn)!;
 
@@ -300,7 +300,7 @@ describe("Plugin system and plugin functionality", () => {
     }
   });
 
-  it("unregister destroys plugin and removes it", async () => {
+  it('unregister destroys plugin and removes it', async () => {
     // First ensure the plugin is registered
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
 
@@ -311,10 +311,10 @@ describe("Plugin system and plugin functionality", () => {
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
 
     // Check if the plugin has a destroy method
-    expect(typeof web3!.destroy).toBe("function");
+    expect(typeof web3!.destroy).toBe('function');
 
     // Ensure the plugin is properly initialized
-    if (web3 && typeof web3.initialize === "function") {
+    if (web3 && typeof web3.initialize === 'function') {
       web3.initialize(core as any);
     }
 
@@ -326,12 +326,12 @@ describe("Plugin system and plugin functionality", () => {
     await Promise.resolve();
 
     // Re-register the plugin for subsequent tests
-    const { Web3ConnectorPlugin } = require("../../plugins/web3");
+    const { Web3ConnectorPlugin } = require('../../plugins/web3');
     const newWeb3Plugin = new Web3ConnectorPlugin();
     core.register(newWeb3Plugin);
   });
 
-  it("reports initialization status for registered plugins", async () => {
+  it('reports initialization status for registered plugins', async () => {
     // Ensure all plugins are initialized (especially for WebAuthn in Node env)
     await core.db.initialize(); // Ensure DB initialization is complete
 
@@ -348,16 +348,16 @@ describe("Plugin system and plugin functionality", () => {
     const zkproofPlugin = core.getPlugin(CorePlugins.ZkProof);
 
     // Ensure plugins are properly initialized
-    if (web3Plugin && typeof web3Plugin.initialize === "function") {
+    if (web3Plugin && typeof web3Plugin.initialize === 'function') {
       web3Plugin.initialize(core as any);
     }
-    if (nostrPlugin && typeof nostrPlugin.initialize === "function") {
+    if (nostrPlugin && typeof nostrPlugin.initialize === 'function') {
       nostrPlugin.initialize(core as any);
     }
-    if (webauthnPlugin && typeof webauthnPlugin.initialize === "function") {
+    if (webauthnPlugin && typeof webauthnPlugin.initialize === 'function') {
       webauthnPlugin.initialize(core as any);
     }
-    if (zkproofPlugin && typeof zkproofPlugin.initialize === "function") {
+    if (zkproofPlugin && typeof zkproofPlugin.initialize === 'function') {
       zkproofPlugin.initialize(core as any);
     }
 
@@ -370,7 +370,7 @@ describe("Plugin system and plugin functionality", () => {
     expect(status[CorePlugins.ZkProof]?.initialized).toBe(true);
   });
 
-  it("getAuthenticationMethod returns plugin-backed handlers", () => {
+  it('getAuthenticationMethod returns plugin-backed handlers', () => {
     // Check that plugins are registered first
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Nostr)).toBe(true);
@@ -382,20 +382,20 @@ describe("Plugin system and plugin functionality", () => {
     expect(web3Plugin).toBeDefined();
     expect(nostrPlugin).toBeDefined();
 
-    if (web3Plugin && typeof web3Plugin.initialize === "function") {
+    if (web3Plugin && typeof web3Plugin.initialize === 'function') {
       web3Plugin.initialize(core as any);
     }
-    if (nostrPlugin && typeof nostrPlugin.initialize === "function") {
+    if (nostrPlugin && typeof nostrPlugin.initialize === 'function') {
       nostrPlugin.initialize(core as any);
     }
 
-    const web3Method = core.getAuthenticationMethod("web3");
-    const nostrMethod = core.getAuthenticationMethod("nostr");
+    const web3Method = core.getAuthenticationMethod('web3');
+    const nostrMethod = core.getAuthenticationMethod('nostr');
 
     expect(web3Method).toBeDefined();
-    expect((web3Method as any)?.name).toBe("web3");
+    expect((web3Method as any)?.name).toBe('web3');
 
     expect(nostrMethod).toBeDefined();
-    expect((nostrMethod as any)?.name).toBe("nostr");
+    expect((nostrMethod as any)?.name).toBe('nostr');
   });
 });

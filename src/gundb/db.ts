@@ -1,15 +1,15 @@
-import type { AuthCallback, EventData, EventListener } from "./types";
+import type { AuthCallback, EventData, EventListener } from './types';
 import type {
   IGunUserInstance,
   IGunChain,
   IGunInstance,
   ISEAPair,
-} from "gun/types";
-import type { AuthResult, SignUpResult } from "../interfaces/shogun";
-import { RxJS } from "./rxjs";
-import { EventEmitter } from "../utils/eventEmitter";
-import * as GunErrors from "./errors";
-import * as crypto from "./crypto";
+} from 'gun/types';
+import type { AuthResult, SignUpResult } from '../interfaces/shogun';
+import { RxJS } from './rxjs';
+import { EventEmitter } from '../utils/eventEmitter';
+import * as GunErrors from './errors';
+import * as crypto from './crypto';
 
 /**
  * GunDB configuration constants.
@@ -62,10 +62,10 @@ class DataBase {
     this.core = core;
 
     if (!gun) {
-      throw new Error("Gun instance is required but was not provided");
+      throw new Error('Gun instance is required but was not provided');
     }
-    if (typeof gun.user !== "function") {
-      throw new Error("Gun instance is invalid: gun.user is not a function");
+    if (typeof gun.user !== 'function') {
+      throw new Error('Gun instance is invalid: gun.user is not a function');
     }
 
     this.gun = gun;
@@ -88,14 +88,14 @@ class DataBase {
 
     this._rxjs = new RxJS(this.gun);
 
-    this.usernamesNode = this.gun.get("usernames") as IGunChain<
+    this.usernamesNode = this.gun.get('usernames') as IGunChain<
       any,
       any,
       any,
       any
     >;
 
-    console.log("[DB] DataBase initialization completed");
+    console.log('[DB] DataBase initialization completed');
   }
 
   /**
@@ -111,11 +111,11 @@ class DataBase {
    * @internal
    */
   private subscribeToAuthEvents(): void {
-    this.gun.on("auth", (ack: any) => {
+    this.gun.on('auth', (ack: any) => {
       if (ack.err) {
-        console.error("[DB] Auth event error:", ack.err);
+        console.error('[DB] Auth event error:', ack.err);
       } else {
-        this.notifyAuthListeners(ack.sea?.pub || "");
+        this.notifyAuthListeners(ack.sea?.pub || '');
       }
     });
   }
@@ -168,24 +168,24 @@ class DataBase {
     error?: string;
   } {
     try {
-      if (typeof sessionStorage === "undefined") {
-        return { success: false, error: "sessionStorage not available" };
+      if (typeof sessionStorage === 'undefined') {
+        return { success: false, error: 'sessionStorage not available' };
       }
 
-      const sessionData = sessionStorage.getItem("gunSessionData");
+      const sessionData = sessionStorage.getItem('gunSessionData');
       if (!sessionData) {
-        return { success: false, error: "No saved session" };
+        return { success: false, error: 'No saved session' };
       }
 
       const session = JSON.parse(sessionData);
       if (!session.userPub) {
-        return { success: false, error: "Invalid session data" };
+        return { success: false, error: 'Invalid session data' };
       }
 
       // Check if session is expired
       if (session.expiresAt && Date.now() > session.expiresAt) {
-        sessionStorage.removeItem("gunSessionData");
-        return { success: false, error: "Session expired" };
+        sessionStorage.removeItem('gunSessionData');
+        return { success: false, error: 'Session expired' };
       }
 
       // Verify session restoration
@@ -195,7 +195,7 @@ class DataBase {
         return { success: true, userPub: session.userPub };
       }
 
-      return { success: false, error: "Session verification failed" };
+      return { success: false, error: 'Session verification failed' };
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -213,16 +213,16 @@ class DataBase {
       }
       this.user = null;
 
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem("gunSessionData");
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('gunSessionData');
       }
 
       // Emit auth:logout event if core is available and user was logged in
-      if (wasLoggedIn && this.core && typeof this.core.emit === "function") {
-        this.core.emit("auth:logout", undefined);
+      if (wasLoggedIn && this.core && typeof this.core.emit === 'function') {
+        this.core.emit('auth:logout', undefined);
       }
     } catch (error) {
-      console.error("[DB] Error during logout:", error);
+      console.error('[DB] Error during logout:', error);
     }
   }
 
@@ -259,7 +259,7 @@ class DataBase {
     if (!username || username.length < 1) {
       return {
         valid: false,
-        error: "Username must be more than 0 characters long",
+        error: 'Username must be more than 0 characters long',
       };
     }
 
@@ -267,13 +267,13 @@ class DataBase {
       return {
         valid: false,
         error:
-          "Username can only contain letters, numbers, dots, underscores, and hyphens",
+          'Username can only contain letters, numbers, dots, underscores, and hyphens',
       };
     }
 
     if (pair) {
       if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
-        return { valid: false, error: "Invalid pair provided" };
+        return { valid: false, error: 'Invalid pair provided' };
       }
       return { valid: true };
     }
@@ -308,8 +308,8 @@ class DataBase {
     alias: string,
     timeout = 5000,
   ): Promise<boolean> {
-    if (typeof alias !== "string" || !alias.trim()) {
-      throw new Error("Alias must be a non-empty string");
+    if (typeof alias !== 'string' || !alias.trim()) {
+      throw new Error('Alias must be a non-empty string');
     }
 
     const normalizedAlias = alias.trim().toLowerCase();
@@ -319,7 +319,7 @@ class DataBase {
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
-        reject(new Error("Timeout while checking alias availability"));
+        reject(new Error('Timeout while checking alias availability'));
       }, timeout);
 
       this.usernamesNode.get(normalizedAlias).once((existingPub: any) => {
@@ -361,10 +361,10 @@ class DataBase {
     timeout = 5000,
   ): Promise<void> {
     if (!alias || !alias.trim()) {
-      throw new Error("Alias must be provided for registration");
+      throw new Error('Alias must be provided for registration');
     }
     if (!userPub) {
-      throw new Error("userPub must be provided for alias registration");
+      throw new Error('userPub must be provided for alias registration');
     }
 
     const normalizedAlias = alias.trim().toLowerCase();
@@ -373,7 +373,7 @@ class DataBase {
       normalizedAlias,
       timeout,
     ).catch((error) => {
-      console.error("[DB] Alias availability check failed:", error);
+      console.error('[DB] Alias availability check failed:', error);
       throw error;
     });
 
@@ -394,7 +394,7 @@ class DataBase {
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
-        reject(new Error("Timeout while registering alias"));
+        reject(new Error('Timeout while registering alias'));
       }, timeout);
 
       this.usernamesNode.get(normalizedAlias).put(userPub, (ack: any) => {
@@ -410,7 +410,7 @@ class DataBase {
         resolve();
       });
     }).catch((error) => {
-      console.error("[DB] Failed to register alias:", error);
+      console.error('[DB] Failed to register alias:', error);
       throw error;
     });
   }
@@ -476,7 +476,7 @@ class DataBase {
     userPub: string;
   }): void {
     try {
-      if (typeof sessionStorage !== "undefined") {
+      if (typeof sessionStorage !== 'undefined') {
         const sessionInfo = {
           username: userInfo.alias,
           pair: userInfo.pair,
@@ -484,10 +484,10 @@ class DataBase {
           timestamp: Date.now(),
           expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
         };
-        sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
+        sessionStorage.setItem('gunSessionData', JSON.stringify(sessionInfo));
       }
     } catch (error) {
-      console.error("[DB] Error saving credentials:", error);
+      console.error('[DB] Error saving credentials:', error);
     }
   }
 
@@ -530,7 +530,7 @@ class DataBase {
             const userPub = user?.is?.pub;
             if (!userPub) {
               this.resetAuthState();
-              resolve({ success: false, error: "No userPub available" });
+              resolve({ success: false, error: 'No userPub available' });
               return;
             }
             this.user = user;
@@ -543,11 +543,11 @@ class DataBase {
             });
 
             // Emit auth:signup event if core is available (pair-based signup)
-            if (this.core && typeof this.core.emit === "function") {
-              this.core.emit("auth:signup", {
+            if (this.core && typeof this.core.emit === 'function') {
+              this.core.emit('auth:signup', {
                 userPub: userPub,
                 username: normalizedUsername,
-                method: "pair" as const,
+                method: 'pair' as const,
               });
             }
 
@@ -590,7 +590,7 @@ class DataBase {
         ) {
           callbackInvoked = true;
           this.resetAuthState();
-          resolve({ success: false, error: createAck.err || "Signup failed" });
+          resolve({ success: false, error: createAck.err || 'Signup failed' });
           return;
         }
 
@@ -601,7 +601,7 @@ class DataBase {
           this.resetAuthState();
           resolve({
             success: false,
-            error: "No userPub available from signup",
+            error: 'No userPub available from signup',
           });
           return;
         }
@@ -616,7 +616,7 @@ class DataBase {
             this.resetAuthState();
             resolve({
               success: false,
-              error: authAck.err || "Authentication after signup failed",
+              error: authAck.err || 'Authentication after signup failed',
             });
             return;
           }
@@ -626,7 +626,7 @@ class DataBase {
             this.resetAuthState();
             resolve({
               success: false,
-              error: "User not authenticated after signup",
+              error: 'User not authenticated after signup',
             });
             return;
           }
@@ -651,15 +651,15 @@ class DataBase {
               authenticatedUserPub,
             );
           } catch (registerError) {
-            console.error("[DB] Alias registration failed:", registerError);
+            console.error('[DB] Alias registration failed:', registerError);
           }
 
           // Emit auth:signup event if core is available
-          if (this.core && typeof this.core.emit === "function") {
-            this.core.emit("auth:signup", {
+          if (this.core && typeof this.core.emit === 'function') {
+            this.core.emit('auth:signup', {
               userPub: authenticatedUserPub,
               username: normalizedUsername,
-              method: pair ? ("pair" as const) : ("password" as const),
+              method: pair ? ('pair' as const) : ('password' as const),
             });
           }
 
@@ -713,7 +713,7 @@ class DataBase {
           const userPub = user?.is?.pub;
           if (!userPub) {
             this.resetAuthState();
-            resolve({ success: false, error: "No userPub available" });
+            resolve({ success: false, error: 'No userPub available' });
             return;
           }
 
@@ -732,11 +732,11 @@ class DataBase {
           }
 
           // Emit auth:login event if core is available (pair-based login)
-          if (this.core && typeof this.core.emit === "function") {
-            this.core.emit("auth:login", {
+          if (this.core && typeof this.core.emit === 'function') {
+            this.core.emit('auth:login', {
               userPub: userPub,
               username: alias || normalizedUsername,
-              method: "pair" as const,
+              method: 'pair' as const,
             });
           }
 
@@ -753,7 +753,7 @@ class DataBase {
           const userPub = user?.is?.pub;
           if (!userPub) {
             this.resetAuthState();
-            resolve({ success: false, error: "No userPub available" });
+            resolve({ success: false, error: 'No userPub available' });
             return;
           }
 
@@ -772,11 +772,11 @@ class DataBase {
           }
 
           // Emit auth:login event if core is available (password-based login)
-          if (this.core && typeof this.core.emit === "function") {
-            this.core.emit("auth:login", {
+          if (this.core && typeof this.core.emit === 'function') {
+            this.core.emit('auth:login', {
               userPub: userPub,
               username: alias || normalizedUsername,
-              method: "password" as const,
+              method: 'password' as const,
             });
           }
 
@@ -830,7 +830,7 @@ class DataBase {
     if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
       return {
         success: false,
-        error: "Invalid pair structure - missing required keys",
+        error: 'Invalid pair structure - missing required keys',
       };
     }
 
@@ -838,7 +838,7 @@ class DataBase {
     const normalizedUsername = username.trim().toLowerCase();
     const user = this.gun.user();
 
-    console.log("[DB] Login with pair for username:", normalizedUsername);
+    console.log('[DB] Login with pair for username:', normalizedUsername);
 
     return new Promise<AuthResult>((resolve) => {
       user.auth(pair, (ack: any) => {
@@ -851,7 +851,7 @@ class DataBase {
         const userPub = user?.is?.pub;
         if (!userPub) {
           this.resetAuthState();
-          resolve({ success: false, error: "No userPub available" });
+          resolve({ success: false, error: 'No userPub available' });
           return;
         }
 
@@ -870,11 +870,11 @@ class DataBase {
         }
 
         // Emit auth:login event if core is available (loginWithPair)
-        if (this.core && typeof this.core.emit === "function") {
-          this.core.emit("auth:login", {
+        if (this.core && typeof this.core.emit === 'function') {
+          this.core.emit('auth:login', {
             userPub: userPub,
             username: alias || normalizedUsername,
-            method: "pair" as const,
+            method: 'pair' as const,
           });
         }
 
@@ -893,7 +893,7 @@ class DataBase {
     username: string,
     pair: ISEAPair,
   ): Promise<AuthResult> {
-    return this.login(username, "", pair);
+    return this.login(username, '', pair);
   }
 
   /**
@@ -911,7 +911,7 @@ class DataBase {
   public destroy(): void {
     if (this._isDestroyed) return;
 
-    console.log("[DB] Destroying DataBase instance...");
+    console.log('[DB] Destroying DataBase instance...');
     this._isDestroyed = true;
 
     this.onAuthCallbacks.length = 0;
@@ -928,17 +928,17 @@ class DataBase {
     }
 
     this._rxjs = undefined;
-    console.log("[DB] DataBase instance destroyed");
+    console.log('[DB] DataBase instance destroyed');
   }
 
   /**
    * Aggressively clean up authentication state and session. Typically used for error recovery.
    */
   public aggressiveAuthCleanup(): void {
-    console.log("🧹 Performing aggressive auth cleanup...");
+    console.log('🧹 Performing aggressive auth cleanup...');
     this.resetAuthState();
     this.logout();
-    console.log("✓ Aggressive auth cleanup completed");
+    console.log('✓ Aggressive auth cleanup completed');
   }
 
   /**
@@ -980,6 +980,6 @@ class DataBase {
 }
 
 export { DataBase, RxJS, crypto, GunErrors };
-export { default as derive, type DeriveOptions } from "./derive";
-export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
-export type { GunDataEventData, GunPeerEventData } from "../interfaces/events";
+export { default as derive, type DeriveOptions } from './derive';
+export type { IGunUserInstance, IGunInstance, IGunChain } from 'gun/types';
+export type { GunDataEventData, GunPeerEventData } from '../interfaces/events';

@@ -1,8 +1,8 @@
-import type { AuthCallback, EventData, EventListener } from "./types";
-import type { AuthResult, SignUpResult } from "../interfaces/shogun";
-import type { ISEAPair } from "gun";
-import { RxJSHolster } from "./rxjs-holster";
-import * as crypto from "./crypto";
+import type { AuthCallback, EventData, EventListener } from './types';
+import type { AuthResult, SignUpResult } from '../interfaces/shogun';
+import type { ISEAPair } from 'gun';
+import { RxJSHolster } from './rxjs-holster';
+import * as crypto from './crypto';
 /**
  * DataBaseHolster
  *

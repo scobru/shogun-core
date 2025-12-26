@@ -1,11 +1,11 @@
-import { BasePlugin } from "../../plugins/base";
-import { PluginCategory } from "../../interfaces/shogun";
+import { BasePlugin } from '../../plugins/base';
+import { PluginCategory } from '../../interfaces/shogun';
 
 // Create a concrete implementation of BasePlugin for testing
 class TestPlugin extends BasePlugin {
-  name = "test-plugin";
-  version = "1.0.0";
-  description = "A test plugin for unit testing";
+  name = 'test-plugin';
+  version = '1.0.0';
+  description = 'A test plugin for unit testing';
   _category = PluginCategory.Utility;
 
   // Add a test method that uses assertInitialized
@@ -15,7 +15,7 @@ class TestPlugin extends BasePlugin {
   }
 }
 
-describe("BasePlugin", () => {
+describe('BasePlugin', () => {
   let plugin: TestPlugin;
   let mockCore: any;
 
@@ -37,27 +37,27 @@ describe("BasePlugin", () => {
     jest.clearAllMocks();
   });
 
-  describe("constructor", () => {
-    it("should create a plugin instance with correct properties", () => {
-      expect(plugin.name).toBe("test-plugin");
-      expect(plugin.version).toBe("1.0.0");
-      expect(plugin.description).toBe("A test plugin for unit testing");
+  describe('constructor', () => {
+    it('should create a plugin instance with correct properties', () => {
+      expect(plugin.name).toBe('test-plugin');
+      expect(plugin.version).toBe('1.0.0');
+      expect(plugin.description).toBe('A test plugin for unit testing');
       expect(plugin._category).toBe(PluginCategory.Utility);
       expect(plugin.core).toBeNull();
     });
 
-    it("should extend EventEmitter", () => {
+    it('should extend EventEmitter', () => {
       expect(plugin.on).toBeDefined();
       expect(plugin.off).toBeDefined();
       expect(plugin.emit).toBeDefined();
-      expect(typeof plugin.on).toBe("function");
-      expect(typeof plugin.off).toBe("function");
-      expect(typeof plugin.emit).toBe("function");
+      expect(typeof plugin.on).toBe('function');
+      expect(typeof plugin.off).toBe('function');
+      expect(typeof plugin.emit).toBe('function');
     });
   });
 
-  describe("initialize", () => {
-    it("should set the core reference", () => {
+  describe('initialize', () => {
+    it('should set the core reference', () => {
       expect(plugin.core).toBeNull();
 
       plugin.initialize(mockCore);
@@ -65,8 +65,8 @@ describe("BasePlugin", () => {
       expect(plugin.core).toBe(mockCore);
     });
 
-    it("should allow re-initialization with different core", () => {
-      const mockCore2 = { ...mockCore, id: "core2" };
+    it('should allow re-initialization with different core', () => {
+      const mockCore2 = { ...mockCore, id: 'core2' };
 
       plugin.initialize(mockCore);
       expect(plugin.core).toBe(mockCore);
@@ -76,10 +76,10 @@ describe("BasePlugin", () => {
     });
   });
 
-  describe("destroy", () => {
-    it("should emit destroyed event and clear core reference", () => {
+  describe('destroy', () => {
+    it('should emit destroyed event and clear core reference', () => {
       const mockListener = jest.fn();
-      plugin.on("destroyed", mockListener);
+      plugin.on('destroyed', mockListener);
 
       plugin.initialize(mockCore);
       expect(plugin.core).toBe(mockCore);
@@ -87,24 +87,24 @@ describe("BasePlugin", () => {
       plugin.destroy();
 
       expect(mockListener).toHaveBeenCalledWith({
-        name: "test-plugin",
-        version: "1.0.0",
+        name: 'test-plugin',
+        version: '1.0.0',
       });
       expect(plugin.core).toBeNull();
     });
 
-    it("should handle errors during destruction gracefully", () => {
+    it('should handle errors during destruction gracefully', () => {
       const consoleSpy = jest
-        .spyOn(console, "error")
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
 
       class ErrorPlugin extends BasePlugin {
-        name = "error-plugin";
-        version = "1.0.0";
+        name = 'error-plugin';
+        version = '1.0.0';
 
         destroy(): void {
           super.destroy();
-          throw new Error("Test error during destruction");
+          throw new Error('Test error during destruction');
         }
       }
 
@@ -113,7 +113,7 @@ describe("BasePlugin", () => {
 
       // The error should be thrown and not caught by the parent's try-catch
       expect(() => errorPlugin.destroy()).toThrow(
-        "Test error during destruction",
+        'Test error during destruction',
       );
 
       // The console.error should not be called because the error is thrown after super.destroy()
@@ -122,7 +122,7 @@ describe("BasePlugin", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should work even if not initialized", () => {
+    it('should work even if not initialized', () => {
       expect(plugin.core).toBeNull();
 
       expect(() => plugin.destroy()).not.toThrow();
@@ -131,8 +131,8 @@ describe("BasePlugin", () => {
     });
   });
 
-  describe("assertInitialized", () => {
-    it("should return core when plugin is initialized", () => {
+  describe('assertInitialized', () => {
+    it('should return core when plugin is initialized', () => {
       plugin.initialize(mockCore);
 
       const result = plugin.testMethod();
@@ -140,78 +140,78 @@ describe("BasePlugin", () => {
       expect(result).toBe(mockCore);
     });
 
-    it("should throw error when plugin is not initialized", () => {
+    it('should throw error when plugin is not initialized', () => {
       expect(plugin.core).toBeNull();
 
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized",
+        'Plugin test-plugin not initialized',
       );
     });
 
-    it("should throw error when core is null after initialization", () => {
+    it('should throw error when core is null after initialization', () => {
       plugin.initialize(mockCore);
       plugin.core = null;
 
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized",
+        'Plugin test-plugin not initialized',
       );
     });
   });
 
-  describe("event emitter functionality", () => {
-    it("should emit and handle custom events", () => {
+  describe('event emitter functionality', () => {
+    it('should emit and handle custom events', () => {
       const mockListener = jest.fn();
-      const eventData = { test: "data" };
+      const eventData = { test: 'data' };
 
-      plugin.on("custom-event", mockListener);
-      const result = plugin.emit("custom-event", eventData);
+      plugin.on('custom-event', mockListener);
+      const result = plugin.emit('custom-event', eventData);
 
       expect(result).toBe(true);
       expect(mockListener).toHaveBeenCalledWith(eventData);
     });
 
-    it("should handle multiple listeners", () => {
+    it('should handle multiple listeners', () => {
       const mockListener1 = jest.fn();
       const mockListener2 = jest.fn();
-      const eventData = { test: "data" };
+      const eventData = { test: 'data' };
 
-      plugin.on("multi-event", mockListener1);
-      plugin.on("multi-event", mockListener2);
+      plugin.on('multi-event', mockListener1);
+      plugin.on('multi-event', mockListener2);
 
-      const result = plugin.emit("multi-event", eventData);
+      const result = plugin.emit('multi-event', eventData);
 
       expect(result).toBe(true);
       expect(mockListener1).toHaveBeenCalledWith(eventData);
       expect(mockListener2).toHaveBeenCalledWith(eventData);
     });
 
-    it("should remove listeners correctly", () => {
+    it('should remove listeners correctly', () => {
       const mockListener = jest.fn();
-      const eventData = { test: "data" };
+      const eventData = { test: 'data' };
 
-      plugin.on("remove-event", mockListener);
-      plugin.emit("remove-event", eventData);
+      plugin.on('remove-event', mockListener);
+      plugin.emit('remove-event', eventData);
       expect(mockListener).toHaveBeenCalledTimes(1);
 
-      plugin.off("remove-event", mockListener);
-      plugin.emit("remove-event", eventData);
+      plugin.off('remove-event', mockListener);
+      plugin.emit('remove-event', eventData);
       expect(mockListener).toHaveBeenCalledTimes(1); // Should not be called again
     });
 
-    it("should return false when no listeners are attached", () => {
-      const result = plugin.emit("no-listeners", {});
+    it('should return false when no listeners are attached', () => {
+      const result = plugin.emit('no-listeners', {});
       expect(result).toBe(false);
     });
   });
 
-  describe("plugin lifecycle", () => {
-    it("should handle complete plugin lifecycle", () => {
+  describe('plugin lifecycle', () => {
+    it('should handle complete plugin lifecycle', () => {
       const lifecycleEvents: any[] = [];
       const mockListener = jest.fn((data: any) => {
         lifecycleEvents.push(data);
       });
 
-      plugin.on("destroyed", mockListener);
+      plugin.on('destroyed', mockListener);
 
       plugin.initialize(mockCore);
       expect(plugin.core).toBe(mockCore);
@@ -221,48 +221,48 @@ describe("BasePlugin", () => {
 
       // Check that the event was emitted with the correct data
       expect(mockListener).toHaveBeenCalledWith({
-        name: "test-plugin",
-        version: "1.0.0",
+        name: 'test-plugin',
+        version: '1.0.0',
       });
 
       // Should throw after destruction
       expect(() => plugin.testMethod()).toThrow(
-        "Plugin test-plugin not initialized",
+        'Plugin test-plugin not initialized',
       );
     });
   });
 
-  describe("abstract properties", () => {
-    it("should require name and version to be implemented", () => {
+  describe('abstract properties', () => {
+    it('should require name and version to be implemented', () => {
       // This test ensures that abstract properties are properly enforced
       // The TestPlugin implementation provides these, so this should work
       expect(plugin.name).toBeDefined();
       expect(plugin.version).toBeDefined();
-      expect(typeof plugin.name).toBe("string");
-      expect(typeof plugin.version).toBe("string");
+      expect(typeof plugin.name).toBe('string');
+      expect(typeof plugin.version).toBe('string');
     });
   });
 
-  describe("optional properties", () => {
-    it("should handle optional description property", () => {
+  describe('optional properties', () => {
+    it('should handle optional description property', () => {
       class MinimalPlugin extends BasePlugin {
-        name = "minimal-plugin";
-        version = "1.0.0";
+        name = 'minimal-plugin';
+        version = '1.0.0';
         // No description or category
       }
 
       const minimalPlugin = new MinimalPlugin();
 
-      expect(minimalPlugin.name).toBe("minimal-plugin");
-      expect(minimalPlugin.version).toBe("1.0.0");
+      expect(minimalPlugin.name).toBe('minimal-plugin');
+      expect(minimalPlugin.version).toBe('1.0.0');
       expect(minimalPlugin.description).toBeUndefined();
       expect(minimalPlugin._category).toBeUndefined();
     });
 
-    it("should handle optional category property", () => {
+    it('should handle optional category property', () => {
       class CategoryPlugin extends BasePlugin {
-        name = "category-plugin";
-        version = "1.0.0";
+        name = 'category-plugin';
+        version = '1.0.0';
         _category = PluginCategory.Authentication;
       }
 

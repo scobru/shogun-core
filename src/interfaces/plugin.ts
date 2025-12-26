@@ -1,5 +1,5 @@
-import { ShogunCore } from "../core";
-import { PluginCategory } from "./shogun";
+import { ShogunCore } from '../core';
+import { PluginCategory } from './shogun';
 
 /**
  * Interfaccia di base per tutti i plugin di ShogunCore

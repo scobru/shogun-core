@@ -1,4 +1,4 @@
-import { ShogunEventEmitter, ShogunEventMap } from "../interfaces/events";
+import { ShogunEventEmitter, ShogunEventMap } from '../interfaces/events';
 /**
  * Manages event operations for ShogunCore
  */

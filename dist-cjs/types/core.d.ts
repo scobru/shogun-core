@@ -1,13 +1,13 @@
-import { ShogunEventMap } from "./interfaces/events";
-import { ShogunError } from "./utils/errorHandler";
-import { ShogunStorage } from "./storage/storage";
-import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from "./interfaces/shogun";
-import { ethers } from "ethers";
-import { ShogunPlugin } from "./interfaces/plugin";
-import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
-import { DataBase, RxJS } from "./gundb";
-import { DataBaseHolster } from "./gundb/db-holster";
-import { PluginManager } from "./managers/PluginManager";
+import { ShogunEventMap } from './interfaces/events';
+import { ShogunError } from './utils/errorHandler';
+import { ShogunStorage } from './storage/storage';
+import { IShogunCore, ShogunCoreConfig, AuthResult, SignUpResult, PluginCategory, AuthMethod, Wallets } from './interfaces/shogun';
+import { ethers } from 'ethers';
+import { ShogunPlugin } from './interfaces/plugin';
+import { ISEAPair, IGunInstance, IGunUserInstance } from 'gun';
+import { DataBase, RxJS } from './gundb';
+import { DataBaseHolster } from './gundb/db-holster';
+import { PluginManager } from './managers/PluginManager';
 /**
  * Main ShogunCore class - implements the IShogunCore interface
  *

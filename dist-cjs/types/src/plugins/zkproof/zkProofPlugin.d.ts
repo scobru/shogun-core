@@ -1,8 +1,8 @@
-import { BasePlugin } from "../base";
-import { ShogunCore } from "../../core";
-import { ZkIdentityData, ZkProofPluginInterface, ZkProofGenerationOptions, ZkProofVerificationResult, ZkProofConfig } from "./types";
-import { AuthResult, SignUpResult, PluginCategory } from "../../interfaces/shogun";
-import { ISEAPair } from "gun";
+import { BasePlugin } from '../base';
+import { ShogunCore } from '../../core';
+import { ZkIdentityData, ZkProofPluginInterface, ZkProofGenerationOptions, ZkProofVerificationResult, ZkProofConfig } from './types';
+import { AuthResult, SignUpResult, PluginCategory } from '../../interfaces/shogun';
+import { ISEAPair } from 'gun';
 /**
  * Plugin for Zero-Knowledge Proof authentication using Semaphore protocol
  *
@@ -73,4 +73,4 @@ export declare class ZkProofPlugin extends BasePlugin implements ZkProofPluginIn
      */
     isAvailable(): boolean;
 }
-export type { ZkProofPluginInterface } from "./types";
+export type { ZkProofPluginInterface } from './types';

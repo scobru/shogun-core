@@ -28,10 +28,10 @@
  * For Webpack projects, the ProvidePlugin should handle this automatically.
  */
 
-import { Buffer as BufferPolyfill } from "buffer";
+import { Buffer as BufferPolyfill } from 'buffer';
 
 // Ensure process is available for browser
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   if (!(window as any).process) {
     (window as any).process = { env: {} };
   }
@@ -45,25 +45,25 @@ if (typeof window !== "undefined") {
 // This should be called by users before importing shogun-core if using Vite
 // Webpack projects should use ProvidePlugin which makes Buffer available automatically
 export const setBufferPolyfill = (Buffer: any) => {
-  if (typeof window !== "undefined") {
+  if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
     (window as any).global = (window as any).global || window;
     (window as any).global.Buffer = Buffer;
   }
 
-  if (typeof globalThis !== "undefined") {
+  if (typeof globalThis !== 'undefined') {
     (globalThis as any).Buffer = Buffer;
   }
 };
 
 // Try to set Buffer from window if it's already available (from bundler)
 if (
-  typeof window !== "undefined" &&
+  typeof window !== 'undefined' &&
   (window as any).Buffer &&
-  typeof Buffer === "undefined"
+  typeof Buffer === 'undefined'
 ) {
   setBufferPolyfill((window as any).Buffer);
-} else if (typeof globalThis !== "undefined" && typeof Buffer === "undefined") {
+} else if (typeof globalThis !== 'undefined' && typeof Buffer === 'undefined') {
   setBufferPolyfill(BufferPolyfill);
 }
 

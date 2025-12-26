@@ -1,13 +1,13 @@
-import Gun from "gun/gun";
-import SEA from "gun/sea";
-import "gun/lib/then.js";
-import "gun/lib/radisk.js";
-import "gun/lib/store.js";
-import "gun/lib/rindexed.js";
-import "gun/lib/webrtc.js";
-import "gun/lib/yson.js";
+import Gun from 'gun/gun';
+import SEA from 'gun/sea';
+import 'gun/lib/then.js';
+import 'gun/lib/radisk.js';
+import 'gun/lib/store.js';
+import 'gun/lib/rindexed.js';
+import 'gun/lib/webrtc.js';
+import 'gun/lib/yson.js';
 
-import { ShogunCore, ShogunSDKConfig } from "../../index";
+import { ShogunCore, ShogunSDKConfig } from '../../index';
 
 // Utilizziamo un'istanza reale di Gun in memoria per i test di integrazione
 const createTestGunInstance = () => {
@@ -22,7 +22,7 @@ const createTestGunInstance = () => {
   });
 };
 
-describe("User Manager - Test di Integrazione con GunDB Reale", () => {
+describe('User Manager - Test di Integrazione con GunDB Reale', () => {
   let gun: any;
   let shogunCore: ShogunCore;
   let config: ShogunSDKConfig;
@@ -32,7 +32,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
     gun = createTestGunInstance();
 
     config = {
-      appToken: "test-integration-token",
+      appToken: 'test-integration-token',
       oauth: { enabled: false },
       peers: [], // Nessun peer per i test locali
     };
@@ -47,10 +47,10 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
     }
   });
 
-  describe("signUp - Test di Integrazione", () => {
-    it("dovrebbe salvare un utente e autenticarlo correttamente", async () => {
-      const username = "integ_testuser";
-      const password = "IntegTestPass123!";
+  describe('signUp - Test di Integrazione', () => {
+    it('dovrebbe salvare un utente e autenticarlo correttamente', async () => {
+      const username = 'integ_testuser';
+      const password = 'IntegTestPass123!';
 
       // Test del signup
       const signUpResult = await shogunCore.signUp(username, password);
@@ -63,7 +63,7 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       // Verifichiamo che l'utente sia stato salvato su GunDB
       const userData = await new Promise((resolve) => {
         gun
-          .get("users")
+          .get('users')
           .get(username)
           .once((data: any) => {
             resolve(data);
@@ -75,9 +75,9 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       expect(userData.username).toBe(username);
     });
 
-    it("dovrebbe rifiutare la registrazione di un utente già esistente", async () => {
-      const username = "duplicate_user";
-      const password = "DuplicatePass123!";
+    it('dovrebbe rifiutare la registrazione di un utente già esistente', async () => {
+      const username = 'duplicate_user';
+      const password = 'DuplicatePass123!';
 
       // Prima registrazione
       const firstSignUp = await shogunCore.signUp(username, password);
@@ -86,24 +86,24 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       // Seconda registrazione con lo stesso username
       const secondSignUp = await shogunCore.signUp(username, password);
       expect(secondSignUp.success).toBe(false);
-      expect(secondSignUp.error).toContain("already exists");
+      expect(secondSignUp.error).toContain('already exists');
     });
 
-    it("dovrebbe validare i requisiti della password", async () => {
-      const username = "weak_user";
-      const weakPassword = "weak";
+    it('dovrebbe validare i requisiti della password', async () => {
+      const username = 'weak_user';
+      const weakPassword = 'weak';
 
       const result = await shogunCore.signUp(username, weakPassword);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Password must contain");
+      expect(result.error).toContain('Password must contain');
     });
   });
 
-  describe("login - Test di Integrazione", () => {
-    it("dovrebbe autenticare un utente registrato", async () => {
-      const username = "login_testuser";
-      const password = "LoginTestPass123!";
+  describe('login - Test di Integrazione', () => {
+    it('dovrebbe autenticare un utente registrato', async () => {
+      const username = 'login_testuser';
+      const password = 'LoginTestPass123!';
 
       // Registriamo l'utente
       const signUpResult = await shogunCore.signUp(username, password);
@@ -120,10 +120,10 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       expect(loginResult.userPub).toBe(signUpResult.userPub);
     });
 
-    it("dovrebbe rifiutare il login con credenziali errate", async () => {
-      const username = "wrong_creds_user";
-      const password = "CorrectPass123!";
-      const wrongPassword = "WrongPass123!";
+    it('dovrebbe rifiutare il login con credenziali errate', async () => {
+      const username = 'wrong_creds_user';
+      const password = 'CorrectPass123!';
+      const wrongPassword = 'WrongPass123!';
 
       // Registriamo l'utente
       await shogunCore.signUp(username, password);
@@ -139,10 +139,10 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
     });
   });
 
-  describe("User Data Persistence - Test di Integrazione", () => {
+  describe('User Data Persistence - Test di Integrazione', () => {
     it("dovrebbe salvare e recuperare i dati dell'utente", async () => {
-      const username = "data_testuser";
-      const password = "DataTestPass123!";
+      const username = 'data_testuser';
+      const password = 'DataTestPass123!';
 
       // Registriamo l'utente
       const signUpResult = await shogunCore.signUp(username, password);
@@ -151,11 +151,11 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       // Salviamo alcuni dati dell'utente
       const testData = {
         profile: {
-          name: "Test User",
-          email: "test@example.com",
+          name: 'Test User',
+          email: 'test@example.com',
           preferences: {
-            theme: "dark",
-            language: "it",
+            theme: 'dark',
+            language: 'it',
           },
         },
       };
@@ -163,9 +163,9 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       // Salviamo i dati usando GunDB direttamente
       await new Promise((resolve) => {
         gun
-          .get("users")
+          .get('users')
           .get(username)
-          .get("profile")
+          .get('profile')
           .put(testData.profile, (ack: any) => {
             resolve(ack);
           });
@@ -174,9 +174,9 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
       // Recuperiamo i dati salvati
       const savedData = await new Promise((resolve) => {
         gun
-          .get("users")
+          .get('users')
           .get(username)
-          .get("profile")
+          .get('profile')
           .once((data: any) => {
             resolve(data);
           });
@@ -186,10 +186,10 @@ describe("User Manager - Test di Integrazione con GunDB Reale", () => {
     });
   });
 
-  describe("Authentication State - Test di Integrazione", () => {
-    it("dovrebbe mantenere lo stato di autenticazione", async () => {
-      const username = "state_testuser";
-      const password = "StateTestPass123!";
+  describe('Authentication State - Test di Integrazione', () => {
+    it('dovrebbe mantenere lo stato di autenticazione', async () => {
+      const username = 'state_testuser';
+      const password = 'StateTestPass123!';
 
       // Registriamo l'utente
       const signUpResult = await shogunCore.signUp(username, password);

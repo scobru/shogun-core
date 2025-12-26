@@ -15,7 +15,7 @@ const derive_1 = __importDefault(require("../../gundb/derive"));
 class Web3Signer {
     constructor(web3Connector) {
         this.credentials = new Map();
-        this.MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+        this.MESSAGE_TO_SIGN = 'I Love Shogun!'; // Same as normal approach
         this.web3Connector = web3Connector || new web3Connector_1.Web3Connector();
     }
     /**
@@ -45,7 +45,7 @@ class Web3Signer {
             return signingCredential;
         }
         catch (error) {
-            console.error("Error creating Web3 signing credential:", error);
+            console.error('Error creating Web3 signing credential:', error);
             throw new Error(`Failed to create Web3 signing credential: ${error.message}`);
         }
     }
@@ -64,7 +64,7 @@ class Web3Signer {
             return signature;
         }
         catch (error) {
-            console.error("Failed to request signature:", error);
+            console.error('Failed to request signature:', error);
             throw error;
         }
     }
@@ -83,7 +83,7 @@ class Web3Signer {
                 const signer = await this.web3Connector.getSigner();
                 const signerAddress = await signer.getAddress();
                 if (signerAddress.toLowerCase() !== address.toLowerCase()) {
-                    throw new Error("Address mismatch during authentication");
+                    throw new Error('Address mismatch during authentication');
                 }
                 // Sign the data
                 const dataToSign = JSON.stringify(data);
@@ -91,7 +91,7 @@ class Web3Signer {
                 return signature;
             }
             catch (error) {
-                console.error("Web3 authentication error:", error);
+                console.error('Web3 authentication error:', error);
                 throw error;
             }
         };
@@ -124,14 +124,14 @@ class Web3Signer {
                     }
                     else {
                         const userPub = authAck.pub;
-                        console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                        console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + '...' : 'null');
                         resolve({ success: true, userPub });
                     }
                 });
             });
         }
         catch (error) {
-            console.error("Error authenticating with deterministic pair:", error);
+            console.error('Error authenticating with deterministic pair:', error);
             return { success: false, error: error.message };
         }
     }
@@ -156,7 +156,7 @@ class Web3Signer {
             };
         }
         catch (error) {
-            console.error("Error creating derived key pair from address:", error);
+            console.error('Error creating derived key pair from address:', error);
             throw error;
         }
     }
@@ -183,7 +183,7 @@ class Web3Signer {
                             }
                             else {
                                 const userPub = authAck.pub;
-                                console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                                console.log(`🔧 Web3Signer - auth successful, userPub:`, userPub ? userPub.slice(0, 8) + '...' : 'null');
                                 resolve({ success: true, userPub });
                             }
                         });
@@ -198,7 +198,7 @@ class Web3Signer {
                             }
                             else {
                                 const userPub = authAck.pub;
-                                console.log(`🔧 Web3Signer - login successful, userPub:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                                console.log(`🔧 Web3Signer - login successful, userPub:`, userPub ? userPub.slice(0, 8) + '...' : 'null');
                                 resolve({ success: true, userPub });
                             }
                         });
@@ -207,7 +207,7 @@ class Web3Signer {
             });
         }
         catch (error) {
-            console.error("Error creating Gun user:", error);
+            console.error('Error creating Gun user:', error);
             return { success: false, error: error.message };
         }
     }
@@ -234,10 +234,10 @@ class Web3Signer {
                 m: message,
                 s: signature,
             };
-            return "SEA" + JSON.stringify(seaSignature);
+            return 'SEA' + JSON.stringify(seaSignature);
         }
         catch (error) {
-            console.error("Error signing with derived keys:", error);
+            console.error('Error signing with derived keys:', error);
             throw error;
         }
     }
@@ -252,7 +252,7 @@ class Web3Signer {
             return derivedPair.pub;
         }
         catch (error) {
-            console.error("Error getting Gun user pub:", error);
+            console.error('Error getting Gun user pub:', error);
             return undefined;
         }
     }
@@ -267,7 +267,7 @@ class Web3Signer {
             return password;
         }
         catch (error) {
-            console.error("Error getting password:", error);
+            console.error('Error getting password:', error);
             return undefined;
         }
     }
@@ -287,7 +287,7 @@ class Web3Signer {
             };
         }
         catch (error) {
-            console.error("Error verifying consistency:", error);
+            console.error('Error verifying consistency:', error);
             return { consistent: false };
         }
     }

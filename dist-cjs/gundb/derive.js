@@ -9,7 +9,7 @@ const ripemd160_1 = require("@noble/hashes/ripemd160");
 async function default_1(pwd, extra, options = {}) {
     const TEXT_ENCODER = new TextEncoder();
     const pwdBytes = pwd
-        ? typeof pwd === "string"
+        ? typeof pwd === 'string'
             ? TEXT_ENCODER.encode(normalizeString(pwd))
             : pwd
         : crypto.getRandomValues(new Uint8Array(32));
@@ -17,21 +17,21 @@ async function default_1(pwd, extra, options = {}) {
     const extras = extra
         ? (Array.isArray(extra) ? extra : [extra]).map((e) => normalizeString(e.toString()))
         : [];
-    const extraBuf = TEXT_ENCODER.encode(extras.join("|"));
+    const extraBuf = TEXT_ENCODER.encode(extras.join('|'));
     const combinedInput = new Uint8Array(pwdBytes.length + extraBuf.length);
     combinedInput.set(pwdBytes);
     combinedInput.set(extraBuf, pwdBytes.length);
     if (combinedInput.length < 16) {
         throw new Error(`Insufficient input entropy (${combinedInput.length})`);
     }
-    const version = "v1";
+    const version = 'v1';
     const result = {};
     // Mantieni comportamento esistente (P-256) come default
     const { includeP256 = true, includeSecp256k1Bitcoin = true, includeSecp256k1Ethereum = true, } = options;
     if (includeP256) {
         const salts = [
-            { label: "signing", type: "pub/priv" },
-            { label: "encryption", type: "epub/epriv" },
+            { label: 'signing', type: 'pub/priv' },
+            { label: 'encryption', type: 'epub/epriv' },
         ];
         const [signingKeys, encryptionKeys] = await Promise.all(salts.map(async ({ label }) => {
             const salt = TEXT_ENCODER.encode(`${label}-${version}`);
@@ -56,7 +56,7 @@ async function default_1(pwd, extra, options = {}) {
         const bitcoinSalt = TEXT_ENCODER.encode(`secp256k1-bitcoin-${version}`);
         const bitcoinPrivateKey = await stretchKey(combinedInput, bitcoinSalt);
         if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(bitcoinPrivateKey)) {
-            throw new Error("Invalid secp256k1 private key for Bitcoin");
+            throw new Error('Invalid secp256k1 private key for Bitcoin');
         }
         const bitcoinPublicKey = secp256k1_1.secp256k1.getPublicKey(bitcoinPrivateKey, true); // Compressed
         result.secp256k1Bitcoin = {
@@ -70,12 +70,12 @@ async function default_1(pwd, extra, options = {}) {
         const ethereumSalt = TEXT_ENCODER.encode(`secp256k1-ethereum-${version}`);
         const ethereumPrivateKey = await stretchKey(combinedInput, ethereumSalt);
         if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(ethereumPrivateKey)) {
-            throw new Error("Invalid secp256k1 private key for Ethereum");
+            throw new Error('Invalid secp256k1 private key for Ethereum');
         }
         const ethereumPublicKey = secp256k1_1.secp256k1.getPublicKey(ethereumPrivateKey, false); // Uncompressed
         result.secp256k1Ethereum = {
-            privateKey: "0x" + bytesToHex(ethereumPrivateKey),
-            publicKey: "0x" + bytesToHex(ethereumPublicKey),
+            privateKey: '0x' + bytesToHex(ethereumPrivateKey),
+            publicKey: '0x' + bytesToHex(ethereumPublicKey),
             address: deriveKeccak256Address(ethereumPublicKey),
         };
     }
@@ -83,29 +83,29 @@ async function default_1(pwd, extra, options = {}) {
 }
 function arrayBufToBase64UrlEncode(buf) {
     return btoa(String.fromCharCode(...buf))
-        .replace(/\//g, "_")
-        .replace(/=/g, "")
-        .replace(/\+/g, "-");
+        .replace(/\//g, '_')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-');
 }
 function keyBufferToJwk(publicKeyBuffer) {
     if (publicKeyBuffer[0] !== 4)
-        throw new Error("Invalid uncompressed public key format");
+        throw new Error('Invalid uncompressed public key format');
     return [
         arrayBufToBase64UrlEncode(publicKeyBuffer.slice(1, 33)), // x
         arrayBufToBase64UrlEncode(publicKeyBuffer.slice(33, 65)), // y
-    ].join(".");
+    ].join('.');
 }
 function normalizeString(str) {
-    return str.normalize("NFC").trim();
+    return str.normalize('NFC').trim();
 }
 async function stretchKey(input, salt, iterations = 300000) {
     try {
-        const baseKey = await crypto.subtle.importKey("raw", input, { name: "PBKDF2" }, false, ["deriveBits"]);
+        const baseKey = await crypto.subtle.importKey('raw', input, { name: 'PBKDF2' }, false, ['deriveBits']);
         const keyBits = await crypto.subtle.deriveBits({
-            name: "PBKDF2",
+            name: 'PBKDF2',
             salt: salt,
             iterations,
-            hash: "SHA-256",
+            hash: 'SHA-256',
         }, baseKey, 256);
         const keyBytes = new Uint8Array(keyBits);
         // Ensure the key is valid for secp256k1
@@ -163,14 +163,14 @@ function ensureValidSecp256k1Key(keyBytes) {
 }
 function bytesToHex(bytes) {
     return Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
 }
 // Base58 encoding per Bitcoin
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 function base58Encode(bytes) {
     if (bytes.length === 0)
-        return "";
+        return '';
     // Count leading zeros
     let zeros = 0;
     for (let i = 0; i < bytes.length && bytes[i] === 0; i++) {
@@ -191,7 +191,7 @@ function base58Encode(bytes) {
         }
     }
     // Convert to string
-    let result = "";
+    let result = '';
     for (let i = 0; i < zeros; i++) {
         result += BASE58_ALPHABET[0];
     }
@@ -228,5 +228,5 @@ function deriveKeccak256Address(publicKey) {
     // 3. Prendi gli ultimi 20 byte
     const address = hash.slice(-20);
     // 4. Aggiungi '0x' prefix e converti in hex
-    return "0x" + bytesToHex(address);
+    return '0x' + bytesToHex(address);
 }

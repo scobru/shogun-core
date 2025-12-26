@@ -8,7 +8,7 @@
 export class GunError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "GunError";
+    this.name = 'GunError';
   }
 }
 
@@ -18,7 +18,7 @@ export class GunError extends Error {
 export class AuthError extends GunError {
   constructor(message: string) {
     super(message);
-    this.name = "AuthError";
+    this.name = 'AuthError';
   }
 }
 
@@ -26,9 +26,9 @@ export class AuthError extends GunError {
  * Invalid credentials error
  */
 export class InvalidCredentials extends AuthError {
-  constructor(message = "Credenziali non valide") {
+  constructor(message = 'Credenziali non valide') {
     super(message);
-    this.name = "InvalidCredentials";
+    this.name = 'InvalidCredentials';
   }
 }
 
@@ -36,9 +36,9 @@ export class InvalidCredentials extends AuthError {
  * User already exists error
  */
 export class UserExists extends AuthError {
-  constructor(message = "Utente già esistente") {
+  constructor(message = 'Utente già esistente') {
     super(message);
-    this.name = "UserExists";
+    this.name = 'UserExists';
   }
 }
 
@@ -48,7 +48,7 @@ export class UserExists extends AuthError {
 export class TimeoutError extends GunError {
   constructor(message = "Timeout durante l'operazione") {
     super(message);
-    this.name = "TimeoutError";
+    this.name = 'TimeoutError';
   }
 }
 
@@ -56,9 +56,9 @@ export class TimeoutError extends GunError {
  * Multiple authentication error
  */
 export class MultipleAuthError extends AuthError {
-  constructor(message = "Autenticazione multipla in corso") {
+  constructor(message = 'Autenticazione multipla in corso') {
     super(message);
-    this.name = "MultipleAuthError";
+    this.name = 'MultipleAuthError';
   }
 }
 

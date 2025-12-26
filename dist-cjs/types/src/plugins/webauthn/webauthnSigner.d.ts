@@ -1,4 +1,4 @@
-import { Webauthn } from "./webauthn";
+import { Webauthn } from './webauthn';
 /**
  * WebAuthn Credential for oneshot signing
  */

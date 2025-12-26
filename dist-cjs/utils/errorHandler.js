@@ -68,7 +68,7 @@ class ErrorHandler {
             error.type === ErrorType.AUTHORIZATION ||
             error.type === ErrorType.SECURITY) {
             // Ensure console.error is available and safe to use
-            if (typeof console !== "undefined" && console.error) {
+            if (typeof console !== 'undefined' && console.error) {
                 console.error(`[${error.type}] ${error.code}: ${error.message}`);
             }
         }
@@ -85,7 +85,7 @@ class ErrorHandler {
             }
             catch (e) {
                 // Fallback logging for external logger errors
-                console.error("Failed to send error to external logger:", e);
+                console.error('Failed to send error to external logger:', e);
             }
         }
         // Notify all listeners
@@ -106,21 +106,21 @@ class ErrorHandler {
      * @param originalError - Original error
      * @param logLevel - Log level for the error
      */
-    static handle(type, code, message, originalError, logLevel = "error") {
+    static handle(type, code, message, originalError, logLevel = 'error') {
         // Create a formatted error message (tests expect the plain message)
         const finalMessage = message;
         // Log the error
         switch (logLevel) {
-            case "debug":
+            case 'debug':
                 console.log(`[${type}] ${code}: ${finalMessage}`);
                 break;
-            case "warn":
+            case 'warn':
                 console.log(`[${type}] ${code}: ${finalMessage}`);
                 break;
-            case "info":
+            case 'info':
                 console.log(`[${type}] ${code}: ${finalMessage}`);
                 break;
-            case "error":
+            case 'error':
             default:
                 console.log(`[${type}] ${code}: ${finalMessage}`);
                 break;
@@ -187,15 +187,15 @@ class ErrorHandler {
      */
     static formatError(error) {
         if (!error) {
-            return "Unknown error";
+            return 'Unknown error';
         }
         if (error instanceof Error) {
             return `${error.name}: ${error.message}`;
         }
-        if (typeof error === "string") {
+        if (typeof error === 'string') {
             return error;
         }
-        if (typeof error === "object") {
+        if (typeof error === 'object') {
             try {
                 return JSON.stringify(error);
             }

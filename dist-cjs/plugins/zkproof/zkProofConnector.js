@@ -46,7 +46,7 @@ class ZkProofConnector {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ZK_IDENTITY_GENERATION_FAILED", `Failed to generate ZK identity: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ZK_IDENTITY_GENERATION_FAILED', `Failed to generate ZK identity: ${error.message}`, error);
             throw error;
         }
     }
@@ -68,7 +68,7 @@ class ZkProofConnector {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ZK_IDENTITY_RESTORE_FAILED", `Failed to restore ZK identity: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ZK_IDENTITY_RESTORE_FAILED', `Failed to restore ZK identity: ${error.message}`, error);
             throw error;
         }
     }
@@ -94,14 +94,14 @@ class ZkProofConnector {
             return gunPair;
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ZK_CREDENTIAL_GENERATION_FAILED", `Failed to generate credentials from ZK identity: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ZK_CREDENTIAL_GENERATION_FAILED', `Failed to generate credentials from ZK identity: ${error.message}`, error);
             throw error;
         }
     }
     /**
      * Get or create a Semaphore group
      */
-    getOrCreateGroup(groupId = "default") {
+    getOrCreateGroup(groupId = 'default') {
         if (!this.groups.has(groupId)) {
             // Convert string groupId to BigNumber using keccak256 hash
             const groupIdHash = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(groupId));
@@ -113,7 +113,7 @@ class ZkProofConnector {
     /**
      * Add identity to a group
      */
-    addToGroup(commitment, groupId = "default") {
+    addToGroup(commitment, groupId = 'default') {
         const group = this.getOrCreateGroup(groupId);
         group.addMember(BigInt(commitment));
     }
@@ -122,9 +122,9 @@ class ZkProofConnector {
      */
     async generateProof(identityData, options = {}) {
         try {
-            const groupId = options.groupId || "default";
-            const messageString = options.message || "authenticate";
-            const scopeString = options.scope || "shogun-auth";
+            const groupId = options.groupId || 'default';
+            const messageString = options.message || 'authenticate';
+            const scopeString = options.scope || 'shogun-auth';
             // Convert message and scope to BigNumber (Semaphore requires BigInt)
             const messageHash = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(messageString));
             const message = BigInt(messageHash);
@@ -137,7 +137,7 @@ class ZkProofConnector {
                 this.identityCache.set(identityData.commitment, identity);
             }
             if (!identity) {
-                throw new Error("Identity not found and cannot be reconstructed");
+                throw new Error('Identity not found and cannot be reconstructed');
             }
             // Get group
             const group = this.getOrCreateGroup(groupId);
@@ -156,7 +156,7 @@ class ZkProofConnector {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ZK_PROOF_GENERATION_FAILED", `Failed to generate ZK proof: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ZK_PROOF_GENERATION_FAILED', `Failed to generate ZK proof: ${error.message}`, error);
             throw error;
         }
     }
@@ -172,7 +172,7 @@ class ZkProofConnector {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ZK_PROOF_VERIFICATION_FAILED", `Failed to verify ZK proof: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ZK_PROOF_VERIFICATION_FAILED', `Failed to verify ZK proof: ${error.message}`, error);
             return {
                 success: false,
                 verified: false,

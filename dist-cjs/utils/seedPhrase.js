@@ -43,7 +43,7 @@ function validateSeedPhrase(mnemonic) {
  */
 function mnemonicToSeed(mnemonic, username) {
     if (!validateSeedPhrase(mnemonic)) {
-        throw new Error("Invalid mnemonic seed phrase");
+        throw new Error('Invalid mnemonic seed phrase');
     }
     // Use username as additional entropy in the passphrase
     // This ensures different users with same seed phrase get different keys
@@ -80,8 +80,8 @@ function deriveCredentialsFromMnemonic(mnemonic, username) {
  * @returns {string} Formatted seed phrase with numbers
  */
 function formatSeedPhrase(mnemonic) {
-    const words = mnemonic.split(" ");
-    return words.map((word, index) => `${index + 1}. ${word}`).join("\n");
+    const words = mnemonic.split(' ');
+    return words.map((word, index) => `${index + 1}. ${word}`).join('\n');
 }
 /**
  * Normalize and clean user input for seed phrase
@@ -92,6 +92,6 @@ function normalizeSeedPhrase(input) {
     return input
         .toLowerCase()
         .trim()
-        .replace(/\s+/g, " ") // Replace multiple spaces with single space
-        .replace(/[^\w\s]/g, ""); // Remove special characters
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .replace(/[^\w\s]/g, ''); // Remove special characters
 }

@@ -1,10 +1,10 @@
-import { BasePlugin } from "../base";
-import { ShogunCore } from "../../core";
-import { Web3SigningCredential } from "./web3Signer";
-import { ConnectionResult, Web3ConnectorPluginInterface } from "./types";
-import { ethers } from "ethers";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
-import { ISEAPair } from "gun";
+import { BasePlugin } from '../base';
+import { ShogunCore } from '../../core';
+import { Web3SigningCredential } from './web3Signer';
+import { ConnectionResult, Web3ConnectorPluginInterface } from './types';
+import { ethers } from 'ethers';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
+import { ISEAPair } from 'gun';
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
@@ -157,4 +157,4 @@ export declare class Web3ConnectorPlugin extends BasePlugin implements Web3Conne
      */
     signUp(address: string): Promise<SignUpResult>;
 }
-export type { Web3ConnectorPluginInterface } from "./types";
+export type { Web3ConnectorPluginInterface } from './types';

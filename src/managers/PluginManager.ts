@@ -1,6 +1,6 @@
-import { ShogunPlugin } from "../interfaces/plugin";
-import { PluginCategory } from "../interfaces/shogun";
-import { IShogunCore } from "../interfaces/shogun";
+import { ShogunPlugin } from '../interfaces/plugin';
+import { PluginCategory } from '../interfaces/shogun';
+import { IShogunCore } from '../interfaces/shogun';
 
 /**
  * Manages plugin registration, validation, and lifecycle
@@ -21,14 +21,14 @@ export class PluginManager {
   register(plugin: ShogunPlugin): void {
     try {
       if (!plugin.name) {
-        if (typeof console !== "undefined" && console.error) {
-          console.error("Plugin registration failed: Plugin must have a name");
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('Plugin registration failed: Plugin must have a name');
         }
         return;
       }
 
       if (this.plugins.has(plugin.name)) {
-        if (typeof console !== "undefined" && console.warn) {
+        if (typeof console !== 'undefined' && console.warn) {
           console.warn(
             `Plugin "${plugin.name}" is already registered. Skipping.`,
           );
@@ -41,13 +41,13 @@ export class PluginManager {
 
       this.plugins.set(plugin.name, plugin);
 
-      this.core.emit("plugin:registered", {
+      this.core.emit('plugin:registered', {
         name: plugin.name,
-        version: plugin.version || "unknown",
-        category: plugin._category || "unknown",
+        version: plugin.version || 'unknown',
+        category: plugin._category || 'unknown',
       });
     } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
+      if (typeof console !== 'undefined' && console.error) {
         console.error(`Error registering plugin "${plugin.name}":`, error);
       }
     }
@@ -62,18 +62,18 @@ export class PluginManager {
       const plugin = this.plugins.get(name);
 
       if (!plugin) {
-        if (typeof console !== "undefined" && console.warn) {
+        if (typeof console !== 'undefined' && console.warn) {
           console.warn(`Plugin "${name}" not found for unregistration`);
         }
         return false;
       }
 
       // Destroy plugin if it has a destroy method
-      if (typeof (plugin as any).destroy === "function") {
+      if (typeof (plugin as any).destroy === 'function') {
         try {
           (plugin as any).destroy();
         } catch (destroyError) {
-          if (typeof console !== "undefined" && console.error) {
+          if (typeof console !== 'undefined' && console.error) {
             console.error(`Error destroying plugin "${name}":`, destroyError);
           }
         }
@@ -81,13 +81,13 @@ export class PluginManager {
 
       this.plugins.delete(name);
 
-      this.core.emit("plugin:unregistered", {
+      this.core.emit('plugin:unregistered', {
         name: plugin.name,
       } as any);
 
       return true;
     } catch (error) {
-      if (typeof console !== "undefined" && console.error) {
+      if (typeof console !== 'undefined' && console.error) {
         console.error(`Error unregistering plugin "${name}":`, error);
       }
       return false;
@@ -101,16 +101,16 @@ export class PluginManager {
    * @template T Type of the plugin or its public interface
    */
   getPlugin<T = ShogunPlugin>(name: string): T | undefined {
-    if (!name || typeof name !== "string") {
-      if (typeof console !== "undefined" && console.warn) {
-        console.warn("Invalid plugin name provided to getPlugin");
+    if (!name || typeof name !== 'string') {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Invalid plugin name provided to getPlugin');
       }
       return undefined;
     }
 
     const plugin = this.plugins.get(name);
     if (!plugin) {
-      if (typeof console !== "undefined" && console.warn) {
+      if (typeof console !== 'undefined' && console.warn) {
         console.warn(`Plugin "${name}" not found`);
       }
       return undefined;
@@ -139,7 +139,7 @@ export class PluginManager {
     this.plugins.forEach((plugin) => {
       pluginsInfo.push({
         name: plugin.name,
-        version: plugin.version || "unknown",
+        version: plugin.version || 'unknown',
         category: plugin._category,
         description: plugin.description,
       });
@@ -169,7 +169,7 @@ export class PluginManager {
     this.plugins.forEach((plugin, name) => {
       try {
         // Verifica se il plugin ha un metodo per controllare l'inizializzazione
-        if (typeof (plugin as any).assertInitialized === "function") {
+        if (typeof (plugin as any).assertInitialized === 'function') {
           (plugin as any).assertInitialized();
           status[name] = { initialized: true };
         } else {
@@ -177,7 +177,7 @@ export class PluginManager {
           status[name] = {
             initialized: !!(plugin as any).core,
             error: !(plugin as any).core
-              ? "No core reference found"
+              ? 'No core reference found'
               : undefined,
           };
         }
@@ -213,11 +213,11 @@ export class PluginManager {
     const warnings: string[] = [];
 
     if (totalPlugins === 0) {
-      warnings.push("No plugins registered");
+      warnings.push('No plugins registered');
     }
 
     if (failedPlugins.length > 0) {
-      warnings.push(`Failed plugins: ${failedPlugins.join(", ")}`);
+      warnings.push(`Failed plugins: ${failedPlugins.join(', ')}`);
     }
 
     return {
@@ -248,7 +248,7 @@ export class PluginManager {
       try {
         const plugin = this.plugins.get(pluginName);
         if (!plugin) {
-          failed.push({ name: pluginName, error: "Plugin not found" });
+          failed.push({ name: pluginName, error: 'Plugin not found' });
           return;
         }
 
@@ -260,7 +260,7 @@ export class PluginManager {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         failed.push({ name: pluginName, error: errorMessage });
-        if (typeof console !== "undefined" && console.error) {
+        if (typeof console !== 'undefined' && console.error) {
           console.error(
             `[PluginManager] Failed to reinitialize plugin ${pluginName}:`,
             error,
@@ -292,11 +292,11 @@ export class PluginManager {
     this.plugins.forEach((plugin) => {
       const pluginInfo = {
         name: plugin.name,
-        version: plugin.version || "unknown",
+        version: plugin.version || 'unknown',
       };
 
       // Verifica se il plugin ha informazioni di compatibilità
-      if (typeof (plugin as any).getCompatibilityInfo === "function") {
+      if (typeof (plugin as any).getCompatibilityInfo === 'function') {
         try {
           const compatibilityInfo = (plugin as any).getCompatibilityInfo();
           if (compatibilityInfo && compatibilityInfo.compatible) {
@@ -305,7 +305,7 @@ export class PluginManager {
             incompatible.push({
               ...pluginInfo,
               reason:
-                compatibilityInfo?.reason || "Unknown compatibility issue",
+                compatibilityInfo?.reason || 'Unknown compatibility issue',
             });
           }
         } catch (error) {
@@ -361,7 +361,7 @@ export class PluginManager {
     }));
 
     return {
-      shogunCoreVersion: "^1.6.6",
+      shogunCoreVersion: '^1.6.6',
       totalPlugins: this.getPluginCount(),
       plugins,
       initializationStatus,

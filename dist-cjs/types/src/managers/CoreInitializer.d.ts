@@ -1,4 +1,4 @@
-import { IShogunCore, ShogunCoreConfig } from "../interfaces/shogun";
+import { IShogunCore, ShogunCoreConfig } from '../interfaces/shogun';
 /**
  * Handles initialization of ShogunCore components
  */

@@ -2,15 +2,15 @@
  * The BitcoinWallet class provides functionality for connecting, signing up, and logging in using Bitcoin wallets.
  * Supports Alby and Nostr extensions, as well as manual key management.
  */
-import { ethers } from "ethers";
+import { ethers } from 'ethers';
 import {
   verifyEvent,
   finalizeEvent,
   utils as nostrUtils,
   getEventHash,
-} from "nostr-tools";
-import type { Event } from "nostr-tools";
-import { EventEmitter } from "../../utils/eventEmitter";
+} from 'nostr-tools';
+import type { Event } from 'nostr-tools';
+import { EventEmitter } from '../../utils/eventEmitter';
 import {
   ConnectionResult,
   AlbyProvider,
@@ -18,9 +18,9 @@ import {
   SignatureCache,
   NostrConnectorConfig,
   NostrConnectorKeyPair,
-} from "./types";
-import derive from "../../gundb/derive";
-import { generateUsernameFromIdentity } from "../../utils/validation";
+} from './types';
+import derive from '../../gundb/derive';
+import { generateUsernameFromIdentity } from '../../utils/validation';
 
 // Extend the Window interface to include bitcoin wallet providers
 declare global {
@@ -31,7 +31,7 @@ declare global {
   }
 }
 
-export const MESSAGE_TO_SIGN = "I Love Shogun!";
+export const MESSAGE_TO_SIGN = 'I Love Shogun!';
 
 /**
  * Class for Bitcoin wallet connections and operations
@@ -42,7 +42,7 @@ class NostrConnector extends EventEmitter {
     maxRetries: 3,
     retryDelay: 1000,
     timeout: 60000,
-    network: "mainnet",
+    network: 'mainnet',
     useApi: false,
   };
 
@@ -51,7 +51,7 @@ class NostrConnector extends EventEmitter {
 
   // Connection state
   private connectedAddress: string | null = null;
-  private connectedType: "alby" | "nostr" | "manual" | null = null;
+  private connectedType: 'alby' | 'nostr' | 'manual' | null = null;
   private manualKeyPair: NostrConnectorKeyPair | null = null;
 
   constructor(config: Partial<NostrConnectorConfig> = {}) {
@@ -83,7 +83,7 @@ class NostrConnector extends EventEmitter {
         );
       } catch (error) {
         console.error(
-          "Error clearing signature cache from localStorage:",
+          'Error clearing signature cache from localStorage:',
           error,
         );
       }
@@ -95,7 +95,7 @@ class NostrConnector extends EventEmitter {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith("shogun_bitcoin_sig_")) {
+          if (key && key.startsWith('shogun_bitcoin_sig_')) {
             keysToRemove.push(key);
           }
         }
@@ -105,7 +105,7 @@ class NostrConnector extends EventEmitter {
         );
       } catch (error) {
         console.error(
-          "Error clearing all signature caches from localStorage:",
+          'Error clearing all signature caches from localStorage:',
           error,
         );
       }
@@ -116,7 +116,7 @@ class NostrConnector extends EventEmitter {
    * Check if Nostr extension is available
    */
   public isNostrExtensionAvailable(): boolean {
-    return typeof window !== "undefined" && !!window.nostr;
+    return typeof window !== 'undefined' && !!window.nostr;
   }
 
   /**
@@ -130,7 +130,7 @@ class NostrConnector extends EventEmitter {
    * Connect to a wallet type
    */
   async connectWallet(
-    type: "alby" | "nostr" | "manual" = "nostr",
+    type: 'alby' | 'nostr' | 'manual' = 'nostr',
   ): Promise<ConnectionResult> {
     console.log(`Connecting to Bitcoin wallet via ${type}...`);
 
@@ -139,16 +139,16 @@ class NostrConnector extends EventEmitter {
 
       // Attempt to connect to the specified wallet type
       switch (type) {
-        case "alby":
+        case 'alby':
           console.log(
-            "[nostrConnector] Alby is deprecated, redirecting to Nostr",
+            '[nostrConnector] Alby is deprecated, redirecting to Nostr',
           );
           result = await this.connectNostr();
           break;
-        case "nostr":
+        case 'nostr':
           result = await this.connectNostr();
           break;
-        case "manual":
+        case 'manual':
           result = await this.connectManual();
           break;
         default:
@@ -161,7 +161,7 @@ class NostrConnector extends EventEmitter {
         console.log(
           `Successfully connected to ${type} wallet: ${result.address}`,
         );
-        this.emit("wallet_connected", {
+        this.emit('wallet_connected', {
           address: result.address,
           type: this.connectedType,
         });
@@ -172,7 +172,7 @@ class NostrConnector extends EventEmitter {
       console.error(`Error connecting to ${type} wallet:`, error);
       return {
         success: false,
-        error: error.message || "Failed to connect to wallet",
+        error: error.message || 'Failed to connect to wallet',
       };
     }
   }
@@ -185,20 +185,20 @@ class NostrConnector extends EventEmitter {
       return {
         success: false,
         error:
-          "Nostr extension is not available. Please install a Nostr compatible extension like nos2x, Alby, or Coracle.",
+          'Nostr extension is not available. Please install a Nostr compatible extension like nos2x, Alby, or Coracle.',
       };
     }
 
     try {
       console.log(
-        "[nostrConnector] Attempting to connect to Nostr extension...",
+        '[nostrConnector] Attempting to connect to Nostr extension...',
       );
 
       // Get public key from Nostr extension
       const pubKey = await window.nostr!.getPublicKey();
 
       if (!pubKey) {
-        throw new Error("Could not get public key from Nostr extension");
+        throw new Error('Could not get public key from Nostr extension');
       }
 
       console.log(
@@ -206,10 +206,10 @@ class NostrConnector extends EventEmitter {
       );
 
       this.connectedAddress = pubKey;
-      this.connectedType = "nostr";
+      this.connectedType = 'nostr';
 
       // Emit connected event
-      this.emit("connected", { address: pubKey, type: "nostr" });
+      this.emit('connected', { address: pubKey, type: 'nostr' });
 
       const username = `nostr_${pubKey.substring(0, 10)}`;
 
@@ -217,17 +217,17 @@ class NostrConnector extends EventEmitter {
         success: true,
         address: pubKey,
         username,
-        extensionType: "nostr",
+        extensionType: 'nostr',
       };
     } catch (error: any) {
-      console.error("[nostrConnector] Nostr connection error:", error);
+      console.error('[nostrConnector] Nostr connection error:', error);
 
       // Provide more specific error messages
-      if (error.message && error.message.includes("User rejected")) {
-        throw new Error("Nostr connection was rejected by the user");
-      } else if (error.message && error.message.includes("not available")) {
+      if (error.message && error.message.includes('User rejected')) {
+        throw new Error('Nostr connection was rejected by the user');
+      } else if (error.message && error.message.includes('not available')) {
         throw new Error(
-          "Nostr extension is not available or not properly installed",
+          'Nostr extension is not available or not properly installed',
         );
       } else {
         throw new Error(`Nostr connection error: ${error.message}`);
@@ -243,17 +243,17 @@ class NostrConnector extends EventEmitter {
     if (!this.manualKeyPair) {
       return {
         success: false,
-        error: "No manual key pair configured. Use setKeyPair() first.",
+        error: 'No manual key pair configured. Use setKeyPair() first.',
       };
     }
 
     this.connectedAddress = this.manualKeyPair.address;
-    this.connectedType = "manual";
+    this.connectedType = 'manual';
 
     // Emit connected event
-    this.emit("connected", {
+    this.emit('connected', {
       address: this.manualKeyPair.address,
-      type: "manual",
+      type: 'manual',
     });
 
     const username = `btc_${this.manualKeyPair.address.substring(0, 10)}`;
@@ -262,7 +262,7 @@ class NostrConnector extends EventEmitter {
       success: true,
       address: this.manualKeyPair.address,
       username,
-      extensionType: "manual",
+      extensionType: 'manual',
     };
   }
 
@@ -273,7 +273,7 @@ class NostrConnector extends EventEmitter {
     this.manualKeyPair = keyPair;
     if (keyPair.address) {
       this.connectedAddress = keyPair.address;
-      this.connectedType = "manual";
+      this.connectedType = 'manual';
     }
   }
 
@@ -285,7 +285,7 @@ class NostrConnector extends EventEmitter {
     signature: string,
     message: string,
   ) {
-    const username = generateUsernameFromIdentity("nostr", { id: address });
+    const username = generateUsernameFromIdentity('nostr', { id: address });
     // Usa un hashing robusto di address con keccak256
     const hashedAddress = ethers.keccak256(ethers.toUtf8Bytes(address));
     // Include la signature nel salt per aggiungere un ulteriore livello di sicurezza
@@ -299,17 +299,17 @@ class NostrConnector extends EventEmitter {
    */
   public async generatePassword(signature: string): Promise<string> {
     if (!signature) {
-      throw new Error("Invalid signature");
+      throw new Error('Invalid signature');
     }
 
     try {
       // Create a deterministic hash from the signature using a secure algorithm
-      const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
+      const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, '');
       const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
       return passwordHash;
     } catch (error) {
-      console.error("Error generating password:", error);
-      throw new Error("Failed to generate password from signature");
+      console.error('Error generating password:', error);
+      throw new Error('Failed to generate password from signature');
     }
   }
 
@@ -324,7 +324,7 @@ class NostrConnector extends EventEmitter {
     try {
       // Ensure address is a string
       const addressStr =
-        typeof address === "object"
+        typeof address === 'object'
           ? address.address || JSON.stringify(address)
           : String(address);
 
@@ -332,13 +332,13 @@ class NostrConnector extends EventEmitter {
 
       if (!signature || !message || !addressStr) {
         console.error(
-          "Invalid message, signature, or address for verification",
+          'Invalid message, signature, or address for verification',
         );
         return false;
       }
 
       // For Nostr wallet type, use nostr-tools for verification
-      if (this.connectedType === "nostr" || this.connectedType === "alby") {
+      if (this.connectedType === 'nostr' || this.connectedType === 'alby') {
         try {
           // Reconstruct the exact event that was signed
           const eventData = {
@@ -356,14 +356,14 @@ class NostrConnector extends EventEmitter {
 
           return verifyEvent(event);
         } catch (verifyError) {
-          console.error("Error in Nostr signature verification:", verifyError);
+          console.error('Error in Nostr signature verification:', verifyError);
           return false;
         }
-      } else if (this.connectedType === "manual" && this.manualKeyPair) {
-        console.log("[nostrConnector] Manual verification for keypair");
+      } else if (this.connectedType === 'manual' && this.manualKeyPair) {
+        console.log('[nostrConnector] Manual verification for keypair');
         // For manual keypairs, we MUST use a secure verification method.
         if (!this.manualKeyPair.privateKey) {
-          console.error("Manual verification failed: private key is missing.");
+          console.error('Manual verification failed: private key is missing.');
           return false;
         }
         try {
@@ -382,7 +382,7 @@ class NostrConnector extends EventEmitter {
           return verifyEvent(event);
         } catch (manualVerifyError) {
           console.error(
-            "Error in manual signature verification:",
+            'Error in manual signature verification:',
             manualVerifyError,
           );
           return false;
@@ -390,11 +390,11 @@ class NostrConnector extends EventEmitter {
       }
 
       console.warn(
-        "No specific verification method available, signature cannot be fully verified",
+        'No specific verification method available, signature cannot be fully verified',
       );
       return false;
     } catch (error) {
-      console.error("Error verifying signature:", error);
+      console.error('Error verifying signature:', error);
       return false;
     }
   }
@@ -409,7 +409,7 @@ class NostrConnector extends EventEmitter {
   /**
    * Get the currently connected wallet type
    */
-  public getConnectedType(): "alby" | "nostr" | "manual" | null {
+  public getConnectedType(): 'alby' | 'nostr' | 'manual' | null {
     return this.connectedType;
   }
 
@@ -421,25 +421,25 @@ class NostrConnector extends EventEmitter {
     message: string,
   ): Promise<string> {
     if (!this.connectedType) {
-      throw new Error("No wallet connected");
+      throw new Error('No wallet connected');
     }
 
     try {
       switch (this.connectedType) {
-        case "alby":
-        case "nostr":
-          if (this.connectedType === "alby") {
+        case 'alby':
+        case 'nostr':
+          if (this.connectedType === 'alby') {
             console.warn(
-              "Alby is deprecated, using Nostr functionality for signature request",
+              'Alby is deprecated, using Nostr functionality for signature request',
             );
           }
           console.log(
-            "[nostrConnector] Requesting Nostr signature for message:",
+            '[nostrConnector] Requesting Nostr signature for message:',
             message,
           );
 
           if (!window.nostr) {
-            throw new Error("Nostr extension not available");
+            throw new Error('Nostr extension not available');
           }
 
           // For Nostr, we need to create an event to sign with a fixed timestamp
@@ -453,22 +453,22 @@ class NostrConnector extends EventEmitter {
           const nostrEvent: Event = {
             ...eventData,
             id: getEventHash(eventData),
-            sig: "", // This will be filled by window.nostr.signEvent
+            sig: '', // This will be filled by window.nostr.signEvent
           };
 
           const signedEvent = await window.nostr!.signEvent(nostrEvent);
           console.log(
-            "Received Nostr signature:",
-            signedEvent.sig.substring(0, 20) + "...",
+            'Received Nostr signature:',
+            signedEvent.sig.substring(0, 20) + '...',
           );
 
           return signedEvent.sig;
 
-        case "manual":
-          console.log("[nostrConnector] Using manual key pair for signature");
+        case 'manual':
+          console.log('[nostrConnector] Using manual key pair for signature');
           if (!this.manualKeyPair || !this.manualKeyPair.privateKey) {
             throw new Error(
-              "No manual key pair available or private key missing",
+              'No manual key pair available or private key missing',
             );
           }
           // Use nostr-tools to sign securely
@@ -482,7 +482,7 @@ class NostrConnector extends EventEmitter {
           const eventTemplate: Event = {
             ...manualEventData,
             id: getEventHash(manualEventData),
-            sig: "", // This will be filled by finalizeEvent
+            sig: '', // This will be filled by finalizeEvent
           };
           const privateKeyBytes = nostrUtils.hexToBytes(
             this.manualKeyPair.privateKey,
@@ -492,8 +492,8 @@ class NostrConnector extends EventEmitter {
             privateKeyBytes,
           );
           console.log(
-            "Generated manual signature:",
-            signedEventManual.sig.substring(0, 20) + "...",
+            'Generated manual signature:',
+            signedEventManual.sig.substring(0, 20) + '...',
           );
           return signedEventManual.sig;
 
@@ -501,7 +501,7 @@ class NostrConnector extends EventEmitter {
           throw new Error(`Unsupported wallet type: ${this.connectedType}`);
       }
     } catch (error: any) {
-      console.error("Error requesting signature:", error);
+      console.error('Error requesting signature:', error);
       throw new Error(`Failed to get signature: ${error.message}`);
     }
   }
@@ -530,9 +530,9 @@ export async function deriveNostrKeys(
   });
 }
 
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   window.NostrConnector = NostrConnector;
-} else if (typeof global !== "undefined") {
+} else if (typeof global !== 'undefined') {
   (global as any).NostrConnector = NostrConnector;
 }
 

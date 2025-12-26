@@ -74,10 +74,10 @@ class DataBaseHolster {
         this.eventEmitter = new eventEmitter_1.EventEmitter();
         this.core = core;
         if (!holster) {
-            throw new Error("Holster instance is required but was not provided");
+            throw new Error('Holster instance is required but was not provided');
         }
-        if (typeof holster.user !== "function") {
-            throw new Error("Holster instance is invalid: holster.user is not a function");
+        if (typeof holster.user !== 'function') {
+            throw new Error('Holster instance is invalid: holster.user is not a function');
         }
         this.holster = holster;
         // Holster's recall() doesn't take options, but it already checks sessionStorage first
@@ -100,8 +100,8 @@ class DataBaseHolster {
         }
         this._rxjs = new rxjs_holster_1.RxJSHolster(this.holster);
         // Create usernames node using Holster's API
-        this.usernamesNode = this.holster.get("usernames");
-        console.log("[DB] DataBaseHolster initialization completed");
+        this.usernamesNode = this.holster.get('usernames');
+        console.log('[DB] DataBaseHolster initialization completed');
     }
     /**
      * Initialize the database instance.
@@ -124,26 +124,26 @@ class DataBaseHolster {
                 this.lastUserState = currentState;
                 if (currentState) {
                     // User logged in
-                    this.notifyAuthListeners(currentState.pub || "");
+                    this.notifyAuthListeners(currentState.pub || '');
                     // Emit auth:login event if core is available and user just logged in
                     if (this.core &&
-                        typeof this.core.emit === "function" &&
+                        typeof this.core.emit === 'function' &&
                         !previousState) {
-                        this.core.emit("auth:login", {
-                            userPub: currentState.pub || "",
-                            username: currentState.username || "",
-                            method: "password",
+                        this.core.emit('auth:login', {
+                            userPub: currentState.pub || '',
+                            username: currentState.username || '',
+                            method: 'password',
                         });
                     }
                 }
                 else {
                     // User logged out
-                    this.notifyAuthListeners("");
+                    this.notifyAuthListeners('');
                     // Emit auth:logout event if core is available and user just logged out
                     if (this.core &&
-                        typeof this.core.emit === "function" &&
+                        typeof this.core.emit === 'function' &&
                         previousState) {
-                        this.core.emit("auth:logout", undefined);
+                        this.core.emit('auth:logout', undefined);
                     }
                 }
             }
@@ -193,21 +193,21 @@ class DataBaseHolster {
      */
     restoreSession() {
         try {
-            if (typeof sessionStorage === "undefined") {
-                return { success: false, error: "sessionStorage not available" };
+            if (typeof sessionStorage === 'undefined') {
+                return { success: false, error: 'sessionStorage not available' };
             }
-            const sessionData = sessionStorage.getItem("gunSessionData");
+            const sessionData = sessionStorage.getItem('gunSessionData');
             if (!sessionData) {
-                return { success: false, error: "No saved session" };
+                return { success: false, error: 'No saved session' };
             }
             const session = JSON.parse(sessionData);
             if (!session.userPub) {
-                return { success: false, error: "Invalid session data" };
+                return { success: false, error: 'Invalid session data' };
             }
             // Check if session is expired
             if (session.expiresAt && Date.now() > session.expiresAt) {
-                sessionStorage.removeItem("gunSessionData");
-                return { success: false, error: "Session expired" };
+                sessionStorage.removeItem('gunSessionData');
+                return { success: false, error: 'Session expired' };
             }
             // Verify session restoration
             const user = this.holster.user();
@@ -215,7 +215,7 @@ class DataBaseHolster {
                 this.user = user;
                 return { success: true, userPub: session.userPub };
             }
-            return { success: false, error: "Session verification failed" };
+            return { success: false, error: 'Session verification failed' };
         }
         catch (error) {
             return { success: false, error: String(error) };
@@ -232,16 +232,16 @@ class DataBaseHolster {
                 currentUser.leave();
             }
             this.user = null;
-            if (typeof sessionStorage !== "undefined") {
-                sessionStorage.removeItem("gunSessionData");
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('gunSessionData');
             }
             // Emit auth:logout event if core is available and user was logged in
-            if (wasLoggedIn && this.core && typeof this.core.emit === "function") {
-                this.core.emit("auth:logout", undefined);
+            if (wasLoggedIn && this.core && typeof this.core.emit === 'function') {
+                this.core.emit('auth:logout', undefined);
             }
         }
         catch (error) {
-            console.error("[DB] Error during logout:", error);
+            console.error('[DB] Error during logout:', error);
         }
     }
     /**
@@ -263,18 +263,18 @@ class DataBaseHolster {
         if (!username || username.length < 1) {
             return {
                 valid: false,
-                error: "Username must be more than 0 characters long",
+                error: 'Username must be more than 0 characters long',
             };
         }
         if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
             return {
                 valid: false,
-                error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
+                error: 'Username can only contain letters, numbers, dots, underscores, and hyphens',
             };
         }
         if (pair) {
             if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
-                return { valid: false, error: "Invalid pair provided" };
+                return { valid: false, error: 'Invalid pair provided' };
             }
             return { valid: true };
         }
@@ -294,8 +294,8 @@ class DataBaseHolster {
      * Uses the same approach as isAliasTaken but returns the inverse.
      */
     async isAliasAvailable(alias, timeout = 5000) {
-        if (typeof alias !== "string" || !alias.trim()) {
-            throw new Error("Alias must be a non-empty string");
+        if (typeof alias !== 'string' || !alias.trim()) {
+            throw new Error('Alias must be a non-empty string');
         }
         const normalizedAlias = alias.trim().toLowerCase();
         return new Promise((resolve, reject) => {
@@ -340,14 +340,14 @@ class DataBaseHolster {
      */
     async registerAlias(alias, userPub, timeout = 5000) {
         if (!alias || !alias.trim()) {
-            throw new Error("Alias must be provided for registration");
+            throw new Error('Alias must be provided for registration');
         }
         if (!userPub) {
-            throw new Error("userPub must be provided for alias registration");
+            throw new Error('userPub must be provided for alias registration');
         }
         const normalizedAlias = alias.trim().toLowerCase();
         const available = await this.isAliasAvailable(normalizedAlias, timeout).catch((error) => {
-            console.error("[DB] Alias availability check failed:", error);
+            console.error('[DB] Alias availability check failed:', error);
             throw error;
         });
         const taken = await this.isAliasTaken(normalizedAlias);
@@ -363,7 +363,7 @@ class DataBaseHolster {
                 if (settled)
                     return;
                 settled = true;
-                reject(new Error("Timeout while registering alias"));
+                reject(new Error('Timeout while registering alias'));
             }, timeout);
             // Holster: use .next() for chaining
             this.usernamesNode
@@ -373,14 +373,14 @@ class DataBaseHolster {
                     return;
                 settled = true;
                 clearTimeout(timer);
-                if (ack && typeof ack === "string" && ack.startsWith("error")) {
+                if (ack && typeof ack === 'string' && ack.startsWith('error')) {
                     reject(new Error(ack));
                     return;
                 }
                 resolve();
             });
         }).catch((error) => {
-            console.error("[DB] Failed to register alias:", error);
+            console.error('[DB] Failed to register alias:', error);
             throw error;
         });
     }
@@ -425,7 +425,7 @@ class DataBaseHolster {
      */
     saveCredentials(userInfo) {
         try {
-            if (typeof sessionStorage !== "undefined") {
+            if (typeof sessionStorage !== 'undefined') {
                 const sessionInfo = {
                     username: userInfo.alias,
                     pair: userInfo.pair,
@@ -433,11 +433,11 @@ class DataBaseHolster {
                     timestamp: Date.now(),
                     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
                 };
-                sessionStorage.setItem("gunSessionData", JSON.stringify(sessionInfo));
+                sessionStorage.setItem('gunSessionData', JSON.stringify(sessionInfo));
             }
         }
         catch (error) {
-            console.error("[DB] Error saving credentials:", error);
+            console.error('[DB] Error saving credentials:', error);
         }
     }
     /**
@@ -456,7 +456,7 @@ class DataBaseHolster {
         if (pair) {
             return {
                 success: false,
-                error: "Pair-based signup not yet supported with Holster",
+                error: 'Pair-based signup not yet supported with Holster',
             };
         }
         try {
@@ -477,7 +477,7 @@ class DataBaseHolster {
                 if (createAck && createAck !== null) {
                     callbackInvoked = true;
                     this.resetAuthState();
-                    resolve({ success: false, error: createAck || "Signup failed" });
+                    resolve({ success: false, error: createAck || 'Signup failed' });
                     return;
                 }
                 // After create, authenticate
@@ -490,7 +490,7 @@ class DataBaseHolster {
                         this.resetAuthState();
                         resolve({
                             success: false,
-                            error: authAck || "Authentication after signup failed",
+                            error: authAck || 'Authentication after signup failed',
                         });
                         return;
                     }
@@ -499,7 +499,7 @@ class DataBaseHolster {
                         this.resetAuthState();
                         resolve({
                             success: false,
-                            error: "User not authenticated after signup",
+                            error: 'User not authenticated after signup',
                         });
                         return;
                     }
@@ -524,14 +524,14 @@ class DataBaseHolster {
                         await this.registerAlias(alias || normalizedUsername, authenticatedUserPub);
                     }
                     catch (registerError) {
-                        console.error("[DB] Alias registration failed:", registerError);
+                        console.error('[DB] Alias registration failed:', registerError);
                     }
                     // Emit auth:signup event if core is available
-                    if (this.core && typeof this.core.emit === "function") {
-                        this.core.emit("auth:signup", {
+                    if (this.core && typeof this.core.emit === 'function') {
+                        this.core.emit('auth:signup', {
                             userPub: authenticatedUserPub,
                             username: normalizedUsername,
-                            method: "password",
+                            method: 'password',
                         });
                     }
                     resolve({
@@ -565,7 +565,7 @@ class DataBaseHolster {
             if (pair) {
                 resolve({
                     success: false,
-                    error: "Pair-based login not yet supported with Holster",
+                    error: 'Pair-based login not yet supported with Holster',
                 });
                 return;
             }
@@ -578,7 +578,7 @@ class DataBaseHolster {
                 const userPub = user?.is?.pub;
                 if (!userPub) {
                     this.resetAuthState();
-                    resolve({ success: false, error: "No userPub available" });
+                    resolve({ success: false, error: 'No userPub available' });
                     return;
                 }
                 this.user = user;
@@ -644,7 +644,7 @@ class DataBaseHolster {
         if (!pair || !pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
             return {
                 success: false,
-                error: "Invalid pair structure - missing required keys",
+                error: 'Invalid pair structure - missing required keys',
             };
         }
         this.resetAuthState();
@@ -654,32 +654,32 @@ class DataBaseHolster {
         if (!normalizedUsername || normalizedUsername.length < 1) {
             return {
                 success: false,
-                error: "Username must be more than 0 characters long",
+                error: 'Username must be more than 0 characters long',
             };
         }
         if (!/^[a-zA-Z0-9._-]+$/.test(normalizedUsername)) {
             return {
                 success: false,
-                error: "Username can only contain letters, numbers, dots, underscores, and hyphens",
+                error: 'Username can only contain letters, numbers, dots, underscores, and hyphens',
             };
         }
         // Ensure SEA is available
         if (!this.sea) {
             return {
                 success: false,
-                error: "SEA cryptography not available",
+                error: 'SEA cryptography not available',
             };
         }
         // Ensure wire is available
         if (!this.holster.wire) {
             return {
                 success: false,
-                error: "Holster wire not available",
+                error: 'Holster wire not available',
             };
         }
         return new Promise(async (resolve) => {
-            const userPub = "~" + pair.pub;
-            const soul = "~@" + normalizedUsername;
+            const userPub = '~' + pair.pub;
+            const soul = '~@' + normalizedUsername;
             // Check if username already exists by checking the usernames node
             try {
                 const aliasAvailable = await this.isAliasAvailable(normalizedUsername);
@@ -698,7 +698,7 @@ class DataBaseHolster {
                         return;
                     }
                     // Pub matches or username exists but no pub registered - verify user data exists
-                    this.holster.wire.get({ "#": userPub, ".": ["username", "pub", "epub"] }, (userMsg) => {
+                    this.holster.wire.get({ '#': userPub, '.': ['username', 'pub', 'epub'] }, (userMsg) => {
                         if (userMsg.err || !userMsg.put || !userMsg.put[userPub]) {
                             // User data doesn't exist, create it
                             this.createUserWithPair(normalizedUsername, pair, userPub, soul, resolve);
@@ -771,7 +771,7 @@ class DataBaseHolster {
                     return;
                 }
                 // Create username -> pub mapping (required by Holster)
-                const rel = { [userPub]: { "#": userPub } };
+                const rel = { [userPub]: { '#': userPub } };
                 const relGraph = this.createGraph(soul, rel, null, null, null);
                 this.holster.wire.put(relGraph, async (relErr) => {
                     if (relErr) {
@@ -786,7 +786,7 @@ class DataBaseHolster {
                         await this.registerAlias(normalizedUsername, pair.pub);
                     }
                     catch (registerError) {
-                        console.error("[DB] Alias registration failed:", registerError);
+                        console.error('[DB] Alias registration failed:', registerError);
                         // Continue anyway - the user is created, just alias registration failed
                     }
                     // Set user.is with the pair
@@ -810,11 +810,11 @@ class DataBaseHolster {
                     }
                     // Emit auth:signup event (new user created) if core is available
                     // The auth:login event will be emitted by subscribeToAuthEvents() when it detects the state change
-                    if (this.core && typeof this.core.emit === "function") {
-                        this.core.emit("auth:signup", {
+                    if (this.core && typeof this.core.emit === 'function') {
+                        this.core.emit('auth:signup', {
                             userPub: pair.pub,
                             username: normalizedUsername,
-                            method: "pair",
+                            method: 'pair',
                         });
                     }
                     // Don't emit auth:login here - let subscribeToAuthEvents() handle it via polling
@@ -836,23 +836,23 @@ class DataBaseHolster {
      * @internal
      */
     createGraph(soul, data, sig, pub, timestamp) {
-        const g = { [soul]: { _: { "#": soul, ">": {} } } };
+        const g = { [soul]: { _: { '#': soul, '>': {} } } };
         for (const [key, value] of Object.entries(data)) {
-            if (key !== "_" &&
-                key !== "_holster_user_public_key" &&
-                key !== "_holster_user_signature") {
+            if (key !== '_' &&
+                key !== '_holster_user_public_key' &&
+                key !== '_holster_user_signature') {
                 g[soul][key] = value;
-                g[soul]._[">"][key] = timestamp || Date.now();
+                g[soul]._['>'][key] = timestamp || Date.now();
             }
         }
         // Store signatures if provided
         if (sig && pub && timestamp) {
-            g[soul]._["s"] = {};
-            if (typeof sig === "string") {
-                g[soul]._["s"][timestamp] = sig;
+            g[soul]._['s'] = {};
+            if (typeof sig === 'string') {
+                g[soul]._['s'][timestamp] = sig;
             }
-            g[soul]["_holster_user_public_key"] = pub;
-            g[soul]._[">"]["_holster_user_public_key"] = timestamp;
+            g[soul]['_holster_user_public_key'] = pub;
+            g[soul]._['>']['_holster_user_public_key'] = timestamp;
         }
         return g;
     }
@@ -874,7 +874,7 @@ class DataBaseHolster {
     destroy() {
         if (this._isDestroyed)
             return;
-        console.log("[DB] Destroying DataBaseHolster instance...");
+        console.log('[DB] Destroying DataBaseHolster instance...');
         this._isDestroyed = true;
         if (this.authPollInterval) {
             clearInterval(this.authPollInterval);
@@ -892,16 +892,16 @@ class DataBaseHolster {
             this.user = null;
         }
         this._rxjs = undefined;
-        console.log("[DB] DataBaseHolster instance destroyed");
+        console.log('[DB] DataBaseHolster instance destroyed');
     }
     /**
      * Aggressively clean up authentication state and session.
      */
     aggressiveAuthCleanup() {
-        console.log("🧹 Performing aggressive auth cleanup...");
+        console.log('🧹 Performing aggressive auth cleanup...');
         this.resetAuthState();
         this.logout();
-        console.log("✓ Aggressive auth cleanup completed");
+        console.log('✓ Aggressive auth cleanup completed');
     }
     /**
      * Register an event handler.
@@ -971,7 +971,7 @@ class DataBaseHolster {
                     // Subscribe and store unsubscribe function
                     if (chain.on) {
                         const unsub = chain.on(wrappedCallback);
-                        if (typeof unsub === "function") {
+                        if (typeof unsub === 'function') {
                             unsubscribe = unsub;
                         }
                     }
@@ -1015,13 +1015,13 @@ class DataBaseHolster {
             SEA: self.holster.SEA,
             on: (event, callback) => {
                 // Holster doesn't have global events, so we handle auth events via polling
-                if (event === "auth") {
+                if (event === 'auth') {
                     self.onAuth(callback);
                 }
             },
             off: (event, callback) => {
                 // Handle event removal if needed
-                if (event === "auth") {
+                if (event === 'auth') {
                     // Remove from onAuth callbacks if possible
                     const index = self.onAuthCallbacks.indexOf(callback);
                     if (index > -1) {

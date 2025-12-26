@@ -1,20 +1,20 @@
-import { Identity } from "@semaphore-protocol/identity";
-import { Group } from "@semaphore-protocol/group";
-import { generateProof, verifyProof } from "@semaphore-protocol/proof";
-import { ethers } from "ethers";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
+import { Identity } from '@semaphore-protocol/identity';
+import { Group } from '@semaphore-protocol/group';
+import { generateProof, verifyProof } from '@semaphore-protocol/proof';
+import { ethers } from 'ethers';
+import { ErrorHandler, ErrorType } from '../../utils/errorHandler';
 
 /**
  * Types of verifiable credentials
  */
 export enum CredentialType {
-  AGE = "age",
-  CITIZENSHIP = "citizenship",
-  EDUCATION = "education",
-  INCOME = "income",
-  EMPLOYMENT = "employment",
-  HEALTH = "health",
-  CUSTOM = "custom",
+  AGE = 'age',
+  CITIZENSHIP = 'citizenship',
+  EDUCATION = 'education',
+  INCOME = 'income',
+  EMPLOYMENT = 'employment',
+  HEALTH = 'health',
+  CUSTOM = 'custom',
 }
 
 /**
@@ -96,10 +96,10 @@ export class ZkCredentials {
         type: credentialData.type,
         claim: credentialData.claim,
         proof: {
-          merkleTreeRoot: "",
-          nullifierHash: "",
+          merkleTreeRoot: '',
+          nullifierHash: '',
           signal: credentialHash,
-          externalNullifier: "",
+          externalNullifier: '',
           proof: [],
         },
         credentialHash,
@@ -113,7 +113,7 @@ export class ZkCredentials {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "CREDENTIAL_CREATION_FAILED",
+        'CREDENTIAL_CREATION_FAILED',
         `Failed to create verifiable credential: ${error.message}`,
         error,
       );
@@ -127,7 +127,7 @@ export class ZkCredentials {
   async proveAttribute(
     identity: Identity,
     credentialData: CredentialClaim,
-    groupId: string = "verified-credentials",
+    groupId: string = 'verified-credentials',
   ): Promise<VerifiableCredentialProof> {
     try {
       const { credential, credentialHash } = this.createCredential(
@@ -160,8 +160,8 @@ export class ZkCredentials {
         signalBigInt,
         externalNullifier,
         {
-          wasmFilePath: "./circuits/semaphore/20/semaphore.wasm",
-          zkeyFilePath: "./circuits/semaphore/20/semaphore.zkey",
+          wasmFilePath: './circuits/semaphore/20/semaphore.wasm',
+          zkeyFilePath: './circuits/semaphore/20/semaphore.zkey',
         },
       );
 
@@ -181,7 +181,7 @@ export class ZkCredentials {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "ATTRIBUTE_PROOF_FAILED",
+        'ATTRIBUTE_PROOF_FAILED',
         `Failed to prove attribute: ${error.message}`,
         error,
       );
@@ -208,7 +208,7 @@ export class ZkCredentials {
     } catch (error: any) {
       ErrorHandler.handle(
         ErrorType.ENCRYPTION,
-        "CREDENTIAL_VERIFICATION_FAILED",
+        'CREDENTIAL_VERIFICATION_FAILED',
         `Failed to verify credential: ${error.message}`,
         error,
       );
@@ -237,7 +237,7 @@ export class ZkCredentials {
    */
   addToCredentialGroup(
     identity: Identity,
-    groupId: string = "verified-credentials",
+    groupId: string = 'verified-credentials',
   ): void {
     const group = this.getOrCreateGroup(groupId);
     if (group.indexOf(identity.commitment) === -1) {
@@ -281,14 +281,14 @@ export class ZkCredentials {
   async proveCitizenship(
     identity: Identity,
     country: string,
-    region: string = "EU",
+    region: string = 'EU',
   ): Promise<VerifiableCredentialProof> {
     return this.proveAttribute(identity, {
       type: CredentialType.CITIZENSHIP,
       claim: `Citizen of ${region}`,
       privateData: {
         country,
-        passportNumber: "hidden",
+        passportNumber: 'hidden',
       },
     });
   }
@@ -320,7 +320,7 @@ export class ZkCredentials {
     identity: Identity,
     amount: number,
     minimumRequired: number,
-    currency: string = "USD",
+    currency: string = 'USD',
   ): Promise<VerifiableCredentialProof> {
     if (amount < minimumRequired) {
       throw new Error(

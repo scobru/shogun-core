@@ -1,9 +1,9 @@
-import type { AuthCallback, EventData, EventListener } from "./types";
-import type { IGunUserInstance, IGunInstance, ISEAPair } from "gun/types";
-import type { AuthResult, SignUpResult } from "../interfaces/shogun";
-import { RxJS } from "./rxjs";
-import * as GunErrors from "./errors";
-import * as crypto from "./crypto";
+import type { AuthCallback, EventData, EventListener } from './types';
+import type { IGunUserInstance, IGunInstance, ISEAPair } from 'gun/types';
+import type { AuthResult, SignUpResult } from '../interfaces/shogun';
+import { RxJS } from './rxjs';
+import * as GunErrors from './errors';
+import * as crypto from './crypto';
 /**
  * DataBase
  *
@@ -226,6 +226,6 @@ declare class DataBase {
     emit(event: string | symbol, data?: EventData): boolean;
 }
 export { DataBase, RxJS, crypto, GunErrors };
-export { default as derive, type DeriveOptions } from "./derive";
-export type { IGunUserInstance, IGunInstance, IGunChain } from "gun/types";
-export type { GunDataEventData, GunPeerEventData } from "../interfaces/events";
+export { default as derive, type DeriveOptions } from './derive';
+export type { IGunUserInstance, IGunInstance, IGunChain } from 'gun/types';
+export type { GunDataEventData, GunPeerEventData } from '../interfaces/events';

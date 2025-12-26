@@ -147,7 +147,7 @@ export interface GunOperationResult {
 /**
  * Improved type definitions to reduce 'any' usage while maintaining GunDB compatibility
  */
-import type { IGunUserInstance, IGunInstance, ISEAPair } from "gun/types";
+import type { IGunUserInstance, IGunInstance, ISEAPair } from 'gun/types';
 export interface GunAckCallback {
     (ack: {
         err?: string;

@@ -45,7 +45,7 @@ class RxJS {
                     node = node.get(path[i]);
                 }
             }
-            else if (typeof path === "string") {
+            else if (typeof path === 'string') {
                 node = this.gun.get(path);
             }
             else {
@@ -58,7 +58,7 @@ class RxJS {
                     return;
                 }
                 // Remove Gun metadata before emitting
-                if (typeof data === "object" && data !== null) {
+                if (typeof data === 'object' && data !== null) {
                     const cleanData = this.removeGunMeta(data);
                     subscriber.next(cleanData);
                 }
@@ -68,7 +68,7 @@ class RxJS {
             });
             // Return teardown logic
             return () => {
-                if (unsub && typeof unsub === "function") {
+                if (unsub && typeof unsub === 'function') {
                     unsub();
                 }
                 node.off();
@@ -90,11 +90,11 @@ class RxJS {
                 subscriber.complete();
                 return;
             }
-            const node = typeof path === "string" ? this.gun.get(path) : path;
+            const node = typeof path === 'string' ? this.gun.get(path) : path;
             const results = {};
             const unsub = node.map().on((data, key) => {
                 // Skip soul key which is Gun's internal reference
-                if (key === "_" || !data)
+                if (key === '_' || !data)
                     return;
                 if (matchFn && !matchFn(data)) {
                     // If matchFn is provided and returns false, remove item
@@ -104,13 +104,13 @@ class RxJS {
                     }
                     return;
                 }
-                const cleanData = typeof data === "object" ? this.removeGunMeta(data) : data;
+                const cleanData = typeof data === 'object' ? this.removeGunMeta(data) : data;
                 results[key] = cleanData;
                 subscriber.next(Object.values(results));
             });
             // Return teardown logic
             return () => {
-                if (unsub && typeof unsub === "function") {
+                if (unsub && typeof unsub === 'function') {
                     unsub();
                 }
                 node.off();
@@ -136,7 +136,7 @@ class RxJS {
                     }
                 });
             };
-            if (typeof path === "string" || Array.isArray(path)) {
+            if (typeof path === 'string' || Array.isArray(path)) {
                 // Path-based put
                 let node;
                 if (Array.isArray(path)) {
@@ -192,7 +192,7 @@ class RxJS {
                     }
                 });
             };
-            if (typeof path === "string" || Array.isArray(path)) {
+            if (typeof path === 'string' || Array.isArray(path)) {
                 let node;
                 if (Array.isArray(path)) {
                     node = this.gun.get(path[0]);
@@ -231,7 +231,7 @@ class RxJS {
      */
     once(path) {
         let node;
-        if (typeof path === "string") {
+        if (typeof path === 'string') {
             node = this.gun.get(path);
         }
         else if (path) {
@@ -247,7 +247,7 @@ class RxJS {
                     subscriber.complete();
                     return;
                 }
-                const cleanData = typeof data === "object" ? this.removeGunMeta(data) : data;
+                const cleanData = typeof data === 'object' ? this.removeGunMeta(data) : data;
                 subscriber.next(cleanData);
                 subscriber.complete();
             });
@@ -262,7 +262,7 @@ class RxJS {
     compute(sources, computeFn) {
         // Convert all sources to observables
         const observables = sources.map((source) => {
-            if (typeof source === "string") {
+            if (typeof source === 'string') {
                 return this.observe(source);
             }
             return source;
@@ -310,7 +310,7 @@ class RxJS {
     userPut(dataOrPath, maybeData, callback) {
         return new rxjs_1.Observable((subscriber) => {
             const user = this.gun.user();
-            if (typeof dataOrPath === "string") {
+            if (typeof dataOrPath === 'string') {
                 user.get(dataOrPath).put(maybeData, (ack) => {
                     if (callback)
                         callback(ack);
@@ -348,7 +348,7 @@ class RxJS {
     userSet(dataOrPath, maybeData, callback) {
         return new rxjs_1.Observable((subscriber) => {
             const user = this.gun.user();
-            if (typeof dataOrPath === "string") {
+            if (typeof dataOrPath === 'string') {
                 user.get(dataOrPath).set(maybeData, (ack) => {
                     if (callback)
                         callback(ack);
@@ -416,7 +416,7 @@ class RxJS {
         if (path) {
             return this.observe(this.gun.user().get(path));
         }
-        return this.observe(this.gun.user().get("~"));
+        return this.observe(this.gun.user().get('~'));
     }
     /**
      * Remove Gun metadata from an object
@@ -424,17 +424,17 @@ class RxJS {
      * @returns Cleaned object without Gun metadata
      */
     removeGunMeta(obj) {
-        if (!obj || typeof obj !== "object")
+        if (!obj || typeof obj !== 'object')
             return obj;
         // Create a clean copy
         const cleanObj = Array.isArray(obj) ? [] : {};
         // Copy properties, skipping Gun metadata
         Object.keys(obj).forEach((key) => {
             // Skip Gun metadata
-            if (key === "_" || key === "#")
+            if (key === '_' || key === '#')
                 return;
             const val = obj[key];
-            if (val && typeof val === "object") {
+            if (val && typeof val === 'object') {
                 cleanObj[key] = this.removeGunMeta(val);
             }
             else {

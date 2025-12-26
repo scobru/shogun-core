@@ -1,6 +1,6 @@
-import { ShogunPlugin } from "../interfaces/plugin";
-import { PluginCategory } from "../interfaces/shogun";
-import { IShogunCore } from "../interfaces/shogun";
+import { ShogunPlugin } from '../interfaces/plugin';
+import { PluginCategory } from '../interfaces/shogun';
+import { IShogunCore } from '../interfaces/shogun';
 /**
  * Manages plugin registration, validation, and lifecycle
  */

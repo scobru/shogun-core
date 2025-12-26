@@ -1,5 +1,5 @@
-import { EventEmitter } from "../../utils/eventEmitter";
-import { ConnectionResult, AlbyProvider, NostrProvider, NostrConnectorConfig, NostrConnectorKeyPair } from "./types";
+import { EventEmitter } from '../../utils/eventEmitter';
+import { ConnectionResult, AlbyProvider, NostrProvider, NostrConnectorConfig, NostrConnectorKeyPair } from './types';
 declare global {
     interface Window {
         alby?: AlbyProvider;
@@ -38,7 +38,7 @@ declare class NostrConnector extends EventEmitter {
     /**
      * Connect to a wallet type
      */
-    connectWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+    connectWallet(type?: 'alby' | 'nostr' | 'manual'): Promise<ConnectionResult>;
     /**
      * Connect to Nostr extension
      */
@@ -90,7 +90,7 @@ declare class NostrConnector extends EventEmitter {
     /**
      * Get the currently connected wallet type
      */
-    getConnectedType(): "alby" | "nostr" | "manual" | null;
+    getConnectedType(): 'alby' | 'nostr' | 'manual' | null;
     /**
      * Request a signature from the connected wallet
      */

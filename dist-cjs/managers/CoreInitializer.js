@@ -26,7 +26,7 @@ class CoreInitializer {
      */
     async initialize(config) {
         // Polyfill console for environments where it might be missing
-        if (typeof console === "undefined") {
+        if (typeof console === 'undefined') {
             global.console = {
                 log: () => { },
                 warn: () => { },
@@ -39,7 +39,7 @@ class CoreInitializer {
         this.core.storage = new storage_1.ShogunStorage(config.silent);
         // Setup error handler
         errorHandler_1.ErrorHandler.addListener((error) => {
-            this.core.emit("error", {
+            this.core.emit('error', {
                 action: error.code,
                 message: error.message,
                 type: error.type,
@@ -76,27 +76,27 @@ class CoreInitializer {
         // Otherwise, use Gun instance
         try {
             if (!config.gunInstance) {
-                throw new Error("Either gunInstance or holsterInstance is required but neither was provided");
+                throw new Error('Either gunInstance or holsterInstance is required but neither was provided');
             }
             // Validate Gun instance
-            if (typeof config.gunInstance !== "object") {
+            if (typeof config.gunInstance !== 'object') {
                 throw new Error(`Gun instance must be an object, received: ${typeof config.gunInstance}`);
             }
-            if (typeof config.gunInstance.user !== "function") {
+            if (typeof config.gunInstance.user !== 'function') {
                 throw new Error(`Gun instance is invalid: gun.user is not a function. Received gun.user type: ${typeof config.gunInstance.user}`);
             }
-            if (typeof config.gunInstance.get !== "function") {
+            if (typeof config.gunInstance.get !== 'function') {
                 throw new Error(`Gun instance is invalid: gun.get is not a function. Received gun.get type: ${typeof config.gunInstance.get}`);
             }
-            if (typeof config.gunInstance.on !== "function") {
+            if (typeof config.gunInstance.on !== 'function') {
                 throw new Error(`Gun instance is invalid: gun.on is not a function. Received gun.on type: ${typeof config.gunInstance.on}`);
             }
-            console.log("Using provided Gun instance:", config.gunInstance);
+            console.log('Using provided Gun instance:', config.gunInstance);
             this.core._gun = config.gunInstance;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error validating Gun instance:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error validating Gun instance:', error);
             }
             throw new Error(`Failed to validate Gun instance: ${error}`);
         }
@@ -105,7 +105,7 @@ class CoreInitializer {
             let sea = this.core._gun.SEA || null;
             if (!sea) {
                 // Try to find SEA in various global locations
-                if (typeof window !== "undefined" &&
+                if (typeof window !== 'undefined' &&
                     window.Gun &&
                     window.Gun.SEA) {
                     sea = window.Gun.SEA;
@@ -121,8 +121,8 @@ class CoreInitializer {
             return true;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing DataBase:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error initializing DataBase:', error);
             }
             throw new Error(`Failed to initialize DataBase: ${error}`);
         }
@@ -133,25 +133,25 @@ class CoreInitializer {
     initializeHolster(config) {
         try {
             if (!config.holsterInstance) {
-                throw new Error("Holster instance is required but was not provided");
+                throw new Error('Holster instance is required but was not provided');
             }
             // Validate Holster instance
-            if (typeof config.holsterInstance !== "object") {
+            if (typeof config.holsterInstance !== 'object') {
                 throw new Error(`Holster instance must be an object, received: ${typeof config.holsterInstance}`);
             }
-            if (typeof config.holsterInstance.user !== "function") {
+            if (typeof config.holsterInstance.user !== 'function') {
                 throw new Error(`Holster instance is invalid: holster.user is not a function. Received holster.user type: ${typeof config.holsterInstance.user}`);
             }
-            if (typeof config.holsterInstance.get !== "function") {
+            if (typeof config.holsterInstance.get !== 'function') {
                 throw new Error(`Holster instance is invalid: holster.get is not a function. Received holster.get type: ${typeof config.holsterInstance.get}`);
             }
-            console.log("Using provided Holster instance:", config.holsterInstance);
+            console.log('Using provided Holster instance:', config.holsterInstance);
             // Store holster instance in _gun for compatibility
             this.core._gun = config.holsterInstance;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error validating Holster instance:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error validating Holster instance:', error);
             }
             throw new Error(`Failed to validate Holster instance: ${error}`);
         }
@@ -160,7 +160,7 @@ class CoreInitializer {
             let sea = this.core._gun.SEA || null;
             if (!sea) {
                 // Try to find SEA in various global locations
-                if (typeof window !== "undefined" &&
+                if (typeof window !== 'undefined' &&
                     window.Holster &&
                     window.Holster.SEA) {
                     sea = window.Holster.SEA;
@@ -180,8 +180,8 @@ class CoreInitializer {
             return true;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing DataBaseHolster:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error initializing DataBaseHolster:', error);
             }
             throw new Error(`Failed to initialize DataBaseHolster: ${error}`);
         }
@@ -192,11 +192,11 @@ class CoreInitializer {
      */
     isHolster() {
         // Check if gun has 'next' method (Holster-specific)
-        if (typeof this.core.gun.next === "function") {
+        if (typeof this.core.gun.next === 'function') {
             return true;
         }
         // Check if db is DataBaseHolster instance
-        if (this.core.db && this.core.db.constructor.name === "DataBaseHolster") {
+        if (this.core.db && this.core.db.constructor.name === 'DataBaseHolster') {
             return true;
         }
         return false;
@@ -208,7 +208,7 @@ class CoreInitializer {
         try {
             const userInstance = this.core.gun.user();
             // Holster's recall() doesn't take options, Gun's does
-            if (typeof userInstance.recall === "function") {
+            if (typeof userInstance.recall === 'function') {
                 if (userInstance.recall.length > 0) {
                     // Gun API: recall takes options
                     this.core._user = userInstance.recall({ sessionStorage: true });
@@ -224,8 +224,8 @@ class CoreInitializer {
             }
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error initializing user:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error initializing user:', error);
             }
             throw new Error(`Failed to initialize user: ${error}`);
         }
@@ -236,16 +236,16 @@ class CoreInitializer {
             // Holster doesn't support global "auth" events
             // Auth events are handled via polling in DataBaseHolster
             // The DataBaseHolster will emit auth events via its onAuth callbacks
-            if (typeof console !== "undefined" && console.log) {
-                console.log("[CoreInitializer] Using Holster - auth events handled via DataBaseHolster polling");
+            if (typeof console !== 'undefined' && console.log) {
+                console.log('[CoreInitializer] Using Holster - auth events handled via DataBaseHolster polling');
             }
         }
-        else if (typeof this.core.gun.on === "function") {
+        else if (typeof this.core.gun.on === 'function') {
             // Gun has native "auth" events
             try {
-                this.core.gun.on("auth", (user) => {
+                this.core.gun.on('auth', (user) => {
                     const userInstance = this.core.gun.user();
-                    if (typeof userInstance.recall === "function") {
+                    if (typeof userInstance.recall === 'function') {
                         if (userInstance.recall.length > 0) {
                             this.core._user = userInstance.recall({ sessionStorage: true });
                         }
@@ -257,17 +257,17 @@ class CoreInitializer {
                     else {
                         this.core._user = userInstance;
                     }
-                    this.core.emit("auth:login", {
+                    this.core.emit('auth:login', {
                         userPub: user.pub || user.is?.pub,
-                        method: "password",
+                        method: 'password',
                     });
                 });
             }
             catch (error) {
                 // If gun.on("auth") fails, it might be because we're using Holster
                 // but the detection didn't work. Log and continue.
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("[CoreInitializer] Failed to register auth event listener:", error);
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[CoreInitializer] Failed to register auth event listener:', error);
                 }
             }
         }
@@ -276,17 +276,17 @@ class CoreInitializer {
      * Setup Gun event forwarding
      */
     setupGunEventForwarding() {
-        const gunEvents = ["gun:put", "gun:get", "gun:set", "gun:remove"];
+        const gunEvents = ['gun:put', 'gun:get', 'gun:set', 'gun:remove'];
         gunEvents.forEach((eventName) => {
             this.core.db.on(eventName, (data) => {
                 this.core.emit(eventName, data);
             });
         });
         const peerEvents = [
-            "gun:peer:add",
-            "gun:peer:remove",
-            "gun:peer:connect",
-            "gun:peer:disconnect",
+            'gun:peer:add',
+            'gun:peer:remove',
+            'gun:peer:connect',
+            'gun:peer:disconnect',
         ];
         peerEvents.forEach((eventName) => {
             this.core.db.on(eventName, (data) => {
@@ -300,7 +300,7 @@ class CoreInitializer {
     setupWalletDerivation() {
         if (this.isHolster()) {
             // For Holster, wallet derivation is handled via onAuth callbacks in DataBaseHolster
-            if (this.core.db && typeof this.core.db.onAuth === "function") {
+            if (this.core.db && typeof this.core.db.onAuth === 'function') {
                 this.core.db.onAuth(async (user) => {
                     if (!user.is)
                         return;
@@ -315,10 +315,10 @@ class CoreInitializer {
                 });
             }
         }
-        else if (typeof this.core.gun.on === "function") {
+        else if (typeof this.core.gun.on === 'function') {
             // Gun has native "auth" events
             try {
-                this.core.gun.on("auth", async (user) => {
+                this.core.gun.on('auth', async (user) => {
                     if (!user.is)
                         return;
                     const priv = user._?.sea?.epriv || user.is?.epriv;
@@ -333,8 +333,8 @@ class CoreInitializer {
             }
             catch (error) {
                 // If gun.on("auth") fails, log and continue
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("[CoreInitializer] Failed to register wallet derivation listener:", error);
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[CoreInitializer] Failed to register wallet derivation listener:', error);
                 }
             }
         }
@@ -346,49 +346,49 @@ class CoreInitializer {
         try {
             // Register WebAuthn plugin if configuration is provided
             if (config.webauthn) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("WebAuthn plugin will be registered with provided configuration");
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('WebAuthn plugin will be registered with provided configuration');
                 }
                 const webauthnPlugin = new webauthnPlugin_1.WebauthnPlugin();
-                if (typeof webauthnPlugin.configure === "function") {
+                if (typeof webauthnPlugin.configure === 'function') {
                     webauthnPlugin.configure(config.webauthn);
                 }
                 this.core.pluginManager.register(webauthnPlugin);
             }
             // Register Web3 plugin if configuration is provided
             if (config.web3) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("Web3 plugin will be registered with provided configuration");
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('Web3 plugin will be registered with provided configuration');
                 }
                 const web3Plugin = new web3ConnectorPlugin_1.Web3ConnectorPlugin();
-                if (typeof web3Plugin.configure === "function") {
+                if (typeof web3Plugin.configure === 'function') {
                     web3Plugin.configure(config.web3);
                 }
                 this.core.pluginManager.register(web3Plugin);
             }
             // Register Nostr plugin if configuration is provided
             if (config.nostr) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("Nostr plugin will be registered with provided configuration");
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('Nostr plugin will be registered with provided configuration');
                 }
                 const nostrPlugin = new nostrConnectorPlugin_1.NostrConnectorPlugin();
-                if (typeof nostrPlugin.configure === "function") {
+                if (typeof nostrPlugin.configure === 'function') {
                     nostrPlugin.configure(config.nostr);
                 }
                 this.core.pluginManager.register(nostrPlugin);
             }
             // Register ZK-Proof plugin if configuration is provided
             if (config.zkproof) {
-                if (typeof console !== "undefined" && console.warn) {
-                    console.warn("ZK-Proof plugin will be registered with provided configuration");
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('ZK-Proof plugin will be registered with provided configuration');
                 }
                 const zkproofPlugin = new zkProofPlugin_1.ZkProofPlugin(config.zkproof);
                 this.core.pluginManager.register(zkproofPlugin);
             }
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error registering builtin plugins:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error registering builtin plugins:', error);
             }
         }
     }
@@ -398,15 +398,15 @@ class CoreInitializer {
     initializeDb() {
         try {
             this.core.db.initialize();
-            this.core.emit("debug", {
-                action: "core_initialized",
+            this.core.emit('debug', {
+                action: 'core_initialized',
                 timestamp: Date.now(),
             });
             return true;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
-                console.error("Error during Shogun Core initialization:", error);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Error during Shogun Core initialization:', error);
             }
             return false;
         }

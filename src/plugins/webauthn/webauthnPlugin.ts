@@ -1,23 +1,23 @@
-import { BasePlugin } from "../base";
-import { ShogunCore } from "../../core";
-import { Webauthn } from "./webauthn";
-import { WebAuthnSigner, WebAuthnSigningCredential } from "./webauthnSigner";
+import { BasePlugin } from '../base';
+import { ShogunCore } from '../../core';
+import { Webauthn } from './webauthn';
+import { WebAuthnSigner, WebAuthnSigningCredential } from './webauthnSigner';
 import {
   WebAuthnCredentials,
   CredentialResult,
   WebauthnPluginInterface,
   WebAuthnUniformCredentials,
-} from "./types";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
-import { ErrorHandler, ErrorType } from "../../utils/errorHandler";
-import { ISEAPair } from "gun";
+} from './types';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
+import { ErrorHandler, ErrorType } from '../../utils/errorHandler';
+import { ISEAPair } from 'gun';
 import {
   generateSeedPhrase,
   deriveCredentialsFromMnemonic,
   validateSeedPhrase,
   normalizeSeedPhrase,
-} from "../../utils/seedPhrase";
-import { deriveWebauthnKeys } from "./webauthn";
+} from '../../utils/seedPhrase';
+import { deriveWebauthnKeys } from './webauthn';
 
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
@@ -26,9 +26,9 @@ export class WebauthnPlugin
   extends BasePlugin
   implements WebauthnPluginInterface
 {
-  name = "webauthn";
-  version = "1.0.0";
-  description = "Provides WebAuthn authentication functionality for ShogunCore";
+  name = 'webauthn';
+  version = '1.0.0';
+  description = 'Provides WebAuthn authentication functionality for ShogunCore';
 
   private webauthn: Webauthn | null = null;
   private signer: WebAuthnSigner | null = null;
@@ -40,9 +40,9 @@ export class WebauthnPlugin
     super.initialize(core);
 
     // Verifica se siamo in ambiente browser
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       console.warn(
-        "[webauthnPlugin] WebAuthn plugin disabled - not in browser environment",
+        '[webauthnPlugin] WebAuthn plugin disabled - not in browser environment',
       );
       return;
     }
@@ -50,7 +50,7 @@ export class WebauthnPlugin
     // Verifica se WebAuthn è supportato
     if (!this.isSupported()) {
       console.warn(
-        "[webauthnPlugin] WebAuthn not supported in this environment",
+        '[webauthnPlugin] WebAuthn not supported in this environment',
       );
       return;
     }
@@ -60,7 +60,7 @@ export class WebauthnPlugin
     this.signer = new WebAuthnSigner(this.webauthn);
 
     console.log(
-      "[webauthnPlugin] WebAuthn plugin initialized with signer support",
+      '[webauthnPlugin] WebAuthn plugin initialized with signer support',
     );
   }
 
@@ -71,7 +71,7 @@ export class WebauthnPlugin
     this.webauthn = null;
     this.signer = null;
     super.destroy();
-    console.log("[webauthnPlugin] WebAuthn plugin destroyed");
+    console.log('[webauthnPlugin] WebAuthn plugin destroyed');
   }
 
   /**
@@ -81,7 +81,7 @@ export class WebauthnPlugin
   private assertWebauthn(): Webauthn {
     this.assertInitialized();
     if (!this.webauthn) {
-      throw new Error("WebAuthn module not initialized");
+      throw new Error('WebAuthn module not initialized');
     }
     return this.webauthn;
   }
@@ -93,7 +93,7 @@ export class WebauthnPlugin
   private assertSigner(): WebAuthnSigner {
     this.assertInitialized();
     if (!this.signer) {
-      throw new Error("WebAuthn signer not initialized");
+      throw new Error('WebAuthn signer not initialized');
     }
     return this.signer;
   }
@@ -114,7 +114,7 @@ export class WebauthnPlugin
 
       return pair;
     } catch (error) {
-      console.error("Error generating pair from WebAuthn credentials:", error);
+      console.error('Error generating pair from WebAuthn credentials:', error);
       return null;
     }
   }
@@ -124,23 +124,23 @@ export class WebauthnPlugin
    */
   isSupported(): boolean {
     // Verifica se siamo in ambiente browser
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return false;
     }
 
     // Check if PublicKeyCredential is available
-    if (typeof window.PublicKeyCredential === "undefined") {
+    if (typeof window.PublicKeyCredential === 'undefined') {
       return false;
     }
 
     // In test environment, allow initialization if window.PublicKeyCredential is mocked
-    if (process.env.NODE_ENV === "test") {
-      return typeof window.PublicKeyCredential !== "undefined";
+    if (process.env.NODE_ENV === 'test') {
+      return typeof window.PublicKeyCredential !== 'undefined';
     }
 
     // Se il plugin non è stato inizializzato, verifica direttamente il supporto
     if (!this.webauthn) {
-      return typeof window.PublicKeyCredential !== "undefined";
+      return typeof window.PublicKeyCredential !== 'undefined';
     }
 
     return this.webauthn.isSupported();
@@ -218,7 +218,7 @@ export class WebauthnPlugin
     try {
       // Delegate to underlying WebAuthn module (tests mock these methods)
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.createSigningCredential === "function") {
+      if (typeof wa.createSigningCredential === 'function') {
         return await wa.createSigningCredential(username);
       }
       // Fallback to signer implementation if available
@@ -237,7 +237,7 @@ export class WebauthnPlugin
   ): (data: any) => Promise<AuthenticatorAssertionResponse> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.createAuthenticator === "function") {
+      if (typeof wa.createAuthenticator === 'function') {
         return wa.createAuthenticator(credentialId);
       }
       return this.assertSigner().createAuthenticator(credentialId);
@@ -257,7 +257,7 @@ export class WebauthnPlugin
   ): Promise<{ pub: string; priv: string; epub: string; epriv: string }> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.createDerivedKeyPair === "function") {
+      if (typeof wa.createDerivedKeyPair === 'function') {
         return await wa.createDerivedKeyPair(credentialId, username, extra);
       }
       return await this.assertSigner().createDerivedKeyPair(
@@ -282,7 +282,7 @@ export class WebauthnPlugin
   ): Promise<string> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.signWithDerivedKeys === "function") {
+      if (typeof wa.signWithDerivedKeys === 'function') {
         return await wa.signWithDerivedKeys(
           data,
           credentialId,
@@ -309,7 +309,7 @@ export class WebauthnPlugin
     credentialId: string,
   ): WebAuthnSigningCredential | undefined {
     const wa = this.assertWebauthn() as any;
-    if (typeof wa.getSigningCredential === "function") {
+    if (typeof wa.getSigningCredential === 'function') {
       return wa.getSigningCredential(credentialId);
     }
     return this.assertSigner().getCredential(credentialId);
@@ -320,7 +320,7 @@ export class WebauthnPlugin
    */
   listSigningCredentials(): WebAuthnSigningCredential[] {
     const wa = this.assertWebauthn() as any;
-    if (typeof wa.listSigningCredentials === "function") {
+    if (typeof wa.listSigningCredentials === 'function') {
       return wa.listSigningCredentials();
     }
     return this.assertSigner().listCredentials();
@@ -331,7 +331,7 @@ export class WebauthnPlugin
    */
   removeSigningCredential(credentialId: string): boolean {
     const wa = this.assertWebauthn() as any;
-    if (typeof wa.removeSigningCredential === "function") {
+    if (typeof wa.removeSigningCredential === 'function') {
       return wa.removeSigningCredential(credentialId);
     }
     return this.assertSigner().removeCredential(credentialId);
@@ -349,7 +349,7 @@ export class WebauthnPlugin
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.createGunUserFromSigningCredential === "function") {
+      if (typeof wa.createGunUserFromSigningCredential === 'function') {
         return await wa.createGunUserFromSigningCredential(
           credentialId,
           username,
@@ -374,7 +374,7 @@ export class WebauthnPlugin
    */
   getGunUserPubFromSigningCredential(credentialId: string): string | undefined {
     const wa = this.assertWebauthn() as any;
-    if (typeof wa.getGunUserPubFromSigningCredential === "function") {
+    if (typeof wa.getGunUserPubFromSigningCredential === 'function') {
       return wa.getGunUserPubFromSigningCredential(credentialId);
     }
     return this.assertSigner().getGunUserPub(credentialId);
@@ -385,7 +385,7 @@ export class WebauthnPlugin
    */
   getHashedCredentialId(credentialId: string): string | undefined {
     const wa = this.assertWebauthn() as any;
-    if (typeof wa.getHashedCredentialId === "function") {
+    if (typeof wa.getHashedCredentialId === 'function') {
       return wa.getHashedCredentialId(credentialId);
     }
     return this.assertSigner().getHashedCredentialId(credentialId);
@@ -406,7 +406,7 @@ export class WebauthnPlugin
   }> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.verifyConsistency === "function") {
+      if (typeof wa.verifyConsistency === 'function') {
         return await wa.verifyConsistency(
           credentialId,
           username,
@@ -437,7 +437,7 @@ export class WebauthnPlugin
   }> {
     try {
       const wa = this.assertWebauthn() as any;
-      if (typeof wa.setupConsistentOneshotSigning === "function") {
+      if (typeof wa.setupConsistentOneshotSigning === 'function') {
         return await wa.setupConsistentOneshotSigning(username);
       }
       // Fallback to local flow when not available
@@ -475,11 +475,11 @@ export class WebauthnPlugin
       const core = this.assertInitialized();
 
       if (!username) {
-        throw new Error("Username required for WebAuthn login");
+        throw new Error('Username required for WebAuthn login');
       }
 
       if (!this.isSupported()) {
-        throw new Error("WebAuthn is not supported by this browser");
+        throw new Error('WebAuthn is not supported by this browser');
       }
 
       // Derive the SEA pair through WebAuthn verification (requires PIN/biometric)
@@ -487,11 +487,11 @@ export class WebauthnPlugin
         await this.generateCredentials(username, null, true);
 
       if (!credentials?.success || !credentials.key) {
-        throw new Error(credentials?.error || "WebAuthn verification failed");
+        throw new Error(credentials?.error || 'WebAuthn verification failed');
       }
 
       // Ensure we mark the authentication method before attempting login
-      core.setAuthMethod("webauthn");
+      core.setAuthMethod('webauthn');
 
       // If core has a custom authenticate hook (tests), use it with the derived key pair
       if ((core as any).authenticate) {
@@ -504,19 +504,19 @@ export class WebauthnPlugin
       }
 
       // Login using the derived SEA pair, consistent with the signup flow
-      return await core.login(username, "", credentials.key);
+      return await core.login(username, '', credentials.key);
     } catch (error: any) {
       console.error(`Error during WebAuthn login: ${error}`);
       // Log but do not depend on handler return value
       ErrorHandler.handle(
         ErrorType.WEBAUTHN,
-        "WEBAUTHN_LOGIN_ERROR",
-        error.message || "Error during WebAuthn login",
+        'WEBAUTHN_LOGIN_ERROR',
+        error.message || 'Error during WebAuthn login',
         error,
       );
       return {
         success: false,
-        error: error.message || "Error during WebAuthn login",
+        error: error.message || 'Error during WebAuthn login',
       };
     }
   }
@@ -539,11 +539,11 @@ export class WebauthnPlugin
       const core = this.assertInitialized();
 
       if (!username) {
-        throw new Error("Username required for WebAuthn registration");
+        throw new Error('Username required for WebAuthn registration');
       }
 
       if (!this.isSupported()) {
-        throw new Error("WebAuthn is not supported by this browser");
+        throw new Error('WebAuthn is not supported by this browser');
       }
 
       // Determine seed phrase to use
@@ -553,14 +553,14 @@ export class WebauthnPlugin
       if (options?.seedPhrase) {
         // Use provided seed phrase
         if (!validateSeedPhrase(options.seedPhrase)) {
-          throw new Error("Invalid seed phrase provided");
+          throw new Error('Invalid seed phrase provided');
         }
         seedPhrase = options.seedPhrase;
       } else if (shouldGenerateSeed) {
         // Generate new seed phrase for multi-device support
         seedPhrase = generateSeedPhrase();
         console.log(
-          "[webauthnPlugin] Generated seed phrase for multi-device support",
+          '[webauthnPlugin] Generated seed phrase for multi-device support',
         );
       }
 
@@ -591,19 +591,19 @@ export class WebauthnPlugin
           await this.generateCredentials(username, null, false);
         if (!credentials?.success) {
           throw new Error(
-            credentials?.error || "Unable to generate WebAuthn credentials",
+            credentials?.error || 'Unable to generate WebAuthn credentials',
           );
         }
         // Force an immediate user verification so the platform authenticator
         // always prompts for PIN/biometrics during signup, matching the login flow
         const postRegistrationVerification =
           await this.assertWebauthn().authenticateUser(username, null, {
-            userVerification: "required",
+            userVerification: 'required',
           });
         if (!postRegistrationVerification.success) {
           throw new Error(
             postRegistrationVerification.error ||
-              "WebAuthn verification required to complete registration",
+              'WebAuthn verification required to complete registration',
           );
         }
 
@@ -611,13 +611,13 @@ export class WebauthnPlugin
         // since generateCredentials already returns the derived key pair
         if (!credentials.key) {
           throw new Error(
-            "Failed to generate SEA pair from WebAuthn credentials",
+            'Failed to generate SEA pair from WebAuthn credentials',
           );
         }
         pair = credentials.key;
       }
 
-      core.setAuthMethod("webauthn");
+      core.setAuthMethod('webauthn');
 
       // Register user with Gun (using email parameter slot for pair)
       const result = await core.signUp(username, undefined, pair);
@@ -627,7 +627,7 @@ export class WebauthnPlugin
         return {
           ...result,
           message: seedPhrase
-            ? "🔑 IMPORTANT: Save your 12-word seed phrase to access your account from other devices!"
+            ? '🔑 IMPORTANT: Save your 12-word seed phrase to access your account from other devices!'
             : result.message,
           seedPhrase: seedPhrase,
         };
@@ -638,13 +638,13 @@ export class WebauthnPlugin
       console.error(`Error during WebAuthn registration: ${error}`);
       ErrorHandler.handle(
         ErrorType.WEBAUTHN,
-        "WEBAUTHN_SIGNUP_ERROR",
-        error.message || "Error during WebAuthn registration",
+        'WEBAUTHN_SIGNUP_ERROR',
+        error.message || 'Error during WebAuthn registration',
         error,
       );
       return {
         success: false,
-        error: error.message || "Error during WebAuthn registration",
+        error: error.message || 'Error during WebAuthn registration',
       };
     }
   }
@@ -662,17 +662,17 @@ export class WebauthnPlugin
   ): Promise<SignUpResult> {
     try {
       if (!username) {
-        throw new Error("Username required");
+        throw new Error('Username required');
       }
 
       // Normalize and validate seed phrase
       const normalizedSeed = normalizeSeedPhrase(seedPhrase);
 
       if (!validateSeedPhrase(normalizedSeed)) {
-        throw new Error("Invalid seed phrase. Please check and try again.");
+        throw new Error('Invalid seed phrase. Please check and try again.');
       }
 
-      console.log("[webauthnPlugin] Importing account from seed phrase");
+      console.log('[webauthnPlugin] Importing account from seed phrase');
 
       // Use signUp with existing seed phrase
       return await this.signUp(username, {
@@ -683,13 +683,13 @@ export class WebauthnPlugin
       console.error(`Error importing from seed: ${error.message}`);
       ErrorHandler.handle(
         ErrorType.WEBAUTHN,
-        "WEBAUTHN_IMPORT_ERROR",
-        error.message || "Error importing from seed phrase",
+        'WEBAUTHN_IMPORT_ERROR',
+        error.message || 'Error importing from seed phrase',
         error,
       );
       return {
         success: false,
-        error: error.message || "Error importing from seed phrase",
+        error: error.message || 'Error importing from seed phrase',
       };
     }
   }
@@ -703,14 +703,14 @@ export class WebauthnPlugin
    */
   async getSeedPhrase(username: string): Promise<string | null> {
     console.warn(
-      "[webauthnPlugin] Seed phrases are not stored for security reasons",
+      '[webauthnPlugin] Seed phrases are not stored for security reasons',
     );
     console.warn(
-      "[webauthnPlugin] Users must save their seed phrase during registration",
+      '[webauthnPlugin] Users must save their seed phrase during registration',
     );
     return null;
   }
 }
 
 // Export only the interface, not the plugin itself again
-export type { WebauthnPluginInterface } from "./types";
+export type { WebauthnPluginInterface } from './types';

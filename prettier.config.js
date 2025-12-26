@@ -1,0 +1,21 @@
+export default {
+  // Standard JavaScript/TypeScript formatting
+  semi: true,
+  singleQuote: true,
+  trailingComma: 'all',
+  printWidth: 80,
+  tabWidth: 2,
+  useTabs: false,
+  bracketSpacing: true,
+  arrowParens: 'always',
+  endOfLine: 'lf',
+  quoteProps: 'as-needed',
+  jsxSingleQuote: true,
+  bracketSameLine: false,
+  embeddedLanguageFormatting: 'auto',
+  htmlWhitespaceSensitivity: 'css',
+  insertPragma: false,
+  requirePragma: false,
+  singleAttributePerLine: false,
+  vueIndentScriptAndStyle: false,
+};   

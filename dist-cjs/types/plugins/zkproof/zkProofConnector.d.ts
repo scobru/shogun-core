@@ -1,5 +1,5 @@
-import { ISEAPair } from "gun";
-import { ZkIdentityData, ZkProofGenerationOptions, ZkProofVerificationResult, ZkProofCredential, SemaphoreProof } from "./types";
+import { ISEAPair } from 'gun';
+import { ZkIdentityData, ZkProofGenerationOptions, ZkProofVerificationResult, ZkProofCredential, SemaphoreProof } from './types';
 /**
  * Connector for ZK-Proof operations using Semaphore protocol
  */

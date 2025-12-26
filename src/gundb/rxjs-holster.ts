@@ -1,5 +1,5 @@
-import { Observable } from "rxjs";
-import { distinctUntilChanged } from "rxjs/operators";
+import { Observable } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs/operators';
 
 /**
  * RxJS Integration for Holster
@@ -49,7 +49,7 @@ export class RxJSHolster {
         for (let i = 1; i < path.length; i++) {
           node = node.next(path[i]);
         }
-      } else if (typeof path === "string") {
+      } else if (typeof path === 'string') {
         node = this.holster.get(path);
       } else {
         node = path;
@@ -63,7 +63,7 @@ export class RxJSHolster {
         }
 
         // Remove Holster metadata before emitting
-        if (typeof data === "object" && data !== null) {
+        if (typeof data === 'object' && data !== null) {
           const cleanData = this.removeHolsterMeta(data);
           subscriber.next(cleanData as T);
         } else {
@@ -73,7 +73,7 @@ export class RxJSHolster {
 
       // Return teardown logic
       return () => {
-        if (unsub && typeof unsub === "function") {
+        if (unsub && typeof unsub === 'function') {
           unsub();
         } else {
           node.off();
@@ -104,13 +104,13 @@ export class RxJSHolster {
         return;
       }
 
-      const node = typeof path === "string" ? this.holster.get(path) : path;
+      const node = typeof path === 'string' ? this.holster.get(path) : path;
       const results: Record<string, T> = {};
 
       // Holster doesn't have .map(), so we use .on() and track keys manually
       const unsub = node.on((data: T, key?: string) => {
         // Skip internal keys
-        if (key === "_" || !data) return;
+        if (key === '_' || !data) return;
 
         const itemKey = key || String(Object.keys(results).length);
 
@@ -124,14 +124,14 @@ export class RxJSHolster {
         }
 
         const cleanData =
-          typeof data === "object" ? this.removeHolsterMeta(data) : data;
+          typeof data === 'object' ? this.removeHolsterMeta(data) : data;
         results[itemKey] = cleanData as T;
         subscriber.next(Object.values(results));
       });
 
       // Return teardown logic
       return () => {
-        if (unsub && typeof unsub === "function") {
+        if (unsub && typeof unsub === 'function') {
           unsub();
         } else {
           node.off();
@@ -159,7 +159,7 @@ export class RxJSHolster {
         });
       };
 
-      if (typeof path === "string" || Array.isArray(path)) {
+      if (typeof path === 'string' || Array.isArray(path)) {
         // Path-based put
         let node: any;
         if (Array.isArray(path)) {
@@ -185,7 +185,7 @@ export class RxJSHolster {
    */
   once<T>(path?: string | any): Observable<T> {
     let node: any;
-    if (typeof path === "string") {
+    if (typeof path === 'string') {
       node = this.holster.get(path);
     } else if (path) {
       node = path;
@@ -205,7 +205,7 @@ export class RxJSHolster {
           }
 
           const cleanData =
-            typeof data === "object" ? this.removeHolsterMeta(data) : data;
+            typeof data === 'object' ? this.removeHolsterMeta(data) : data;
           subscriber.next(cleanData as T);
           subscriber.complete();
         }
@@ -231,7 +231,7 @@ export class RxJSHolster {
   ): Observable<R> {
     // Convert all sources to observables
     const observables = sources.map((source) => {
-      if (typeof source === "string") {
+      if (typeof source === 'string') {
         return this.observe<T>(source);
       }
       return source as Observable<T>;
@@ -287,7 +287,7 @@ export class RxJSHolster {
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
       const user = this.holster.user();
-      if (typeof dataOrPath === "string") {
+      if (typeof dataOrPath === 'string') {
         user.get(dataOrPath).put(maybeData as T, (ack: any) => {
           if (callback) callback(ack);
           if (ack && ack.err) {
@@ -330,7 +330,7 @@ export class RxJSHolster {
     if (path) {
       return this.observe<T>(user.get(path));
     }
-    return this.observe<T>(user.get("~"));
+    return this.observe<T>(user.get('~'));
   }
 
   /**
@@ -339,7 +339,7 @@ export class RxJSHolster {
    * @returns Cleaned object without Holster metadata
    */
   private removeHolsterMeta<T>(obj: T): T {
-    if (!obj || typeof obj !== "object") return obj;
+    if (!obj || typeof obj !== 'object') return obj;
 
     // Create a clean copy
     const cleanObj: any = Array.isArray(obj) ? [] : {};
@@ -347,10 +347,10 @@ export class RxJSHolster {
     // Copy properties, skipping Holster metadata
     Object.keys(obj).forEach((key) => {
       // Skip Holster metadata
-      if (key === "_" || key.startsWith("~")) return;
+      if (key === '_' || key.startsWith('~')) return;
 
       const val = (obj as any)[key];
-      if (val && typeof val === "object") {
+      if (val && typeof val === 'object') {
         cleanObj[key] = this.removeHolsterMeta(val);
       } else {
         cleanObj[key] = val;

@@ -200,7 +200,7 @@ import type {
   IGunInstance,
   IGunChain,
   ISEAPair,
-} from "gun/types";
+} from 'gun/types';
 
 // Typed callback interfaces
 export interface GunAckCallback {

@@ -1,4 +1,4 @@
-import { TextEncoder, TextDecoder } from "util";
+import { TextEncoder, TextDecoder } from 'util';
 
 // Add jest types
 declare const jest: any;
@@ -7,33 +7,33 @@ declare const test: any;
 declare const expect: any;
 
 // Polyfill TextEncoder and TextDecoder for Node.js environment
-if (typeof global.TextEncoder === "undefined") {
+if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder as any;
 }
 
-if (typeof global.TextDecoder === "undefined") {
+if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder as any;
 }
 
 // Polyfill crypto for Node.js environment
-if (typeof global.crypto === "undefined") {
-  const crypto = require("crypto");
+if (typeof global.crypto === 'undefined') {
+  const crypto = require('crypto');
   global.crypto = {
     getRandomValues: (arr: any) => crypto.randomFillSync(arr),
     subtle: {
       generateKey: async () =>
         ({
-          type: "secret",
+          type: 'secret',
           extractable: true,
-          algorithm: { name: "AES-GCM" },
-          usages: ["encrypt", "decrypt"],
+          algorithm: { name: 'AES-GCM' },
+          usages: ['encrypt', 'decrypt'],
         }) as any,
       importKey: async () =>
         ({
-          type: "secret",
+          type: 'secret',
           extractable: true,
-          algorithm: { name: "AES-GCM" },
-          usages: ["encrypt", "decrypt"],
+          algorithm: { name: 'AES-GCM' },
+          usages: ['encrypt', 'decrypt'],
         }) as any,
       deriveBits: jest.fn().mockImplementation((params, key, bits) => {
         // Generate a valid private key for testing
@@ -100,5 +100,5 @@ if (typeof global.crypto === "undefined") {
 // Lasciamo che i test usino istanze reali di GunDB
 
 console.log(
-  "🔧 Integration Test Setup: GunDB mocking DISABLED - using real instances",
+  '🔧 Integration Test Setup: GunDB mocking DISABLED - using real instances',
 );

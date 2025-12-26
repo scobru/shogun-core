@@ -1,20 +1,20 @@
-import Gun from "gun/gun";
-import "gun/lib/then.js";
-import "gun/lib/radisk.js";
-import "gun/lib/store.js";
-import "gun/lib/rindexed.js";
-import "gun/lib/webrtc.js";
-import "gun/lib/yson.js";
-import SEA from "gun/sea";
+import Gun from 'gun/gun';
+import 'gun/lib/then.js';
+import 'gun/lib/radisk.js';
+import 'gun/lib/store.js';
+import 'gun/lib/rindexed.js';
+import 'gun/lib/webrtc.js';
+import 'gun/lib/yson.js';
+import SEA from 'gun/sea';
 
-import { ShogunCore, ShogunSDKConfig } from "../../index";
+import { ShogunCore, ShogunSDKConfig } from '../../index';
 
-describe("Robust Integration Tests - User Manager", () => {
+describe('Robust Integration Tests - User Manager', () => {
   let shogunCore: ShogunCore;
 
   beforeEach(() => {
     const config: ShogunSDKConfig = {
-      appToken: "test-token",
+      appToken: 'test-token',
       oauth: { enabled: false },
       peers: [],
     };
@@ -33,18 +33,18 @@ describe("Robust Integration Tests - User Manager", () => {
     }
   });
 
-  describe("Core Functionality Tests", () => {
-    it("should initialize ShogunCore correctly", () => {
+  describe('Core Functionality Tests', () => {
+    it('should initialize ShogunCore correctly', () => {
       expect(shogunCore).toBeDefined();
       expect(shogunCore.db).toBeDefined();
-      expect(typeof shogunCore.signUp).toBe("function");
-      expect(typeof shogunCore.login).toBe("function");
+      expect(typeof shogunCore.signUp).toBe('function');
+      expect(typeof shogunCore.login).toBe('function');
     });
 
-    it("should validate credentials correctly", () => {
-      const testUsername = "robust_test_" + Date.now();
-      const strongPassword = "TestPass123!@#";
-      const weakPassword = "123";
+    it('should validate credentials correctly', () => {
+      const testUsername = 'robust_test_' + Date.now();
+      const strongPassword = 'TestPass123!@#';
+      const weakPassword = '123';
 
       // Test valid credentials
       const validResult = shogunCore.db.validateSignupCredentials(
@@ -59,21 +59,21 @@ describe("Robust Integration Tests - User Manager", () => {
         weakPassword,
       );
       expect(weakResult.valid).toBe(false);
-      expect(weakResult.error).toContain("password");
+      expect(weakResult.error).toContain('password');
 
       // Test empty username
       const emptyUsernameResult = shogunCore.db.validateSignupCredentials(
-        "",
+        '',
         strongPassword,
       );
       expect(emptyUsernameResult.valid).toBe(false);
-      expect(emptyUsernameResult.error).toContain("username");
+      expect(emptyUsernameResult.error).toContain('username');
     });
 
-    it("should validate password strength correctly", () => {
-      const strongPassword = "TestPass123!@#";
-      const weakPassword = "123";
-      const mediumPassword = "testpass";
+    it('should validate password strength correctly', () => {
+      const strongPassword = 'TestPass123!@#';
+      const weakPassword = '123';
+      const mediumPassword = 'testpass';
 
       // Test strong password
       const strongResult =
@@ -90,8 +90,8 @@ describe("Robust Integration Tests - User Manager", () => {
       expect(mediumResult.valid).toBe(false);
     });
 
-    it("should check rate limiting correctly", () => {
-      const testUsername = "rate_test_" + Date.now();
+    it('should check rate limiting correctly', () => {
+      const testUsername = 'rate_test_' + Date.now();
 
       // First check should be allowed
       const firstCheck = shogunCore.db.checkRateLimit(testUsername);
@@ -103,8 +103,8 @@ describe("Robust Integration Tests - User Manager", () => {
     });
   });
 
-  describe("GunDB Integration Tests", () => {
-    it("should create a real GunDB instance", () => {
+  describe('GunDB Integration Tests', () => {
+    it('should create a real GunDB instance', () => {
       const gun = Gun({
         file: false,
         localStorage: false,
@@ -116,28 +116,28 @@ describe("Robust Integration Tests - User Manager", () => {
 
       expect(gun).toBeDefined();
       expect(gun.user).toBeDefined();
-      expect(typeof gun.user.create).toBe("function");
-      expect(typeof gun.user.auth).toBe("function");
+      expect(typeof gun.user.create).toBe('function');
+      expect(typeof gun.user.auth).toBe('function');
     });
 
-    it("should have working SEA encryption", () => {
-      const testData = "test message";
-      const testPass = "testpass";
+    it('should have working SEA encryption', () => {
+      const testData = 'test message';
+      const testPass = 'testpass';
 
       // Test SEA encryption/decryption
       const encrypted = SEA.encrypt(testData, testPass);
       expect(encrypted).toBeDefined();
-      expect(typeof encrypted).toBe("string");
+      expect(typeof encrypted).toBe('string');
 
       const decrypted = SEA.decrypt(encrypted, testPass);
       expect(decrypted).toBe(testData);
     });
   });
 
-  describe("Error Handling Tests", () => {
-    it("should handle invalid configurations gracefully", () => {
+  describe('Error Handling Tests', () => {
+    it('should handle invalid configurations gracefully', () => {
       const invalidConfig = {
-        appToken: "",
+        appToken: '',
         oauth: { enabled: false },
         peers: [],
       };
@@ -148,35 +148,35 @@ describe("Robust Integration Tests - User Manager", () => {
       }).not.toThrow();
     });
 
-    it("should handle validation errors gracefully", () => {
-      const result = shogunCore.db.validateSignupCredentials("", "");
+    it('should handle validation errors gracefully', () => {
+      const result = shogunCore.db.validateSignupCredentials('', '');
       expect(result.valid).toBe(false);
       expect(result.error).toBeDefined();
-      expect(typeof result.error).toBe("string");
+      expect(typeof result.error).toBe('string');
     });
   });
 
-  describe("Bug Fix Verification", () => {
-    it("should have fixed the checkRateLimit bug", () => {
+  describe('Bug Fix Verification', () => {
+    it('should have fixed the checkRateLimit bug', () => {
       // Test that checkRateLimit returns the correct object structure
-      const rateLimitResult = shogunCore.db.checkRateLimit("testuser");
+      const rateLimitResult = shogunCore.db.checkRateLimit('testuser');
 
-      expect(rateLimitResult).toHaveProperty("allowed");
-      expect(typeof rateLimitResult.allowed).toBe("boolean");
+      expect(rateLimitResult).toHaveProperty('allowed');
+      expect(typeof rateLimitResult.allowed).toBe('boolean');
       expect(rateLimitResult.allowed).toBe(true);
 
       // Test that validateSignupCredentials works correctly
       const validationResult = shogunCore.db.validateSignupCredentials(
-        "testuser",
-        "TestPass123!@#",
+        'testuser',
+        'TestPass123!@#',
       );
 
-      expect(validationResult).toHaveProperty("valid");
-      expect(typeof validationResult.valid).toBe("boolean");
+      expect(validationResult).toHaveProperty('valid');
+      expect(typeof validationResult.valid).toBe('boolean');
       expect(validationResult.valid).toBe(true);
 
       console.log(
-        "✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly",
+        '✅ Bug fix verified: checkRateLimit and validateSignupCredentials work correctly',
       );
     });
   });

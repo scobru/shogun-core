@@ -40,10 +40,10 @@ class ZkCredentials {
                 type: credentialData.type,
                 claim: credentialData.claim,
                 proof: {
-                    merkleTreeRoot: "",
-                    nullifierHash: "",
+                    merkleTreeRoot: '',
+                    nullifierHash: '',
                     signal: credentialHash,
-                    externalNullifier: "",
+                    externalNullifier: '',
                     proof: [],
                 },
                 credentialHash,
@@ -55,14 +55,14 @@ class ZkCredentials {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "CREDENTIAL_CREATION_FAILED", `Failed to create verifiable credential: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'CREDENTIAL_CREATION_FAILED', `Failed to create verifiable credential: ${error.message}`, error);
             throw error;
         }
     }
     /**
      * Prove an attribute about yourself without revealing the underlying data
      */
-    async proveAttribute(identity, credentialData, groupId = "verified-credentials") {
+    async proveAttribute(identity, credentialData, groupId = 'verified-credentials') {
         try {
             const { credential, credentialHash } = this.createCredential(identity, credentialData);
             // Convert claim to signal
@@ -79,8 +79,8 @@ class ZkCredentials {
             // Generate ZK proof
             // Note: This requires circuit files to be available
             const fullProof = await (0, proof_1.generateProof)(identity, group, signalBigInt, externalNullifier, {
-                wasmFilePath: "./circuits/semaphore/20/semaphore.wasm",
-                zkeyFilePath: "./circuits/semaphore/20/semaphore.zkey",
+                wasmFilePath: './circuits/semaphore/20/semaphore.wasm',
+                zkeyFilePath: './circuits/semaphore/20/semaphore.zkey',
             });
             return {
                 type: credentialData.type,
@@ -97,7 +97,7 @@ class ZkCredentials {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "ATTRIBUTE_PROOF_FAILED", `Failed to prove attribute: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'ATTRIBUTE_PROOF_FAILED', `Failed to prove attribute: ${error.message}`, error);
             throw error;
         }
     }
@@ -115,7 +115,7 @@ class ZkCredentials {
             };
         }
         catch (error) {
-            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, "CREDENTIAL_VERIFICATION_FAILED", `Failed to verify credential: ${error.message}`, error);
+            errorHandler_1.ErrorHandler.handle(errorHandler_1.ErrorType.ENCRYPTION, 'CREDENTIAL_VERIFICATION_FAILED', `Failed to verify credential: ${error.message}`, error);
             return {
                 verified: false,
                 error: error.message,
@@ -136,7 +136,7 @@ class ZkCredentials {
     /**
      * Add an identity to a credentials group
      */
-    addToCredentialGroup(identity, groupId = "verified-credentials") {
+    addToCredentialGroup(identity, groupId = 'verified-credentials') {
         const group = this.getOrCreateGroup(groupId);
         if (group.indexOf(identity.commitment) === -1) {
             group.addMember(identity.commitment);
@@ -165,13 +165,13 @@ class ZkCredentials {
     /**
      * Prove citizenship without revealing country
      */
-    async proveCitizenship(identity, country, region = "EU") {
+    async proveCitizenship(identity, country, region = 'EU') {
         return this.proveAttribute(identity, {
             type: CredentialType.CITIZENSHIP,
             claim: `Citizen of ${region}`,
             privateData: {
                 country,
-                passportNumber: "hidden",
+                passportNumber: 'hidden',
             },
         });
     }
@@ -192,7 +192,7 @@ class ZkCredentials {
     /**
      * Prove income range without revealing exact amount
      */
-    async proveIncome(identity, amount, minimumRequired, currency = "USD") {
+    async proveIncome(identity, amount, minimumRequired, currency = 'USD') {
         if (amount < minimumRequired) {
             throw new Error(`Income ${amount} is less than required ${minimumRequired}`);
         }

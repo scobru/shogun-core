@@ -15,7 +15,7 @@ const ethers_1 = require("ethers");
 class NostrSigner {
     constructor(nostrConnector) {
         this.credentials = new Map();
-        this.MESSAGE_TO_SIGN = "I Love Shogun!"; // Same as normal approach
+        this.MESSAGE_TO_SIGN = 'I Love Shogun!'; // Same as normal approach
         this.nostrConnector = nostrConnector || new nostrConnector_1.NostrConnector();
     }
     /**
@@ -43,7 +43,7 @@ class NostrSigner {
             return signingCredential;
         }
         catch (error) {
-            console.error("Error creating Nostr signing credential:", error);
+            console.error('Error creating Nostr signing credential:', error);
             throw new Error(`Failed to create Nostr signing credential: ${error.message}`);
         }
     }
@@ -52,7 +52,7 @@ class NostrSigner {
      */
     validateAddress(address) {
         if (!address) {
-            throw new Error("Address not provided");
+            throw new Error('Address not provided');
         }
         try {
             const normalizedAddress = String(address).trim();
@@ -60,13 +60,13 @@ class NostrSigner {
             if (!/^(npub1|[0-9a-f]{64}|bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/.test(normalizedAddress)) {
                 // More lenient validation for Nostr addresses
                 if (normalizedAddress.length < 10) {
-                    throw new Error("Invalid Nostr/Bitcoin address format");
+                    throw new Error('Invalid Nostr/Bitcoin address format');
                 }
             }
             return normalizedAddress;
         }
         catch (error) {
-            throw new Error("Invalid Nostr/Bitcoin address provided");
+            throw new Error('Invalid Nostr/Bitcoin address provided');
         }
     }
     /**
@@ -78,29 +78,29 @@ class NostrSigner {
         // SAME LOGIC as NostrConnector.generateDeterministicSignature
         const baseString = `${address}_${this.MESSAGE_TO_SIGN}_shogun_deterministic`;
         // Simple hash function to create a deterministic signature
-        let hash = "";
+        let hash = '';
         let runningValue = 0;
         for (let i = 0; i < baseString.length; i++) {
             const charCode = baseString.charCodeAt(i);
             runningValue = (runningValue * 31 + charCode) & 0xffffffff;
             if (i % 4 === 3) {
-                hash += runningValue.toString(16).padStart(8, "0");
+                hash += runningValue.toString(16).padStart(8, '0');
             }
         }
         // Ensure we have exactly 128 characters (64 bytes in hex)
         while (hash.length < 128) {
             runningValue = (runningValue * 31 + hash.length) & 0xffffffff;
-            hash += runningValue.toString(16).padStart(8, "0");
+            hash += runningValue.toString(16).padStart(8, '0');
         }
         // Ensure the result is exactly 128 characters and contains only valid hex characters
         let deterministicSignature = hash.substring(0, 128);
         // Double-check that it's a valid hex string
         deterministicSignature = deterministicSignature
             .toLowerCase()
-            .replace(/[^0-9a-f]/g, "0");
+            .replace(/[^0-9a-f]/g, '0');
         // Ensure it's exactly 128 characters
         if (deterministicSignature.length < 128) {
-            deterministicSignature = deterministicSignature.padEnd(128, "0");
+            deterministicSignature = deterministicSignature.padEnd(128, '0');
         }
         else if (deterministicSignature.length > 128) {
             deterministicSignature = deterministicSignature.substring(0, 128);
@@ -112,17 +112,17 @@ class NostrSigner {
      */
     async generatePassword(signature) {
         if (!signature) {
-            throw new Error("Invalid signature");
+            throw new Error('Invalid signature');
         }
         try {
             // SAME LOGIC as NostrConnector.generatePassword
-            const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, "");
+            const normalizedSig = signature.toLowerCase().replace(/[^a-f0-9]/g, '');
             const passwordHash = ethers_1.ethers.sha256(ethers_1.ethers.toUtf8Bytes(normalizedSig));
             return passwordHash;
         }
         catch (error) {
-            console.error("Error generating password:", error);
-            throw new Error("Failed to generate password from signature");
+            console.error('Error generating password:', error);
+            throw new Error('Failed to generate password from signature');
         }
     }
     /**
@@ -144,7 +144,7 @@ class NostrSigner {
                 return signature;
             }
             catch (error) {
-                console.error("Nostr authentication error:", error);
+                console.error('Nostr authentication error:', error);
                 throw error;
             }
         };
@@ -179,7 +179,7 @@ class NostrSigner {
             };
         }
         catch (error) {
-            console.error("Error deriving keys from Nostr credential:", error);
+            console.error('Error deriving keys from Nostr credential:', error);
             throw error;
         }
     }
@@ -233,7 +233,7 @@ class NostrSigner {
             });
         }
         catch (error) {
-            console.error("Error creating Gun user:", error);
+            console.error('Error creating Gun user:', error);
             return { success: false, error: error.message };
         }
     }
@@ -258,10 +258,10 @@ class NostrSigner {
                 m: message,
                 s: signature,
             };
-            return "SEA" + JSON.stringify(seaSignature);
+            return 'SEA' + JSON.stringify(seaSignature);
         }
         catch (error) {
-            console.error("Error signing with derived keys:", error);
+            console.error('Error signing with derived keys:', error);
             throw error;
         }
     }

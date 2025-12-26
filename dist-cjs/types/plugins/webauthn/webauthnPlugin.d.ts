@@ -1,8 +1,8 @@
-import { BasePlugin } from "../base";
-import { ShogunCore } from "../../core";
-import { WebAuthnSigningCredential } from "./webauthnSigner";
-import { WebAuthnCredentials, CredentialResult, WebauthnPluginInterface, WebAuthnUniformCredentials } from "./types";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
+import { BasePlugin } from '../base';
+import { ShogunCore } from '../../core';
+import { WebAuthnSigningCredential } from './webauthnSigner';
+import { WebAuthnCredentials, CredentialResult, WebauthnPluginInterface, WebAuthnUniformCredentials } from './types';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
@@ -176,4 +176,4 @@ export declare class WebauthnPlugin extends BasePlugin implements WebauthnPlugin
      */
     getSeedPhrase(username: string): Promise<string | null>;
 }
-export type { WebauthnPluginInterface } from "./types";
+export type { WebauthnPluginInterface } from './types';

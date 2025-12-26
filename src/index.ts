@@ -1,42 +1,22 @@
 // Import polyfills FIRST before any other imports
 // This ensures Buffer and other Node.js polyfills are available
-import "./polyfills";
-
-import { ShogunCore } from "./core";
-
-import {
-  IGunUserInstance,
-  IGunInstance,
-  GunDataEventData,
-  GunPeerEventData,
-  DeriveOptions,
-} from "./gundb/db";
-
-import { RxJS, crypto, derive, GunErrors, DataBase } from "./gundb/db";
-import { DataBaseHolster } from "./gundb/db-holster";
-import { RxJSHolster } from "./gundb/rxjs-holster";
-
-// Import improved types
-import { TypedGunOperationResult, TypedAuthResult } from "./gundb";
+import './polyfills';
 
 // Gun and SEA imports removed - users should import them directly from 'gun' package
 // This prevents bundling issues in build systems like Vite
 
-export * from "./utils/errorHandler";
+export * from './utils/errorHandler';
 
-export * from "./plugins";
+export * from './plugins';
 
-export * from "./interfaces/shogun";
+export * from './interfaces/shogun';
 
-export * from "./gundb/gun-es";
+export * from './gundb/gun-es';
 
-// export * from "./config/simplified-config"; // Deprecated - removed to avoid Gun.js import issues
+export type * from './interfaces/plugin';
 
 // Type alias for backward compatibility
-import type { ShogunCoreConfig } from "./interfaces/shogun";
-export type ShogunSDKConfig = ShogunCoreConfig;
-
-export type * from "./interfaces/plugin";
+export type { ShogunCoreConfig as ShogunSDKConfig } from './interfaces/shogun';
 
 export type {
   IGunUserInstance,
@@ -46,18 +26,14 @@ export type {
   DeriveOptions,
   TypedGunOperationResult,
   TypedAuthResult,
-};
+} from './gundb';
 
-export {
-  ShogunCore,
-  RxJS,
-  crypto,
-  derive,
-  GunErrors,
-  DataBase,
-  DataBaseHolster,
-  RxJSHolster,
-};
+export { ShogunCore } from './core';
+
+export { RxJS, crypto, derive, GunErrors, DataBase } from './gundb/db';
+
+export { DataBaseHolster } from './gundb/db-holster';
+export { RxJSHolster } from './gundb/rxjs-holster';
 
 // Note: Gun and SEA are not exported to avoid bundling issues
 // Users should import Gun and SEA directly from the 'gun' package
@@ -71,10 +47,10 @@ export {
   deriveCredentialsFromMnemonic,
   formatSeedPhrase,
   normalizeSeedPhrase,
-} from "./utils/seedPhrase";
+} from './utils/seedPhrase';
 
 // Export storage
-export { ShogunStorage } from "./storage/storage";
+export { ShogunStorage } from './storage/storage';
 
 // Export polyfill utilities
-export { setBufferPolyfill } from "./polyfills";
+export { setBufferPolyfill } from './polyfills';

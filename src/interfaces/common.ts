@@ -43,7 +43,7 @@ export interface BaseAuthResult extends BaseResult {
 /**
  * Common log levels
  */
-export type LogLevel = "info" | "error" | "debug" | "warn";
+export type LogLevel = 'info' | 'error' | 'debug' | 'warn';
 
 /**
  * Base log message

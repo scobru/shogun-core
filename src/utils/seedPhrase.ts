@@ -7,10 +7,10 @@ import {
   generateMnemonic,
   mnemonicToSeedSync,
   validateMnemonic,
-} from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex } from "@noble/hashes/utils";
+} from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
 
 /**
  * Generate a new 12-word BIP39 mnemonic seed phrase
@@ -41,7 +41,7 @@ export function validateSeedPhrase(mnemonic: string): boolean {
  */
 export function mnemonicToSeed(mnemonic: string, username: string): Uint8Array {
   if (!validateSeedPhrase(mnemonic)) {
-    throw new Error("Invalid mnemonic seed phrase");
+    throw new Error('Invalid mnemonic seed phrase');
   }
 
   // Use username as additional entropy in the passphrase
@@ -86,8 +86,8 @@ export function deriveCredentialsFromMnemonic(
  * @returns {string} Formatted seed phrase with numbers
  */
 export function formatSeedPhrase(mnemonic: string): string {
-  const words = mnemonic.split(" ");
-  return words.map((word, index) => `${index + 1}. ${word}`).join("\n");
+  const words = mnemonic.split(' ');
+  return words.map((word, index) => `${index + 1}. ${word}`).join('\n');
 }
 
 /**
@@ -99,6 +99,6 @@ export function normalizeSeedPhrase(input: string): string {
   return input
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/[^\w\s]/g, ""); // Remove special characters
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/[^\w\s]/g, ''); // Remove special characters
 }

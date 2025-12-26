@@ -16,7 +16,7 @@ export class ShogunStorage {
     this.store = new Map<string, any>();
     this.silent = silent;
 
-    this.isTestMode = process.env.NODE_ENV === "test";
+    this.isTestMode = process.env.NODE_ENV === 'test';
     this.useLocalStorage = false;
 
     // In test mode, don't use localStorage to avoid test pollution
@@ -26,27 +26,27 @@ export class ShogunStorage {
       return;
     }
 
-    if (typeof localStorage !== "undefined") {
+    if (typeof localStorage !== 'undefined') {
       try {
         // Probe localStorage without polluting expectations in tests
-        const testKey = "_shogun_test";
+        const testKey = '_shogun_test';
         localStorage.setItem(testKey, testKey);
         localStorage.removeItem(testKey);
         this.useLocalStorage = true;
         if (!this.silent) {
-          console.log("ShogunStorage: localStorage enabled");
+          console.log('ShogunStorage: localStorage enabled');
         }
 
-        const storedPair = localStorage.getItem("shogun_keypair");
+        const storedPair = localStorage.getItem('shogun_keypair');
         if (storedPair) {
-          this.store.set("keypair", JSON.parse(storedPair));
+          this.store.set('keypair', JSON.parse(storedPair));
         }
       } catch (error) {
         this.useLocalStorage = false;
         // Silence logs in tests; tests expect no console.error during constructor
         if (!this.silent) {
           console.log(
-            "ShogunStorage: localStorage error:",
+            'ShogunStorage: localStorage error:',
             (error as Error).message,
           );
         }
@@ -67,7 +67,7 @@ export class ShogunStorage {
    * @returns The keypair or null if not found
    */
   getPairSync(): any {
-    return this.store.get("keypair") || null;
+    return this.store.get('keypair') || null;
   }
 
   /**
@@ -75,15 +75,15 @@ export class ShogunStorage {
    * @param pair - The keypair to store
    */
   async setPair(pair: any): Promise<void> {
-    this.store.set("keypair", pair);
+    this.store.set('keypair', pair);
 
     // Also save to localStorage in browser environments
     if (this.useLocalStorage) {
       try {
-        localStorage.setItem("shogun_keypair", JSON.stringify(pair));
+        localStorage.setItem('shogun_keypair', JSON.stringify(pair));
       } catch (error) {
         if (!this.isTestMode) {
-          console.error("Error saving data to localStorage:", error);
+          console.error('Error saving data to localStorage:', error);
         }
       }
     }
@@ -98,10 +98,10 @@ export class ShogunStorage {
     // Also clear localStorage in browser environments
     if (this.useLocalStorage) {
       try {
-        localStorage.removeItem("shogun_keypair");
+        localStorage.removeItem('shogun_keypair');
       } catch (error) {
         if (!this.isTestMode) {
-          console.error("Error removing data from localStorage:", error);
+          console.error('Error removing data from localStorage:', error);
         }
       }
     }
@@ -133,7 +133,7 @@ export class ShogunStorage {
       try {
         localStorage.setItem(
           key,
-          typeof value === "string" ? value : JSON.stringify(value),
+          typeof value === 'string' ? value : JSON.stringify(value),
         );
       } catch (error) {
         if (!this.isTestMode) {

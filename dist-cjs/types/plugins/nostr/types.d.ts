@@ -1,5 +1,5 @@
-import { BaseConfig, BaseResult, BaseCacheEntry } from "../../interfaces/common";
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
+import { BaseConfig, BaseResult, BaseCacheEntry } from '../../interfaces/common';
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 /**
  * Result of connection attempt
  */
@@ -7,7 +7,7 @@ export interface ConnectionResult extends BaseResult {
     address?: string;
     username?: string;
     randomPassword?: string;
-    extensionType?: "alby" | "nostr" | "manual";
+    extensionType?: 'alby' | 'nostr' | 'manual';
 }
 /**
  * Structure for credentials generated via Bitcoin wallet
@@ -55,7 +55,7 @@ export interface SignatureCache extends BaseCacheEntry<string> {
  */
 export interface NostrConnectorConfig extends BaseConfig {
     cacheDuration?: number;
-    network?: "mainnet" | "testnet";
+    network?: 'mainnet' | 'testnet';
     useApi?: boolean;
     apiUrl?: string;
 }
@@ -66,7 +66,7 @@ export interface NostrConnectorKeyPair {
     privateKey: string;
     publicKey: string;
     address: string;
-    type: "legacy" | "segwit" | "taproot" | "nostr";
+    type: 'legacy' | 'segwit' | 'taproot' | 'nostr';
 }
 /**
  * Interface for the Bitcoin wallet plugin
@@ -82,7 +82,7 @@ export interface NostrConnectorPluginInterface {
      * @param type Type of wallet to connect to
      * @returns Promise with the connection result
      */
-    connectBitcoinWallet(type?: "alby" | "nostr" | "manual"): Promise<ConnectionResult>;
+    connectBitcoinWallet(type?: 'alby' | 'nostr' | 'manual'): Promise<ConnectionResult>;
     /**
      * Generate credentials using a Bitcoin wallet
      * @param address Bitcoin address

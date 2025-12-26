@@ -10,7 +10,7 @@ exports.NetworkError = exports.MultipleAuthError = exports.TimeoutError = export
 class GunError extends Error {
     constructor(message) {
         super(message);
-        this.name = "GunError";
+        this.name = 'GunError';
     }
 }
 exports.GunError = GunError;
@@ -20,7 +20,7 @@ exports.GunError = GunError;
 class AuthError extends GunError {
     constructor(message) {
         super(message);
-        this.name = "AuthError";
+        this.name = 'AuthError';
     }
 }
 exports.AuthError = AuthError;
@@ -28,9 +28,9 @@ exports.AuthError = AuthError;
  * Invalid credentials error
  */
 class InvalidCredentials extends AuthError {
-    constructor(message = "Credenziali non valide") {
+    constructor(message = 'Credenziali non valide') {
         super(message);
-        this.name = "InvalidCredentials";
+        this.name = 'InvalidCredentials';
     }
 }
 exports.InvalidCredentials = InvalidCredentials;
@@ -38,9 +38,9 @@ exports.InvalidCredentials = InvalidCredentials;
  * User already exists error
  */
 class UserExists extends AuthError {
-    constructor(message = "Utente già esistente") {
+    constructor(message = 'Utente già esistente') {
         super(message);
-        this.name = "UserExists";
+        this.name = 'UserExists';
     }
 }
 exports.UserExists = UserExists;
@@ -50,7 +50,7 @@ exports.UserExists = UserExists;
 class TimeoutError extends GunError {
     constructor(message = "Timeout durante l'operazione") {
         super(message);
-        this.name = "TimeoutError";
+        this.name = 'TimeoutError';
     }
 }
 exports.TimeoutError = TimeoutError;
@@ -58,9 +58,9 @@ exports.TimeoutError = TimeoutError;
  * Multiple authentication error
  */
 class MultipleAuthError extends AuthError {
-    constructor(message = "Autenticazione multipla in corso") {
+    constructor(message = 'Autenticazione multipla in corso') {
         super(message);
-        this.name = "MultipleAuthError";
+        this.name = 'MultipleAuthError';
     }
 }
 exports.MultipleAuthError = MultipleAuthError;

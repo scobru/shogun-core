@@ -1,12 +1,12 @@
-import { ShogunCore } from "../../index";
-import { CorePlugins, ShogunSDKConfig } from "../../interfaces/shogun";
+import { ShogunCore } from '../../index';
+import { CorePlugins, ShogunSDKConfig } from '../../interfaces/shogun';
 // OAuth plugin removed - no longer supported
-import { Web3ConnectorPlugin } from "../../plugins/web3/web3ConnectorPlugin";
-import { NostrConnectorPlugin } from "../../plugins/nostr/nostrConnectorPlugin";
+import { Web3ConnectorPlugin } from '../../plugins/web3/web3ConnectorPlugin';
+import { NostrConnectorPlugin } from '../../plugins/nostr/nostrConnectorPlugin';
 
 // Mock GunDB layer with user recall returning an object supporting put()
-jest.mock("../../gundb", () => {
-  const originalGundb = jest.requireActual("../../gundb");
+jest.mock('../../gundb', () => {
+  const originalGundb = jest.requireActual('../../gundb');
 
   // Create a mock Gun instance that matches the expected interface
   const mockGunInstance = {
@@ -14,7 +14,7 @@ jest.mock("../../gundb", () => {
       recall: jest.fn(() => ({
         put: jest.fn(),
         _: {
-          sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          sea: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' },
         },
       })),
       create: jest.fn(),
@@ -47,30 +47,30 @@ jest.mock("../../gundb", () => {
       on: jest.fn(),
       isLoggedIn: jest.fn().mockReturnValue(false),
       logout: jest.fn(),
-      login: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      login: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       loginWithPair: jest.fn(),
-      signUp: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      signUp: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       updateUserAlias: jest.fn().mockResolvedValue({ success: true }),
       clearGunStorage: jest.fn(),
       initialize: jest.fn(),
-      getCurrentUser: jest.fn().mockReturnValue({ pub: "pub" }),
+      getCurrentUser: jest.fn().mockReturnValue({ pub: 'pub' }),
     })),
     DataBase: jest.fn().mockImplementation(() => ({
       user: {
         recall: jest.fn(() => ({
           put: jest.fn(),
-          _: { sea: { pub: "pub" } },
+          _: { sea: { pub: 'pub' } },
         })),
       },
       isLoggedIn: jest.fn().mockReturnValue(false),
       logout: jest.fn(),
-      login: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      login: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       loginWithPair: jest.fn(),
-      signUp: jest.fn().mockResolvedValue({ success: true, userPub: "pub" }),
+      signUp: jest.fn().mockResolvedValue({ success: true, userPub: 'pub' }),
       updateUserAlias: jest.fn().mockResolvedValue({ success: true }),
       clearGunStorage: jest.fn(),
       initialize: jest.fn(),
-      getCurrentUser: jest.fn().mockReturnValue({ pub: "pub" }),
+      getCurrentUser: jest.fn().mockReturnValue({ pub: 'pub' }),
       on: jest.fn(),
       once: jest.fn(),
       off: jest.fn(),
@@ -91,17 +91,17 @@ jest.mock("../../gundb", () => {
 // OAuth plugin removed - no longer supported in current version
 
 // Web3 connector mock
-jest.mock("../../plugins/web3/web3Connector", () => {
+jest.mock('../../plugins/web3/web3Connector', () => {
   return {
     Web3Connector: class MockWeb3Connector {
       isAvailable() {
         return true;
       }
       async connectMetaMask() {
-        return { success: true, address: "0xabc" };
+        return { success: true, address: '0xabc' };
       }
       async generateCredentials(_address: string) {
-        return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" };
+        return { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' };
       }
       cleanup() {}
       setCustomProvider() {}
@@ -112,24 +112,24 @@ jest.mock("../../plugins/web3/web3Connector", () => {
         return {} as any;
       }
       async generatePassword(_signature: string) {
-        return "password";
+        return 'password';
       }
       async verifySignature(_message: string, _signature: string) {
-        return "0xabc";
+        return '0xabc';
       }
       async login(_address: string) {
-        return { success: true, userPub: "pub" };
+        return { success: true, userPub: 'pub' };
       }
       async signUp(_address: string) {
-        return { success: true, userPub: "pub" };
+        return { success: true, userPub: 'pub' };
       }
       async setupConsistentOneshotSigning(_address: string) {
         return {
-          credential: { id: "id", pub: "pub" },
-          authenticator: async (_data: any) => "signature",
-          gunUser: { success: true, userPub: "pub" },
+          credential: { id: 'id', pub: 'pub' },
+          authenticator: async (_data: any) => 'signature',
+          gunUser: { success: true, userPub: 'pub' },
           username: _address,
-          password: "password",
+          password: 'password',
         };
       }
     },
@@ -137,14 +137,14 @@ jest.mock("../../plugins/web3/web3Connector", () => {
 });
 
 // Nostr connector mock
-jest.mock("../../plugins/nostr/nostrConnector", () => {
+jest.mock('../../plugins/nostr/nostrConnector', () => {
   return {
-    MESSAGE_TO_SIGN: "Please sign to authenticate",
+    MESSAGE_TO_SIGN: 'Please sign to authenticate',
     deriveNostrKeys: async () => ({
-      pub: "pub",
-      priv: "priv",
-      epub: "epub",
-      epriv: "epriv",
+      pub: 'pub',
+      priv: 'priv',
+      epub: 'epub',
+      epriv: 'epriv',
     }),
     NostrConnector: class MockNostrConnector {
       isAvailable() {
@@ -154,10 +154,10 @@ jest.mock("../../plugins/nostr/nostrConnector", () => {
         return true;
       }
       async connectWallet(_type: string) {
-        return { success: true, address: "npub123" };
+        return { success: true, address: 'npub123' };
       }
       async requestSignature(_address: string, _message: string) {
-        return "signature";
+        return 'signature';
       }
       async generateCredentials(
         address: string,
@@ -166,7 +166,7 @@ jest.mock("../../plugins/nostr/nostrConnector", () => {
       ) {
         return {
           username: address,
-          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          key: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' },
           message,
           signature,
         };
@@ -175,7 +175,7 @@ jest.mock("../../plugins/nostr/nostrConnector", () => {
         return true;
       }
       generatePassword() {
-        return "password";
+        return 'password';
       }
       cleanup() {}
       clearSignatureCache() {}
@@ -184,7 +184,7 @@ jest.mock("../../plugins/nostr/nostrConnector", () => {
 });
 
 // WebAuthn mocks
-jest.mock("../../plugins/webauthn/webauthn", () => {
+jest.mock('../../plugins/webauthn/webauthn', () => {
   return {
     Webauthn: class MockWebauthn {
       constructor(_gun: any) {}
@@ -194,7 +194,7 @@ jest.mock("../../plugins/webauthn/webauthn", () => {
       async generateCredentials(_username: string) {
         return {
           success: true,
-          key: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+          key: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' },
         };
       }
       async createAccount() {
@@ -211,21 +211,21 @@ jest.mock("../../plugins/webauthn/webauthn", () => {
   };
 });
 
-jest.mock("../../plugins/webauthn/webauthnSigner", () => {
+jest.mock('../../plugins/webauthn/webauthnSigner', () => {
   return {
     WebAuthnSigner: class MockWebAuthnSigner {
       constructor(_webauthn: any) {}
       async createSigningCredential(_username: string) {
-        return { id: "id", pub: "pub", hashedCredentialId: "hid" } as any;
+        return { id: 'id', pub: 'pub', hashedCredentialId: 'hid' } as any;
       }
       createAuthenticator(_id: string) {
         return async (_data: any) => ({}) as any;
       }
       async createDerivedKeyPair() {
-        return { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" };
+        return { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' };
       }
       async signWithDerivedKeys() {
-        return "signature";
+        return 'signature';
       }
       getCredential() {
         return undefined;
@@ -237,19 +237,19 @@ jest.mock("../../plugins/webauthn/webauthnSigner", () => {
         return true;
       }
       async createGunUser() {
-        return { success: true, userPub: "pub" };
+        return { success: true, userPub: 'pub' };
       }
       getGunUserPub() {
-        return "pub";
+        return 'pub';
       }
       getHashedCredentialId() {
-        return "hid";
+        return 'hid';
       }
       async verifyConsistency() {
         return {
           consistent: true,
-          actualUserPub: "pub",
-          expectedUserPub: "pub",
+          actualUserPub: 'pub',
+          expectedUserPub: 'pub',
         };
       }
     },
@@ -257,7 +257,7 @@ jest.mock("../../plugins/webauthn/webauthnSigner", () => {
 });
 
 // Tests
-describe("Plugin end-to-end flows", () => {
+describe('Plugin end-to-end flows', () => {
   let config: ShogunSDKConfig;
   let core: ShogunCore;
   const originalWindow = global.window as any;
@@ -269,7 +269,7 @@ describe("Plugin end-to-end flows", () => {
         recall: jest.fn(() => ({
           put: jest.fn(),
           _: {
-            sea: { pub: "pub", priv: "priv", epub: "epub", epriv: "epriv" },
+            sea: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' },
           },
         })),
         create: jest.fn(),
@@ -314,31 +314,31 @@ describe("Plugin end-to-end flows", () => {
     (global as any).window = originalWindow;
   });
 
-  it("Web3 login emits auth:login and succeeds", async () => {
+  it('Web3 login emits auth:login and succeeds', async () => {
     const loginSpy = jest.fn();
-    core.on("auth:login", loginSpy as any);
+    core.on('auth:login', loginSpy as any);
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
-    const res = await web3.login("0xAbC");
+    const res = await web3.login('0xAbC');
     expect(res.success).toBe(true);
     expect(loginSpy).toHaveBeenCalled();
     const evt = (loginSpy.mock.calls[0] || [])[0];
-    expect(evt?.method).toBe("web3");
+    expect(evt?.method).toBe('web3');
   });
 
-  it("Web3 signUp succeeds", async () => {
+  it('Web3 signUp succeeds', async () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3)!;
-    const res = await web3.signUp("0xabc");
+    const res = await web3.signUp('0xabc');
     expect(res.success).toBe(true);
   });
 
-  it("Nostr login emits auth:login and succeeds", async () => {
+  it('Nostr login emits auth:login and succeeds', async () => {
     const loginSpy = jest.fn();
-    core.on("auth:login", loginSpy as any);
+    core.on('auth:login', loginSpy as any);
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr)!;
 
-    const testPromise = nostr.login("npub123");
+    const testPromise = nostr.login('npub123');
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Test timeout")), 5000),
+      setTimeout(() => reject(new Error('Test timeout')), 5000),
     );
 
     try {
@@ -346,21 +346,21 @@ describe("Plugin end-to-end flows", () => {
       expect(res.success).toBe(true);
       expect(loginSpy).toHaveBeenCalled();
       const methods = loginSpy.mock.calls.map((c: any[]) => c[0]?.method);
-      expect(methods).toEqual(expect.arrayContaining(["nostr"]));
+      expect(methods).toEqual(expect.arrayContaining(['nostr']));
     } catch (error) {
-      console.warn("Nostr login test skipped due to timeout or error:", error);
+      console.warn('Nostr login test skipped due to timeout or error:', error);
       expect(true).toBe(true);
     }
   }, 10000);
 
-  it("Nostr signUp emits auth:signup and succeeds", async () => {
+  it('Nostr signUp emits auth:signup and succeeds', async () => {
     const signupSpy = jest.fn();
-    core.on("auth:signup", signupSpy as any);
+    core.on('auth:signup', signupSpy as any);
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr)!;
 
-    const testPromise = nostr.signUp("npub123");
+    const testPromise = nostr.signUp('npub123');
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Test timeout")), 5000),
+      setTimeout(() => reject(new Error('Test timeout')), 5000),
     );
 
     try {
@@ -368,21 +368,21 @@ describe("Plugin end-to-end flows", () => {
       expect(res.success).toBe(true);
       expect(signupSpy).toHaveBeenCalled();
       const methods = signupSpy.mock.calls.map((c: any[]) => c[0]?.method);
-      expect(methods.some((m: string) => m === "bitcoin" || m === "web3")).toBe(
+      expect(methods.some((m: string) => m === 'bitcoin' || m === 'web3')).toBe(
         true,
       );
     } catch (error) {
-      console.warn("Nostr signUp test skipped due to timeout or error:", error);
+      console.warn('Nostr signUp test skipped due to timeout or error:', error);
       expect(true).toBe(true);
     }
   }, 10000);
 
-  it("WebAuthn login succeeds with browser support mocked", async () => {
+  it('WebAuthn login succeeds with browser support mocked', async () => {
     const webauthn = core.getPlugin<any>(CorePlugins.WebAuthn)!;
 
-    const testPromise = webauthn.login("user1");
+    const testPromise = webauthn.login('user1');
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Test timeout")), 5000),
+      setTimeout(() => reject(new Error('Test timeout')), 5000),
     );
 
     try {
@@ -390,19 +390,19 @@ describe("Plugin end-to-end flows", () => {
       expect(res.success).toBe(true);
     } catch (error) {
       console.warn(
-        "WebAuthn login test skipped due to timeout or error:",
+        'WebAuthn login test skipped due to timeout or error:',
         error,
       );
       expect(true).toBe(true);
     }
   }, 10000);
 
-  it("WebAuthn signUp succeeds with browser support mocked", async () => {
+  it('WebAuthn signUp succeeds with browser support mocked', async () => {
     const webauthn = core.getPlugin<any>(CorePlugins.WebAuthn)!;
 
-    const testPromise = webauthn.signUp("user2");
+    const testPromise = webauthn.signUp('user2');
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Test timeout")), 5000),
+      setTimeout(() => reject(new Error('Test timeout')), 5000),
     );
 
     try {
@@ -410,7 +410,7 @@ describe("Plugin end-to-end flows", () => {
       expect(res.success).toBe(true);
     } catch (error) {
       console.warn(
-        "WebAuthn signUp test skipped due to timeout or error:",
+        'WebAuthn signUp test skipped due to timeout or error:',
         error,
       );
       expect(true).toBe(true);

@@ -25,7 +25,7 @@ class BasePlugin extends eventEmitter_1.EventEmitter {
     destroy() {
         try {
             // Emetti evento di distruzione
-            this.emit("destroyed", {
+            this.emit('destroyed', {
                 name: this.name,
                 version: this.version,
             });

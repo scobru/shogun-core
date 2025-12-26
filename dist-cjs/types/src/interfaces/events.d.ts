@@ -1,4 +1,4 @@
-import { EventEmitter } from "../utils/eventEmitter";
+import { EventEmitter } from '../utils/eventEmitter';
 /**
  * Interface representing authentication event data
  * @interface AuthEventData
@@ -10,7 +10,7 @@ import { EventEmitter } from "../utils/eventEmitter";
 export interface AuthEventData {
     userPub?: string;
     username?: string;
-    method: "password" | "webauthn" | "web3" | "nostr" | "zkproof" | "pair";
+    method: 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair';
     provider?: string;
 }
 /**
@@ -62,36 +62,36 @@ export interface GunDataEventData {
  */
 export interface GunPeerEventData {
     peer: string;
-    action: "add" | "remove" | "connect" | "disconnect";
+    action: 'add' | 'remove' | 'connect' | 'disconnect';
     timestamp: number;
 }
 /**
  * Type defining all available Shogun event listeners
  */
 export type ShogunEventMap = {
-    "auth:login": AuthEventData;
-    "auth:logout": void;
-    "auth:signup": AuthEventData;
-    "auth:username_changed": {
+    'auth:login': AuthEventData;
+    'auth:logout': void;
+    'auth:signup': AuthEventData;
+    'auth:username_changed': {
         oldUsername?: string;
         newUsername?: string;
         userPub?: string;
     };
-    "wallet:created": WalletEventData;
-    "gun:put": GunDataEventData;
-    "gun:get": GunDataEventData;
-    "gun:set": GunDataEventData;
-    "gun:remove": GunDataEventData;
-    "gun:peer:add": GunPeerEventData;
-    "gun:peer:remove": GunPeerEventData;
-    "gun:peer:connect": GunPeerEventData;
-    "gun:peer:disconnect": GunPeerEventData;
-    "plugin:registered": {
+    'wallet:created': WalletEventData;
+    'gun:put': GunDataEventData;
+    'gun:get': GunDataEventData;
+    'gun:set': GunDataEventData;
+    'gun:remove': GunDataEventData;
+    'gun:peer:add': GunPeerEventData;
+    'gun:peer:remove': GunPeerEventData;
+    'gun:peer:connect': GunPeerEventData;
+    'gun:peer:disconnect': GunPeerEventData;
+    'plugin:registered': {
         name: string;
         version?: string;
         category?: string;
     };
-    "plugin:unregistered": {
+    'plugin:unregistered': {
         name: string;
     };
     debug: {

@@ -3,23 +3,23 @@
  */
 
 // Mock zkproof to avoid ES module issues with @zk-kit/groth16
-jest.mock("../../plugins/zkproof/zkProofConnector");
-jest.mock("../../plugins/zkproof/zkProofPlugin");
-jest.mock("@semaphore-protocol/proof", () => ({
+jest.mock('../../plugins/zkproof/zkProofConnector');
+jest.mock('../../plugins/zkproof/zkProofPlugin');
+jest.mock('@semaphore-protocol/proof', () => ({
   generateProof: jest.fn(),
   verifyProof: jest.fn(),
 }));
 
-import { ShogunCore, ShogunSDKConfig } from "../../index";
-import Gun from "gun/gun";
-import "gun/lib/then";
-import "gun/lib/radix";
-import "gun/lib/radisk";
-import "gun/lib/store";
-import "gun/lib/rindexed";
-import "gun/lib/webrtc";
+import { ShogunCore, ShogunSDKConfig } from '../../index';
+import Gun from 'gun/gun';
+import 'gun/lib/then';
+import 'gun/lib/radix';
+import 'gun/lib/radisk';
+import 'gun/lib/store';
+import 'gun/lib/rindexed';
+import 'gun/lib/webrtc';
 
-describe("Browser Compatibility Tests", () => {
+describe('Browser Compatibility Tests', () => {
   let originalLocalStorage: Storage | undefined;
   let originalCrypto: Crypto | undefined;
   let originalWindow: Window | undefined;
@@ -60,8 +60,8 @@ describe("Browser Compatibility Tests", () => {
     }
   });
 
-  describe("localStorage Compatibility", () => {
-    it("should work with localStorage available", () => {
+  describe('localStorage Compatibility', () => {
+    it('should work with localStorage available', () => {
       const mockLocalStorage = {
         getItem: jest.fn(),
         setItem: jest.fn(),
@@ -81,7 +81,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without localStorage", () => {
+    it('should work without localStorage', () => {
       delete (global as any).localStorage;
       delete (global as any).window;
 
@@ -94,10 +94,10 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should handle localStorage errors gracefully", () => {
+    it('should handle localStorage errors gracefully', () => {
       const mockLocalStorage = {
         getItem: jest.fn().mockImplementation(() => {
-          throw new Error("localStorage error");
+          throw new Error('localStorage error');
         }),
         setItem: jest.fn(),
         removeItem: jest.fn(),
@@ -117,8 +117,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Crypto API Compatibility", () => {
-    it("should work with crypto API available", () => {
+  describe('Crypto API Compatibility', () => {
+    it('should work with crypto API available', () => {
       const mockCrypto = {
         getRandomValues: jest.fn(),
         subtle: {
@@ -139,7 +139,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without crypto API", () => {
+    it('should work without crypto API', () => {
       delete (global as any).crypto;
 
       const config: ShogunSDKConfig = {
@@ -152,8 +152,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("WebAuthn Compatibility", () => {
-    it("should detect WebAuthn support", () => {
+  describe('WebAuthn Compatibility', () => {
+    it('should detect WebAuthn support', () => {
       const mockNavigator = {
         credentials: {
           create: jest.fn(),
@@ -173,7 +173,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without WebAuthn support", () => {
+    it('should work without WebAuthn support', () => {
       delete (global as any).navigator;
 
       const config: ShogunSDKConfig = {
@@ -187,8 +187,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Web3 Compatibility", () => {
-    it("should detect Web3 provider", () => {
+  describe('Web3 Compatibility', () => {
+    it('should detect Web3 provider', () => {
       const mockEthereum = {
         request: jest.fn(),
         on: jest.fn(),
@@ -210,7 +210,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without Web3 provider", () => {
+    it('should work without Web3 provider', () => {
       delete (global as any).window;
 
       const config: ShogunSDKConfig = {
@@ -224,8 +224,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Event System Compatibility", () => {
-    it("should work with EventTarget", () => {
+  describe('Event System Compatibility', () => {
+    it('should work with EventTarget', () => {
       const mockEventTarget = {
         addEventListener: jest.fn(),
         removeEventListener: jest.fn(),
@@ -245,7 +245,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without EventTarget", () => {
+    it('should work without EventTarget', () => {
       delete (global as any).EventTarget;
 
       const config: ShogunSDKConfig = {
@@ -258,8 +258,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("TextEncoder/TextDecoder Compatibility", () => {
-    it("should work with TextEncoder/TextDecoder", () => {
+  describe('TextEncoder/TextDecoder Compatibility', () => {
+    it('should work with TextEncoder/TextDecoder', () => {
       const mockTextEncoder = jest.fn();
       const mockTextDecoder = jest.fn();
 
@@ -267,7 +267,7 @@ describe("Browser Compatibility Tests", () => {
       global.TextDecoder = mockTextDecoder as any;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        appToken: 'test-token',
         oauth: { enabled: false },
         peers: [],
         gunInstance: createTestGunInstance(),
@@ -278,12 +278,12 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without TextEncoder/TextDecoder", () => {
+    it('should work without TextEncoder/TextDecoder', () => {
       delete (global as any).TextEncoder;
       delete (global as any).TextDecoder;
 
       const config: ShogunSDKConfig = {
-        appToken: "test-token",
+        appToken: 'test-token',
         oauth: { enabled: false },
         peers: [],
         gunInstance: createTestGunInstance(),
@@ -295,8 +295,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Fetch API Compatibility", () => {
-    it("should work with fetch API", () => {
+  describe('Fetch API Compatibility', () => {
+    it('should work with fetch API', () => {
       const mockFetch = jest.fn();
       global.fetch = mockFetch as any;
 
@@ -309,7 +309,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without fetch API", () => {
+    it('should work without fetch API', () => {
       delete (global as any).fetch;
 
       const config: ShogunSDKConfig = {
@@ -322,8 +322,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("URL API Compatibility", () => {
-    it("should work with URL API", () => {
+  describe('URL API Compatibility', () => {
+    it('should work with URL API', () => {
       const mockURL = jest.fn();
       global.URL = mockURL as any;
 
@@ -336,7 +336,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without URL API", () => {
+    it('should work without URL API', () => {
       delete (global as any).URL;
 
       const config: ShogunSDKConfig = {
@@ -349,8 +349,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Performance API Compatibility", () => {
-    it("should work with Performance API", () => {
+  describe('Performance API Compatibility', () => {
+    it('should work with Performance API', () => {
       const mockPerformance = {
         now: jest.fn(),
         mark: jest.fn(),
@@ -368,7 +368,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without Performance API", () => {
+    it('should work without Performance API', () => {
       delete (global as any).performance;
 
       const config: ShogunSDKConfig = {
@@ -381,8 +381,8 @@ describe("Browser Compatibility Tests", () => {
     });
   });
 
-  describe("Console API Compatibility", () => {
-    it("should work with console API", () => {
+  describe('Console API Compatibility', () => {
+    it('should work with console API', () => {
       const mockConsole = {
         log: jest.fn(),
         error: jest.fn(),
@@ -402,7 +402,7 @@ describe("Browser Compatibility Tests", () => {
       }).not.toThrow();
     });
 
-    it("should work without console API", () => {
+    it('should work without console API', () => {
       delete (global as any).console;
 
       const config: ShogunSDKConfig = {

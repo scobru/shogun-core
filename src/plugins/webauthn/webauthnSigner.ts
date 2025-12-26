@@ -1,8 +1,8 @@
-import { Webauthn } from "./webauthn";
-import { p256 } from "@noble/curves/p256";
-import { sha256 } from "@noble/hashes/sha256";
-import derive from "../../gundb/derive";
-import { ethers } from "ethers";
+import { Webauthn } from './webauthn';
+import { p256 } from '@noble/curves/p256';
+import { sha256 } from '@noble/hashes/sha256';
+import derive from '../../gundb/derive';
+import { ethers } from 'ethers';
 
 /**
  * Base64URL encoding utilities
@@ -11,15 +11,15 @@ const base64url = {
   encode: function (buffer: ArrayBuffer | Uint8Array): string {
     const bytes = new Uint8Array(buffer);
     return btoa(String.fromCharCode(...bytes))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=/g, "");
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   },
   decode: function (str: string): Uint8Array {
-    str = str.replace(/-/g, "+").replace(/_/g, "/");
-    while (str.length % 4) str += "=";
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
     const binary = atob(str);
-    return new Uint8Array(binary.split("").map((c) => c.charCodeAt(0)));
+    return new Uint8Array(binary.split('').map((c) => c.charCodeAt(0)));
   },
 };
 
@@ -64,10 +64,10 @@ export class WebAuthnSigner {
           challenge: crypto.getRandomValues(new Uint8Array(32)),
           rp: {
             id:
-              window.location.hostname === "localhost"
-                ? "localhost"
+              window.location.hostname === 'localhost'
+                ? 'localhost'
                 : window.location.hostname,
-            name: "Shogun Wallet",
+            name: 'Shogun Wallet',
           },
           user: {
             id: new TextEncoder().encode(username),
@@ -76,20 +76,20 @@ export class WebAuthnSigner {
           },
           // Use the same algorithms as webauthn.js for SEA compatibility
           pubKeyCredParams: [
-            { type: "public-key", alg: -7 }, // ECDSA, P-256 curve, for signing
-            { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets
-            { type: "public-key", alg: -257 },
+            { type: 'public-key', alg: -7 }, // ECDSA, P-256 curve, for signing
+            { type: 'public-key', alg: -25 }, // ECDH, P-256 curve, for creating shared secrets
+            { type: 'public-key', alg: -257 },
           ],
           authenticatorSelection: {
-            userVerification: "preferred",
+            userVerification: 'preferred',
           },
           timeout: 60000,
-          attestation: "none",
+          attestation: 'none',
         },
       })) as PublicKeyCredential;
 
       if (!credential) {
-        throw new Error("Failed to create WebAuthn credential");
+        throw new Error('Failed to create WebAuthn credential');
       }
 
       // Extract public key in the same way as webauthn.js
@@ -97,7 +97,7 @@ export class WebAuthnSigner {
       const publicKey = response.getPublicKey();
 
       if (!publicKey) {
-        throw new Error("Failed to get public key from credential");
+        throw new Error('Failed to get public key from credential');
       }
 
       const rawKey = new Uint8Array(publicKey);
@@ -128,7 +128,7 @@ export class WebAuthnSigner {
 
       return signingCredential;
     } catch (error: any) {
-      console.error("Error creating signing credential:", error);
+      console.error('Error creating signing credential:', error);
       throw new Error(`Failed to create signing credential: ${error.message}`);
     }
   }
@@ -152,13 +152,13 @@ export class WebAuthnSigner {
         const options: PublicKeyCredentialRequestOptions = {
           challenge,
           rpId:
-            window.location.hostname === "localhost"
-              ? "localhost"
+            window.location.hostname === 'localhost'
+              ? 'localhost'
               : window.location.hostname,
-          userVerification: "preferred",
+          userVerification: 'preferred',
           allowCredentials: [
             {
-              type: "public-key",
+              type: 'public-key',
               id: credential.rawId,
             },
           ],
@@ -170,12 +170,12 @@ export class WebAuthnSigner {
         })) as PublicKeyCredential;
 
         if (!assertion) {
-          throw new Error("WebAuthn assertion failed");
+          throw new Error('WebAuthn assertion failed');
         }
 
         return assertion.response as AuthenticatorAssertionResponse;
       } catch (error: any) {
-        console.error("WebAuthn assertion error:", error);
+        console.error('WebAuthn assertion error:', error);
         throw error;
       }
     };
@@ -211,7 +211,7 @@ export class WebAuthnSigner {
         epriv: derivedKeys.epriv,
       };
     } catch (error: any) {
-      console.error("Error deriving keys from WebAuthn credential:", error);
+      console.error('Error deriving keys from WebAuthn credential:', error);
       throw error;
     }
   }
@@ -271,7 +271,7 @@ export class WebAuthnSigner {
         });
       });
     } catch (error: any) {
-      console.error("Error creating Gun user:", error);
+      console.error('Error creating Gun user:', error);
       return { success: false, error: error.message };
     }
   }
@@ -315,9 +315,9 @@ export class WebAuthnSigner {
         s: base64url.encode(signature.toCompactRawBytes()),
       };
 
-      return "SEA" + JSON.stringify(seaSignature);
+      return 'SEA' + JSON.stringify(seaSignature);
     } catch (error: any) {
-      console.error("Error signing with derived keys:", error);
+      console.error('Error signing with derived keys:', error);
       throw error;
     }
   }

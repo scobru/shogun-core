@@ -17,13 +17,13 @@ class PluginManager {
     register(plugin) {
         try {
             if (!plugin.name) {
-                if (typeof console !== "undefined" && console.error) {
-                    console.error("Plugin registration failed: Plugin must have a name");
+                if (typeof console !== 'undefined' && console.error) {
+                    console.error('Plugin registration failed: Plugin must have a name');
                 }
                 return;
             }
             if (this.plugins.has(plugin.name)) {
-                if (typeof console !== "undefined" && console.warn) {
+                if (typeof console !== 'undefined' && console.warn) {
                     console.warn(`Plugin "${plugin.name}" is already registered. Skipping.`);
                 }
                 return;
@@ -31,14 +31,14 @@ class PluginManager {
             // Initialize plugin with core instance
             plugin.initialize(this.core);
             this.plugins.set(plugin.name, plugin);
-            this.core.emit("plugin:registered", {
+            this.core.emit('plugin:registered', {
                 name: plugin.name,
-                version: plugin.version || "unknown",
-                category: plugin._category || "unknown",
+                version: plugin.version || 'unknown',
+                category: plugin._category || 'unknown',
             });
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
+            if (typeof console !== 'undefined' && console.error) {
                 console.error(`Error registering plugin "${plugin.name}":`, error);
             }
         }
@@ -51,30 +51,30 @@ class PluginManager {
         try {
             const plugin = this.plugins.get(name);
             if (!plugin) {
-                if (typeof console !== "undefined" && console.warn) {
+                if (typeof console !== 'undefined' && console.warn) {
                     console.warn(`Plugin "${name}" not found for unregistration`);
                 }
                 return false;
             }
             // Destroy plugin if it has a destroy method
-            if (typeof plugin.destroy === "function") {
+            if (typeof plugin.destroy === 'function') {
                 try {
                     plugin.destroy();
                 }
                 catch (destroyError) {
-                    if (typeof console !== "undefined" && console.error) {
+                    if (typeof console !== 'undefined' && console.error) {
                         console.error(`Error destroying plugin "${name}":`, destroyError);
                     }
                 }
             }
             this.plugins.delete(name);
-            this.core.emit("plugin:unregistered", {
+            this.core.emit('plugin:unregistered', {
                 name: plugin.name,
             });
             return true;
         }
         catch (error) {
-            if (typeof console !== "undefined" && console.error) {
+            if (typeof console !== 'undefined' && console.error) {
                 console.error(`Error unregistering plugin "${name}":`, error);
             }
             return false;
@@ -87,15 +87,15 @@ class PluginManager {
      * @template T Type of the plugin or its public interface
      */
     getPlugin(name) {
-        if (!name || typeof name !== "string") {
-            if (typeof console !== "undefined" && console.warn) {
-                console.warn("Invalid plugin name provided to getPlugin");
+        if (!name || typeof name !== 'string') {
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('Invalid plugin name provided to getPlugin');
             }
             return undefined;
         }
         const plugin = this.plugins.get(name);
         if (!plugin) {
-            if (typeof console !== "undefined" && console.warn) {
+            if (typeof console !== 'undefined' && console.warn) {
                 console.warn(`Plugin "${name}" not found`);
             }
             return undefined;
@@ -111,7 +111,7 @@ class PluginManager {
         this.plugins.forEach((plugin) => {
             pluginsInfo.push({
                 name: plugin.name,
-                version: plugin.version || "unknown",
+                version: plugin.version || 'unknown',
                 category: plugin._category,
                 description: plugin.description,
             });
@@ -134,7 +134,7 @@ class PluginManager {
         this.plugins.forEach((plugin, name) => {
             try {
                 // Verifica se il plugin ha un metodo per controllare l'inizializzazione
-                if (typeof plugin.assertInitialized === "function") {
+                if (typeof plugin.assertInitialized === 'function') {
                     plugin.assertInitialized();
                     status[name] = { initialized: true };
                 }
@@ -143,7 +143,7 @@ class PluginManager {
                     status[name] = {
                         initialized: !!plugin.core,
                         error: !plugin.core
-                            ? "No core reference found"
+                            ? 'No core reference found'
                             : undefined,
                     };
                 }
@@ -170,10 +170,10 @@ class PluginManager {
             .map(([name, _]) => name);
         const warnings = [];
         if (totalPlugins === 0) {
-            warnings.push("No plugins registered");
+            warnings.push('No plugins registered');
         }
         if (failedPlugins.length > 0) {
-            warnings.push(`Failed plugins: ${failedPlugins.join(", ")}`);
+            warnings.push(`Failed plugins: ${failedPlugins.join(', ')}`);
         }
         return {
             totalPlugins,
@@ -197,7 +197,7 @@ class PluginManager {
             try {
                 const plugin = this.plugins.get(pluginName);
                 if (!plugin) {
-                    failed.push({ name: pluginName, error: "Plugin not found" });
+                    failed.push({ name: pluginName, error: 'Plugin not found' });
                     return;
                 }
                 // Reinizializza il plugin
@@ -207,7 +207,7 @@ class PluginManager {
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 failed.push({ name: pluginName, error: errorMessage });
-                if (typeof console !== "undefined" && console.error) {
+                if (typeof console !== 'undefined' && console.error) {
                     console.error(`[PluginManager] Failed to reinitialize plugin ${pluginName}:`, error);
                 }
             }
@@ -225,10 +225,10 @@ class PluginManager {
         this.plugins.forEach((plugin) => {
             const pluginInfo = {
                 name: plugin.name,
-                version: plugin.version || "unknown",
+                version: plugin.version || 'unknown',
             };
             // Verifica se il plugin ha informazioni di compatibilità
-            if (typeof plugin.getCompatibilityInfo === "function") {
+            if (typeof plugin.getCompatibilityInfo === 'function') {
                 try {
                     const compatibilityInfo = plugin.getCompatibilityInfo();
                     if (compatibilityInfo && compatibilityInfo.compatible) {
@@ -237,7 +237,7 @@ class PluginManager {
                     else {
                         incompatible.push({
                             ...pluginInfo,
-                            reason: compatibilityInfo?.reason || "Unknown compatibility issue",
+                            reason: compatibilityInfo?.reason || 'Unknown compatibility issue',
                         });
                     }
                 }
@@ -265,7 +265,7 @@ class PluginManager {
             error: initializationStatus[info.name]?.error,
         }));
         return {
-            shogunCoreVersion: "^1.6.6",
+            shogunCoreVersion: '^1.6.6',
             totalPlugins: this.getPluginCount(),
             plugins,
             initializationStatus,

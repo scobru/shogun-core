@@ -3,7 +3,7 @@
  * Based on GunDB's SEA (Security, Encryption, Authorization) module.
  * @see https://github.com/amark/gun/wiki/Snippets
  */
-import { ISEAPair } from "gun";
+import { ISEAPair } from 'gun';
 /**
  * Checks if a string is a valid GunDB hash
  * @param str - String to check

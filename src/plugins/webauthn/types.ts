@@ -1,11 +1,11 @@
-import { AuthResult, SignUpResult } from "../../interfaces/shogun";
+import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 import {
   BaseEvent,
   BaseConfig,
   BaseDeviceInfo,
   BaseResult,
   BaseAuthResult,
-} from "../../interfaces/common";
+} from '../../interfaces/common';
 
 /**
  * WebAuthn types definitions
@@ -53,11 +53,11 @@ export interface WebAuthnConfig extends BaseConfig {
  * WebAuthn event types
  */
 export enum WebAuthnEventType {
-  DEVICE_REGISTERED = "deviceRegistered",
-  DEVICE_REMOVED = "deviceRemoved",
-  AUTHENTICATION_SUCCESS = "authenticationSuccess",
-  AUTHENTICATION_FAILED = "authenticationFailed",
-  ERROR = "error",
+  DEVICE_REGISTERED = 'deviceRegistered',
+  DEVICE_REMOVED = 'deviceRemoved',
+  AUTHENTICATION_SUCCESS = 'authenticationSuccess',
+  AUTHENTICATION_FAILED = 'authenticationFailed',
+  ERROR = 'error',
 }
 
 /**
@@ -105,7 +105,8 @@ export interface WebAuthnVerificationResult extends BaseResult {
 /**
  * WebAuthn credential creation options with extensions
  */
-export interface WebAuthnCredentialCreationOptions extends PublicKeyCredentialCreationOptions {
+export interface WebAuthnCredentialCreationOptions
+  extends PublicKeyCredentialCreationOptions {
   signal?: AbortSignal;
 }
 

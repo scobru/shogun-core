@@ -1,10 +1,10 @@
 /**
  * The MetaMaskAuth class provides functionality for connecting, signing up, and logging in using MetaMask.
  */
-import { ethers } from "ethers";
-import { EventEmitter } from "../../utils/eventEmitter";
-import { ConnectionResult, EthereumProvider, Web3Config } from "./types";
-import { ISEAPair } from "gun";
+import { ethers } from 'ethers';
+import { EventEmitter } from '../../utils/eventEmitter';
+import { ConnectionResult, EthereumProvider, Web3Config } from './types';
+import { ISEAPair } from 'gun';
 declare global {
     interface Window {
         ethereum?: EthereumProvider;

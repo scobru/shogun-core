@@ -1,6 +1,6 @@
-import { ShogunEventMap } from "./interfaces/events";
-import { ErrorHandler, ShogunError } from "./utils/errorHandler";
-import { ShogunStorage } from "./storage/storage";
+import { ShogunEventMap } from './interfaces/events';
+import { ErrorHandler, ShogunError } from './utils/errorHandler';
+import { ShogunStorage } from './storage/storage';
 import {
   IShogunCore,
   ShogunCoreConfig,
@@ -9,18 +9,18 @@ import {
   PluginCategory,
   AuthMethod,
   Wallets,
-} from "./interfaces/shogun";
-import { ethers } from "ethers";
-import { ShogunPlugin } from "./interfaces/plugin";
-import { ISEAPair, IGunInstance, IGunUserInstance } from "gun";
-import { DataBase, RxJS } from "./gundb";
-import { DataBaseHolster } from "./gundb/db-holster";
+} from './interfaces/shogun';
+import { ethers } from 'ethers';
+import { ShogunPlugin } from './interfaces/plugin';
+import { ISEAPair, IGunInstance, IGunUserInstance } from 'gun';
+import { DataBase, RxJS } from './gundb';
+import { DataBaseHolster } from './gundb/db-holster';
 
 // Import managers
-import { PluginManager } from "./managers/PluginManager";
-import { AuthManager } from "./managers/AuthManager";
-import { EventManager } from "./managers/EventManager";
-import { CoreInitializer } from "./managers/CoreInitializer";
+import { PluginManager } from './managers/PluginManager';
+import { AuthManager } from './managers/AuthManager';
+import { EventManager } from './managers/EventManager';
+import { CoreInitializer } from './managers/CoreInitializer';
 
 /**
  * Main ShogunCore class - implements the IShogunCore interface
@@ -34,7 +34,7 @@ import { CoreInitializer } from "./managers/CoreInitializer";
  * @since 2.0.0
  */
 export class ShogunCore implements IShogunCore {
-  public static readonly API_VERSION = "^6.2.1";
+  public static readonly API_VERSION = '^6.2.1';
   public db!: DataBase | DataBaseHolster;
   public storage!: ShogunStorage;
   public provider?: ethers.Provider;
@@ -69,8 +69,8 @@ export class ShogunCore implements IShogunCore {
 
     // Initialize async components
     this.coreInitializer.initialize(config).catch((error: any) => {
-      if (typeof console !== "undefined" && console.warn) {
-        console.warn("Error during async initialization:", error);
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Error during async initialization:', error);
       }
     });
   }
@@ -441,12 +441,12 @@ export class ShogunCore implements IShogunCore {
    */
   async saveCredentials(credentials: any): Promise<void> {
     try {
-      this.storage.setItem("userCredentials", JSON.stringify(credentials));
+      this.storage.setItem('userCredentials', JSON.stringify(credentials));
     } catch (error) {
-      if (typeof console !== "undefined" && console.warn) {
-        console.warn("Failed to save credentials to storage");
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Failed to save credentials to storage');
       }
-      if (typeof console !== "undefined" && console.error) {
+      if (typeof console !== 'undefined' && console.error) {
         console.error(`Error saving credentials:`, error);
       }
     }
@@ -459,7 +459,7 @@ export class ShogunCore implements IShogunCore {
 
 // Global declarations are handled in the original core.ts file
 // to avoid conflicts, we only set the window properties here
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   (window as any).Shogun = (config: ShogunCoreConfig): ShogunCore => {
     return new ShogunCore(config);
   };
