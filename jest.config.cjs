@@ -50,6 +50,7 @@ module.exports = {
   // Mock problematic modules
   moduleNameMapper: {
     '^gun/sea$': '<rootDir>/src/__tests__/__mocks__/gun-sea.js',
+    '^gun/sea\\.js$': '<rootDir>/src/__tests__/__mocks__/gun-sea.js',
     '^gun$': '<rootDir>/src/__tests__/__mocks__/gun.js',
     '^@/(.*)$': '<rootDir>/src/$1'
   }

@@ -1,0 +1,514 @@
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.warn
+    [webauthnPlugin] WebAuthn plugin disabled - not in browser environment
+
+    [0m [90m 42 |[39m     [90m// Verifica se siamo in ambiente browser[39m
+     [90m 43 |[39m     [36mif[39m ([36mtypeof[39m window [33m===[39m [32m'undefined'[39m) {
+    [31m[1m>[22m[39m[90m 44 |[39m       console[33m.[39mwarn(
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 45 |[39m         [32m'[webauthnPlugin] WebAuthn plugin disabled - not in browser environment'[39m[33m,[39m
+     [90m 46 |[39m       )[33m;[39m
+     [90m 47 |[39m       [36mreturn[39m[33m;[39m[0m
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:44:15)
+      at Object.<anonymous> (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:96:12)
+
+  console.warn
+    [webauthnPlugin] WebAuthn not supported in this environment
+
+    [0m [90m 50 |[39m     [90m// Verifica se WebAuthn ├¿ supportato[39m
+     [90m 51 |[39m     [36mif[39m ([33m![39m[36mthis[39m[33m.[39misSupported()) {
+    [31m[1m>[22m[39m[90m 52 |[39m       console[33m.[39mwarn(
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 53 |[39m         [32m'[webauthnPlugin] WebAuthn not supported in this environment'[39m[33m,[39m
+     [90m 54 |[39m       )[33m;[39m
+     [90m 55 |[39m       [36mreturn[39m[33m;[39m[0m
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:52:15)
+      at Object.<anonymous> (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:96:12)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.warn
+    [webauthnPlugin] WebAuthn plugin disabled - not in browser environment
+
+    [0m [90m 42 |[39m     [90m// Verifica se siamo in ambiente browser[39m
+     [90m 43 |[39m     [36mif[39m ([36mtypeof[39m window [33m===[39m [32m'undefined'[39m) {
+    [31m[1m>[22m[39m[90m 44 |[39m       console[33m.[39mwarn(
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 45 |[39m         [32m'[webauthnPlugin] WebAuthn plugin disabled - not in browser environment'[39m[33m,[39m
+     [90m 46 |[39m       )[33m;[39m
+     [90m 47 |[39m       [36mreturn[39m[33m;[39m[0m
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:44:15)
+      at Object.<anonymous> (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:96:12)
+
+  console.warn
+    [webauthnPlugin] WebAuthn not supported in this environment
+
+    [0m [90m 50 |[39m     [90m// Verifica se WebAuthn ├¿ supportato[39m
+     [90m 51 |[39m     [36mif[39m ([33m![39m[36mthis[39m[33m.[39misSupported()) {
+    [31m[1m>[22m[39m[90m 52 |[39m       console[33m.[39mwarn(
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 53 |[39m         [32m'[webauthnPlugin] WebAuthn not supported in this environment'[39m[33m,[39m
+     [90m 54 |[39m       )[33m;[39m
+     [90m 55 |[39m       [36mreturn[39m[33m;[39m[0m
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:52:15)
+      at Object.<anonymous> (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:96:12)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.error
+    Error during WebAuthn login: Error: WebAuthn verification failed
+
+    [0m [90m 507 |[39m       [36mreturn[39m [36mawait[39m core[33m.[39mlogin(username[33m,[39m [32m''[39m[33m,[39m credentials[33m.[39mkey)[33m;[39m
+     [90m 508 |[39m     } [36mcatch[39m (error[33m:[39m any) {
+    [31m[1m>[22m[39m[90m 509 |[39m       console[33m.[39merror([32m`Error during WebAuthn login: ${error}`[39m)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 510 |[39m       [90m// Log but do not depend on handler return value[39m
+     [90m 511 |[39m       [33mErrorHandler[39m[33m.[39mhandle(
+     [90m 512 |[39m         [33mErrorType[39m[33m.[39m[33mWEBAUTHN[39m[33m,[39m[0m
+
+      at WebauthnPlugin.<anonymous> (src/plugins/webauthn/webauthnPlugin.ts:509:15)
+      at fulfilled (src/plugins/webauthn/webauthnPlugin.ts:5:58)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.error
+    Error during WebAuthn login: Error: WebAuthn verification failed
+
+    [0m [90m 507 |[39m       [36mreturn[39m [36mawait[39m core[33m.[39mlogin(username[33m,[39m [32m''[39m[33m,[39m credentials[33m.[39mkey)[33m;[39m
+     [90m 508 |[39m     } [36mcatch[39m (error[33m:[39m any) {
+    [31m[1m>[22m[39m[90m 509 |[39m       console[33m.[39merror([32m`Error during WebAuthn login: ${error}`[39m)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 510 |[39m       [90m// Log but do not depend on handler return value[39m
+     [90m 511 |[39m       [33mErrorHandler[39m[33m.[39mhandle(
+     [90m 512 |[39m         [33mErrorType[39m[33m.[39m[33mWEBAUTHN[39m[33m,[39m[0m
+
+      at WebauthnPlugin.<anonymous> (src/plugins/webauthn/webauthnPlugin.ts:509:15)
+      at fulfilled (src/plugins/webauthn/webauthnPlugin.ts:5:58)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.error
+    Error during WebAuthn registration: TypeError: Cannot read properties of undefined (reading 'success')
+
+    [0m [90m 636 |[39m       [36mreturn[39m result[33m;[39m
+     [90m 637 |[39m     } [36mcatch[39m (error[33m:[39m any) {
+    [31m[1m>[22m[39m[90m 638 |[39m       console[33m.[39merror([32m`Error during WebAuthn registration: ${error}`[39m)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 639 |[39m       [33mErrorHandler[39m[33m.[39mhandle(
+     [90m 640 |[39m         [33mErrorType[39m[33m.[39m[33mWEBAUTHN[39m[33m,[39m
+     [90m 641 |[39m         [32m'WEBAUTHN_SIGNUP_ERROR'[39m[33m,[39m[0m
+
+      at WebauthnPlugin.<anonymous> (src/plugins/webauthn/webauthnPlugin.ts:638:15)
+      at fulfilled (src/plugins/webauthn/webauthnPlugin.ts:5:58)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+  console.log
+    [webauthnPlugin] WebAuthn plugin initialized with signer support
+
+      at WebauthnPlugin.initialize (src/plugins/webauthn/webauthnPlugin.ts:62:13)
+
+FAIL src/__tests__/plugins/webauthn/webauthnPlugin.test.ts
+  ÔêÜ dummy test (5 ms)
+  WebauthnPlugin
+    Constructor
+      ÔêÜ should create WebauthnPlugin with correct properties (25 ms)
+    isSupported
+      ÔêÜ should return false when not in browser environment (3 ms)
+      ÔêÜ should return false when PublicKeyCredential not available (11 ms)
+      ÔêÜ should return true when WebAuthn is supported (4 ms)
+    initialize
+      ÔêÜ should initialize plugin when WebAuthn is supported (4 ms)
+      ÔêÜ should not initialize when not in browser environment (2 ms)
+      ÔêÜ should not initialize when WebAuthn not supported (5 ms)
+    destroy
+      ÔêÜ should cleanup resources when destroyed (6 ms)
+    generateCredentials
+      ÔêÜ should generate credentials successfully (3 ms)
+      ÔêÜ should generate credentials with existing credential (3 ms)
+    createAccount
+      ÔêÜ should create account successfully (3 ms)
+    authenticateUser
+      ÔêÜ should authenticate user successfully (3 ms)
+    abortAuthentication
+      ÔêÜ should abort authentication (8 ms)
+    removeDevice
+      ÔêÜ should remove device successfully (3 ms)
+    createSigningCredential
+      ÔêÜ should create signing credential successfully (3 ms)
+    createAuthenticator
+      ÔêÜ should create authenticator function (3 ms)
+    createDerivedKeyPair
+      ÔêÜ should create derived key pair (3 ms)
+    signWithDerivedKeys
+      ÔêÜ should sign data with derived keys (3 ms)
+    getSigningCredential
+      ÔêÜ should return signing credential if exists (3 ms)
+      ÔêÜ should return undefined if credential not found (3 ms)
+    listSigningCredentials
+      ÔêÜ should return list of signing credentials (2 ms)
+    removeSigningCredential
+      ÔêÜ should remove signing credential successfully (2 ms)
+      ÔêÜ should return false if credential not found (3 ms)
+    createGunUserFromSigningCredential
+      ÔêÜ should create Gun user successfully (2 ms)
+      ÔêÜ should handle Gun user creation failure (2 ms)
+    getGunUserPubFromSigningCredential
+      ÔêÜ should return Gun user public key (3 ms)
+      ÔêÜ should return undefined if not found (3 ms)
+    getHashedCredentialId
+      ÔêÜ should return hashed credential ID (2 ms)
+      ÔêÜ should return undefined if not found (2 ms)
+    verifyConsistency
+      ÔêÜ should verify consistency successfully (3 ms)
+      ÔêÜ should detect inconsistency (2 ms)
+    setupConsistentOneshotSigning
+      ÔêÜ should setup consistent oneshot signing (3 ms)
+    login
+      ├ù should perform login successfully (9 ms)
+      ÔêÜ should handle login failure (5 ms)
+    signUp
+      ├ù should perform signup successfully (5 ms)
+    Error handling
+      ÔêÜ should handle webauthn initialization errors (8 ms)
+      ÔêÜ should handle signer initialization errors (3 ms)
+
+  ÔùÅ WebauthnPlugin ÔÇ║ login ÔÇ║ should perform login successfully
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 2
+
+      Object {
+    -   "success": true,
+    -   "user": Object {
+    -     "id": "testuser",
+    -     "username": "testuser",
+    -   },
+    +   "error": "WebAuthn verification failed",
+    +   "success": false,
+      }
+
+      918 |       const result = await plugin.login('testuser');
+      919 |
+    > 920 |       expect(result).toEqual(mockAuthResult);
+          |                      ^
+      921 |     });
+      922 |
+      923 |     it('should handle login failure', async () => {
+
+      at src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:920:22
+      at fulfilled (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:5:58)
+
+  ÔùÅ WebauthnPlugin ÔÇ║ signUp ÔÇ║ should perform signup successfully
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 2
+
+      Object {
+    -   "success": true,
+    -   "user": Object {
+    -     "id": "testuser",
+    -     "username": "testuser",
+    -   },
+    +   "error": "Cannot read properties of undefined (reading 'success')",
+    +   "success": false,
+      }
+
+      1000 |       });
+      1001 |
+    > 1002 |       expect(result).toEqual(mockSignUpResult);
+           |                      ^
+      1003 |     });
+      1004 |   });
+      1005 |
+
+      at src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:1002:22
+      at fulfilled (src/__tests__/plugins/webauthn/webauthnPlugin.test.ts:5:58)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 36 passed, 38 total
+Snapshots:   0 total
+Time:        0.892 s, estimated 2 s
+Ran all test suites matching /src\\__tests__\\plugins\\webauthn\\webauthnPlugin.test.ts/i.

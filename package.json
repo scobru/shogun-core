@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "yarn docs && yarn format && yarn run build:esm && yarn run build:cjs && yarn run build:browser",
+    "build": "yarn format && yarn run build:esm && yarn run build:cjs && yarn run build:browser",
     "build:esm": "tsc && node scripts/add-js-extensions.mjs",
     "build:cjs": "tsc --project tsconfig.cjs.json && node scripts/make-cjs.mjs",
     "build:browser": "webpack --config webpack.config.cjs",
