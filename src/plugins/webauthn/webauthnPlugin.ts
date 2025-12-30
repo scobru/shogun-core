@@ -585,6 +585,27 @@ export class WebauthnPlugin
           epub: derivedKeys.epub,
           epriv: derivedKeys.epriv,
         };
+
+        // ALSO create a WebAuthn credential for device-bound login
+        // This allows users to login with passkey without needing the seed phrase
+        try {
+          const credentials = await this.generateCredentials(
+            username,
+            null,
+            false,
+          );
+          if (credentials?.success) {
+            console.log(
+              '[webauthnPlugin] Created passkey for device-bound login',
+            );
+          }
+        } catch (e) {
+          // Don't fail signup if passkey creation fails - seed phrase is the backup
+          console.warn(
+            '[webauthnPlugin] Could not create passkey, seed-only mode:',
+            e,
+          );
+        }
       } else {
         // Legacy WebAuthn credential-based flow (device-bound)
         const credentials: WebAuthnUniformCredentials =
