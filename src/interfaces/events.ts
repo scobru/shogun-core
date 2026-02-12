@@ -11,7 +11,7 @@ import { EventEmitter } from '../utils/eventEmitter';
 export interface AuthEventData {
   userPub?: string;
   username?: string;
-  method: 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair';
+  method: 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair' | 'challenge';
   provider?: string;
 }
 
@@ -94,7 +94,7 @@ export type ShogunEventMap = {
   'gun:peer:disconnect': GunPeerEventData;
   'plugin:registered': { name: string; version?: string; category?: string };
   'plugin:unregistered': { name: string };
-  debug: { action: string; [key: string]: any };
+  debug: { action: string;[key: string]: any };
   error: ErrorEventData;
 };
 

@@ -6,6 +6,14 @@ import {
 } from '../interfaces/shogun';
 import { ISEAPair } from 'gun';
 import { ErrorHandler, ErrorType } from '../utils/errorHandler';
+// Import seed utilities dynamically or statically? Statically is fine as they are in same package.
+import {
+  deriveCredentialsFromMnemonic,
+  mnemonicToSeed,
+  seedToPassword,
+  validateSeedPhrase
+} from '../utils/seedPhrase';
+import { generatePairFromMnemonic } from '../gundb/crypto';
 
 /**
  * Manages authentication operations for ShogunCore
@@ -153,6 +161,37 @@ export class AuthManager {
       return {
         success: false,
         error: error.message ?? 'Unknown error during pair login',
+      };
+    }
+  }
+
+  /**
+   * Login with a BIP39 seed phrase (mnemonic).
+   * Derives the key pair deterministically and logs in.
+   * @param username - Username associated with the seed
+   * @param mnemonic - The 12-word seed phrase
+   */
+  async loginWithSeed(username: string, mnemonic: string): Promise<AuthResult> {
+    try {
+      if (!validateSeedPhrase(mnemonic)) {
+        return { success: false, error: 'Invalid seed phrase' };
+      }
+
+      // Generate deterministc pair
+      const pair = await generatePairFromMnemonic(mnemonic, username);
+
+      // Login with pair
+      const result = await this.loginWithPair(username, pair);
+
+      if (result.success && this.core) {
+        // If successful, we might want to store that the method was 'seed' or 'pair'
+        // usage of 'pair' method is correct as per underlying mechanic
+      }
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

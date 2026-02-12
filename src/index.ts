@@ -28,6 +28,14 @@ export type {
   TypedAuthResult,
 } from './gundb';
 
+export { generatePairFromMnemonic } from './gundb/crypto';
+
+export {
+  deriveChildKey,
+  deriveChildPublicKey,
+  deriveKeyHierarchy,
+} from './gundb/hd-keys';
+
 export { ShogunCore } from './core';
 
 export { RxJS, crypto, derive, GunErrors, DataBase } from './gundb/db';
@@ -47,6 +55,7 @@ export {
   deriveCredentialsFromMnemonic,
   formatSeedPhrase,
   normalizeSeedPhrase,
+  seedToKeyPair,
 } from './utils/seedPhrase';
 
 // Export storage

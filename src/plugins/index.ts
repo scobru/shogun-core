@@ -43,3 +43,7 @@ export type {
   VerifiableCredentialProof,
   CredentialVerificationResult,
 } from './zkproof/zkCredentials';
+
+// Challenge-Response plugin exports
+export { ChallengePlugin } from './challenge/challengePlugin';
+export type { ChallengeData, ChallengeConfig, ChallengePluginInterface } from './challenge/types';

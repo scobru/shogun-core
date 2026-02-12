@@ -102,3 +102,17 @@ export function normalizeSeedPhrase(input: string): string {
     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
     .replace(/[^\w\s]/g, ''); // Remove special characters
 }
+
+/**
+ * Convert mnemonic to SEA Key Pair directly
+ * @param {string} mnemonic - The BIP39 mnemonic
+ * @param {string} username - Username for derivation
+ * @returns {Promise<any>} SEA Key Pair
+ */
+export async function seedToKeyPair(
+  mnemonic: string,
+  username: string
+): Promise<any> {
+  const { generatePairFromMnemonic } = await import('../gundb/crypto');
+  return generatePairFromMnemonic(mnemonic, username);
+}

@@ -162,11 +162,11 @@ class DataBase {
    * Attempt to restore a previously saved session from sessionStorage.
    * @returns Object indicating success, error, and userPub if restored.
    */
-  restoreSession(): {
+  async restoreSession(): Promise<{
     success: boolean;
     userPub?: string;
     error?: string;
-  } {
+  }> {
     try {
       if (typeof sessionStorage === 'undefined') {
         return { success: false, error: 'sessionStorage not available' };
@@ -178,25 +178,60 @@ class DataBase {
       }
 
       const session = JSON.parse(sessionData);
-      if (!session.userPub) {
-        return { success: false, error: 'Invalid session data' };
+
+      // Handle legacy plaintext sessions (no version or version < 2)
+      if (!session.version || session.version < 2) {
+        sessionStorage.removeItem('gunSessionData');
+        return { success: false, error: 'Legacy session expired' };
+      }
+
+      // Check required fields for encrypted session
+      if (!session.encrypted || !session.integrity || !session.salt || !session.pub) {
+        return { success: false, error: 'Invalid encrypted session format' };
+      }
+
+      // 1. Verify integrity hash
+      // We hash the encrypted string itself to verify it hasn't been tampered with
+      const integrityCheck = await this.sea.work(session.encrypted, null, null, { name: 'SHA-256' });
+      if (integrityCheck !== session.integrity) {
+        sessionStorage.removeItem('gunSessionData');
+        return { success: false, error: 'Session integrity check failed' };
+      }
+
+      // 2. Derive decryption key
+      // Key = SEA.work(username + salt, pub)
+      // This ensures the key is tied to the user and the specific session salt
+      const key = await this.deriveSessionKey(session.username, session.salt, session.pub);
+
+      // 3. Decrypt payload
+      const decryptedData = await this.sea.decrypt(session.encrypted, key);
+
+      if (!decryptedData) {
+        sessionStorage.removeItem('gunSessionData');
+        return { success: false, error: 'Session decryption failed' };
+      }
+
+      // 4. Validate session content
+      if (decryptedData.pub !== session.pub) {
+        return { success: false, error: 'Session public key mismatch' };
       }
 
       // Check if session is expired
-      if (session.expiresAt && Date.now() > session.expiresAt) {
+      if (decryptedData.expiresAt && Date.now() > decryptedData.expiresAt) {
         sessionStorage.removeItem('gunSessionData');
         return { success: false, error: 'Session expired' };
       }
 
       // Verify session restoration
       const user = this.gun.user();
-      if (user.is && user.is.pub === session.userPub) {
+      if (user.is && user.is.pub === session.pub) {
         this.user = user;
-        return { success: true, userPub: session.userPub };
+        return { success: true, userPub: session.pub };
       }
 
       return { success: false, error: 'Session verification failed' };
     } catch (error) {
+      console.error('[DB] Restore session error:', error);
       return { success: false, error: String(error) };
     }
   }
@@ -457,33 +492,73 @@ class DataBase {
       username,
       sea: seaPair
         ? {
-            pub: seaPair.pub,
-            priv: seaPair.priv,
-            epub: seaPair.epub,
-            epriv: seaPair.epriv,
-          }
+          pub: seaPair.pub,
+          priv: seaPair.priv,
+          epub: seaPair.epub,
+          epriv: seaPair.epriv,
+        }
         : undefined,
     };
   }
 
   /**
+   * Derive a unique encryption key for the session.
+   * @param username Username to derive key from
+   * @param salt Random salt for this session
+   * @param pub User's public key
+   */
+  private async deriveSessionKey(username: string, salt: string, pub: string): Promise<string> {
+    // We use SEA.work to derive a key from username + salt + pub
+    // This makes the key unique per session (due to salt) and user
+    if (!this.sea) throw new Error('SEA not available');
+    const input = `${username}:${salt}:${pub}`;
+    return await this.sea.work(input, null, null, { name: 'SHA-256' });
+  }
+
+  /**
    * Save credentials for the current session to sessionStorage, if available.
+   * Encrypts sensitive data using a derived session key.
    * @param userInfo The credentials and user identity to store.
    */
-  private saveCredentials(userInfo: {
+  private async saveCredentials(userInfo: {
     alias: string;
     pair: ISEAPair;
     userPub: string;
-  }): void {
+  }): Promise<void> {
     try {
       if (typeof sessionStorage !== 'undefined') {
-        const sessionInfo = {
+        if (!this.sea) return;
+
+        // 1. Generate a random salt for this session
+        const salt = await this.sea.work(Math.random().toString(), null, null, { name: 'SHA-256' });
+
+        // 2. Derive encryption key
+        const key = await this.deriveSessionKey(userInfo.alias, salt, userInfo.userPub);
+
+        // 3. Prepare payload
+        const payload = {
           username: userInfo.alias,
           pair: userInfo.pair,
-          userPub: userInfo.userPub,
-          timestamp: Date.now(),
+          pub: userInfo.userPub,
           expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
         };
+
+        // 4. Encrypt payload
+        const encrypted = await this.sea.encrypt(payload, key);
+
+        // 5. Compute integrity hash of the encrypted string
+        const integrity = await this.sea.work(encrypted, null, null, { name: 'SHA-256' });
+
+        // 6. Store envelope
+        const sessionInfo = {
+          version: 2,
+          username: userInfo.alias,
+          pub: userInfo.userPub,
+          salt: salt,
+          encrypted: encrypted,
+          integrity: integrity
+        };
+
         sessionStorage.setItem('gunSessionData', JSON.stringify(sessionInfo));
       }
     } catch (error) {
@@ -517,7 +592,7 @@ class DataBase {
         const loginResult = await new Promise<SignUpResult>((resolve) => {
           let callbackInvoked = false;
 
-          user.auth(pair, (ack: any) => {
+          user.auth(pair, async (ack: any) => {
             if (callbackInvoked) {
               return;
             }
@@ -536,7 +611,7 @@ class DataBase {
             this.user = user;
             const alias = user?.is?.alias as string;
             const userPair = (user as any)?._?.sea as ISEAPair;
-            this.saveCredentials({
+            await this.saveCredentials({
               alias: alias || normalizedUsername,
               pair: pair ?? userPair,
               userPub: userPub,
@@ -636,7 +711,7 @@ class DataBase {
           const userPair = (user as any)?._?.sea as ISEAPair;
 
           try {
-            this.saveCredentials({
+            await this.saveCredentials({
               alias: alias || normalizedUsername,
               pair: pair ?? userPair,
               userPub: authenticatedUserPub,
@@ -671,11 +746,11 @@ class DataBase {
             isNewUser: true,
             sea: sea
               ? {
-                  pub: sea.pub,
-                  priv: sea.priv,
-                  epub: sea.epub,
-                  epriv: sea.epriv,
-                }
+                pub: sea.pub,
+                priv: sea.priv,
+                epub: sea.epub,
+                epriv: sea.epriv,
+              }
               : undefined,
           });
         });
@@ -703,7 +778,7 @@ class DataBase {
 
     return new Promise<AuthResult>((resolve) => {
       if (pair) {
-        user.auth(pair, (ack: any) => {
+        user.auth(pair, async (ack: any) => {
           if (ack.err) {
             this.resetAuthState();
             resolve({ success: false, error: ack.err });
@@ -722,7 +797,7 @@ class DataBase {
           const userPair = (user as any)?._?.sea as ISEAPair;
 
           try {
-            this.saveCredentials({
+            await this.saveCredentials({
               alias: alias || normalizedUsername,
               pair: pair ?? userPair,
               userPub: userPub,
@@ -743,7 +818,7 @@ class DataBase {
           resolve(this.buildLoginResult(alias || normalizedUsername, userPub));
         });
       } else {
-        user.auth(normalizedUsername, password, (ack: any) => {
+        user.auth(normalizedUsername, password, async (ack: any) => {
           if (ack.err) {
             this.resetAuthState();
             resolve({ success: false, error: ack.err });
@@ -762,7 +837,7 @@ class DataBase {
           const userPair = (user as any)?._?.sea as ISEAPair;
 
           try {
-            this.saveCredentials({
+            await this.saveCredentials({
               alias: alias || normalizedUsername,
               pair: pair ?? userPair,
               userPub: userPub,
@@ -841,7 +916,7 @@ class DataBase {
     console.log('[DB] Login with pair for username:', normalizedUsername);
 
     return new Promise<AuthResult>((resolve) => {
-      user.auth(pair, (ack: any) => {
+      user.auth(pair, async (ack: any) => {
         if (ack.err) {
           this.resetAuthState();
           resolve({ success: false, error: ack.err });
@@ -860,7 +935,7 @@ class DataBase {
         const userPair = (user as any)?._?.sea as ISEAPair;
 
         try {
-          this.saveCredentials({
+          await this.saveCredentials({
             alias: alias || normalizedUsername,
             pair: pair ?? userPair,
             userPub: userPub,

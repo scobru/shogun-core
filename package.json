@@ -1,6 +1,6 @@
 {
   "name": "shogun-core",
-  "version": "6.8.3",
+  "version": "6.9.0",
   "type": "module",
   "description": "SHOGUN CORE - Core library for Shogun Ecosystem",
   "main": "./dist/src/index.js",
@@ -78,7 +78,7 @@
     "elliptic": "^6.6.1",
     "ethers": "^6.13.5",
     "global": "^4.4.0",
-    "gun": "^0.2020.1241",
+    "gun": "git+https://github.com/scobru/gun.git",
     "lodash.merge": "^4.6.2",
     "nostr-tools": "^2.15.0",
     "openpgp": "^6.2.2",

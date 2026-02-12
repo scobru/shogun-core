@@ -41,6 +41,8 @@ export enum CorePlugins {
   Nostr = 'nostr',
   /** Zero-Knowledge Proof plugin */
   ZkProof = 'zkproof',
+  /** Challenge-Response Authentication plugin */
+  Challenge = 'challenge',
 }
 
 export type AuthMethod =
@@ -49,6 +51,7 @@ export type AuthMethod =
   | 'web3'
   | 'nostr'
   | 'zkproof'
+  | 'challenge'
   | 'pair';
 
 // AuthEventData is exported from interfaces/events.ts to avoid duplication

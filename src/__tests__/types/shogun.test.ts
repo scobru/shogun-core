@@ -59,6 +59,14 @@ describe('Shogun Types', () => {
       expect(CorePlugins.Nostr).toBe('nostr');
     });
 
+    it('should have correct zkproof plugin', () => {
+      expect(CorePlugins.ZkProof).toBe('zkproof');
+    });
+
+    it('should have correct challenge plugin', () => {
+      expect(CorePlugins.Challenge).toBe('challenge');
+    });
+
     // OAuth has been removed from Shogun Core
 
     it('should have all expected plugins', () => {
@@ -67,8 +75,9 @@ describe('Shogun Types', () => {
       expect(plugins).toContain('web3');
       expect(plugins).toContain('nostr');
       expect(plugins).toContain('zkproof');
+      expect(plugins).toContain('challenge');
       // OAuth has been removed from Shogun Core
-      expect(plugins).toHaveLength(4);
+      expect(plugins).toHaveLength(5);
     });
   });
 

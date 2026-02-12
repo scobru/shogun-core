@@ -9,6 +9,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to get SEA safely from various sources
 function getSEA() {
+  try { require('fs').appendFileSync('debug_crypto.log', '[DEBUG] getSEA called\n'); } catch { }
+  console.error('[DEBUG] getSEA called');
+
+  // Try global.SEA directly (matches setup.ts)
+  if ((global as any).SEA) {
+    try { require('fs').appendFileSync('debug_crypto.log', '[DEBUG] Found global.SEA\n'); } catch { }
+    console.error('[DEBUG] Found global.SEA');
+    return (global as any).SEA;
+  }
+
   // Try globalThis first (works in both browser and Node)
   if ((globalThis as any).Gun && (globalThis as any).Gun.SEA) {
     return (globalThis as any).Gun.SEA;
@@ -32,9 +42,8 @@ function getSEA() {
   if (typeof window !== 'undefined' && (window as any).SEA) {
     return (window as any).SEA;
   }
-  if ((global as any).SEA) {
-    return (global as any).SEA;
-  }
+
+  // console.error('[DEBUG] SEA not found in any location');
   return null;
 }
 
@@ -238,7 +247,7 @@ export function safeHash(unsafe: string) {
  * @returns Encoded character
  */
 //@ts-ignore
-function encodeChar(_: any) {}
+function encodeChar(_: any) { }
 
 /**
  * Converts URL-safe characters back to original hash characters
@@ -269,7 +278,7 @@ export function unsafeHash(safe: string) {
  * @returns Decoded character
  */
 //@ts-ignore
-function decodeChar(_: any) {}
+function decodeChar(_: any) { }
 
 /**
  * Safely parses JSON with fallback to default value
@@ -302,6 +311,98 @@ export function randomUUID() {
       const b = Array.from(bytes).map(toHex).join('');
       return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
     }
-  } catch {}
+  } catch { }
   return uuidv4();
+}
+
+/**
+ * Generate a SEA key pair from a deterministic seed string.
+ *
+ * Tries to use the Gun fork's native SEA.pair({ seed }) if available.
+ * Falls back to deriving a password from the seed and creating a pair from that.
+ *
+ * @param seed - The seed string (e.g. from BIP39 mnemonic)
+ * @returns Promise resolving to a SEA key pair
+ */
+export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
+  const sea = getSEA();
+  try {
+    require('fs').appendFileSync('debug_crypto.log', `[DEBUG] generatePairFromSeed sea: ${!!sea} pair: ${!!sea?.pair} keys: ${sea ? Object.keys(sea).join(',') : 'null'}\n`);
+  } catch { }
+
+  if (!sea || !sea.pair) {
+    try {
+      require('fs').appendFileSync('debug_crypto.log', `[DEBUG] SEA global state details: global.SEA=${!!(global as any).SEA}\n`);
+    } catch { }
+    throw new Error('SEA not available');
+  }
+
+  // 1. Try native seed-based derivation (Gun fork feature)
+  try {
+    const pair = await sea.pair(null, { seed });
+    console.error('[DEBUG] native pair result:', pair);
+    if (pair && pair.pub && pair.priv) {
+      return pair as ISEAPair;
+    }
+  } catch (err) {
+    console.error('[DEBUG] native pair failed:', err);
+    // Native seed support not available
+  }
+
+  // 2. Fallback: Derive a pseudo-random password from the seed
+  // We use SEA.work to hash the seed into a password
+  const derivedPassword = await sea.work(
+    seed,
+    'shogun-seed-salt', // Constant salt for consistent derivation
+    null,
+    { name: 'SHA-256' }
+  );
+
+  // 3. Generate a pair using the derived password as a seed equivalent
+  // Note: Standard SEA.pair() isn't fully deterministic without {seed},
+  // but some versions use the input as entropy.
+  // To ensure determinism without native support, we might need a stronger fallback,
+  // but for now we relay on the password-based generation if available or basic pair.
+  // Ideally, if native support is missing, we shouldn't claim full determinism.
+
+  // Actually, standard Gun SEA.pair() doesn't take a password for determinism.
+  // However, we can use the derivedPassword as the "seed" input again if the
+  // first attempt failed due to format issues, but it's likely the same API.
+
+  // If native seed isn't supported, we cannot guarantee true 100% determinism 
+  // across all Gun versions without an external crypto library. 
+  // But strictly speaking, the requirement implies we should try our best.
+
+  // Re-try with the hash as seed (sometimes format matters)
+  try {
+    const pair = await sea.pair(null, { seed: derivedPassword });
+    if (pair && pair.pub && pair.priv) {
+      return pair as ISEAPair;
+    }
+  } catch { }
+
+  throw new Error('Deterministic key generation not supported by this Gun version');
+}
+
+/**
+ * Generate a SEA key pair from a BIP39 mnemonic.
+ *
+ * @param mnemonic - The 12-word mnemonic string
+ * @param username - Username to include in derivation (salt)
+ * @returns Promise resolving to a SEA key pair
+ */
+export async function generatePairFromMnemonic(
+  mnemonic: string,
+  username: string
+): Promise<ISEAPair> {
+  if (!mnemonic || mnemonic.split(' ').length < 12) {
+    throw new Error('Invalid mnemonic: must be at least 12 words');
+  }
+
+  // Combine mnemonic and username to create a unique seed context
+  // This prevents two users with the same mnemonic (unlikely but possible in bad randomness)
+  // from having the same keys, and binds the keys to the username.
+  const seedContext = `${mnemonic.trim()}:${username.trim()}`;
+
+  return generatePairFromSeed(seedContext);
 }

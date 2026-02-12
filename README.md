@@ -12,11 +12,11 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 
 ## Features
 
-- 🔐 **Multiple Authentication Methods**: Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, ZK-Proof (anonymous)
+- 🔐 **Multiple Authentication Methods**: Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, ZK-Proof (anonymous), Challenge (Server-Signed)
 - 🌐 **Decentralized Storage**: Built on GunDB or Holster for peer-to-peer data synchronization
 - 🔄 **Dual Database Support**: Use Gun (maximum compatibility) or Holster (modern ES modules, improved performance)
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins
-- 💼 **Smart Wallet**: Account Abstraction with multi-sig, social recovery, and batch transactions
+
 - 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
@@ -60,17 +60,7 @@ const shogun = new ShogunCore({
   },
 });
 
-// Register Smart Wallet plugin separately if needed
-import { SmartWalletPlugin } from "shogun-core";
 
-const smartWalletPlugin = new SmartWalletPlugin({
-  enabled: true,
-  factoryAddress: "0x...",
-  defaultRequiredSignatures: 1,
-  defaultRequiredGuardians: 2,
-});
-
-shogun.register(smartWalletPlugin);
 ```
 
 ### Using Holster (Alternative)
@@ -246,46 +236,55 @@ if (zkPlugin && zkPlugin.isAvailable()) {
 }
 ```
 
-### 6. Smart Wallet Plugin API
+
+
+### 7. Challenge Auth Plugin API
+
+The `Challenge` plugin allows for server-signed challenges to verify user authenticity without exposing private keys directly, useful for certain server-side integrations.
 
 ```typescript
-import { SmartWalletPlugin } from "shogun-core";
+const challengePlugin = shogun.getPlugin("challenge");
 
-// Register Smart Wallet plugin
-const smartWalletPlugin = new SmartWalletPlugin({
-  enabled: true,
-  factoryAddress: "0x...", // Smart Wallet Factory contract address
-  defaultRequiredSignatures: 1,
-  defaultRequiredGuardians: 2,
-});
-
-shogun.register(smartWalletPlugin);
-
-// Configure signer (derive EOA from WebAuthn seed phrase)
-const webauthnPlugin = shogun.getPlugin("webauthn");
-const signUpResult = await webauthnPlugin.signUp("alice", {
-  generateSeedPhrase: true
-});
-
-import { derive } from "shogun-core";
-
-const wallet = await derive(signUpResult.seedPhrase!, "alice", {
-  includeSecp256k1Ethereum: true
-});
-
-await smartWalletPlugin.setSigner(wallet.secp256k1Ethereum.privateKey);
-
-// Create Smart Wallet with guardians
-const result = await smartWalletPlugin.createWalletWithGuardians(
-  wallet.secp256k1Ethereum.address,
-  [guardian1, guardian2],
-  1,  // 1 signature required
-  2   // 2 guardians for recovery
-);
-
-if (result.success) {
-  console.log("Smart Wallet created:", result.walletAddress);
+if (challengePlugin) {
+  // Initiate a challenge
+  const challenge = await challengePlugin.createChallenge();
+  
+  // User signs the challenge
+  const signature = await user.sign(challenge);
+  
+  // Verify the signature
+  const isValid = await challengePlugin.verify(challenge, signature);
 }
+```
+
+### 8. Mnemonic & HD Keys
+
+Shogun Core supports BIP39 mnemonics and Hierarchical Deterministic (HD) key derivation, allowing you to generate multiple purpose-specific keys from a single seed.
+
+```typescript
+import { 
+  generateSeedPhrase, 
+  validateSeedPhrase, 
+  seedToKeyPair,
+  deriveChildKey 
+} from "shogun-core";
+
+// 1. Generate a new 12-word mnemonic
+const mnemonic = generateSeedPhrase();
+console.log("Secret Mnemonic:", mnemonic);
+
+// 2. Validate a mnemonic
+const isValid = validateSeedPhrase(mnemonic);
+
+// 3. Convert mnemonic to a master SEA pair
+const masterPair = await seedToKeyPair(mnemonic, "my-username");
+
+// 4. Derive child keys for specific purposes (HD Wallet style)
+const chatPair = await deriveChildKey(masterPair, "messaging");
+const walletPair = await deriveChildKey(masterPair, "payment");
+
+console.log("Master Pub:", masterPair.pub);
+console.log("Chat Pub:", chatPair.pub);
 ```
 
 ## Browser Usage (CDN)
@@ -458,7 +457,6 @@ interface ShogunCoreConfig {
 
 **Note**: 
 - Either `gunInstance` or `holsterInstance` must be provided (but not both)
-- `SmartWalletPlugin` must be registered separately using `shogun.register()` as it's not included in the main configuration
 
 ## Migration Guide
 
