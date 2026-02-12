@@ -10,7 +10,7 @@ import { EventEmitter } from '../utils/eventEmitter';
 export interface AuthEventData {
     userPub?: string;
     username?: string;
-    method: 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair';
+    method: 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair' | 'challenge';
     provider?: string;
 }
 /**

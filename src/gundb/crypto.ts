@@ -9,12 +9,19 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to get SEA safely from various sources
 function getSEA() {
-  try { require('fs').appendFileSync('debug_crypto.log', '[DEBUG] getSEA called\n'); } catch { }
+  try {
+    require('fs').appendFileSync('debug_crypto.log', '[DEBUG] getSEA called\n');
+  } catch {}
   console.error('[DEBUG] getSEA called');
 
   // Try global.SEA directly (matches setup.ts)
   if ((global as any).SEA) {
-    try { require('fs').appendFileSync('debug_crypto.log', '[DEBUG] Found global.SEA\n'); } catch { }
+    try {
+      require('fs').appendFileSync(
+        'debug_crypto.log',
+        '[DEBUG] Found global.SEA\n',
+      );
+    } catch {}
     console.error('[DEBUG] Found global.SEA');
     return (global as any).SEA;
   }
@@ -247,7 +254,7 @@ export function safeHash(unsafe: string) {
  * @returns Encoded character
  */
 //@ts-ignore
-function encodeChar(_: any) { }
+function encodeChar(_: any) {}
 
 /**
  * Converts URL-safe characters back to original hash characters
@@ -278,7 +285,7 @@ export function unsafeHash(safe: string) {
  * @returns Decoded character
  */
 //@ts-ignore
-function decodeChar(_: any) { }
+function decodeChar(_: any) {}
 
 /**
  * Safely parses JSON with fallback to default value
@@ -311,7 +318,7 @@ export function randomUUID() {
       const b = Array.from(bytes).map(toHex).join('');
       return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
     }
-  } catch { }
+  } catch {}
   return uuidv4();
 }
 
@@ -327,13 +334,19 @@ export function randomUUID() {
 export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
   const sea = getSEA();
   try {
-    require('fs').appendFileSync('debug_crypto.log', `[DEBUG] generatePairFromSeed sea: ${!!sea} pair: ${!!sea?.pair} keys: ${sea ? Object.keys(sea).join(',') : 'null'}\n`);
-  } catch { }
+    require('fs').appendFileSync(
+      'debug_crypto.log',
+      `[DEBUG] generatePairFromSeed sea: ${!!sea} pair: ${!!sea?.pair} keys: ${sea ? Object.keys(sea).join(',') : 'null'}\n`,
+    );
+  } catch {}
 
   if (!sea || !sea.pair) {
     try {
-      require('fs').appendFileSync('debug_crypto.log', `[DEBUG] SEA global state details: global.SEA=${!!(global as any).SEA}\n`);
-    } catch { }
+      require('fs').appendFileSync(
+        'debug_crypto.log',
+        `[DEBUG] SEA global state details: global.SEA=${!!(global as any).SEA}\n`,
+      );
+    } catch {}
     throw new Error('SEA not available');
   }
 
@@ -355,7 +368,7 @@ export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
     seed,
     'shogun-seed-salt', // Constant salt for consistent derivation
     null,
-    { name: 'SHA-256' }
+    { name: 'SHA-256' },
   );
 
   // 3. Generate a pair using the derived password as a seed equivalent
@@ -369,8 +382,8 @@ export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
   // However, we can use the derivedPassword as the "seed" input again if the
   // first attempt failed due to format issues, but it's likely the same API.
 
-  // If native seed isn't supported, we cannot guarantee true 100% determinism 
-  // across all Gun versions without an external crypto library. 
+  // If native seed isn't supported, we cannot guarantee true 100% determinism
+  // across all Gun versions without an external crypto library.
   // But strictly speaking, the requirement implies we should try our best.
 
   // Re-try with the hash as seed (sometimes format matters)
@@ -379,9 +392,11 @@ export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
     if (pair && pair.pub && pair.priv) {
       return pair as ISEAPair;
     }
-  } catch { }
+  } catch {}
 
-  throw new Error('Deterministic key generation not supported by this Gun version');
+  throw new Error(
+    'Deterministic key generation not supported by this Gun version',
+  );
 }
 
 /**
@@ -393,7 +408,7 @@ export async function generatePairFromSeed(seed: string): Promise<ISEAPair> {
  */
 export async function generatePairFromMnemonic(
   mnemonic: string,
-  username: string
+  username: string,
 ): Promise<ISEAPair> {
   if (!mnemonic || mnemonic.split(' ').length < 12) {
     throw new Error('Invalid mnemonic: must be at least 12 words');

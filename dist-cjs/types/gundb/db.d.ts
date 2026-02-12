@@ -70,11 +70,11 @@ declare class DataBase {
      * Attempt to restore a previously saved session from sessionStorage.
      * @returns Object indicating success, error, and userPub if restored.
      */
-    restoreSession(): {
+    restoreSession(): Promise<{
         success: boolean;
         userPub?: string;
         error?: string;
-    };
+    }>;
     /**
      * Log out the current user, clear local state and remove session from storage.
      */
@@ -137,7 +137,15 @@ declare class DataBase {
      */
     private buildLoginResult;
     /**
+     * Derive a unique encryption key for the session.
+     * @param username Username to derive key from
+     * @param salt Random salt for this session
+     * @param pub User's public key
+     */
+    private deriveSessionKey;
+    /**
      * Save credentials for the current session to sessionStorage, if available.
+     * Encrypts sensitive data using a derived session key.
      * @param userInfo The credentials and user identity to store.
      */
     private saveCredentials;

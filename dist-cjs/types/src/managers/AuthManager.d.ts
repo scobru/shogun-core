@@ -38,6 +38,13 @@ export declare class AuthManager {
      */
     loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult>;
     /**
+     * Login with a BIP39 seed phrase (mnemonic).
+     * Derives the key pair deterministically and logs in.
+     * @param username - Username associated with the seed
+     * @param mnemonic - The 12-word seed phrase
+     */
+    loginWithSeed(username: string, mnemonic: string): Promise<AuthResult>;
+    /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password

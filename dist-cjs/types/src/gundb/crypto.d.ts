@@ -93,3 +93,21 @@ export declare function unsafeHash(safe: string): any;
  */
 export declare function safeJSONParse(input: any, def?: any): any;
 export declare function randomUUID(): string;
+/**
+ * Generate a SEA key pair from a deterministic seed string.
+ *
+ * Tries to use the Gun fork's native SEA.pair({ seed }) if available.
+ * Falls back to deriving a password from the seed and creating a pair from that.
+ *
+ * @param seed - The seed string (e.g. from BIP39 mnemonic)
+ * @returns Promise resolving to a SEA key pair
+ */
+export declare function generatePairFromSeed(seed: string): Promise<ISEAPair>;
+/**
+ * Generate a SEA key pair from a BIP39 mnemonic.
+ *
+ * @param mnemonic - The 12-word mnemonic string
+ * @param username - Username to include in derivation (salt)
+ * @returns Promise resolving to a SEA key pair
+ */
+export declare function generatePairFromMnemonic(mnemonic: string, username: string): Promise<ISEAPair>;

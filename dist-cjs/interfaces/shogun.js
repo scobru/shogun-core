@@ -34,4 +34,6 @@ var CorePlugins;
     CorePlugins["Nostr"] = "nostr";
     /** Zero-Knowledge Proof plugin */
     CorePlugins["ZkProof"] = "zkproof";
+    /** Challenge-Response Authentication plugin */
+    CorePlugins["Challenge"] = "challenge";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

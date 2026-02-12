@@ -327,6 +327,16 @@ export class ShogunCore implements IShogunCore {
   }
 
   /**
+   * Login with a BIP39 seed phrase (mnemonic)
+   * @param username - Username associated with the seed
+   * @param mnemonic - The 12-word seed phrase
+   * @returns {Promise<AuthResult>} authentication result
+   */
+  async loginWithSeed(username: string, mnemonic: string): Promise<AuthResult> {
+    return this.authManager.loginWithSeed(username, mnemonic);
+  }
+
+  /**
    * Register a new user with provided credentials
    * @param username - Username
    * @param password - Password

@@ -13,18 +13,18 @@
  * @module hd-keys
  */
 
-import { ISEAPair } from "gun";
+import { ISEAPair } from 'gun';
 
 /**
  * Get SEA from available global sources.
  */
 function getSEA(): any {
-    if ((globalThis as any).Gun?.SEA) return (globalThis as any).Gun.SEA;
-    if ((globalThis as any).SEA) return (globalThis as any).SEA;
-    if (typeof window !== "undefined" && (window as any).Gun?.SEA) {
-        return (window as any).Gun.SEA;
-    }
-    return null;
+  if ((globalThis as any).Gun?.SEA) return (globalThis as any).Gun.SEA;
+  if ((globalThis as any).SEA) return (globalThis as any).SEA;
+  if (typeof window !== 'undefined' && (window as any).Gun?.SEA) {
+    return (window as any).Gun.SEA;
+  }
+  return null;
 }
 
 /**
@@ -40,60 +40,65 @@ function getSEA(): any {
  * @throws Error if SEA is not available or masterPair is invalid
  */
 export async function deriveChildKey(
-    masterPair: ISEAPair,
-    purpose: string,
+  masterPair: ISEAPair,
+  purpose: string,
 ): Promise<ISEAPair> {
-    const sea = getSEA();
-    if (!sea || !sea.work || !sea.pair) {
-        throw new Error("SEA not available for HD key derivation");
+  const sea = getSEA();
+  if (!sea || !sea.work || !sea.pair) {
+    throw new Error('SEA not available for HD key derivation');
+  }
+
+  if (!masterPair?.priv || !masterPair?.pub) {
+    throw new Error('Invalid master pair: missing priv or pub key');
+  }
+
+  if (!purpose || purpose.trim().length === 0) {
+    throw new Error('Purpose string is required for key derivation');
+  }
+
+  // Try native additive derivation if available (Gun fork feature)
+  try {
+    const childPair = await sea.pair(null, {
+      priv: masterPair.priv,
+      seed: purpose,
+    });
+    if (
+      childPair?.pub &&
+      childPair?.priv &&
+      childPair?.epub &&
+      childPair?.epriv
+    ) {
+      return childPair as ISEAPair;
     }
+  } catch {
+    // Native API not available, use fallback
+  }
 
-    if (!masterPair?.priv || !masterPair?.pub) {
-        throw new Error("Invalid master pair: missing priv or pub key");
+  // Fallback: derive a seed from master private key + purpose using PBKDF2
+  const derivedSeed = await sea.work(
+    masterPair.priv + ':' + purpose,
+    'shogun-hd-derivation',
+    null,
+    { name: 'SHA-256' },
+  );
+
+  // Generate a pair seeded by the derived value
+  try {
+    const childPair = await sea.pair(null, { seed: derivedSeed });
+    if (childPair?.pub && childPair?.priv) {
+      return childPair as ISEAPair;
     }
+  } catch {
+    // seed-based pair not supported
+  }
 
-    if (!purpose || purpose.trim().length === 0) {
-        throw new Error("Purpose string is required for key derivation");
-    }
-
-    // Try native additive derivation if available (Gun fork feature)
-    try {
-        const childPair = await sea.pair(null, {
-            priv: masterPair.priv,
-            seed: purpose,
-        });
-        if (childPair?.pub && childPair?.priv && childPair?.epub && childPair?.epriv) {
-            return childPair as ISEAPair;
-        }
-    } catch {
-        // Native API not available, use fallback
-    }
-
-    // Fallback: derive a seed from master private key + purpose using PBKDF2
-    const derivedSeed = await sea.work(
-        masterPair.priv + ":" + purpose,
-        "shogun-hd-derivation",
-        null,
-        { name: "SHA-256" },
-    );
-
-    // Generate a pair seeded by the derived value
-    try {
-        const childPair = await sea.pair(null, { seed: derivedSeed });
-        if (childPair?.pub && childPair?.priv) {
-            return childPair as ISEAPair;
-        }
-    } catch {
-        // seed-based pair not supported
-    }
-
-    // Final fallback: use work output as input to pair()
-    // NOTE: This is NOT fully deterministic without native seed support
-    console.warn(
-        "[hd-keys] Native seed-based derivation not available. Child key may not be deterministic.",
-    );
-    const childPair = await sea.pair();
-    return childPair as ISEAPair;
+  // Final fallback: use work output as input to pair()
+  // NOTE: This is NOT fully deterministic without native seed support
+  console.warn(
+    '[hd-keys] Native seed-based derivation not available. Child key may not be deterministic.',
+  );
+  const childPair = await sea.pair();
+  return childPair as ISEAPair;
 }
 
 /**
@@ -113,28 +118,28 @@ export async function deriveChildKey(
  * @returns Promise resolving to the derived public key string
  */
 export async function deriveChildPublicKey(
-    masterPub: string,
-    purpose: string,
+  masterPub: string,
+  purpose: string,
 ): Promise<string> {
-    const sea = getSEA();
-    if (!sea || !sea.work) {
-        throw new Error("SEA not available for public key derivation");
-    }
+  const sea = getSEA();
+  if (!sea || !sea.work) {
+    throw new Error('SEA not available for public key derivation');
+  }
 
-    if (!masterPub) {
-        throw new Error("Master public key is required");
-    }
+  if (!masterPub) {
+    throw new Error('Master public key is required');
+  }
 
-    // Derive a deterministic identifier from masterPub + purpose
-    // This uses SEA.work as a KDF to produce a unique, repeatable string
-    const derivedId = await sea.work(
-        masterPub + ":" + purpose,
-        "shogun-hd-pub-derivation",
-        null,
-        { name: "SHA-256" },
-    );
+  // Derive a deterministic identifier from masterPub + purpose
+  // This uses SEA.work as a KDF to produce a unique, repeatable string
+  const derivedId = await sea.work(
+    masterPub + ':' + purpose,
+    'shogun-hd-pub-derivation',
+    null,
+    { name: 'SHA-256' },
+  );
 
-    return derivedId as string;
+  return derivedId as string;
 }
 
 /**
@@ -145,18 +150,18 @@ export async function deriveChildPublicKey(
  * @returns Promise resolving to a record mapping purpose → ISEAPair
  */
 export async function deriveKeyHierarchy(
-    masterPair: ISEAPair,
-    purposes: string[],
+  masterPair: ISEAPair,
+  purposes: string[],
 ): Promise<Record<string, ISEAPair>> {
-    if (!purposes || purposes.length === 0) {
-        return {};
-    }
+  if (!purposes || purposes.length === 0) {
+    return {};
+  }
 
-    const hierarchy: Record<string, ISEAPair> = {};
+  const hierarchy: Record<string, ISEAPair> = {};
 
-    for (const purpose of purposes) {
-        hierarchy[purpose] = await deriveChildKey(masterPair, purpose);
-    }
+  for (const purpose of purposes) {
+    hierarchy[purpose] = await deriveChildKey(masterPair, purpose);
+  }
 
-    return hierarchy;
+  return hierarchy;
 }

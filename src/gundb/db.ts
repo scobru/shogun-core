@@ -186,13 +186,23 @@ class DataBase {
       }
 
       // Check required fields for encrypted session
-      if (!session.encrypted || !session.integrity || !session.salt || !session.pub) {
+      if (
+        !session.encrypted ||
+        !session.integrity ||
+        !session.salt ||
+        !session.pub
+      ) {
         return { success: false, error: 'Invalid encrypted session format' };
       }
 
       // 1. Verify integrity hash
       // We hash the encrypted string itself to verify it hasn't been tampered with
-      const integrityCheck = await this.sea.work(session.encrypted, null, null, { name: 'SHA-256' });
+      const integrityCheck = await this.sea.work(
+        session.encrypted,
+        null,
+        null,
+        { name: 'SHA-256' },
+      );
       if (integrityCheck !== session.integrity) {
         sessionStorage.removeItem('gunSessionData');
         return { success: false, error: 'Session integrity check failed' };
@@ -201,7 +211,11 @@ class DataBase {
       // 2. Derive decryption key
       // Key = SEA.work(username + salt, pub)
       // This ensures the key is tied to the user and the specific session salt
-      const key = await this.deriveSessionKey(session.username, session.salt, session.pub);
+      const key = await this.deriveSessionKey(
+        session.username,
+        session.salt,
+        session.pub,
+      );
 
       // 3. Decrypt payload
       const decryptedData = await this.sea.decrypt(session.encrypted, key);
@@ -492,11 +506,11 @@ class DataBase {
       username,
       sea: seaPair
         ? {
-          pub: seaPair.pub,
-          priv: seaPair.priv,
-          epub: seaPair.epub,
-          epriv: seaPair.epriv,
-        }
+            pub: seaPair.pub,
+            priv: seaPair.priv,
+            epub: seaPair.epub,
+            epriv: seaPair.epriv,
+          }
         : undefined,
     };
   }
@@ -507,7 +521,11 @@ class DataBase {
    * @param salt Random salt for this session
    * @param pub User's public key
    */
-  private async deriveSessionKey(username: string, salt: string, pub: string): Promise<string> {
+  private async deriveSessionKey(
+    username: string,
+    salt: string,
+    pub: string,
+  ): Promise<string> {
     // We use SEA.work to derive a key from username + salt + pub
     // This makes the key unique per session (due to salt) and user
     if (!this.sea) throw new Error('SEA not available');
@@ -530,10 +548,16 @@ class DataBase {
         if (!this.sea) return;
 
         // 1. Generate a random salt for this session
-        const salt = await this.sea.work(Math.random().toString(), null, null, { name: 'SHA-256' });
+        const salt = await this.sea.work(Math.random().toString(), null, null, {
+          name: 'SHA-256',
+        });
 
         // 2. Derive encryption key
-        const key = await this.deriveSessionKey(userInfo.alias, salt, userInfo.userPub);
+        const key = await this.deriveSessionKey(
+          userInfo.alias,
+          salt,
+          userInfo.userPub,
+        );
 
         // 3. Prepare payload
         const payload = {
@@ -547,7 +571,9 @@ class DataBase {
         const encrypted = await this.sea.encrypt(payload, key);
 
         // 5. Compute integrity hash of the encrypted string
-        const integrity = await this.sea.work(encrypted, null, null, { name: 'SHA-256' });
+        const integrity = await this.sea.work(encrypted, null, null, {
+          name: 'SHA-256',
+        });
 
         // 6. Store envelope
         const sessionInfo = {
@@ -556,7 +582,7 @@ class DataBase {
           pub: userInfo.userPub,
           salt: salt,
           encrypted: encrypted,
-          integrity: integrity
+          integrity: integrity,
         };
 
         sessionStorage.setItem('gunSessionData', JSON.stringify(sessionInfo));
@@ -746,11 +772,11 @@ class DataBase {
             isNewUser: true,
             sea: sea
               ? {
-                pub: sea.pub,
-                priv: sea.priv,
-                epub: sea.epub,
-                epriv: sea.epriv,
-              }
+                  pub: sea.pub,
+                  priv: sea.priv,
+                  epub: sea.epub,
+                  epriv: sea.epriv,
+                }
               : undefined,
           });
         });

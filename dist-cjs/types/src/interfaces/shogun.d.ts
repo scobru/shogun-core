@@ -38,9 +38,11 @@ export declare enum CorePlugins {
     /** Bitcoin wallet plugin */
     Nostr = "nostr",
     /** Zero-Knowledge Proof plugin */
-    ZkProof = "zkproof"
+    ZkProof = "zkproof",
+    /** Challenge-Response Authentication plugin */
+    Challenge = "challenge"
 }
-export type AuthMethod = 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'pair';
+export type AuthMethod = 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'challenge' | 'pair';
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -120,6 +122,7 @@ export interface IShogunCore extends PluginManager {
     getRecentErrors(count?: number): ShogunError[];
     login(username: string, password: string, pair?: ISEAPair | null): Promise<AuthResult>;
     loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult>;
+    loginWithSeed(username: string, mnemonic: string): Promise<AuthResult>;
     signUp(username: string, password?: string, pair?: ISEAPair | null): Promise<SignUpResult>;
     getAuthenticationMethod(type: AuthMethod): any;
     setAuthMethod(method: AuthMethod): void;
@@ -162,6 +165,9 @@ export interface ShogunCoreConfig {
         defaultGroupId?: string;
         deterministic?: boolean;
         minEntropy?: number;
+    };
+    challenge?: {
+        enabled?: boolean;
     };
     /**
      * Crypto-related configuration

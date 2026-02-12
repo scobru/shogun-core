@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setBufferPolyfill = exports.ShogunStorage = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.RxJSHolster = exports.DataBaseHolster = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = void 0;
+exports.setBufferPolyfill = exports.ShogunStorage = exports.seedToKeyPair = exports.normalizeSeedPhrase = exports.formatSeedPhrase = exports.deriveCredentialsFromMnemonic = exports.seedToPassword = exports.mnemonicToSeed = exports.validateSeedPhrase = exports.generateSeedPhrase = exports.RxJSHolster = exports.DataBaseHolster = exports.DataBase = exports.GunErrors = exports.derive = exports.crypto = exports.RxJS = exports.ShogunCore = exports.deriveKeyHierarchy = exports.deriveChildPublicKey = exports.deriveChildKey = exports.generatePairFromMnemonic = void 0;
 // Import polyfills FIRST before any other imports
 // This ensures Buffer and other Node.js polyfills are available
 require("./polyfills");
@@ -24,6 +24,12 @@ __exportStar(require("./utils/errorHandler"), exports);
 __exportStar(require("./plugins"), exports);
 __exportStar(require("./interfaces/shogun"), exports);
 __exportStar(require("./gundb/gun-es"), exports);
+var crypto_1 = require("./gundb/crypto");
+Object.defineProperty(exports, "generatePairFromMnemonic", { enumerable: true, get: function () { return crypto_1.generatePairFromMnemonic; } });
+var hd_keys_1 = require("./gundb/hd-keys");
+Object.defineProperty(exports, "deriveChildKey", { enumerable: true, get: function () { return hd_keys_1.deriveChildKey; } });
+Object.defineProperty(exports, "deriveChildPublicKey", { enumerable: true, get: function () { return hd_keys_1.deriveChildPublicKey; } });
+Object.defineProperty(exports, "deriveKeyHierarchy", { enumerable: true, get: function () { return hd_keys_1.deriveKeyHierarchy; } });
 var core_1 = require("./core");
 Object.defineProperty(exports, "ShogunCore", { enumerable: true, get: function () { return core_1.ShogunCore; } });
 var db_1 = require("./gundb/db");
@@ -47,6 +53,7 @@ Object.defineProperty(exports, "seedToPassword", { enumerable: true, get: functi
 Object.defineProperty(exports, "deriveCredentialsFromMnemonic", { enumerable: true, get: function () { return seedPhrase_1.deriveCredentialsFromMnemonic; } });
 Object.defineProperty(exports, "formatSeedPhrase", { enumerable: true, get: function () { return seedPhrase_1.formatSeedPhrase; } });
 Object.defineProperty(exports, "normalizeSeedPhrase", { enumerable: true, get: function () { return seedPhrase_1.normalizeSeedPhrase; } });
+Object.defineProperty(exports, "seedToKeyPair", { enumerable: true, get: function () { return seedPhrase_1.seedToKeyPair; } });
 // Export storage
 var storage_1 = require("./storage/storage");
 Object.defineProperty(exports, "ShogunStorage", { enumerable: true, get: function () { return storage_1.ShogunStorage; } });

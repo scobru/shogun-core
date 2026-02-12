@@ -48,3 +48,10 @@ export declare function formatSeedPhrase(mnemonic: string): string;
  * @returns {string} Normalized seed phrase
  */
 export declare function normalizeSeedPhrase(input: string): string;
+/**
+ * Convert mnemonic to SEA Key Pair directly
+ * @param {string} mnemonic - The BIP39 mnemonic
+ * @param {string} username - Username for derivation
+ * @returns {Promise<any>} SEA Key Pair
+ */
+export declare function seedToKeyPair(mnemonic: string, username: string): Promise<any>;

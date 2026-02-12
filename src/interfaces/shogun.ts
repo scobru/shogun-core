@@ -173,6 +173,7 @@ export interface IShogunCore extends PluginManager {
     pair?: ISEAPair | null,
   ): Promise<AuthResult>;
   loginWithPair(username: string, pair: ISEAPair): Promise<AuthResult>;
+  loginWithSeed(username: string, mnemonic: string): Promise<AuthResult>;
   signUp(
     username: string,
     password?: string,
@@ -224,6 +225,9 @@ export interface ShogunCoreConfig {
     defaultGroupId?: string;
     deterministic?: boolean;
     minEntropy?: number;
+  };
+  challenge?: {
+    enabled?: boolean;
   };
   /**
    * Crypto-related configuration

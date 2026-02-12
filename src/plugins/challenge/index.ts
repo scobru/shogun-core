@@ -1,7 +1,7 @@
 // Challenge-Response Authentication Plugin
-export { ChallengePlugin } from "./challengePlugin";
+export { ChallengePlugin } from './challengePlugin';
 export type {
-    ChallengeData,
-    ChallengeConfig,
-    ChallengePluginInterface,
-} from "./types";
+  ChallengeData,
+  ChallengeConfig,
+  ChallengePluginInterface,
+} from './types';

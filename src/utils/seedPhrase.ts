@@ -111,7 +111,7 @@ export function normalizeSeedPhrase(input: string): string {
  */
 export async function seedToKeyPair(
   mnemonic: string,
-  username: string
+  username: string,
 ): Promise<any> {
   const { generatePairFromMnemonic } = await import('../gundb/crypto');
   return generatePairFromMnemonic(mnemonic, username);

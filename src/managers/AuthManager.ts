@@ -11,7 +11,7 @@ import {
   deriveCredentialsFromMnemonic,
   mnemonicToSeed,
   seedToPassword,
-  validateSeedPhrase
+  validateSeedPhrase,
 } from '../utils/seedPhrase';
 import { generatePairFromMnemonic } from '../gundb/crypto';
 
@@ -191,7 +191,7 @@ export class AuthManager {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

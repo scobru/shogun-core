@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthManager = void 0;
 const errorHandler_1 = require("../utils/errorHandler");
+// Import seed utilities dynamically or statically? Statically is fine as they are in same package.
+const seedPhrase_1 = require("../utils/seedPhrase");
+const crypto_1 = require("../gundb/crypto");
 /**
  * Manages authentication operations for ShogunCore
  */
@@ -116,6 +119,34 @@ class AuthManager {
             return {
                 success: false,
                 error: error.message ?? 'Unknown error during pair login',
+            };
+        }
+    }
+    /**
+     * Login with a BIP39 seed phrase (mnemonic).
+     * Derives the key pair deterministically and logs in.
+     * @param username - Username associated with the seed
+     * @param mnemonic - The 12-word seed phrase
+     */
+    async loginWithSeed(username, mnemonic) {
+        try {
+            if (!(0, seedPhrase_1.validateSeedPhrase)(mnemonic)) {
+                return { success: false, error: 'Invalid seed phrase' };
+            }
+            // Generate deterministc pair
+            const pair = await (0, crypto_1.generatePairFromMnemonic)(mnemonic, username);
+            // Login with pair
+            const result = await this.loginWithPair(username, pair);
+            if (result.success && this.core) {
+                // If successful, we might want to store that the method was 'seed' or 'pair'
+                // usage of 'pair' method is correct as per underlying mechanic
+            }
+            return result;
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
             };
         }
     }

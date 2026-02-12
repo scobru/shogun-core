@@ -219,6 +219,15 @@ class ShogunCore {
         return this.authManager.loginWithPair(username, pair);
     }
     /**
+     * Login with a BIP39 seed phrase (mnemonic)
+     * @param username - Username associated with the seed
+     * @param mnemonic - The 12-word seed phrase
+     * @returns {Promise<AuthResult>} authentication result
+     */
+    async loginWithSeed(username, mnemonic) {
+        return this.authManager.loginWithSeed(username, mnemonic);
+    }
+    /**
      * Register a new user with provided credentials
      * @param username - Username
      * @param password - Password

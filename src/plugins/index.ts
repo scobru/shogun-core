@@ -46,4 +46,8 @@ export type {
 
 // Challenge-Response plugin exports
 export { ChallengePlugin } from './challenge/challengePlugin';
-export type { ChallengeData, ChallengeConfig, ChallengePluginInterface } from './challenge/types';
+export type {
+  ChallengeData,
+  ChallengeConfig,
+  ChallengePluginInterface,
+} from './challenge/types';
