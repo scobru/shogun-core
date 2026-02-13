@@ -268,32 +268,6 @@ describe('ShogunCore Integration Tests', () => {
     });
   });
 
-  // TODO: Storage Operations tests removed - methods have been removed from ShogunCore
-  // describe("Storage Operations", () => {
-  //   beforeEach(() => {
-  //     shogunCore = new ShogunCore(config);
-  //   });
-
-  //   // TODO: clearAllStorageData method has been removed from ShogunCore
-  //   // it("should clear all storage data", () => {
-  //   //   expect(() => {
-  //   //     shogunCore.clearAllStorageData();
-  //   //   }).not.toThrow();
-  //   // });
-
-  //   // TODO: saveCredentials and exportPair methods have been removed from ShogunCore
-  //   // it("should save and export credentials", () => {
-  //   //   const credentials = { username: "test", password: "test" };
-
-  //   //   expect(() => {
-  //   //     shogunCore.saveCredentials(credentials);
-  //   //   }).not.toThrow();
-
-  //   //   const exported = shogunCore.exportPair();
-  //   //   expect(typeof exported).toBe("string");
-  //   // });
-  // });
-
   describe('User Operations', () => {
     beforeEach(() => {
       shogunCore = new ShogunCore(config);
@@ -317,11 +291,6 @@ describe('ShogunCore Integration Tests', () => {
       expect(errors.length).toBeLessThanOrEqual(5);
     });
 
-    // TODO: updateUserAlias method has been removed from ShogunCore
-    // it("should update user alias", async () => {
-    //   const result = await shogunCore.updateUserAlias("new-alias");
-    //   expect(typeof result).toBe("boolean");
-    // });
   });
 
   describe('Configuration Validation', () => {
