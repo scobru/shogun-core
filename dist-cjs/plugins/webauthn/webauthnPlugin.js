@@ -425,7 +425,7 @@ class WebauthnPlugin extends base_1.BasePlugin {
                 }
                 // Force an immediate user verification so the platform authenticator
                 // always prompts for PIN/biometrics during signup, matching the login flow
-                const postRegistrationVerification = await this.assertWebauthn().authenticateUser(username, null, {
+                const postRegistrationVerification = await this.assertWebauthn().authenticateUser(username, credentials.credentialId, {
                     userVerification: 'required',
                 });
                 if (!postRegistrationVerification.success) {
