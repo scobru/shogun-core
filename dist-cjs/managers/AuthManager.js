@@ -239,16 +239,21 @@ class AuthManager {
                 return this.core.getPlugin('nostr');
             case 'password':
             default:
+                // Mock a plugin for password-based authentication to provide a consistent interface
                 return {
+                    name: 'password',
+                    version: '1.0.0',
+                    initialize: () => { },
                     login: async (username, password) => {
-                        return await this.login(username, password);
+                        return await this.login(username, password || '');
                     },
-                    signUp: async (username, password, confirm) => {
+                    signUp: async (username, options) => {
+                        const { password, confirm } = options || {};
                         // For password-based signup, validate password confirmation
                         if (confirm && password !== confirm) {
                             throw new Error('Password and confirm password do not match');
                         }
-                        return await this.signUp(username, password);
+                        return await this.signUp(username, password || '');
                     },
                 };
         }

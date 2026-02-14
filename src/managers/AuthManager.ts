@@ -14,6 +14,7 @@ import {
   validateSeedPhrase,
 } from '../utils/seedPhrase';
 import { generatePairFromMnemonic } from '../gundb/crypto';
+import { IAuthPlugin } from '../interfaces/auth';
 
 /**
  * Manages authentication operations for ShogunCore
@@ -288,35 +289,39 @@ export class AuthManager {
    * @returns The authentication plugin or undefined if not available
    * This is a more modern approach to accessing authentication methods
    */
-  getAuthenticationMethod(type: AuthMethod) {
+  getAuthenticationMethod(type: AuthMethod): IAuthPlugin | undefined {
     switch (type) {
       case 'webauthn':
-        return this.core.getPlugin('webauthn');
+        return this.core.getPlugin<IAuthPlugin>('webauthn');
       case 'web3':
-        return this.core.getPlugin('web3');
+        return this.core.getPlugin<IAuthPlugin>('web3');
       case 'nostr':
-        return this.core.getPlugin('nostr');
+        return this.core.getPlugin<IAuthPlugin>('nostr');
       case 'password':
       default:
+        // Mock a plugin for password-based authentication to provide a consistent interface
         return {
+          name: 'password',
+          version: '1.0.0',
+          initialize: () => {},
           login: async (
             username: string,
-            password: string,
+            password?: string,
           ): Promise<AuthResult> => {
-            return await this.login(username, password);
+            return await this.login(username, password || '');
           },
           signUp: async (
             username: string,
-            password: string,
-            confirm?: string,
+            options?: any,
           ): Promise<SignUpResult> => {
+            const { password, confirm } = options || {};
             // For password-based signup, validate password confirmation
             if (confirm && password !== confirm) {
               throw new Error('Password and confirm password do not match');
             }
-            return await this.signUp(username, password);
+            return await this.signUp(username, password || '');
           },
-        };
+        } as IAuthPlugin;
     }
   }
 }

@@ -3,10 +3,11 @@ import { ShogunCore } from '../../core';
 import { WebAuthnSigningCredential } from './webauthnSigner';
 import { WebAuthnCredentials, CredentialResult, WebauthnPluginInterface, WebAuthnUniformCredentials } from './types';
 import { AuthResult, SignUpResult } from '../../interfaces/shogun';
+import { IAuthPlugin } from '../../interfaces/auth';
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
-export declare class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface {
+export declare class WebauthnPlugin extends BasePlugin implements WebauthnPluginInterface, IAuthPlugin {
     name: string;
     version: string;
     description: string;

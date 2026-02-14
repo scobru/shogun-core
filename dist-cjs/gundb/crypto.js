@@ -21,42 +21,41 @@ exports.randomUUID = randomUUID;
 exports.generatePairFromSeed = generatePairFromSeed;
 exports.generatePairFromMnemonic = generatePairFromMnemonic;
 const uuid_1 = require("uuid");
+let seaCache = null;
 // Helper function to get SEA safely from various sources
 function getSEA() {
-    try {
-        require('fs').appendFileSync('debug_crypto.log', '[DEBUG] getSEA called\n');
-    }
-    catch { }
-    console.error('[DEBUG] getSEA called');
+    if (seaCache)
+        return seaCache;
     // Try global.SEA directly (matches setup.ts)
     if (global.SEA) {
-        try {
-            require('fs').appendFileSync('debug_crypto.log', '[DEBUG] Found global.SEA\n');
-        }
-        catch { }
-        console.error('[DEBUG] Found global.SEA');
-        return global.SEA;
+        seaCache = global.SEA;
+        return seaCache;
     }
     // Try globalThis first (works in both browser and Node)
     if (globalThis.Gun && globalThis.Gun.SEA) {
-        return globalThis.Gun.SEA;
+        seaCache = globalThis.Gun.SEA;
+        return seaCache;
     }
     // Try window (browser)
     if (typeof window !== 'undefined' &&
         window.Gun &&
         window.Gun.SEA) {
-        return window.Gun.SEA;
+        seaCache = window.Gun.SEA;
+        return seaCache;
     }
     // Try global (Node.js)
     if (global.Gun && global.Gun.SEA) {
-        return global.Gun.SEA;
+        seaCache = global.Gun.SEA;
+        return seaCache;
     }
     // Try direct SEA global
     if (globalThis.SEA) {
-        return globalThis.SEA;
+        seaCache = globalThis.SEA;
+        return seaCache;
     }
     if (typeof window !== 'undefined' && window.SEA) {
-        return window.SEA;
+        seaCache = window.SEA;
+        return seaCache;
     }
     // console.error('[DEBUG] SEA not found in any location');
     return null;
@@ -329,27 +328,17 @@ function randomUUID() {
  */
 async function generatePairFromSeed(seed) {
     const sea = getSEA();
-    try {
-        require('fs').appendFileSync('debug_crypto.log', `[DEBUG] generatePairFromSeed sea: ${!!sea} pair: ${!!sea?.pair} keys: ${sea ? Object.keys(sea).join(',') : 'null'}\n`);
-    }
-    catch { }
     if (!sea || !sea.pair) {
-        try {
-            require('fs').appendFileSync('debug_crypto.log', `[DEBUG] SEA global state details: global.SEA=${!!global.SEA}\n`);
-        }
-        catch { }
         throw new Error('SEA not available');
     }
     // 1. Try native seed-based derivation (Gun fork feature)
     try {
         const pair = await sea.pair(null, { seed });
-        console.error('[DEBUG] native pair result:', pair);
         if (pair && pair.pub && pair.priv) {
             return pair;
         }
     }
     catch (err) {
-        console.error('[DEBUG] native pair failed:', err);
         // Native seed support not available
     }
     // 2. Fallback: Derive a pseudo-random password from the seed

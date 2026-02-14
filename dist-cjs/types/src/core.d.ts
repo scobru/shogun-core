@@ -199,10 +199,7 @@ export declare class ShogunCore implements IShogunCore {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): ShogunPlugin | {
-        login: (username: string, password: string) => Promise<AuthResult>;
-        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
-    } | undefined;
+    getAuthenticationMethod(type: AuthMethod): import(".").IAuthPlugin | undefined;
     /**
      * Retrieve recent errors logged by the system
      * @param count - Number of errors to retrieve (default: 10)

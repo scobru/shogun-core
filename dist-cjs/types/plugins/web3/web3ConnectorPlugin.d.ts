@@ -5,10 +5,11 @@ import { ConnectionResult, Web3ConnectorPluginInterface } from './types';
 import { ethers } from 'ethers';
 import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 import { ISEAPair } from 'gun';
+import { IAuthPlugin } from '../../interfaces/auth';
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
-export declare class Web3ConnectorPlugin extends BasePlugin implements Web3ConnectorPluginInterface {
+export declare class Web3ConnectorPlugin extends BasePlugin implements Web3ConnectorPluginInterface, IAuthPlugin {
     name: string;
     version: string;
     description: string;

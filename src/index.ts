@@ -14,6 +14,7 @@ export * from './interfaces/shogun';
 export * from './gundb/gun-es';
 
 export type * from './interfaces/plugin';
+export type { IAuthPlugin } from './interfaces/auth';
 
 // Type alias for backward compatibility
 export type { ShogunCoreConfig as ShogunSDKConfig } from './interfaces/shogun';

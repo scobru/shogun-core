@@ -19,12 +19,14 @@ import {
 } from '../../utils/seedPhrase';
 import { deriveWebauthnKeys } from './webauthn';
 
+import { IAuthPlugin } from '../../interfaces/auth';
+
 /**
  * Plugin per la gestione delle funzionalità WebAuthn in ShogunCore
  */
 export class WebauthnPlugin
   extends BasePlugin
-  implements WebauthnPluginInterface
+  implements WebauthnPluginInterface, IAuthPlugin
 {
   name = 'webauthn';
   version = '1.0.0';

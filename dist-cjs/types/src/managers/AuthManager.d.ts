@@ -1,5 +1,6 @@
 import { IShogunCore, AuthResult, SignUpResult, AuthMethod } from '../interfaces/shogun';
 import { ISEAPair } from 'gun';
+import { IAuthPlugin } from '../interfaces/auth';
 /**
  * Manages authentication operations for ShogunCore
  */
@@ -72,8 +73,5 @@ export declare class AuthManager {
      * @returns The authentication plugin or undefined if not available
      * This is a more modern approach to accessing authentication methods
      */
-    getAuthenticationMethod(type: AuthMethod): import("..").ShogunPlugin | {
-        login: (username: string, password: string) => Promise<AuthResult>;
-        signUp: (username: string, password: string, confirm?: string) => Promise<SignUpResult>;
-    } | undefined;
+    getAuthenticationMethod(type: AuthMethod): IAuthPlugin | undefined;
 }

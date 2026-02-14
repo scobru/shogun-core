@@ -8,12 +8,14 @@ import { AuthResult, SignUpResult } from '../../interfaces/shogun';
 import { ErrorHandler, ErrorType, createError } from '../../utils/errorHandler';
 import { ISEAPair } from 'gun';
 
+import { IAuthPlugin } from '../../interfaces/auth';
+
 /**
  * Plugin per la gestione delle funzionalità Web3 in ShogunCore
  */
 export class Web3ConnectorPlugin
   extends BasePlugin
-  implements Web3ConnectorPluginInterface
+  implements Web3ConnectorPluginInterface, IAuthPlugin
 {
   name = 'web3';
   version = '1.0.0';
