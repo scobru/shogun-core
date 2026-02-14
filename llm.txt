@@ -1,0 +1,73 @@
+# Shogun Core - Context for LLMs
+
+## Project Overview
+
+Shogun Core is a comprehensive SDK for building decentralized applications (dApps) that simplifies authentication, wallet management, and decentralized data storage. It is built on top of GunDB or Holster for peer-to-peer networking and data synchronization.
+
+**Key Features:**
+- **Dual Database Support:** GunDB (maximum compatibility) and Holster (modern ES modules, improved performance).
+- **Authentication:** Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, ZK-Proof (anonymous), Challenge (Server-Signed).
+- **Decentralized Storage:** Peer-to-peer data synchronization.
+- **Reactive Programming:** RxJS integration for real-time data streams.
+- **Security:** End-to-end encryption and secure key management.
+- **TypeScript:** Written in TypeScript with full type definitions.
+
+## Tech Stack
+
+- **Language:** TypeScript
+- **Database:** GunDB / Holster
+- **Build System:** Yarn, Webpack (implied by config file)
+- **Testing:** Jest
+
+## Directory Structure (src/)
+
+- `src/core.ts`: Likely the main entry point or core logic of the library.
+- `src/index.ts`: Entry point for the library exports.
+- `src/gundb/`: Contains GunDB-specific logic and adapters.
+- `src/storage/`: Likely handles data storage abstractions.
+- `src/managers/`: Likely contains managers for different aspects like users, wallets, etc.
+- `src/plugins/`: Contains the plugin system implementation and built-in plugins (Web3, WebAuthn, etc.).
+- `src/utils/`: Utility functions.
+- `src/interfaces/`: TypeScript interfaces and type definitions.
+- `src/__tests__/`: Unit and integration tests.
+
+## Key Concepts
+
+### Initialization
+The core class `ShogunCore` is initialized with either a Gun instance or a Holster instance.
+
+```typescript
+import { ShogunCore } from "shogun-core";
+// ... (Gun or Holster initialization)
+const shogun = new ShogunCore({
+  gunInstance: gun, // or holsterInstance: holster
+  // ... plugin configurations
+});
+```
+
+### Authentication
+Supported methods:
+- **Traditional:** `signUp(username, password)`, `login(username, password)`
+- **Web3:** Connect MetaMask, sign messages.
+- **WebAuthn:** Biometric authentication.
+- **Nostr:** Login with Nostr keys.
+- **ZK-Proof:** Anonymous authentication.
+
+### Database Operations
+- **Gun:** Chainable API `.get().get().put()`.
+- **Holster:** Modern API, abstracted by Shogun Core to be compatible.
+
+### Event System
+Shogun Core emits events for authentication status changes (`auth:login`, `auth:logout`, `auth:signup`) and errors.
+
+## Development
+
+- **Install:** `yarn install`
+- **Test:** `yarn test:ci`
+- **Build:** `yarn build` (implied)
+
+## Notes for LLM Assistance
+
+- When writing code using Shogun Core, prioritize using the `ShogunCore` class and its methods over direct Gun/Holster interaction when possible, unless advanced features are needed.
+- Be aware of the dual backend support (Gun/Holster). Ensure code is compatible or clearly specifies the backend if it relies on specific features.
+- Use the provided plugins for specialized authentication methods.
