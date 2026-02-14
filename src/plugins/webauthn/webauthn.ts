@@ -127,7 +127,7 @@ export class Webauthn extends EventEmitter {
           const result = await this.generateCredentials(
             username,
             credentials,
-            isNewDevice,
+            false, // isLogin = false during createAccount
           );
 
           if (result.success) {
@@ -397,8 +397,9 @@ export class Webauthn extends EventEmitter {
         {
           challenge,
           rp: {
-            name: 'Shogun Wallet',
-            ...(this.config.rpId !== 'localhost' && { id: this.config.rpId }),
+            name: this.config.rpName || 'Shogun Wallet',
+            ...(this.config.rpId &&
+              this.config.rpId !== 'localhost' && { id: this.config.rpId }),
           },
           user: {
             id: userId,

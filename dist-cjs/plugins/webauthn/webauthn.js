@@ -76,7 +76,7 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             let lastError = null;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const result = await this.generateCredentials(username, credentials, isNewDevice);
+                    const result = await this.generateCredentials(username, credentials, false);
                     if (result.success) {
                         this.emit(types_1.WebAuthnEventType.DEVICE_REGISTERED, {
                             type: types_1.WebAuthnEventType.DEVICE_REGISTERED,
@@ -281,8 +281,9 @@ class Webauthn extends eventEmitter_1.EventEmitter {
             const publicKeyCredentialCreationOptions = {
                 challenge,
                 rp: {
-                    name: 'Shogun Wallet',
-                    ...(this.config.rpId !== 'localhost' && { id: this.config.rpId }),
+                    name: this.config.rpName || 'Shogun Wallet',
+                    ...(this.config.rpId &&
+                        this.config.rpId !== 'localhost' && { id: this.config.rpId }),
                 },
                 user: {
                     id: userId,
