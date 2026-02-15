@@ -451,21 +451,22 @@ export class RxJS {
   private removeGunMeta<T>(obj: T): T {
     if (!obj || typeof obj !== 'object') return obj;
 
-    // Create a clean copy
     const cleanObj: any = Array.isArray(obj) ? [] : {};
 
-    // Copy properties, skipping Gun metadata
-    Object.keys(obj).forEach((key) => {
+    // Use loop instead of Object.keys().forEach for better performance
+    for (const key in obj) {
       // Skip Gun metadata
-      if (key === '_' || key === '#') return;
+      if (key === '_' || key === '#') continue;
 
-      const val = (obj as any)[key];
-      if (val && typeof val === 'object') {
-        cleanObj[key] = this.removeGunMeta(val);
-      } else {
-        cleanObj[key] = val;
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const val = (obj as any)[key];
+        if (val && typeof val === 'object') {
+          cleanObj[key] = this.removeGunMeta(val);
+        } else {
+          cleanObj[key] = val;
+        }
       }
-    });
+    }
 
     return cleanObj as T;
   }
