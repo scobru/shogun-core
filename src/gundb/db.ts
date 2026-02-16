@@ -548,7 +548,7 @@ class DataBase {
         if (!this.sea) return;
 
         // 1. Generate a random salt for this session
-        const salt = await this.sea.work(Math.random().toString(), null, null, {
+        const salt = await this.sea.work(this.crypto.randomUUID(), null, null, {
           name: 'SHA-256',
         });
 
