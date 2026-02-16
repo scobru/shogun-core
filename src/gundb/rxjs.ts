@@ -64,7 +64,7 @@ export class RxJS {
 
         // Remove Gun metadata before emitting
         if (typeof data === 'object' && data !== null) {
-          const cleanData = this.removeGunMeta(data);
+          const cleanData = removeGunMeta(data);
           subscriber.next(cleanData as T);
         } else {
           subscriber.next(data);
@@ -118,8 +118,7 @@ export class RxJS {
           return;
         }
 
-        const cleanData =
-          typeof data === 'object' ? this.removeGunMeta(data) : data;
+        const cleanData = typeof data === 'object' ? removeGunMeta(data) : data;
         results[key] = cleanData as T;
         subscriber.next(Object.values(results));
       });
@@ -261,8 +260,7 @@ export class RxJS {
           return;
         }
 
-        const cleanData =
-          typeof data === 'object' ? this.removeGunMeta(data) : data;
+        const cleanData = typeof data === 'object' ? removeGunMeta(data) : data;
         subscriber.next(cleanData as T);
         subscriber.complete();
       });
@@ -449,24 +447,35 @@ export class RxJS {
    * @returns Cleaned object without Gun metadata
    */
   private removeGunMeta<T>(obj: T): T {
-    if (!obj || typeof obj !== 'object') return obj;
-
-    // Create a clean copy
-    const cleanObj: any = Array.isArray(obj) ? [] : {};
-
-    // Copy properties, skipping Gun metadata
-    Object.keys(obj).forEach((key) => {
-      // Skip Gun metadata
-      if (key === '_' || key === '#') return;
-
-      const val = (obj as any)[key];
-      if (val && typeof val === 'object') {
-        cleanObj[key] = this.removeGunMeta(val);
-      } else {
-        cleanObj[key] = val;
-      }
-    });
-
-    return cleanObj as T;
+    return removeGunMeta(obj);
   }
+}
+
+/**
+ * Remove Gun metadata from an object
+ * @param obj - Object to clean
+ * @returns Cleaned object without Gun metadata
+ */
+function removeGunMeta<T>(obj: T): T {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  // Create a clean copy
+  const cleanObj: any = Array.isArray(obj) ? [] : {};
+
+  // Copy properties, skipping Gun metadata
+  const keys = Object.keys(obj);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    // Skip Gun metadata
+    if (key === '_' || key === '#') continue;
+
+    const val = (obj as any)[key];
+    if (val && typeof val === 'object') {
+      cleanObj[key] = removeGunMeta(val);
+    } else {
+      cleanObj[key] = val;
+    }
+  }
+
+  return cleanObj as T;
 }
