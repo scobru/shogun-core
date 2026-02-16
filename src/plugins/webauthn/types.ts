@@ -105,8 +105,7 @@ export interface WebAuthnVerificationResult extends BaseResult {
 /**
  * WebAuthn credential creation options with extensions
  */
-export interface WebAuthnCredentialCreationOptions
-  extends PublicKeyCredentialCreationOptions {
+export interface WebAuthnCredentialCreationOptions extends PublicKeyCredentialCreationOptions {
   signal?: AbortSignal;
 }
 
