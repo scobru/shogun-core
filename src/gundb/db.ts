@@ -290,6 +290,34 @@ class DataBase {
         error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
       };
     }
+
+    // Sentinel Security Fix: Enforce password complexity
+    if (!/[A-Z]/.test(password)) {
+      return {
+        valid: false,
+        error: 'Password must contain at least one uppercase letter',
+      };
+    }
+    if (!/[a-z]/.test(password)) {
+      return {
+        valid: false,
+        error: 'Password must contain at least one lowercase letter',
+      };
+    }
+    if (!/[0-9]/.test(password)) {
+      return {
+        valid: false,
+        error: 'Password must contain at least one number',
+      };
+    }
+    // eslint-disable-next-line no-useless-escape
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\]/.test(password)) {
+      return {
+        valid: false,
+        error: 'Password must contain at least one special character',
+      };
+    }
+
     return { valid: true };
   }
 
