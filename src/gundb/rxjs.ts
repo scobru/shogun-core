@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
 import { IGunInstance, IGunUserInstance } from 'gun';
+import { deepEqual } from '../utils/deepEqual';
 
 /**
  * RxJS Integration for GunDB
@@ -80,7 +81,7 @@ export class RxJS {
       };
     }).pipe(
       distinctUntilChanged((prev, curr) => {
-        return JSON.stringify(prev) === JSON.stringify(curr);
+        return deepEqual(prev, curr);
       }),
     );
   }
