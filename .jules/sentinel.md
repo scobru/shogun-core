@@ -2,3 +2,8 @@
 **Vulnerability:** Found `Math.random().toString()` used as entropy source for generating session encryption salts in `src/gundb/db.ts`. This makes the salt predictable, weakening the protection against rainbow table attacks on stored sessions.
 **Learning:** Even when using strong hashing algorithms (PBKDF2/SHA256), the strength depends entirely on the quality of the input entropy. Using `Math.random()` undermines the security of the entire mechanism.
 **Prevention:** Always use `crypto.getRandomValues()` or `crypto.randomUUID()` (or platform-specific CSPRNGs) for any value that requires unpredictability (salts, nonces, keys, IVs).
+
+## 2026-02-16 - Weak Password Policy
+**Vulnerability:** Passwords were only validated for length (>= 8 chars), allowing weak passwords like "password", "12345678", or "aaaaaaaa" which are susceptible to brute-force and dictionary attacks.
+**Learning:** Default configurations often prioritize usability over security. Explicit validation logic is required to enforce complexity.
+**Prevention:** Enforce complexity requirements: uppercase, lowercase, numbers, and special characters. Use regex or dedicated libraries for validation.
