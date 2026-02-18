@@ -3,7 +3,7 @@
 **Learning:** Even when using strong hashing algorithms (PBKDF2/SHA256), the strength depends entirely on the quality of the input entropy. Using `Math.random()` undermines the security of the entire mechanism.
 **Prevention:** Always use `crypto.getRandomValues()` or `crypto.randomUUID()` (or platform-specific CSPRNGs) for any value that requires unpredictability (salts, nonces, keys, IVs).
 
-## 2026-02-16 - Enforce Password Complexity
-**Vulnerability:** Weak passwords (short, lowercase only, etc.) were allowed, making brute-force attacks easier. The code claimed to enforce strict complexity but only checked length.
-**Learning:** Comments or documentation claiming a security policy exists do not guarantee its implementation. Always verify validation logic in code.
-**Prevention:** Implemented strict regex-based password validation in `validatePasswordStrength` enforcing uppercase, lowercase, number, and special characters.
+## 2026-02-16 - Weak Password Policy
+**Vulnerability:** Passwords were only validated for length (>= 8 chars), allowing weak passwords like "password", "12345678", or "aaaaaaaa" which are susceptible to brute-force and dictionary attacks.
+**Learning:** Default configurations often prioritize usability over security. Explicit validation logic is required to enforce complexity.
+**Prevention:** Enforce complexity requirements: uppercase, lowercase, numbers, and special characters. Use regex or dedicated libraries for validation.

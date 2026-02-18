@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
+import { deepEqual } from '../utils/deepEqual';
 
 /**
  * RxJS Integration for Holster
@@ -81,7 +82,7 @@ export class RxJSHolster {
       };
     }).pipe(
       distinctUntilChanged((prev, curr) => {
-        return JSON.stringify(prev) === JSON.stringify(curr);
+        return deepEqual(prev, curr);
       }),
     );
   }
