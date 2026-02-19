@@ -10,16 +10,16 @@ const mockUser = {
   auth: jest.fn().mockImplementation((arg1, arg2, cb) => {
     let callback = cb;
     if (typeof arg2 === 'function') {
-        callback = arg2;
+      callback = arg2;
     }
     // Simulate successful auth
     if (callback) {
-        callback({ err: undefined });
+      callback({ err: undefined });
     }
   }),
   recall: jest.fn().mockReturnThis(),
   leave: jest.fn(),
-  _: { sea: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' } }
+  _: { sea: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' } },
 };
 
 const mockGun = {
@@ -36,7 +36,14 @@ const mockSEA = {
   work: jest.fn().mockResolvedValue('mocked-hash'),
   encrypt: jest.fn().mockResolvedValue('mocked-encrypted-data'),
   decrypt: jest.fn().mockResolvedValue({ pub: 'testpub' }),
-  pair: jest.fn().mockResolvedValue({ pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' }),
+  pair: jest
+    .fn()
+    .mockResolvedValue({
+      pub: 'pub',
+      priv: 'priv',
+      epub: 'epub',
+      epriv: 'epriv',
+    }),
 };
 
 describe('Security Tests', () => {
@@ -50,8 +57,12 @@ describe('Security Tests', () => {
     Object.defineProperty(global, 'sessionStorage', {
       value: {
         getItem: jest.fn((key) => mockStorage[key] || null),
-        setItem: jest.fn((key, value) => { mockStorage[key] = value; }),
-        removeItem: jest.fn((key) => { delete mockStorage[key]; }),
+        setItem: jest.fn((key, value) => {
+          mockStorage[key] = value;
+        }),
+        removeItem: jest.fn((key) => {
+          delete mockStorage[key];
+        }),
       },
       writable: true,
       configurable: true,
@@ -67,7 +78,9 @@ describe('Security Tests', () => {
 
   it('should use crypto.randomUUID instead of Math.random for salt generation', async () => {
     // Spy on crypto.randomUUID
-    const randomUUIDSpy = jest.spyOn(crypto, 'randomUUID').mockReturnValue('mock-uuid-1234');
+    const randomUUIDSpy = jest
+      .spyOn(crypto, 'randomUUID')
+      .mockReturnValue('mock-uuid-1234');
 
     db = new DataBase(mockGun as any, undefined, mockSEA);
 
