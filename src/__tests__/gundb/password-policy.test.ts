@@ -26,6 +26,13 @@ describe('Password Policy', () => {
     expect(result.error).toMatch(/at least 8 characters/);
   });
 
+  it('should reject passwords that are too long', () => {
+    const longPassword = 'A'.repeat(1025) + '1a!';
+    const result = validatePassword(longPassword);
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/1024 characters or fewer/);
+  });
+
   it('should reject passwords without uppercase letters', () => {
     const result = validatePassword('password123!');
     expect(result.valid).toBe(false);
