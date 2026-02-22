@@ -7,3 +7,8 @@
 **Vulnerability:** Passwords were only validated for length (>= 8 chars), allowing weak passwords like "password", "12345678", or "aaaaaaaa" which are susceptible to brute-force and dictionary attacks.
 **Learning:** Default configurations often prioritize usability over security. Explicit validation logic is required to enforce complexity.
 **Prevention:** Enforce complexity requirements: uppercase, lowercase, numbers, and special characters. Use regex or dedicated libraries for validation.
+
+## 2026-02-19 - WebAuthn Sign Method Ignores Input Data
+**Vulnerability:** The WebAuthn `sign` method in `src/plugins/webauthn/webauthn.ts` used a hardcoded empty 16-byte challenge regardless of the input data. This rendered the resulting signature useless for verifying the integrity or authenticity of the specific data being "signed".
+**Learning:** WebAuthn signatures are generated over the concatenation of authenticator data and client data (which includes the challenge). To use WebAuthn as a signing primitive for arbitrary data, the challenge MUST be a cryptographic hash of that data.
+**Prevention:** Ensure that any method claiming to sign data actually binds the signature to that data by incorporating it (or its hash) into the signing challenge or message.
