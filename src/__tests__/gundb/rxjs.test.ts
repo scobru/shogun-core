@@ -137,9 +137,9 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = {
         foo: {
           bar: 'baz',
-          _: { '#': 'inner-soul' }
+          _: { '#': 'inner-soul' },
         },
-        _: { '#': 'outer-soul' }
+        _: { '#': 'outer-soul' },
       };
       mockNode.on.mockImplementation((cb) => {
         cb(testData, 'key');
@@ -225,28 +225,32 @@ describe('RxJS GunDB Wrapper', () => {
         return () => {};
       });
 
-      rxjs.match('collection', (data) => data.active).subscribe((items) => {
-        expect(items).toEqual([item1]);
-        done();
-      });
+      rxjs
+        .match('collection', (data) => data.active)
+        .subscribe((items) => {
+          expect(items).toEqual([item1]);
+          done();
+        });
     });
 
     it('should handle item removal when matchFn returns false', (done) => {
       const item1 = { id: 1, name: 'one', active: true };
       let emitCount = 0;
 
-      rxjs.match('collection', (data) => data.active).subscribe((items) => {
-        emitCount++;
-        if (emitCount === 1) {
-          expect(items).toEqual([item1]);
-          // Simulate update that now fails matchFn
-          const onCall = mockNode.on.mock.calls[0][0];
-          onCall({ ...item1, active: false }, 'key1');
-        } else if (emitCount === 2) {
-          expect(items).toEqual([]);
-          done();
-        }
-      });
+      rxjs
+        .match('collection', (data) => data.active)
+        .subscribe((items) => {
+          emitCount++;
+          if (emitCount === 1) {
+            expect(items).toEqual([item1]);
+            // Simulate update that now fails matchFn
+            const onCall = mockNode.on.mock.calls[0][0];
+            onCall({ ...item1, active: false }, 'key1');
+          } else if (emitCount === 2) {
+            expect(items).toEqual([]);
+            done();
+          }
+        });
 
       const onCall = mockNode.on.mock.calls[0][0];
       onCall(item1, 'key1');
@@ -259,7 +263,7 @@ describe('RxJS GunDB Wrapper', () => {
         },
         complete: () => {
           done();
-        }
+        },
       });
     });
   });
@@ -269,25 +273,31 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = { foo: 'bar' };
       rxjs.put('path', testData).subscribe((data) => {
         expect(mockGun.get).toHaveBeenCalledWith('path');
-        expect(mockNode.put).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockNode.put).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         expect(data).toEqual(testData);
         done();
       });
     });
 
     it('should put data to an array path', (done) => {
-        const testData = { foo: 'bar' };
-        rxjs.put(['p1', 'p2'], testData).subscribe(() => {
-          expect(mockGun.get).toHaveBeenCalledWith('p1');
-          expect(mockNode.get).toHaveBeenCalledWith('p2');
-          done();
-        });
+      const testData = { foo: 'bar' };
+      rxjs.put(['p1', 'p2'], testData).subscribe(() => {
+        expect(mockGun.get).toHaveBeenCalledWith('p1');
+        expect(mockNode.get).toHaveBeenCalledWith('p2');
+        done();
       });
+    });
 
     it('should put data to root if path is not a string or array', (done) => {
       const testData = { foo: 'bar' };
       rxjs.put(testData).subscribe(() => {
-        expect(mockGun.put).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockGun.put).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         done();
       });
     });
@@ -298,7 +308,7 @@ describe('RxJS GunDB Wrapper', () => {
         error: (err) => {
           expect(err.message).toBe('put error');
           done();
-        }
+        },
       });
     });
 
@@ -306,7 +316,10 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = { foo: 'bar' };
       const callback = jest.fn();
       rxjs.putCompat(testData, callback).subscribe((data) => {
-        expect(mockGun.put).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockGun.put).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         expect(callback).toHaveBeenCalledWith({ ok: 1 });
         expect(data).toEqual(testData);
         done();
@@ -319,7 +332,10 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = { foo: 'bar' };
       rxjs.set('path', testData).subscribe((data) => {
         expect(mockGun.get).toHaveBeenCalledWith('path');
-        expect(mockNode.set).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockNode.set).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         expect(data).toEqual(testData);
         done();
       });
@@ -331,7 +347,7 @@ describe('RxJS GunDB Wrapper', () => {
         error: (err) => {
           expect(err.message).toBe('set error');
           done();
-        }
+        },
       });
     });
 
@@ -361,7 +377,7 @@ describe('RxJS GunDB Wrapper', () => {
         },
         complete: () => {
           done();
-        }
+        },
       });
     });
 
@@ -376,7 +392,7 @@ describe('RxJS GunDB Wrapper', () => {
         },
         complete: () => {
           done();
-        }
+        },
       });
     });
   });
@@ -390,46 +406,54 @@ describe('RxJS GunDB Wrapper', () => {
             if (path === 'b') cb(20, 'b');
             return () => {};
           },
-          off: jest.fn()
+          off: jest.fn(),
         };
       });
 
-      rxjs.compute(['a', 'b'], (a, b) => a + b).subscribe((result) => {
-        expect(result).toBe(30);
-        done();
-      });
+      rxjs
+        .compute(['a', 'b'], (a, b) => a + b)
+        .subscribe((result) => {
+          expect(result).toBe(30);
+          done();
+        });
     });
 
     it('should compute value from observables', (done) => {
       const obs1 = of(100);
       const obs2 = of(200);
 
-      rxjs.compute([obs1, obs2], (v1, v2) => v1 + v2).subscribe((result) => {
-        expect(result).toBe(300);
-        done();
-      });
+      rxjs
+        .compute([obs1, obs2], (v1, v2) => v1 + v2)
+        .subscribe((result) => {
+          expect(result).toBe(300);
+          done();
+        });
     });
 
     it('should handle errors in computeFn', (done) => {
-      rxjs.compute([of(1), of(2)], () => {
-        throw new Error('compute error');
-      }).subscribe({
-        error: (err) => {
-          expect(err.message).toBe('compute error');
-          done();
-        }
-      });
+      rxjs
+        .compute([of(1), of(2)], () => {
+          throw new Error('compute error');
+        })
+        .subscribe({
+          error: (err) => {
+            expect(err.message).toBe('compute error');
+            done();
+          },
+        });
     });
 
     it('should handle source observable errors', (done) => {
-        const errorObs = throwError(() => new Error('source error'));
-        rxjs.compute([of(1), errorObs], (v1, v2) => v1 + v2).subscribe({
+      const errorObs = throwError(() => new Error('source error'));
+      rxjs
+        .compute([of(1), errorObs], (v1, v2) => v1 + v2)
+        .subscribe({
           error: (err) => {
             expect(err.message).toBe('source error');
             done();
-          }
+          },
         });
-      });
+    });
   });
 
   describe('User Operations', () => {
@@ -438,7 +462,10 @@ describe('RxJS GunDB Wrapper', () => {
       rxjs.userPut('profile', testData).subscribe((data) => {
         expect(mockGun.user).toHaveBeenCalled();
         expect(mockUser.get).toHaveBeenCalledWith('profile');
-        expect(mockNode.put).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockNode.put).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         expect(data).toEqual(testData);
         done();
       });
@@ -448,7 +475,10 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = { profile: 'data' };
       rxjs.userPut(testData).subscribe((data) => {
         expect(mockGun.user).toHaveBeenCalled();
-        expect(mockUser.put).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockUser.put).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         done();
       });
     });
@@ -457,18 +487,24 @@ describe('RxJS GunDB Wrapper', () => {
       const testData = { item: 'val' };
       rxjs.userSet('collection', testData).subscribe((data) => {
         expect(mockUser.get).toHaveBeenCalledWith('collection');
-        expect(mockNode.set).toHaveBeenCalledWith(testData, expect.any(Function));
+        expect(mockNode.set).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
         done();
       });
     });
 
     it('should perform userSet without path', (done) => {
-        const testData = { item: 'val' };
-        rxjs.userSet(testData).subscribe((data) => {
-          expect(mockUser.set).toHaveBeenCalledWith(testData, expect.any(Function));
-          done();
-        });
+      const testData = { item: 'val' };
+      rxjs.userSet(testData).subscribe((data) => {
+        expect(mockUser.set).toHaveBeenCalledWith(
+          testData,
+          expect.any(Function),
+        );
+        done();
       });
+    });
 
     it('should perform userOnce with path', (done) => {
       const testData = { val: 123 };
@@ -484,28 +520,28 @@ describe('RxJS GunDB Wrapper', () => {
     });
 
     it('should perform userOnce without path', (done) => {
-        mockUser.once.mockImplementation((cb: any) => {
-          cb({ val: 456 }, { err: null });
-        });
-
-        rxjs.userOnce().subscribe((data) => {
-          expect(mockUser.once).toHaveBeenCalled();
-          expect(data).toEqual({ val: 456 });
-          done();
-        });
+      mockUser.once.mockImplementation((cb: any) => {
+        cb({ val: 456 }, { err: null });
       });
 
-    it('should handle errors in userOnce', (done) => {
-        mockUser.once.mockImplementation((cb: any) => {
-            cb(null, { err: 'user once error' });
-        });
+      rxjs.userOnce().subscribe((data) => {
+        expect(mockUser.once).toHaveBeenCalled();
+        expect(data).toEqual({ val: 456 });
+        done();
+      });
+    });
 
-        rxjs.userOnce().subscribe({
-            error: (err) => {
-                expect(err.message).toBe('user once error');
-                done();
-            }
-        });
+    it('should handle errors in userOnce', (done) => {
+      mockUser.once.mockImplementation((cb: any) => {
+        cb(null, { err: 'user once error' });
+      });
+
+      rxjs.userOnce().subscribe({
+        error: (err) => {
+          expect(err.message).toBe('user once error');
+          done();
+        },
+      });
     });
 
     it('should perform userGet', (done) => {

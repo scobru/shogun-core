@@ -460,8 +460,22 @@ export class RxJS {
 function removeGunMeta<T>(obj: T): T {
   if (!obj || typeof obj !== 'object') return obj;
 
+  if (Array.isArray(obj)) {
+    const len = obj.length;
+    const cleanArr = new Array(len);
+    for (let i = 0; i < len; i++) {
+      const val = (obj as any)[i];
+      if (val && typeof val === 'object') {
+        cleanArr[i] = removeGunMeta(val);
+      } else {
+        cleanArr[i] = val;
+      }
+    }
+    return cleanArr as unknown as T;
+  }
+
   // Create a clean copy
-  const cleanObj: any = Array.isArray(obj) ? [] : {};
+  const cleanObj: any = {};
 
   // Copy properties, skipping Gun metadata
   const keys = Object.keys(obj);

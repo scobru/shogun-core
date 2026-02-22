@@ -290,7 +290,6 @@ describe('ShogunCore Integration Tests', () => {
       expect(Array.isArray(errors)).toBe(true);
       expect(errors.length).toBeLessThanOrEqual(5);
     });
-
   });
 
   describe('Configuration Validation', () => {

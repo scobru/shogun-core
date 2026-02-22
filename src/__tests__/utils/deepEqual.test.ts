@@ -71,7 +71,7 @@ describe('deepEqual', () => {
   });
 
   it('should return false if types mismatch', () => {
-      expect(deepEqual({ a: 1 }, [1])).toBe(false);
-      expect(deepEqual(null, {})).toBe(false);
+    expect(deepEqual({ a: 1 }, [1])).toBe(false);
+    expect(deepEqual(null, {})).toBe(false);
   });
 });

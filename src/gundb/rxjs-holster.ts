@@ -342,13 +342,29 @@ export class RxJSHolster {
   private removeHolsterMeta<T>(obj: T): T {
     if (!obj || typeof obj !== 'object') return obj;
 
+    if (Array.isArray(obj)) {
+      const len = obj.length;
+      const cleanArr = new Array(len);
+      for (let i = 0; i < len; i++) {
+        const val = (obj as any)[i];
+        if (val && typeof val === 'object') {
+          cleanArr[i] = this.removeHolsterMeta(val);
+        } else {
+          cleanArr[i] = val;
+        }
+      }
+      return cleanArr as unknown as T;
+    }
+
     // Create a clean copy
-    const cleanObj: any = Array.isArray(obj) ? [] : {};
+    const cleanObj: any = {};
 
     // Copy properties, skipping Holster metadata
-    Object.keys(obj).forEach((key) => {
+    const keys = Object.keys(obj);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       // Skip Holster metadata
-      if (key === '_' || key.startsWith('~')) return;
+      if (key === '_' || key.startsWith('~')) continue;
 
       const val = (obj as any)[key];
       if (val && typeof val === 'object') {
@@ -356,7 +372,7 @@ export class RxJSHolster {
       } else {
         cleanObj[key] = val;
       }
-    });
+    }
 
     return cleanObj as T;
   }

@@ -12,7 +12,12 @@ export function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
 
   // If either is null or not an object, they are not equal (since a !== b)
-  if (a === null || typeof a !== 'object' || b === null || typeof b !== 'object') {
+  if (
+    a === null ||
+    typeof a !== 'object' ||
+    b === null ||
+    typeof b !== 'object'
+  ) {
     return false;
   }
 

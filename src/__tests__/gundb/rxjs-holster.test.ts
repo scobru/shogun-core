@@ -55,38 +55,38 @@ describe('RxJSHolster', () => {
     });
 
     it('should use distinctUntilChanged (using deepEqual)', () => {
-        const testData = { foo: 'bar' };
-        let emitCount = 0;
+      const testData = { foo: 'bar' };
+      let emitCount = 0;
 
-        const subscription = rxjsHolster.observe('path').subscribe(() => {
-          emitCount++;
-        });
+      const subscription = rxjsHolster.observe('path').subscribe(() => {
+        emitCount++;
+      });
 
-        const onCall = mockNode.on.mock.calls[0][0];
+      const onCall = mockNode.on.mock.calls[0][0];
 
-        // Emit same data twice
-        onCall(testData);
-        onCall({ ...testData }); // Different object reference, same content
+      // Emit same data twice
+      onCall(testData);
+      onCall({ ...testData }); // Different object reference, same content
 
-        expect(emitCount).toBe(1);
-        subscription.unsubscribe();
+      expect(emitCount).toBe(1);
+      subscription.unsubscribe();
     });
 
     it('should emit if data changes', () => {
-        const testData = { foo: 'bar' };
-        let emitCount = 0;
+      const testData = { foo: 'bar' };
+      let emitCount = 0;
 
-        const subscription = rxjsHolster.observe('path').subscribe(() => {
-          emitCount++;
-        });
+      const subscription = rxjsHolster.observe('path').subscribe(() => {
+        emitCount++;
+      });
 
-        const onCall = mockNode.on.mock.calls[0][0];
+      const onCall = mockNode.on.mock.calls[0][0];
 
-        onCall(testData);
-        onCall({ foo: 'baz' });
+      onCall(testData);
+      onCall({ foo: 'baz' });
 
-        expect(emitCount).toBe(2);
-        subscription.unsubscribe();
+      expect(emitCount).toBe(2);
+      subscription.unsubscribe();
     });
   });
 });
