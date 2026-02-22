@@ -128,22 +128,8 @@ export class CoreInitializer {
     }
 
     try {
-      // Get SEA from Gun instance or global
-      let sea = (this.core._gun as any).SEA || null;
-      if (!sea) {
-        // Try to find SEA in various global locations
-        if (
-          typeof window !== 'undefined' &&
-          (window as any).Gun &&
-          (window as any).Gun.SEA
-        ) {
-          sea = (window as any).Gun.SEA;
-        } else if ((globalThis as any).Gun && (globalThis as any).Gun.SEA) {
-          sea = (globalThis as any).Gun.SEA;
-        } else if ((global as any).Gun && (global as any).Gun.SEA) {
-          sea = (global as any).Gun.SEA;
-        }
-      }
+      // Resolve SEA
+      const sea = this.resolveSEA(this.core._gun, false);
 
       this.core.db = new DataBase(this.core._gun, this.core, sea);
       return true;
@@ -153,6 +139,38 @@ export class CoreInitializer {
       }
       throw new Error(`Failed to initialize DataBase: ${error}`);
     }
+  }
+
+  /**
+   * Resolve SEA from Gun/Holster instance or global scope
+   * @param instance - Gun or Holster instance
+   * @param isHolster - Whether we are using Holster
+   * @returns SEA module or null
+   */
+  private resolveSEA(instance: any, isHolster: boolean): any {
+    // Get SEA from instance
+    let sea = (instance as any).SEA || null;
+    if (sea) return sea;
+
+    // Try to find SEA in various global locations
+    const namespace = isHolster ? 'Holster' : 'Gun';
+    const g = globalThis as any;
+    const w = (typeof window !== 'undefined' ? window : {}) as any;
+    const glob = (typeof global !== 'undefined' ? global : {}) as any;
+
+    if (w[namespace] && w[namespace].SEA) {
+      sea = w[namespace].SEA;
+    } else if (g[namespace] && g[namespace].SEA) {
+      sea = g[namespace].SEA;
+    } else if (glob[namespace] && glob[namespace].SEA) {
+      sea = glob[namespace].SEA;
+    } else if (g.SEA) {
+      sea = g.SEA;
+    } else if (w.SEA) {
+      sea = w.SEA;
+    }
+
+    return sea;
   }
 
   /**
@@ -194,27 +212,8 @@ export class CoreInitializer {
     }
 
     try {
-      // Get SEA from Holster instance or global
-      let sea = (this.core._gun as any).SEA || null;
-      if (!sea) {
-        // Try to find SEA in various global locations
-        if (
-          typeof window !== 'undefined' &&
-          (window as any).Holster &&
-          (window as any).Holster.SEA
-        ) {
-          sea = (window as any).Holster.SEA;
-        } else if (
-          (globalThis as any).Holster &&
-          (globalThis as any).Holster.SEA
-        ) {
-          sea = (globalThis as any).Holster.SEA;
-        } else if ((global as any).Holster && (global as any).Holster.SEA) {
-          sea = (global as any).Holster.SEA;
-        } else if ((globalThis as any).SEA) {
-          sea = (globalThis as any).SEA;
-        }
-      }
+      // Resolve SEA
+      const sea = this.resolveSEA(this.core._gun, true);
 
       this.core.db = new DataBaseHolster(this.core._gun, this.core, sea);
       return true;
