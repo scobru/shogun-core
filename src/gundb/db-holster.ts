@@ -13,6 +13,10 @@ import * as crypto from './crypto';
 const CONFIG = {
   PASSWORD: {
     MIN_LENGTH: 8,
+    MAX_LENGTH: 1024,
+  },
+  USERNAME: {
+    MAX_LENGTH: 64,
   },
 } as const;
 
@@ -273,6 +277,12 @@ class DataBaseHolster {
         error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
       };
     }
+    if (password.length > CONFIG.PASSWORD.MAX_LENGTH) {
+      return {
+        valid: false,
+        error: `Password must be ${CONFIG.PASSWORD.MAX_LENGTH} characters or fewer`,
+      };
+    }
     if (!/[A-Z]/.test(password)) {
       return {
         valid: false,
@@ -312,6 +322,13 @@ class DataBaseHolster {
       return {
         valid: false,
         error: 'Username must be more than 0 characters long',
+      };
+    }
+
+    if (username.length > CONFIG.USERNAME.MAX_LENGTH) {
+      return {
+        valid: false,
+        error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
       };
     }
 
@@ -774,6 +791,13 @@ class DataBaseHolster {
       return {
         success: false,
         error: 'Username must be more than 0 characters long',
+      };
+    }
+
+    if (normalizedUsername.length > CONFIG.USERNAME.MAX_LENGTH) {
+      return {
+        success: false,
+        error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
       };
     }
 
