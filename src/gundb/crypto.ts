@@ -304,19 +304,12 @@ export function safeJSONParse(input: any, def: any = {}) {
 }
 
 export function randomUUID() {
+  // Use native crypto.randomUUID if available (fastest)
   const c = (globalThis as any)?.crypto as Crypto | undefined;
   if (c?.randomUUID) return c.randomUUID();
-  try {
-    if (c?.getRandomValues) {
-      const bytes = new Uint8Array(16);
-      c.getRandomValues(bytes);
-      bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC4122
-      const toHex = (n: number) => n.toString(16).padStart(2, '0');
-      const b = Array.from(bytes).map(toHex).join('');
-      return `${b.slice(0, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}-${b.slice(16, 20)}-${b.slice(20)}`;
-    }
-  } catch {}
+
+  // Fallback to uuidv4 which handles other cases (e.g. crypto.getRandomValues)
+  // much more efficiently than a manual JS implementation
   return uuidv4();
 }
 
