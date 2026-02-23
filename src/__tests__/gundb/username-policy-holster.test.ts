@@ -10,15 +10,15 @@ describe('Username Policy Holster', () => {
       user: jest.fn().mockReturnValue({
         recall: jest.fn(),
         is: null,
-        leave: jest.fn()
+        leave: jest.fn(),
       }),
       get: jest.fn().mockReturnThis(),
       next: jest.fn().mockReturnThis(),
       SEA: {
         work: jest.fn(),
         encrypt: jest.fn(),
-        decrypt: jest.fn()
-      }
+        decrypt: jest.fn(),
+      },
     };
 
     dbHolster = new DataBaseHolster(mockHolster);
@@ -32,7 +32,10 @@ describe('Username Policy Holster', () => {
   const validateUsername = (username: string) => {
     // validateSignupCredentials checks username first, then password strength.
     // We pass a valid password to ensure only username validation fails.
-    return (dbHolster as any).validateSignupCredentials(username, 'ValidPass1!');
+    return (dbHolster as any).validateSignupCredentials(
+      username,
+      'ValidPass1!',
+    );
   };
 
   // Helper function to access private method for testing password

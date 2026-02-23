@@ -557,6 +557,32 @@ class DataBase {
   }
 
   /**
+   * Internal: Get or create a device-specific secret stored in localStorage.
+   * This binds the session key to the device, preventing decryption of stolen sessionStorage
+   * on other devices.
+   */
+  private getDeviceSecret(): string {
+    try {
+      if (typeof localStorage === 'undefined') return '';
+      const KEY = 'shogun_device_secret';
+      let secret = localStorage.getItem(KEY);
+      if (!secret) {
+        secret = this.crypto.randomUUID();
+        try {
+          localStorage.setItem(KEY, secret);
+        } catch (e) {
+          console.warn('[DB] Failed to save device secret to localStorage', e);
+          // If we can't save it, we return it anyway so current session works.
+          // Next reload will fail to decrypt, which is secure fail.
+        }
+      }
+      return secret;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
    * Derive a unique encryption key for the session.
    * @param username Username to derive key from
    * @param salt Random salt for this session
@@ -570,7 +596,11 @@ class DataBase {
     // We use SEA.work to derive a key from username + salt + pub
     // This makes the key unique per session (due to salt) and user
     if (!this.sea) throw new Error('SEA not available');
-    const input = `${username}:${salt}:${pub}`;
+
+    // Retrieve device-specific secret (if available) to bind session to this device
+    const deviceSecret = this.getDeviceSecret();
+    const input = `${username}:${salt}:${pub}:${deviceSecret}`;
+
     return await this.sea.work(input, null, null, { name: 'SHA-256' });
   }
 
