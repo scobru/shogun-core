@@ -1,6 +1,7 @@
 import { p256 } from '@noble/curves/p256';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
+import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { ripemd160 } from '@noble/hashes/ripemd160';
 
@@ -170,22 +171,18 @@ async function stretchKey(
     // Ensure the key is valid for secp256k1
     return ensureValidSecp256k1Key(keyBytes);
   } catch (error) {
-    // Fallback: generate a deterministic key from input and salt
-    const fallbackKey = generateFallbackKey(input, salt);
+    // Fallback: use pbkdf2 implementation from @noble/hashes
+    // This is secure and deterministic, matching the subtle crypto implementation
+    // as closely as possible (PBKDF2-HMAC-SHA256)
+    const inputBytes =
+      input instanceof Uint8Array ? input : new Uint8Array(input as ArrayBuffer);
+
+    const fallbackKey = pbkdf2(sha256, inputBytes, salt, {
+      c: iterations,
+      dkLen: 32,
+    });
     return ensureValidSecp256k1Key(fallbackKey);
   }
-}
-
-function generateFallbackKey(
-  input: BufferSource,
-  salt: Uint8Array,
-): Uint8Array {
-  // Simple deterministic key generation as fallback
-  const key = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    key[i] = (i * 7 + salt[i % salt.length]) % 256;
-  }
-  return key;
 }
 
 function ensureValidSecp256k1Key(keyBytes: Uint8Array): Uint8Array {

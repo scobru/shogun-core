@@ -12,3 +12,8 @@
 **Vulnerability:** The WebAuthn `sign` method in `src/plugins/webauthn/webauthn.ts` used a hardcoded empty 16-byte challenge regardless of the input data. This rendered the resulting signature useless for verifying the integrity or authenticity of the specific data being "signed".
 **Learning:** WebAuthn signatures are generated over the concatenation of authenticator data and client data (which includes the challenge). To use WebAuthn as a signing primitive for arbitrary data, the challenge MUST be a cryptographic hash of that data.
 **Prevention:** Ensure that any method claiming to sign data actually binds the signature to that data by incorporating it (or its hash) into the signing challenge or message.
+
+## 2026-02-19 - Insecure Fallback Key Derivation
+**Vulnerability:** Found `generateFallbackKey` function used when `crypto.subtle` fails in `src/gundb/derive.ts`. This function used weak arithmetic and ignored the password input, causing identical keys for different passwords.
+**Learning:** Fallback mechanisms are often less tested and can introduce critical vulnerabilities. Never implement custom crypto; always rely on established libraries like `@noble/hashes` for polyfills.
+**Prevention:** Ensure cryptographic inputs are actually used in the operation. Use standard libraries for fallback implementations.
