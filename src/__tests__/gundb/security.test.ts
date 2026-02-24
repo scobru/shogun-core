@@ -36,14 +36,12 @@ const mockSEA = {
   work: jest.fn().mockResolvedValue('mocked-hash'),
   encrypt: jest.fn().mockResolvedValue('mocked-encrypted-data'),
   decrypt: jest.fn().mockResolvedValue({ pub: 'testpub' }),
-  pair: jest
-    .fn()
-    .mockResolvedValue({
-      pub: 'pub',
-      priv: 'priv',
-      epub: 'epub',
-      epriv: 'epriv',
-    }),
+  pair: jest.fn().mockResolvedValue({
+    pub: 'pub',
+    priv: 'priv',
+    epub: 'epub',
+    epriv: 'epriv',
+  }),
 };
 
 describe('Security Tests', () => {

@@ -202,13 +202,17 @@ describe('PluginManager', () => {
 
     it('getPlugin should return undefined for non-existent plugin', () => {
       expect(pluginManager.getPlugin('non-existent')).toBeUndefined();
-      expect(console.warn).toHaveBeenCalledWith('Plugin "non-existent" not found');
+      expect(console.warn).toHaveBeenCalledWith(
+        'Plugin "non-existent" not found',
+      );
     });
 
     it('getPlugin should handle invalid names', () => {
       expect(pluginManager.getPlugin('')).toBeUndefined();
       expect(pluginManager.getPlugin(null as any)).toBeUndefined();
-      expect(console.warn).toHaveBeenCalledWith('Invalid plugin name provided to getPlugin');
+      expect(console.warn).toHaveBeenCalledWith(
+        'Invalid plugin name provided to getPlugin',
+      );
     });
 
     it('hasPlugin should return correct boolean', () => {
@@ -238,15 +242,21 @@ describe('PluginManager', () => {
     });
 
     it('getPluginsByCategory should filter correctly', () => {
-      const authPlugins = pluginManager.getPluginsByCategory(PluginCategory.Authentication);
+      const authPlugins = pluginManager.getPluginsByCategory(
+        PluginCategory.Authentication,
+      );
       expect(authPlugins).toHaveLength(1);
       expect(authPlugins[0].name).toBe('plugin1');
 
-      const utilityPlugins = pluginManager.getPluginsByCategory(PluginCategory.Utility);
+      const utilityPlugins = pluginManager.getPluginsByCategory(
+        PluginCategory.Utility,
+      );
       expect(utilityPlugins).toHaveLength(1);
       expect(utilityPlugins[0].name).toBe('plugin2');
 
-      const walletPlugins = pluginManager.getPluginsByCategory(PluginCategory.Wallet);
+      const walletPlugins = pluginManager.getPluginsByCategory(
+        PluginCategory.Wallet,
+      );
       expect(walletPlugins).toHaveLength(0);
     });
   });
@@ -285,8 +295,14 @@ describe('PluginManager', () => {
 
       expect(status['p1']).toEqual({ initialized: true });
       expect(status['p2']).toEqual({ initialized: true });
-      expect(status['p3']).toEqual({ initialized: false, error: 'Not initialized' });
-      expect(status['p4']).toEqual({ initialized: false, error: 'No core reference found' });
+      expect(status['p3']).toEqual({
+        initialized: false,
+        error: 'Not initialized',
+      });
+      expect(status['p4']).toEqual({
+        initialized: false,
+        error: 'No core reference found',
+      });
     });
 
     it('validatePluginSystem should return correct validation results', () => {
@@ -296,7 +312,11 @@ describe('PluginManager', () => {
       expect(validationEmpty.warnings).toContain('No plugins registered');
 
       // Case 2: Mix of initialized and failed
-      const mockPlugin1: any = { name: 'p1', initialize: jest.fn(), core: mockCore };
+      const mockPlugin1: any = {
+        name: 'p1',
+        initialize: jest.fn(),
+        core: mockCore,
+      };
       const mockPlugin2: any = { name: 'p2', initialize: jest.fn() }; // fails because no core/assertInitialized
       pluginManager.register(mockPlugin1);
       pluginManager.register(mockPlugin2);
@@ -309,7 +329,11 @@ describe('PluginManager', () => {
     });
 
     it('reinitializeFailedPlugins should attempt to reinitialize failed plugins', () => {
-      const mockPlugin1: any = { name: 'p1', initialize: jest.fn(), core: mockCore };
+      const mockPlugin1: any = {
+        name: 'p1',
+        initialize: jest.fn(),
+        core: mockCore,
+      };
       const mockPlugin2: any = {
         name: 'p2',
         initialize: jest.fn(),
@@ -328,9 +352,12 @@ describe('PluginManager', () => {
     it('reinitializeFailedPlugins should handle reinitialization errors', () => {
       const mockPlugin: any = {
         name: 'p1',
-        initialize: jest.fn()
+        initialize: jest
+          .fn()
           .mockImplementationOnce(() => {}) // register succeeds
-          .mockImplementationOnce(() => { throw new Error('Still failing'); }), // reinitialize fails
+          .mockImplementationOnce(() => {
+            throw new Error('Still failing');
+          }), // reinitialize fails
       };
 
       pluginManager.register(mockPlugin);
@@ -338,10 +365,13 @@ describe('PluginManager', () => {
 
       const result = pluginManager.reinitializeFailedPlugins();
 
-      expect(result.failed).toContainEqual({ name: 'p1', error: 'Still failing' });
+      expect(result.failed).toContainEqual({
+        name: 'p1',
+        error: 'Still failing',
+      });
       expect(console.error).toHaveBeenCalledWith(
         '[PluginManager] Failed to reinitialize plugin p1:',
-        expect.any(Error)
+        expect.any(Error),
       );
     });
   });
@@ -358,7 +388,10 @@ describe('PluginManager', () => {
         name: 'p2',
         version: '2.0.0',
         initialize: jest.fn(),
-        getCompatibilityInfo: jest.fn(() => ({ compatible: false, reason: 'Too old' })),
+        getCompatibilityInfo: jest.fn(() => ({
+          compatible: false,
+          reason: 'Too old',
+        })),
       };
       const mockPlugin3: any = {
         name: 'p3',
@@ -370,7 +403,9 @@ describe('PluginManager', () => {
         name: 'p4',
         version: '4.0.0',
         initialize: jest.fn(),
-        getCompatibilityInfo: jest.fn(() => { throw new Error('Comp error'); }),
+        getCompatibilityInfo: jest.fn(() => {
+          throw new Error('Comp error');
+        }),
       };
 
       pluginManager.register(mockPlugin1);
@@ -380,8 +415,15 @@ describe('PluginManager', () => {
 
       const result = pluginManager.checkPluginCompatibility();
 
-      expect(result.compatible).toContainEqual({ name: 'p1', version: '1.0.0' });
-      expect(result.incompatible).toContainEqual({ name: 'p2', version: '2.0.0', reason: 'Too old' });
+      expect(result.compatible).toContainEqual({
+        name: 'p1',
+        version: '1.0.0',
+      });
+      expect(result.incompatible).toContainEqual({
+        name: 'p2',
+        version: '2.0.0',
+        reason: 'Too old',
+      });
       expect(result.unknown).toContainEqual({ name: 'p3', version: '3.0.0' });
       expect(result.unknown).toContainEqual({ name: 'p4', version: '4.0.0' });
     });
