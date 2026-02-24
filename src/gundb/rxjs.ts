@@ -478,17 +478,16 @@ function removeGunMeta<T>(obj: T): T {
   const cleanObj: any = {};
 
   // Copy properties, skipping Gun metadata
-  const keys = Object.keys(obj);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    // Skip Gun metadata
+  // Optimized: Use for...in loop to avoid Object.keys array allocation overhead
+  for (const key in obj) {
     if (key === '_' || key === '#') continue;
-
-    const val = (obj as any)[key];
-    if (val && typeof val === 'object') {
-      cleanObj[key] = removeGunMeta(val);
-    } else {
-      cleanObj[key] = val;
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const val = (obj as any)[key];
+      if (val && typeof val === 'object') {
+        cleanObj[key] = removeGunMeta(val);
+      } else {
+        cleanObj[key] = val;
+      }
     }
   }
 
