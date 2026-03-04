@@ -10,7 +10,11 @@ import { ethers } from 'ethers';
 const base64url = {
   encode: function (buffer: ArrayBuffer | Uint8Array): string {
     const bytes = new Uint8Array(buffer);
-    return btoa(String.fromCharCode(...bytes))
+    const chars: string[] = [];
+    for (let i = 0; i < bytes.length; i++) {
+      chars.push(String.fromCharCode(bytes[i]));
+    }
+    return btoa(chars.join(''))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');

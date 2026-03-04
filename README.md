@@ -12,7 +12,7 @@ Shogun Core is a comprehensive SDK for building decentralized applications (dApp
 
 ## Features
 
-- 🔐 **Multiple Authentication Methods**: Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, ZK-Proof (anonymous), Challenge (Server-Signed)
+- 🔐 **Multiple Authentication Methods**: Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, Challenge (Server-Signed)
 - 🌐 **Decentralized Storage**: Built on GunDB or Holster for peer-to-peer data synchronization
 - 🔄 **Dual Database Support**: Use Gun (maximum compatibility) or Holster (modern ES modules, improved performance)
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins
@@ -34,62 +34,56 @@ yarn add shogun-core
 ### Using Gun (Default)
 
 ```typescript
-import { ShogunCore } from "shogun-core";
-import Gun from "gun";
+import { ShogunCore } from 'shogun-core';
+import Gun from 'gun';
 
 // Create Gun instance first
-const gun = Gun({ 
-  peers: ['https://gun-manhattan.herokuapp.com/gun'] 
+const gun = Gun({
+  peers: ['https://gun-manhattan.herokuapp.com/gun'],
 });
 
 // Initialize Shogun Core with the Gun instance
 const shogun = new ShogunCore({
   gunInstance: gun,
-  
+
   // Enable authentication plugins
   web3: { enabled: true },
-  webauthn: { 
+  webauthn: {
     enabled: true,
-    rpName: "My Awesome App",
+    rpName: 'My Awesome App',
     rpId: window.location.hostname,
   },
   nostr: { enabled: true },
-  zkproof: { 
+  zkproof: {
     enabled: true,
-    defaultGroupId: "my-app-users",
+    defaultGroupId: 'my-app-users',
   },
 });
-
-
 ```
 
 ### Using Holster (Alternative)
 
 ```typescript
-import { ShogunCore } from "shogun-core";
-import Holster from "@mblaney/holster";
+import { ShogunCore } from 'shogun-core';
+import Holster from '@mblaney/holster';
 
 // Create Holster instance first
-const holster = Holster({ 
-  peers: ['ws://localhost:8765'] 
+const holster = Holster({
+  peers: ['ws://localhost:8765'],
 });
 
 // Initialize Shogun Core with the Holster instance
 const shogun = new ShogunCore({
-  holsterInstance: holster,  // Use Holster instead of Gun
-  
+  holsterInstance: holster, // Use Holster instead of Gun
+
   // Enable authentication plugins (same as Gun)
   web3: { enabled: true },
-  webauthn: { 
+  webauthn: {
     enabled: true,
-    rpName: "My Awesome App",
+    rpName: 'My Awesome App',
     rpId: window.location.hostname,
   },
   nostr: { enabled: true },
-  zkproof: { 
-    enabled: true,
-    defaultGroupId: "my-app-users",
-  },
 });
 
 // All other APIs work the same way!
@@ -100,22 +94,70 @@ const shogun = new ShogunCore({
 ```typescript
 const db = shogun.db;
 
-// Store data using Gun chaining
+// Store data using Gun chaining (Traditional Method)
 await db.get('users').get('alice').get('profile').put({
   name: 'Alice Smith',
-  email: 'alice@example.com'
+  email: 'alice@example.com',
 });
 
 // Read data
 const profile = await db.get('users').get('alice').get('profile').once().then();
 
 // Update specific fields
-await db.get('users').get('alice').get('profile').get('name').put('Alice Johnson');
+await db
+  .get('users')
+  .get('alice')
+  .get('profile')
+  .get('name')
+  .put('Alice Johnson');
 
 // Iterate over collections with .map()
 db.get('users').map((user, userId) => {
   console.log(`User ${userId}:`, user);
 });
+```
+
+### Promise-based Advanced Utilities (Firegun API)
+
+Shogun Core includes built-in Promise wrappers, timeouts, and user-space utilities directly in the `DataBase` class:
+
+```typescript
+const db = shogun.db;
+
+// Promise-based Root GET with auto-retry
+const data = await db.Get('public/posts/123');
+
+// Promise-based Root PUT (supports deep object merging)
+await db.Put('public/settings', { theme: 'dark' }, true);
+
+// Listen to node changes with easy unsubscribe
+await db.On(
+  'public/feed',
+  (data) => console.log('Feed updated:', data),
+  'myFeedListener',
+);
+await db.Off('myFeedListener'); // Cleanly remove the listener
+
+// Content Addressed Storage (CAS)
+// Hashes the data automatically using SHA-256 and saves it immutably
+const ack = await db.addContentAdressing('#immutable-posts', {
+  text: 'Hello Web3!',
+});
+
+// --- User Space Operations ---
+// These automatically prefix the path with `~pubkey/` of the logged-in user
+
+// Read from current user's graph
+const userSettings = await db.userGet('settings');
+
+// Write to current user's graph
+await db.userPut('profile', { name: 'Alice' });
+
+// Delete user node (Tombstoning)
+await db.userDel('old-post');
+
+// Purge (nullify all keys in a node)
+await db.purge('~pubkey/public/posts/123');
 ```
 
 ## Authentication Methods
@@ -124,39 +166,39 @@ db.get('users').map((user, userId) => {
 
 ```typescript
 // Sign up
-const signUpResult = await shogun.signUp("username", "password");
+const signUpResult = await shogun.signUp('username', 'password');
 if (signUpResult.success) {
-  console.log("User created:", signUpResult.username);
+  console.log('User created:', signUpResult.username);
 }
 
 // Login
-const loginResult = await shogun.login("username", "password");
+const loginResult = await shogun.login('username', 'password');
 if (loginResult.success) {
-  console.log("Logged in as:", loginResult.username);
+  console.log('Logged in as:', loginResult.username);
 }
 ```
 
 ### 2. Web3 Plugin API
 
 ```typescript
-const web3Plugin = shogun.getPlugin("web3");
+const web3Plugin = shogun.getPlugin('web3');
 
 if (web3Plugin && web3Plugin.isAvailable()) {
   const connectionResult = await web3Plugin.connectMetaMask();
-  
+
   if (connectionResult.success) {
     const address = connectionResult.address!;
-    
+
     // Login with Web3 wallet
     const loginResult = await web3Plugin.login(address);
     if (loginResult.success) {
-      console.log("Web3 login successful");
+      console.log('Web3 login successful');
     }
-    
+
     // Register new user
     const signUpResult = await web3Plugin.signUp(address);
     if (signUpResult.success) {
-      console.log("Web3 registration successful");
+      console.log('Web3 registration successful');
     }
   }
 }
@@ -165,28 +207,28 @@ if (web3Plugin && web3Plugin.isAvailable()) {
 ### 3. WebAuthn Plugin API
 
 ```typescript
-const webauthnPlugin = shogun.getPlugin("webauthn");
+const webauthnPlugin = shogun.getPlugin('webauthn');
 
 if (webauthnPlugin && webauthnPlugin.isSupported()) {
   // Register with seed phrase for multi-device support
-  const signUpResult = await webauthnPlugin.signUp("username", {
-    generateSeedPhrase: true
+  const signUpResult = await webauthnPlugin.signUp('username', {
+    generateSeedPhrase: true,
   });
-  
+
   if (signUpResult.success && signUpResult.seedPhrase) {
-    console.log("🔑 SAVE THESE 12 WORDS:", signUpResult.seedPhrase);
+    console.log('🔑 SAVE THESE 12 WORDS:', signUpResult.seedPhrase);
   }
 
   // Import account on another device
   const importResult = await webauthnPlugin.importFromSeed(
-    "username",
-    "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
+    'username',
+    'word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12',
   );
-  
+
   // Authenticate
-  const loginResult = await webauthnPlugin.login("username");
+  const loginResult = await webauthnPlugin.login('username');
   if (loginResult.success) {
-    console.log("WebAuthn authentication successful");
+    console.log('WebAuthn authentication successful');
   }
 }
 ```
@@ -194,64 +236,41 @@ if (webauthnPlugin && webauthnPlugin.isSupported()) {
 ### 4. Nostr Plugin API
 
 ```typescript
-const nostrPlugin = shogun.getPlugin("nostr");
+const nostrPlugin = shogun.getPlugin('nostr');
 
 if (nostrPlugin && nostrPlugin.isAvailable()) {
   const connectionResult = await nostrPlugin.connectNostrWallet();
-  
+
   if (connectionResult.success) {
     const address = connectionResult.address!;
-    
+
     const loginResult = await nostrPlugin.login(address);
     if (loginResult.success) {
-      console.log("Nostr login successful");
+      console.log('Nostr login successful');
     }
-    
+
     const signUpResult = await nostrPlugin.signUp(address);
     if (signUpResult.success) {
-      console.log("Nostr registration successful");
+      console.log('Nostr registration successful');
     }
   }
 }
 ```
-
-### 5. ZK-Proof Plugin API
-
-```typescript
-const zkPlugin = shogun.getPlugin("zkproof");
-
-if (zkPlugin && zkPlugin.isAvailable()) {
-  // Sign up with ZK-Proof (creates anonymous identity)
-  const signUpResult = await zkPlugin.signUp();
-  
-  if (signUpResult.success && signUpResult.seedPhrase) {
-    console.log("🔑 SAVE THIS TRAPDOOR:", signUpResult.seedPhrase);
-  }
-
-  // Login with trapdoor (anonymous authentication)
-  const loginResult = await zkPlugin.login(trapdoor);
-  if (loginResult.success) {
-    console.log("ZK-Proof login successful (anonymous)");
-  }
-}
-```
-
-
 
 ### 7. Challenge Auth Plugin API
 
 The `Challenge` plugin allows for server-signed challenges to verify user authenticity without exposing private keys directly, useful for certain server-side integrations.
 
 ```typescript
-const challengePlugin = shogun.getPlugin("challenge");
+const challengePlugin = shogun.getPlugin('challenge');
 
 if (challengePlugin) {
   // Initiate a challenge
   const challenge = await challengePlugin.createChallenge();
-  
+
   // User signs the challenge
   const signature = await user.sign(challenge);
-  
+
   // Verify the signature
   const isValid = await challengePlugin.verify(challenge, signature);
 }
@@ -262,29 +281,29 @@ if (challengePlugin) {
 Shogun Core supports BIP39 mnemonics and Hierarchical Deterministic (HD) key derivation, allowing you to generate multiple purpose-specific keys from a single seed.
 
 ```typescript
-import { 
-  generateSeedPhrase, 
-  validateSeedPhrase, 
+import {
+  generateSeedPhrase,
+  validateSeedPhrase,
   seedToKeyPair,
-  deriveChildKey 
-} from "shogun-core";
+  deriveChildKey,
+} from 'shogun-core';
 
 // 1. Generate a new 12-word mnemonic
 const mnemonic = generateSeedPhrase();
-console.log("Secret Mnemonic:", mnemonic);
+console.log('Secret Mnemonic:', mnemonic);
 
 // 2. Validate a mnemonic
 const isValid = validateSeedPhrase(mnemonic);
 
 // 3. Convert mnemonic to a master SEA pair
-const masterPair = await seedToKeyPair(mnemonic, "my-username");
+const masterPair = await seedToKeyPair(mnemonic, 'my-username');
 
 // 4. Derive child keys for specific purposes (HD Wallet style)
-const chatPair = await deriveChildKey(masterPair, "messaging");
-const walletPair = await deriveChildKey(masterPair, "payment");
+const chatPair = await deriveChildKey(masterPair, 'messaging');
+const walletPair = await deriveChildKey(masterPair, 'payment');
 
-console.log("Master Pub:", masterPair.pub);
-console.log("Chat Pub:", chatPair.pub);
+console.log('Master Pub:', masterPair.pub);
+console.log('Chat Pub:', chatPair.pub);
 ```
 
 ## Browser Usage (CDN)
@@ -305,8 +324,8 @@ console.log("Chat Pub:", chatPair.pub);
 
     <script>
       // Create Gun instance first
-      const gun = Gun({ 
-        peers: ["https://gun-manhattan.herokuapp.com/gun"] 
+      const gun = Gun({
+        peers: ['https://gun-manhattan.herokuapp.com/gun'],
       });
 
       // Initialize Shogun Core
@@ -315,12 +334,12 @@ console.log("Chat Pub:", chatPair.pub);
         web3: { enabled: true },
         webauthn: {
           enabled: true,
-          rpName: "My Browser dApp",
+          rpName: 'My Browser dApp',
           rpId: window.location.hostname,
         },
       });
 
-      console.log("Shogun Core initialized in browser!", shogunCore);
+      console.log('Shogun Core initialized in browser!', shogunCore);
     </script>
   </body>
 </html>
@@ -341,8 +360,8 @@ console.log("Chat Pub:", chatPair.pub);
       import { ShogunCore } from 'https://cdn.jsdelivr.net/npm/shogun-core/dist/src/index.js';
 
       // Create Holster instance
-      const holster = Holster({ 
-        peers: ['ws://localhost:8765'] 
+      const holster = Holster({
+        peers: ['ws://localhost:8765'],
       });
 
       // Initialize Shogun Core
@@ -351,12 +370,12 @@ console.log("Chat Pub:", chatPair.pub);
         web3: { enabled: true },
         webauthn: {
           enabled: true,
-          rpName: "My Browser dApp",
+          rpName: 'My Browser dApp',
           rpId: window.location.hostname,
         },
       });
 
-      console.log("Shogun Core initialized with Holster!", shogunCore);
+      console.log('Shogun Core initialized with Holster!', shogunCore);
     </script>
   </body>
 </html>
@@ -366,22 +385,22 @@ console.log("Chat Pub:", chatPair.pub);
 
 ```typescript
 // Listen for authentication events
-shogun.on("auth:login", (data) => {
-  console.log("User logged in:", data.username);
-  console.log("Authentication method:", data.method);
+shogun.on('auth:login', (data) => {
+  console.log('User logged in:', data.username);
+  console.log('Authentication method:', data.method);
 });
 
-shogun.on("auth:logout", () => {
-  console.log("User logged out");
+shogun.on('auth:logout', () => {
+  console.log('User logged out');
 });
 
-shogun.on("auth:signup", (data) => {
-  console.log("New user signed up:", data.username);
+shogun.on('auth:signup', (data) => {
+  console.log('New user signed up:', data.username);
 });
 
 // Listen for errors
-shogun.on("error", (error) => {
-  console.error("Shogun error:", error.message);
+shogun.on('error', (error) => {
+  console.error('Shogun error:', error.message);
 });
 ```
 
@@ -390,11 +409,13 @@ shogun.on("error", (error) => {
 Shogun Core supports both Gun and Holster as database backends. Choose based on your needs:
 
 ### Gun (Default)
+
 - **Pros**: Maximum compatibility, large ecosystem, battle-tested
 - **Cons**: Older codebase, CommonJS modules
 - **Best for**: Existing projects, maximum compatibility
 
 ### Holster
+
 - **Pros**: Modern ES modules, improved performance, cleaner API
 - **Cons**: Newer project, smaller ecosystem
 - **Best for**: New projects, modern build systems, performance-critical apps
@@ -402,6 +423,7 @@ Shogun Core supports both Gun and Holster as database backends. Choose based on 
 **Note**: The API is identical regardless of which backend you choose. Shogun Core handles all the differences internally.
 
 ### Differences to be aware of:
+
 - **Pair-based authentication**: Currently only supported with Gun (username/password works with both)
 - **Event system**: Gun has native events, Holster uses polling (handled automatically)
 - **Chaining API**: Gun uses `.get().get()`, Holster uses `.get().next()` (handled automatically via proxy)
@@ -412,7 +434,7 @@ Shogun Core supports both Gun and Holster as database backends. Choose based on 
 interface ShogunCoreConfig {
   gunInstance?: IGunInstance<any>; // Optional: existing Gun instance (required if holsterInstance not provided)
   holsterInstance?: any; // Optional: existing Holster instance (required if gunInstance not provided)
-  
+
   // Plugin configurations
   webauthn?: {
     enabled?: boolean;
@@ -426,13 +448,6 @@ interface ShogunCoreConfig {
 
   nostr?: {
     enabled?: boolean;
-  };
-
-  zkproof?: {
-    enabled?: boolean;
-    defaultGroupId?: string;
-    deterministic?: boolean;
-    minEntropy?: number;
   };
 
   postAuth?: {
@@ -455,7 +470,8 @@ interface ShogunCoreConfig {
 }
 ```
 
-**Note**: 
+**Note**:
+
 - Either `gunInstance` or `holsterInstance` must be provided (but not both)
 
 ## Migration Guide
@@ -465,6 +481,7 @@ interface ShogunCoreConfig {
 If you're currently using Gun and want to switch to Holster:
 
 1. **Install Holster**:
+
    ```bash
    npm install @mblaney/holster
    # or
@@ -472,6 +489,7 @@ If you're currently using Gun and want to switch to Holster:
    ```
 
 2. **Update your initialization**:
+
    ```typescript
    // Before (Gun)
    import Gun from "gun";

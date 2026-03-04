@@ -124,7 +124,11 @@ export default async function (
 }
 
 function arrayBufToBase64UrlEncode(buf: Uint8Array) {
-  return btoa(String.fromCharCode(...buf))
+  const chars: string[] = [];
+  for (let i = 0; i < buf.length; i++) {
+    chars.push(String.fromCharCode(buf[i]));
+  }
+  return btoa(chars.join(''))
     .replace(/\//g, '_')
     .replace(/=/g, '')
     .replace(/\+/g, '-');

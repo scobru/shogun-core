@@ -146,6 +146,17 @@ export interface GunAckCallback {
         pub?: string;
     }): void;
 }
+export type Ack = {
+    '@'?: string;
+    err: undefined;
+    ok: {
+        '': number;
+    } | string;
+    '#'?: string;
+} | {
+    err: Error;
+    ok: any;
+} | void;
 export interface TypedGunOperationResult<T = unknown> {
     success: boolean;
     data?: T;

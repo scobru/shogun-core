@@ -26,13 +26,8 @@
     "noUnusedParameters": false, // Report errors on unused parameters
     "noImplicitReturns": true, // Report error when not all code paths in function return a value
     "noFallthroughCasesInSwitch": true, // Report errors for fallthrough cases in switch statements
-    "composite": true, // Enable composite project support
+    "composite": true // Enable composite project support
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/__tests__/**/*",
-    "**/*.test.ts"
-    ]
+  "exclude": ["node_modules", "dist", "src/__tests__/**/*", "**/*.test.ts"]
 }

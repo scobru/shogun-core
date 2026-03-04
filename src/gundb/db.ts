@@ -1,4 +1,4 @@
-import type { AuthCallback, EventData, EventListener } from './types';
+import type { AuthCallback, EventData, EventListener, Ack } from './types';
 import type {
   IGunUserInstance,
   IGunChain,
@@ -53,6 +53,11 @@ class DataBase {
   private _rxjs?: RxJS;
   /** Whether the database instance has been destroyed */
   private _isDestroyed: boolean = false;
+
+  /** Node prefix for Firegun compatibility */
+  public prefix: string = '';
+  /** Event handlers for Firegun compatibility */
+  public ev: { [key: string]: { handler: any } } = {};
 
   /**
    * Constructs a new DataBase instance connected to a GunDB instance.
@@ -1081,6 +1086,547 @@ class DataBase {
    */
   rx(): RxJS {
     return this._rxjs as RxJS;
+  }
+
+  /**
+   * Wait in ms
+   * @param ms duration of timeout in ms
+   * @returns
+   */
+  async _timeout(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Delete On Subscription
+   * @param ev On subscription name, default : "default"
+   */
+  Off(ev = 'default'): void {
+    if (this.ev[ev] && this.ev[ev].handler) {
+      this.ev[ev].handler.off();
+    } else {
+      this.ev[ev] = { handler: null };
+    }
+  }
+
+  /**
+   * Listen changes on path
+   *
+   * @param path node path
+   * @param callback callback
+   * @param prefix node prefix, default : ""
+   */
+  Listen(
+    path: string,
+    callback: (result: { [key: string]: any } | string | undefined) => void,
+    prefix: string = this.prefix,
+  ): void {
+    path = `${prefix}${path}`;
+    let paths = path.split('/');
+    let dataGun: any = this.gun;
+
+    paths.forEach((p) => {
+      dataGun = dataGun.get(p);
+    });
+    dataGun.map().once((s: any) => {
+      callback(s);
+    });
+  }
+
+  /**
+   * New subscription on Path. When data on Path changed, callback is called.
+   *
+   * @param path node path
+   * @param callback callback
+   * @param ev On name as identifier, to be called by Off when finished
+   * @param different Whether to fetch only differnce, or all of nodes
+   * @param prefix node prefix, default : ""
+   */
+  On(
+    path: string,
+    callback: (result: { [key: string]: any } | string | undefined) => void,
+    ev: string = 'default',
+    different: boolean = true,
+    prefix: string = this.prefix,
+  ): void {
+    path = `${prefix}${path}`;
+    let paths = path.split('/');
+    let dataGun: any = this.gun;
+
+    paths.forEach((p) => {
+      dataGun = dataGun.get(p);
+    });
+
+    let listenerHandler = (value: any, key: any, _msg: any, _ev: any) => {
+      this.ev[ev] = { handler: _ev };
+      if (value) callback(JSON.parse(JSON.stringify(value)));
+    };
+
+    // @ts-ignore
+    dataGun.on(listenerHandler, { change: different });
+  }
+
+  /**
+   * Insert CONTENT-ADDRESSING Readonly Data.
+   *
+   * @param key must begin with #
+   * @param data If object, it will be stringified automatically
+   * @returns
+   */
+  addContentAdressing(key: string, data: string | {}): Promise<Ack> {
+    if (typeof data === 'object') {
+      data = JSON.stringify(data);
+    }
+    return new Promise((resolve, reject) => {
+      this.sea
+        .work(data, null, undefined, { name: 'SHA-256' })
+        .then((hash: any) => {
+          if (hash) {
+            this.gun
+              .get(`${key}`)
+              .get(hash)
+              .put(<any>data, (s: any) => {
+                resolve(<Ack>s);
+              });
+          } else {
+            reject(new Error('Hash generation failed'));
+          }
+        })
+        .catch(reject);
+    });
+  }
+
+  /**
+   * Fetch data from userspace
+   */
+  userGet(
+    path: string,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<
+    string | { [key: string]: {} } | { [key: string]: string } | undefined
+  > {
+    const pub = this.getUserPub();
+    if (pub) {
+      path = `~${pub}/${path}`;
+      return this.Get(path, repeat, prefix);
+    } else {
+      return Promise.resolve(undefined);
+    }
+  }
+
+  /**
+   * Load Multi Nested Data From Userspace
+   */
+  userLoad(
+    path: string,
+    async = false,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<{
+    data: { [s: string]: any };
+    err: { path: string; err: string }[];
+  }> {
+    const pub = this.getUserPub();
+    if (pub) {
+      path = `~${pub}/${path}`;
+      return this.Load(path, async, repeat, prefix);
+    } else {
+      return Promise.resolve({
+        data: {},
+        err: [{ path: path, err: 'User not logged in' }],
+      });
+    }
+  }
+
+  /**
+   * Fetching data
+   */
+  Get(
+    path: string,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<
+    undefined | string | { [key: string]: {} } | { [key: string]: string }
+  > {
+    let path0 = path;
+    path = `${prefix}${path}`;
+    let paths = path.split('/');
+    let dataGun: any = this.gun;
+
+    paths.forEach((p) => {
+      dataGun = dataGun.get(p);
+    });
+
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject({
+          err: 'timeout',
+          ket: `TIMEOUT, Possibly Data : ${path} is corrupt`,
+          data: {},
+          '#': path,
+        });
+      }, 5000);
+      dataGun.once(async (s: any) => {
+        if (s) {
+          s = JSON.parse(JSON.stringify(s));
+          resolve(s);
+        } else {
+          if (repeat) {
+            await this._timeout(1000);
+            try {
+              let data = await this.Get(path0, repeat - 1, prefix);
+              resolve(data);
+            } catch (error) {
+              reject(error);
+            }
+          } else {
+            reject({
+              err: 'notfound',
+              ket: `Data Not Found,  Data : ${path} is undefined`,
+              data: {},
+              '#': path,
+            });
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Put data on userspace
+   */
+  userPut(
+    path: string,
+    data: string | { [key: string]: {} },
+    async = false,
+    prefix = this.prefix,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return new Promise((resolve, reject) => {
+      const pub = this.getUserPub();
+      if (pub) {
+        path = `~${pub}/${path}`;
+        this.Put(path, data, async, prefix).then(resolve).catch(reject);
+      } else {
+        reject(<Ack>{ err: new Error('User Belum Login'), ok: undefined });
+      }
+    });
+  }
+
+  private _randomAlphaNumeric(length: number): string {
+    var result = '';
+    var characters =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for (var i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  }
+
+  /**
+   * Insert new Data into a node with a random key
+   */
+  Set(
+    path: string,
+    data: { [key: string]: {} } | { [key: string]: string },
+    async = false,
+    prefix = this.prefix,
+    opt: undefined | { opt: { cert: string } } = undefined,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return new Promise((resolve, reject) => {
+      var token = this._randomAlphaNumeric(30);
+      (data as any).id = token;
+      this.Put(`${path}/${token}`, data, async, prefix, opt)
+        .then((s) => {
+          resolve(s);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  }
+
+  /**
+   * Put Data to the gunDB Node
+   */
+  Put(
+    path: string,
+    data: null | string | { [key: string]: {} | string },
+    async = false,
+    prefix: string = this.prefix,
+    opt: undefined | { opt: { cert: string } } = undefined,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    path = `${prefix}${path}`;
+    let paths = path.split('/');
+    let dataGun: any = this.gun;
+
+    paths.forEach((p) => {
+      dataGun = dataGun.get(p);
+    });
+
+    if (typeof data === 'undefined') {
+      data = { t: '_' } as any;
+    }
+
+    let promises: Promise<Ack>[] = [];
+    let storedObj = { data: [] as Ack[], error: [] as Ack[] };
+
+    if (typeof data == 'object' && data !== null) {
+      for (const key of Object.keys(data)) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = (data as any)[key];
+          if (typeof element === 'object') {
+            delete (data as any)[key];
+            promises.push(
+              this.Put(`${path}/${key}`, element as any, async).then((s) => {
+                storedObj.data = storedObj.data.concat(s.data);
+                storedObj.error = storedObj.error.concat(s.error);
+                return s.data[0];
+              }),
+            );
+          }
+        }
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      Promise.allSettled(promises)
+        .then(() => {
+          if (data && Object.keys(data).length === 0) {
+            resolve(storedObj);
+          } else {
+            setTimeout(() => {
+              storedObj.error.push({
+                err: Error('TIMEOUT, Failed to put Data'),
+                ok: path,
+              } as any);
+              resolve(storedObj);
+            }, 2000);
+
+            dataGun.put(
+              <any>data,
+              (ack: any) => {
+                if (ack.err === undefined) {
+                  storedObj.data.push(ack);
+                } else {
+                  storedObj.error.push({
+                    err: Error(JSON.stringify(ack)),
+                    ok: path,
+                  } as any);
+                }
+                resolve(storedObj);
+              },
+              opt as any,
+            );
+          }
+        })
+        .catch((s) => {
+          storedObj.error.push({
+            err: Error(JSON.stringify(s)),
+            ok: path,
+          } as any);
+          resolve(storedObj);
+        });
+    });
+  }
+
+  purge(path: string) {
+    return new Promise((resolve, reject) => {
+      this.Get(path)
+        .then((data) => {
+          let newData = JSON.parse(JSON.stringify(data));
+          if (typeof newData === 'object' && newData !== null) {
+            for (const key of Object.keys(newData)) {
+              if (key != '_' && key != '>' && key != '#' && key != ':')
+                newData[key] = null;
+            }
+          }
+          this.Put(path, newData)
+            .then(() => {
+              resolve('OK');
+            })
+            .catch((err) => {
+              console.log(err);
+              reject(JSON.stringify(err));
+            });
+        })
+        .catch(reject);
+    });
+  }
+
+  /**
+   * Delete form user node
+   */
+  userDel(
+    path: string,
+    putNull: boolean = true,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return new Promise((resolve, reject) => {
+      const pub = this.getUserPub();
+      if (!pub) return reject(new Error('User not logged in'));
+      path = `~${pub}/${path}`;
+      this.Del(path, putNull)
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  }
+
+  /**
+   * Delete node Path. It's not really deleted. It's just detached (tombstone). Data without parent.
+   */
+  Del(
+    path: string,
+    putNull: boolean = true,
+    cert: string = '',
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return new Promise((resolve, reject) => {
+      try {
+        let randomNode: any;
+        let paths = path.split('/');
+        let dataGun: any = this.gun;
+
+        if (putNull) {
+          randomNode = null;
+        } else {
+          if (paths[0].indexOf('~') >= 0) {
+            randomNode = (this.gun as any)
+              .user()
+              .get('newNode')
+              .set({ t: '_' });
+          } else {
+            randomNode = this.gun.get('newNode').set({ t: '_' });
+          }
+        }
+
+        paths.forEach((p) => {
+          dataGun = dataGun.get(p);
+        });
+
+        if (cert) {
+          dataGun.put(
+            randomNode,
+            (s: any) => {
+              if (s.err === undefined) {
+                resolve({
+                  data: [{ ok: 'ok', err: undefined } as any],
+                  error: [],
+                });
+              } else {
+                reject({
+                  data: [{ ok: '', err: s.err } as any],
+                  error: [],
+                });
+              }
+            },
+            { opt: { cert: cert } } as any,
+          );
+        } else {
+          dataGun.put(randomNode, (s: any) => {
+            if (s.err === undefined) {
+              resolve({
+                data: [{ ok: 'ok', err: undefined } as any],
+                error: [],
+              });
+            } else {
+              reject({
+                data: [{ ok: '', err: s.err } as any],
+                error: [],
+              });
+            }
+          });
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Load Multi Nested Data
+   */
+  Load(
+    path: string,
+    async = false,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<{
+    data: { [s: string]: any };
+    err: { path: string; err: string }[];
+  }> {
+    return new Promise((resolve, reject) => {
+      let promises: Promise<any>[] = [];
+      let obj: {
+        data: { [s: string]: {} };
+        err: { path: string; err: string }[];
+      } = { data: {}, err: [] };
+
+      this.Get(path, repeat, prefix)
+        .then((s) => {
+          if (typeof s === 'object' && s !== null) {
+            for (const key of Object.keys(s)) {
+              if (key != '_' && key != '#' && key != '>') {
+                var element;
+                if (typeof s === 'object') {
+                  element = (s as any)[key];
+                } else {
+                  element = s;
+                }
+                if (typeof element === 'object') {
+                  promises.push(
+                    this.Load(`${path}/${key}`, async)
+                      .then((s2) => {
+                        obj.data[key] = s2;
+                      })
+                      .catch((error) => {
+                        (obj.err as any).push(error);
+                      }),
+                  );
+                } else {
+                  obj.data[key] = element;
+                }
+              }
+            }
+          }
+          Promise.allSettled(promises)
+            .then(() => {
+              resolve(obj as any);
+            })
+            .catch((s2) => {
+              obj.err.push(s2 as any);
+              resolve(obj as any);
+            });
+        })
+        .catch((s2) => {
+          obj.err.push(s2 as any);
+          resolve(obj as any);
+        });
+    });
+  }
+
+  /**
+   * Generate Public Certificate for Logged in User
+   */
+  generatePublicCert(): Promise<{ data: Ack[]; error: Ack[] }> {
+    return new Promise((resolve, reject) => {
+      const pub = this.getUserPub();
+      const seaPair = (this.gun.user() as any)?._?.sea;
+      if (pub && seaPair) {
+        this.sea
+          .certify('*', [{ '*': 'chat-with', '+': '*' }], seaPair, null, {})
+          .then((cert: any) => {
+            return this.userPut('chat-cert', cert);
+          })
+          .then((ack: any) => resolve(ack))
+          .catch(reject);
+      } else {
+        reject('User belum Login');
+      }
+    });
   }
 
   /**

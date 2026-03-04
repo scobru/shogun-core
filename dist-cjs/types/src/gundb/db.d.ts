@@ -1,4 +1,4 @@
-import type { AuthCallback, EventData, EventListener } from './types';
+import type { AuthCallback, EventData, EventListener, Ack } from './types';
 import type { IGunUserInstance, IGunInstance, ISEAPair } from 'gun/types';
 import type { AuthResult, SignUpResult } from '../interfaces/shogun';
 import { RxJS } from './rxjs';
@@ -31,6 +31,14 @@ declare class DataBase {
     private _rxjs?;
     /** Whether the database instance has been destroyed */
     private _isDestroyed;
+    /** Node prefix for Firegun compatibility */
+    prefix: string;
+    /** Event handlers for Firegun compatibility */
+    ev: {
+        [key: string]: {
+            handler: any;
+        };
+    };
     /**
      * Constructs a new DataBase instance connected to a GunDB instance.
      * @param gun The main GunDB instance.
@@ -204,6 +212,147 @@ declare class DataBase {
      * @returns RxJS instance.
      */
     rx(): RxJS;
+    /**
+     * Wait in ms
+     * @param ms duration of timeout in ms
+     * @returns
+     */
+    _timeout(ms: number): Promise<void>;
+    /**
+     * Delete On Subscription
+     * @param ev On subscription name, default : "default"
+     */
+    Off(ev?: string): void;
+    /**
+     * Listen changes on path
+     *
+     * @param path node path
+     * @param callback callback
+     * @param prefix node prefix, default : ""
+     */
+    Listen(path: string, callback: (result: {
+        [key: string]: any;
+    } | string | undefined) => void, prefix?: string): void;
+    /**
+     * New subscription on Path. When data on Path changed, callback is called.
+     *
+     * @param path node path
+     * @param callback callback
+     * @param ev On name as identifier, to be called by Off when finished
+     * @param different Whether to fetch only differnce, or all of nodes
+     * @param prefix node prefix, default : ""
+     */
+    On(path: string, callback: (result: {
+        [key: string]: any;
+    } | string | undefined) => void, ev?: string, different?: boolean, prefix?: string): void;
+    /**
+     * Insert CONTENT-ADDRESSING Readonly Data.
+     *
+     * @param key must begin with #
+     * @param data If object, it will be stringified automatically
+     * @returns
+     */
+    addContentAdressing(key: string, data: string | {}): Promise<Ack>;
+    /**
+     * Fetch data from userspace
+     */
+    userGet(path: string, repeat?: number, prefix?: string): Promise<string | {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    } | undefined>;
+    /**
+     * Load Multi Nested Data From Userspace
+     */
+    userLoad(path: string, async?: boolean, repeat?: number, prefix?: string): Promise<{
+        data: {
+            [s: string]: any;
+        };
+        err: {
+            path: string;
+            err: string;
+        }[];
+    }>;
+    /**
+     * Fetching data
+     */
+    Get(path: string, repeat?: number, prefix?: string): Promise<undefined | string | {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    }>;
+    /**
+     * Put data on userspace
+     */
+    userPut(path: string, data: string | {
+        [key: string]: {};
+    }, async?: boolean, prefix?: string): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    private _randomAlphaNumeric;
+    /**
+     * Insert new Data into a node with a random key
+     */
+    Set(path: string, data: {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    }, async?: boolean, prefix?: string, opt?: undefined | {
+        opt: {
+            cert: string;
+        };
+    }): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    /**
+     * Put Data to the gunDB Node
+     */
+    Put(path: string, data: null | string | {
+        [key: string]: {} | string;
+    }, async?: boolean, prefix?: string, opt?: undefined | {
+        opt: {
+            cert: string;
+        };
+    }): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    purge(path: string): Promise<unknown>;
+    /**
+     * Delete form user node
+     */
+    userDel(path: string, putNull?: boolean): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    /**
+     * Delete node Path. It's not really deleted. It's just detached (tombstone). Data without parent.
+     */
+    Del(path: string, putNull?: boolean, cert?: string): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    /**
+     * Load Multi Nested Data
+     */
+    Load(path: string, async?: boolean, repeat?: number, prefix?: string): Promise<{
+        data: {
+            [s: string]: any;
+        };
+        err: {
+            path: string;
+            err: string;
+        }[];
+    }>;
+    /**
+     * Generate Public Certificate for Logged in User
+     */
+    generatePublicCert(): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
     /**
      * Tears down the DataBase instance and performs cleanup of all resources/listeners.
      * No further actions should be performed on this instance after destruction.

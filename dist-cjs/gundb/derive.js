@@ -83,7 +83,11 @@ async function default_1(pwd, extra, options = {}) {
     return result;
 }
 function arrayBufToBase64UrlEncode(buf) {
-    return btoa(String.fromCharCode(...buf))
+    const chars = [];
+    for (let i = 0; i < buf.length; i++) {
+        chars.push(String.fromCharCode(buf[i]));
+    }
+    return btoa(chars.join(''))
         .replace(/\//g, '_')
         .replace(/=/g, '')
         .replace(/\+/g, '-');

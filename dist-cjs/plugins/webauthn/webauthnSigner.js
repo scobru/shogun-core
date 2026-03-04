@@ -15,7 +15,11 @@ const ethers_1 = require("ethers");
 const base64url = {
     encode: function (buffer) {
         const bytes = new Uint8Array(buffer);
-        return btoa(String.fromCharCode(...bytes))
+        const chars = [];
+        for (let i = 0; i < bytes.length; i++) {
+            chars.push(String.fromCharCode(bytes[i]));
+        }
+        return btoa(chars.join(''))
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=/g, '');
