@@ -6,7 +6,6 @@ const errorHandler_1 = require("../utils/errorHandler");
 const webauthnPlugin_1 = require("../plugins/webauthn/webauthnPlugin");
 const web3ConnectorPlugin_1 = require("../plugins/web3/web3ConnectorPlugin");
 const nostrConnectorPlugin_1 = require("../plugins/nostr/nostrConnectorPlugin");
-const zkProofPlugin_1 = require("../plugins/zkproof/zkProofPlugin");
 const db_1 = require("../gundb/db");
 const db_holster_1 = require("../gundb/db-holster");
 const rxjs_holster_1 = require("../gundb/rxjs-holster");
@@ -101,22 +100,8 @@ class CoreInitializer {
             throw new Error(`Failed to validate Gun instance: ${error}`);
         }
         try {
-            // Get SEA from Gun instance or global
-            let sea = this.core._gun.SEA || null;
-            if (!sea) {
-                // Try to find SEA in various global locations
-                if (typeof window !== 'undefined' &&
-                    window.Gun &&
-                    window.Gun.SEA) {
-                    sea = window.Gun.SEA;
-                }
-                else if (globalThis.Gun && globalThis.Gun.SEA) {
-                    sea = globalThis.Gun.SEA;
-                }
-                else if (global.Gun && global.Gun.SEA) {
-                    sea = global.Gun.SEA;
-                }
-            }
+            // Resolve SEA
+            const sea = this.resolveSEA(this.core._gun, false);
             this.core.db = new db_1.DataBase(this.core._gun, this.core, sea);
             return true;
         }
@@ -126,6 +111,39 @@ class CoreInitializer {
             }
             throw new Error(`Failed to initialize DataBase: ${error}`);
         }
+    }
+    /**
+     * Resolve SEA from Gun/Holster instance or global scope
+     * @param instance - Gun or Holster instance
+     * @param isHolster - Whether we are using Holster
+     * @returns SEA module or null
+     */
+    resolveSEA(instance, isHolster) {
+        // Get SEA from instance
+        let sea = instance.SEA || null;
+        if (sea)
+            return sea;
+        // Try to find SEA in various global locations
+        const namespace = isHolster ? 'Holster' : 'Gun';
+        const g = globalThis;
+        const w = (typeof window !== 'undefined' ? window : {});
+        const glob = (typeof global !== 'undefined' ? global : {});
+        if (w[namespace] && w[namespace].SEA) {
+            sea = w[namespace].SEA;
+        }
+        else if (g[namespace] && g[namespace].SEA) {
+            sea = g[namespace].SEA;
+        }
+        else if (glob[namespace] && glob[namespace].SEA) {
+            sea = glob[namespace].SEA;
+        }
+        else if (g.SEA) {
+            sea = g.SEA;
+        }
+        else if (w.SEA) {
+            sea = w.SEA;
+        }
+        return sea;
     }
     /**
      * Initialize Holster instance
@@ -156,26 +174,8 @@ class CoreInitializer {
             throw new Error(`Failed to validate Holster instance: ${error}`);
         }
         try {
-            // Get SEA from Holster instance or global
-            let sea = this.core._gun.SEA || null;
-            if (!sea) {
-                // Try to find SEA in various global locations
-                if (typeof window !== 'undefined' &&
-                    window.Holster &&
-                    window.Holster.SEA) {
-                    sea = window.Holster.SEA;
-                }
-                else if (globalThis.Holster &&
-                    globalThis.Holster.SEA) {
-                    sea = globalThis.Holster.SEA;
-                }
-                else if (global.Holster && global.Holster.SEA) {
-                    sea = global.Holster.SEA;
-                }
-                else if (globalThis.SEA) {
-                    sea = globalThis.SEA;
-                }
-            }
+            // Resolve SEA
+            const sea = this.resolveSEA(this.core._gun, true);
             this.core.db = new db_holster_1.DataBaseHolster(this.core._gun, this.core, sea);
             return true;
         }
@@ -376,14 +376,6 @@ class CoreInitializer {
                     nostrPlugin.configure(config.nostr);
                 }
                 this.core.pluginManager.register(nostrPlugin);
-            }
-            // Register ZK-Proof plugin if configuration is provided
-            if (config.zkproof) {
-                if (typeof console !== 'undefined' && console.warn) {
-                    console.warn('ZK-Proof plugin will be registered with provided configuration');
-                }
-                const zkproofPlugin = new zkProofPlugin_1.ZkProofPlugin(config.zkproof);
-                this.core.pluginManager.register(zkproofPlugin);
             }
         }
         catch (error) {

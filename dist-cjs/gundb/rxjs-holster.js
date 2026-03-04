@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RxJSHolster = void 0;
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
+const deepEqual_1 = require("../utils/deepEqual");
 /**
  * RxJS Integration for Holster
  * Provides reactive programming capabilities for Holster data
@@ -77,7 +78,7 @@ class RxJSHolster {
                 }
             };
         }).pipe((0, operators_1.distinctUntilChanged)((prev, curr) => {
-            return JSON.stringify(prev) === JSON.stringify(curr);
+            return (0, deepEqual_1.deepEqual)(prev, curr);
         }));
     }
     /**
@@ -315,13 +316,29 @@ class RxJSHolster {
     removeHolsterMeta(obj) {
         if (!obj || typeof obj !== 'object')
             return obj;
+        if (Array.isArray(obj)) {
+            const len = obj.length;
+            const cleanArr = new Array(len);
+            for (let i = 0; i < len; i++) {
+                const val = obj[i];
+                if (val && typeof val === 'object') {
+                    cleanArr[i] = this.removeHolsterMeta(val);
+                }
+                else {
+                    cleanArr[i] = val;
+                }
+            }
+            return cleanArr;
+        }
         // Create a clean copy
-        const cleanObj = Array.isArray(obj) ? [] : {};
+        const cleanObj = {};
         // Copy properties, skipping Holster metadata
-        Object.keys(obj).forEach((key) => {
+        const keys = Object.keys(obj);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
             // Skip Holster metadata
             if (key === '_' || key.startsWith('~'))
-                return;
+                continue;
             const val = obj[key];
             if (val && typeof val === 'object') {
                 cleanObj[key] = this.removeHolsterMeta(val);
@@ -329,7 +346,7 @@ class RxJSHolster {
             else {
                 cleanObj[key] = val;
             }
-        });
+        }
         return cleanObj;
     }
 }

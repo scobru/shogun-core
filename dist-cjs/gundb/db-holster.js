@@ -44,6 +44,10 @@ const crypto = __importStar(require("./crypto"));
 const CONFIG = {
     PASSWORD: {
         MIN_LENGTH: 8,
+        MAX_LENGTH: 1024,
+    },
+    USERNAME: {
+        MAX_LENGTH: 64,
     },
 };
 /**
@@ -254,6 +258,36 @@ class DataBaseHolster {
                 error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
             };
         }
+        if (password.length > CONFIG.PASSWORD.MAX_LENGTH) {
+            return {
+                valid: false,
+                error: `Password must be ${CONFIG.PASSWORD.MAX_LENGTH} characters or fewer`,
+            };
+        }
+        if (!/[A-Z]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one uppercase letter',
+            };
+        }
+        if (!/[a-z]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one lowercase letter',
+            };
+        }
+        if (!/[0-9]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one number',
+            };
+        }
+        if (!/[!@#$%^&*()_+\-=[\]{}|;':",./<>?]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one special character',
+            };
+        }
         return { valid: true };
     }
     /**
@@ -264,6 +298,12 @@ class DataBaseHolster {
             return {
                 valid: false,
                 error: 'Username must be more than 0 characters long',
+            };
+        }
+        if (username.length > CONFIG.USERNAME.MAX_LENGTH) {
+            return {
+                valid: false,
+                error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
             };
         }
         if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
@@ -655,6 +695,12 @@ class DataBaseHolster {
             return {
                 success: false,
                 error: 'Username must be more than 0 characters long',
+            };
+        }
+        if (normalizedUsername.length > CONFIG.USERNAME.MAX_LENGTH) {
+            return {
+                success: false,
+                error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
             };
         }
         if (!/^[a-zA-Z0-9._-]+$/.test(normalizedUsername)) {

@@ -18,6 +18,13 @@ export declare class CoreInitializer {
      */
     private initializeGun;
     /**
+     * Resolve SEA from Gun/Holster instance or global scope
+     * @param instance - Gun or Holster instance
+     * @param isHolster - Whether we are using Holster
+     * @returns SEA module or null
+     */
+    private resolveSEA;
+    /**
      * Initialize Holster instance
      */
     private initializeHolster;

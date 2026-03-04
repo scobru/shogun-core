@@ -496,14 +496,6 @@ async function authTest() {
 
   console.log('');
 
-  // === TEST 6: PASSWORD RECOVERY ===
-  // NOTE: Password recovery functions removed in simplified database
-  // Skipping password recovery test
-  console.log('🔐 === TEST 6: PASSWORD RECOVERY ===\n');
-  console.log(
-    'ℹ️ Password recovery test skipped (functions removed in simplified database)\n',
-  );
-
   // === FINAL LOGOUT ===
   console.log('🚪 === FINAL CLEANUP ===\n');
 
@@ -549,7 +541,6 @@ async function authTest() {
   console.log('- ✓ Re-login capability');
   console.log('- ✓ Error handling for invalid credentials');
   console.log('- ✓ Error handling for non-existent users');
-  // Password recovery tests removed (functions removed in simplified database)
 }
 
 // Esegui il test

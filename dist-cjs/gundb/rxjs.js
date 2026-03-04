@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RxJS = void 0;
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
+const deepEqual_1 = require("../utils/deepEqual");
 /**
  * RxJS Integration for GunDB
  * Provides reactive programming capabilities for GunDB data
@@ -59,7 +60,7 @@ class RxJS {
                 }
                 // Remove Gun metadata before emitting
                 if (typeof data === 'object' && data !== null) {
-                    const cleanData = this.removeGunMeta(data);
+                    const cleanData = removeGunMeta(data);
                     subscriber.next(cleanData);
                 }
                 else {
@@ -74,7 +75,7 @@ class RxJS {
                 node.off();
             };
         }).pipe((0, operators_1.distinctUntilChanged)((prev, curr) => {
-            return JSON.stringify(prev) === JSON.stringify(curr);
+            return (0, deepEqual_1.deepEqual)(prev, curr);
         }));
     }
     /**
@@ -104,7 +105,7 @@ class RxJS {
                     }
                     return;
                 }
-                const cleanData = typeof data === 'object' ? this.removeGunMeta(data) : data;
+                const cleanData = typeof data === 'object' ? removeGunMeta(data) : data;
                 results[key] = cleanData;
                 subscriber.next(Object.values(results));
             });
@@ -247,7 +248,7 @@ class RxJS {
                     subscriber.complete();
                     return;
                 }
-                const cleanData = typeof data === 'object' ? this.removeGunMeta(data) : data;
+                const cleanData = typeof data === 'object' ? removeGunMeta(data) : data;
                 subscriber.next(cleanData);
                 subscriber.complete();
             });
@@ -424,24 +425,48 @@ class RxJS {
      * @returns Cleaned object without Gun metadata
      */
     removeGunMeta(obj) {
-        if (!obj || typeof obj !== 'object')
-            return obj;
-        // Create a clean copy
-        const cleanObj = Array.isArray(obj) ? [] : {};
-        // Copy properties, skipping Gun metadata
-        Object.keys(obj).forEach((key) => {
-            // Skip Gun metadata
-            if (key === '_' || key === '#')
-                return;
+        return removeGunMeta(obj);
+    }
+}
+exports.RxJS = RxJS;
+/**
+ * Remove Gun metadata from an object
+ * @param obj - Object to clean
+ * @returns Cleaned object without Gun metadata
+ */
+function removeGunMeta(obj) {
+    if (!obj || typeof obj !== 'object')
+        return obj;
+    if (Array.isArray(obj)) {
+        const len = obj.length;
+        const cleanArr = new Array(len);
+        for (let i = 0; i < len; i++) {
+            const val = obj[i];
+            if (val && typeof val === 'object') {
+                cleanArr[i] = removeGunMeta(val);
+            }
+            else {
+                cleanArr[i] = val;
+            }
+        }
+        return cleanArr;
+    }
+    // Create a clean copy
+    const cleanObj = {};
+    // Copy properties, skipping Gun metadata
+    // Optimized: Use for...in loop to avoid Object.keys array allocation overhead
+    for (const key in obj) {
+        if (key === '_' || key === '#')
+            continue;
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
             const val = obj[key];
             if (val && typeof val === 'object') {
-                cleanObj[key] = this.removeGunMeta(val);
+                cleanObj[key] = removeGunMeta(val);
             }
             else {
                 cleanObj[key] = val;
             }
-        });
-        return cleanObj;
+        }
     }
+    return cleanObj;
 }
-exports.RxJS = RxJS;

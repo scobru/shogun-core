@@ -176,30 +176,6 @@ jest.mock('../../plugins/webauthn/webauthnPlugin', () => {
   };
 });
 
-jest.mock('../../plugins/zkproof/zkProofPlugin', () => {
-  return {
-    ZkProofPlugin: class MockZkProofPlugin {
-      name = 'zkproof';
-      version = '1.0.0';
-      core: any;
-      events: any = new Map();
-
-      initialize(core: any) {
-        this.core = core;
-      }
-      on(eventName: string, listener: () => void) {
-        if (!this.events.has(eventName)) {
-          this.events.set(eventName, []);
-        }
-        this.events.get(eventName)?.push(listener);
-      }
-      destroy() {
-        this.events.clear();
-      }
-    },
-  };
-});
-
 describe('Plugin system and plugin functionality', () => {
   let config: ShogunSDKConfig;
   let core: ShogunCore;
@@ -228,7 +204,6 @@ describe('Plugin system and plugin functionality', () => {
       webauthn: { enabled: true },
       web3: { enabled: true },
       nostr: { enabled: true },
-      zkproof: { enabled: true }, // Add ZK-Proof plugin config
       peers: ['http://localhost:8765/gun'],
       gunOptions: { peers: ['http://localhost:8765/gun'] },
     };
@@ -250,19 +225,16 @@ describe('Plugin system and plugin functionality', () => {
     expect(core.hasPlugin(CorePlugins.WebAuthn)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Nostr)).toBe(true);
-    expect(core.hasPlugin(CorePlugins.ZkProof)).toBe(true); // Check ZK-Proof plugin
   });
 
   it('getPlugin returns correct instances', () => {
     const web3 = core.getPlugin<Web3ConnectorPlugin>(CorePlugins.Web3);
     const nostr = core.getPlugin<NostrConnectorPlugin>(CorePlugins.Nostr);
     const webauthn = core.getPlugin<WebauthnPlugin>(CorePlugins.WebAuthn); // Get Webauthn plugin
-    const zkproof = core.getPlugin<any>(CorePlugins.ZkProof); // Get ZK-Proof plugin
 
     expect(web3?.name).toBe('web3');
     expect(nostr?.name).toBe('nostr');
     expect(webauthn?.name).toBe('webauthn'); // Check Webauthn plugin name
-    expect(zkproof?.name).toBe('zkproof'); // Check ZK-Proof plugin name
   });
 
   it('Web3 plugin exposes availability and connection', async () => {
@@ -339,13 +311,11 @@ describe('Plugin system and plugin functionality', () => {
     expect(core.hasPlugin(CorePlugins.Web3)).toBe(true);
     expect(core.hasPlugin(CorePlugins.Nostr)).toBe(true);
     expect(core.hasPlugin(CorePlugins.WebAuthn)).toBe(true);
-    expect(core.hasPlugin(CorePlugins.ZkProof)).toBe(true);
 
     // Manually initialize plugins to ensure they're ready
     const web3Plugin = core.getPlugin(CorePlugins.Web3);
     const nostrPlugin = core.getPlugin(CorePlugins.Nostr);
     const webauthnPlugin = core.getPlugin(CorePlugins.WebAuthn);
-    const zkproofPlugin = core.getPlugin(CorePlugins.ZkProof);
 
     // Ensure plugins are properly initialized
     if (web3Plugin && typeof web3Plugin.initialize === 'function') {
@@ -357,9 +327,6 @@ describe('Plugin system and plugin functionality', () => {
     if (webauthnPlugin && typeof webauthnPlugin.initialize === 'function') {
       webauthnPlugin.initialize(core as any);
     }
-    if (zkproofPlugin && typeof zkproofPlugin.initialize === 'function') {
-      zkproofPlugin.initialize(core as any);
-    }
 
     const status = core.getPluginsInitializationStatus();
     expect(status[CorePlugins.Web3]?.initialized).toBe(true);
@@ -367,7 +334,6 @@ describe('Plugin system and plugin functionality', () => {
     // WebAuthn should be initialized even in Node environment because `initialize` is called,
     // but `isSupported` might return false.
     expect(status[CorePlugins.WebAuthn]?.initialized).toBe(true);
-    expect(status[CorePlugins.ZkProof]?.initialized).toBe(true);
   });
 
   it('getAuthenticationMethod returns plugin-backed handlers', () => {

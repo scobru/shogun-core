@@ -32,8 +32,6 @@ var CorePlugins;
     CorePlugins["Web3"] = "web3";
     /** Bitcoin wallet plugin */
     CorePlugins["Nostr"] = "nostr";
-    /** Zero-Knowledge Proof plugin */
-    CorePlugins["ZkProof"] = "zkproof";
     /** Challenge-Response Authentication plugin */
     CorePlugins["Challenge"] = "challenge";
 })(CorePlugins || (exports.CorePlugins = CorePlugins = {}));

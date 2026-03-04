@@ -223,21 +223,6 @@ describe('GunInstance Integration Tests', () => {
       expect(gunInstance.user.get).toBeDefined();
       expect(gunInstance.user.put).toBeDefined();
     });
-
-    it('should handle password hint operations', () => {
-      const hint = 'test hint';
-
-      expect(() => {
-        gunInstance.setPasswordHint(hint);
-      }).not.toThrow();
-
-      expect(() => {
-        gunInstance.getPasswordHint();
-      }).not.toThrow();
-
-      expect(gunInstance.user.get).toBeDefined();
-      expect(gunInstance.user.put).toBeDefined();
-    });
   });
 
   describe('Storage Operations Integration', () => {

@@ -55,12 +55,6 @@ export interface MappingData {
   createdAt: number;
 }
 
-// Security data
-export interface SecurityData {
-  questions: string;
-  hint: string;
-}
-
 // Frozen space data
 export interface FrozenData {
   data: any;
@@ -116,13 +110,6 @@ export interface PostAuthResult {
   success: boolean;
   userPub?: string;
   username?: string;
-  error?: string;
-}
-
-// Password hint result
-export interface PasswordHintResult {
-  success: boolean;
-  hint?: string;
   error?: string;
 }
 

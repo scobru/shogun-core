@@ -458,11 +458,28 @@ class Webauthn extends eventEmitter_1.EventEmitter {
      * Signs data with the credential
      */
     async sign(data) {
+        // Generate a challenge from the data to be signed
+        const dataString = JSON.stringify(data);
+        const dataBytes = ethers_1.ethers.toUtf8Bytes(dataString);
+        const hash = ethers_1.ethers.sha256(dataBytes);
+        const challenge = ethers_1.ethers.getBytes(hash);
+        const options = {
+            challenge: challenge,
+            rpId: this.config.rpId,
+            userVerification: this.config.userVerification,
+            timeout: this.config.timeout,
+        };
+        // If we have a stored credential, use it
+        if (this.credential?.rawId) {
+            options.allowCredentials = [
+                {
+                    id: this.credential.rawId,
+                    type: 'public-key',
+                },
+            ];
+        }
         const signature = await navigator.credentials.get({
-            publicKey: {
-                challenge: new Uint8Array(16),
-                rpId: this.config.rpId,
-            },
+            publicKey: options,
         });
         return signature;
     }

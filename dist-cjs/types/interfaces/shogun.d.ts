@@ -37,12 +37,10 @@ export declare enum CorePlugins {
     Web3 = "web3",
     /** Bitcoin wallet plugin */
     Nostr = "nostr",
-    /** Zero-Knowledge Proof plugin */
-    ZkProof = "zkproof",
     /** Challenge-Response Authentication plugin */
     Challenge = "challenge"
 }
-export type AuthMethod = 'password' | 'webauthn' | 'web3' | 'nostr' | 'zkproof' | 'challenge' | 'pair';
+export type AuthMethod = 'password' | 'webauthn' | 'web3' | 'nostr' | 'challenge' | 'pair';
 export interface AuthResult {
     success: boolean;
     error?: string;
@@ -159,12 +157,6 @@ export interface ShogunCoreConfig {
     };
     nostr?: {
         enabled?: boolean;
-    };
-    zkproof?: {
-        enabled?: boolean;
-        defaultGroupId?: string;
-        deterministic?: boolean;
-        minEntropy?: number;
     };
     challenge?: {
         enabled?: boolean;

@@ -4,6 +4,7 @@ exports.default = default_1;
 const p256_1 = require("@noble/curves/p256");
 const secp256k1_1 = require("@noble/curves/secp256k1");
 const sha256_1 = require("@noble/hashes/sha256");
+const pbkdf2_1 = require("@noble/hashes/pbkdf2");
 const sha3_1 = require("@noble/hashes/sha3");
 const ripemd160_1 = require("@noble/hashes/ripemd160");
 async function default_1(pwd, extra, options = {}) {
@@ -112,18 +113,18 @@ async function stretchKey(input, salt, iterations = 300000) {
         return ensureValidSecp256k1Key(keyBytes);
     }
     catch (error) {
-        // Fallback: generate a deterministic key from input and salt
-        const fallbackKey = generateFallbackKey(input, salt);
+        // Fallback: use pbkdf2 implementation from @noble/hashes
+        // This is secure and deterministic, matching the subtle crypto implementation
+        // as closely as possible (PBKDF2-HMAC-SHA256)
+        const inputBytes = input instanceof Uint8Array
+            ? input
+            : new Uint8Array(input);
+        const fallbackKey = (0, pbkdf2_1.pbkdf2)(sha256_1.sha256, inputBytes, salt, {
+            c: iterations,
+            dkLen: 32,
+        });
         return ensureValidSecp256k1Key(fallbackKey);
     }
-}
-function generateFallbackKey(input, salt) {
-    // Simple deterministic key generation as fallback
-    const key = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-        key[i] = (i * 7 + salt[i % salt.length]) % 256;
-    }
-    return key;
 }
 function ensureValidSecp256k1Key(keyBytes) {
     // Ensure the key is not all zeros

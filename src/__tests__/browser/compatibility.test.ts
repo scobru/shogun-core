@@ -2,14 +2,8 @@
  * @jest-environment jsdom
  */
 
-// Mock zkproof to avoid ES module issues with @zk-kit/groth16
-jest.mock('../../plugins/zkproof/zkProofConnector');
-jest.mock('../../plugins/zkproof/zkProofPlugin');
-jest.mock('@semaphore-protocol/proof', () => ({
-  generateProof: jest.fn(),
-  verifyProof: jest.fn(),
-}));
-
+// Mock dependencies
+jest.mock('../../plugins/webauthn/webauthnPlugin');
 import { ShogunCore, ShogunSDKConfig } from '../../index';
 import Gun from 'gun/gun';
 import 'gun/lib/then';

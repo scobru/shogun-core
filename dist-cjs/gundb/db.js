@@ -51,6 +51,10 @@ exports.crypto = crypto;
 const CONFIG = {
     PASSWORD: {
         MIN_LENGTH: 8,
+        MAX_LENGTH: 1024,
+    },
+    USERNAME: {
+        MAX_LENGTH: 64,
     },
 };
 /**
@@ -261,6 +265,36 @@ class DataBase {
                 error: `Password must be at least ${CONFIG.PASSWORD.MIN_LENGTH} characters long`,
             };
         }
+        if (password.length > CONFIG.PASSWORD.MAX_LENGTH) {
+            return {
+                valid: false,
+                error: `Password must be ${CONFIG.PASSWORD.MAX_LENGTH} characters or fewer`,
+            };
+        }
+        if (!/[A-Z]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one uppercase letter',
+            };
+        }
+        if (!/[a-z]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one lowercase letter',
+            };
+        }
+        if (!/[0-9]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one number',
+            };
+        }
+        if (!/[!@#$%^&*()_+\-=[\]{}|;':",./<>?]/.test(password)) {
+            return {
+                valid: false,
+                error: 'Password must contain at least one special character',
+            };
+        }
         return { valid: true };
     }
     /**
@@ -275,6 +309,12 @@ class DataBase {
             return {
                 valid: false,
                 error: 'Username must be more than 0 characters long',
+            };
+        }
+        if (username.length > CONFIG.USERNAME.MAX_LENGTH) {
+            return {
+                valid: false,
+                error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
             };
         }
         if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
@@ -450,6 +490,34 @@ class DataBase {
         };
     }
     /**
+     * Internal: Get or create a device-specific secret stored in localStorage.
+     * This binds the session key to the device, preventing decryption of stolen sessionStorage
+     * on other devices.
+     */
+    getDeviceSecret() {
+        try {
+            if (typeof localStorage === 'undefined')
+                return '';
+            const KEY = 'shogun_device_secret';
+            let secret = localStorage.getItem(KEY);
+            if (!secret) {
+                secret = this.crypto.randomUUID();
+                try {
+                    localStorage.setItem(KEY, secret);
+                }
+                catch (e) {
+                    console.warn('[DB] Failed to save device secret to localStorage', e);
+                    // If we can't save it, we return it anyway so current session works.
+                    // Next reload will fail to decrypt, which is secure fail.
+                }
+            }
+            return secret;
+        }
+        catch (e) {
+            return '';
+        }
+    }
+    /**
      * Derive a unique encryption key for the session.
      * @param username Username to derive key from
      * @param salt Random salt for this session
@@ -460,7 +528,9 @@ class DataBase {
         // This makes the key unique per session (due to salt) and user
         if (!this.sea)
             throw new Error('SEA not available');
-        const input = `${username}:${salt}:${pub}`;
+        // Retrieve device-specific secret (if available) to bind session to this device
+        const deviceSecret = this.getDeviceSecret();
+        const input = `${username}:${salt}:${pub}:${deviceSecret}`;
         return await this.sea.work(input, null, null, { name: 'SHA-256' });
     }
     /**
@@ -474,7 +544,7 @@ class DataBase {
                 if (!this.sea)
                     return;
                 // 1. Generate a random salt for this session
-                const salt = await this.sea.work(Math.random().toString(), null, null, {
+                const salt = await this.sea.work(this.crypto.randomUUID(), null, null, {
                     name: 'SHA-256',
                 });
                 // 2. Derive encryption key
@@ -804,6 +874,12 @@ class DataBase {
             return {
                 success: false,
                 error: 'Invalid pair structure - missing required keys',
+            };
+        }
+        if (username.length > CONFIG.USERNAME.MAX_LENGTH) {
+            return {
+                success: false,
+                error: `Username must be ${CONFIG.USERNAME.MAX_LENGTH} characters or fewer`,
             };
         }
         this.resetAuthState();

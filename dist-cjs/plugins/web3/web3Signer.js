@@ -30,7 +30,7 @@ class Web3Signer {
             const signature = await this.requestSignature(validAddress);
             // Generate credentials using the SAME logic as normal approach
             const username = `${validAddress.toLowerCase()}`;
-            // FIX: Use only address for password generation to ensure consistency
+            // Use only address for password generation to ensure consistency
             // The signature changes each time, causing different passwords for same user
             const password = ethers_1.ethers.keccak256(ethers_1.ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`));
             const signingCredential = {
@@ -163,7 +163,6 @@ class Web3Signer {
     /**
      * Creates a Gun user from Web3 credential
      * This ensures the SAME user is created as with normal approach
-     * FIX: Use derived pair instead of username/password for GunDB auth
      */
     async createGunUser(address, gunInstance) {
         try {

@@ -137,6 +137,12 @@ declare class DataBase {
      */
     private buildLoginResult;
     /**
+     * Internal: Get or create a device-specific secret stored in localStorage.
+     * This binds the session key to the device, preventing decryption of stolen sessionStorage
+     * on other devices.
+     */
+    private getDeviceSecret;
+    /**
      * Derive a unique encryption key for the session.
      * @param username Username to derive key from
      * @param salt Random salt for this session

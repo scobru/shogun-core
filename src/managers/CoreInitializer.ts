@@ -4,7 +4,6 @@ import { ErrorHandler, ShogunError } from '../utils/errorHandler';
 import { WebauthnPlugin } from '../plugins/webauthn/webauthnPlugin';
 import { Web3ConnectorPlugin } from '../plugins/web3/web3ConnectorPlugin';
 import { NostrConnectorPlugin } from '../plugins/nostr/nostrConnectorPlugin';
-import { ZkProofPlugin } from '../plugins/zkproof/zkProofPlugin';
 import { DataBase, RxJS, derive } from '../gundb/db';
 import { DataBaseHolster } from '../gundb/db-holster';
 import { RxJSHolster } from '../gundb/rxjs-holster';
@@ -430,18 +429,6 @@ export class CoreInitializer {
           (nostrPlugin as any).configure(config.nostr);
         }
         this.core.pluginManager.register(nostrPlugin);
-      }
-
-      // Register ZK-Proof plugin if configuration is provided
-      if (config.zkproof) {
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn(
-            'ZK-Proof plugin will be registered with provided configuration',
-          );
-        }
-
-        const zkproofPlugin = new ZkProofPlugin(config.zkproof);
-        this.core.pluginManager.register(zkproofPlugin);
       }
     } catch (error) {
       if (typeof console !== 'undefined' && console.error) {

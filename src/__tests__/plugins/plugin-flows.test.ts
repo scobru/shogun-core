@@ -297,7 +297,6 @@ describe('Plugin end-to-end flows', () => {
       webauthn: { enabled: true },
       web3: { enabled: true },
       nostr: { enabled: true },
-      zkproof: { enabled: true },
       gunInstance: mockGunInstance,
     } as any;
     // Simula ambiente browser per WebAuthn

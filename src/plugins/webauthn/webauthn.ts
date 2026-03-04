@@ -621,7 +621,7 @@ export class Webauthn extends EventEmitter {
     const challenge = ethers.getBytes(hash);
 
     const options: PublicKeyCredentialRequestOptions = {
-      challenge,
+      challenge: challenge as unknown as BufferSource,
       rpId: this.config.rpId,
       userVerification: this.config.userVerification,
       timeout: this.config.timeout,

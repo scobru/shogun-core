@@ -37,10 +37,6 @@ export interface MappingData {
     userPub: string;
     createdAt: number;
 }
-export interface SecurityData {
-    questions: string;
-    hint: string;
-}
 export interface FrozenData {
     data: any;
     timestamp: number;
@@ -90,11 +86,6 @@ export interface PostAuthResult {
     success: boolean;
     userPub?: string;
     username?: string;
-    error?: string;
-}
-export interface PasswordHintResult {
-    success: boolean;
-    hint?: string;
     error?: string;
 }
 export interface P256Keys {

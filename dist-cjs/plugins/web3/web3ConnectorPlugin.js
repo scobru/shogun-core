@@ -229,7 +229,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
             }
             console.log(`🔧 Using fallback createGunUser`);
             const core = this.assertInitialized();
-            // FIX: Use deterministic approach - try to authenticate first, then create if needed
             console.log(`🔧 Attempting authentication with deterministic pair`);
             const authResult = await this.assertSigner().authenticateWithExistingPair(address, core.gun);
             if (authResult.success) {
@@ -328,7 +327,6 @@ class Web3ConnectorPlugin extends base_1.BasePlugin {
                 throw (0, errorHandler_1.createError)(errorHandler_1.ErrorType.ENVIRONMENT, 'WEB3_UNAVAILABLE', 'Web3 is not available in the browser');
             }
             console.log(`🔧 Web3 login - starting login for address:`, address);
-            // FIX: Use deterministic pair instead of generating new credentials
             // Get the existing credential if available
             const existingCredential = this.getSigningCredential(address);
             if (existingCredential) {
