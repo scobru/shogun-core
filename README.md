@@ -89,92 +89,93 @@ const shogun = new ShogunCore({
 // All other APIs work the same way!
 ```
 
-## Basic Database Operations
+## Database API Reference
+
+The `shogun.db` instance provides a high-level API for interacting with the decentralized database. Shogun Core automatically handles the differences between **Gun** and **Holster** backends.
+
+### 1. Connection & Session Management
+These methods work with both backends.
+
+- `db.isLoggedIn(): boolean`: Returns `true` if a user is currently authenticated.
+- `db.getCurrentUser(): { pub: string; user?: any } | null`: Returns the current user's public key and instance.
+- `db.getUserPub(): string | null`: Returns the current user's public key.
+- `db.onAuth(callback: (user: any) => void): () => void`: Listens for authentication changes. Returns an unsubscribe function.
+- `db.restoreSession(): Promise<RestoreResult>`: Attempts to restore a previous session from `sessionStorage`.
+
+### 2. Promise-based Advanced Utilities (Firegun API)
+*Note: These methods currently provide full Promise support and auto-retries primarily when using the **Gun** backend.*
 
 ```typescript
 const db = shogun.db;
 
-// Store data using Gun chaining (Traditional Method)
-await db.get('users').get('alice').get('profile').put({
-  name: 'Alice Smith',
-  email: 'alice@example.com',
-});
-
-// Read data
-const profile = await db.get('users').get('alice').get('profile').once().then();
-
-// Update specific fields
-await db
-  .get('users')
-  .get('alice')
-  .get('profile')
-  .get('name')
-  .put('Alice Johnson');
-
-// Iterate over collections with .map()
-db.get('users').map((user, userId) => {
-  console.log(`User ${userId}:`, user);
-});
-```
-
-### Promise-based Advanced Utilities (Firegun API)
-
-Shogun Core includes built-in Promise wrappers, timeouts, and user-space utilities directly in the `DataBase` class:
-
-```typescript
-const db = shogun.db;
-
-// Promise-based Root GET with auto-retry
+// Fetch data with auto-retry and 5s timeout
 const data = await db.Get('public/posts/123');
 
-// Promise-based Root PUT (supports deep object merging)
-await db.Put('public/settings', { theme: 'dark' }, true);
+// Save data (supports deep object merging)
+await db.Put('public/settings', { theme: 'dark' });
 
-// Listen to node changes with easy unsubscribe
-await db.On(
-  'public/feed',
-  (data) => console.log('Feed updated:', data),
-  'myFeedListener',
-);
-await db.Off('myFeedListener'); // Cleanly remove the listener
+// Insert into a collection with a random key
+await db.Set('public/logs', { event: 'login', time: Date.now() });
 
-// Content Addressed Storage (CAS)
-// Hashes the data automatically using SHA-256 and saves it immutably
-const ack = await db.addContentAdressing('#immutable-posts', {
-  text: 'Hello Web3!',
-});
+// Recursive load of nested nodes
+const fullData = await db.Load('public/complex-node');
 
-// --- User Space Operations ---
-// These automatically prefix the path with `~pubkey/` of the logged-in user
+// "Delete" a node (Tombstoning)
+await db.Del('public/temp-data');
 
-// Read from current user's graph
-const userSettings = await db.userGet('settings');
-
-// Write to current user's graph
-await db.userPut('profile', { name: 'Alice' });
-
-// Delete user node (Tombstoning)
-await db.userDel('old-post');
-
-// Purge (nullify all keys in a node)
-await db.purge('~pubkey/public/posts/123');
+// Deeply nullify all keys in a node
+await db.purge('public/old-config');
 ```
 
-## Authentication Methods
+### 3. Real-time Subscriptions
+```typescript
+// Listen to changes with an identifier for easy unsubscription
+db.On('public/feed', (data) => console.log('Update:', data), 'myListener');
 
-### 1. Traditional Authentication
+// Stop listening
+db.Off('myListener');
+
+// One-time fetch of initial state + future changes
+db.Listen('public/status', (status) => console.log('Status:', status));
+```
+
+### 4. User-Space Operations (Gun Only)
+These methods automatically prefix the path with `~pubkey/` of the logged-in user.
+
+- `db.userGet(path: string)`: Read from current user's graph.
+- `db.userPut(path: string, data: any)`: Write to current user's graph.
+- `db.userDel(path: string)`: Delete node from user's graph.
+- `db.userLoad(path: string)`: Recursively load user-space data.
+
+### 5. Advanced Features
+- **Reactive Streams**: `db.rx()` returns an RxJS helper for observable-based data handling.
+- **Content Addressing**: `db.addContentAdressing('#key', data)` hashes data using SHA-256 for immutable storage.
+- **Security**: `db.generatePublicCert()` creates a public certificate for P2P interactions.
+- **Cleanup**: `db.aggressiveAuthCleanup()` forcefully clears all local auth state.
+
+## Authentication API
+
+Shogun Core provides a unified authentication interface. Plugins (Web3, WebAuthn, etc.) extend this system.
+
+### Core Methods
 
 ```typescript
-// Sign up
-const signUpResult = await shogun.signUp('username', 'password');
-if (signUpResult.success) {
-  console.log('User created:', signUpResult.username);
-}
+// 1. Traditional Signup/Login
+await shogun.signUp('alice', 'Password123!');
+await shogun.login('alice', 'Password123!');
 
-// Login
-const loginResult = await shogun.login('username', 'password');
-if (loginResult.success) {
-  console.log('Logged in as:', loginResult.username);
+// 2. Pair-based Authentication (Gun Only)
+const pair = await shogun.db.crypto.createPair();
+await shogun.loginWithPair('alice', pair);
+
+// 3. Mnemonic Seed Authentication
+const mnemonic = 'word1 word2 ...';
+await shogun.loginWithSeed('alice', mnemonic);
+
+// 4. Session Check & Logout
+if (shogun.isLoggedIn()) {
+  console.log('User Pub:', shogun.db.getUserPub());
+  shogun.logout();
 }
 ```
 
