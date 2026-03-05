@@ -1,4 +1,4 @@
-import type { AuthCallback, EventData, EventListener } from './types';
+import type { AuthCallback, EventData, EventListener, Ack } from './types';
 import type { AuthResult, SignUpResult } from '../interfaces/shogun';
 import type { ISEAPair } from 'gun';
 import { RxJSHolster } from './rxjs-holster';
@@ -36,6 +36,8 @@ class DataBaseHolster {
   public crypto: typeof crypto;
   /** Holster SEA cryptography context */
   public sea: any;
+  public prefix: string = '';
+  public ev: { [key: string]: { handler: any } } = {};
   /** Holster node dedicated to mapping usernames to pubkeys */
   private readonly usernamesNode: any;
   /** ShogunCore instance for emitting events */
@@ -1139,6 +1141,147 @@ class DataBaseHolster {
    */
   emit(event: string | symbol, data?: EventData): boolean {
     return this.eventEmitter.emit(event, data);
+  }
+
+  // --- Firegun Methods Stubs ---
+  async _timeout(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  Off(ev = 'default'): void {
+    console.warn('Off not implemented in DataBaseHolster');
+  }
+
+  Listen(
+    path: string,
+    callback: (result: { [key: string]: any } | string | undefined) => void,
+    prefix: string = this.prefix,
+  ): void {
+    console.warn('Listen not implemented in DataBaseHolster');
+  }
+
+  On(
+    path: string,
+    callback: (result: { [key: string]: any } | string | undefined) => void,
+    ev: string = 'default',
+    different: boolean = true,
+    prefix: string = this.prefix,
+  ): void {
+    console.warn('On not implemented in DataBaseHolster');
+  }
+
+  addContentAdressing(key: string, data: string | {}): Promise<Ack> {
+    return Promise.reject(
+      new Error('addContentAdressing not implemented in DataBaseHolster'),
+    );
+  }
+
+  userGet(
+    path: string,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<
+    string | { [key: string]: {} } | { [key: string]: string } | undefined
+  > {
+    return Promise.reject(
+      new Error('userGet not implemented in DataBaseHolster'),
+    );
+  }
+
+  userLoad(
+    path: string,
+    async = false,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<{
+    data: { [s: string]: any };
+    err: { path: string; err: string }[];
+  }> {
+    return Promise.reject(
+      new Error('userLoad not implemented in DataBaseHolster'),
+    );
+  }
+
+  Get(
+    path: string,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<
+    undefined | string | { [key: string]: {} } | { [key: string]: string }
+  > {
+    return Promise.reject(new Error('Get not implemented in DataBaseHolster'));
+  }
+
+  userPut(
+    path: string,
+    data: string | { [key: string]: {} },
+    async = false,
+    prefix = this.prefix,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(
+      new Error('userPut not implemented in DataBaseHolster'),
+    );
+  }
+
+  Set(
+    path: string,
+    data: { [key: string]: {} } | { [key: string]: string },
+    async = false,
+    prefix = this.prefix,
+    opt: undefined | { opt: { cert: string } } = undefined,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(new Error('Set not implemented in DataBaseHolster'));
+  }
+
+  Put(
+    path: string,
+    data: null | string | { [key: string]: {} | string },
+    async = false,
+    prefix: string = this.prefix,
+    opt: undefined | { opt: { cert: string } } = undefined,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(new Error('Put not implemented in DataBaseHolster'));
+  }
+
+  purge(path: string): Promise<any> {
+    return Promise.reject(
+      new Error('purge not implemented in DataBaseHolster'),
+    );
+  }
+
+  userDel(
+    path: string,
+    putNull: boolean = true,
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(
+      new Error('userDel not implemented in DataBaseHolster'),
+    );
+  }
+
+  Del(
+    path: string,
+    putNull: boolean = true,
+    cert: string = '',
+  ): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(new Error('Del not implemented in DataBaseHolster'));
+  }
+
+  Load(
+    path: string,
+    async = false,
+    repeat: number = 1,
+    prefix: string = this.prefix,
+  ): Promise<{
+    data: { [s: string]: any };
+    err: { path: string; err: string }[];
+  }> {
+    return Promise.reject(new Error('Load not implemented in DataBaseHolster'));
+  }
+
+  generatePublicCert(): Promise<{ data: Ack[]; error: Ack[] }> {
+    return Promise.reject(
+      new Error('generatePublicCert not implemented in DataBaseHolster'),
+    );
   }
 
   /**

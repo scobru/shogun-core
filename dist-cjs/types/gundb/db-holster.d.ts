@@ -1,4 +1,4 @@
-import type { AuthCallback, EventData, EventListener } from './types';
+import type { AuthCallback, EventData, EventListener, Ack } from './types';
 import type { AuthResult, SignUpResult } from '../interfaces/shogun';
 import type { ISEAPair } from 'gun';
 import { RxJSHolster } from './rxjs-holster';
@@ -19,6 +19,12 @@ declare class DataBaseHolster {
     crypto: typeof crypto;
     /** Holster SEA cryptography context */
     sea: any;
+    prefix: string;
+    ev: {
+        [key: string]: {
+            handler: any;
+        };
+    };
     /** Holster node dedicated to mapping usernames to pubkeys */
     private readonly usernamesNode;
     /** ShogunCore instance for emitting events */
@@ -186,6 +192,84 @@ declare class DataBaseHolster {
      * Emit a custom event.
      */
     emit(event: string | symbol, data?: EventData): boolean;
+    _timeout(ms: number): Promise<void>;
+    Off(ev?: string): void;
+    Listen(path: string, callback: (result: {
+        [key: string]: any;
+    } | string | undefined) => void, prefix?: string): void;
+    On(path: string, callback: (result: {
+        [key: string]: any;
+    } | string | undefined) => void, ev?: string, different?: boolean, prefix?: string): void;
+    addContentAdressing(key: string, data: string | {}): Promise<Ack>;
+    userGet(path: string, repeat?: number, prefix?: string): Promise<string | {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    } | undefined>;
+    userLoad(path: string, async?: boolean, repeat?: number, prefix?: string): Promise<{
+        data: {
+            [s: string]: any;
+        };
+        err: {
+            path: string;
+            err: string;
+        }[];
+    }>;
+    Get(path: string, repeat?: number, prefix?: string): Promise<undefined | string | {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    }>;
+    userPut(path: string, data: string | {
+        [key: string]: {};
+    }, async?: boolean, prefix?: string): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    Set(path: string, data: {
+        [key: string]: {};
+    } | {
+        [key: string]: string;
+    }, async?: boolean, prefix?: string, opt?: undefined | {
+        opt: {
+            cert: string;
+        };
+    }): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    Put(path: string, data: null | string | {
+        [key: string]: {} | string;
+    }, async?: boolean, prefix?: string, opt?: undefined | {
+        opt: {
+            cert: string;
+        };
+    }): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    purge(path: string): Promise<any>;
+    userDel(path: string, putNull?: boolean): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    Del(path: string, putNull?: boolean, cert?: string): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
+    Load(path: string, async?: boolean, repeat?: number, prefix?: string): Promise<{
+        data: {
+            [s: string]: any;
+        };
+        err: {
+            path: string;
+            err: string;
+        }[];
+    }>;
+    generatePublicCert(): Promise<{
+        data: Ack[];
+        error: Ack[];
+    }>;
     /**
      * Get the Holster instance (for backward compatibility with gun property).
      * Returns a proxy that provides Gun-like API on top of Holster.

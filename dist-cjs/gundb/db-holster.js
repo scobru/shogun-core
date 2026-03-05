@@ -67,6 +67,8 @@ class DataBaseHolster {
     constructor(holster, core, sea) {
         /** Cached user instance or `null` if not logged in */
         this.user = null;
+        this.prefix = '';
+        this.ev = {};
         /** Registered callbacks for auth state changes */
         this.onAuthCallbacks = [];
         /** Whether the database instance has been destroyed */
@@ -972,6 +974,55 @@ class DataBaseHolster {
      */
     emit(event, data) {
         return this.eventEmitter.emit(event, data);
+    }
+    // --- Firegun Methods Stubs ---
+    async _timeout(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    Off(ev = 'default') {
+        console.warn('Off not implemented in DataBaseHolster');
+    }
+    Listen(path, callback, prefix = this.prefix) {
+        console.warn('Listen not implemented in DataBaseHolster');
+    }
+    On(path, callback, ev = 'default', different = true, prefix = this.prefix) {
+        console.warn('On not implemented in DataBaseHolster');
+    }
+    addContentAdressing(key, data) {
+        return Promise.reject(new Error('addContentAdressing not implemented in DataBaseHolster'));
+    }
+    userGet(path, repeat = 1, prefix = this.prefix) {
+        return Promise.reject(new Error('userGet not implemented in DataBaseHolster'));
+    }
+    userLoad(path, async = false, repeat = 1, prefix = this.prefix) {
+        return Promise.reject(new Error('userLoad not implemented in DataBaseHolster'));
+    }
+    Get(path, repeat = 1, prefix = this.prefix) {
+        return Promise.reject(new Error('Get not implemented in DataBaseHolster'));
+    }
+    userPut(path, data, async = false, prefix = this.prefix) {
+        return Promise.reject(new Error('userPut not implemented in DataBaseHolster'));
+    }
+    Set(path, data, async = false, prefix = this.prefix, opt = undefined) {
+        return Promise.reject(new Error('Set not implemented in DataBaseHolster'));
+    }
+    Put(path, data, async = false, prefix = this.prefix, opt = undefined) {
+        return Promise.reject(new Error('Put not implemented in DataBaseHolster'));
+    }
+    purge(path) {
+        return Promise.reject(new Error('purge not implemented in DataBaseHolster'));
+    }
+    userDel(path, putNull = true) {
+        return Promise.reject(new Error('userDel not implemented in DataBaseHolster'));
+    }
+    Del(path, putNull = true, cert = '') {
+        return Promise.reject(new Error('Del not implemented in DataBaseHolster'));
+    }
+    Load(path, async = false, repeat = 1, prefix = this.prefix) {
+        return Promise.reject(new Error('Load not implemented in DataBaseHolster'));
+    }
+    generatePublicCert() {
+        return Promise.reject(new Error('generatePublicCert not implemented in DataBaseHolster'));
     }
     /**
      * Get the Holster instance (for backward compatibility with gun property).
