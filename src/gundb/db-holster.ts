@@ -1034,14 +1034,16 @@ class DataBaseHolster {
   ): any {
     const g: any = { [soul]: { _: { '#': soul, '>': {} } } };
 
-    for (const [key, value] of Object.entries(data)) {
-      if (
-        key !== '_' &&
-        key !== '_holster_user_public_key' &&
-        key !== '_holster_user_signature'
-      ) {
-        g[soul][key] = value;
-        g[soul]._['>'][key] = timestamp || Date.now();
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        if (
+          key !== '_' &&
+          key !== '_holster_user_public_key' &&
+          key !== '_holster_user_signature'
+        ) {
+          g[soul][key] = data[key];
+          g[soul]._['>'][key] = timestamp || Date.now();
+        }
       }
     }
 
