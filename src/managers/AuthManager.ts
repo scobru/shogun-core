@@ -249,9 +249,12 @@ export class AuthManager {
 
       return result;
     } catch (error) {
-      if (typeof console !== 'undefined' && console.error) {
-        console.error(`Error during registration for user ${username}:`, error);
-      }
+      ErrorHandler.handle(
+        ErrorType.AUTHENTICATION,
+        'SIGNUP_FAILED',
+        `Error during registration for user ${username}: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
 
       this.core.emit('debug', {
         action: 'signup_error',
