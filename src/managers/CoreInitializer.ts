@@ -117,7 +117,6 @@ export class CoreInitializer {
         );
       }
 
-      console.log('Using provided Gun instance:', config.gunInstance);
       this.core._gun = config.gunInstance;
     } catch (error) {
       if (typeof console !== 'undefined' && console.error) {
@@ -200,7 +199,6 @@ export class CoreInitializer {
         );
       }
 
-      console.log('Using provided Holster instance:', config.holsterInstance);
       // Store holster instance in _gun for compatibility
       this.core._gun = config.holsterInstance as any;
     } catch (error) {
@@ -273,11 +271,6 @@ export class CoreInitializer {
       // Holster doesn't support global "auth" events
       // Auth events are handled via polling in DataBaseHolster
       // The DataBaseHolster will emit auth events via its onAuth callbacks
-      if (typeof console !== 'undefined' && console.log) {
-        console.log(
-          '[CoreInitializer] Using Holster - auth events handled via DataBaseHolster polling',
-        );
-      }
     } else if (typeof this.core.gun.on === 'function') {
       // Gun has native "auth" events
       try {
