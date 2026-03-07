@@ -44,7 +44,6 @@ describe('NostrConnectorPlugin', () => {
       connectNostrWallet: jest.fn(),
       connectWallet: jest.fn(), // Add the correct method name
       cleanup: jest.fn(),
-      clearSignatureCache: jest.fn(),
       verifySignature: jest.fn(),
       generatePassword: jest.fn(),
       generateCredentials: jest.fn(), // Add missing method
@@ -281,28 +280,6 @@ describe('NostrConnectorPlugin', () => {
       expect(mockConnector.cleanup).toHaveBeenCalled();
     });
   });
-
-  // TODO: clearSignatureCache method has been removed from NostrConnectorPlugin
-  // describe("clearSignatureCache", () => {
-  //   beforeEach(() => {
-  //     plugin.initialize(mockCore);
-  //     // Ensure clearSignatureCache is properly mocked
-  //     mockConnector.clearSignatureCache = jest.fn();
-  //   });
-
-  //   it("should clear signature cache for specific address", () => {
-  //     plugin.clearSignatureCache("npub123");
-
-  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalledWith("npub123");
-  //   });
-
-  //   it("should clear all signature cache when no address provided", () => {
-  //     plugin.clearSignatureCache();
-
-  //     // Check that the method was called, but don't specify arguments since it might be called with undefined
-  //     expect(mockConnector.clearSignatureCache).toHaveBeenCalled();
-  //   });
-  // });
 
   describe('verifySignature', () => {
     beforeEach(() => {
