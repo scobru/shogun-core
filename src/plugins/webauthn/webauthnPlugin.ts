@@ -571,7 +571,7 @@ export class WebauthnPlugin
 
       if (seedPhrase) {
         // Use seed phrase derivation
-        const { password } = deriveCredentialsFromMnemonic(
+        const { password } = await deriveCredentialsFromMnemonic(
           seedPhrase,
           username,
         );

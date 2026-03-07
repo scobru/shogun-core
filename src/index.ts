@@ -52,6 +52,7 @@ export {
   generateSeedPhrase,
   validateSeedPhrase,
   mnemonicToSeed,
+  mnemonicToSeedAsync,
   seedToPassword,
   deriveCredentialsFromMnemonic,
   formatSeedPhrase,

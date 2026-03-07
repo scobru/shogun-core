@@ -5,6 +5,7 @@
 
 import {
   generateMnemonic,
+  mnemonicToSeed as scureMnemonicToSeed,
   mnemonicToSeedSync,
   validateMnemonic,
 } from '@scure/bip39';
@@ -37,15 +38,34 @@ export function validateSeedPhrase(mnemonic: string): boolean {
  * Derive a deterministic seed from mnemonic and username
  * @param {string} mnemonic - The BIP39 mnemonic seed phrase
  * @param {string} username - Username to include in derivation
- * @returns {Uint8Array} 64-byte seed for key derivation
+ * @returns {Promise<Uint8Array>} 64-byte seed for key derivation
  */
-export function mnemonicToSeed(mnemonic: string, username: string): Uint8Array {
+export async function mnemonicToSeedAsync(
+  mnemonic: string,
+  username: string,
+): Promise<Uint8Array> {
   if (!validateSeedPhrase(mnemonic)) {
     throw new Error('Invalid mnemonic seed phrase');
   }
 
   // Use username as additional entropy in the passphrase
   // This ensures different users with same seed phrase get different keys
+  const passphrase = `shogun-${username}`;
+  return scureMnemonicToSeed(mnemonic, passphrase);
+}
+
+/**
+ * Derive a deterministic seed from mnemonic and username (Synchronous)
+ * @param {string} mnemonic - The BIP39 mnemonic seed phrase
+ * @param {string} username - Username to include in derivation
+ * @returns {Uint8Array} 64-byte seed for key derivation
+ * @deprecated Use mnemonicToSeedAsync instead to avoid blocking the main thread
+ */
+export function mnemonicToSeed(mnemonic: string, username: string): Uint8Array {
+  if (!validateSeedPhrase(mnemonic)) {
+    throw new Error('Invalid mnemonic seed phrase');
+  }
+
   const passphrase = `shogun-${username}`;
   return mnemonicToSeedSync(mnemonic, passphrase);
 }
@@ -65,13 +85,13 @@ export function seedToPassword(seed: Uint8Array): string {
  * Derive GunDB credentials from mnemonic
  * @param {string} mnemonic - The BIP39 mnemonic
  * @param {string} username - Username for derivation
- * @returns {{password: string; seed: Uint8Array}} Credentials for GunDB
+ * @returns {Promise<{password: string; seed: Uint8Array}>} Credentials for GunDB
  */
-export function deriveCredentialsFromMnemonic(
+export async function deriveCredentialsFromMnemonic(
   mnemonic: string,
   username: string,
-): { password: string; seed: Uint8Array } {
-  const seed = mnemonicToSeed(mnemonic, username);
+): Promise<{ password: string; seed: Uint8Array }> {
+  const seed = await mnemonicToSeedAsync(mnemonic, username);
   const password = seedToPassword(seed);
 
   return {
