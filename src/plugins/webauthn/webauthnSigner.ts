@@ -199,7 +199,7 @@ export class WebAuthnSigner {
       // CONSISTENCY: Use the same approach as normal WebAuthn
       // Use hashedCredentialId as password (same as normal approach)
       const derivedKeys = await derive(
-        credential.hashedCredentialId, // This is the key change!
+        credential.hashedCredentialId,
         extra,
         { includeP256: true },
       );
@@ -219,7 +219,6 @@ export class WebAuthnSigner {
   /**
    * Creates a Gun user from WebAuthn credential
    * This ensures the SAME user is created as with normal approach
-   * FIX: Use derived pair instead of username/password for GunDB auth
    */
   async createGunUser(
     credentialId: string,
@@ -232,7 +231,6 @@ export class WebAuthnSigner {
     }
 
     try {
-      // FIX: Use derived pair for GunDB authentication instead of username/password
       const derivedPair = await this.createDerivedKeyPair(
         credentialId,
         username,
