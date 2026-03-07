@@ -664,7 +664,7 @@ export async function deriveWebauthnKeys(
   if (useSeedPhrase) {
     // New method: derive from BIP39 seed phrase for multi-device support
 
-    const { password, seed } = deriveCredentialsFromMnemonic(
+    const { password, seed } = await deriveCredentialsFromMnemonic(
       credentialIdOrSeedPhrase,
       username,
     );
