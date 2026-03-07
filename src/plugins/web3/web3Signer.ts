@@ -1,6 +1,7 @@
 import { Web3Connector } from './web3Connector';
 import { ethers } from 'ethers';
 import derive from '../../gundb/derive';
+import { ErrorHandler, ErrorType } from '../../utils/errorHandler';
 
 /**
  * Web3 Signing Credential for oneshot signing
@@ -63,7 +64,12 @@ export class Web3Signer {
 
       return signingCredential;
     } catch (error: any) {
-      console.error('Error creating Web3 signing credential:', error);
+      ErrorHandler.handle(
+        ErrorType.WALLET,
+        'WEB3_CREDENTIAL_ERROR',
+        'Error creating Web3 signing credential',
+        error,
+      );
       throw new Error(
         `Failed to create Web3 signing credential: ${error.message}`,
       );
@@ -89,7 +95,12 @@ export class Web3Signer {
 
       return signature;
     } catch (error: any) {
-      console.error('Failed to request signature:', error);
+      ErrorHandler.handle(
+        ErrorType.WALLET,
+        'WEB3_SIGNATURE_ERROR',
+        'Failed to request signature',
+        error,
+      );
       throw error;
     }
   }
@@ -120,7 +131,12 @@ export class Web3Signer {
 
         return signature;
       } catch (error: any) {
-        console.error('Web3 authentication error:', error);
+        ErrorHandler.handle(
+          ErrorType.AUTHENTICATION,
+          'WEB3_AUTH_ERROR',
+          'Web3 authentication error',
+          error,
+        );
         throw error;
       }
     };
@@ -148,37 +164,33 @@ export class Web3Signer {
     gunInstance: any,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
-      console.log(
-        `🔧 Web3Signer - authenticating with deterministic pair for address:`,
-        address,
-      );
-
       // Generate the deterministic pair directly from address (no need for stored credentials)
       const derivedPair = await this.createDerivedKeyPairFromAddress(address);
-
-      console.log(
-        `🔧 Web3Signer - deterministic pair created, attempting auth with GunDB`,
-      );
 
       return new Promise((resolve) => {
         // Authenticate directly with GunDB using the deterministic pair
         gunInstance.user().auth(derivedPair, (authAck: any) => {
           if (authAck.err) {
-            console.log(`🔧 Web3Signer - auth failed:`, authAck.err);
+            ErrorHandler.handle(
+              ErrorType.AUTHENTICATION,
+              'WEB3_GUN_AUTH_FAILED',
+              'Web3Signer - GunDB auth failed',
+              authAck.err,
+            );
             resolve({ success: false, error: authAck.err });
           } else {
             const userPub = authAck.pub;
-            console.log(
-              `🔧 Web3Signer - auth successful, userPub:`,
-              userPub ? userPub.slice(0, 8) + '...' : 'null',
-            );
-
             resolve({ success: true, userPub });
           }
         });
       });
     } catch (error: any) {
-      console.error('Error authenticating with deterministic pair:', error);
+      ErrorHandler.handle(
+        ErrorType.AUTHENTICATION,
+        'WEB3_AUTH_EXISTING_FAILED',
+        'Error authenticating with deterministic pair',
+        error,
+      );
       return { success: false, error: error.message };
     }
   }
@@ -198,11 +210,6 @@ export class Web3Signer {
         ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`),
       );
 
-      console.log(
-        `🔧 Web3Signer - generating deterministic pair for address:`,
-        validAddress,
-      );
-
       // Use the same derive function as normal approach
       const derivedKeys = await derive(
         password, // Deterministic password from address
@@ -217,7 +224,12 @@ export class Web3Signer {
         epriv: derivedKeys.epriv,
       };
     } catch (error: any) {
-      console.error('Error creating derived key pair from address:', error);
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'WEB3_KEY_DERIVATION_ERROR',
+        'Error creating derived key pair from address',
+        error,
+      );
       throw error;
     }
   }
@@ -231,11 +243,6 @@ export class Web3Signer {
     gunInstance: any,
   ): Promise<{ success: boolean; userPub?: string; error?: string }> {
     try {
-      console.log(
-        `🔧 Web3Signer - creating Gun user with deterministic pair for address:`,
-        address,
-      );
-
       // Generate the deterministic pair directly from address
       const derivedPair = await this.createDerivedKeyPairFromAddress(address);
 
@@ -243,42 +250,40 @@ export class Web3Signer {
         // Use the derived pair directly for GunDB auth
         gunInstance.user().create(derivedPair, (ack: any) => {
           if (ack.err) {
-            console.log(
-              `🔧 Web3Signer - user creation failed, trying auth:`,
+            ErrorHandler.handle(
+              ErrorType.DATABASE,
+              'WEB3_USER_CREATION_FAILED',
+              'Web3Signer - user creation failed, trying auth',
               ack.err,
             );
             // Try to login if user already exists
             gunInstance.user().auth(derivedPair, (authAck: any) => {
               if (authAck.err) {
-                console.log(`🔧 Web3Signer - auth also failed:`, authAck.err);
-                resolve({ success: false, error: authAck.err });
-              } else {
-                const userPub = authAck.pub;
-                console.log(
-                  `🔧 Web3Signer - auth successful, userPub:`,
-                  userPub ? userPub.slice(0, 8) + '...' : 'null',
-                );
-                resolve({ success: true, userPub });
-              }
-            });
-          } else {
-            console.log(
-              `🔧 Web3Signer - user created successfully, now logging in`,
-            );
-            // User created, now login
-            gunInstance.user().auth(derivedPair, (authAck: any) => {
-              if (authAck.err) {
-                console.log(
-                  `🔧 Web3Signer - login after creation failed:`,
+                ErrorHandler.handle(
+                  ErrorType.AUTHENTICATION,
+                  'WEB3_USER_AUTH_FAILED',
+                  'Web3Signer - auth also failed',
                   authAck.err,
                 );
                 resolve({ success: false, error: authAck.err });
               } else {
                 const userPub = authAck.pub;
-                console.log(
-                  `🔧 Web3Signer - login successful, userPub:`,
-                  userPub ? userPub.slice(0, 8) + '...' : 'null',
+                resolve({ success: true, userPub });
+              }
+            });
+          } else {
+            // User created, now login
+            gunInstance.user().auth(derivedPair, (authAck: any) => {
+              if (authAck.err) {
+                ErrorHandler.handle(
+                  ErrorType.AUTHENTICATION,
+                  'WEB3_LOGIN_AFTER_CREATION_FAILED',
+                  'Web3Signer - login after creation failed',
+                  authAck.err,
                 );
+                resolve({ success: false, error: authAck.err });
+              } else {
+                const userPub = authAck.pub;
                 resolve({ success: true, userPub });
               }
             });
@@ -286,7 +291,12 @@ export class Web3Signer {
         });
       });
     } catch (error: any) {
-      console.error('Error creating Gun user:', error);
+      ErrorHandler.handle(
+        ErrorType.DATABASE,
+        'WEB3_CREATE_USER_ERROR',
+        'Error creating Gun user',
+        error,
+      );
       return { success: false, error: error.message };
     }
   }
@@ -325,7 +335,12 @@ export class Web3Signer {
 
       return 'SEA' + JSON.stringify(seaSignature);
     } catch (error: any) {
-      console.error('Error signing with derived keys:', error);
+      ErrorHandler.handle(
+        ErrorType.SIGNATURE,
+        'WEB3_DERIVED_SIGN_ERROR',
+        'Error signing with derived keys',
+        error,
+      );
       throw error;
     }
   }
@@ -339,8 +354,13 @@ export class Web3Signer {
       // Generate the deterministic pair and return the public key
       const derivedPair = await this.createDerivedKeyPairFromAddress(address);
       return derivedPair.pub;
-    } catch (error) {
-      console.error('Error getting Gun user pub:', error);
+    } catch (error: any) {
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'WEB3_GET_PUB_ERROR',
+        'Error getting Gun user pub',
+        error,
+      );
       return undefined;
     }
   }
@@ -356,8 +376,13 @@ export class Web3Signer {
         ethers.toUtf8Bytes(`${validAddress.toLowerCase()}:shogun-web3`),
       );
       return password;
-    } catch (error) {
-      console.error('Error getting password:', error);
+    } catch (error: any) {
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'WEB3_GET_PASSWORD_ERROR',
+        'Error getting password',
+        error,
+      );
       return undefined;
     }
   }
@@ -384,8 +409,13 @@ export class Web3Signer {
         actualUserPub: derivedKeys.pub,
         expectedUserPub,
       };
-    } catch (error) {
-      console.error('Error verifying consistency:', error);
+    } catch (error: any) {
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'WEB3_CONSISTENCY_ERROR',
+        'Error verifying consistency',
+        error,
+      );
       return { consistent: false };
     }
   }
