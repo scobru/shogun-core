@@ -13,6 +13,10 @@ dist
 
 
 node_modules
+dist-cjs/
+src/**/*.js
+!src/__tests__/__mocks__/*.js
+!src/__tests__/integration/jest.integration.config.js
 
 # ZK Circuit files (large binary files)
 circuits/

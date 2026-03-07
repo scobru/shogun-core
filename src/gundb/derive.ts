@@ -175,7 +175,9 @@ async function stretchKey(
     // This is secure and deterministic, matching the subtle crypto implementation
     // as closely as possible (PBKDF2-HMAC-SHA256)
     const inputBytes =
-      input instanceof Uint8Array ? input : new Uint8Array(input as ArrayBuffer);
+      input instanceof Uint8Array
+        ? input
+        : new Uint8Array(input as ArrayBuffer);
 
     const fallbackKey = pbkdf2(sha256, inputBytes, salt, {
       c: iterations,
