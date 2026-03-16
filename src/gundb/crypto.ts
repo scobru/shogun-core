@@ -247,14 +247,6 @@ export function safeHash(unsafe: string) {
 }
 
 /**
- * Helper function to encode individual characters
- * @param c - Character to encode
- * @returns Encoded character
- */
-//@ts-ignore
-function encodeChar(_: any) {}
-
-/**
  * Converts URL-safe characters back to original hash characters
  * @param safe - URL-safe string
  * @returns Original string with decoded characters
@@ -276,14 +268,6 @@ export function unsafeHash(safe: string) {
 
   return result;
 }
-
-/**
- * Helper function to decode individual characters
- * @param c - Character to decode
- * @returns Decoded character
- */
-//@ts-ignore
-function decodeChar(_: any) {}
 
 /**
  * Safely parses JSON with fallback to default value
