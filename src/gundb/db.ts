@@ -1314,12 +1314,31 @@ class DataBase {
   }
 
   private _randomAlphaNumeric(length: number): string {
-    var result = '';
-    var characters =
+    const characters =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength = characters.length;
-    for (var i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    const charactersLength = characters.length;
+    const bytes = new Uint8Array(length);
+
+    try {
+      const c = (globalThis as any)?.crypto as Crypto | undefined;
+      if (c?.getRandomValues) {
+        c.getRandomValues(bytes);
+      } else {
+        // Fallback to Math.random if crypto is not available
+        for (let i = 0; i < length; i++) {
+          bytes[i] = Math.floor(Math.random() * 256);
+        }
+      }
+    } catch {
+      // Fallback to Math.random if getRandomValues fails
+      for (let i = 0; i < length; i++) {
+        bytes[i] = Math.floor(Math.random() * 256);
+      }
+    }
+
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(bytes[i] % charactersLength);
     }
     return result;
   }
