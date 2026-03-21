@@ -1319,21 +1319,19 @@ class DataBase {
     const charactersLength = characters.length;
     const bytes = new Uint8Array(length);
 
+    const c = (globalThis as any)?.crypto as Crypto | undefined;
+    if (!c?.getRandomValues) {
+      throw new GunErrors.GunError(
+        'Cryptographically secure randomness is not available.',
+      );
+    }
+
     try {
-      const c = (globalThis as any)?.crypto as Crypto | undefined;
-      if (c?.getRandomValues) {
-        c.getRandomValues(bytes);
-      } else {
-        // Fallback to Math.random if crypto is not available
-        for (let i = 0; i < length; i++) {
-          bytes[i] = Math.floor(Math.random() * 256);
-        }
-      }
-    } catch {
-      // Fallback to Math.random if getRandomValues fails
-      for (let i = 0; i < length; i++) {
-        bytes[i] = Math.floor(Math.random() * 256);
-      }
+      c.getRandomValues(bytes);
+    } catch (e) {
+      throw new GunErrors.GunError(
+        `Failed to generate secure random values: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
 
     let result = '';
