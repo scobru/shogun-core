@@ -1083,7 +1083,6 @@ class DataBaseHolster {
   public destroy(): void {
     if (this._isDestroyed) return;
 
-    console.log('[DB] Destroying DataBaseHolster instance...');
     this._isDestroyed = true;
 
     if (this.authPollInterval) {
@@ -1104,7 +1103,6 @@ class DataBaseHolster {
     }
 
     this._rxjs = undefined;
-    console.log('[DB] DataBaseHolster instance destroyed');
   }
 
   /**

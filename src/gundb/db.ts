@@ -1653,7 +1653,6 @@ class DataBase {
   public destroy(): void {
     if (this._isDestroyed) return;
 
-    console.log('[DB] Destroying DataBase instance...');
     this._isDestroyed = true;
 
     this.onAuthCallbacks.length = 0;
@@ -1670,7 +1669,6 @@ class DataBase {
     }
 
     this._rxjs = undefined;
-    console.log('[DB] DataBase instance destroyed');
   }
 
   /**
