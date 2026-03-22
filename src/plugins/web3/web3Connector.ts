@@ -35,6 +35,8 @@ declare global {
  * Class for MetaMask connection
  */
 class Web3Connector extends EventEmitter {
+  private static cachedEthereumProvider: EthereumProvider | null | undefined =
+    undefined;
   private readonly MESSAGE_TO_SIGN = 'I Love Shogun!';
   private readonly DEFAULT_CONFIG: Web3Config = {
     cacheDuration: 30 * 60 * 1000, // 30 minutes
@@ -65,7 +67,7 @@ class Web3Connector extends EventEmitter {
     if (typeof window !== 'undefined') {
       try {
         // Check if ethereum is available from any provider
-        const ethereumProvider = this.getAvailableEthereumProvider();
+        const ethereumProvider = Web3Connector.getAvailableEthereumProvider();
 
         if (ethereumProvider) {
           this.provider = new ethers.BrowserProvider(
@@ -85,8 +87,13 @@ class Web3Connector extends EventEmitter {
   /**
    * Get available Ethereum provider from multiple possible sources
    */
-  private getAvailableEthereumProvider(): EthereumProvider | undefined {
+  private static getAvailableEthereumProvider(): EthereumProvider | undefined {
     if (typeof window === 'undefined') return undefined;
+
+    // Check if we have a cached provider (including null for "not found")
+    if (Web3Connector.cachedEthereumProvider !== undefined) {
+      return Web3Connector.cachedEthereumProvider || undefined;
+    }
 
     // Define provider sources with priority order
     const providerSources = [
@@ -136,6 +143,7 @@ class Web3Connector extends EventEmitter {
         const provider = source();
 
         if (provider && typeof provider.request === 'function') {
+          Web3Connector.cachedEthereumProvider = provider;
           return provider;
         }
       } catch (error) {
@@ -147,6 +155,7 @@ class Web3Connector extends EventEmitter {
 
     // No provider found
     console.warn('No compatible Ethereum provider found');
+    Web3Connector.cachedEthereumProvider = null;
     return undefined;
   }
 
@@ -157,7 +166,7 @@ class Web3Connector extends EventEmitter {
     try {
       if (typeof window !== 'undefined') {
         // Check if ethereum is available from any provider
-        const ethereumProvider = this.getAvailableEthereumProvider();
+        const ethereumProvider = Web3Connector.getAvailableEthereumProvider();
 
         if (ethereumProvider) {
           this.provider = new ethers.BrowserProvider(
@@ -186,7 +195,7 @@ class Web3Connector extends EventEmitter {
 
       // Listen for account changes through the detected provider
       try {
-        const ethereumProvider = this.getAvailableEthereumProvider();
+        const ethereumProvider = Web3Connector.getAvailableEthereumProvider();
         if (ethereumProvider?.on) {
           ethereumProvider.on('accountsChanged', (accounts: string[]) => {
             this.emit('accountsChanged', accounts);
@@ -293,7 +302,7 @@ class Web3Connector extends EventEmitter {
       }
 
       // First check if we can get the provider
-      const ethereumProvider = this.getAvailableEthereumProvider();
+      const ethereumProvider = Web3Connector.getAvailableEthereumProvider();
       if (!ethereumProvider) {
         throw new Error('No compatible Ethereum provider found');
       }
@@ -463,30 +472,7 @@ class Web3Connector extends EventEmitter {
    * Checks if MetaMask is available
    */
   public static isMetaMaskAvailable(): boolean {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
-    // Check multiple possible sources
-    const sources = [
-      () => window.ethereum,
-      () => (window as any).web3?.currentProvider,
-      () => (window as any).metamask,
-      () => window._ethereumProviders?.[0],
-    ];
-
-    for (const source of sources) {
-      try {
-        const provider = source();
-        if (provider && typeof provider.request === 'function') {
-          return true;
-        }
-      } catch {
-        // Continue to next source
-      }
-    }
-
-    return false;
+    return !!Web3Connector.getAvailableEthereumProvider();
   }
 
   /**

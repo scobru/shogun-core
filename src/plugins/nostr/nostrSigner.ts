@@ -1,6 +1,7 @@
 import { NostrConnector } from './nostrConnector';
 import derive from '../../gundb/derive';
 import { ethers } from 'ethers';
+import { ErrorHandler, ErrorType } from '../../utils/errorHandler';
 
 /**
  * Nostr Signing Credential for oneshot signing
@@ -59,7 +60,12 @@ export class NostrSigner {
 
       return signingCredential;
     } catch (error: any) {
-      console.error('Error creating Nostr signing credential:', error);
+      ErrorHandler.handle(
+        ErrorType.BITCOIN,
+        'NOSTR_CREDENTIAL_ERROR',
+        'Error creating Nostr signing credential',
+        error,
+      );
       throw new Error(
         `Failed to create Nostr signing credential: ${error.message}`,
       );
@@ -157,7 +163,12 @@ export class NostrSigner {
       const passwordHash = ethers.sha256(ethers.toUtf8Bytes(normalizedSig));
       return passwordHash;
     } catch (error) {
-      console.error('Error generating password:', error);
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'NOSTR_PASSWORD_ERROR',
+        'Error generating password',
+        error,
+      );
       throw new Error('Failed to generate password from signature');
     }
   }
@@ -183,7 +194,12 @@ export class NostrSigner {
 
         return signature;
       } catch (error: any) {
-        console.error('Nostr authentication error:', error);
+        ErrorHandler.handle(
+          ErrorType.AUTHENTICATION,
+          'NOSTR_AUTH_ERROR',
+          'Nostr authentication error',
+          error,
+        );
         throw error;
       }
     };
@@ -230,7 +246,12 @@ export class NostrSigner {
         epriv: derivedKeys.epriv,
       };
     } catch (error: any) {
-      console.error('Error deriving keys from Nostr credential:', error);
+      ErrorHandler.handle(
+        ErrorType.ENCRYPTION,
+        'NOSTR_KEY_DERIVATION_ERROR',
+        'Error deriving keys from Nostr credential',
+        error,
+      );
       throw error;
     }
   }
@@ -238,7 +259,6 @@ export class NostrSigner {
   /**
    * Creates a Gun user from Nostr credential
    * This ensures the SAME user is created as with normal approach
-   * FIX: Use derived pair instead of username/password for GunDB auth
    */
   async createGunUser(
     address: string,
@@ -250,43 +270,46 @@ export class NostrSigner {
     }
 
     try {
-      // FIX: Use derived pair for GunDB authentication instead of username/password
+      // Use derived pair for GunDB authentication instead of username/password
       const derivedPair = await this.createDerivedKeyPair(address);
 
       return new Promise((resolve) => {
+        const handleAuth = (authAck: any) => {
+          if (authAck.err) {
+            ErrorHandler.handle(
+              ErrorType.AUTHENTICATION,
+              'NOSTR_GUN_AUTH_FAILED',
+              'NostrSigner - GunDB auth failed',
+              authAck.err,
+            );
+            resolve({ success: false, error: authAck.err });
+          } else {
+            const userPub = authAck.pub;
+            // Update credential with Gun user pub
+            credential.gunUserPub = userPub;
+            this.credentials.set(address.toLowerCase(), credential);
+            resolve({ success: true, userPub });
+          }
+        };
+
         // Use the derived pair directly for GunDB auth
         gunInstance.user().create(derivedPair, (ack: any) => {
           if (ack.err) {
             // Try to login if user already exists
-            gunInstance.user().auth(derivedPair, (authAck: any) => {
-              if (authAck.err) {
-                resolve({ success: false, error: authAck.err });
-              } else {
-                const userPub = authAck.pub;
-                // Update credential with Gun user pub
-                credential.gunUserPub = userPub;
-                this.credentials.set(address.toLowerCase(), credential);
-                resolve({ success: true, userPub });
-              }
-            });
+            gunInstance.user().auth(derivedPair, handleAuth);
           } else {
             // User created, now login
-            gunInstance.user().auth(derivedPair, (authAck: any) => {
-              if (authAck.err) {
-                resolve({ success: false, error: authAck.err });
-              } else {
-                const userPub = authAck.pub;
-                // Update credential with Gun user pub
-                credential.gunUserPub = userPub;
-                this.credentials.set(address.toLowerCase(), credential);
-                resolve({ success: true, userPub });
-              }
-            });
+            gunInstance.user().auth(derivedPair, handleAuth);
           }
         });
       });
     } catch (error: any) {
-      console.error('Error creating Gun user:', error);
+      ErrorHandler.handle(
+        ErrorType.DATABASE,
+        'NOSTR_CREATE_USER_ERROR',
+        'Error creating Gun user',
+        error,
+      );
       return { success: false, error: error.message };
     }
   }
@@ -325,7 +348,12 @@ export class NostrSigner {
 
       return 'SEA' + JSON.stringify(seaSignature);
     } catch (error: any) {
-      console.error('Error signing with derived keys:', error);
+      ErrorHandler.handle(
+        ErrorType.SIGNATURE,
+        'NOSTR_DERIVED_SIGN_ERROR',
+        'Error signing with derived keys',
+        error,
+      );
       throw error;
     }
   }

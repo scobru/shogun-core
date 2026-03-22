@@ -1301,12 +1301,29 @@ class DataBase {
   }
 
   private _randomAlphaNumeric(length: number): string {
-    var result = '';
-    var characters =
+    const characters =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength = characters.length;
-    for (var i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    const charactersLength = characters.length;
+    const bytes = new Uint8Array(length);
+
+    const c = (globalThis as any)?.crypto as Crypto | undefined;
+    if (!c?.getRandomValues) {
+      throw new GunErrors.GunError(
+        'Cryptographically secure randomness is not available.',
+      );
+    }
+
+    try {
+      c.getRandomValues(bytes);
+    } catch (e) {
+      throw new GunErrors.GunError(
+        `Failed to generate secure random values: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(bytes[i] % charactersLength);
     }
     return result;
   }
