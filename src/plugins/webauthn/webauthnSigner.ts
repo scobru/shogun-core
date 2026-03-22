@@ -202,11 +202,9 @@ export class WebAuthnSigner {
     try {
       // CONSISTENCY: Use the same approach as normal WebAuthn
       // Use hashedCredentialId as password (same as normal approach)
-      const derivedKeys = await derive(
-        credential.hashedCredentialId,
-        extra,
-        { includeP256: true },
-      );
+      const derivedKeys = await derive(credential.hashedCredentialId, extra, {
+        includeP256: true,
+      });
 
       return {
         pub: derivedKeys.pub,

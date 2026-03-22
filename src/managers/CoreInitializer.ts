@@ -4,9 +4,7 @@ import { ErrorHandler, ShogunError } from '../utils/errorHandler';
 import { WebauthnPlugin } from '../plugins/webauthn/webauthnPlugin';
 import { Web3ConnectorPlugin } from '../plugins/web3/web3ConnectorPlugin';
 import { NostrConnectorPlugin } from '../plugins/nostr/nostrConnectorPlugin';
-import { DataBase, RxJS, derive } from '../gundb/db';
-import { DataBaseHolster } from '../gundb/db-holster';
-import { RxJSHolster } from '../gundb/rxjs-holster';
+import { DataBase, derive } from '../gundb/db';
 
 /**
  * Handles initialization of ShogunCore components
@@ -61,13 +59,6 @@ export class CoreInitializer {
     // Setup wallet derivation
     this.setupWalletDerivation();
 
-    // Initialize RxJS (use appropriate implementation based on instance type)
-    if (config.holsterInstance) {
-      this.core.rx = new RxJSHolster(this.core.gun) as any;
-    } else {
-      this.core.rx = new RxJS(this.core.gun);
-    }
-
     // Register built-in plugins
     this.registerBuiltinPlugins(config);
 
@@ -79,17 +70,9 @@ export class CoreInitializer {
    * Initialize Gun or Holster instance
    */
   private initializeGun(config: ShogunCoreConfig): boolean {
-    // Check if Holster instance is provided
-    if (config.holsterInstance) {
-      return this.initializeHolster(config);
-    }
-
-    // Otherwise, use Gun instance
     try {
       if (!config.gunInstance) {
-        throw new Error(
-          'Either gunInstance or holsterInstance is required but neither was provided',
-        );
+        throw new Error('gunInstance is required but was not provided');
       }
 
       // Validate Gun instance
@@ -127,7 +110,7 @@ export class CoreInitializer {
 
     try {
       // Resolve SEA
-      const sea = this.resolveSEA(this.core._gun, false);
+      const sea = this.resolveSEA(this.core._gun);
 
       this.core.db = new DataBase(this.core._gun, this.core, sea);
       return true;
@@ -139,19 +122,13 @@ export class CoreInitializer {
     }
   }
 
-  /**
-   * Resolve SEA from Gun/Holster instance or global scope
-   * @param instance - Gun or Holster instance
-   * @param isHolster - Whether we are using Holster
-   * @returns SEA module or null
-   */
-  private resolveSEA(instance: any, isHolster: boolean): any {
+  private resolveSEA(instance: any): any {
     // Get SEA from instance
     let sea = (instance as any).SEA || null;
     if (sea) return sea;
 
     // Try to find SEA in various global locations
-    const namespace = isHolster ? 'Holster' : 'Gun';
+    const namespace = 'Gun';
     const g = globalThis as any;
     const w = (typeof window !== 'undefined' ? window : {}) as any;
     const glob = (typeof global !== 'undefined' ? global : {}) as any;
@@ -172,85 +149,16 @@ export class CoreInitializer {
   }
 
   /**
-   * Initialize Holster instance
-   */
-  private initializeHolster(config: ShogunCoreConfig): boolean {
-    try {
-      if (!config.holsterInstance) {
-        throw new Error('Holster instance is required but was not provided');
-      }
-
-      // Validate Holster instance
-      if (typeof config.holsterInstance !== 'object') {
-        throw new Error(
-          `Holster instance must be an object, received: ${typeof config.holsterInstance}`,
-        );
-      }
-
-      if (typeof config.holsterInstance.user !== 'function') {
-        throw new Error(
-          `Holster instance is invalid: holster.user is not a function. Received holster.user type: ${typeof config.holsterInstance.user}`,
-        );
-      }
-
-      if (typeof config.holsterInstance.get !== 'function') {
-        throw new Error(
-          `Holster instance is invalid: holster.get is not a function. Received holster.get type: ${typeof config.holsterInstance.get}`,
-        );
-      }
-
-      // Store holster instance in _gun for compatibility
-      this.core._gun = config.holsterInstance as any;
-    } catch (error) {
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('Error validating Holster instance:', error);
-      }
-      throw new Error(`Failed to validate Holster instance: ${error}`);
-    }
-
-    try {
-      // Resolve SEA
-      const sea = this.resolveSEA(this.core._gun, true);
-
-      this.core.db = new DataBaseHolster(this.core._gun, this.core, sea);
-      return true;
-    } catch (error) {
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('Error initializing DataBaseHolster:', error);
-      }
-      throw new Error(`Failed to initialize DataBaseHolster: ${error}`);
-    }
-  }
-
-  /**
-   * Check if we're using Holster instead of Gun
-   * Holster has a 'next' method that Gun doesn't have
-   */
-  private isHolster(): boolean {
-    // Check if gun has 'next' method (Holster-specific)
-    if (typeof (this.core.gun as any).next === 'function') {
-      return true;
-    }
-    // Check if db is DataBaseHolster instance
-    if (this.core.db && this.core.db.constructor.name === 'DataBaseHolster') {
-      return true;
-    }
-    return false;
-  }
-
-  /**
    * Initialize Gun/Holster user
    */
   private initializeGunUser(): void {
     try {
       const userInstance = this.core.gun.user();
-      // Holster's recall() doesn't take options, Gun's does
       if (typeof userInstance.recall === 'function') {
         if (userInstance.recall.length > 0) {
           // Gun API: recall takes options
           this.core._user = userInstance.recall({ sessionStorage: true });
         } else {
-          // Holster API: recall takes no arguments
           (userInstance.recall as () => void)();
           this.core._user = userInstance.is ? userInstance : null;
         }
@@ -265,13 +173,7 @@ export class CoreInitializer {
     }
 
     // Setup auth event listener
-    // Gun has native "auth" events, but Holster doesn't support global events
-    // Holster uses polling in DataBaseHolster.subscribeToAuthEvents() instead
-    if (this.isHolster()) {
-      // Holster doesn't support global "auth" events
-      // Auth events are handled via polling in DataBaseHolster
-      // The DataBaseHolster will emit auth events via its onAuth callbacks
-    } else if (typeof this.core.gun.on === 'function') {
+    if (typeof this.core.gun.on === 'function') {
       // Gun has native "auth" events
       try {
         this.core.gun.on('auth', (user: any) => {
@@ -292,8 +194,6 @@ export class CoreInitializer {
           });
         });
       } catch (error) {
-        // If gun.on("auth") fails, it might be because we're using Holster
-        // but the detection didn't work. Log and continue.
         if (typeof console !== 'undefined' && console.warn) {
           console.warn(
             '[CoreInitializer] Failed to register auth event listener:',
@@ -333,22 +233,7 @@ export class CoreInitializer {
    * Setup wallet derivation
    */
   private setupWalletDerivation(): void {
-    if (this.isHolster()) {
-      // For Holster, wallet derivation is handled via onAuth callbacks in DataBaseHolster
-      if (this.core.db && typeof (this.core.db as any).onAuth === 'function') {
-        this.core.db.onAuth(async (user: any) => {
-          if (!user.is) return;
-          const priv = user.is?.epriv;
-          const pub = user.is?.epub;
-          if (priv && pub) {
-            this.core.wallets = await derive(priv, pub, {
-              includeSecp256k1Bitcoin: true,
-              includeSecp256k1Ethereum: true,
-            });
-          }
-        });
-      }
-    } else if (typeof this.core.gun.on === 'function') {
+    if (typeof this.core.gun.on === 'function') {
       // Gun has native "auth" events
       try {
         this.core.gun.on('auth', async (user: any) => {

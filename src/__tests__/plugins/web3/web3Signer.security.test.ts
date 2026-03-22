@@ -51,7 +51,10 @@ describe('Web3Signer Security', () => {
       callback(authError);
     });
 
-    const result = await web3Signer.authenticateWithExistingPair(address, mockGun);
+    const result = await web3Signer.authenticateWithExistingPair(
+      address,
+      mockGun,
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(authError.err);
@@ -61,25 +64,25 @@ describe('Web3Signer Security', () => {
       ErrorType.AUTHENTICATION,
       'WEB3_GUN_AUTH_FAILED',
       expect.any(String),
-      authError.err
+      authError.err,
     );
   });
 
   it('should call ErrorHandler when createDerivedKeyPairFromAddress fails', async () => {
-     // Trigger an error by passing an invalid address that ethers.getAddress would reject
-     const invalidAddress = 'invalid-address';
+    // Trigger an error by passing an invalid address that ethers.getAddress would reject
+    const invalidAddress = 'invalid-address';
 
-     try {
-       await web3Signer.createDerivedKeyPairFromAddress(invalidAddress);
-     } catch (e) {
-       // Expected error
-     }
+    try {
+      await web3Signer.createDerivedKeyPairFromAddress(invalidAddress);
+    } catch (e) {
+      // Expected error
+    }
 
-     expect(ErrorHandler.handle).toHaveBeenCalledWith(
-       ErrorType.ENCRYPTION,
-       'WEB3_KEY_DERIVATION_ERROR',
-       expect.any(String),
-       expect.any(Error)
-     );
+    expect(ErrorHandler.handle).toHaveBeenCalledWith(
+      ErrorType.ENCRYPTION,
+      'WEB3_KEY_DERIVATION_ERROR',
+      expect.any(String),
+      expect.any(Error),
+    );
   });
 });

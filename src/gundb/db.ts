@@ -6,7 +6,6 @@ import type {
   ISEAPair,
 } from 'gun/types';
 import type { AuthResult, SignUpResult } from '../interfaces/shogun';
-import { RxJS } from './rxjs';
 import { EventEmitter } from '../utils/eventEmitter';
 import * as GunErrors from './errors';
 import * as crypto from './crypto';
@@ -49,8 +48,6 @@ class DataBase {
   private readonly onAuthCallbacks: Array<AuthCallback> = [];
   /** EventEmitter for app-specific event management */
   private readonly eventEmitter: EventEmitter;
-  /** RxJS-based GunDB observable/stream helper */
-  private _rxjs?: RxJS;
   /** Whether the database instance has been destroyed */
   private _isDestroyed: boolean = false;
 
@@ -94,8 +91,6 @@ class DataBase {
         this.sea = (globalThis as any).SEA;
       }
     }
-
-    this._rxjs = new RxJS(this.gun);
 
     this.usernamesNode = this.gun.get('usernames') as IGunChain<
       any,
@@ -1081,14 +1076,6 @@ class DataBase {
   }
 
   /**
-   * Returns the bound RxJS GunDB helper (reactive streams).
-   * @returns RxJS instance.
-   */
-  rx(): RxJS {
-    return this._rxjs as RxJS;
-  }
-
-  /**
    * Wait in ms
    * @param ms duration of timeout in ms
    * @returns
@@ -1652,7 +1639,6 @@ class DataBase {
       this.user = null;
     }
 
-    this._rxjs = undefined;
     console.log('[DB] DataBase instance destroyed');
   }
 
@@ -1704,7 +1690,7 @@ class DataBase {
   }
 }
 
-export { DataBase, RxJS, crypto, GunErrors };
+export { DataBase, crypto, GunErrors };
 export { default as derive, type DeriveOptions } from './derive';
 export type { IGunUserInstance, IGunInstance, IGunChain } from 'gun/types';
 export type { GunDataEventData, GunPeerEventData } from '../interfaces/events';

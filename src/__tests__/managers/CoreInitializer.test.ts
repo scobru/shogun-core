@@ -14,12 +14,10 @@ describe('CoreInitializer SEA Resolution', () => {
 
     // Clear globals
     (globalThis as any).Gun = undefined;
-    (globalThis as any).Holster = undefined;
     (globalThis as any).SEA = undefined;
 
     if (typeof global !== 'undefined') {
       (global as any).Gun = undefined;
-      (global as any).Holster = undefined;
       (global as any).SEA = undefined;
     }
   });
@@ -27,7 +25,6 @@ describe('CoreInitializer SEA Resolution', () => {
   afterAll(() => {
     // Cleanup
     delete (globalThis as any).Gun;
-    delete (globalThis as any).Holster;
     delete (globalThis as any).SEA;
   });
 
@@ -48,24 +45,16 @@ describe('CoreInitializer SEA Resolution', () => {
     expect(resolvedSEA).toBe(mockSEA);
   });
 
-  it('should resolve SEA from global Holster.SEA', () => {
-    const mockSEA = { name: 'mockSEA-global-holster' };
-    (globalThis as any).Holster = { SEA: mockSEA };
-
-    const resolvedSEA = (initializer as any).resolveSEA({}, true);
-    expect(resolvedSEA).toBe(mockSEA);
-  });
-
   it('should resolve SEA from globalThis.SEA', () => {
     const mockSEA = { name: 'mockSEA-globalthis' };
     (globalThis as any).SEA = mockSEA;
 
-    const resolvedSEA = (initializer as any).resolveSEA({}, false);
+    const resolvedSEA = (initializer as any).resolveSEA({});
     expect(resolvedSEA).toBe(mockSEA);
   });
 
   it('should return null if SEA not found', () => {
-    const resolvedSEA = (initializer as any).resolveSEA({}, false);
+    const resolvedSEA = (initializer as any).resolveSEA({});
     expect(resolvedSEA).toBeNull();
   });
 });

@@ -113,7 +113,10 @@ describe('AuthManager', () => {
 
     it('should return error if pair is missing pub', async () => {
       const partialPair = { priv: 'priv', epub: 'epub', epriv: 'epriv' };
-      const result = await authManager.loginWithPair('testuser', partialPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        partialPair as any,
+      );
       expect(result).toEqual({
         success: false,
         error: 'Invalid pair structure - missing required keys',
@@ -123,7 +126,10 @@ describe('AuthManager', () => {
 
     it('should return error if pair is missing priv', async () => {
       const partialPair = { pub: 'pub', epub: 'epub', epriv: 'epriv' };
-      const result = await authManager.loginWithPair('testuser', partialPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        partialPair as any,
+      );
       expect(result).toEqual({
         success: false,
         error: 'Invalid pair structure - missing required keys',
@@ -133,7 +139,10 @@ describe('AuthManager', () => {
 
     it('should return error if pair is missing epub', async () => {
       const partialPair = { pub: 'pub', priv: 'priv', epriv: 'epriv' };
-      const result = await authManager.loginWithPair('testuser', partialPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        partialPair as any,
+      );
       expect(result).toEqual({
         success: false,
         error: 'Invalid pair structure - missing required keys',
@@ -143,7 +152,10 @@ describe('AuthManager', () => {
 
     it('should return error if pair is missing epriv', async () => {
       const partialPair = { pub: 'pub', priv: 'priv', epub: 'epub' };
-      const result = await authManager.loginWithPair('testuser', partialPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        partialPair as any,
+      );
       expect(result).toEqual({
         success: false,
         error: 'Invalid pair structure - missing required keys',
@@ -162,7 +174,10 @@ describe('AuthManager', () => {
       const expectedResult = { success: true, userPub: 'pub' };
       mockDb.loginWithPair.mockResolvedValue(expectedResult);
 
-      const result = await authManager.loginWithPair('testuser', validPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        validPair as any,
+      );
 
       expect(result.success).toBe(true);
       expect(mockDb.loginWithPair).toHaveBeenCalledWith('testuser', validPair);
@@ -180,14 +195,17 @@ describe('AuthManager', () => {
       const expectedResult = { success: false, error: 'DB Error' };
       mockDb.loginWithPair.mockResolvedValue(expectedResult);
 
-      const result = await authManager.loginWithPair('testuser', validPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        validPair as any,
+      );
 
       expect(result).toEqual(expectedResult as any);
       expect(mockDb.loginWithPair).toHaveBeenCalledWith('testuser', validPair);
     });
 
     it('should catch and handle unexpected errors during loginWithPair', async () => {
-       const validPair = {
+      const validPair = {
         pub: 'pub',
         priv: 'priv',
         epub: 'epub',
@@ -196,7 +214,10 @@ describe('AuthManager', () => {
 
       mockDb.loginWithPair.mockRejectedValue(new Error('Unexpected error'));
 
-      const result = await authManager.loginWithPair('testuser', validPair as any);
+      const result = await authManager.loginWithPair(
+        'testuser',
+        validPair as any,
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Unexpected error');

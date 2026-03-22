@@ -28,7 +28,8 @@ describe('AuthManager Security', () => {
   });
 
   it('should not leak full error object in signUp console log after fix', async () => {
-    const sensitiveStackTrace = 'Error: Sensitive Stack Trace\n    at Object.signUp (test.ts:1:1)';
+    const sensitiveStackTrace =
+      'Error: Sensitive Stack Trace\n    at Object.signUp (test.ts:1:1)';
     const errorWithSensitiveInfo = new Error('Registration failed');
     errorWithSensitiveInfo.stack = sensitiveStackTrace;
 
@@ -41,17 +42,17 @@ describe('AuthManager Security', () => {
 
     // For AuthenticationError, ErrorHandler.handleError logs: `[${error.type}] ${error.code}: ${error.message}`
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      `[${ErrorType.AUTHENTICATION}] SIGNUP_FAILED: Error during registration for user testuser: Registration failed`
+      `[${ErrorType.AUTHENTICATION}] SIGNUP_FAILED: Error during registration for user testuser: Registration failed`,
     );
 
     // Verify it was NOT called with the full error object as a second argument
-    consoleErrorSpy.mock.calls.forEach(call => {
-        expect(call).not.toContain(errorWithSensitiveInfo);
-        call.forEach(arg => {
-            if (typeof arg === 'string') {
-                expect(arg).not.toContain('Sensitive Stack Trace');
-            }
-        });
+    consoleErrorSpy.mock.calls.forEach((call) => {
+      expect(call).not.toContain(errorWithSensitiveInfo);
+      call.forEach((arg) => {
+        if (typeof arg === 'string') {
+          expect(arg).not.toContain('Sensitive Stack Trace');
+        }
+      });
     });
   });
 });

@@ -39,10 +39,7 @@ export {
 
 export { ShogunCore } from './core';
 
-export { RxJS, crypto, derive, GunErrors, DataBase } from './gundb/db';
-
-export { DataBaseHolster } from './gundb/db-holster';
-export { RxJSHolster } from './gundb/rxjs-holster';
+export { crypto, derive, GunErrors, DataBase } from './gundb/db';
 
 // Note: Gun and SEA are not exported to avoid bundling issues
 // Users should import Gun and SEA directly from the 'gun' package
