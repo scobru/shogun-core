@@ -6,18 +6,13 @@
 
 ## Overview
 
-Shogun Core is a comprehensive SDK for building decentralized applications (dApps) that simplifies authentication, wallet management, and decentralized data storage. It combines GunDB's or Holster's peer-to-peer networking with modern authentication standards and blockchain integration.
-
-**Now supports both Gun and Holster!** You can use either database backend - Gun for maximum compatibility or Holster for modern ES modules and improved performance.
+Shogun Core is a comprehensive SDK for building decentralized applications (dApps) that simplifies authentication, wallet management, and decentralized data storage. It utilizes GunDB's peer-to-peer networking with modern authentication standards and blockchain integration.
 
 ## Features
 
 - 🔐 **Multiple Authentication Methods**: Password, WebAuthn (biometrics), Web3 (MetaMask), Nostr, Challenge (Server-Signed)
-- 🌐 **Decentralized Storage**: Built on GunDB or Holster for peer-to-peer data synchronization
-- 🔄 **Dual Database Support**: Use Gun (maximum compatibility) or Holster (modern ES modules, improved performance)
+- 🌐 **Decentralized Storage**: Built on GunDB for peer-to-peer data synchronization
 - 🔌 **Plugin System**: Extensible architecture with built-in plugins
-
-- 📱 **Reactive Programming**: RxJS integration for real-time data streams
 - 🛡️ **Security**: End-to-end encryption and secure key management
 - 🎯 **TypeScript**: Full TypeScript support with comprehensive type definitions
 
@@ -31,7 +26,7 @@ yarn add shogun-core
 
 ## Quick Start
 
-### Using Gun (Default)
+### Basic Initialization
 
 ```typescript
 import { ShogunCore } from 'shogun-core';
@@ -61,40 +56,13 @@ const shogun = new ShogunCore({
 });
 ```
 
-### Using Holster (Alternative)
 
-```typescript
-import { ShogunCore } from 'shogun-core';
-import Holster from '@mblaney/holster';
-
-// Create Holster instance first
-const holster = Holster({
-  peers: ['ws://localhost:8765'],
-});
-
-// Initialize Shogun Core with the Holster instance
-const shogun = new ShogunCore({
-  holsterInstance: holster, // Use Holster instead of Gun
-
-  // Enable authentication plugins (same as Gun)
-  web3: { enabled: true },
-  webauthn: {
-    enabled: true,
-    rpName: 'My Awesome App',
-    rpId: window.location.hostname,
-  },
-  nostr: { enabled: true },
-});
-
-// All other APIs work the same way!
-```
 
 ## Database API Reference
 
-The `shogun.db` instance provides a high-level API for interacting with the decentralized database. Shogun Core automatically handles the differences between **Gun** and **Holster** backends.
+The `shogun.db` instance provides a high-level API for interacting with the decentralized database.
 
 ### 1. Connection & Session Management
-These methods work with both backends.
 
 - `db.isLoggedIn(): boolean`: Returns `true` if a user is currently authenticated.
 - `db.getCurrentUser(): { pub: string; user?: any } | null`: Returns the current user's public key and instance.
@@ -103,7 +71,7 @@ These methods work with both backends.
 - `db.restoreSession(): Promise<RestoreResult>`: Attempts to restore a previous session from `sessionStorage`.
 
 ### 2. Promise-based Advanced Utilities (Firegun API)
-*Note: These methods currently provide full Promise support and auto-retries primarily when using the **Gun** backend.*
+*Note: These methods provide full Promise support and auto-retries.*
 
 ```typescript
 const db = shogun.db;
@@ -139,7 +107,7 @@ db.Off('myListener');
 db.Listen('public/status', (status) => console.log('Status:', status));
 ```
 
-### 4. User-Space Operations (Gun Only)
+### 4. User-Space Operations
 These methods automatically prefix the path with `~pubkey/` of the logged-in user.
 
 - `db.userGet(path: string)`: Read from current user's graph.
@@ -148,7 +116,6 @@ These methods automatically prefix the path with `~pubkey/` of the logged-in use
 - `db.userLoad(path: string)`: Recursively load user-space data.
 
 ### 5. Advanced Features
-- **Reactive Streams**: `db.rx()` returns an RxJS helper for observable-based data handling.
 - **Content Addressing**: `db.addContentAdressing('#key', data)` hashes data using SHA-256 for immutable storage.
 - **Security**: `db.generatePublicCert()` creates a public certificate for P2P interactions.
 - **Cleanup**: `db.aggressiveAuthCleanup()` forcefully clears all local auth state.
@@ -164,7 +131,7 @@ Shogun Core provides a unified authentication interface. Plugins (Web3, WebAuthn
 await shogun.signUp('alice', 'Password123!');
 await shogun.login('alice', 'Password123!');
 
-// 2. Pair-based Authentication (Gun Only)
+// 2. Pair-based Authentication
 const pair = await shogun.db.crypto.createPair();
 await shogun.loginWithPair('alice', pair);
 
@@ -346,41 +313,7 @@ console.log('Chat Pub:', chatPair.pub);
 </html>
 ```
 
-### With Holster (ES Modules)
 
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Shogun Core with Holster</title>
-  </head>
-  <body>
-    <h1>My dApp</h1>
-    <script type="module">
-      import Holster from 'https://cdn.jsdelivr.net/npm/@mblaney/holster/build/holster.js';
-      import { ShogunCore } from 'https://cdn.jsdelivr.net/npm/shogun-core/dist/src/index.js';
-
-      // Create Holster instance
-      const holster = Holster({
-        peers: ['ws://localhost:8765'],
-      });
-
-      // Initialize Shogun Core
-      const shogunCore = new ShogunCore({
-        holsterInstance: holster,
-        web3: { enabled: true },
-        webauthn: {
-          enabled: true,
-          rpName: 'My Browser dApp',
-          rpId: window.location.hostname,
-        },
-      });
-
-      console.log('Shogun Core initialized with Holster!', shogunCore);
-    </script>
-  </body>
-</html>
-```
 
 ## Event System
 
@@ -405,36 +338,13 @@ shogun.on('error', (error) => {
 });
 ```
 
-## Database Backend: Gun vs Holster
 
-Shogun Core supports both Gun and Holster as database backends. Choose based on your needs:
-
-### Gun (Default)
-
-- **Pros**: Maximum compatibility, large ecosystem, battle-tested
-- **Cons**: Older codebase, CommonJS modules
-- **Best for**: Existing projects, maximum compatibility
-
-### Holster
-
-- **Pros**: Modern ES modules, improved performance, cleaner API
-- **Cons**: Newer project, smaller ecosystem
-- **Best for**: New projects, modern build systems, performance-critical apps
-
-**Note**: The API is identical regardless of which backend you choose. Shogun Core handles all the differences internally.
-
-### Differences to be aware of:
-
-- **Pair-based authentication**: Currently only supported with Gun (username/password works with both)
-- **Event system**: Gun has native events, Holster uses polling (handled automatically)
-- **Chaining API**: Gun uses `.get().get()`, Holster uses `.get().next()` (handled automatically via proxy)
 
 ## Configuration Options
 
 ```typescript
 interface ShogunCoreConfig {
-  gunInstance?: IGunInstance<any>; // Optional: existing Gun instance (required if holsterInstance not provided)
-  holsterInstance?: any; // Optional: existing Holster instance (required if gunInstance not provided)
+  gunInstance?: IGunInstance<any>; // Optional: existing Gun instance
 
   // Plugin configurations
   webauthn?: {
@@ -471,45 +381,7 @@ interface ShogunCoreConfig {
 }
 ```
 
-**Note**:
 
-- Either `gunInstance` or `holsterInstance` must be provided (but not both)
-
-## Migration Guide
-
-### From Gun to Holster
-
-If you're currently using Gun and want to switch to Holster:
-
-1. **Install Holster**:
-
-   ```bash
-   npm install @mblaney/holster
-   # or
-   yarn add @mblaney/holster
-   ```
-
-2. **Update your initialization**:
-
-   ```typescript
-   // Before (Gun)
-   import Gun from "gun";
-   const gun = Gun({ peers: [...] });
-   const shogun = new ShogunCore({ gunInstance: gun });
-
-   // After (Holster)
-   import Holster from "@mblaney/holster";
-   const holster = Holster({ peers: [...] });
-   const shogun = new ShogunCore({ holsterInstance: holster });
-   ```
-
-3. **That's it!** All other code remains the same. The API is identical.
-
-### Limitations when using Holster
-
-- Pair-based authentication (`loginWithPair()`) is not yet supported - use username/password instead
-- Some advanced Gun features may not be available
-- Event system uses polling instead of native events (handled automatically)
 
 ## Testing
 

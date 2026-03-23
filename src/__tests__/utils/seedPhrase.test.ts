@@ -12,11 +12,14 @@ import {
 
 // Mock gundb/crypto for seedToKeyPair
 jest.mock('../../gundb/crypto', () => ({
-  generatePairFromMnemonic: jest.fn().mockResolvedValue({ pub: 'test-pub', priv: 'test-priv' }),
+  generatePairFromMnemonic: jest
+    .fn()
+    .mockResolvedValue({ pub: 'test-pub', priv: 'test-priv' }),
 }));
 
 describe('seedPhrase Utility', () => {
-  const validMnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const validMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
   const invalidMnemonic = 'invalid mnemonic phrase';
   const username = 'testuser';
 
@@ -62,7 +65,9 @@ describe('seedPhrase Utility', () => {
     });
 
     it('should throw error for invalid mnemonic', () => {
-      expect(() => mnemonicToSeed(invalidMnemonic, username)).toThrow('Invalid mnemonic seed phrase');
+      expect(() => mnemonicToSeed(invalidMnemonic, username)).toThrow(
+        'Invalid mnemonic seed phrase',
+      );
     });
   });
 
@@ -80,7 +85,9 @@ describe('seedPhrase Utility', () => {
     });
 
     it('should throw error for invalid mnemonic', async () => {
-      await expect(mnemonicToSeedAsync(invalidMnemonic, username)).rejects.toThrow('Invalid mnemonic seed phrase');
+      await expect(
+        mnemonicToSeedAsync(invalidMnemonic, username),
+      ).rejects.toThrow('Invalid mnemonic seed phrase');
     });
   });
 
@@ -103,7 +110,10 @@ describe('seedPhrase Utility', () => {
 
   describe('deriveCredentialsFromMnemonic', () => {
     it('should derive both password and seed', async () => {
-      const credentials = await deriveCredentialsFromMnemonic(validMnemonic, username);
+      const credentials = await deriveCredentialsFromMnemonic(
+        validMnemonic,
+        username,
+      );
       expect(credentials).toHaveProperty('password');
       expect(credentials).toHaveProperty('seed');
       expect(credentials.seed.length).toBe(64);
@@ -137,7 +147,10 @@ describe('seedPhrase Utility', () => {
     it('should call generatePairFromMnemonic', async () => {
       const { generatePairFromMnemonic } = await import('../../gundb/crypto');
       const pair = await seedToKeyPair(validMnemonic, username);
-      expect(generatePairFromMnemonic).toHaveBeenCalledWith(validMnemonic, username);
+      expect(generatePairFromMnemonic).toHaveBeenCalledWith(
+        validMnemonic,
+        username,
+      );
       expect(pair).toEqual({ pub: 'test-pub', priv: 'test-priv' });
     });
   });

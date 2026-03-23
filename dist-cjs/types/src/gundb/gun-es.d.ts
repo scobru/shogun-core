@@ -1,0 +1,10 @@
+import Gun from 'gun';
+import 'gun/sea.js';
+import 'gun/lib/then.js';
+import 'gun/lib/radix.js';
+import 'gun/lib/radisk.js';
+import 'gun/lib/store.js';
+import 'gun/lib/rindexed.js';
+import 'gun/lib/webrtc.js';
+export { Gun };
+export { default as SEA } from 'gun/sea.js';
