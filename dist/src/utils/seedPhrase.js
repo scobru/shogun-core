@@ -40,8 +40,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { generateMnemonic, mnemonicToSeed as scureMnemonicToSeed, mnemonicToSeedSync, validateMnemonic, } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex } from '@noble/hashes/utils';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 /**
  * Generate a new 12-word BIP39 mnemonic seed phrase
  * @returns {string} 12-word mnemonic seed phrase

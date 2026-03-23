@@ -1,9 +1,9 @@
-import { p256 } from '@noble/curves/p256';
-import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { pbkdf2 } from '@noble/hashes/pbkdf2';
-import { keccak_256 } from '@noble/hashes/sha3';
-import { ripemd160 } from '@noble/hashes/ripemd160';
+import { p256 } from '@noble/curves/nist.js';
+import { secp256k1 } from '@noble/curves/secp256k1.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { ripemd160 } from '@noble/hashes/legacy.js';
 
 export interface DeriveOptions {
   includeSecp256k1Bitcoin?: boolean; // Bitcoin P2PKH using secp256k1

@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebAuthnSigner = void 0;
 const webauthn_1 = require("./webauthn");
-const p256_1 = require("@noble/curves/p256");
-const sha256_1 = require("@noble/hashes/sha256");
+const nist_js_1 = require("@noble/curves/nist.js");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
 const derive_1 = __importDefault(require("../../gundb/derive"));
 const ethers_1 = require("ethers");
 /**
@@ -242,11 +242,11 @@ class WebAuthnSigner {
             const keyPair = await this.createDerivedKeyPair(credentialId, username, extra);
             // Create signature using P-256 (same as SEA)
             const message = JSON.stringify(data);
-            const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(message));
+            const messageHash = (0, sha2_js_1.sha256)(new TextEncoder().encode(message));
             // Convert base64url private key to bytes
             const privKeyBytes = base64url.decode(keyPair.priv);
             // Sign with P-256
-            const signature = p256_1.p256.sign(messageHash, privKeyBytes);
+            const signature = nist_js_1.p256.sign(messageHash, privKeyBytes);
             // Format like SEA signature
             const seaSignature = {
                 m: message,

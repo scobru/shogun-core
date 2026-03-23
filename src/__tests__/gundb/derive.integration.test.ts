@@ -1,7 +1,7 @@
 import derive, { DeriveOptions } from '../../gundb/derive';
 
 // Mock completo delle librerie @noble/curves
-jest.mock('@noble/curves/p256', () => ({
+jest.mock('@noble/curves/nist.js', () => ({
   p256: {
     getPublicKey: jest.fn((privateKey: Uint8Array) => {
       // Simula una chiave pubblica P-256 valida in formato uncompressed
@@ -22,7 +22,7 @@ jest.mock('@noble/curves/p256', () => ({
   },
 }));
 
-jest.mock('@noble/curves/secp256k1', () => ({
+jest.mock('@noble/curves/secp256k1.js', () => ({
   secp256k1: {
     getPublicKey: jest.fn(
       (privateKey: Uint8Array, compressed: boolean = true) => {
@@ -211,7 +211,7 @@ describe('Derive Integration Tests', () => {
     });
 
     it('should handle invalid private key errors', async () => {
-      const mockP256 = require('@noble/curves/p256');
+      const mockP256 = require('@noble/curves/nist.js');
       mockP256.p256.utils.isValidPrivateKey = jest.fn().mockReturnValue(false);
 
       const password = 'testpassword12345678901234567890';
@@ -226,7 +226,7 @@ describe('Derive Integration Tests', () => {
     });
 
     it('should handle invalid secp256k1 private key for Bitcoin', async () => {
-      const mockSecp256k1 = require('@noble/curves/secp256k1');
+      const mockSecp256k1 = require('@noble/curves/secp256k1.js');
       mockSecp256k1.secp256k1.utils.isValidPrivateKey = jest
         .fn()
         .mockReturnValue(false);
@@ -248,7 +248,7 @@ describe('Derive Integration Tests', () => {
     });
 
     it('should handle invalid secp256k1 private key for Ethereum', async () => {
-      const mockSecp256k1 = require('@noble/curves/secp256k1');
+      const mockSecp256k1 = require('@noble/curves/secp256k1.js');
       mockSecp256k1.secp256k1.utils.isValidPrivateKey = jest
         .fn()
         .mockReturnValue(false);

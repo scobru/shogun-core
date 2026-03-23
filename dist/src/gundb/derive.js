@@ -50,12 +50,12 @@ var __read = (this && this.__read) || function (o, n) {
     }
     return ar;
 };
-import { p256 } from '@noble/curves/p256';
-import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { pbkdf2 } from '@noble/hashes/pbkdf2';
-import { keccak_256 } from '@noble/hashes/sha3';
-import { ripemd160 } from '@noble/hashes/ripemd160';
+import { p256 } from '@noble/curves/nist.js';
+import { secp256k1 } from '@noble/curves/secp256k1.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { ripemd160 } from '@noble/hashes/legacy.js';
 export default function (pwd_1, extra_1) {
     return __awaiter(this, arguments, void 0, function (pwd, extra, options) {
         var TEXT_ENCODER, pwdBytes, extras, extraBuf, combinedInput, version, result, _a, includeP256, _b, includeSecp256k1Bitcoin, _c, includeSecp256k1Ethereum, salts, _d, signingKeys, encryptionKeys, bitcoinSalt, bitcoinPrivateKey, bitcoinPublicKey, ethereumSalt, ethereumPrivateKey, ethereumPublicKey;

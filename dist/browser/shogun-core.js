@@ -3108,7 +3108,7 @@ var __webpack_exports__ = {};
 (() => {
 "use strict";
 /*!************************************!*\
-  !*** ./src/index.ts + 190 modules ***!
+  !*** ./src/index.ts + 187 modules ***!
   \************************************/
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
@@ -9833,23 +9833,6 @@ const p521_hasher = /* @__PURE__ */ (() => {
 //   hashToScalar: p521_hasher.hashToScalar, // produces L=98 just like in RFC
 // });
 //# sourceMappingURL=nist.js.map
-;// ./node_modules/@noble/curves/esm/p256.js
-/**
- * NIST secp256r1 aka p256.
- * @module
- */
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-
-
-/** @deprecated use `import { p256 } from '@noble/curves/nist.js';` */
-const p256_p256 = p256;
-/** @deprecated use `import { p256 } from '@noble/curves/nist.js';` */
-const p256_secp256r1 = p256;
-/** @deprecated use `import { p256_hasher } from '@noble/curves/nist.js';` */
-const hashToCurve = /* @__PURE__ */ (() => p256_hasher.hashToCurve)();
-/** @deprecated use `import { p256_hasher } from '@noble/curves/nist.js';` */
-const encodeToCurve = /* @__PURE__ */ (() => p256_hasher.encodeToCurve)();
-//# sourceMappingURL=p256.js.map
 ;// ./node_modules/@noble/curves/esm/secp256k1.js
 /**
  * SECG secp256k1. See [pdf](https://www.secg.org/sec2-v2.pdf).
@@ -10141,31 +10124,10 @@ const secp256k1_hasher = /* @__PURE__ */ (() => hash_to_curve_createHasher(secp2
     hash: esm_sha2_sha256,
 }))();
 /** @deprecated use `import { secp256k1_hasher } from '@noble/curves/secp256k1.js';` */
-const secp256k1_hashToCurve = /* @__PURE__ */ (() => secp256k1_hasher.hashToCurve)();
+const hashToCurve = /* @__PURE__ */ (() => secp256k1_hasher.hashToCurve)();
 /** @deprecated use `import { secp256k1_hasher } from '@noble/curves/secp256k1.js';` */
-const secp256k1_encodeToCurve = /* @__PURE__ */ (() => secp256k1_hasher.encodeToCurve)();
+const encodeToCurve = /* @__PURE__ */ (() => secp256k1_hasher.encodeToCurve)();
 //# sourceMappingURL=secp256k1.js.map
-;// ./node_modules/@noble/hashes/esm/sha256.js
-/**
- * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
- *
- * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
- * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
- *
- * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
- * @module
- * @deprecated
- */
-
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha256_SHA256 = sha2_SHA256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha256_sha256 = esm_sha2_sha256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha256_SHA224 = sha2_SHA224;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha256_sha224 = sha2_sha224;
-//# sourceMappingURL=sha256.js.map
 ;// ./node_modules/@noble/hashes/esm/pbkdf2.js
 /**
  * PBKDF (RFC 2898). Can be used to create a key from password and salt.
@@ -10781,20 +10743,6 @@ class RIPEMD160 extends HashMD {
  */
 const ripemd160 = /* @__PURE__ */ createHasher(() => new RIPEMD160());
 //# sourceMappingURL=legacy.js.map
-;// ./node_modules/@noble/hashes/esm/ripemd160.js
-/**
- * RIPEMD-160 legacy hash function.
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
- * @module
- * @deprecated
- */
-
-/** @deprecated Use import from `noble/hashes/legacy` module */
-const ripemd160_RIPEMD160 = RIPEMD160;
-/** @deprecated Use import from `noble/hashes/legacy` module */
-const ripemd160_ripemd160 = ripemd160;
-//# sourceMappingURL=ripemd160.js.map
 ;// ./src/gundb/derive.ts
 var derive_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -10898,10 +10846,10 @@ var derive_read = (undefined && undefined.__read) || function (o, n) {
                                         return [4 /*yield*/, stretchKey(combinedInput, salt)];
                                     case 1:
                                         privateKey = _c.sent();
-                                        if (!p256_p256.utils.isValidPrivateKey(privateKey)) {
+                                        if (!p256.utils.isValidPrivateKey(privateKey)) {
                                             throw new Error("Invalid private key for ".concat(label));
                                         }
-                                        publicKey = p256_p256.getPublicKey(privateKey, false);
+                                        publicKey = p256.getPublicKey(privateKey, false);
                                         return [2 /*return*/, {
                                                 pub: keyBufferToJwk(publicKey),
                                                 priv: arrayBufToBase64UrlEncode(privateKey),
@@ -11002,7 +10950,7 @@ function stretchKey(input_1, salt_1) {
                     inputBytes = input instanceof Uint8Array
                         ? input
                         : new Uint8Array(input);
-                    fallbackKey = pbkdf2_pbkdf2(sha256_sha256, inputBytes, salt, {
+                    fallbackKey = pbkdf2_pbkdf2(esm_sha2_sha256, inputBytes, salt, {
                         c: iterations,
                         dkLen: 32,
                     });
@@ -11090,15 +11038,15 @@ function base58Encode(bytes) {
 function deriveP2PKHAddress(publicKey) {
     // Bitcoin P2PKH address derivation
     // 1. SHA256 hash del public key
-    var sha256Hash = sha256_sha256(publicKey);
+    var sha256Hash = esm_sha2_sha256(publicKey);
     // 2. RIPEMD160 hash del risultato
-    var ripemd160Hash = ripemd160_ripemd160(sha256Hash);
+    var ripemd160Hash = ripemd160(sha256Hash);
     // 3. Aggiungi version byte (0x00 per mainnet P2PKH)
     var versionedHash = new Uint8Array(21);
     versionedHash[0] = 0x00; // Mainnet P2PKH version
     versionedHash.set(ripemd160Hash, 1);
     // 4. Double SHA256 per checksum
-    var checksum = sha256_sha256(sha256_sha256(versionedHash));
+    var checksum = esm_sha2_sha256(esm_sha2_sha256(versionedHash));
     // 5. Aggiungi i primi 4 byte del checksum
     var addressBytes = new Uint8Array(25);
     addressBytes.set(versionedHash);
@@ -14143,7 +14091,7 @@ function seedPhrase_mnemonicToSeed(mnemonic, username) {
  */
 function seedToPassword(seed) {
     // Hash the seed to create a deterministic password
-    var hash = sha256_sha256(seed);
+    var hash = esm_sha2_sha256(seed);
     return utils_bytesToHex(hash);
 }
 /**
@@ -15199,9 +15147,9 @@ var WebAuthnSigner = /** @class */ (function () {
                     case 2:
                         keyPair = _a.sent();
                         message = JSON.stringify(data);
-                        messageHash = sha256_sha256(new TextEncoder().encode(message));
+                        messageHash = esm_sha2_sha256(new TextEncoder().encode(message));
                         privKeyBytes = webauthnSigner_base64url.decode(keyPair.priv);
-                        signature = p256_p256.sign(messageHash, privKeyBytes);
+                        signature = p256.sign(messageHash, privKeyBytes);
                         seaSignature = {
                             m: message,
                             s: webauthnSigner_base64url.encode(signature.toCompactRawBytes()),
@@ -21899,8 +21847,8 @@ const htf = /* @__PURE__ */ (() => abstract_hash_to_curve_createHasher(secp256k1
     expand: 'xmd',
     hash: sha256,
 }))();
-const esm_secp256k1_hashToCurve = /* @__PURE__ */ (() => htf.hashToCurve)();
-const esm_secp256k1_encodeToCurve = /* @__PURE__ */ (() => htf.encodeToCurve)();
+const secp256k1_hashToCurve = /* @__PURE__ */ (() => htf.hashToCurve)();
+const secp256k1_encodeToCurve = /* @__PURE__ */ (() => htf.encodeToCurve)();
 //# sourceMappingURL=secp256k1.js.map
 ;// ./node_modules/ethers/lib.esm/constants/hashes.js
 /**
@@ -35235,7 +35183,7 @@ function f(group, x, y, z) {
 }
 // Temporary buffer, not used to store anything between runs
 const BUF = /* @__PURE__ */ new Uint32Array(16);
-class esm_ripemd160_RIPEMD160 extends SHA2 {
+class ripemd160_RIPEMD160 extends SHA2 {
     constructor() {
         super(64, 20, 8, true);
         this.h0 = 0x67452301 | 0;
@@ -35293,14 +35241,14 @@ class esm_ripemd160_RIPEMD160 extends SHA2 {
  * RIPEMD-160 - a hash function from 1990s.
  * @param message - msg that would be hashed
  */
-const esm_ripemd160_ripemd160 = /* @__PURE__ */ wrapConstructor(() => new esm_ripemd160_RIPEMD160());
+const ripemd160_ripemd160 = /* @__PURE__ */ wrapConstructor(() => new ripemd160_RIPEMD160());
 //# sourceMappingURL=ripemd160.js.map
 ;// ./node_modules/ethers/lib.esm/crypto/ripemd160.js
 
 
 let ripemd160_locked = false;
 const _ripemd160 = function (data) {
-    return esm_ripemd160_ripemd160(data);
+    return ripemd160_ripemd160(data);
 };
 let __ripemd160 = _ripemd160;
 /**
@@ -39947,7 +39895,7 @@ const sha256_IV = /* @__PURE__ */ new Uint32Array([
 // Temporary buffer, not used to store anything between runs
 // Named this way because it matches specification.
 const sha256_SHA256_W = /* @__PURE__ */ new Uint32Array(64);
-class esm_sha256_SHA256 extends _sha2_SHA2 {
+class sha256_SHA256 extends _sha2_SHA2 {
     constructor() {
         super(64, 32, 8, false);
         // We cannot use array here since array allows indexing by variable
@@ -40023,7 +39971,7 @@ class esm_sha256_SHA256 extends _sha2_SHA2 {
     }
 }
 // Constants from https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
-class esm_sha256_SHA224 extends esm_sha256_SHA256 {
+class sha256_SHA224 extends sha256_SHA256 {
     constructor() {
         super();
         this.A = 0xc1059ed8 | 0;
@@ -40041,8 +39989,8 @@ class esm_sha256_SHA224 extends esm_sha256_SHA256 {
  * SHA2-256 hash function
  * @param message - data that would be hashed
  */
-const esm_sha256_sha256 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new esm_sha256_SHA256());
-const esm_sha256_sha224 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new esm_sha256_SHA224());
+const sha256_sha256 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new sha256_SHA256());
+const sha256_sha224 = /* @__PURE__ */ esm_utils_wrapConstructor(() => new sha256_SHA224());
 //# sourceMappingURL=sha256.js.map
 ;// ./node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/utils.js
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
@@ -42296,7 +42244,7 @@ const esm_secp256k1_secp256k1 = esm_shortw_utils_createCurve({
             return { k1neg, k1, k2neg, k2 };
         },
     },
-}, esm_sha256_sha256);
+}, sha256_sha256);
 // Schnorr signatures are superior to ECDSA from above. Below is Schnorr-specific BIP0340 code.
 // https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 const curves_esm_secp256k1_0n = BigInt(0);
@@ -42307,11 +42255,11 @@ const esm_secp256k1_TAGGED_HASH_PREFIXES = {};
 function esm_secp256k1_taggedHash(tag, ...messages) {
     let tagP = esm_secp256k1_TAGGED_HASH_PREFIXES[tag];
     if (tagP === undefined) {
-        const tagH = esm_sha256_sha256(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
+        const tagH = sha256_sha256(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
         tagP = esm_abstract_utils_concatBytes(tagH, tagH);
         esm_secp256k1_TAGGED_HASH_PREFIXES[tag] = tagP;
     }
-    return esm_sha256_sha256(esm_abstract_utils_concatBytes(tagP, ...messages));
+    return sha256_sha256(esm_abstract_utils_concatBytes(tagP, ...messages));
 }
 // ECDSA compact points are 33-byte. Schnorr is 32: we strip first byte 0x02 or 0x03
 const esm_secp256k1_pointToBytes = (point) => point.toRawBytes(true).slice(1);
@@ -42462,10 +42410,10 @@ const secp256k1_htf = /* @__PURE__ */ (() => esm_abstract_hash_to_curve_createHa
     m: 1,
     k: 128,
     expand: 'xmd',
-    hash: esm_sha256_sha256,
+    hash: sha256_sha256,
 }))();
-const curves_esm_secp256k1_hashToCurve = /* @__PURE__ */ (() => secp256k1_htf.hashToCurve)();
-const curves_esm_secp256k1_encodeToCurve = /* @__PURE__ */ (() => secp256k1_htf.encodeToCurve)();
+const esm_secp256k1_hashToCurve = /* @__PURE__ */ (() => secp256k1_htf.hashToCurve)();
+const esm_secp256k1_encodeToCurve = /* @__PURE__ */ (() => secp256k1_htf.encodeToCurve)();
 //# sourceMappingURL=secp256k1.js.map
 ;// ./node_modules/nostr-tools/node_modules/@noble/hashes/esm/crypto.js
 const _noble_hashes_esm_crypto_crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
@@ -42813,7 +42761,7 @@ const esm_sha256_IV = new Uint32Array([
 // Temporary buffer, not used to store anything between runs
 // Named this way because it matches specification.
 const esm_sha256_SHA256_W = new Uint32Array(64);
-class hashes_esm_sha256_SHA256 extends esm_sha2_SHA2 {
+class esm_sha256_SHA256 extends esm_sha2_SHA2 {
     constructor() {
         super(64, 32, 8, false);
         // We cannot use array here since array allows indexing by variable
@@ -42889,7 +42837,7 @@ class hashes_esm_sha256_SHA256 extends esm_sha2_SHA2 {
     }
 }
 // Constants from https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
-class hashes_esm_sha256_SHA224 extends hashes_esm_sha256_SHA256 {
+class esm_sha256_SHA224 extends esm_sha256_SHA256 {
     constructor() {
         super();
         this.A = 0xc1059ed8 | 0;
@@ -42907,8 +42855,8 @@ class hashes_esm_sha256_SHA224 extends hashes_esm_sha256_SHA256 {
  * SHA2-256 hash function
  * @param message - data that would be hashed
  */
-const hashes_esm_sha256_sha256 = hashes_esm_utils_wrapConstructor(() => new hashes_esm_sha256_SHA256());
-const hashes_esm_sha256_sha224 = hashes_esm_utils_wrapConstructor(() => new hashes_esm_sha256_SHA224());
+const esm_sha256_sha256 = hashes_esm_utils_wrapConstructor(() => new esm_sha256_SHA256());
+const esm_sha256_sha224 = hashes_esm_utils_wrapConstructor(() => new esm_sha256_SHA224());
 //# sourceMappingURL=sha256.js.map
 ;// ./node_modules/nostr-tools/node_modules/@scure/base/lib/esm/index.js
 /*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
@@ -45544,7 +45492,7 @@ function serializeEvent(evt) {
   return JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content]);
 }
 function getEventHash(event) {
-  let eventHash = hashes_esm_sha256_sha256(utf8Encoder.encode(serializeEvent(event)));
+  let eventHash = esm_sha256_sha256(utf8Encoder.encode(serializeEvent(event)));
   return hashes_esm_utils_bytesToHex(eventHash);
 }
 var i = new JS();
@@ -47133,7 +47081,7 @@ function minePow(unsigned, difficulty) {
 }
 function fastEventHash(evt) {
   return hashes_esm_utils_bytesToHex(
-    hashes_esm_sha256_sha256(utf8Encoder.encode(JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content])))
+    esm_sha256_sha256(utf8Encoder.encode(JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content])))
   );
 }
 
@@ -47178,10 +47126,10 @@ var minPlaintextSize = 1;
 var maxPlaintextSize = 65535;
 function getConversationKey(privkeyA, pubkeyB) {
   const sharedX = esm_secp256k1_secp256k1.getSharedSecret(privkeyA, "02" + pubkeyB).subarray(1, 33);
-  return extract(hashes_esm_sha256_sha256, sharedX, "nip44-v2");
+  return extract(esm_sha256_sha256, sharedX, "nip44-v2");
 }
 function getMessageKeys(conversationKey, nonce) {
-  const keys = expand(hashes_esm_sha256_sha256, conversationKey, nonce, 76);
+  const keys = expand(esm_sha256_sha256, conversationKey, nonce, 76);
   return {
     chacha_key: keys.subarray(0, 32),
     chacha_nonce: keys.subarray(32, 44),
@@ -47222,7 +47170,7 @@ function hmacAad(key, message, aad) {
   if (aad.length !== 32)
     throw new Error("AAD associated data must be 32 bytes");
   const combined = hashes_esm_utils_concatBytes(aad, message);
-  return hashes_esm_hmac_hmac(hashes_esm_sha256_sha256, key, combined);
+  return hashes_esm_hmac_hmac(esm_sha256_sha256, key, combined);
 }
 function decodePayload(payload) {
   if (typeof payload !== "string")
@@ -48071,7 +48019,7 @@ function validateEventMethodTag(event, method) {
   return methodTag.length > 0 && methodTag[1].toLowerCase() === method.toLowerCase();
 }
 function hashPayload(payload) {
-  const hash = hashes_esm_sha256_sha256(utf8Encoder.encode(JSON.stringify(payload)));
+  const hash = esm_sha256_sha256(utf8Encoder.encode(JSON.stringify(payload)));
   return hashes_esm_utils_bytesToHex(hash);
 }
 function validateEventPayloadTag(event, payload) {

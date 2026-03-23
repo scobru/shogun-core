@@ -48,8 +48,8 @@ exports.normalizeSeedPhrase = normalizeSeedPhrase;
 exports.seedToKeyPair = seedToKeyPair;
 const bip39_1 = require("@scure/bip39");
 const english_1 = require("@scure/bip39/wordlists/english");
-const sha256_1 = require("@noble/hashes/sha256");
-const utils_1 = require("@noble/hashes/utils");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
+const utils_js_1 = require("@noble/hashes/utils.js");
 /**
  * Generate a new 12-word BIP39 mnemonic seed phrase
  * @returns {string} 12-word mnemonic seed phrase
@@ -106,8 +106,8 @@ function mnemonicToSeed(mnemonic, username) {
  */
 function seedToPassword(seed) {
     // Hash the seed to create a deterministic password
-    const hash = (0, sha256_1.sha256)(seed);
-    return (0, utils_1.bytesToHex)(hash);
+    const hash = (0, sha2_js_1.sha256)(seed);
+    return (0, utils_js_1.bytesToHex)(hash);
 }
 /**
  * Derive GunDB credentials from mnemonic
