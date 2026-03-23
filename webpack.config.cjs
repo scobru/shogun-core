@@ -20,13 +20,21 @@ module.exports = {
   externals: {
     gun: "Gun",
     "gun/gun": "Gun",
+    "gun/gun.js": "Gun",
     "gun/sea": "Gun.SEA",
+    "gun/sea.js": "Gun.SEA",
     "gun/lib/then": "Gun",
+    "gun/lib/then.js": "Gun",
     "gun/lib/radix": "Gun",
+    "gun/lib/radix.js": "Gun",
     "gun/lib/radisk": "Gun",
+    "gun/lib/radisk.js": "Gun",
     "gun/lib/store": "Gun",
+    "gun/lib/store.js": "Gun",
     "gun/lib/rindexed": "Gun",
+    "gun/lib/rindexed.js": "Gun",
     "gun/lib/webrtc": "Gun",
+    "gun/lib/webrtc.js": "Gun",
   },
 
   resolve: {
